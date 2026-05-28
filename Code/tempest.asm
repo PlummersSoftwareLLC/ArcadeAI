@@ -4333,9 +4333,15 @@ loca7d2:                lda     $0115
                         lda     #$00
                         sta     $29
 
-; There appears to be a loop beginning here
-; for ($37=7;$37>=0;$37--) running from here through a827.  I'm not sure
-; just what goes on inside it, yet, though.
+; Decrement animation timers for 8 slots at $03FE-$0405
+; (likely sprite/effect states during level transitions)
+; LOGIC: non zero values: subtract 7 (countdown), clamp based on $0115: 
+; $0115.7=1 (zoom active): expired timers reset to $F0 (full)
+; $0115.7=0 (normal): expired timers clear to $00
+; zero values: if $0115.7=1, inherit from next slot (circular, 
+; $03FE[0] wraps to $03FE[7]); values <$D5 become $F0, >=$D5 become $00
+; $29 accumulates OR of all results; if zero after loop, clears $0115
+; called during level transitions (zoom in/out effects).
 
                         ldx     #$07
                         stx     $37
