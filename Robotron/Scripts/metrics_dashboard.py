@@ -370,8 +370,7 @@ class _DashboardState:
           hidden_layers = list(getattr(net, "mlp_hidden_layers", list(getattr(cfg, "mlp_hidden_layers", [1024, 512]) or [1024, 512])))
           output_dim = int(getattr(net, "mlp_output_dim", int(getattr(cfg, "mlp_output_dim", 256) or 256)))
           uses_attn = bool(getattr(net, "use_mlp_with_attention", False))
- 
-           uses_dir_lanes = bool(getattr(net, "use_directional_lanes", False))
+          uses_dir_lanes = bool(getattr(net, "use_directional_lanes", False))
           uses_pointer = bool(getattr(net, "use_pointer_action_heads", False))
           uses_memory = bool(getattr(net, "use_temporal_memory", False))
           slot_count = int(getattr(net, "num_object_slots", int(getattr(cfg, "object_slots", 0) or 0)))
