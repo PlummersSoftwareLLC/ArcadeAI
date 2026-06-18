@@ -15,7 +15,7 @@
       - Receives joystick commands: movement_dir (-1 neutral or 0..7) and firing_dir (-1 neutral or 0..7)
 --]]
 
-RAW_SOCKET_ADDRESS = os.getenv("ROBOTRON_SOCKET_ADDRESS") or "ubvmdell:9998"
+RAW_SOCKET_ADDRESS = os.getenv("ROBOTRON_SOCKET_ADDRESS") or "m2macpro:9998"
 PREVIEW_CLIENT_FLAG = (os.getenv("ROBOTRON_PREVIEW_CLIENT") == "1") and 1 or 0
 CLIENT_SLOT = math.max(0, math.floor(tonumber(os.getenv("ROBOTRON_CLIENT_SLOT") or "0") or 0))
 SOCKET_ADDRESS = RAW_SOCKET_ADDRESS
