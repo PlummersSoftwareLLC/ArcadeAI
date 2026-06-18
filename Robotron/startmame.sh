@@ -15,6 +15,11 @@ GAME_AUDIO_ENABLED_RAW="${ROBOTRON_GAME_AUDIO_ENABLED:-1}"
 GAME_AUDIO_ENABLED_NORM="$(printf '%s' "$GAME_AUDIO_ENABLED_RAW" | tr '[:upper:]' '[:lower:]')"
 SKIP_UNUSED_TACTICAL_RAW="${ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES:-1}"
 SKIP_UNUSED_TACTICAL_NORM="$(printf '%s' "$SKIP_UNUSED_TACTICAL_RAW" | tr '[:upper:]' '[:lower:]')"
+PREVIEW_SLOT_DEFAULT="${ROBOTRON_PREVIEW_SLOT:-0}"
+VIDEO_ALL_RAW="${ROBOTRON_VIDEO_ALL_CLIENTS:-0}"
+VIDEO_ALL_NORM="$(printf '%s' "$VIDEO_ALL_RAW" | tr '[:upper:]' '[:lower:]')"
+AUDIO_ALL_RAW="${ROBOTRON_AUDIO_ALL_CLIENTS:-0}"
+AUDIO_ALL_NORM="$(printf '%s' "$AUDIO_ALL_RAW" | tr '[:upper:]' '[:lower:]')"
 
 EXPLICIT_SOCKET_ADDRESS_SET=0
 EXPLICIT_SOCKET_HOST_SET=0
@@ -61,6 +66,24 @@ case "$SKIP_UNUSED_TACTICAL_NORM" in
         ;;
 esac
 
+case "$VIDEO_ALL_NORM" in
+    1|true|yes|on)
+        VIDEO_ALL_CLIENTS=1
+        ;;
+    *)
+        VIDEO_ALL_CLIENTS=0
+        ;;
+esac
+
+case "$AUDIO_ALL_NORM" in
+    1|true|yes|on)
+        AUDIO_ALL_CLIENTS=1
+        ;;
+    *)
+        AUDIO_ALL_CLIENTS=0
+        ;;
+esac
+
 if [[ -f "$SHARD_ENV_FILE" ]]; then
     # shellcheck disable=SC1090
     source "$SHARD_ENV_FILE"
@@ -81,6 +104,7 @@ fi
 if [[ "$EXPLICIT_PREVIEW_SLOT_SET" -eq 1 ]]; then
     ROBOTRON_PREVIEW_SLOT="$EXPLICIT_PREVIEW_SLOT"
 fi
+PREVIEW_SLOT_SELECTED="${ROBOTRON_PREVIEW_SLOT:-$PREVIEW_SLOT_DEFAULT}"
 
 resolve_client_socket() {
     local client_slot="$1"
@@ -98,9 +122,12 @@ resolve_client_socket() {
     fi
 
     if [[ -n "$host" && -n "$master_port" ]]; then
-        if [[ "$client_slot" -eq "$preview_slot" || -z "$worker_ports_csv" ]]; then
+        if [[ "$client_slot" -eq "$preview_slot" ]]; then
             socket_addr="${host}:${master_port}"
             preview_flag="1"
+        elif [[ -z "$worker_ports_csv" ]]; then
+            socket_addr="${host}:${master_port}"
+            preview_flag="0"
         else
             IFS=',' read -r -a worker_ports <<< "$worker_ports_csv"
             if [[ "${#worker_ports[@]}" -gt 0 ]]; then
@@ -130,12 +157,47 @@ fi
 usage() {
     echo "Usage: $0 [COUNT] [novideo] [--fg] [--throttle-client0] [-kill]"
     echo "       $0 kill CLIENT_ID"
-    echo "  COUNT              Number of MAME instances to launch (default: 1, background mode only)"
+    echo "  COUNT              Desired number of MAME instances left running (default: 1, background mode only; 0 kills all)"
     echo "  novideo            Launch MAME with -video none for faster operation"
+    echo "  ROBOTRON_VIDEO_ALL_CLIENTS=1 restores software video for every background client"
+    echo "  ROBOTRON_AUDIO_ALL_CLIENTS=1 restores audio capture for every background client"
     echo "  --fg               Run one MAME instance in foreground"
     echo "  --throttle-client0 Throttle client 0 to real-time speed (default: unthrottled)"
     echo "  -kill              Kill all running Robotron MAME instances"
     echo "  kill CLIENT_ID     Kill one Robotron MAME client by ROBOTRON_CLIENT_SLOT"
+}
+
+list_robotron_pids() {
+    pgrep -f 'mame.*robotron' || true
+}
+
+count_running_robotron_instances() {
+    local pids
+    pids="$(list_robotron_pids)"
+    if [[ -z "${pids//[[:space:]]/}" ]]; then
+        echo 0
+    else
+        printf '%s\n' "$pids" | awk 'NF { count++ } END { print count + 0 }'
+    fi
+}
+
+kill_all_robotron_instances() {
+    local message="${1:-Killing all running Robotron MAME instances...}"
+    local pids
+
+    echo "$message"
+    pids="$(list_robotron_pids)"
+    if [[ -n "${pids//[[:space:]]/}" ]]; then
+        echo "$pids" | xargs kill -9
+        echo "Killed PIDs: $(echo "$pids" | tr '\n' ' ')"
+    else
+        echo "No Robotron MAME instances found."
+    fi
+
+    cleanup_audio_relays
+    cleanup_audio_wavs
+    cleanup_audio_fifos
+    echo "Removed stale audio capture files from /tmp."
 }
 
 kill_client_by_id() {
@@ -216,18 +278,7 @@ while [[ $# -gt 0 ]]; do
             exit $?
             ;;
         -kill)
-            echo "Killing all running Robotron MAME instances..."
-            pids=$(pgrep -f 'mame.*robotron' || true)
-            if [[ -n "$pids" ]]; then
-                echo "$pids" | xargs kill -9
-                echo "Killed PIDs: $(echo "$pids" | tr '\n' ' ')"
-            else
-                echo "No Robotron MAME instances found."
-            fi
-            cleanup_audio_relays
-            cleanup_audio_wavs
-            cleanup_audio_fifos
-            echo "Removed stale audio capture files from /tmp."
+            kill_all_robotron_instances
             exit 0
             ;;
         --fg)
@@ -259,10 +310,15 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if ! [[ "$COUNT" =~ ^[0-9]+$ ]] || [[ "$COUNT" -lt 1 ]]; then
-    echo "error: COUNT must be a positive integer" >&2
+if ! [[ "$COUNT" =~ ^[0-9]+$ ]]; then
+    echo "error: COUNT must be a non-negative integer" >&2
     usage >&2
     exit 1
+fi
+
+if [[ "$COUNT" -eq 0 ]]; then
+    kill_all_robotron_instances "Target count is 0; stopping all Robotron MAME instances..."
+    exit 0
 fi
 
 if [[ "$FOREGROUND" -eq 1 && "$COUNT" -ne 1 ]]; then
@@ -271,20 +327,6 @@ if [[ "$FOREGROUND" -eq 1 && "$COUNT" -ne 1 ]]; then
 fi
 
 mkdir -p "$LOG_DIR"
-
-if [[ "$GAME_AUDIO_ENABLED" -eq 1 ]]; then
-    # Guard against stacking multiple wavwrite-enabled Robotron launches.
-    if pgrep -f "mame.*robotron.*wavwrite" > /dev/null 2>&1; then
-        echo "ERROR: MAME with audio output is already running!"
-        echo "Kill existing instances with: killall mame"
-        exit 1
-    fi
-fi
-
-# No wavwrite-enabled Robotron process is active, so any prior capture files are stale.
-cleanup_audio_relays
-cleanup_audio_wavs
-cleanup_audio_fifos
 
 WARNING_FLAG=""
 if "$MAME_BIN" -showusage 2>&1 | grep -q -- "-skip_warnings"; then
@@ -302,6 +344,15 @@ if ! "$MAME_BIN" -rompath "$ROMPATH" -verifyroms robotron >/dev/null 2>&1; then
     echo "error: Robotron ROM verification failed for rompath: $ROMPATH" >&2
     "$MAME_BIN" -rompath "$ROMPATH" -verifyroms robotron || true
     exit 1
+fi
+
+RUNNING_COUNT="$(count_running_robotron_instances)"
+if [[ "$RUNNING_COUNT" -gt 0 ]]; then
+    kill_all_robotron_instances "Reconciling to $COUNT Robotron MAME instance(s) by restarting the current $RUNNING_COUNT instance(s)..."
+else
+    cleanup_audio_relays
+    cleanup_audio_wavs
+    cleanup_audio_fifos
 fi
 
 if [[ "$NO_VIDEO" -eq 1 ]]; then
@@ -361,11 +412,17 @@ else
     fi
 fi
 if [[ "$GAME_AUDIO_ENABLED" -eq 1 ]]; then
+    RELAY_SLOT_COUNT="$COUNT"
+    if [[ "$AUDIO_ALL_CLIENTS" -eq 0 ]]; then
+        RELAY_SLOT_COUNT=$((PREVIEW_SLOT_SELECTED + 1))
+    fi
     for i in $(seq 1 "$COUNT"); do
         CLIENT_SLOT=$((i-1))
-        mkfifo "/tmp/robotron_audio_client${CLIENT_SLOT}.fifo"
+        if [[ "$AUDIO_ALL_CLIENTS" -eq 1 || "$CLIENT_SLOT" -eq "$PREVIEW_SLOT_SELECTED" ]]; then
+            mkfifo "/tmp/robotron_audio_client${CLIENT_SLOT}.fifo"
+        fi
     done
-    python3 "$RELAY_SCRIPT" --slot-count "$COUNT" --audio-dir /tmp --max-bytes "$AUDIO_BUFFER_BYTES" \
+    python3 "$RELAY_SCRIPT" --slot-count "$RELAY_SLOT_COUNT" --audio-dir /tmp --max-bytes "$AUDIO_BUFFER_BYTES" \
         >> "$LOG_DIR/audio_relay.log" 2>&1 &
 fi
 declare -a PIDS=()
@@ -375,9 +432,15 @@ for i in $(seq 1 "$COUNT"); do
     CLIENT_SOCKET_ADDRESS="${socket_info%%|*}"
     PREVIEW_CLIENT_FLAG="${socket_info##*|}"
     SOUND_FLAG=""
-    if [[ "$GAME_AUDIO_ENABLED" -eq 1 ]]; then
+    if [[ "$GAME_AUDIO_ENABLED" -eq 1 && ( "$AUDIO_ALL_CLIENTS" -eq 1 || "$CLIENT_SLOT" -eq "$PREVIEW_SLOT_SELECTED" ) ]]; then
         AUDIO_FIFO="/tmp/robotron_audio_client${CLIENT_SLOT}.fifo"
         SOUND_FLAG="-wavwrite $AUDIO_FIFO -samplerate 48000 -audio_latency 1"
+    fi
+    CLIENT_VIDEO_FLAG="$VIDEO_FLAG"
+    CLIENT_VIDEO_MODE_DESC="$VIDEO_MODE_DESC"
+    if [[ "$NO_VIDEO" -eq 0 && "$VIDEO_ALL_CLIENTS" -eq 0 && "$CLIENT_SLOT" -ne "$PREVIEW_SLOT_SELECTED" ]]; then
+        CLIENT_VIDEO_FLAG="-video none"
+        CLIENT_VIDEO_MODE_DESC="headless"
     fi
     if [[ $i -eq 1 && "$THROTTLE_CLIENT0" -eq 1 ]]; then
         THROTTLE_FLAG="-throttle -speed 1.0"
@@ -387,17 +450,17 @@ for i in $(seq 1 "$COUNT"); do
     LOG_FILE="$LOG_DIR/mame_instance_${CLIENT_SLOT}.log"
     if [[ $i -eq 1 ]]; then
         # Keep the first instance attached to the terminal so one clean set of init lines stays visible.
-        ROBOTRON_SOCKET_ADDRESS="$CLIENT_SOCKET_ADDRESS" ROBOTRON_PREVIEW_CLIENT="$PREVIEW_CLIENT_FLAG" ROBOTRON_CLIENT_SLOT="$CLIENT_SLOT" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $THROTTLE_FLAG $SOUND_FLAG $VIDEO_FLAG -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT" &
+        ROBOTRON_SOCKET_ADDRESS="$CLIENT_SOCKET_ADDRESS" ROBOTRON_PREVIEW_CLIENT="$PREVIEW_CLIENT_FLAG" ROBOTRON_CLIENT_SLOT="$CLIENT_SLOT" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $THROTTLE_FLAG $SOUND_FLAG $CLIENT_VIDEO_FLAG -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT" &
     else
         # Additional clients stay backgrounded and log to per-instance files.
-        ROBOTRON_SOCKET_ADDRESS="$CLIENT_SOCKET_ADDRESS" ROBOTRON_PREVIEW_CLIENT="$PREVIEW_CLIENT_FLAG" ROBOTRON_CLIENT_SLOT="$CLIENT_SLOT" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $THROTTLE_FLAG $SOUND_FLAG $VIDEO_FLAG -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT" >> "$LOG_FILE" 2>&1 &
+        ROBOTRON_SOCKET_ADDRESS="$CLIENT_SOCKET_ADDRESS" ROBOTRON_PREVIEW_CLIENT="$PREVIEW_CLIENT_FLAG" ROBOTRON_CLIENT_SLOT="$CLIENT_SLOT" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $THROTTLE_FLAG $SOUND_FLAG $CLIENT_VIDEO_FLAG -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT" >> "$LOG_FILE" 2>&1 &
     fi
     pid=$!
     PIDS+=("$pid")
     if [[ $i -eq 1 && "$THROTTLE_CLIENT0" -eq 1 ]]; then
-        echo "  Started instance $i (client $CLIENT_SLOT -> $CLIENT_SOCKET_ADDRESS - $VIDEO_MODE_DESC, throttled) PID $pid  log: $LOG_FILE"
+        echo "  Started instance $i (client $CLIENT_SLOT -> $CLIENT_SOCKET_ADDRESS - $CLIENT_VIDEO_MODE_DESC, throttled) PID $pid  log: $LOG_FILE"
     else
-        echo "  Started instance $i (client $CLIENT_SLOT -> $CLIENT_SOCKET_ADDRESS - $VIDEO_MODE_DESC, unthrottled) PID $pid  log: $LOG_FILE"
+        echo "  Started instance $i (client $CLIENT_SLOT -> $CLIENT_SOCKET_ADDRESS - $CLIENT_VIDEO_MODE_DESC, unthrottled) PID $pid  log: $LOG_FILE"
     fi
 done
 

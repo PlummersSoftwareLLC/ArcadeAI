@@ -31,6 +31,7 @@ class RolloutBuffer:
         max_entities: int = None,
         entity_feature_dim: int = None,
         global_context_dim: int = None,
+        action_feature_dim: int = None,
         frame_stack: int = None,
         gamma: float = None,
         gae_lambda: float = None,
@@ -44,6 +45,7 @@ class RolloutBuffer:
         self.max_entities = max_entities or cfg.max_entities
         self.entity_feature_dim = entity_feature_dim or cfg.entity_feature_dim
         self.global_context_dim = global_context_dim or cfg.global_context_dim
+        self.action_feature_dim = action_feature_dim or cfg.action_feature_dim
         self.frame_stack = frame_stack or cfg.frame_stack
         self.gamma = gamma or tcfg.gamma
         self.gae_lambda = gae_lambda or tcfg.gae_lambda
@@ -54,6 +56,7 @@ class RolloutBuffer:
         N = self.max_entities
         F = self.entity_feature_dim
         G = self.global_context_dim
+        AF = self.action_feature_dim
         FS = self.frame_stack
 
         # Observations: per-frame entity set + global context
@@ -61,6 +64,8 @@ class RolloutBuffer:
         self.entity_features = torch.zeros(T, A, FS, N, F, device=self.device)
         self.entity_masks = torch.ones(T, A, FS, N, dtype=torch.bool, device=self.device)
         self.global_contexts = torch.zeros(T, A, FS, G, device=self.device)
+        self.move_action_features = torch.zeros(T, A, FS, cfg.num_move_actions, AF, device=self.device)
+        self.fire_action_features = torch.zeros(T, A, FS, cfg.num_fire_actions, AF, device=self.device)
 
         # Actions
         self.move_actions = torch.zeros(T, A, dtype=torch.long, device=self.device)
@@ -105,6 +110,8 @@ class RolloutBuffer:
         has_value: bool,
         reward: float,
         done: bool,
+        move_action_features: torch.Tensor = None,  # (FS, move_actions, AF)
+        fire_action_features: torch.Tensor = None,  # (FS, fire_actions, AF)
         expert_move: int = 8,
         expert_fire: int = 8,
         is_expert: bool = False,
@@ -118,6 +125,10 @@ class RolloutBuffer:
         self.entity_features[t, a] = entity_features
         self.entity_masks[t, a] = entity_mask
         self.global_contexts[t, a] = global_context
+        if move_action_features is not None:
+            self.move_action_features[t, a] = move_action_features
+        if fire_action_features is not None:
+            self.fire_action_features[t, a] = fire_action_features
         self.move_actions[t, a] = move_action
         self.fire_actions[t, a] = fire_action
         self.log_probs[t, a] = log_prob
@@ -168,6 +179,8 @@ class RolloutBuffer:
             "entity_features": self.entity_features.reshape(N, self.frame_stack, self.max_entities, self.entity_feature_dim),
             "entity_masks": self.entity_masks.reshape(N, self.frame_stack, self.max_entities),
             "global_contexts": self.global_contexts.reshape(N, self.frame_stack, self.global_context_dim),
+            "move_action_features": self.move_action_features.reshape(N, self.frame_stack, CONFIG.model.num_move_actions, self.action_feature_dim),
+            "fire_action_features": self.fire_action_features.reshape(N, self.frame_stack, CONFIG.model.num_fire_actions, self.action_feature_dim),
             "move_actions": self.move_actions.reshape(N),
             "fire_actions": self.fire_actions.reshape(N),
             "log_probs": self.log_probs.reshape(N),

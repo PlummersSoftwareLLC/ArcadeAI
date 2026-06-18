@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Robotron AI v3 — PPO Agent.
 
-High-level agent wrapping the Set Transformer network, PPO training,
+High-level agent wrapping the object-ray transformer network, PPO training,
 expert system, and state processing. Provides the same external API
 that the socket server expects: act(), step(), save(), load().
 """
@@ -22,7 +22,7 @@ from pathlib import Path
 from .config import CONFIG, MODEL_DIR, CHECKPOINT_PATH, GAME_SETTINGS
 from .model import RobotronPPONet
 from .state_processor import StateProcessor, extract_entities, extract_global_context
-from .expert import PotentialFieldExpert, get_expert_action
+from .expert import get_expert_action
 from .reward import shape_reward
 from .rollout_buffer import RolloutBuffer
 
@@ -63,8 +63,15 @@ def _configure_cpu_torch_threads() -> tuple[int, int]:
     return intra_threads, interop_threads
 
 
+def _open_fd_count() -> int:
+    try:
+        return len(os.listdir("/proc/self/fd"))
+    except Exception:
+        return -1
+
+
 class PPOAgent:
-    """PPO agent for Robotron with Set Transformer.
+    """PPO agent for Robotron with object-ray transformer policy.
 
     Manages:
       - Network (policy + value + auxiliary heads)
@@ -141,10 +148,10 @@ class PPOAgent:
             entity_feature_dim=cfg.entity_feature_dim,
             max_entities=cfg.max_entities,
             embed_dim=cfg.embed_dim,
-            num_isab_layers=cfg.num_isab_layers,
+            transformer_layers=cfg.transformer_layers,
             num_heads=cfg.num_heads,
-            num_inducing=cfg.num_inducing_points,
             global_context_dim=cfg.global_context_dim,
+            action_feature_dim=cfg.action_feature_dim,
             frame_stack=cfg.frame_stack,
             fusion_hidden=cfg.fusion_hidden,
             fusion_layers=cfg.fusion_layers,
@@ -180,7 +187,7 @@ class PPOAgent:
 
         # State processor
         self.state_processor = StateProcessor()
-        self.expert = PotentialFieldExpert()
+        # Expert actions are handled via module-level get_expert_action()
 
         # Per-client frame buffers: client_id → deque of processed frames
         self._frame_buffers: dict[int, deque] = {}
@@ -210,14 +217,16 @@ class PPOAgent:
         self._saved_expert_ratio = 0.0        # stash for o/e toggles
         self.manual_epsilon_override = False  # 4/6 keys: manual epsilon pct
         self._manual_epsilon = 0.0            # value set by 4/6
+        self._guidance_rescue_active = False
+        self._guidance_rescue_avg_reward = 0.0
 
         print(f"PPO Agent initialized on {self.device}")
         print(f"  Network params: {sum(p.numel() for p in self.net.parameters()):,}")
         print(f"  Entity feature dim: {cfg.entity_feature_dim}")
         print(f"  Max entities: {cfg.max_entities}")
         print(f"  Embed dim: {cfg.embed_dim}")
-        print(f"  ISAB layers: {cfg.num_isab_layers}")
-        print(f"  Inducing points: {cfg.num_inducing_points}")
+        print(f"  Transformer layers: {cfg.transformer_layers}")
+        print(f"  Action feature dim: {cfg.action_feature_dim}")
         print(f"  Frame stack: {cfg.frame_stack}")
         if self._multi_gpu:
             print(f"  Multi-GPU: infer={self.infer_device}, train={self.train_device}")
@@ -297,6 +306,8 @@ class PPOAgent:
             tensors["entity_features"],
             tensors["entity_mask"],
             tensors["global_context"],
+            tensors["move_action_features"],
+            tensors["fire_action_features"],
         )
 
         move_logits = out["move_logits"][0].clamp(-50, 50)
@@ -334,6 +345,8 @@ class PPOAgent:
             tensors["entity_features"],
             tensors["entity_mask"],
             tensors["global_context"],
+            tensors["move_action_features"],
+            tensors["fire_action_features"],
         )
 
         move = out["move_logits"][0].argmax().item()
@@ -365,6 +378,8 @@ class PPOAgent:
                 tensors["entity_features"],
                 tensors["entity_mask"],
                 tensors["global_context"],
+                tensors["move_action_features"],
+                tensors["fire_action_features"],
             ).item()
             return move, fire, 0.0, value, True, self._detach_tensors(tensors)
 
@@ -375,6 +390,8 @@ class PPOAgent:
             tensors["entity_features"],
             tensors["entity_mask"],
             tensors["global_context"],
+            tensors["move_action_features"],
+            tensors["fire_action_features"],
         )
 
         move = move_a[0].item()
@@ -422,6 +439,8 @@ class PPOAgent:
             entity_features = batch["entity_features"].to(self.device)
             entity_masks = batch["entity_masks"].to(self.device)
             global_contexts = batch["global_contexts"].to(self.device)
+            move_action_features = batch["move_action_features"].to(self.device)
+            fire_action_features = batch["fire_action_features"].to(self.device)
             old_move = batch["move_actions"].to(self.device)
             old_fire = batch["fire_actions"].to(self.device)
             old_log_probs = batch["log_probs"].to(self.device)
@@ -438,7 +457,13 @@ class PPOAgent:
             any_expert = bool(is_expert.any().item())
 
             # Forward pass: evaluate the stored actions under the current policy.
-            out = self.net(entity_features, entity_masks, global_contexts)
+            out = self.net(
+                entity_features,
+                entity_masks,
+                global_contexts,
+                move_action_features,
+                fire_action_features,
+            )
             move_logits = out["move_logits"].clamp(-50.0, 50.0)
             fire_logits = out["fire_logits"].clamp(-50.0, 50.0)
             if torch.isnan(move_logits).any() or torch.isinf(move_logits).any():
@@ -573,13 +598,18 @@ class PPOAgent:
         """Compute current BC weight from decay schedule."""
         tcfg = CONFIG.train
         if self.total_frames <= tcfg.bc_decay_start_frame:
-            return tcfg.bc_weight_initial
-        if self.total_frames >= tcfg.bc_decay_end_frame:
-            return tcfg.bc_weight_floor
-        frac = (self.total_frames - tcfg.bc_decay_start_frame) / max(
-            1, tcfg.bc_decay_end_frame - tcfg.bc_decay_start_frame
-        )
-        return tcfg.bc_weight_initial + frac * (tcfg.bc_weight_floor - tcfg.bc_weight_initial)
+            bc_weight = tcfg.bc_weight_initial
+        elif self.total_frames >= tcfg.bc_decay_end_frame:
+            bc_weight = tcfg.bc_weight_floor
+        else:
+            frac = (self.total_frames - tcfg.bc_decay_start_frame) / max(
+                1, tcfg.bc_decay_end_frame - tcfg.bc_decay_start_frame
+            )
+            bc_weight = tcfg.bc_weight_initial + frac * (tcfg.bc_weight_floor - tcfg.bc_weight_initial)
+        with self._override_lock:
+            if self._guidance_rescue_active:
+                bc_weight = max(bc_weight, tcfg.guidance_rescue_bc_weight_floor)
+        return bc_weight
 
     def _build_lr_scheduler(self):
         """Linear warmup then cosine decay."""
@@ -629,10 +659,38 @@ class PPOAgent:
                 return self._manual_expert_ratio
         # Natural decay schedule
         tcfg = CONFIG.train
-        if self.total_frames >= tcfg.expert_ratio_decay_frames:
-            return tcfg.expert_ratio_final
-        frac = self.total_frames / max(1, tcfg.expert_ratio_decay_frames)
-        return tcfg.expert_ratio_initial + frac * (tcfg.expert_ratio_final - tcfg.expert_ratio_initial)
+        if self.total_frames <= tcfg.expert_ratio_decay_start_frame:
+            expert_ratio = tcfg.expert_ratio_initial
+        elif self.total_frames >= tcfg.expert_ratio_decay_frames:
+            expert_ratio = tcfg.expert_ratio_final
+        else:
+            frac = (
+                (self.total_frames - tcfg.expert_ratio_decay_start_frame)
+                / max(1, tcfg.expert_ratio_decay_frames - tcfg.expert_ratio_decay_start_frame)
+            )
+            expert_ratio = tcfg.expert_ratio_initial + frac * (tcfg.expert_ratio_final - tcfg.expert_ratio_initial)
+        with self._override_lock:
+            if self._guidance_rescue_active:
+                expert_ratio = max(expert_ratio, tcfg.guidance_rescue_expert_ratio_floor)
+        return expert_ratio
+
+    def update_guidance_rescue(self, avg_reward: float) -> bool:
+        """Raise expert/BC floors when recent self-play reward is unhealthy."""
+        tcfg = CONFIG.train
+        avg_reward = float(avg_reward)
+        rescue_active = (
+            self.total_frames >= tcfg.guidance_rescue_min_frame
+            and math.isfinite(avg_reward)
+            and avg_reward <= tcfg.guidance_rescue_reward_threshold
+        )
+        with self._override_lock:
+            changed = rescue_active != self._guidance_rescue_active
+            self._guidance_rescue_active = rescue_active
+            self._guidance_rescue_avg_reward = avg_reward
+        if changed:
+            state = "ON" if rescue_active else "OFF"
+            print(f"[v3] Guidance rescue {state} (avg reward {avg_reward:.1f})")
+        return rescue_active
 
     def get_epsilon(self) -> float:
         """Current exploration epsilon, respecting manual overrides."""
@@ -767,7 +825,11 @@ class PPOAgent:
                 GAME_SETTINGS.save()
                 return True
             except Exception as e:
-                print(f"Save failed: {e}")
+                fd_count = _open_fd_count()
+                if fd_count >= 0:
+                    print(f"Save failed: {e} (open_fds={fd_count})")
+                else:
+                    print(f"Save failed: {e}")
                 return False
 
     def load(self, path: str = None) -> bool:
@@ -779,6 +841,12 @@ class PPOAgent:
                 return False
 
             checkpoint = torch.load(str(load_path), map_location=self.train_device, weights_only=False)
+
+            saved_arch = checkpoint.get("config", {}).get("model", {}).get("architecture")
+            current_arch = getattr(CONFIG.model, "architecture", None)
+            if current_arch and saved_arch != current_arch:
+                print(f"Checkpoint architecture {saved_arch!r} != {current_arch!r}; starting fresh.")
+                return False
 
             self.net.load_state_dict(checkpoint["net_state_dict"])
             self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])

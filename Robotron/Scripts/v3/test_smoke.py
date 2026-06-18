@@ -15,27 +15,32 @@ def test_config():
 
 def test_state_processor():
     from v3.state_processor import StateProcessor
-    from v3.config import WIRE_PARAMS_COUNT
+    from v3.config import CONFIG, WIRE_PARAMS_COUNT
 
-    wire = np.random.randn(WIRE_PARAMS_COUNT).astype(np.float32)
-    # Set some occupancy counts so entities are found
-    wire[766] = 5   # projectile occupancy
-    wire[766 + 241] = 8  # danger occupancy
-    wire[766 + 241 + 321] = 3  # human occupancy
+    wire = np.zeros(WIRE_PARAMS_COUNT, dtype=np.float32)
+    wire[5] = 0.5
+    wire[6] = 0.5
+    wire[766] = 1.0
+    wire[767] = 1.0
+    wire[768] = 0.10
+    wire[769] = -0.05
+    wire[770] = 0.12
 
     proc = StateProcessor()
     frame = proc.process_frame(wire)
-    assert frame["entity_features"].shape == (128, 18)
-    assert frame["entity_mask"].shape == (128,)
+    assert frame["entity_features"].shape == (CONFIG.model.max_entities, CONFIG.model.entity_feature_dim)
+    assert frame["entity_mask"].shape == (CONFIG.model.max_entities,)
     assert frame["global_context"].shape == (40,)
+    assert frame["move_action_features"].shape == (9, CONFIG.model.action_feature_dim)
+    assert frame["fire_action_features"].shape == (9, CONFIG.model.action_feature_dim)
     assert frame["num_entities"] > 0
 
-    from v3.config import CONFIG
     T = CONFIG.model.frame_stack
-    frames = [proc.process_frame(np.random.randn(WIRE_PARAMS_COUNT).astype(np.float32)) for _ in range(T)]
+    frames = [proc.process_frame(wire.copy()) for _ in range(T)]
     stacked = proc.stack_frames(frames)
-    assert stacked["entity_features"].shape == (T, 128, 18)
+    assert stacked["entity_features"].shape == (T, CONFIG.model.max_entities, CONFIG.model.entity_feature_dim)
     assert stacked["global_context"].shape == (T, 40)
+    assert stacked["move_action_features"].shape == (T, 9, CONFIG.model.action_feature_dim)
     print("  state_processor: OK")
 
 def test_model():
@@ -48,20 +53,24 @@ def test_model():
 
     from v3.config import CONFIG
     T = CONFIG.model.frame_stack
-    B, N, F, G = 4, 128, 18, 40
+    B = 4
+    N = CONFIG.model.max_entities
+    F = CONFIG.model.entity_feature_dim
+    G = CONFIG.model.global_context_dim
+    AF = CONFIG.model.action_feature_dim
     ent = torch.randn(B, T, N, F)
     mask = torch.ones(B, T, N, dtype=torch.bool)
     mask[:, :, :20] = False
     ctx = torch.randn(B, T, G)
+    move_feats = torch.randn(B, T, CONFIG.model.num_move_actions, AF)
+    fire_feats = torch.randn(B, T, CONFIG.model.num_fire_actions, AF)
 
-    out = net(ent, mask, ctx)
+    out = net(ent, mask, ctx, move_feats, fire_feats)
     assert out["move_logits"].shape == (B, 9)
     assert out["fire_logits"].shape == (B, 9)
     assert out["value"].shape == (B,)
-    assert "aux_1" in out
-    assert "aux_5" in out
 
-    move, fire, lp, entropy, val = net.get_action_and_value(ent, mask, ctx)
+    move, fire, lp, entropy, val = net.get_action_and_value(ent, mask, ctx, move_feats, fire_feats)
     assert move.shape == (B,)
     assert fire.shape == (B,)
     assert lp.shape == (B,)
@@ -69,12 +78,11 @@ def test_model():
     print(f"  model: OK ({params:,} params)")
 
 def test_expert():
-    from v3.expert import PotentialFieldExpert
+    from v3.expert import get_expert_action
     from v3.config import WIRE_PARAMS_COUNT
 
     wire = np.random.randn(WIRE_PARAMS_COUNT).astype(np.float32)
-    expert = PotentialFieldExpert()
-    move, fire = expert.get_action(wire)
+    move, fire = get_expert_action(wire)
     assert 0 <= move <= 8
     assert 0 <= fire <= 8
     print("  expert: OK")
@@ -116,9 +124,11 @@ def test_rollout_buffer():
         for actor in range(2):
             buf.add(
                 actor_id=actor,
-                entity_features=torch.randn(T, 128, 18),
-                entity_mask=torch.ones(T, 128, dtype=torch.bool),
-                global_context=torch.randn(T, 40),
+                entity_features=torch.randn(T, CONFIG.model.max_entities, CONFIG.model.entity_feature_dim),
+                entity_mask=torch.ones(T, CONFIG.model.max_entities, dtype=torch.bool),
+                global_context=torch.randn(T, CONFIG.model.global_context_dim),
+                move_action_features=torch.randn(T, CONFIG.model.num_move_actions, CONFIG.model.action_feature_dim),
+                fire_action_features=torch.randn(T, CONFIG.model.num_fire_actions, CONFIG.model.action_feature_dim),
                 move_action=np.random.randint(0, 9),
                 fire_action=np.random.randint(0, 9),
                 log_prob=-0.5,

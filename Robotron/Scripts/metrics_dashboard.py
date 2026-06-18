@@ -359,6 +359,75 @@ class _DashboardState:
 
     def _get_model_desc(self) -> str:
       cfg = RL_CONFIG
+      v3_net = getattr(self.agent, "net", None) if self.agent is not None else None
+      if v3_net is not None or self._model_desc is None:
+        try:
+          from v3.config import CONFIG as V3_CONFIG
+          from v3.model import RobotronPPONet
+
+          v3_cfg = V3_CONFIG.model
+          summary_net = v3_net
+          if summary_net is None:
+            summary_net = RobotronPPONet(
+              entity_feature_dim=v3_cfg.entity_feature_dim,
+              max_entities=v3_cfg.max_entities,
+              embed_dim=v3_cfg.embed_dim,
+              transformer_layers=v3_cfg.transformer_layers,
+              num_heads=v3_cfg.num_heads,
+              global_context_dim=v3_cfg.global_context_dim,
+              action_feature_dim=v3_cfg.action_feature_dim,
+              frame_stack=v3_cfg.frame_stack,
+              fusion_hidden=v3_cfg.fusion_hidden,
+              fusion_layers=v3_cfg.fusion_layers,
+              num_move_actions=v3_cfg.num_move_actions,
+              num_fire_actions=v3_cfg.num_fire_actions,
+              use_auxiliary_head=v3_cfg.use_auxiliary_head,
+              auxiliary_predict_steps=v3_cfg.auxiliary_predict_steps,
+              dropout=v3_cfg.dropout,
+            )
+          param_count = sum(p.numel() for p in summary_net.parameters())
+          model_desc_key = (
+            id(v3_net) if v3_net is not None else "v3_config_summary",
+            getattr(v3_cfg, "architecture", "object_ray_v1"),
+            int(getattr(v3_cfg, "entity_feature_dim", 0) or 0),
+            int(getattr(v3_cfg, "transformer_layers", 0) or 0),
+            int(getattr(v3_cfg, "embed_dim", 0) or 0),
+            int(getattr(v3_cfg, "global_context_dim", 0) or 0),
+            int(getattr(v3_cfg, "action_feature_dim", 0) or 0),
+            int(getattr(v3_cfg, "frame_stack", 0) or 0),
+            int(getattr(v3_cfg, "fusion_hidden", 0) or 0),
+            int(getattr(v3_cfg, "fusion_layers", 0) or 0),
+            int(getattr(v3_cfg, "num_move_actions", 0) or 0),
+            int(getattr(v3_cfg, "num_fire_actions", 0) or 0),
+            param_count,
+          )
+          if self._model_desc is not None and self._model_desc_key == model_desc_key:
+            return self._model_desc
+
+          layers = [
+            str(getattr(v3_cfg, "architecture", "object_ray_v1")),
+            f"ent{int(getattr(v3_cfg, 'entity_feature_dim', 0) or 0)}",
+            f"tx{int(getattr(v3_cfg, 'transformer_layers', 0) or 0)}x{int(getattr(v3_cfg, 'embed_dim', 0) or 0)}",
+            f"g{int(getattr(v3_cfg, 'global_context_dim', 0) or 0)}",
+            f"ray{int(getattr(v3_cfg, 'action_feature_dim', 0) or 0)}",
+            f"fs{int(getattr(v3_cfg, 'frame_stack', 0) or 0)}",
+            f"fus{int(getattr(v3_cfg, 'fusion_hidden', 0) or 0)}x{int(getattr(v3_cfg, 'fusion_layers', 0) or 0)}",
+            f"act({int(getattr(v3_cfg, 'num_move_actions', 0) or 0)}+{int(getattr(v3_cfg, 'num_fire_actions', 0) or 0)})",
+          ]
+          arch_str = " » ".join(layers)
+          if param_count >= 1_000_000:
+            p_str = f"{param_count / 1_000_000:.1f}M"
+          elif param_count >= 1_000:
+            p_str = f"{param_count / 1_000:.0f}K"
+          else:
+            p_str = str(param_count)
+          desc = f"Model: ObjectRay+PPO · {arch_str} · {p_str} params"
+          self._model_desc = desc
+          self._model_desc_key = model_desc_key
+          return desc
+        except Exception:
+          pass
+
       net = getattr(self.agent, "online_net", None) if self.agent is not None else None
 
       # Prefer describing the active network structure rather than the older
@@ -370,8 +439,8 @@ class _DashboardState:
           hidden_layers = list(getattr(net, "mlp_hidden_layers", list(getattr(cfg, "mlp_hidden_layers", [1024, 512]) or [1024, 512])))
           output_dim = int(getattr(net, "mlp_output_dim", int(getattr(cfg, "mlp_output_dim", 256) or 256)))
           uses_attn = bool(getattr(net, "use_mlp_with_attention", False))
- 
-           uses_dir_lanes = bool(getattr(net, "use_directional_lanes", False))
+
+          uses_dir_lanes = bool(getattr(net, "use_directional_lanes", False))
           uses_pointer = bool(getattr(net, "use_pointer_action_heads", False))
           uses_memory = bool(getattr(net, "use_temporal_memory", False))
           slot_count = int(getattr(net, "num_object_slots", int(getattr(cfg, "object_slots", 0) or 0)))

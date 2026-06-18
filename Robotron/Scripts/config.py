@@ -289,6 +289,11 @@ class RLConfigData:
     type_embedding_dim: int = 16
     # Entity self-attention: let entities see each other before lane cross-attention.
     entity_self_attn_layers: int = 2
+    # Use ISAB (Induced Set Attention Block) instead of full O(N²) self-attention.
+    # Reduces entity self-attention to O(NM) via M learnable inducing points.
+    # Backported from V3 Set Transformer.  Requires fresh checkpoint.
+    use_isab: bool = True
+    isab_num_inducing: int = 32
     attn_heads: int = 4
     attn_dim: int = 256
     attn_layers: int = 1
@@ -299,6 +304,14 @@ class RLConfigData:
     global_hidden: int = 128
     category_summary_dim: int = 48
     entity_hidden: int = 192
+
+    # Auxiliary next-state entity position prediction heads.
+    # Backported from V3: trains small MLP heads off the trunk to predict
+    # entity (dx, dy) positions N steps into the future.  Regularises the
+    # shared representation to encode entity kinematics.
+    use_auxiliary_heads: bool = True
+    auxiliary_predict_steps: list = field(default_factory=lambda: [1, 5])
+    auxiliary_loss_weight: float = 0.1
 
     # Distributional C51
     # Robotron per-frame rewards: grunt=100, brain=500, human rescue=1000-5000.
@@ -461,6 +474,15 @@ class RLConfigData:
     subj_reward_scale: float = 0.001
     reward_clip: float = 100.0
     death_reward_clip: float = 60.0
+
+    # ── reward shaping (backported from V3) ─────────────────────────────
+    # Additional shaped reward components layered on top of the existing
+    # obj/subj scaling.  Set individual scales to 0.0 to disable.
+    survival_bonus: float = 0.01
+    score_log_scale: float = 0.5
+    human_rescue_bonus: float = 2.0
+    death_penalty: float = 0.0         # V2 already has death via obj_reward; set >0 to add explicit penalty
+    proximity_penalty_scale: float = 0.05
 
     # ── death attribution ───────────────────────────────────────────────
     death_priority_boost: float = 5.0      # Lower terminal boost to reduce over-focusing on death tails

@@ -4,19 +4,15 @@ This `Robotron/Scripts` project is now a stripped baseline for Robotron-specific
 
 ## Current Scope
 
-- Lua sends a **2210-value hybrid state vector** each frame:
-  - 98 global features
-    - alive / score / replay / lasers / wave
-    - player position and velocity
-    - `ZP1ENM` enemy-state bag (50 normalized bytes)
-    - per-category counts / presence / nearest-distance summaries
-    - quadrant danger / rescue summaries
-    - wall proximity
-  - `12 x 12 x 8` player-centered spatial grid
-    - local danger, projectile, brute, human, obstacle, wall, density, and approach channels
-  - `64 x 15` object tokens
-    - salient objects from `OPTR`, `HPTR`, `RPTR`, `PPTR`
-    - relative position, true velocity, distance, direction, threat, size, type flags
+- Lua sends a **1454-value wire packet** each frame:
+  - 18 core player/game values
+  - 22 `ZP1ENM` / ELIST bytes
+  - legacy lane/grid sections kept on the wire for server stability
+  - role pools for projectile, danger, human, and electrode objects
+- Python v3 now converts those role pools into an **object-ray representation**:
+  - HUD-consistent collision-center object positions from `OPTR`, `HPTR`, `RPTR`, and `PPTR`
+  - 32-feature entity tokens with relative/absolute position, velocity, timing, threat, type, and role flags
+  - per-action move/fire ray features so each joystick direction is scored against the current geometry
 - Python returns **dual 8-way joystick actions**:
   - movement direction index `0..7`
   - firing direction index `0..7`

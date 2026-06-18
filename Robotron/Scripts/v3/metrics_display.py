@@ -150,11 +150,11 @@ def display_metrics_header():
     global _row_counter
     _row_counter = 0
     hdr = (
-        f"{'Frame':>11} {'FPS':>7} {'Epsi':>7} {'Xprt':>7} {'AvgScr':>7} "
+        f"{'Frame':>11} {'FPS':>7} {'Epsi':>7} {'Xprt':>7} {'Pol%':>7} {'AvgScr':>7} "
         f"{'AvgRwd':>9} {'Rwd100K':>9} {'Rwd1M':>9} {'Rwd5M':>9} "
         f"{'Loss':>10} {'PiLoss':>8} {'VLoss':>8} {'Entropy':>8} "
         f"{'EpLen':>8} {'BCLoss':>8} {'BCWgt':>6} "
-        f"{'Clnt':>4} {'Levl':>5} "
+        f"{'Clnt':>4} {'Levl':>5} {'QSz':>6} "
         f"{'GrNorm':>8} {'LR':>9}"
     )
     _write_console_line(hdr)
@@ -176,6 +176,7 @@ def display_metrics_row(server_metrics, agent):
     rwd100k, rwd1m, rwd5m = get_reward_window_averages()
 
     expert_r = agent.get_expert_ratio()
+    pol_r = getattr(m, "policy_sampled_fraction", 0.0)
     eps = agent.get_epsilon()
     bc_w = agent._get_bc_weight()
     lr = agent.optimizer.param_groups[0]["lr"]
@@ -185,6 +186,14 @@ def display_metrics_row(server_metrics, agent):
     xprt_mark = "*" if agent.is_expert_overridden() else "%"
     train_mark = "" if agent.training_enabled else " T-OFF"
 
+    # Queue size from the server's transition queue
+    queue_sz = 0
+    if m.global_server is not None:
+        try:
+            queue_sz = len(m.global_server._transition_queue)
+        except Exception:
+            pass
+
     def _fr(v, w=9):
         try:
             return f"{float(v):.1f}".rjust(w)
@@ -193,13 +202,13 @@ def display_metrics_row(server_metrics, agent):
 
     row = (
         f"{m.total_frames:>11,} {m.fps:>7.1f} "
-        f"{eps*100:>6.1f}{eps_mark} {expert_r*100:>6.1f}{xprt_mark} "
+        f"{eps*100:>6.1f}{eps_mark} {expert_r*100:>6.1f}{xprt_mark} {pol_r*100:>6.1f}% "
         f"{int(round(m.avg_game_score)):>7,} "
         f"{_fr(m.avg_reward)} {_fr(rwd100k)} {_fr(rwd1m)} {_fr(rwd5m)} "
         f"{agent.last_loss:>10.6f} {agent.last_policy_loss:>8.5f} "
         f"{agent.last_value_loss:>8.5f} {agent.last_entropy:>8.5f} "
         f"{m.avg_ep_len:>8.1f} {agent.last_bc_loss:>8.5f} {bc_w:>6.3f} "
-        f"{m.client_count:>4} {m.avg_level:>5.1f} "
+        f"{m.client_count:>4} {m.avg_level:>5.1f} {queue_sz:>6} "
         f"{agent.last_grad_norm:>8.3f} {lr:>9.1e}{train_mark}"
     )
     _write_console_line(row)

@@ -24,6 +24,13 @@ from aimodel import (
 )
 from config import RL_CONFIG, SERVER_CONFIG, metrics, game_settings
 try:
+    from reward_shaper import shape_reward as _shape_reward_v2
+except ImportError:
+    try:
+        from Scripts.reward_shaper import shape_reward as _shape_reward_v2
+    except ImportError:
+        _shape_reward_v2 = None
+try:
     from inference_pool import ProcessInferencePool
 except ImportError:
     try:
@@ -814,6 +821,7 @@ class SocketServer:
                 "last_player_alive": False,
                 "player_alive": False,
                 "game_score": 0,
+                "prev_frame_score": 0,
                 "num_lasers": 0,
                 "alive_streak": 0,
                 "dead_streak": 0,
@@ -1007,6 +1015,7 @@ class SocketServer:
                     # during attract/death the byte can hold garbage.
                     if frame.player_alive and bool(cs.get("gameplay_seen", False)):
                         cs["level_number"] = frame.level_number
+                        cs["prev_frame_score"] = int(cs.get("game_score", 0) or 0)
                         cs["game_score"] = max(0, int(getattr(frame, "game_score", 0) or 0))
                     # Only accept a new peak while actively playing the last life.
                     if (
@@ -1058,17 +1067,31 @@ class SocketServer:
                     and cs.get("last_player_alive", False)
                 ):
                     move_i, fire_i = cs["last_action"]
+                    # Reward shaping (V3 backport with survival bonus, log-scaled score, proximity)
+                    prev_score = int(cs.get("prev_frame_score", 0) or 0)
+                    cur_score = max(0, int(getattr(frame, "game_score", 0) or 0))
+                    score_delta = max(0.0, float(cur_score - prev_score))
+                    if _shape_reward_v2 is not None:
+                        total_r = _shape_reward_v2(
+                            obj_reward=float(frame.objreward),
+                            subj_reward=float(frame.subjreward),
+                            done=bool(frame.done),
+                            player_alive=bool(frame.player_alive),
+                            score_delta=score_delta,
+                        )
+                    else:
+                        subj_r = float(frame.subjreward) * RL_CONFIG.subj_reward_scale
+                        obj_r = float(frame.objreward) * RL_CONFIG.obj_reward_scale
+                        total_unclipped_r = obj_r + subj_r
+                        clip = RL_CONFIG.death_reward_clip if frame.done else RL_CONFIG.reward_clip
+                        total_r = max(-clip, min(clip, total_unclipped_r))
+                    # Effective split for metrics display
                     subj_r = float(frame.subjreward) * RL_CONFIG.subj_reward_scale
                     obj_r = float(frame.objreward) * RL_CONFIG.obj_reward_scale
                     total_unclipped_r = obj_r + subj_r
-                    # Use wider clip on terminal frames so death penalty passes through
-                    clip = RL_CONFIG.death_reward_clip if frame.done else RL_CONFIG.reward_clip
-                    total_r = max(-clip, min(clip, total_unclipped_r))
                     eff_obj_r = obj_r
                     eff_subj_r = subj_r
                     if abs(total_unclipped_r) > 1e-9:
-                        # Display reward components after the same clip that the trainer sees
-                        # so Rwrd == Obj + Subj in the metrics table.
                         scale = total_r / total_unclipped_r
                         eff_obj_r = obj_r * scale
                         eff_subj_r = subj_r * scale

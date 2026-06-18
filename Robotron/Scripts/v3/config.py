@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Robotron AI v3 — Configuration for Set Transformer + PPO architecture."""
+"""Robotron AI v3 — Configuration for object-ray transformer + PPO."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -57,6 +57,8 @@ ENTITY_TYPE_NAMES = (
     "enforcer", "projectile", "human", "electrode",
 )
 NUM_ENTITY_TYPES = len(ENTITY_TYPE_NAMES)
+MODEL_ARCHITECTURE = "object_ray_v1"
+ACTION_FEATURE_DIM = 12
 
 # ── Server ──────────────────────────────────────────────────────────────────
 
@@ -67,29 +69,35 @@ class ServerConfig:
     max_clients: int = 36
     params_count: int = WIRE_PARAMS_COUNT
 
-# ── Set Transformer architecture ────────────────────────────────────────────
+# ── Object-ray transformer architecture ─────────────────────────────────────
 
 @dataclass
 class ModelConfig:
-    # Entity feature dimensions
-    entity_feature_dim: int = 18   # 4 rect + 2 vel + 12 type one-hot
-    max_entities: int = 128        # pad/truncate entity set to this size
+    architecture: str = MODEL_ARCHITECTURE
 
-    # Set Transformer encoder
-    embed_dim: int = 256
-    num_isab_layers: int = 1       # 1 ISAB layer (was 3) — sufficient for early training
-    num_heads: int = 8
-    num_inducing_points: int = 32  # M for ISAB: reduces O(N²)→O(NM)
+    # Entity features keep the old first 18 columns for expert compatibility:
+    # rel_xy, box_wh, velocity, and 12 type one-hot columns. The remaining
+    # columns add HUD-consistent absolute position, timing, and role flags.
+    entity_feature_dim: int = 32
+    max_entities: int = 96
+
+    # Entity encoder
+    embed_dim: int = 160
+    transformer_layers: int = 2
+    num_heads: int = 4
     dropout: float = 0.0
 
     # Temporal context
-    frame_stack: int = 2           # concat z_{t-1}..z_t (was 4) — halves GPU cost
+    frame_stack: int = 3
 
     # Global context (core features + ELIST directly injected)
     global_context_dim: int = LEGACY_CORE_FEATURES + LEGACY_ELIST_FEATURES  # 40
 
-    # Fusion MLP after concat(entity_repr, global_context, temporal)
-    fusion_hidden: int = 512
+    # Per-action ray affordances for move and fire heads.
+    action_feature_dim: int = ACTION_FEATURE_DIM
+
+    # Fusion MLP after temporal entity/context encoding.
+    fusion_hidden: int = 320
     fusion_layers: int = 2
 
     # Action space
@@ -100,8 +108,9 @@ class ModelConfig:
     def num_joint_actions(self) -> int:
         return self.num_move_actions * self.num_fire_actions
 
-    # Auxiliary prediction head (next-state entity positions)
-    use_auxiliary_head: bool = True
+    # The old next-position auxiliary head was tied to stable pool slots. The
+    # new model is action-conditioned and starts fresh without that loss.
+    use_auxiliary_head: bool = False
     auxiliary_predict_steps: list[int] = field(default_factory=lambda: [1, 5])
 
 # ── PPO training ────────────────────────────────────────────────────────────
@@ -113,8 +122,8 @@ class TrainConfig:
     gae_lambda: float = 0.95
     clip_epsilon: float = 0.2
     clip_value: float = 0.5
-    entropy_coeff: float = 0.01
-    value_coeff: float = 0.5
+    entropy_coeff: float = 0.03
+    value_coeff: float = 0.25
     max_grad_norm: float = 1.0
 
     # PPO mini-batch
@@ -127,33 +136,43 @@ class TrainConfig:
     lr: float = 3e-4
     lr_min: float = 1e-5
     lr_warmup_steps: int = 5000
-    lr_decay_steps: int = 500_000
+    lr_decay_steps: int = 3_000_000
     weight_decay: float = 1e-5
     adam_eps: float = 1e-5
 
     # Expert behavioral cloning
     bc_weight_initial: float = 1.0
-    bc_weight_floor: float = 0.2
-    bc_decay_start_frame: int = 0
-    bc_decay_end_frame: int = 10_000_000
+    # Keep BC present, but hand off much sooner so the policy learns to recover
+    # from its own states instead of watching the heuristic for millions of frames.
+    bc_weight_floor: float = 0.20
+    bc_decay_start_frame: int = 250_000
+    bc_decay_end_frame: int = 3_000_000
 
     # Expert action ratio (how often to use expert vs policy)
     expert_ratio_initial: float = 0.99
-    expert_ratio_final: float = 0.05
-    expert_ratio_decay_frames: int = 10_000_000
+    expert_ratio_final: float = 0.20
+    expert_ratio_decay_start_frame: int = 100_000
+    expert_ratio_decay_frames: int = 2_000_000
 
     # Exploration (epsilon-greedy fallback for PPO)
     epsilon_initial: float = 0.1
     epsilon_final: float = 0.02
     epsilon_decay_frames: int = 5_000_000
 
+    # If recent self-play reward collapses after the early guided phase,
+    # temporarily raise the expert/BC floor so the policy can recover.
+    guidance_rescue_min_frame: int = 4_000_000
+    guidance_rescue_reward_threshold: float = -10.0
+    guidance_rescue_expert_ratio_floor: float = 0.10
+    guidance_rescue_bc_weight_floor: float = 0.15
+
     # Reward shaping
     survival_bonus: float = 0.01
     score_log_scale: float = 1.0
     human_rescue_bonus: float = 5.0
-    death_penalty: float = 100.0
+    death_penalty: float = 10.0
     proximity_penalty_scale: float = 0.1
-    reward_clip: float = 100.0
+    reward_clip: float = 10.0
 
     # Checkpoint
     save_interval_frames: int = 500_000
@@ -195,7 +214,7 @@ CONFIG = V3Config()
 
 @dataclass
 class GameSettings:
-    start_advanced: bool = True
+    start_advanced: bool = False
     start_level_min: int = 1
     epsilon: float = CONFIG.train.epsilon_initial
     expert_ratio: float = CONFIG.train.expert_ratio_initial

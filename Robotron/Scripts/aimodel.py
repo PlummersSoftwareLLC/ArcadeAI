@@ -1018,9 +1018,11 @@ def _active_tokens_from_state(state: np.ndarray) -> np.ndarray:
     legacy_size = _legacy_slot_layout()[1]
     hybrid_size = _hybrid_base_state_size()
 
-    if tactical_size <= base_state_size < legacy_size:
+    # Route to the correct parser based on state size.
+    # tactical_size (1454) > legacy_size (745) so check tactical first.
+    if base_state_size >= tactical_size:
         return _tactical_slot_tokens_from_state(state)
-    if legacy_size <= base_state_size < hybrid_size:
+    if base_state_size >= legacy_size:
         return _legacy_slot_tokens_from_state(state)
     _, _, tokens = _split_latest_sections(state)
     if tokens is None or tokens.size == 0:
@@ -2083,6 +2085,93 @@ class SpatialGridEncoder(nn.Module):
         return self.proj(h.flatten(start_dim=1))
 
 
+# ── ISAB — Induced Set Attention Block (backported from V3) ─────────────────
+# Reduces entity self-attention from O(N²) to O(NM) via M learnable inducing
+# points.  Two cross-attention steps:
+#   1. Inducing points attend to input set  → H = CrossAttn(I, X)
+#   2. Input set attends to inducing points → Y = CrossAttn(X, H)
+
+class _ISABCrossAttention(nn.Module):
+    """Cross-attention: Q from one set, K/V from another."""
+
+    def __init__(self, dim: int, num_heads: int, dropout: float = 0.0):
+        super().__init__()
+        assert dim % num_heads == 0
+        self.num_heads = num_heads
+        self.head_dim = dim // num_heads
+        self.scale = self.head_dim ** -0.5
+        self.q_proj = nn.Linear(dim, dim)
+        self.k_proj = nn.Linear(dim, dim)
+        self.v_proj = nn.Linear(dim, dim)
+        self.out_proj = nn.Linear(dim, dim)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, query: torch.Tensor, key_value: torch.Tensor,
+                mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        B, N, D = query.shape
+        _, S, _ = key_value.shape
+        H, d = self.num_heads, self.head_dim
+        q = self.q_proj(query).reshape(B, N, H, d).permute(0, 2, 1, 3)
+        k = self.k_proj(key_value).reshape(B, S, H, d).permute(0, 2, 1, 3)
+        v = self.v_proj(key_value).reshape(B, S, H, d).permute(0, 2, 1, 3)
+        attn = (q @ k.transpose(-2, -1)) * self.scale
+        if mask is not None:
+            attn = attn.masked_fill(mask.unsqueeze(1).unsqueeze(2), -1e9)
+        attn = self.dropout(F.softmax(attn, dim=-1))
+        out = (attn @ v).transpose(1, 2).reshape(B, N, D)
+        return self.out_proj(out)
+
+
+class ISABBlock(nn.Module):
+    """Induced Set Attention Block with M inducing points."""
+
+    def __init__(self, dim: int, num_heads: int, num_inducing: int, dropout: float = 0.0):
+        super().__init__()
+        self.inducing_points = nn.Parameter(torch.randn(1, num_inducing, dim) * 0.02)
+        self.attn1 = _ISABCrossAttention(dim, num_heads, dropout)
+        self.attn2 = _ISABCrossAttention(dim, num_heads, dropout)
+        self.norm1 = nn.LayerNorm(dim)
+        self.norm2 = nn.LayerNorm(dim)
+        self.ff = nn.Sequential(
+            nn.Linear(dim, dim * 2),
+            nn.GELU(),
+            nn.Linear(dim * 2, dim),
+            nn.Dropout(dropout),
+        )
+        self.norm3 = nn.LayerNorm(dim)
+
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        B = x.shape[0]
+        I = self.inducing_points.expand(B, -1, -1)
+        # Step 1: inducing points attend to input
+        H = self.norm1(I + self.attn1(I, x, mask=mask))
+        # Step 2: input attends to inducing points (no mask on inducing set)
+        y = self.norm2(x + self.attn2(x, H))
+        # Feed-forward
+        y = self.norm3(y + self.ff(y))
+        return y
+
+
+class ISABEntityEncoder(nn.Module):
+    """Drop-in replacement for TransformerEncoder-based entity self-attention.
+
+    Uses stacked ISAB blocks to reduce O(N²) to O(NM) complexity.
+    Input/output shapes are identical to the nn.TransformerEncoder it replaces.
+    """
+
+    def __init__(self, dim: int, num_heads: int, num_inducing: int, num_layers: int, dropout: float = 0.0):
+        super().__init__()
+        self.layers = nn.ModuleList([
+            ISABBlock(dim, num_heads, num_inducing, dropout)
+            for _ in range(num_layers)
+        ])
+
+    def forward(self, x: torch.Tensor, src_key_padding_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        for layer in self.layers:
+            x = layer(x, mask=src_key_padding_mask)
+        return x
+
+
 class EntitySetEncoder(nn.Module):
     def __init__(self, token_features: int, embed_dim: int, num_heads: int, num_layers: int):
         super().__init__()
@@ -2456,21 +2545,32 @@ class RainbowNet(nn.Module):
                 )
                 # ── Entity self-attention: entities see each other ─────
                 num_sa_layers = int(getattr(cfg, "entity_self_attn_layers", 2))
-                sa_layer = nn.TransformerEncoderLayer(
-                    d_model=attn_dim,
-                    nhead=int(getattr(cfg, "attn_heads", 4)),
-                    dim_feedforward=attn_dim * 4,
-                    dropout=float(cfg.dropout),
-                    batch_first=True,
-                    norm_first=True,
-                )
-                with warnings.catch_warnings():
-                    warnings.filterwarnings(
-                        "ignore",
-                        message="enable_nested_tensor is True, but self.use_nested_tensor is False because encoder_layer.norm_first was True",
-                        category=UserWarning,
+                self.use_isab = bool(getattr(cfg, "use_isab", False))
+                if self.use_isab:
+                    isab_num_inducing = int(getattr(cfg, "isab_num_inducing", 32))
+                    self.entity_self_attn = ISABEntityEncoder(
+                        dim=attn_dim,
+                        num_heads=int(getattr(cfg, "attn_heads", 4)),
+                        num_inducing=isab_num_inducing,
+                        num_layers=num_sa_layers,
+                        dropout=float(cfg.dropout),
                     )
-                    self.entity_self_attn = nn.TransformerEncoder(sa_layer, num_layers=num_sa_layers)
+                else:
+                    sa_layer = nn.TransformerEncoderLayer(
+                        d_model=attn_dim,
+                        nhead=int(getattr(cfg, "attn_heads", 4)),
+                        dim_feedforward=attn_dim * 4,
+                        dropout=float(cfg.dropout),
+                        batch_first=True,
+                        norm_first=True,
+                    )
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings(
+                            "ignore",
+                            message="enable_nested_tensor is True, but self.use_nested_tensor is False because encoder_layer.norm_first was True",
+                            category=UserWarning,
+                        )
+                        self.entity_self_attn = nn.TransformerEncoder(sa_layer, num_layers=num_sa_layers)
 
                 # ── Lane cross-attention over self-attended entity tokens
                 self.lane_encoder = DirectionalLaneEncoder(
@@ -2604,6 +2704,7 @@ class RainbowNet(nn.Module):
 
             head_mid = max(64, head_in // 2)
             self._build_action_heads(head_in, head_mid)
+            self._build_auxiliary_heads(head_in)
             self._init_weights()
             if self.use_dist:
                 support = torch.linspace(self.v_min, self.v_max, self.num_atoms)
@@ -2654,6 +2755,7 @@ class RainbowNet(nn.Module):
         head_in = int(cfg.trunk_hidden)
         head_mid = max(64, head_in // 2)
         self._build_action_heads(head_in, head_mid)
+        self._build_auxiliary_heads(head_in)
 
         self._init_weights()
         if self.use_dist:
@@ -2707,6 +2809,29 @@ class RainbowNet(nn.Module):
         else:
             self.q_fc = nn.Linear(head_in, head_mid)
             self.q_out = nn.Linear(head_mid, self.num_actions * self.num_atoms)
+
+    def _build_auxiliary_heads(self, head_in: int):
+        """Build auxiliary next-state entity position prediction heads.
+
+        Backported from V3: small MLP heads off the trunk predict entity
+        (dx, dy) positions N steps into the future.  This regularises the
+        shared representation to encode entity kinematics.
+        """
+        cfg = RL_CONFIG
+        self.use_auxiliary_heads = bool(getattr(cfg, "use_auxiliary_heads", False))
+        if not self.use_auxiliary_heads:
+            self.aux_heads = None
+            self.aux_steps = []
+            return
+        self.aux_steps = list(getattr(cfg, "auxiliary_predict_steps", [1, 5]))
+        self.aux_heads = nn.ModuleDict({
+            f"aux_{s}": nn.Sequential(
+                nn.Linear(head_in, 256),
+                nn.GELU(),
+                nn.Linear(256, self.num_object_slots * 2),
+            )
+            for s in self.aux_steps
+        })
 
     def _action_head_q_atoms(
         self,
@@ -3067,6 +3192,64 @@ class RainbowNet(nn.Module):
             probs = self.forward(state, log=False)
             return (probs * self.support.unsqueeze(0).unsqueeze(0)).sum(dim=2)
         return self.forward(state, log=False)
+
+    def forward_with_aux(self, state: torch.Tensor) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+        """Forward pass returning (log_probs, aux_predictions).
+
+        Used only during training when auxiliary heads are active.
+        Returns log-softmax Q-atom distributions plus auxiliary entity
+        position predictions keyed by step name (e.g. 'aux_1', 'aux_5').
+        """
+        B = state.shape[0]
+        aux_out: Dict[str, torch.Tensor] = {}
+
+        if self.use_pure_mlp:
+            if self.use_directional_lanes:
+                dense_state = self._build_compact_dense_state(state)
+                lane_summary, entity_pool_summary, grid_summary = self._build_directional_temporal_summaries(state)
+                latest_lane_tokens, _lane_active = self._build_directional_lane_tokens(state)
+                move_prior, fire_prior = self._build_directional_action_priors(latest_lane_tokens)
+                parts = [
+                    self.state_norm(dense_state),
+                    self.lane_norm_out(lane_summary),
+                    entity_pool_summary,
+                ]
+                if self.use_local_tactical_grid and grid_summary is not None:
+                    parts.append(self.grid_norm_out(grid_summary))
+                h = self.trunk(torch.cat(parts, dim=1))
+            elif self.use_mlp_with_attention:
+                h = self.trunk(self._build_dense_state_input(state))
+                all_tokens, all_masks = self._build_all_frame_object_tokens(state)
+                frame_summaries = self.object_attn(all_tokens, all_masks).view(B, self.attn_frame_count, -1)
+                entity_out = self.entity_proj(frame_summaries.reshape(B, -1))
+                h = self.mlp_attn_fusion(torch.cat([h, entity_out], dim=1))
+                move_prior = None
+                fire_prior = None
+            else:
+                h = self.trunk(self._build_dense_state_input(state))
+                move_prior = None
+                fire_prior = None
+            q_atoms = self._action_head_q_atoms(h, B, move_prior=move_prior if self.use_directional_lanes else None,
+                                                  fire_prior=fire_prior if self.use_directional_lanes else None)
+        else:
+            global_in = self._build_global_features(state)
+            global_out = self.global_encoder(global_in)
+            all_tokens, all_masks = self._build_all_frame_object_tokens(state)
+            frame_summaries = self.object_attn(all_tokens, all_masks).view(B, self.attn_frame_count, -1)
+            entity_out = self.entity_proj(frame_summaries.reshape(B, -1))
+            h = self.input_proj(torch.cat([global_out, entity_out], dim=1))
+            h = self.trunk(h)
+            q_atoms = self._action_head_q_atoms(h, B)
+
+        # Auxiliary predictions from trunk
+        if self.use_auxiliary_heads and self.aux_heads is not None:
+            for s in self.aux_steps:
+                pred = self.aux_heads[f"aux_{s}"](h)
+                aux_out[f"aux_{s}"] = pred.reshape(B, self.num_object_slots, 2)
+
+        q_atoms = q_atoms.float()
+        log_probs = F.log_softmax(q_atoms, dim=2)
+        return log_probs, aux_out
 
 # ── Keyboard handler ────────────────────────────────────────────────────────
 msvcrt = termios = tty = fcntl = None

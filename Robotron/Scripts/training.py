@@ -306,7 +306,12 @@ def train_step(agent, prefetched_batch=None) -> float | None:
 
     with amp_ctx:
         # Current distribution
-        log_p = agent.online_net(states_t, log=True)       # (B, A, N)
+        use_aux = bool(getattr(cfg, "use_auxiliary_heads", False)) and hasattr(agent.online_net, "forward_with_aux")
+        if use_aux:
+            log_p, aux_preds = agent.online_net.forward_with_aux(states_t)
+        else:
+            log_p = agent.online_net(states_t, log=True)       # (B, A, N)
+            aux_preds = {}
         log_p_a = log_p[torch.arange(B, device=device), actions_t]  # (B, N)
         q_all = (log_p.exp() * support.unsqueeze(0).unsqueeze(0)).sum(dim=2)  # (B, A)
 
@@ -427,6 +432,40 @@ def train_step(agent, prefetched_batch=None) -> float | None:
             dqn_bc_scale = float(dqn_idx.numel()) / float(B)
             weighted_loss = weighted_loss + (dqn_bc_w * dqn_bc_scale) * dqn_bc_loss
 
+    # ── Auxiliary next-state prediction loss ──────────────────────────────
+    aux_loss_val = 0.0
+    if use_aux and "aux_1" in aux_preds:
+        aux_w = float(getattr(cfg, "auxiliary_loss_weight", 0.1) or 0.1)
+        if aux_w > 0.0:
+            base_sz = int(getattr(cfg, "base_state_size", 0) or 0)
+            _pool_defs = getattr(cfg, "state_role_pools", TACTICAL_POOL_DEFS) or TACTICAL_POOL_DEFS
+            _lane_ct = int(getattr(cfg, "lane_token_count", TACTICAL_LANE_COUNT) or TACTICAL_LANE_COUNT)
+            _lane_ft = int(getattr(cfg, "lane_token_features", TACTICAL_LANE_FEATURES) or TACTICAL_LANE_FEATURES)
+            _gw = int(getattr(cfg, "tactical_grid_width", 0) or 0)
+            _gh = int(getattr(cfg, "tactical_grid_height", 0) or 0)
+            _gc = int(getattr(cfg, "tactical_grid_channels", 0) or 0)
+            if base_sz > 0:
+                nxt_latest = next_states_t[:, -base_sz:]
+                pool_off = int(LEGACY_CORE_FEATURES + LEGACY_ELIST_FEATURES
+                               + (_lane_ct * _lane_ft) + (_gw * _gh * _gc))
+                tgt_dxdy = []
+                tgt_mask = []
+                off = pool_off
+                for _pn, _ps, _pf in _pool_defs:
+                    ps_i, pf_i = int(_ps), int(_pf)
+                    blk = nxt_latest[:, off + 1: off + 1 + ps_i * pf_i].reshape(B, ps_i, pf_i)
+                    tgt_dxdy.append(blk[:, :, 1:3])        # dx, dy
+                    tgt_mask.append(blk[:, :, 0] > 0.5)    # presence
+                    off += 1 + ps_i * pf_i
+                tgt_dxdy = torch.cat(tgt_dxdy, dim=1)      # (B, 76, 2)
+                tgt_mask = torch.cat(tgt_mask, dim=1)       # (B, 76)
+                pred_1 = aux_preds["aux_1"]                 # (B, 76, 2)
+                if tgt_mask.any():
+                    mask_3d = tgt_mask.unsqueeze(-1).expand_as(pred_1)
+                    mse = ((pred_1 - tgt_dxdy) ** 2)[mask_3d].mean()
+                    weighted_loss = weighted_loss + aux_w * mse
+                    aux_loss_val = float(mse.detach())
+
     # ── NaN / Inf guard ───────────────────────────────────────────────────
     if not torch.isfinite(weighted_loss):
         print(f"[WARN] Non-finite loss detected ({weighted_loss.item():.4g}), skipping step")
@@ -502,6 +541,8 @@ def train_step(agent, prefetched_batch=None) -> float | None:
             metrics.last_bc_raw_loss = bc_loss_val
         if hasattr(metrics, "last_bc_weight"):
             metrics.last_bc_weight = bc_weight_effective
+        if hasattr(metrics, "last_aux_loss"):
+            metrics.last_aux_loss = aux_loss_val
         metrics.last_priority_mean = float(np.mean(td_errors))
 
         # Agreement metric: exact joint-action match rate.

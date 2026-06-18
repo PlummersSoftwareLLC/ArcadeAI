@@ -91,8 +91,8 @@ class _KeyboardHandler:
 
 BANNER = """
 ╔═══════════════════════════════════════════════════════════════════╗
-║  ROBOTRON AI v3 — Set Transformer + PPO                         ║
-║  Neurosymbolic RL with Potential Field Expert Guidance           ║
+║  ROBOTRON AI v3 — Object-Ray Transformer + PPO                  ║
+║  HUD-Grounded Entities with Action-Conditioned Geometry          ║
 ╚═══════════════════════════════════════════════════════════════════╝
 """
 
@@ -134,6 +134,7 @@ def main():
     print(f"\n  Expert ratio: {agent.get_expert_ratio():.1%}")
     print(f"  Epsilon: {agent.get_epsilon():.3f}")
     print(f"  BC weight: {agent._get_bc_weight():.3f}")
+    print(f"  Curriculum: advanced={'on' if GAME_SETTINGS.start_advanced else 'off'}  min_level={GAME_SETTINGS.start_level_min}")
     print(f"  LR: {CONFIG.train.lr:.1e}")
     print()
 
@@ -287,8 +288,10 @@ def main():
             shutdown_event.wait(300.0)  # save every 5 minutes
             if shutdown_event.is_set():
                 break
-            agent.save()
-            print("[v3] Auto-saved checkpoint")
+            if agent.save():
+                print("[v3] Auto-saved checkpoint")
+            else:
+                print("[v3] Auto-save skipped after save failure")
 
     saver = threading.Thread(target=auto_saver, daemon=True)
     saver.start()

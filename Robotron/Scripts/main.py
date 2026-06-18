@@ -308,7 +308,7 @@ def print_network_info(agent):
 
 
 # ── Main ────────────────────────────────────────────────────────────────────
-def main():
+def main_v2():
     from socket_server import SocketServer
     from metrics_dashboard import MetricsDashboard
     from server_shards import ShardedServerCoordinator, clear_shard_env_file
@@ -433,6 +433,19 @@ def main():
         except Exception:
             pass
         print("Shutdown complete")
+
+
+def main():
+    """Default entrypoint now runs the replacement v3 object-ray AI.
+
+    The old Rainbow/v2 stack is intentionally kept available for comparison
+    with ROBOTRON_USE_V2=1, but normal restarts should use the new learner.
+    """
+    if _env_enabled("ROBOTRON_USE_V2", False):
+        return main_v2()
+
+    from v3.main import main as v3_main
+    return v3_main()
 
 
 if __name__ == "__main__":
