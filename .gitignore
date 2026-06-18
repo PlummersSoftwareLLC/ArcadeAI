@@ -1,4 +1,4 @@
-/.DS_Store
+.DS_Store
 Scripts/models
 Scripts/__pycache__
 cfg
@@ -61,4 +61,4 @@ Robotron/models/game_settings.json
 Robotron/logs/dashboard_chat.jsonl
 models/game_settings.json
 
-Tempest/models/tempest_model_latest.pt
+Tempest/models/

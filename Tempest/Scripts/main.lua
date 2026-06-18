@@ -22,7 +22,9 @@ local SHOW_DISPLAY            = false
 local START_ADVANCED          = true   -- true = start on highest available level from last game (updated by server)
 local START_LEVEL_MIN         = 13      -- Desired 1-based starting level (updated by server)
 local DISPLAY_UPDATE_INTERVAL = 0.02
-local SOCKET_ADDRESS          = "socket.ubvmdell:9999"
+local SOCKET_HOST             = os.getenv("TEMPEST_SERVER_HOST") or "127.0.0.1"
+local SOCKET_PORT             = os.getenv("TEMPEST_SERVER_PORT") or "9999"
+local SOCKET_ADDRESS          = os.getenv("TEMPEST_SOCKET_ADDRESS") or ("socket." .. SOCKET_HOST .. ":" .. SOCKET_PORT)
 local SOCKET_READ_TIMEOUT_S   = 3.5  
 local SOCKET_RETRY_WAIT_S     = 0.01
 local CONNECTION_RETRY_INTERVAL_S = 5 -- How often to retry connecting (seconds)
