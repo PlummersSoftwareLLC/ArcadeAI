@@ -1074,7 +1074,9 @@ class SocketServer:
           bit 7:    HUD enable flag
         """
         start_adv = 1 if GAME_SETTINGS.start_advanced else 0
-        start_level = max(1, GAME_SETTINGS.start_level_min)
+        start_level = 1
+        if start_adv:
+            start_level = max(1, GAME_SETTINGS.start_level_min)
         source_u8 = (int(source_code) & 0x0F)
         if preview_enabled:
             source_u8 |= 0x40

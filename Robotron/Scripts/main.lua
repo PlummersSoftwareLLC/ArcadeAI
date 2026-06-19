@@ -251,7 +251,7 @@ ACTIVE_LISTS = {
     {name = "pptr", addr = PPTR_ADDR},   -- fatal: electrodes
 }
 
--- Per-type entity categories. Order MUST match Python config/aimodel.py.
+-- Per-type entity categories. Order MUST match Python v3 state processing.
 ENTITY_CATEGORIES = {
     {name = "grunt",      slots = 40, peak = 80},
     {name = "hulk",       slots = 16, peak = 25},
@@ -3021,7 +3021,7 @@ end
 
 function Controls:apply_action(move_dir, fire_dir, start_cmd, coin_cmd)
     apply_direction(self.move_up, self.move_down, self.move_left, self.move_right, move_dir)
-    -- Fire hold is now applied Python-side (socket_server.py) so the replay
+    -- Fire hold is now applied Python-side (v3/socket_server.py) so the replay
     -- buffer stores the effective action, not the model's raw request.
     -- The fire_dir received here IS the effective (held) direction.
     apply_direction(self.fire_up, self.fire_down, self.fire_left, self.fire_right, fire_dir)

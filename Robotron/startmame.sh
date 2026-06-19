@@ -155,16 +155,18 @@ else
 fi
 
 usage() {
-    echo "Usage: $0 [COUNT] [novideo] [--fg] [--throttle-client0] [-kill]"
+    echo "Usage: $0 [COUNT] [novideo] [--fg] [--throttle-client0] [--socket-address HOST:PORT] [-kill]"
     echo "       $0 kill CLIENT_ID"
     echo "  COUNT              Desired number of MAME instances left running (default: 1, background mode only; 0 kills all)"
     echo "  novideo            Launch MAME with -video none for faster operation"
     echo "  ROBOTRON_VIDEO_ALL_CLIENTS=1 restores software video for every background client"
     echo "  ROBOTRON_AUDIO_ALL_CLIENTS=1 restores audio capture for every background client"
+    echo "  --socket-address   Override the Python socket target for all clients"
     echo "  --fg               Run one MAME instance in foreground"
     echo "  --throttle-client0 Throttle client 0 to real-time speed (default: unthrottled)"
     echo "  -kill              Kill all running Robotron MAME instances"
     echo "  kill CLIENT_ID     Kill one Robotron MAME client by ROBOTRON_CLIENT_SLOT"
+    echo "  Tip: use ROBOTRON_SOCKET_ADDRESS=ubvmdell:9998 or --socket-address ubvmdell:9998 for a remote host"
 }
 
 list_robotron_pids() {
@@ -285,6 +287,21 @@ while [[ $# -gt 0 ]]; do
             FOREGROUND=1
             shift
             ;;
+        --socket-address)
+            if [[ $# -lt 2 ]]; then
+                echo "error: --socket-address requires HOST:PORT" >&2
+                usage >&2
+                exit 2
+            fi
+            EXPLICIT_SOCKET_ADDRESS_SET=1
+            EXPLICIT_SOCKET_ADDRESS="$2"
+            shift 2
+            ;;
+        --socket-address=*)
+            EXPLICIT_SOCKET_ADDRESS_SET=1
+            EXPLICIT_SOCKET_ADDRESS="${1#*=}"
+            shift
+            ;;
         --throttle-client0)
             THROTTLE_CLIENT0=1
             shift
@@ -390,6 +407,7 @@ if [[ "$FOREGROUND" -eq 1 ]]; then
     socket_info="$(resolve_client_socket 0)"
     CLIENT_SOCKET_ADDRESS="${socket_info%%|*}"
     PREVIEW_CLIENT_FLAG="${socket_info##*|}"
+    echo "Socket target: $CLIENT_SOCKET_ADDRESS"
     env ROBOTRON_SOCKET_ADDRESS="$CLIENT_SOCKET_ADDRESS" ROBOTRON_PREVIEW_CLIENT="$PREVIEW_CLIENT_FLAG" ROBOTRON_CLIENT_SLOT=0 ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $THROTTLE_FLAG $SOUND_FLAG $VIDEO_FLAG -window -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT"
     status=$?
     cleanup_audio_relays

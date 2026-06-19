@@ -73,25 +73,12 @@ except Exception as e:
     _WEBRTC_IMPORT_ERROR = f"{type(e).__name__}: {e}"
 
 from .config import CONFIG, GAME_SETTINGS
+from .chat_store import ChatStore
 from .metrics_display import (
     get_reward_window_averages,
     get_eplen_100k_average,
     get_eplen_1m_average,
 )
-
-import importlib as _importlib
-try:
-    _cs_mod = _importlib.import_module("chat_store", package=None)
-    ChatStore = _cs_mod.ChatStore
-except Exception:
-    try:
-        import sys as _sys
-        _parent = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        if _parent not in _sys.path:
-            _sys.path.insert(0, _parent)
-        from chat_store import ChatStore
-    except Exception:
-        ChatStore = None
 
 
 def _tail_mean(values, count: int = 20) -> float:
@@ -3248,7 +3235,7 @@ def _render_dashboard_html(webrtc_ice_servers: list[dict[str, Any]] | None = Non
     }
     const _selectableLevels = Array.from({ length: 81 }, (_, i) => i + 1);
     function _computeAutoLevel(avgLevel) {
-      const target = Math.floor(avgLevel) - 1;
+      const target = Math.floor(avgLevel) - 3;
       let best = _selectableLevels[0];
       for (const lv of _selectableLevels) { if (lv <= target) best = lv; else break; }
       return best;

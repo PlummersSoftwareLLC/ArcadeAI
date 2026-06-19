@@ -25,20 +25,16 @@ class ChatStore:
 
     @staticmethod
     def _default_persist_path() -> Path:
-        scripts_dir = Path(__file__).resolve().parent
+        scripts_dir = Path(__file__).resolve().parent.parent
         logs_dir = scripts_dir.parent / "logs"
         return logs_dir / "dashboard_chat.jsonl"
 
     @staticmethod
     def _sanitize_text(text: str) -> str:
-        # Enforce one-line text and strip control/bidi spoof characters.
         cleaned = str(text)
         cleaned = cleaned.replace("\r", " ").replace("\n", " ").replace("\t", " ")
-        # Remove C0/C1 controls and DEL.
         cleaned = "".join(ch for ch in cleaned if ch >= " " and ch not in {"\x7f"})
-        # Remove common bidi overrides/isolates to prevent visual spoofing.
         cleaned = re.sub(r"[\u202a-\u202e\u2066-\u2069]", "", cleaned)
-        # Collapse whitespace runs.
         cleaned = re.sub(r"\s+", " ", cleaned).strip()
         return cleaned
 
@@ -47,17 +43,15 @@ class ChatStore:
         raw = str(ip or "").strip()
         if not raw:
             return "unknown"
-        # Keep a conservative printable subset for display labels.
         safe = "".join(ch for ch in raw if ch.isalnum() or ch in ".:[]-%")
         safe = safe.strip("%")
-        return (safe[:64] if safe else "unknown")
+        return safe[:64] if safe else "unknown"
 
     @staticmethod
     def _sanitize_display_name(name: str) -> str:
         cleaned = ChatStore._sanitize_text(name)
         if not cleaned:
             return ""
-        # Keep names compact and readable in the dashboard column.
         return cleaned[:16]
 
     @staticmethod
@@ -119,16 +113,17 @@ class ChatStore:
                     rid = 0
                 if rid > max_seen_id:
                     max_seen_id = rid
-                self._rows.append({
-                    "id": rid,
-                    "ts": ts,
-                    "ip": ip,
-                    "display_name": display_name,
-                    "text": msg,
-                })
+                self._rows.append(
+                    {
+                        "id": rid,
+                        "ts": ts,
+                        "ip": ip,
+                        "display_name": display_name,
+                        "text": msg,
+                    }
+                )
             self._next_id = max(1, max_seen_id + 1)
         except Exception:
-            # Persistence is best-effort; runtime chat remains available.
             return
 
     def _append_to_disk(self, row: dict[str, Any]) -> None:
@@ -138,21 +133,21 @@ class ChatStore:
             with path.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(row, ensure_ascii=True, separators=(",", ":")) + "\n")
         except Exception:
-            # Do not fail chat posting on storage errors.
-            return
+            pass
 
-    def add_message(self, ip: str, text: str, display_name: str = "") -> dict[str, Any]:
+    def add_message(self, ip: str, text: str, display_name: str = "") -> dict[str, Any] | None:
         msg = self._sanitize_text(text)
         if not msg:
-            raise ValueError("message_empty")
-        if len(msg) > 240:
-            raise ValueError("message_too_long")
+            return None
+        msg = msg[:240]
+        safe_ip = self._sanitize_ip(ip)
+        safe_name = self._sanitize_display_name(display_name)
         with self._lock:
             row = {
-                "id": int(self._next_id),
+                "id": self._next_id,
                 "ts": float(time.time()),
-                "ip": self._sanitize_ip(ip),
-                "display_name": self._sanitize_display_name(display_name),
+                "ip": safe_ip,
+                "display_name": safe_name,
                 "text": msg,
             }
             self._next_id += 1
@@ -161,8 +156,7 @@ class ChatStore:
             return self._public_row(row)
 
     def snapshot(self, limit: int = 120) -> list[dict[str, Any]]:
-        take = max(1, min(int(limit), self._max_messages))
+        take = max(1, min(self._max_messages, int(limit)))
         with self._lock:
-            if not self._rows:
-                return []
-            return [self._public_row(row) for row in list(self._rows)[-take:]]
+            rows = list(self._rows)[-take:]
+        return [self._public_row(row) for row in rows]

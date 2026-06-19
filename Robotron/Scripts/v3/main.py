@@ -12,6 +12,7 @@ import time
 import signal
 import threading
 import select as _select
+import socket
 import torch
 
 from .config import CONFIG, GAME_SETTINGS, MODEL_DIR, CHECKPOINT_PATH
@@ -35,6 +36,33 @@ def _env_enabled(name: str, default: bool) -> bool:
     if raw is None:
         return default
     return raw.strip().lower() not in {"0", "false", "off", "no"}
+
+
+def _best_lan_ip() -> str:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("8.8.8.8", 80))
+            ip = sock.getsockname()[0]
+            if ip and not ip.startswith("127."):
+                return ip
+    except Exception:
+        pass
+    try:
+        ip = socket.gethostbyname(socket.gethostname())
+        if ip and not ip.startswith("127."):
+            return ip
+    except Exception:
+        pass
+    return "127.0.0.1"
+
+
+def _resolve_dashboard_url_host(bind_host: str) -> str:
+    explicit = os.getenv("ROBOTRON_DASHBOARD_PUBLIC_HOST", "").strip()
+    if explicit:
+        return explicit
+    if bind_host in {"0.0.0.0", "::", "[::]"}:
+        return _best_lan_ip()
+    return bind_host
 
 
 class _KeyboardHandler:
@@ -174,6 +202,11 @@ def main():
         open_browser=open_browser,
     )
     dashboard.start()
+    dashboard_url_host = _resolve_dashboard_url_host(dashboard.host)
+    dashboard_url = f"http://{dashboard_url_host}:{dashboard.port}"
+    print(f"  Dashboard: {dashboard_url}")
+    if dashboard.host != dashboard_url_host:
+        print(f"             (bound {dashboard.host}:{dashboard.port})")
 
     # Tabular status reporter
     def status_reporter():

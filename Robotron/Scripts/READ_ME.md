@@ -35,15 +35,26 @@ This `Robotron/Scripts` project is now a stripped baseline for Robotron-specific
 
 ## Protocol (Python -> Lua)
 
-- Action format: `bb`
+- Action format: `bbBBB`
   - movement direction index `0..7`
   - firing direction index `0..7`
+  - source byte / preview flags
+  - advanced-start flag
+  - start-level minimum
+
+When advanced start is off, Python now sends level `1` so Robotron starts on the
+default wave.
 
 ## Startup Diagnostics
 
+- Run the Python v3 server from `Robotron/Scripts`:
+  - `python3 run_v3.py`
 - Run foreground diagnostics:
   - `cd Robotron`
   - `./startmame.sh --fg`
+- Point MAME at a remote Python host:
+  - `ROBOTRON_SOCKET_ADDRESS=ubvmdell:9998 ./startmame.sh --fg`
+  - or `./startmame.sh --fg --socket-address ubvmdell:9998`
 - Background mode now reports explicit process liveness:
   - `./startmame.sh`
 - Startup trace output is written to:
@@ -83,7 +94,7 @@ export ROBOTRON_WEBRTC_ICE_SERVERS='[
 ```
 
 If unset or invalid, dashboard uses built-in ICE defaults from
-`Robotron/Scripts/config.py` (`WEBRTC_ICE_SERVERS`).
+`Robotron/Scripts/v3/metrics_dashboard.py`.
 
 ## TODO (Known Missing Robotron Wiring)
 
