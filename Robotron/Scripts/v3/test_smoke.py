@@ -3,11 +3,14 @@
 
 import numpy as np
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 def test_config():
     from v3.config import CONFIG, WIRE_PARAMS_COUNT, AUGMENTED_PARAMS_COUNT
-    assert WIRE_PARAMS_COUNT == 1454, f"Expected 1454, got {WIRE_PARAMS_COUNT}"
-    assert AUGMENTED_PARAMS_COUNT == 1458
+    assert WIRE_PARAMS_COUNT == 1478, f"Expected 1478, got {WIRE_PARAMS_COUNT}"
+    assert AUGMENTED_PARAMS_COUNT == 1482
     assert CONFIG.server.port == 9998
     assert CONFIG.model.num_move_actions == 9
     assert CONFIG.model.num_fire_actions == 9
@@ -30,7 +33,7 @@ def test_state_processor():
     frame = proc.process_frame(wire)
     assert frame["entity_features"].shape == (CONFIG.model.max_entities, CONFIG.model.entity_feature_dim)
     assert frame["entity_mask"].shape == (CONFIG.model.max_entities,)
-    assert frame["global_context"].shape == (40,)
+    assert frame["global_context"].shape == (CONFIG.model.global_context_dim,)
     assert frame["move_action_features"].shape == (9, CONFIG.model.action_feature_dim)
     assert frame["fire_action_features"].shape == (9, CONFIG.model.action_feature_dim)
     assert frame["num_entities"] > 0
@@ -39,7 +42,7 @@ def test_state_processor():
     frames = [proc.process_frame(wire.copy()) for _ in range(T)]
     stacked = proc.stack_frames(frames)
     assert stacked["entity_features"].shape == (T, CONFIG.model.max_entities, CONFIG.model.entity_feature_dim)
-    assert stacked["global_context"].shape == (T, 40)
+    assert stacked["global_context"].shape == (T, CONFIG.model.global_context_dim)
     assert stacked["move_action_features"].shape == (T, 9, CONFIG.model.action_feature_dim)
     print("  state_processor: OK")
 
@@ -116,6 +119,7 @@ def test_agent():
 def test_rollout_buffer():
     import torch
     from v3.rollout_buffer import RolloutBuffer
+    from v3.socket_server import SocketServer
 
     from v3.config import CONFIG
     T = CONFIG.model.frame_stack
@@ -147,6 +151,19 @@ def test_rollout_buffer():
     assert len(batches) > 0
     assert "entity_features" in batches[0]
     assert "advantages" in batches[0]
+
+    grouped = RolloutBuffer(rollout_length=4, num_actors=1, device=torch.device("cpu"))
+    grouped.values[:, 0] = torch.tensor([1.0, 10.0, 2.0, 20.0])
+    grouped.rewards[:, 0] = torch.tensor([1.0, 10.0, 1.0, 10.0])
+    grouped.has_value[:, 0] = True
+    grouped.dones[:, 0] = torch.tensor([False, False, True, True])
+    SocketServer._compute_grouped_advantages(
+        grouped,
+        client_ids=[0, 1, 0, 1],
+        next_values=[2.0, 20.0, 0.0, 0.0],
+    )
+    assert grouped.advantages[0, 0] > grouped.advantages[2, 0]
+    assert grouped.advantages[1, 0] > grouped.advantages[3, 0]
     print(f"  rollout_buffer: OK ({len(batches)} batches)")
 
 def test_socket_protocol():

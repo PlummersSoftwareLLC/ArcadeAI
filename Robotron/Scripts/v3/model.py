@@ -77,9 +77,9 @@ class RobotronPPONet(nn.Module):
         embed_dim: int = 160,
         transformer_layers: int = 2,
         num_heads: int = 4,
-        global_context_dim: int = 40,
+        global_context_dim: int = 44,
         action_feature_dim: int = 12,
-        frame_stack: int = 3,
+        frame_stack: int = 2,
         fusion_hidden: int = 320,
         fusion_layers: int = 2,
         num_move_actions: int = 9,
@@ -135,9 +135,18 @@ class RobotronPPONet(nn.Module):
             nn.GELU(),
         )
 
-        temporal_in = self.frame_stack * self.embed_dim
+        # Per-slot temporal fusion: combine each object's embedding across the
+        # frame stack BEFORE the transformer. Because the Lua side keeps stable
+        # slot assignments, slot i is the same object over time, so this MLP
+        # learns per-object motion/identity instead of pooling whole frames.
+        self.temporal_fusion = nn.Sequential(
+            nn.Linear(self.frame_stack * self.embed_dim, self.embed_dim),
+            nn.LayerNorm(self.embed_dim),
+            nn.GELU(),
+        )
+
         fusion = []
-        in_dim = temporal_in
+        in_dim = self.embed_dim
         for _ in range(fusion_layers):
             fusion.extend([
                 nn.Linear(in_dim, fusion_hidden),
@@ -241,20 +250,36 @@ class RobotronPPONet(nn.Module):
         entity_mask: torch.Tensor,
         global_context: torch.Tensor,
     ) -> torch.Tensor:
+        """Encode the frame stack into a single (B, embed_dim) scene vector.
+
+        Each object's per-frame embedding is fused along the time axis first
+        (per-slot temporal tracking), then the resulting current-scene tokens go
+        through the transformer once. This is both cheaper (one transformer pass
+        per sample instead of frame_stack passes) and richer, since per-object
+        motion is preserved instead of being averaged away by per-frame pooling.
+        """
         B, T, N, F = entity_features.shape
-        BT = B * T
 
-        ent = entity_features.reshape(BT, N, F)
-        mask = entity_mask.reshape(BT, N).bool()
-        ctx = global_context.reshape(BT, self.global_context_dim)
+        # Project every frame's entities, then zero padded slots so absent
+        # objects contribute nothing to the temporal fusion.
+        ent = self.entity_proj(entity_features.reshape(B * T, N, F))
+        ent = ent.reshape(B, T, N, self.embed_dim)
+        active_all = (~entity_mask.bool()).unsqueeze(-1).to(ent.dtype)
+        ent = ent * active_all
 
-        ent_tokens = self.entity_proj(ent)
+        # Per-slot temporal fusion: (B, T, N, E) -> (B, N, T*E) -> (B, N, E)
+        ent = ent.permute(0, 2, 1, 3).reshape(B, N, T * self.embed_dim)
+        ent_tokens = self.temporal_fusion(ent)
+
+        # Encode the current scene once using the latest-frame mask + globals.
+        latest_mask = entity_mask[:, -1].bool()
+        ctx = global_context[:, -1]
         player_token = self.global_token(ctx).unsqueeze(1)
         tokens = torch.cat([player_token, ent_tokens], dim=1)
         token_mask = torch.cat(
             [
-                torch.zeros(BT, 1, dtype=torch.bool, device=mask.device),
-                mask,
+                torch.zeros(B, 1, dtype=torch.bool, device=latest_mask.device),
+                latest_mask,
             ],
             dim=1,
         )
@@ -263,20 +288,20 @@ class RobotronPPONet(nn.Module):
         player_repr = encoded[:, 0]
         object_repr = encoded[:, 1:]
 
-        active = (~mask).unsqueeze(-1).to(object_repr.dtype)
+        active = (~latest_mask).unsqueeze(-1).to(object_repr.dtype)
         active_count = active.sum(dim=1).clamp_min(1.0)
         mean_repr = (object_repr * active).sum(dim=1) / active_count
 
         very_neg = torch.finfo(object_repr.dtype).min
-        max_src = object_repr.masked_fill(mask.unsqueeze(-1), very_neg)
+        max_src = object_repr.masked_fill(latest_mask.unsqueeze(-1), very_neg)
         max_repr = max_src.max(dim=1).values
-        no_objects = mask.all(dim=1)
+        no_objects = latest_mask.all(dim=1)
         if bool(no_objects.any()):
             max_repr = max_repr.clone()
             max_repr[no_objects] = 0.0
 
-        frame_repr = self.frame_fusion(torch.cat([player_repr, mean_repr, max_repr], dim=-1))
-        return frame_repr.reshape(B, T, self.embed_dim)
+        scene = self.frame_fusion(torch.cat([player_repr, mean_repr, max_repr], dim=-1))
+        return scene
 
     def forward(
         self,
@@ -302,7 +327,7 @@ class RobotronPPONet(nn.Module):
         )
 
         frame_repr = self._encode_frames(entity_features, entity_mask, global_context)
-        fused = self.fusion(frame_repr.reshape(frame_repr.shape[0], -1))
+        fused = self.fusion(frame_repr)
 
         # Current-frame action geometry is the most relevant for the next input.
         move_current = move_action_features[:, -1]

@@ -209,9 +209,24 @@ class RolloutBuffer:
         flat = self._flatten()
         N = flat["move_actions"].shape[0]
 
+        # Oversample policy-gradient frames into the shuffle pool. During the
+        # guided phase most frames are expert/BC, so without this the rare
+        # policy-sampled frames barely contribute to the PPO gradient.
+        oversample = max(1, int(CONFIG.train.policy_oversample))
+        base = torch.arange(N, device=self.device)
+        if oversample > 1:
+            ps_idx = flat["policy_sampled"].nonzero(as_tuple=False).flatten()
+            if ps_idx.numel() > 0:
+                pool = torch.cat([base, ps_idx.repeat(oversample - 1)])
+            else:
+                pool = base
+        else:
+            pool = base
+        pool_size = pool.numel()
+
         for _ in range(num_epochs):
-            indices = torch.randperm(N, device=self.device)
-            for start in range(0, N, mbs):
-                end = min(start + mbs, N)
-                idx = indices[start:end]
+            perm = pool[torch.randperm(pool_size, device=self.device)]
+            for start in range(0, pool_size, mbs):
+                end = min(start + mbs, pool_size)
+                idx = perm[start:end]
                 yield {k: v[idx] for k, v in flat.items()}

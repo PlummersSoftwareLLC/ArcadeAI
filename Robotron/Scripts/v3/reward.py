@@ -31,20 +31,18 @@ class RewardShaper:
         player_alive: bool,
         score_delta: float = 0.0,
         nearest_enemy_dist: float = 1.0,
-        humans_rescued_this_frame: int = 0,
-        human_bonus_level: int = 1,
+        wave_completed: bool = False,
     ) -> float:
         """Compute shaped reward from frame data.
 
         Args:
             obj_reward: raw objective reward from Lua (score-based)
-            subj_reward: raw subjective reward from Lua (heuristic)
+            subj_reward: raw subjective reward from Lua (aim/evade/human/survival)
             done: True on death/episode end
             player_alive: whether player is currently alive
-            score_delta: change in game score this frame
+            score_delta: change in game score this frame (>= 0)
             nearest_enemy_dist: distance to nearest enemy (normalized 0-1)
-            humans_rescued_this_frame: how many humans just picked up
-            human_bonus_level: progressive rescue bonus level (1-5)
+            wave_completed: True on the frame a wave was just cleared
 
         Returns:
             float: shaped reward, clipped to [-reward_clip, +reward_clip]
@@ -56,20 +54,26 @@ class RewardShaper:
         if player_alive and not done:
             r += cfg.survival_bonus
 
-        # Score-based reward (log-scaled for density)
+        # Score-based reward (log-scaled for density). Log scaling keeps large
+        # point events (human rescues 1000-5000) ordered above smaller kills
+        # instead of saturating a linear clip, which is what makes "is a human
+        # worth saving" learnable.
         if score_delta > 0:
             r += cfg.score_log_scale * math.log1p(score_delta)
 
-        # Human rescue bonus
-        if humans_rescued_this_frame > 0:
-            # Progressive bonus: 1000, 2000, 3000, 4000, 5000
-            bonus_multiplier = min(5, human_bonus_level)
-            r += cfg.human_rescue_bonus * bonus_multiplier * humans_rescued_this_frame
+        # Lua-side subjective shaping (dense, between scoring events).
+        r += cfg.subj_reward_scale * float(subj_reward)
 
-        # Proximity penalty (encourages "safety bubble")
-        if player_alive and nearest_enemy_dist < 1.0:
-            inv_dist = 1.0 / max(nearest_enemy_dist, 0.01)
-            r -= cfg.proximity_penalty_scale * inv_dist
+        # Wave-clear bonus: reward reaching deeper waves.
+        if wave_completed:
+            r += cfg.wave_clear_bonus
+
+        # Proximity penalty (bounded; encourages a "safety bubble").
+        if player_alive and not done and nearest_enemy_dist < cfg.proximity_penalty_dist:
+            closeness = (cfg.proximity_penalty_dist - nearest_enemy_dist) / max(
+                cfg.proximity_penalty_dist, 1e-6
+            )
+            r -= cfg.proximity_penalty_scale * max(0.0, min(1.0, closeness))
 
         # Death penalty
         if done:
@@ -109,8 +113,24 @@ class RewardShaper:
 # Module-level singleton
 _shaper: RewardShaper = None
 
-def shape_reward(obj_reward: float, subj_reward: float, done: bool) -> float:
+def shape_reward(
+    obj_reward: float,
+    subj_reward: float,
+    done: bool,
+    player_alive: bool = True,
+    score_delta: float = 0.0,
+    nearest_enemy_dist: float = 1.0,
+    wave_completed: bool = False,
+) -> float:
     global _shaper
     if _shaper is None:
         _shaper = RewardShaper()
-    return _shaper.shape_simple(obj_reward, subj_reward, done)
+    return _shaper.shape(
+        obj_reward,
+        subj_reward,
+        done,
+        player_alive=player_alive,
+        score_delta=score_delta,
+        nearest_enemy_dist=nearest_enemy_dist,
+        wave_completed=wave_completed,
+    )

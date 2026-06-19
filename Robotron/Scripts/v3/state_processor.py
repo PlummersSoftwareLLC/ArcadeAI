@@ -9,7 +9,7 @@ the debug HUD overlay.
 Processed observation:
   entity_features:      (max_entities, 32)
   entity_mask:          (max_entities,) True for padding
-  global_context:       (40,) core player/game + ELIST bytes
+  global_context:       (44,) core player/game + ELIST bytes + surround affordances
   move_action_features: (9, 12) one row per move action, idle last
   fire_action_features: (9, 12) one row per fire action, idle last
 
@@ -206,6 +206,10 @@ def _collect_entity_slots(wire_state: np.ndarray) -> list[dict[str, float]]:
                 ttc_norm = float(_clamp01(slot[7] if feat_per_slot > 7 else 1.0))
                 closest_pass_norm = float(_clamp01(slot[8] if feat_per_slot > 8 else dist))
                 approach = float(_clamp11(slot[9] if feat_per_slot > 9 else 0.0))
+                # Subtype channel: 1.0 => homing cruise missile, else straight shot.
+                subtype = float(slot[10]) if feat_per_slot > 10 else 0.0
+                if subtype >= 0.5:
+                    type_id = TYPE_MISSILE
             elif pool_name == "danger":
                 threat = float(_clamp01(slot[6] if feat_per_slot > 6 else 0.6))
                 approach = float(_clamp11(slot[7] if feat_per_slot > 7 else 0.0))
@@ -471,6 +475,28 @@ def build_action_features(
     return move, fire
 
 
+def _global_affordances(move_features: np.ndarray) -> np.ndarray:
+    """Derive surround/"boxed-in" scalars from the per-direction move rays.
+
+    Returns 4 features (see config.GLOBAL_EXTRA_FEATURES):
+      [0] safest_danger   - lowest total danger over the 8 escape directions
+      [1] mean_danger     - average total danger over the 8 directions
+      [2] boxed_in        - 1 - best escape quality (high => surrounded/trapped)
+      [3] safe_dirs_frac  - fraction of directions with low danger
+    """
+    dirs = move_features[:8]
+    enemy_danger = dirs[:, 3]
+    proj_danger = dirs[:, 4]
+    total_danger = np.clip(enemy_danger + proj_danger, 0.0, 1.0)
+    clearance = dirs[:, 2]
+    escape_quality = clearance * (1.0 - total_danger)
+    safest_danger = float(total_danger.min())
+    mean_danger = float(total_danger.mean())
+    boxed_in = 1.0 - float(escape_quality.max())
+    safe_dirs_frac = float((total_danger < 0.3).sum()) / 8.0
+    return np.array([safest_danger, mean_danger, boxed_in, safe_dirs_frac], dtype=np.float32)
+
+
 class StateProcessor:
     """Convert raw Lua state into tensors for the object-ray policy."""
 
@@ -490,6 +516,11 @@ class StateProcessor:
         features, mask, num_ents = extract_entities(wire_state, self.max_entities)
         global_ctx = extract_global_context(wire_state)
         move_features, fire_features = build_action_features(features, mask, global_ctx)
+        # Append surround/"boxed-in" affordances so the trapped state is explicit
+        # in the global context rather than implicit across per-direction rays.
+        global_ctx = np.concatenate(
+            [global_ctx, _global_affordances(move_features)]
+        ).astype(np.float32)
         return {
             "entity_features": features,
             "entity_mask": mask,

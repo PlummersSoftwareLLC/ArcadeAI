@@ -28,7 +28,6 @@ import select
 import threading
 import traceback
 import random
-import pathlib
 import numpy as np
 import torch
 from collections import deque
@@ -623,10 +622,6 @@ class SocketServer:
             max_batch=max(64, self.max_clients + 8),
             max_wait_ms=1.5,
         )
-        default_skip_expert_value = True
-        if self.agent.infer_device.type == "cpu":
-            default_skip_expert_value = _env_flag("ROBOTRON_SKIP_EXPERT_VALUE_ON_CPU", True)
-        self._skip_expert_value = _env_flag("ROBOTRON_SKIP_EXPERT_VALUE", default_skip_expert_value)
 
     def start(self):
         """Start the server (blocking)."""
@@ -638,9 +633,6 @@ class SocketServer:
         server_sock.bind((self.host, self.port))
         server_sock.listen(self.max_clients)
         print(f"v3 Socket server listening on {self.host}:{self.port}")
-
-        # Write server_shards.env so startmame.sh sends ALL clients to this single port
-        self._write_shard_env()
 
         try:
             while self.running and not self.shutdown_event.is_set():
@@ -671,34 +663,11 @@ class SocketServer:
         self.shutdown_event.set()
         self.batcher.stop()
 
-    def _write_shard_env(self):
-        """Write server_shards.env so startmame.sh routes all clients here."""
-        host = os.getenv("ROBOTRON_SOCKET_PUBLIC_HOST", "").strip()
-        if not host:
-            bind_host = str(self.host or "127.0.0.1")
-            if bind_host in {"0.0.0.0", "::", "[::]"}:
-                host = "127.0.0.1"
-            else:
-                host = bind_host
-        log_dir = pathlib.Path(__file__).resolve().parent.parent.parent / "logs"
-        log_dir.mkdir(parents=True, exist_ok=True)
-        env_path = log_dir / "server_shards.env"
-        tmp_path = env_path.with_suffix(".tmp")
-        lines = [
-            f"ROBOTRON_SHARD_ENABLED=0",
-            f"ROBOTRON_SOCKET_HOST={host}",
-            f"ROBOTRON_MASTER_PORT={self.port}",
-            f"ROBOTRON_WORKER_PORTS=",
-            f"ROBOTRON_PREVIEW_SLOT=0",
-        ]
-        tmp_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        tmp_path.replace(env_path)
-        print(f"  Wrote {env_path} (all clients → port {self.port})")
-
     # ── Training coordinator ────────────────────────────────────────────
 
     def _push_transition(
         self,
+        client_id: int,
         entity_features: torch.Tensor,
         entity_mask: torch.Tensor,
         global_context: torch.Tensor,
@@ -720,6 +689,7 @@ class SocketServer:
     ):
         """Thread-safe push of one transition. Triggers training when batch is full."""
         txn = (
+            int(client_id),
             entity_features, entity_mask, global_context, move_action_features, fire_action_features,
             move_action, fire_action, log_prob, value, has_value, reward, done, next_value,
             expert_move, expert_fire, is_expert, policy_sampled, fire_locked,
@@ -757,7 +727,11 @@ class SocketServer:
         """Drain transition queue into a RolloutBuffer and run PPO update."""
         try:
             with self._transition_lock:
-                batch_size = min(len(self._transition_queue), self._train_batch_size)
+                max_drain = max(
+                    self._train_batch_size,
+                    int(getattr(CONFIG.train, "max_rollout_drain", self._train_batch_size) or self._train_batch_size),
+                )
+                batch_size = min(len(self._transition_queue), max_drain)
                 if batch_size < 64:
                     return  # not enough data
                 batch = [self._transition_queue.popleft() for _ in range(batch_size)]
@@ -769,9 +743,13 @@ class SocketServer:
                 device=torch.device("cpu"),
             )
 
+            client_ids: list[int] = []
+            next_values: list[float] = []
             for t, txn in enumerate(batch):
-                (ef, em, gc, maf, faf, ma, fa, lp, val, has_val, rew, done, next_val,
+                (client_id, ef, em, gc, maf, faf, ma, fa, lp, val, has_val, rew, done, next_val,
                  ex_m, ex_f, is_exp, policy_sampled, fire_locked) = txn
+                client_ids.append(int(client_id))
+                next_values.append(float(next_val))
                 rollout.entity_features[t, 0] = ef
                 rollout.entity_masks[t, 0] = em
                 rollout.global_contexts[t, 0] = gc
@@ -789,16 +767,10 @@ class SocketServer:
                 rollout.is_expert[t, 0] = is_exp
                 rollout.policy_sampled[t, 0] = policy_sampled
                 rollout.fire_locked[t, 0] = fire_locked
-                if has_val:
-                    bootstrap = 0.0 if done else float(next_val)
-                    rollout.advantages[t, 0] = float(rew) + (float(CONFIG.train.gamma) * bootstrap) - float(val)
-                    rollout.returns[t, 0] = rollout.advantages[t, 0] + float(val)
-                else:
-                    rollout.advantages[t, 0] = 0.0
-                    rollout.returns[t, 0] = 0.0
 
             rollout.step = batch_size
             rollout.ready = True
+            self._compute_grouped_advantages(rollout, client_ids, next_values)
 
             # Run training on the appropriate device/stream
             if self.agent.train_stream is not None:
@@ -822,6 +794,34 @@ class SocketServer:
                 self._training_active.clear()
                 self._train_thread = None
 
+    @staticmethod
+    def _compute_grouped_advantages(rollout: RolloutBuffer, client_ids: list[int], next_values: list[float]) -> None:
+        """Compute GAE independently for each client timeline in a drained batch."""
+        gamma = float(CONFIG.train.gamma)
+        lam = float(CONFIG.train.gae_lambda)
+        by_client: dict[int, list[int]] = {}
+        for idx, client_id in enumerate(client_ids):
+            by_client.setdefault(int(client_id), []).append(idx)
+
+        rollout.advantages.zero_()
+        rollout.returns.zero_()
+        for indices in by_client.values():
+            last_gae = 0.0
+            for idx in reversed(indices):
+                has_value = bool(rollout.has_value[idx, 0].item())
+                if not has_value:
+                    last_gae = 0.0
+                    continue
+                done = bool(rollout.dones[idx, 0].item())
+                non_terminal = 0.0 if done else 1.0
+                reward = float(rollout.rewards[idx, 0].item())
+                value = float(rollout.values[idx, 0].item())
+                bootstrap = 0.0 if done else float(next_values[idx])
+                delta = reward + gamma * bootstrap * non_terminal - value
+                last_gae = delta + gamma * lam * non_terminal * last_gae
+                rollout.advantages[idx, 0] = last_gae
+                rollout.returns[idx, 0] = last_gae + value
+
 
     def _new_client_state(self) -> dict:
         return {
@@ -835,6 +835,7 @@ class SocketServer:
             "plausible_start_streak": 0,
             "level_number": 0,
             "start_wave": 1,
+            "reward_prev_wave": 0,
             "game_score": 0,
             "num_lasers": 0,
             "last_time": time.time(),
@@ -1065,6 +1066,7 @@ class SocketServer:
         source_code: int,
         preview_enabled: bool = False,
         hud_enabled: bool = False,
+        client_slot: int = 0,
     ) -> bytes:
         """Pack 5-byte action response for Lua.
 
@@ -1076,7 +1078,11 @@ class SocketServer:
         start_adv = 1 if GAME_SETTINGS.start_advanced else 0
         start_level = 1
         if start_adv:
-            start_level = max(1, GAME_SETTINGS.start_level_min)
+            # Curriculum: spread per-client start waves so some actors train on
+            # dense late-game object fields. Lua latches START_LEVEL_MIN per
+            # packet, so per-client values take effect without a Lua change.
+            spread = max(1, int(CONFIG.train.curriculum_wave_spread))
+            start_level = max(1, min(81, int(GAME_SETTINGS.start_level_min) + (int(client_slot) % spread)))
         source_u8 = (int(source_code) & 0x0F)
         if preview_enabled:
             source_u8 |= 0x40
@@ -1147,7 +1153,7 @@ class SocketServer:
                 should_parse_preview = bool(self._is_preview_client(cid) and preview_enabled)
                 frame = parse_frame_data(data, parse_preview=should_parse_preview)
                 if not frame:
-                    sock.sendall(self._pack_action(-1, -1, 0, preview_enabled=preview_enabled, hud_enabled=hud_enabled))
+                    sock.sendall(self._pack_action(-1, -1, 0, preview_enabled=preview_enabled, hud_enabled=hud_enabled, client_slot=client_slot))
                     continue
 
                 with self.client_lock:
@@ -1237,7 +1243,35 @@ class SocketServer:
 
                 # ── Process previous step reward → prepare transition ──
                 if cs.get("last_state") is not None and cs.get("last_action") is not None:
-                    pending_reward = shape_reward(frame.objreward, frame.subjreward, frame.done)
+                    # Wave-clear detection: a wave increment while alive means the
+                    # previous action finished clearing a wave. Guard against the
+                    # initial 0→start_wave jump at episode start.
+                    wave_completed = False
+                    cur_wave = int(frame.level_number)
+                    if frame.player_alive and not frame.done:
+                        prev_wave = int(cs.get("reward_prev_wave", 0))
+                        if prev_wave > 0 and cur_wave > prev_wave:
+                            wave_completed = True
+                        cs["reward_prev_wave"] = cur_wave
+
+                    # Score delta (objreward carries the per-frame score change;
+                    # ignore it on the terminal frame, where death dominates).
+                    score_delta = max(0.0, float(frame.objreward)) if not frame.done else 0.0
+                    # Nearest-enemy distance is core wire field index 9 (0-1).
+                    try:
+                        nearest_enemy_dist = float(frame.state[9])
+                    except (IndexError, TypeError, ValueError):
+                        nearest_enemy_dist = 1.0
+
+                    pending_reward = shape_reward(
+                        frame.objreward,
+                        frame.subjreward,
+                        frame.done,
+                        player_alive=frame.player_alive,
+                        score_delta=score_delta,
+                        nearest_enemy_dist=nearest_enemy_dist,
+                        wave_completed=wave_completed,
+                    )
                     cs["total_reward"] += pending_reward
                     cs["ep_frames"] = cs.get("ep_frames", 0) + 1
 
@@ -1256,6 +1290,7 @@ class SocketServer:
                 if frame.done:
                     if pending_prev_tensors is not None and pending_prev_action is not None and pending_reward is not None:
                         self._push_transition(
+                            client_id=cid,
                             entity_features=pending_prev_tensors["entity_features"],
                             entity_mask=pending_prev_tensors["entity_mask"],
                             global_context=pending_prev_tensors["global_context"],
@@ -1295,7 +1330,7 @@ class SocketServer:
                     cs["was_done"] = True
                     _pv = self._preview_enabled_for_client(cid)
                     _hd = self._hud_enabled_for_client(cid)
-                    sock.sendall(self._pack_action(-1, -1, 0, preview_enabled=_pv, hud_enabled=_hd))
+                    sock.sendall(self._pack_action(-1, -1, 0, preview_enabled=_pv, hud_enabled=_hd, client_slot=client_slot))
                     cs["last_state"] = cs["last_action"] = None
                     cs["last_tensors"] = None
                     cs["last_log_prob"] = 0.0
@@ -1311,6 +1346,7 @@ class SocketServer:
                     cs["episode_id"] = cs.get("episode_id", 1) + 1
                     cs["total_reward"] = 0.0
                     cs["ep_frames"] = 0
+                    cs["reward_prev_wave"] = 0
                     continue
 
                 if cs.get("was_done"):
@@ -1322,6 +1358,7 @@ class SocketServer:
                 if not frame.player_alive:
                     if pending_prev_tensors is not None and pending_prev_action is not None and pending_reward is not None:
                         self._push_transition(
+                            client_id=cid,
                             entity_features=pending_prev_tensors["entity_features"],
                             entity_mask=pending_prev_tensors["entity_mask"],
                             global_context=pending_prev_tensors["global_context"],
@@ -1357,9 +1394,10 @@ class SocketServer:
                     cs["fire_hold_dir"] = -1
                     cs["fire_hold_count"] = 0
                     cs["fire_pending_dir"] = -1
+                    cs["reward_prev_wave"] = 0
                     _pv = self._preview_enabled_for_client(cid)
                     _hd = self._hud_enabled_for_client(cid)
-                    sock.sendall(self._pack_action(-1, -1, 0, preview_enabled=_pv, hud_enabled=_hd))
+                    sock.sendall(self._pack_action(-1, -1, 0, preview_enabled=_pv, hud_enabled=_hd, client_slot=client_slot))
                     continue
 
                 # ── Choose action ───────────────────────────────────────
@@ -1417,11 +1455,14 @@ class SocketServer:
                         fire_idx = locked_fire
                     expert_fire_out = fire_idx
                     action_source = "expert"
-                    if pending_prev_has_value or not self._skip_expert_value:
-                        t0 = time.perf_counter()
-                        value = self.batcher.submit_value(tensors)
-                        self.metrics.add_inference_time(time.perf_counter() - t0)
-                        has_value = True
+                    # Always compute the value head for expert frames so they
+                    # carry a real critic estimate and keep each client's GAE
+                    # timeline continuous (no broken chains during the guided
+                    # phase where most frames are expert-driven).
+                    t0 = time.perf_counter()
+                    value = self.batcher.submit_value(tensors)
+                    self.metrics.add_inference_time(time.perf_counter() - t0)
+                    has_value = True
                     tensors_dict = self.agent._detach_tensors(tensors)
                 else:
                     is_epsilon = random.random() < epsilon
@@ -1452,6 +1493,7 @@ class SocketServer:
 
                 if pending_prev_tensors is not None and pending_prev_action is not None and pending_reward is not None:
                     self._push_transition(
+                        client_id=cid,
                         entity_features=pending_prev_tensors["entity_features"],
                         entity_mask=pending_prev_tensors["entity_mask"],
                         global_context=pending_prev_tensors["global_context"],
@@ -1507,7 +1549,7 @@ class SocketServer:
 
                 _pv = self._preview_enabled_for_client(cid)
                 _hd = self._hud_enabled_for_client(cid)
-                sock.sendall(self._pack_action(move_cmd, fire_cmd, source_byte, preview_enabled=_pv, hud_enabled=_hd))
+                sock.sendall(self._pack_action(move_cmd, fire_cmd, source_byte, preview_enabled=_pv, hud_enabled=_hd, client_slot=client_slot))
 
         except Exception as e:
             is_expected = isinstance(e, (ConnectionError, BrokenPipeError, ConnectionResetError, TimeoutError))

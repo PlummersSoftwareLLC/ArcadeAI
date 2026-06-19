@@ -31,9 +31,15 @@ TACTICAL_LANE_FEATURES = 30
 TACTICAL_LOCAL_GRID_FEATURES = 9 * 9 * 6  # 486
 PY_CONTROL_CONTEXT_FEATURES = 4
 
+# Extra global-context scalars appended by the StateProcessor (surround/boxed-in
+# affordances derived from the per-direction move rays). See state_processor.
+GLOBAL_EXTRA_FEATURES = 4
+
 # Entity pool definitions: (name, max_slots, features_per_slot)
+# The projectile pool carries an extra subtype channel (cruise missile vs
+# spark/shell) so the model can distinguish homing threats from straight shots.
 ENTITY_POOL_DEFS: list[tuple[str, int, int]] = [
-    ("projectile", 24, 10),
+    ("projectile", 24, 11),
     ("danger",     32, 10),
     ("human",      12,  7),
     ("electrode",   8,  5),
@@ -88,10 +94,10 @@ class ModelConfig:
     dropout: float = 0.0
 
     # Temporal context
-    frame_stack: int = 3
+    frame_stack: int = 2
 
-    # Global context (core features + ELIST directly injected)
-    global_context_dim: int = LEGACY_CORE_FEATURES + LEGACY_ELIST_FEATURES  # 40
+    # Global context (core features + ELIST + appended surround affordances).
+    global_context_dim: int = LEGACY_CORE_FEATURES + LEGACY_ELIST_FEATURES + GLOBAL_EXTRA_FEATURES  # 44
 
     # Per-action ray affordances for move and fire heads.
     action_feature_dim: int = ACTION_FEATURE_DIM
@@ -122,15 +128,21 @@ class TrainConfig:
     gae_lambda: float = 0.95
     clip_epsilon: float = 0.2
     clip_value: float = 0.5
-    entropy_coeff: float = 0.03
+    entropy_coeff: float = 0.015
     value_coeff: float = 0.25
     max_grad_norm: float = 1.0
 
     # PPO mini-batch
-    rollout_length: int = 512       # steps per actor before PPO update
-    num_epochs: int = 4             # PPO epochs per rollout
-    mini_batch_size: int = 256
+    rollout_length: int = 512       # minimum queued steps before PPO update
+    max_rollout_drain: int = 2048   # drain bigger batches when many clients are connected
+    num_epochs: int = 3             # PPO epochs per rollout
+    mini_batch_size: int = 512
     num_actors: int = 32            # parallel MAME instances
+
+    # Policy-gradient oversampling: during the guided phase policy-sampled frames
+    # are rare (most are expert/BC). Replicating them in the PPO minibatch pool so
+    # the policy gradient is not drowned out by behavioral-cloning data.
+    policy_oversample: int = 3
 
     # Optimizer
     lr: float = 3e-4
@@ -144,35 +156,49 @@ class TrainConfig:
     bc_weight_initial: float = 1.0
     # Keep BC present, but hand off much sooner so the policy learns to recover
     # from its own states instead of watching the heuristic for millions of frames.
-    bc_weight_floor: float = 0.20
-    bc_decay_start_frame: int = 250_000
-    bc_decay_end_frame: int = 3_000_000
+    bc_weight_floor: float = 0.05
+    bc_decay_start_frame: int = 100_000
+    bc_decay_end_frame: int = 1_200_000
 
     # Expert action ratio (how often to use expert vs policy)
     expert_ratio_initial: float = 0.99
-    expert_ratio_final: float = 0.20
-    expert_ratio_decay_start_frame: int = 100_000
-    expert_ratio_decay_frames: int = 2_000_000
+    expert_ratio_final: float = 0.08
+    expert_ratio_decay_start_frame: int = 50_000
+    expert_ratio_decay_frames: int = 1_000_000
 
     # Exploration (epsilon-greedy fallback for PPO)
     epsilon_initial: float = 0.1
-    epsilon_final: float = 0.02
+    epsilon_final: float = 0.04
     epsilon_decay_frames: int = 5_000_000
 
     # If recent self-play reward collapses after the early guided phase,
     # temporarily raise the expert/BC floor so the policy can recover.
     guidance_rescue_min_frame: int = 4_000_000
     guidance_rescue_reward_threshold: float = -10.0
-    guidance_rescue_expert_ratio_floor: float = 0.10
-    guidance_rescue_bc_weight_floor: float = 0.15
+    guidance_rescue_expert_ratio_floor: float = 0.12
+    guidance_rescue_bc_weight_floor: float = 0.08
 
     # Reward shaping
     survival_bonus: float = 0.01
     score_log_scale: float = 1.0
+    # Lua-side subjective shaping (aim/evade/human proximity/survival) is carried
+    # in subj_reward; scale it so it densifies learning without dominating the
+    # log-scaled objective score signal.
+    subj_reward_scale: float = 0.02
     human_rescue_bonus: float = 5.0
     death_penalty: float = 10.0
     proximity_penalty_scale: float = 0.1
+    # Only penalize proximity when the nearest enemy is within this normalized
+    # distance; bounded so it shapes spacing without a constant negative drift.
+    proximity_penalty_dist: float = 0.12
+    # Bonus on the frame a wave is cleared (rewards reaching deeper waves).
+    wave_clear_bonus: float = 3.0
     reward_clip: float = 10.0
+
+    # Curriculum: when GAME_SETTINGS.start_advanced is enabled, spread per-client
+    # start levels across this many waves so some actors train on dense late-game
+    # object fields instead of every instance starting on the same wave.
+    curriculum_wave_spread: int = 6
 
     # Checkpoint
     save_interval_frames: int = 500_000

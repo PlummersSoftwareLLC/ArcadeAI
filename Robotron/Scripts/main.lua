@@ -294,7 +294,7 @@ TACTICAL_GRID_FEATURES = TACTICAL_GRID_W * TACTICAL_GRID_H * TACTICAL_GRID_CHANN
 TACTICAL_GRID_LOOKAHEAD_FRAMES = 4.0
 TACTICAL_TTC_MAX_FRAMES = 24.0
 PROJECTILE_POOL_SLOTS = 24
-PROJECTILE_SLOT_FEATURES = 10
+PROJECTILE_SLOT_FEATURES = 11
 DANGER_POOL_SLOTS = 32
 DANGER_SLOT_FEATURES = 10
 HUMAN_POOL_SLOTS = 12
@@ -2043,6 +2043,10 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
             pool_features[#pool_features + 1] = obj.ttc_norm or 1.0
             pool_features[#pool_features + 1] = obj.closest_pass_norm or obj.dist_norm or 1.0
             pool_features[#pool_features + 1] = obj.approach or 0.0
+            -- Subtype: 1.0 for homing cruise missiles (RPTR list), 0.0 for
+            -- straight enforcer sparks/shells. Lets the model treat the seeking
+            -- threat differently from a predictable shot.
+            pool_features[#pool_features + 1] = (obj.list_name == "rptr") and 1.0 or 0.0
         else
             for _ = 1, PROJECTILE_SLOT_FEATURES do
                 pool_features[#pool_features + 1] = 0.0

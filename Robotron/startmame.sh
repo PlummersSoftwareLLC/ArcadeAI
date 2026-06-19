@@ -6,7 +6,6 @@ LUA_SCRIPT="$SCRIPT_DIR/Scripts/main.lua"
 RELAY_SCRIPT="$SCRIPT_DIR/Scripts/audio_relay.py"
 LOG_DIR="$SCRIPT_DIR/logs"
 ROM_DIR="$SCRIPT_DIR/roms"
-SHARD_ENV_FILE="$LOG_DIR/server_shards.env"
 MAME_BIN="${MAME_BIN:-mame}"
 TMP_AUDIO_GLOB="/tmp/robotron_audio_client"*.wav
 TMP_AUDIO_FIFO_GLOB="/tmp/robotron_audio_client"*.fifo
@@ -15,38 +14,16 @@ GAME_AUDIO_ENABLED_RAW="${ROBOTRON_GAME_AUDIO_ENABLED:-1}"
 GAME_AUDIO_ENABLED_NORM="$(printf '%s' "$GAME_AUDIO_ENABLED_RAW" | tr '[:upper:]' '[:lower:]')"
 SKIP_UNUSED_TACTICAL_RAW="${ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES:-1}"
 SKIP_UNUSED_TACTICAL_NORM="$(printf '%s' "$SKIP_UNUSED_TACTICAL_RAW" | tr '[:upper:]' '[:lower:]')"
-PREVIEW_SLOT_DEFAULT="${ROBOTRON_PREVIEW_SLOT:-0}"
 VIDEO_ALL_RAW="${ROBOTRON_VIDEO_ALL_CLIENTS:-0}"
 VIDEO_ALL_NORM="$(printf '%s' "$VIDEO_ALL_RAW" | tr '[:upper:]' '[:lower:]')"
 AUDIO_ALL_RAW="${ROBOTRON_AUDIO_ALL_CLIENTS:-0}"
 AUDIO_ALL_NORM="$(printf '%s' "$AUDIO_ALL_RAW" | tr '[:upper:]' '[:lower:]')"
-
-EXPLICIT_SOCKET_ADDRESS_SET=0
-EXPLICIT_SOCKET_HOST_SET=0
-EXPLICIT_MASTER_PORT_SET=0
-EXPLICIT_WORKER_PORTS_SET=0
-EXPLICIT_PREVIEW_SLOT_SET=0
-
-if [[ "${ROBOTRON_SOCKET_ADDRESS+x}" == "x" ]]; then
-    EXPLICIT_SOCKET_ADDRESS_SET=1
-    EXPLICIT_SOCKET_ADDRESS="$ROBOTRON_SOCKET_ADDRESS"
-fi
-if [[ "${ROBOTRON_SOCKET_HOST+x}" == "x" ]]; then
-    EXPLICIT_SOCKET_HOST_SET=1
-    EXPLICIT_SOCKET_HOST="$ROBOTRON_SOCKET_HOST"
-fi
-if [[ "${ROBOTRON_MASTER_PORT+x}" == "x" ]]; then
-    EXPLICIT_MASTER_PORT_SET=1
-    EXPLICIT_MASTER_PORT="$ROBOTRON_MASTER_PORT"
-fi
-if [[ "${ROBOTRON_WORKER_PORTS+x}" == "x" ]]; then
-    EXPLICIT_WORKER_PORTS_SET=1
-    EXPLICIT_WORKER_PORTS="$ROBOTRON_WORKER_PORTS"
-fi
-if [[ "${ROBOTRON_PREVIEW_SLOT+x}" == "x" ]]; then
-    EXPLICIT_PREVIEW_SLOT_SET=1
-    EXPLICIT_PREVIEW_SLOT="$ROBOTRON_PREVIEW_SLOT"
-fi
+DEFAULT_SOCKET_HOST="$(hostname)"
+DEFAULT_SOCKET_PORT="9998"
+SOCKET_HOST="$DEFAULT_SOCKET_HOST"
+SOCKET_PORT="$DEFAULT_SOCKET_PORT"
+SOCKET_ADDRESS=""
+PREVIEW_SLOT_SELECTED=0
 
 case "$GAME_AUDIO_ENABLED_NORM" in
     1|true|yes|on)
@@ -84,64 +61,14 @@ case "$AUDIO_ALL_NORM" in
         ;;
 esac
 
-if [[ -f "$SHARD_ENV_FILE" ]]; then
-    # shellcheck disable=SC1090
-    source "$SHARD_ENV_FILE"
-fi
-
-if [[ "$EXPLICIT_SOCKET_ADDRESS_SET" -eq 1 ]]; then
-    ROBOTRON_SOCKET_ADDRESS="$EXPLICIT_SOCKET_ADDRESS"
-fi
-if [[ "$EXPLICIT_SOCKET_HOST_SET" -eq 1 ]]; then
-    ROBOTRON_SOCKET_HOST="$EXPLICIT_SOCKET_HOST"
-fi
-if [[ "$EXPLICIT_MASTER_PORT_SET" -eq 1 ]]; then
-    ROBOTRON_MASTER_PORT="$EXPLICIT_MASTER_PORT"
-fi
-if [[ "$EXPLICIT_WORKER_PORTS_SET" -eq 1 ]]; then
-    ROBOTRON_WORKER_PORTS="$EXPLICIT_WORKER_PORTS"
-fi
-if [[ "$EXPLICIT_PREVIEW_SLOT_SET" -eq 1 ]]; then
-    ROBOTRON_PREVIEW_SLOT="$EXPLICIT_PREVIEW_SLOT"
-fi
-PREVIEW_SLOT_SELECTED="${ROBOTRON_PREVIEW_SLOT:-$PREVIEW_SLOT_DEFAULT}"
-
 resolve_client_socket() {
     local client_slot="$1"
-    local default_addr="${ROBOTRON_SOCKET_ADDRESS:-}"
-    local host="${ROBOTRON_SOCKET_HOST:-}"
-    local master_port="${ROBOTRON_MASTER_PORT:-}"
-    local worker_ports_csv="${ROBOTRON_WORKER_PORTS:-}"
-    local preview_slot="${ROBOTRON_PREVIEW_SLOT:-0}"
-    local socket_addr="$default_addr"
+    local preview_slot="$PREVIEW_SLOT_SELECTED"
+    local socket_addr="$SOCKET_ADDRESS"
     local preview_flag="1"
 
-    if [[ -n "$default_addr" ]]; then
-        printf '%s|%s\n' "$socket_addr" "$preview_flag"
-        return 0
-    fi
-
-    if [[ -n "$host" && -n "$master_port" ]]; then
-        if [[ "$client_slot" -eq "$preview_slot" ]]; then
-            socket_addr="${host}:${master_port}"
-            preview_flag="1"
-        elif [[ -z "$worker_ports_csv" ]]; then
-            socket_addr="${host}:${master_port}"
-            preview_flag="0"
-        else
-            IFS=',' read -r -a worker_ports <<< "$worker_ports_csv"
-            if [[ "${#worker_ports[@]}" -gt 0 ]]; then
-                local reduced_slot="$client_slot"
-                if [[ "$client_slot" -gt "$preview_slot" ]]; then
-                    reduced_slot=$((client_slot - 1))
-                fi
-                local shard_idx=$((reduced_slot % ${#worker_ports[@]}))
-                socket_addr="${host}:${worker_ports[$shard_idx]}"
-            else
-                socket_addr="${host}:${master_port}"
-            fi
-            preview_flag="0"
-        fi
+    if [[ "$client_slot" -ne "$preview_slot" ]]; then
+        preview_flag="0"
     fi
 
     printf '%s|%s\n' "$socket_addr" "$preview_flag"
@@ -155,18 +82,20 @@ else
 fi
 
 usage() {
-    echo "Usage: $0 [COUNT] [novideo] [--fg] [--throttle-client0] [--socket-address HOST:PORT] [-kill]"
+    echo "Usage: $0 [COUNT] [novideo] [--fg] [--throttle-client0] [--socket-address HOST:PORT] [--socket-host HOST] [--socket-port PORT] [-kill]"
     echo "       $0 kill CLIENT_ID"
     echo "  COUNT              Desired number of MAME instances left running (default: 1, background mode only; 0 kills all)"
     echo "  novideo            Launch MAME with -video none for faster operation"
     echo "  ROBOTRON_VIDEO_ALL_CLIENTS=1 restores software video for every background client"
     echo "  ROBOTRON_AUDIO_ALL_CLIENTS=1 restores audio capture for every background client"
-    echo "  --socket-address   Override the Python socket target for all clients"
+    echo "  --socket-address   Set the Python socket target for all clients"
+    echo "  --socket-host      Set socket host (default: current hostname)"
+    echo "  --socket-port      Set socket port (default: 9998)"
     echo "  --fg               Run one MAME instance in foreground"
     echo "  --throttle-client0 Throttle client 0 to real-time speed (default: unthrottled)"
     echo "  -kill              Kill all running Robotron MAME instances"
     echo "  kill CLIENT_ID     Kill one Robotron MAME client by ROBOTRON_CLIENT_SLOT"
-    echo "  Tip: use ROBOTRON_SOCKET_ADDRESS=ubvmdell:9998 or --socket-address ubvmdell:9998 for a remote host"
+    echo "  Tip: use --socket-address ubvmdell:9998 for a remote host"
 }
 
 list_robotron_pids() {
@@ -293,13 +222,37 @@ while [[ $# -gt 0 ]]; do
                 usage >&2
                 exit 2
             fi
-            EXPLICIT_SOCKET_ADDRESS_SET=1
-            EXPLICIT_SOCKET_ADDRESS="$2"
+            SOCKET_ADDRESS="$2"
             shift 2
             ;;
         --socket-address=*)
-            EXPLICIT_SOCKET_ADDRESS_SET=1
-            EXPLICIT_SOCKET_ADDRESS="${1#*=}"
+            SOCKET_ADDRESS="${1#*=}"
+            shift
+            ;;
+        --socket-host)
+            if [[ $# -lt 2 ]]; then
+                echo "error: --socket-host requires HOST" >&2
+                usage >&2
+                exit 2
+            fi
+            SOCKET_HOST="$2"
+            shift 2
+            ;;
+        --socket-host=*)
+            SOCKET_HOST="${1#*=}"
+            shift
+            ;;
+        --socket-port)
+            if [[ $# -lt 2 ]]; then
+                echo "error: --socket-port requires PORT" >&2
+                usage >&2
+                exit 2
+            fi
+            SOCKET_PORT="$2"
+            shift 2
+            ;;
+        --socket-port=*)
+            SOCKET_PORT="${1#*=}"
             shift
             ;;
         --throttle-client0)
@@ -320,27 +273,21 @@ while [[ $# -gt 0 ]]; do
                 usage >&2
                 exit 1
             fi
-            COUNT="$1"
+            if [[ "$1" =~ ^[0-9]+$ ]]; then
+                COUNT="$1"
+            else
+                echo "error: unrecognized argument: $1" >&2
+                usage >&2
+                exit 1
+            fi
             COUNT_SET=1
             shift
             ;;
     esac
 done
 
-if [[ "$EXPLICIT_SOCKET_ADDRESS_SET" -eq 1 ]]; then
-    ROBOTRON_SOCKET_ADDRESS="$EXPLICIT_SOCKET_ADDRESS"
-fi
-if [[ "$EXPLICIT_SOCKET_HOST_SET" -eq 1 ]]; then
-    ROBOTRON_SOCKET_HOST="$EXPLICIT_SOCKET_HOST"
-fi
-if [[ "$EXPLICIT_MASTER_PORT_SET" -eq 1 ]]; then
-    ROBOTRON_MASTER_PORT="$EXPLICIT_MASTER_PORT"
-fi
-if [[ "$EXPLICIT_WORKER_PORTS_SET" -eq 1 ]]; then
-    ROBOTRON_WORKER_PORTS="$EXPLICIT_WORKER_PORTS"
-fi
-if [[ "$EXPLICIT_PREVIEW_SLOT_SET" -eq 1 ]]; then
-    ROBOTRON_PREVIEW_SLOT="$EXPLICIT_PREVIEW_SLOT"
+if [[ -z "$SOCKET_ADDRESS" ]]; then
+    SOCKET_ADDRESS="${SOCKET_HOST}:${SOCKET_PORT}"
 fi
 
 if ! [[ "$COUNT" =~ ^[0-9]+$ ]]; then

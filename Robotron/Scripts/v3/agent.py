@@ -410,7 +410,22 @@ class PPOAgent:
         return detached
 
     # ── Training ────────────────────────────────────────────────────────
+    def _normalize_policy_advantages(self, rollout: RolloutBuffer) -> None:
+        """Normalize advantages over the whole policy-sampled subset, in place.
 
+        Operates on a flattened view of the rollout's advantage tensor, so the
+        normalized values are seen by every minibatch drawn afterward.
+        """
+        adv = rollout.advantages.reshape(-1)
+        ps = rollout.policy_sampled.reshape(-1).bool()
+        if not bool(ps.any()):
+            return
+        sel = adv[ps]
+        if sel.numel() <= 1:
+            return
+        mean = sel.mean()
+        std = sel.std(unbiased=False).clamp_min(1e-6)
+        adv[ps] = (sel - mean) / std
     def train_step(self, rollout: RolloutBuffer) -> dict[str, float]:
         """Run PPO update on a filled rollout buffer.
 
@@ -422,6 +437,12 @@ class PPOAgent:
         # Build LR scheduler on first step
         if self.lr_scheduler is None:
             self.lr_scheduler = self._build_lr_scheduler()
+
+        # Normalize advantages ONCE over the whole drained policy subset rather
+        # than per-minibatch. Per-minibatch normalization warps the relative
+        # scale of advantages between batches (and is unstable for the small,
+        # sparse policy subset during the guided phase).
+        self._normalize_policy_advantages(rollout)
 
         total_policy_loss = 0.0
         total_value_loss = 0.0
@@ -490,8 +511,6 @@ class PPOAgent:
                     fire_dist.entropy(),
                 )
                 adv_policy = advantages[policy_sampled]
-                adv_policy_std = adv_policy.std(unbiased=False).clamp_min(1e-8)
-                adv_policy = (adv_policy - adv_policy.mean()) / adv_policy_std
                 ratio = torch.exp(new_log_probs[policy_sampled] - old_log_probs[policy_sampled])
                 surr1 = ratio * adv_policy
                 surr2 = torch.clamp(ratio, 1.0 - tcfg.clip_epsilon, 1.0 + tcfg.clip_epsilon) * adv_policy
