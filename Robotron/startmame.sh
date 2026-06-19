@@ -327,6 +327,22 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if [[ "$EXPLICIT_SOCKET_ADDRESS_SET" -eq 1 ]]; then
+    ROBOTRON_SOCKET_ADDRESS="$EXPLICIT_SOCKET_ADDRESS"
+fi
+if [[ "$EXPLICIT_SOCKET_HOST_SET" -eq 1 ]]; then
+    ROBOTRON_SOCKET_HOST="$EXPLICIT_SOCKET_HOST"
+fi
+if [[ "$EXPLICIT_MASTER_PORT_SET" -eq 1 ]]; then
+    ROBOTRON_MASTER_PORT="$EXPLICIT_MASTER_PORT"
+fi
+if [[ "$EXPLICIT_WORKER_PORTS_SET" -eq 1 ]]; then
+    ROBOTRON_WORKER_PORTS="$EXPLICIT_WORKER_PORTS"
+fi
+if [[ "$EXPLICIT_PREVIEW_SLOT_SET" -eq 1 ]]; then
+    ROBOTRON_PREVIEW_SLOT="$EXPLICIT_PREVIEW_SLOT"
+fi
+
 if ! [[ "$COUNT" =~ ^[0-9]+$ ]]; then
     echo "error: COUNT must be a non-negative integer" >&2
     usage >&2
