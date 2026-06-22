@@ -80,18 +80,20 @@ DEBUG_FORCE_MOVE_DIR = 2  -- right
 DEBUG_FORCE_FIRE_DIR = 2  -- right
 DEATH_PENALTY_POINTS = 25000
 -- Subjective shaping rewards (raw points; scaled in Python by subj_reward_scale).
--- Goal: densify survival signal without dominating objective score rewards.
+-- Goal: densify the objective (score/aim/evade/rescue) signal between scoring
+-- events. NOTE: there is intentionally no survival bonus -- time-on-task has no
+-- terminal value and a per-frame "stay alive" reward incentivized camping the
+-- last enemy instead of clearing the wave.
 SUBJ_ENEMY_WEIGHT = 8.0
 SUBJ_HUMAN_WEIGHT = 12.0
-SUBJ_SURVIVAL_BONUS = 2.0
--- Survival shaping is only awarded while there are humans left to rescue.
-SUBJ_SURVIVAL_REQUIRE_HUMANS = true
--- Per-frame penalty when alive but no humans remain; helps avoid end-of-wave stalling.
-SUBJ_NO_HUMANS_EXISTENCE_PENALTY = 2.0
 SUBJ_DEATH_PENALTY = 25.0
 SUBJ_ENEMY_NEAR_NORM = 0.035
 SUBJ_ENEMY_FAR_NORM = 0.200
 SUBJ_HUMAN_NEAR_NORM = 0.120
+-- Discount used for potential-based shaping of the state-only terms (enemy
+-- spacing + human proximity).  MUST match RL_CONFIG.gamma on the Python side
+-- so the shaping F = gamma*Phi(s')-Phi(s) stays policy-invariant (Ng et al. 1999).
+POTENTIAL_GAMMA = 0.99
 ADVANCED_SHAPING = {
     priority_aim_weight = 10.0,
     brain_guard_weight = 8.0,
@@ -163,6 +165,7 @@ previous_player_alive = 1
 previous_score = 0
 previous_wave_number = 0
 prev_num_humans = 0
+prev_potential = 0.0       -- previous-frame shaping potential Phi(s) (state-only terms)
 prev_fire_cmd = -1          -- fire direction from previous frame
 prev_move_cmd = -1          -- move direction from previous frame
 prev_aim_objects = nil      -- classified objects from previous frame
@@ -185,7 +188,7 @@ prev_nearest_enemy_dist = nil
 -- Autoboot input sequence (MAME input level, no game-specific memory logic required).
 -- Every cycle: pulse Coin 1, then pulse 1P Start shortly after.
 AUTOBOOT_ENABLED = true
-AUTOBOOT_CYCLE_FRAMES = 300
+AUTOBOOT_CYCLE_FRAMES = 120
 AUTOBOOT_COIN_PULSE_FRAMES = 3
 AUTOBOOT_START_DELAY_FRAMES = 18
 AUTOBOOT_START_PULSE_FRAMES = 3
@@ -3337,7 +3340,28 @@ function compute_frame_rewards(frame)
     local aim_score = compute_aim_reward(prev_fire_cmd, prev_aim_px16, prev_aim_py16, prev_aim_objects)
     local evade_score = compute_evasion_reward(prev_move_cmd, prev_aim_px16, prev_aim_py16,
         prev_nearest_enemy_x16, prev_nearest_enemy_y16, prev_nearest_enemy_dist)
-    local survival_bonus = (player_alive == 1) and SUBJ_SURVIVAL_BONUS or 0.0
+
+    -- Potential-based shaping (Ng et al. 1999) for the state-only terms.
+    -- Phi(s) = enemy-spacing + human-proximity potential.  Emitting the per-frame
+    -- CHANGE  F = gamma*Phi(s') - Phi(s)  (instead of Phi itself) keeps these terms
+    -- policy-invariant AND action-relative: it rewards MOVING toward good states
+    -- rather than merely BEING in them.  The old absolute form added ~Phi every
+    -- frame (~20/frame x ~700 frames), inflating V(s) and collapsing the dueling
+    -- advantage stream into noise; the telescoping potential form does not.
+    local potential = (spacing_score * SUBJ_ENEMY_WEIGHT) + (rescue_score * SUBJ_HUMAN_WEIGHT)
+    local shaping = 0.0
+    if done then
+        -- Terminal potential is 0 by convention: F = gamma*0 - Phi(s).
+        shaping = -prev_potential
+        prev_potential = 0.0
+    elseif previous_player_alive == 0 then
+        -- First alive frame of a new life: no continuous transition to shape yet.
+        shaping = 0.0
+        prev_potential = potential
+    else
+        shaping = (POTENTIAL_GAMMA * potential) - prev_potential
+        prev_potential = potential
+    end
 
     local wall_penalty = 0.0
     if player_alive == 1 and player_x16 then
@@ -3351,9 +3375,7 @@ function compute_frame_rewards(frame)
         end
     end
 
-    local subj_reward = survival_bonus
-        + (spacing_score * SUBJ_ENEMY_WEIGHT)
-        + (rescue_score * SUBJ_HUMAN_WEIGHT)
+    local subj_reward = shaping
         + (aim_score * SUBJ_AIM_WEIGHT)
         + (evade_score * SUBJ_EVADE_WEIGHT)
         - wall_penalty

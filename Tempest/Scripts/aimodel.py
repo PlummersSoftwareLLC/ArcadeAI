@@ -754,7 +754,7 @@ class RainbowAgent:
             same_cuda_device = (
                 self.device.type == "cuda"
                 and self.inference_device.type == "cuda"
-                and self.device.index == self.inference_device.index
+                and self.device.index == self.inference_device.index1
             )
             if self.inference_device.type == "cpu":
                 sd = {k: v.detach().cpu() for k, v in self.online_net.state_dict().items()}

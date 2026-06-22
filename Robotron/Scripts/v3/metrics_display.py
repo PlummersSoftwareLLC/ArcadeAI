@@ -152,8 +152,9 @@ def display_metrics_header():
     hdr = (
         f"{'Frame':>11} {'FPS':>7} {'Epsi':>7} {'Xprt':>7} {'Pol%':>7} {'AvgScr':>7} "
         f"{'AvgRwd':>9} {'Rwd100K':>9} {'Rwd1M':>9} {'Rwd5M':>9} "
-        f"{'Loss':>10} {'PiLoss':>8} {'VLoss':>8} {'Entropy':>8} "
-        f"{'EpLen':>8} {'BCLoss':>8} {'BCWgt':>6} "
+        f"{'RScore':>7} {'RSubj':>7} {'RSurv':>7} {'RProx':>7} {'RDeath':>7} {'RWave':>7} {'RMove':>7} {'RClip':>7} "
+        f"{'Loss':>10} {'PiLoss':>8} {'VLoss':>8} {'ExplVar':>8} {'Entropy':>8} "
+        f"{'EpLen':>8} {'BCLoss':>8} {'BCMv':>7} {'BCFr':>7} {'MAcc':>6} {'FAcc':>6} {'BCWgt':>6} "
         f"{'Clnt':>4} {'Levl':>5} {'QSz':>6} "
         f"{'GrNorm':>8} {'LR':>9}"
     )
@@ -174,6 +175,11 @@ def display_metrics_row(server_metrics, agent):
 
     m = server_metrics
     rwd100k, rwd1m, rwd5m = get_reward_window_averages()
+    reward_parts = {}
+    try:
+        reward_parts = m.avg_reward_components()
+    except Exception:
+        reward_parts = {}
 
     expert_r = agent.get_expert_ratio()
     pol_r = getattr(m, "policy_sampled_fraction", 0.0)
@@ -205,9 +211,17 @@ def display_metrics_row(server_metrics, agent):
         f"{eps*100:>6.1f}{eps_mark} {expert_r*100:>6.1f}{xprt_mark} {pol_r*100:>6.1f}% "
         f"{int(round(m.avg_game_score)):>7,} "
         f"{_fr(m.avg_reward)} {_fr(rwd100k)} {_fr(rwd1m)} {_fr(rwd5m)} "
+        f"{_fr(reward_parts.get('score', 0.0), 7)} {_fr(reward_parts.get('subj', 0.0), 7)} "
+        f"{_fr(reward_parts.get('surv', 0.0), 7)} {_fr(reward_parts.get('prox', 0.0), 7)} "
+        f"{_fr(reward_parts.get('death', 0.0), 7)} {_fr(reward_parts.get('wave', 0.0), 7)} "
+        f"{_fr(reward_parts.get('move', 0.0), 7)} "
+        f"{_fr(reward_parts.get('clip', 0.0), 7)} "
         f"{agent.last_loss:>10.6f} {agent.last_policy_loss:>8.5f} "
-        f"{agent.last_value_loss:>8.5f} {agent.last_entropy:>8.5f} "
-        f"{m.avg_ep_len:>8.1f} {agent.last_bc_loss:>8.5f} {bc_w:>6.3f} "
+        f"{agent.last_value_loss:>8.5f} {getattr(agent, 'last_explained_variance', 0.0):>8.3f} {agent.last_entropy:>8.5f} "
+        f"{m.avg_ep_len:>8.1f} {agent.last_bc_loss:>8.5f} "
+        f"{getattr(agent, 'last_bc_move_loss', 0.0):>7.4f} {getattr(agent, 'last_bc_fire_loss', 0.0):>7.4f} "
+        f"{getattr(agent, 'last_bc_move_acc', 0.0)*100:>5.1f}% {getattr(agent, 'last_bc_fire_acc', 0.0)*100:>5.1f}% "
+        f"{bc_w:>6.3f} "
         f"{m.client_count:>4} {m.avg_level:>5.1f} {queue_sz:>6} "
         f"{agent.last_grad_norm:>8.3f} {lr:>9.1e}{train_mark}"
     )

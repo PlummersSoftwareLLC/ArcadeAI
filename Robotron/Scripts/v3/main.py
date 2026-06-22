@@ -336,6 +336,8 @@ def main():
         pass
     finally:
         kb.restore()
+        if dashboard is not None:
+            dashboard.stop()
         print("Saving final checkpoint...")
         agent.save()
         print("Done.")

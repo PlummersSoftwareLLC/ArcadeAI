@@ -526,6 +526,10 @@ class _DashboardState:
         value_loss = float(agent.last_value_loss) if agent else 0.0
         entropy = float(agent.last_entropy) if agent else 0.0
         bc_loss = float(agent.last_bc_loss) if agent else 0.0
+        bc_move_loss = float(getattr(agent, "last_bc_move_loss", 0.0)) if agent else 0.0
+        bc_fire_loss = float(getattr(agent, "last_bc_fire_loss", 0.0)) if agent else 0.0
+        bc_move_acc = float(getattr(agent, "last_bc_move_acc", 0.0)) if agent else 0.0
+        bc_fire_acc = float(getattr(agent, "last_bc_fire_acc", 0.0)) if agent else 0.0
         grad_norm = float(agent.last_grad_norm) if agent else 0.0
         total_loss = float(agent.last_loss) if agent else 0.0
         training_steps = int(agent._training_steps) if agent else 0
@@ -594,6 +598,10 @@ class _DashboardState:
             "value_loss": value_loss,
             "entropy": entropy,
             "bc_loss": bc_loss,
+            "bc_move_loss": bc_move_loss,
+            "bc_fire_loss": bc_fire_loss,
+            "bc_move_acc": bc_move_acc,
+            "bc_fire_acc": bc_fire_acc,
             "grad_norm": grad_norm,
             "lr": lr,
             "lr_max": float(CONFIG.train.lr),
@@ -2646,7 +2654,7 @@ def _render_dashboard_html(webrtc_ice_servers: list[dict[str, Any]] | None = Non
             </colgroup>
             <thead id="tblClientsHead">
               <tr>
-                <th aria-sort="ascending"><button type="button" class="client-table-sort-btn active" data-sort-key="client_id">CLNT<span class="client-table-sort-indicator">▲</span></button></th>
+                <th aria-sort="ascending"><button type="button" class="client-table-sort-btn active" data-sort-key="client_slot">CLNT<span class="client-table-sort-indicator">▲</span></button></th>
                 <th class="num" aria-sort="none"><button type="button" class="client-table-sort-btn" data-sort-key="duration_seconds">DUR<span class="client-table-sort-indicator"></span></button></th>
                 <th class="num" aria-sort="none"><button type="button" class="client-table-sort-btn" data-sort-key="efficiency">Efficiency<span class="client-table-sort-indicator"></span></button></th>
                 <th class="num" aria-sort="none"><button type="button" class="client-table-sort-btn" data-sort-key="lives">LIV<span class="client-table-sort-indicator"></span></button></th>
@@ -3329,7 +3337,7 @@ def _render_dashboard_html(webrtc_ice_servers: list[dict[str, Any]] | None = Non
     let _previewGameAudioEnabled = PREVIEW_GAME_AUDIO_TRANSPORT_ENABLED;
     let _previewClientRequestInFlight = false;
     let _previewPendingClientId = null;
-    let _clientTableSortKey = "client_id";
+    let _clientTableSortKey = "client_slot";
     let _clientTableSortDir = "asc";
     // Preview is controlled via checkbox; start enabled by default.
     const ENABLE_CLIENT0_PREVIEW = true;
@@ -3464,22 +3472,31 @@ def _render_dashboard_html(webrtc_ice_servers: list[dict[str, Any]] | None = Non
         .map((row) => {
           const clientId = Number(row && row.client_id);
           if (!Number.isFinite(clientId) || clientId < 0) return null;
+          const clientSlotRaw = Number(row && row.client_slot);
+          const clientSlot = Number.isFinite(clientSlotRaw) && clientSlotRaw >= 0
+            ? Math.trunc(clientSlotRaw)
+            : Math.trunc(clientId);
           const level = Math.max(0, Math.trunc(Number(row && row.level) || 0));
           const score = Math.max(0, Math.trunc(Number(row && row.score) || 0));
           const efficiency = level > 0 ? (score / level) : 0;
           return {
             client_id: Math.trunc(clientId),
+            client_slot: clientSlot,
             duration_seconds: Math.max(0, Number(row && row.duration_seconds) || 0),
+            connected_duration_seconds: Math.max(0, Number(row && row.connected_duration_seconds) || 0),
             lives: Math.max(0, Math.trunc(Number(row && row.lives) || 0)),
             level,
             score,
             efficiency,
+            status: String((row && row.status) || "unknown"),
+            player_alive: !!(row && row.player_alive),
+            gameplay_seen: !!(row && row.gameplay_seen),
             selected_preview: !!(row && row.selected_preview),
             preview_capable: !!(row && row.preview_capable),
           };
         })
         .filter((row) => row !== null)
-        .sort((a, b) => a.client_id - b.client_id);
+        .sort((a, b) => (a.client_slot - b.client_slot) || (a.client_id - b.client_id));
     }
 
     function _effectivePreviewClientId(rows, selectedId) {
@@ -3506,7 +3523,7 @@ def _render_dashboard_html(webrtc_ice_servers: list[dict[str, Any]] | None = Non
         const av = Number(a && a[key]) || 0;
         const bv = Number(b && b[key]) || 0;
         if (av !== bv) return (av - bv) * dir;
-        return a.client_id - b.client_id;
+        return (a.client_slot - b.client_slot) || (a.client_id - b.client_id);
       });
     }
 
@@ -3587,12 +3604,15 @@ def _render_dashboard_html(webrtc_ice_servers: list[dict[str, Any]] | None = Non
           }
         }
         tr.dataset.clientId = String(row.client_id);
+        tr.dataset.clientSlot = String(row.client_slot);
         tr.dataset.previewCapable = row.preview_capable ? "1" : "0";
         tr.classList.toggle("selected", row.client_id === effectiveSelectedId);
         tr.classList.toggle("preview-capable", !!row.preview_capable);
         tr.classList.toggle("inactive", !row.preview_capable);
+        tr.title = `slot ${row.client_slot}, socket ${row.client_id}, ${row.status}, connected ${fmtGameDuration(row.connected_duration_seconds)}`;
+        const statusMark = row.status === "playing" ? "" : ` ${String(row.status || "?").slice(0, 1).toUpperCase()}`;
         const cellDefs = [
-          { value: fmtInt(row.client_id), className: "" },
+          { value: fmtInt(row.client_slot) + statusMark, className: "" },
           { value: fmtGameDuration(row.duration_seconds), className: "num" },
           { value: fmtInt(row.efficiency), className: "num" },
           { value: fmtInt(row.lives), className: "num" },

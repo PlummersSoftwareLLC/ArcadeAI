@@ -824,13 +824,14 @@ def get_expert_action(
     wire_state: np.ndarray,
     wave_number: int = 1,
     max_entities: int = 128,
+    locked_fire: Optional[int] = None,
 ) -> tuple[int, int]:
     """Compute expert action from raw wire state."""
     entity_features, entity_mask, num_entities = extract_entities(wire_state, max_entities)
     px = float(wire_state[5]) if wire_state.size > 6 else 0.5
     py = float(wire_state[6]) if wire_state.size > 6 else 0.5
     entities = _get_active_entities(entity_features, entity_mask, num_entities)
-    return _get_strategic_expert_action(entities, px, py, wave_number)
+    return _get_strategic_expert_action(entities, px, py, wave_number, locked_fire=locked_fire)
 
 
 def get_expert_action_from_entities(
@@ -840,7 +841,8 @@ def get_expert_action_from_entities(
     wave_number: int = 1,
     px: float = 0.5,
     py: float = 0.5,
+    locked_fire: Optional[int] = None,
 ) -> tuple[int, int]:
     """Compute expert action from pre-extracted V3 entity arrays."""
     entities = _get_active_entities(entity_features, entity_mask, num_entities)
-    return _get_strategic_expert_action(entities, px, py, wave_number)
+    return _get_strategic_expert_action(entities, px, py, wave_number, locked_fire=locked_fire)

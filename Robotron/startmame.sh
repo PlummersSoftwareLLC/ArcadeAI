@@ -18,7 +18,7 @@ VIDEO_ALL_RAW="${ROBOTRON_VIDEO_ALL_CLIENTS:-0}"
 VIDEO_ALL_NORM="$(printf '%s' "$VIDEO_ALL_RAW" | tr '[:upper:]' '[:lower:]')"
 AUDIO_ALL_RAW="${ROBOTRON_AUDIO_ALL_CLIENTS:-0}"
 AUDIO_ALL_NORM="$(printf '%s' "$AUDIO_ALL_RAW" | tr '[:upper:]' '[:lower:]')"
-DEFAULT_SOCKET_HOST="$(hostname)"
+DEFAULT_SOCKET_HOST="127.0.0.1"
 DEFAULT_SOCKET_PORT="9998"
 SOCKET_HOST="$DEFAULT_SOCKET_HOST"
 SOCKET_PORT="$DEFAULT_SOCKET_PORT"
@@ -74,6 +74,12 @@ resolve_client_socket() {
     printf '%s|%s\n' "$socket_addr" "$preview_flag"
 }
 
+ensure_audio_fifo() {
+    local fifo_path="$1"
+    rm -f "$fifo_path"
+    mkfifo "$fifo_path"
+}
+
 # Default to project-local ROMs; allow callers to append/override via MAME_ROMPATH.
 if [[ -n "${MAME_ROMPATH:-}" ]]; then
     ROMPATH="$ROM_DIR;$MAME_ROMPATH"
@@ -85,11 +91,11 @@ usage() {
     echo "Usage: $0 [COUNT] [novideo] [--fg] [--throttle-client0] [--socket-address HOST:PORT] [--socket-host HOST] [--socket-port PORT] [-kill]"
     echo "       $0 kill CLIENT_ID"
     echo "  COUNT              Desired number of MAME instances left running (default: 1, background mode only; 0 kills all)"
-    echo "  novideo            Launch MAME with -video none for faster operation"
+    echo "  novideo            Launch MAME headless with -video none and -sound none for faster operation"
     echo "  ROBOTRON_VIDEO_ALL_CLIENTS=1 restores software video for every background client"
-    echo "  ROBOTRON_AUDIO_ALL_CLIENTS=1 restores audio capture for every background client"
+    echo "  ROBOTRON_AUDIO_ALL_CLIENTS=1 restores audio capture for every background client unless novideo is set"
     echo "  --socket-address   Set the Python socket target for all clients"
-    echo "  --socket-host      Set socket host (default: current hostname)"
+    echo "  --socket-host      Set socket host (default: 127.0.0.1)"
     echo "  --socket-port      Set socket port (default: 9998)"
     echo "  --fg               Run one MAME instance in foreground"
     echo "  --throttle-client0 Throttle client 0 to real-time speed (default: unthrottled)"
@@ -336,8 +342,10 @@ else
 fi
 
 if [[ "$NO_VIDEO" -eq 1 ]]; then
+    GAME_AUDIO_ENABLED=0
+    AUDIO_ALL_CLIENTS=0
     VIDEO_FLAG="-video none"
-    VIDEO_MODE_DESC="video disabled"
+    VIDEO_MODE_DESC="headless"
 else
     VIDEO_FLAG="-video soft"
     if [[ "$GAME_AUDIO_ENABLED" -eq 1 ]]; then
@@ -347,6 +355,8 @@ else
     fi
 fi
 
+SOUND_DISABLED_FLAG="-sound none"
+
 if [[ "$FOREGROUND" -eq 1 ]]; then
     echo "Mode: foreground"
     if [[ "$THROTTLE_CLIENT0" -eq 1 ]]; then
@@ -354,10 +364,10 @@ if [[ "$FOREGROUND" -eq 1 ]]; then
     else
         echo "Launching 1 MAME instance (attached) with $VIDEO_MODE_DESC, unthrottled..."
     fi
-    SOUND_FLAG=""
+    SOUND_FLAG="$SOUND_DISABLED_FLAG"
     if [[ "$GAME_AUDIO_ENABLED" -eq 1 ]]; then
         AUDIO_FIFO="/tmp/robotron_audio_client0.fifo"
-        mkfifo "$AUDIO_FIFO"
+        ensure_audio_fifo "$AUDIO_FIFO"
         python3 "$RELAY_SCRIPT" --slot-count 1 --audio-dir /tmp --max-bytes "$AUDIO_BUFFER_BYTES" \
             >> "$LOG_DIR/audio_relay.log" 2>&1 &
         SOUND_FLAG="-wavwrite $AUDIO_FIFO -samplerate 48000 -audio_latency 1"
@@ -400,7 +410,7 @@ if [[ "$GAME_AUDIO_ENABLED" -eq 1 ]]; then
     for i in $(seq 1 "$COUNT"); do
         CLIENT_SLOT=$((i-1))
         if [[ "$AUDIO_ALL_CLIENTS" -eq 1 || "$CLIENT_SLOT" -eq "$PREVIEW_SLOT_SELECTED" ]]; then
-            mkfifo "/tmp/robotron_audio_client${CLIENT_SLOT}.fifo"
+            ensure_audio_fifo "/tmp/robotron_audio_client${CLIENT_SLOT}.fifo"
         fi
     done
     python3 "$RELAY_SCRIPT" --slot-count "$RELAY_SLOT_COUNT" --audio-dir /tmp --max-bytes "$AUDIO_BUFFER_BYTES" \
@@ -412,7 +422,7 @@ for i in $(seq 1 "$COUNT"); do
     socket_info="$(resolve_client_socket "$CLIENT_SLOT")"
     CLIENT_SOCKET_ADDRESS="${socket_info%%|*}"
     PREVIEW_CLIENT_FLAG="${socket_info##*|}"
-    SOUND_FLAG=""
+    SOUND_FLAG="$SOUND_DISABLED_FLAG"
     if [[ "$GAME_AUDIO_ENABLED" -eq 1 && ( "$AUDIO_ALL_CLIENTS" -eq 1 || "$CLIENT_SLOT" -eq "$PREVIEW_SLOT_SELECTED" ) ]]; then
         AUDIO_FIFO="/tmp/robotron_audio_client${CLIENT_SLOT}.fifo"
         SOUND_FLAG="-wavwrite $AUDIO_FIFO -samplerate 48000 -audio_latency 1"

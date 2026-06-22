@@ -105,9 +105,11 @@ class PPOAgent:
         if self.device.type == "cpu":
             self.cpu_intra_threads, self.cpu_interop_threads = _configure_cpu_torch_threads()
 
-        # ── Multi-GPU / CUDA stream setup ───────────────────────────────
-        # If ≥2 CUDA GPUs: inference on GPU 0, training on GPU 1.
-        # If 1 CUDA GPU: both on same GPU but separate CUDA streams.
+        # ── GPU / CUDA stream setup ─────────────────────────────────────
+        # Default: one shared GPU/network for both inference and training. A
+        # separate inference GPU/copy is only used when CONFIG.train.use_multi_gpu
+        # is enabled, which keeps debugging runs free of cross-GPU weight sync.
+        # If 1 CUDA GPU: both on same GPU with separate CUDA streams.
         # Otherwise (CPU/MPS): single device, no streams.
         self.train_device = self.device
         self.infer_device = self.device
@@ -119,19 +121,20 @@ class PPOAgent:
             num_gpus = torch.cuda.device_count()
             env_infer_gpu = (os.getenv("ROBOTRON_INFER_GPU") or "").strip()
             env_train_gpu = (os.getenv("ROBOTRON_TRAIN_GPU") or "").strip()
+            use_multi_gpu = bool(getattr(tcfg, "use_multi_gpu", False))
 
-            if env_infer_gpu and env_train_gpu:
+            if use_multi_gpu and env_infer_gpu and env_train_gpu:
                 # Explicit GPU assignment
                 self.infer_device = torch.device(f"cuda:{int(env_infer_gpu)}")
                 self.train_device = torch.device(f"cuda:{int(env_train_gpu)}")
                 self._multi_gpu = (self.infer_device != self.train_device)
-            elif num_gpus >= 2:
+            elif use_multi_gpu and num_gpus >= 2:
                 # Auto: inference on GPU 0, training on GPU 1
                 self.infer_device = torch.device("cuda:0")
                 self.train_device = torch.device("cuda:1")
                 self._multi_gpu = True
             else:
-                # Single GPU — use streams for overlap
+                # Single shared GPU/network — use streams under the server lock.
                 self.infer_device = self.device
                 self.train_device = self.device
 
@@ -160,6 +163,9 @@ class PPOAgent:
             use_auxiliary_head=cfg.use_auxiliary_head,
             auxiliary_predict_steps=cfg.auxiliary_predict_steps,
             dropout=cfg.dropout,
+            use_direction_attention=cfg.use_direction_attention,
+            attention_geometry_bias=cfg.attention_geometry_bias,
+            attention_geometry_bias_strength=cfg.attention_geometry_bias_strength,
         ).to(self.train_device)
 
         # Separate inference copy (on infer_device) when multi-GPU
@@ -198,12 +204,25 @@ class PPOAgent:
 
         # Training state
         self.total_frames = 0
+        # Frames the policy itself drove (excludes expert/epsilon). Used as the
+        # guidance-schedule clock when schedule_on_policy_frames is set so the
+        # handoff self-paces to real policy experience instead of wall frames.
+        self.policy_frames = 0
         self.last_loss = 0.0
         self.last_policy_loss = 0.0
         self.last_value_loss = 0.0
         self.last_entropy = 0.0
         self.last_bc_loss = 0.0
+        self.last_bc_move_loss = 0.0
+        self.last_bc_fire_loss = 0.0
+        self.last_bc_move_acc = 0.0
+        self.last_bc_fire_acc = 0.0
         self.last_grad_norm = 0.0
+        # Explained variance of the value head: 1 - Var(returns - value)/Var(returns).
+        # ~1 = value predicts returns well (advantages are meaningful); ~0 = value
+        # is no better than the mean (advantages are noise -> policy random-walks);
+        # <0 = value is anti-correlated. THE key signal for whether PPO can learn.
+        self.last_explained_variance = 0.0
         self._save_lock = threading.Lock()
 
         # Manual override state (keyboard / dashboard controls)
@@ -219,6 +238,12 @@ class PPOAgent:
         self._manual_epsilon = 0.0            # value set by 4/6
         self._guidance_rescue_active = False
         self._guidance_rescue_avg_reward = 0.0
+        # De-bounce state for the rescue controller: EMAs smooth the noisy
+        # per-minibatch BC losses, and a pending counter requires N consecutive
+        # agreeing evaluations before the committed rescue state flips.
+        self._guidance_rescue_bc_fire_ema: float | None = None
+        self._guidance_rescue_bc_move_ema: float | None = None
+        self._guidance_rescue_pending_count = 0
 
         print(f"PPO Agent initialized on {self.device}")
         print(f"  Network params: {sum(p.numel() for p in self.net.parameters()):,}")
@@ -426,6 +451,36 @@ class PPOAgent:
         mean = sel.mean()
         std = sel.std(unbiased=False).clamp_min(1e-6)
         adv[ps] = (sel - mean) / std
+
+    def _move_bc_loss(self, move_logits: torch.Tensor, expert_move_targets: torch.Tensor) -> torch.Tensor:
+        """Movement BC loss with optional adjacent-direction soft targets."""
+        tcfg = CONFIG.train
+        if not getattr(tcfg, "bc_move_soft_targets", False):
+            return F.cross_entropy(move_logits, expert_move_targets)
+
+        exact_mass = max(0.0, float(getattr(tcfg, "bc_move_soft_exact_mass", 0.80)))
+        adjacent_mass = max(0.0, float(getattr(tcfg, "bc_move_soft_adjacent_mass", 0.10)))
+        total_mass = exact_mass + 2.0 * adjacent_mass
+        if total_mass <= 1e-8:
+            return F.cross_entropy(move_logits, expert_move_targets)
+        exact_mass /= total_mass
+        adjacent_mass /= total_mass
+
+        target_dist = torch.zeros_like(move_logits)
+        non_idle = expert_move_targets < 8
+        if bool(non_idle.any().item()):
+            non_idle_targets = expert_move_targets[non_idle]
+            rows = torch.nonzero(non_idle, as_tuple=False).flatten()
+            target_dist[rows, non_idle_targets] = exact_mass
+            target_dist[rows, (non_idle_targets + 7) % 8] = adjacent_mass
+            target_dist[rows, (non_idle_targets + 1) % 8] = adjacent_mass
+        idle = ~non_idle
+        if bool(idle.any().item()):
+            target_dist[idle, 8] = 1.0
+
+        log_probs = F.log_softmax(move_logits, dim=-1)
+        return -(target_dist * log_probs).sum(dim=-1).mean()
+
     def train_step(self, rollout: RolloutBuffer) -> dict[str, float]:
         """Run PPO update on a filled rollout buffer.
 
@@ -448,7 +503,15 @@ class PPOAgent:
         total_value_loss = 0.0
         total_entropy_loss = 0.0
         total_bc_loss = 0.0
+        total_bc_move_loss_sum = 0.0
+        total_bc_fire_loss_sum = 0.0
+        total_bc_move_correct = 0
+        total_bc_fire_correct = 0
+        total_bc_move_count = 0
+        total_bc_fire_count = 0
         total_total_loss = 0.0
+        total_explained_variance = 0.0
+        ev_batches = 0
         num_batches = 0
         last_finite_grad_norm = self.last_grad_norm if math.isfinite(float(self.last_grad_norm)) else 0.0
 
@@ -529,35 +592,89 @@ class PPOAgent:
                     value_pred - old_values,
                     -tcfg.clip_value, tcfg.clip_value,
                 )
-                value_loss1 = F.mse_loss(value_pred, returns_value)
-                value_loss2 = F.mse_loss(value_clipped, returns_value)
+                # Huber (smooth L1) instead of MSE: Robotron returns are heavy
+                # tailed (sparse +-10 death/wave/rescue events), so MSE turns a
+                # return error of ~10 into a loss of ~100 and a gradient ~10x
+                # normal. Those spikes dominate the shared trunk and get clipped
+                # 40-60x by max_grad_norm, crushing the policy gradient with it.
+                # Huber caps the per-sample gradient at large errors.
+                value_loss1 = F.smooth_l1_loss(value_pred, returns_value)
+                value_loss2 = F.smooth_l1_loss(value_clipped, returns_value)
                 value_loss = torch.max(value_loss1, value_loss2)
+
+                # Explained variance: how much of the return variance the value
+                # head actually captures. Computed (not backpropped) for logging.
+                with torch.no_grad():
+                    ret_var = returns_value.var(unbiased=False)
+                    if torch.isfinite(ret_var) and ret_var > 1e-8:
+                        resid_var = (returns_value - value_pred).var(unbiased=False)
+                        total_explained_variance += float(1.0 - (resid_var / ret_var))
+                        ev_batches += 1
             else:
                 value_loss = torch.zeros((), device=self.device)
 
             # Behavioral cloning loss (if expert demonstrations present)
             bc_loss = torch.tensor(0.0, device=self.device)
+            bc_move_loss_t = torch.tensor(0.0, device=self.device)
+            bc_fire_loss_t = torch.tensor(0.0, device=self.device)
             bc_weight = self._get_bc_weight()
-            if any_expert and bc_weight > 0:
+            if any_expert:
                 expert_move_logits = move_logits[is_expert]
                 expert_fire_logits = fire_logits[is_expert]
-                bc_move_loss = F.cross_entropy(expert_move_logits, expert_move[is_expert])
+                expert_move_targets = expert_move[is_expert]
+                expert_fire_targets = expert_fire[is_expert]
+                bc_move_loss = self._move_bc_loss(expert_move_logits, expert_move_targets)
+                bc_move_loss_t = bc_move_loss
                 expert_fire_locked = fire_locked[is_expert]
+
+                with torch.no_grad():
+                    move_pred = expert_move_logits.argmax(dim=1)
+                    total_bc_move_correct += int((move_pred == expert_move_targets).sum().item())
+                    total_bc_move_count += int(expert_move_targets.numel())
+                    total_bc_move_loss_sum += float(bc_move_loss.detach().item()) * int(expert_move_targets.numel())
+
                 if (~expert_fire_locked).any():
+                    unlocked_fire_logits = expert_fire_logits[~expert_fire_locked]
+                    unlocked_fire_targets = expert_fire_targets[~expert_fire_locked]
                     bc_fire_loss = F.cross_entropy(
-                        expert_fire_logits[~expert_fire_locked],
-                        expert_fire[is_expert][~expert_fire_locked],
+                        unlocked_fire_logits,
+                        unlocked_fire_targets,
                     )
+                    bc_fire_loss_t = bc_fire_loss
+                    with torch.no_grad():
+                        fire_pred = unlocked_fire_logits.argmax(dim=1)
+                        total_bc_fire_correct += int((fire_pred == unlocked_fire_targets).sum().item())
+                        total_bc_fire_count += int(unlocked_fire_targets.numel())
+                        total_bc_fire_loss_sum += float(bc_fire_loss.detach().item()) * int(unlocked_fire_targets.numel())
                     bc_loss = bc_move_loss + bc_fire_loss
                 else:
                     bc_loss = bc_move_loss
+
+            # BC contribution, weighted per head. F.cross_entropy reduces with
+            # mean, so bc_loss is independent of how many expert frames are in the
+            # batch; once expert_ratio floors at 5% a flat term still dominates the
+            # total loss. Scaling by the expert-frame fraction makes BC fade with
+            # the handoff — but only firing has a dense PPO teacher (the score
+            # reward), so only the fire term is safe to fade. Movement has no such
+            # teacher; fading its BC starves the move head to a random walk, so the
+            # move term keeps full weight unless explicitly told otherwise. (The
+            # BCLoss/BCMv/BCFr columns are logged unscaled as per-frame errors.)
+            if getattr(tcfg, "bc_scale_by_expert_fraction", False) and any_expert:
+                bc_frac = is_expert.float().mean()
+            else:
+                bc_frac = 1.0
+            move_frac = bc_frac if getattr(tcfg, "bc_scale_move_by_expert_fraction", False) else 1.0
+            fire_frac = bc_frac if getattr(tcfg, "bc_scale_fire_by_expert_fraction", True) else 1.0
+
+            # Compute current entropy coefficient with decay
+            entropy_coeff = self._get_entropy_coeff()
 
             # Total loss
             loss = (
                 policy_loss
                 + tcfg.value_coeff * value_loss
-                + tcfg.entropy_coeff * entropy_loss
-                + bc_weight * bc_loss
+                + entropy_coeff * entropy_loss
+                + bc_weight * (move_frac * bc_move_loss_t + fire_frac * bc_fire_loss_t)
             )
 
             # Backprop
@@ -595,6 +712,12 @@ class PPOAgent:
             self.last_bc_loss = total_bc_loss / num_batches
             self.last_loss = total_total_loss / num_batches
             self.last_grad_norm = last_finite_grad_norm
+            self.last_bc_move_loss = total_bc_move_loss_sum / max(1, total_bc_move_count)
+            self.last_bc_fire_loss = total_bc_fire_loss_sum / max(1, total_bc_fire_count)
+            self.last_bc_move_acc = total_bc_move_correct / max(1, total_bc_move_count)
+            self.last_bc_fire_acc = total_bc_fire_correct / max(1, total_bc_fire_count)
+        if ev_batches > 0:
+            self.last_explained_variance = total_explained_variance / ev_batches
 
         if not math.isfinite(float(self.last_grad_norm)):
             self.last_grad_norm = 0.0
@@ -606,22 +729,29 @@ class PPOAgent:
             "value_loss": self.last_value_loss,
             "entropy": self.last_entropy,
             "bc_loss": self.last_bc_loss,
+            "bc_move_loss": self.last_bc_move_loss,
+            "bc_fire_loss": self.last_bc_fire_loss,
+            "bc_move_acc": self.last_bc_move_acc,
+            "bc_fire_acc": self.last_bc_fire_acc,
             "grad_norm": self.last_grad_norm,
             "total_loss": self.last_loss,
+            "explained_variance": self.last_explained_variance,
             "lr": self.optimizer.param_groups[0]["lr"],
             "bc_weight": self._get_bc_weight(),
+            "entropy_coeff": self._get_entropy_coeff(),
             "training_steps": self._training_steps,
         }
 
     def _get_bc_weight(self) -> float:
         """Compute current BC weight from decay schedule."""
         tcfg = CONFIG.train
-        if self.total_frames <= tcfg.bc_decay_start_frame:
+        clock = self._schedule_clock()
+        if clock <= tcfg.bc_decay_start_frame:
             bc_weight = tcfg.bc_weight_initial
-        elif self.total_frames >= tcfg.bc_decay_end_frame:
+        elif clock >= tcfg.bc_decay_end_frame:
             bc_weight = tcfg.bc_weight_floor
         else:
-            frac = (self.total_frames - tcfg.bc_decay_start_frame) / max(
+            frac = (clock - tcfg.bc_decay_start_frame) / max(
                 1, tcfg.bc_decay_end_frame - tcfg.bc_decay_start_frame
             )
             bc_weight = tcfg.bc_weight_initial + frac * (tcfg.bc_weight_floor - tcfg.bc_weight_initial)
@@ -629,6 +759,24 @@ class PPOAgent:
             if self._guidance_rescue_active:
                 bc_weight = max(bc_weight, tcfg.guidance_rescue_bc_weight_floor)
         return bc_weight
+
+    def _get_entropy_coeff(self) -> float:
+        """Compute current entropy coefficient from decay schedule."""
+        tcfg = CONFIG.train
+        clock = self._schedule_clock()
+        
+        # Get decay parameters with defaults for backward compatibility
+        initial = getattr(tcfg, "entropy_coeff_initial", 0.012)
+        final = getattr(tcfg, "entropy_coeff_final", 0.004)
+        decay_frames = getattr(tcfg, "entropy_coeff_decay_frames", 3_000_000)
+        
+        if clock <= 100_000:  # Initial guided phase
+            return initial
+        elif clock >= decay_frames:
+            return final
+        else:
+            frac = (clock - 100_000) / max(1, decay_frames - 100_000)
+            return initial + frac * (final - initial)
 
     def _build_lr_scheduler(self):
         """Linear warmup then cosine decay."""
@@ -646,16 +794,22 @@ class PPOAgent:
 
         return torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda)
 
-    def sync_inference_weights(self):
+    def sync_inference_weights(self, force: bool = False):
         """Copy trained weights to the inference network.
 
-        Multi-GPU: copies state_dict from train_device → infer_device.
+        Multi-GPU: copies state_dict from train_device → infer_device, throttled
+        to once every CONFIG.train.inference_sync_interval training steps (pass
+        force=True to bypass, e.g. right after loading a checkpoint).
         Single-GPU with streams: no-op (same net object, streams handle sync).
         """
         if self.infer_net is None:
             # Single-GPU or CPU — inference uses self.net directly.
             # Signal the batcher that weights changed (for stream sync).
             self._weights_updated.set()
+            return
+        # Multi-GPU: throttle the cross-device copy to every Nth update.
+        interval = max(1, int(getattr(CONFIG.train, "inference_sync_interval", 1)))
+        if not force and (self._training_steps % interval) != 0:
             return
         # Multi-GPU: copy state_dict across devices
         src = self.net.state_dict()
@@ -666,6 +820,15 @@ class PPOAgent:
     def get_inference_net(self) -> RobotronPPONet:
         """Return the network copy used for inference (may differ from training net)."""
         return self.infer_net if self.infer_net is not None else self.net
+
+    def _schedule_clock(self) -> int:
+        """Frame count that drives the guidance schedules (expert ratio, BC
+        weight, epsilon). When schedule_on_policy_frames is set, count only the
+        frames the policy itself drove so the curriculum advances with real
+        policy experience rather than expert-driven or idle frames."""
+        if getattr(CONFIG.train, "schedule_on_policy_frames", False):
+            return self.policy_frames
+        return self.total_frames
 
     def get_expert_ratio(self) -> float:
         """Current expert action mixing ratio, respecting manual overrides."""
@@ -678,13 +841,14 @@ class PPOAgent:
                 return self._manual_expert_ratio
         # Natural decay schedule
         tcfg = CONFIG.train
-        if self.total_frames <= tcfg.expert_ratio_decay_start_frame:
+        clock = self._schedule_clock()
+        if clock <= tcfg.expert_ratio_decay_start_frame:
             expert_ratio = tcfg.expert_ratio_initial
-        elif self.total_frames >= tcfg.expert_ratio_decay_frames:
+        elif clock >= tcfg.expert_ratio_decay_frames:
             expert_ratio = tcfg.expert_ratio_final
         else:
             frac = (
-                (self.total_frames - tcfg.expert_ratio_decay_start_frame)
+                (clock - tcfg.expert_ratio_decay_start_frame)
                 / max(1, tcfg.expert_ratio_decay_frames - tcfg.expert_ratio_decay_start_frame)
             )
             expert_ratio = tcfg.expert_ratio_initial + frac * (tcfg.expert_ratio_final - tcfg.expert_ratio_initial)
@@ -693,23 +857,117 @@ class PPOAgent:
                 expert_ratio = max(expert_ratio, tcfg.guidance_rescue_expert_ratio_floor)
         return expert_ratio
 
-    def update_guidance_rescue(self, avg_reward: float) -> bool:
-        """Raise expert/BC floors when recent self-play reward is unhealthy."""
+    def update_guidance_rescue(
+        self,
+        avg_reward: float,
+        avg_score: float | None = None,
+        avg_ep_len: float | None = None,
+        bc_fire_loss: float | None = None,
+        bc_move_loss: float | None = None,
+    ) -> bool:
+        """Raise expert/BC floors when recent self-play competence is unhealthy."""
         tcfg = CONFIG.train
         avg_reward = float(avg_reward)
-        rescue_active = (
-            self.total_frames >= tcfg.guidance_rescue_min_frame
-            and math.isfinite(avg_reward)
-            and avg_reward <= tcfg.guidance_rescue_reward_threshold
-        )
+        def finite_value(value: float | None) -> float | None:
+            if value is None:
+                return None
+            value = float(value)
+            return value if math.isfinite(value) else None
+
+        avg_score_v = finite_value(avg_score)
+        avg_ep_len_v = finite_value(avg_ep_len)
+        bc_fire_loss_v = finite_value(bc_fire_loss)
+        bc_move_loss_v = finite_value(bc_move_loss)
+
+        # Smooth the noisy per-minibatch BC losses with an EMA before
+        # thresholding. Score/ep_len are already rolling averages.
+        ema_alpha = float(getattr(tcfg, "guidance_rescue_bc_ema_alpha", 1.0))
+        ema_alpha = min(1.0, max(0.0, ema_alpha))
+        if bc_fire_loss_v is not None:
+            prev = self._guidance_rescue_bc_fire_ema
+            self._guidance_rescue_bc_fire_ema = (
+                bc_fire_loss_v if prev is None
+                else ema_alpha * bc_fire_loss_v + (1.0 - ema_alpha) * prev
+            )
+        if bc_move_loss_v is not None:
+            prev = self._guidance_rescue_bc_move_ema
+            self._guidance_rescue_bc_move_ema = (
+                bc_move_loss_v if prev is None
+                else ema_alpha * bc_move_loss_v + (1.0 - ema_alpha) * prev
+            )
+        bc_fire_smoothed = self._guidance_rescue_bc_fire_ema
+        bc_move_smoothed = self._guidance_rescue_bc_move_ema
+
+        rescue_eligible = self.total_frames >= tcfg.guidance_rescue_min_frame and math.isfinite(avg_reward)
+        score_bad = avg_score_v is not None and avg_score_v <= float(getattr(tcfg, "guidance_rescue_score_threshold", -math.inf))
+        ep_len_bad = avg_ep_len_v is not None and avg_ep_len_v <= float(getattr(tcfg, "guidance_rescue_ep_len_threshold", -math.inf))
+        fire_bad = bc_fire_smoothed is not None and bc_fire_smoothed >= float(getattr(tcfg, "guidance_rescue_bc_fire_loss_threshold", math.inf))
+        move_bad = bc_move_smoothed is not None and bc_move_smoothed >= float(getattr(tcfg, "guidance_rescue_bc_move_loss_threshold", math.inf))
+
+        score_recovered = avg_score_v is not None and avg_score_v >= float(getattr(tcfg, "guidance_rescue_score_recovered_threshold", math.inf))
+        ep_len_recovered = avg_ep_len_v is not None and avg_ep_len_v >= float(getattr(tcfg, "guidance_rescue_ep_len_recovered_threshold", math.inf))
+        fire_recovered = bc_fire_smoothed is not None and bc_fire_smoothed <= float(getattr(tcfg, "guidance_rescue_bc_fire_loss_recovered_threshold", -math.inf))
+        move_recovered = bc_move_smoothed is not None and bc_move_smoothed <= float(getattr(tcfg, "guidance_rescue_bc_move_loss_recovered_threshold", -math.inf))
+
+        with self._override_lock:
+            was_active = bool(self._guidance_rescue_active)
+
+        if was_active:
+            recovered = score_recovered and ep_len_recovered
+            if getattr(tcfg, "guidance_rescue_recovery_require_fire_bc", True):
+                recovered = recovered and fire_recovered
+            if getattr(tcfg, "guidance_rescue_recovery_require_move_bc", False):
+                recovered = recovered and move_recovered
+            desired = not recovered
+        else:
+            desired = (
+                avg_reward <= tcfg.guidance_rescue_reward_threshold
+                or score_bad
+                or ep_len_bad
+                or fire_bad
+                or move_bad
+            )
+
+        # De-bounce: require N consecutive evaluations that all agree on a FLIP
+        # before committing it, so a single noisy eval can't toggle the expert
+        # ratio. Ineligibility forces OFF immediately (bypassing the debounce).
+        debounce_evals = int(getattr(tcfg, "guidance_rescue_debounce_evals", 1))
+        if not rescue_eligible:
+            rescue_active = False
+            self._guidance_rescue_pending_count = 0
+        elif desired == was_active:
+            rescue_active = was_active
+            self._guidance_rescue_pending_count = 0
+        else:
+            self._guidance_rescue_pending_count += 1
+            if self._guidance_rescue_pending_count >= max(1, debounce_evals):
+                rescue_active = desired
+                self._guidance_rescue_pending_count = 0
+            else:
+                rescue_active = was_active
+
         with self._override_lock:
             changed = rescue_active != self._guidance_rescue_active
             self._guidance_rescue_active = rescue_active
             self._guidance_rescue_avg_reward = avg_reward
         if changed:
             state = "ON" if rescue_active else "OFF"
-            print(f"[v3] Guidance rescue {state} (avg reward {avg_reward:.1f})")
+            details = []
+            if avg_score_v is not None:
+                details.append(f"score {avg_score_v:.0f}")
+            if avg_ep_len_v is not None:
+                details.append(f"ep_len {avg_ep_len_v:.0f}")
+            if bc_move_smoothed is not None:
+                details.append(f"BCMv {bc_move_smoothed:.2f}")
+            if bc_fire_smoothed is not None:
+                details.append(f"BCFr {bc_fire_smoothed:.2f}")
+            suffix = ", ".join(details)
+            print(f"[v3] Guidance rescue {state} (avg reward {avg_reward:.1f}{', ' + suffix if suffix else ''})")
         return rescue_active
+
+    def is_guidance_rescue_active(self) -> bool:
+        with self._override_lock:
+            return bool(self._guidance_rescue_active)
 
     def get_epsilon(self) -> float:
         """Current exploration epsilon, respecting manual overrides."""
@@ -718,10 +976,23 @@ class PPOAgent:
                 return self._manual_epsilon
         # Natural decay schedule
         tcfg = CONFIG.train
-        if self.total_frames >= tcfg.epsilon_decay_frames:
-            return tcfg.epsilon_final
-        frac = self.total_frames / max(1, tcfg.epsilon_decay_frames)
-        return tcfg.epsilon_initial + frac * (tcfg.epsilon_final - tcfg.epsilon_initial)
+        clock = self._schedule_clock()
+        if clock >= tcfg.epsilon_decay_frames:
+            base = tcfg.epsilon_final
+        else:
+            frac = clock / max(1, tcfg.epsilon_decay_frames)
+            base = tcfg.epsilon_initial + frac * (tcfg.epsilon_final - tcfg.epsilon_initial)
+
+        # After bootstrapping, add a bounded triangular exploration pulse. A flat
+        # epsilon floor tends to settle into the same level-2/3 habits; pulses
+        # periodically sample recoveries and higher-risk openings without making
+        # every rollout equally noisy.
+        if clock >= tcfg.epsilon_pulse_min_frame:
+            period = max(1, int(tcfg.epsilon_pulse_period_frames))
+            phase = ((clock - tcfg.epsilon_pulse_min_frame) % period) / period
+            triangle = 1.0 - abs(2.0 * phase - 1.0)
+            base += tcfg.epsilon_pulse_amplitude * triangle
+        return min(0.20, max(0.0, base))
 
     # ── Interactive parameter controls ──────────────────────────────────
 
@@ -834,6 +1105,7 @@ class PPOAgent:
                     "scheduler_state_dict": self.lr_scheduler.state_dict() if self.lr_scheduler else None,
                     "training_steps": self._training_steps,
                     "total_frames": self.total_frames,
+                    "policy_frames": self.policy_frames,
                     "config": {
                         "model": CONFIG.model.__dict__,
                         "train": CONFIG.train.__dict__,
@@ -841,6 +1113,14 @@ class PPOAgent:
                 }, str(save_path))
 
                 GAME_SETTINGS.total_frames = self.total_frames
+                GAME_SETTINGS.policy_frames = self.policy_frames
+                with self._override_lock:
+                    GAME_SETTINGS.epsilon = self.get_epsilon()
+                    GAME_SETTINGS.expert_ratio = self.get_expert_ratio()
+                    GAME_SETTINGS.manual_epsilon_override = bool(self.manual_epsilon_override)
+                    GAME_SETTINGS.manual_expert_override = bool(
+                        self.manual_expert_override or self.override_expert or self.expert_mode
+                    )
                 GAME_SETTINGS.save()
                 return True
             except Exception as e:
@@ -872,6 +1152,10 @@ class PPOAgent:
 
             self._training_steps = checkpoint.get("training_steps", 0)
             self.total_frames = checkpoint.get("total_frames", 0)
+            # Old checkpoints predate the policy-frame clock: default it to
+            # total_frames so resumed runs keep their schedules past the floors
+            # instead of resetting expert/BC/epsilon to their initial values.
+            self.policy_frames = checkpoint.get("policy_frames", self.total_frames)
 
             if checkpoint.get("scheduler_state_dict"):
                 if self.lr_scheduler is None:
@@ -880,9 +1164,17 @@ class PPOAgent:
 
             GAME_SETTINGS.load()
             GAME_SETTINGS.total_frames = self.total_frames
+            GAME_SETTINGS.policy_frames = self.policy_frames
+            with self._override_lock:
+                self.manual_epsilon_override = bool(getattr(GAME_SETTINGS, "manual_epsilon_override", False))
+                self._manual_epsilon = float(getattr(GAME_SETTINGS, "epsilon", self.get_epsilon()))
+                self.manual_expert_override = bool(getattr(GAME_SETTINGS, "manual_expert_override", False))
+                self._manual_expert_ratio = float(getattr(GAME_SETTINGS, "expert_ratio", self.get_expert_ratio()))
+                self.override_expert = False
+                self.expert_mode = False
 
             # Sync inference copy with freshly loaded weights
-            self.sync_inference_weights()
+            self.sync_inference_weights(force=True)
 
             print(f"Loaded checkpoint: {self.total_frames:,} frames, {self._training_steps:,} training steps")
             return True

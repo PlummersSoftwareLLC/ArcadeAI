@@ -9,9 +9,10 @@ the debug HUD overlay.
 Processed observation:
   entity_features:      (max_entities, 32)
   entity_mask:          (max_entities,) True for padding
-  global_context:       (44,) core player/game + ELIST bytes + surround affordances
-  move_action_features: (9, 12) one row per move action, idle last
-  fire_action_features: (9, 12) one row per fire action, idle last
+  global_context:       (40,) core player/game + ELIST bytes (raw; the 4 surround
+                        affordances are appended on-device inside the model)
+  move_action_features: (9, 12) zero placeholder; computed on-device in the model
+  fire_action_features: (9, 12) zero placeholder; computed on-device in the model
 
 The first 18 entity columns intentionally remain compatible with the expert:
   [rel_x, rel_y, box_w, box_h, vx, vy, type_one_hot(12)]
@@ -123,6 +124,18 @@ _POOL_TYPE_DEFAULT = {
     "human": TYPE_HUMAN,
     "electrode": TYPE_ELECTRODE,
 }
+
+# Stable per-pool base offset into the flattened entity array. Each Lua pool
+# slot maps to a FIXED model index (base[pool] + slot_idx) so that, frame to
+# frame, model index i is always the same object (Lua keeps slots stable by
+# object pointer via _stable_assign_pool_slots). This is what makes the per-slot
+# temporal fusion in the model valid; compacting active entities to contiguous
+# indices would shift identities whenever any lower-indexed object spawns/dies.
+_POOL_GLOBAL_BASE: dict[str, int] = {}
+_ENTITY_SLOT_TOTAL = 0
+for _pname, _pslots, _pfeats in ENTITY_POOL_DEFS:
+    _POOL_GLOBAL_BASE[_pname] = _ENTITY_SLOT_TOTAL
+    _ENTITY_SLOT_TOTAL += _pslots
 
 
 def _clamp01(v):
@@ -251,10 +264,16 @@ def extract_entities(
     px = _safe_float(wire_state[5], 0.5) if wire_state.shape[0] > 6 else 0.5
     py = _safe_float(wire_state[6], 0.5) if wire_state.shape[0] > 6 else 0.5
     slots = _collect_entity_slots(wire_state)
-    write_n = min(max_entities, len(slots))
 
-    for i in range(write_n):
-        slot = slots[i]
+    # Place each entity at its STABLE global index (pool base + slot). Holes
+    # (inactive slots) stay masked. num_entities is returned as an exclusive
+    # upper bound on occupied indices, so consumers that iterate range(n) with a
+    # mask check (e.g. the expert) still visit every active row.
+    max_idx = -1
+    for slot in slots:
+        gidx = _POOL_GLOBAL_BASE[slot["pool"]] + int(slot["slot"])
+        if gidx >= max_entities:
+            continue
         type_id = int(max(0, min(NUM_ENTITY_CLASSES - 1, int(slot["type_id"]))))
         dx = float(slot["dx"])
         dy = float(slot["dy"])
@@ -267,7 +286,7 @@ def extract_entities(
         closest_pass_norm = float(slot["closest_pass_norm"])
         box_w, box_h = _type_box_norm(type_id)
 
-        out = features[i]
+        out = features[gidx]
         out[0] = dx
         out[1] = dy
         out[2] = box_w
@@ -291,9 +310,11 @@ def extract_entities(
         out[29] = 1.0 if type_id == TYPE_HUMAN else 0.0
         out[30] = 1.0 if type_id in _STATIC_BLOCKER_TYPES else 0.0
         out[31] = 1.0 if type_id in _DESTRUCTIBLE_TYPES else 0.0
-        mask[i] = False
+        mask[gidx] = False
+        if gidx > max_idx:
+            max_idx = gidx
 
-    return features, mask, write_n
+    return features, mask, max_idx + 1
 
 
 def extract_global_context(wire_state: np.ndarray) -> np.ndarray:
@@ -377,6 +398,9 @@ def build_action_features(
         fire[action_idx, 8] = destructible_count_norm
         fire[action_idx, 10] = 1.0
         fire[action_idx, 11] = idle
+        if ACTION_FEATURE_DIM >= 24:
+            move[action_idx, 23] = destructible_count_norm
+            fire[action_idx, 23] = destructible_count_norm
 
         if idle > 0.0:
             continue
@@ -390,6 +414,34 @@ def build_action_features(
         nearest_target_dist = 1.0
         aligned_human_penalty = 0.0
         hulk_blocker = 0.0
+        nearest_hulk_dist = 1.0
+        nearest_electrode_dist = 1.0
+        nearest_brain_dist = 1.0
+        nearest_spawn_dist = 1.0
+        nearest_brain_target_dist = 1.0
+        nearest_spawn_target_dist = 1.0
+        type_move_pressure = {
+            TYPE_GRUNT: 0.0,
+            TYPE_HULK: 0.0,
+            TYPE_BRAIN: 0.0,
+            TYPE_TANK: 0.0,
+            TYPE_SPAWNER: 0.0,
+            TYPE_ENFORCER: 0.0,
+            TYPE_ELECTRODE: 0.0,
+            TYPE_MISSILE: 0.0,
+            TYPE_SPARK: 0.0,
+        }
+        type_fire_score = {
+            TYPE_GRUNT: 0.0,
+            TYPE_BRAIN: 0.0,
+            TYPE_TANK: 0.0,
+            TYPE_SPAWNER: 0.0,
+            TYPE_ENFORCER: 0.0,
+            TYPE_PROJECTILE: 0.0,
+            TYPE_MISSILE: 0.0,
+            TYPE_SPARK: 0.0,
+            TYPE_PROG: 0.0,
+        }
 
         for ent in ents:
             type_id = int(np.argmax(ent[6:6 + NUM_ENTITY_CLASSES]))
@@ -411,6 +463,16 @@ def build_action_features(
             if type_id in _DANGEROUS_TYPES:
                 nearest_danger_dist = min(nearest_danger_dist, dist_norm)
                 pressure = threat * (0.25 + 0.75 * closeness) * (0.2 + 0.8 * moving_toward)
+                if type_id in type_move_pressure:
+                    type_move_pressure[type_id] = min(1.0, type_move_pressure[type_id] + pressure)
+                if type_id == TYPE_HULK:
+                    nearest_hulk_dist = min(nearest_hulk_dist, dist_norm)
+                elif type_id == TYPE_ELECTRODE:
+                    nearest_electrode_dist = min(nearest_electrode_dist, dist_norm)
+                elif type_id == TYPE_BRAIN:
+                    nearest_brain_dist = min(nearest_brain_dist, dist_norm)
+                elif type_id in {TYPE_TANK, TYPE_SPAWNER, TYPE_ENFORCER}:
+                    nearest_spawn_dist = min(nearest_spawn_dist, dist_norm)
                 if type_id in _PROJECTILE_TYPES:
                     move[action_idx, 4] += pressure
                     nearest_projectile_ttc = min(nearest_projectile_ttc, ttc)
@@ -450,6 +512,12 @@ def build_action_features(
             best_target = max(best_target, score)
             nearest_target_dist = min(nearest_target_dist, dist_norm)
             target_density += score
+            if type_id in type_fire_score:
+                type_fire_score[type_id] = max(type_fire_score[type_id], score)
+            if type_id == TYPE_BRAIN:
+                nearest_brain_target_dist = min(nearest_brain_target_dist, dist_norm)
+            elif type_id in {TYPE_TANK, TYPE_SPAWNER, TYPE_ENFORCER}:
+                nearest_spawn_target_dist = min(nearest_spawn_target_dist, dist_norm)
             if type_id in _PRIORITY_FIRE_TYPES:
                 priority_target = max(priority_target, score)
             if type_id in _PROJECTILE_TYPES:
@@ -463,6 +531,24 @@ def build_action_features(
         move[action_idx, 7] = min(1.0, move[action_idx, 7] + 0.2 * move[action_idx, 6])
         move[action_idx, 8] = nearest_danger_dist
         move[action_idx, 9] = nearest_projectile_ttc
+        if ACTION_FEATURE_DIM >= 24:
+            move[action_idx, 12] = min(1.0, type_move_pressure[TYPE_GRUNT])
+            move[action_idx, 13] = min(1.0, type_move_pressure[TYPE_HULK])
+            move[action_idx, 14] = min(1.0, type_move_pressure[TYPE_BRAIN])
+            move[action_idx, 15] = min(
+                1.0,
+                type_move_pressure[TYPE_TANK]
+                + type_move_pressure[TYPE_SPAWNER]
+                + type_move_pressure[TYPE_ENFORCER],
+            )
+            move[action_idx, 16] = min(1.0, type_move_pressure[TYPE_ELECTRODE])
+            move[action_idx, 17] = min(1.0, type_move_pressure[TYPE_MISSILE] + type_move_pressure[TYPE_SPARK])
+            move[action_idx, 18] = nearest_hulk_dist
+            move[action_idx, 19] = nearest_electrode_dist
+            move[action_idx, 20] = nearest_brain_dist
+            move[action_idx, 21] = nearest_spawn_dist
+            move[action_idx, 22] = min(1.0, move[action_idx, 6] * (1.0 - aligned_human_penalty))
+            move[action_idx, 23] = destructible_count_norm
 
         fire[action_idx, 2] = min(1.0, best_target)
         fire[action_idx, 3] = min(1.0, priority_target)
@@ -471,6 +557,22 @@ def build_action_features(
         fire[action_idx, 6] = nearest_target_dist
         fire[action_idx, 7] = min(1.0, aligned_human_penalty)
         fire[action_idx, 9] = min(1.0, hulk_blocker)
+        if ACTION_FEATURE_DIM >= 24:
+            fire[action_idx, 12] = min(1.0, type_fire_score[TYPE_GRUNT])
+            fire[action_idx, 13] = min(1.0, type_fire_score[TYPE_BRAIN])
+            fire[action_idx, 14] = min(
+                1.0,
+                max(type_fire_score[TYPE_TANK], type_fire_score[TYPE_SPAWNER], type_fire_score[TYPE_ENFORCER]),
+            )
+            fire[action_idx, 15] = min(1.0, type_fire_score[TYPE_ENFORCER])
+            fire[action_idx, 16] = min(1.0, type_fire_score[TYPE_PROJECTILE])
+            fire[action_idx, 17] = min(1.0, max(type_fire_score[TYPE_MISSILE], type_fire_score[TYPE_SPARK]))
+            fire[action_idx, 18] = min(1.0, type_fire_score[TYPE_PROG])
+            fire[action_idx, 19] = nearest_brain_target_dist
+            fire[action_idx, 20] = nearest_spawn_target_dist
+            fire[action_idx, 21] = max(0.0, min(1.0, 1.0 - aligned_human_penalty))
+            fire[action_idx, 22] = min(1.0, hulk_blocker)
+            fire[action_idx, 23] = destructible_count_norm
 
     return move, fire
 
@@ -515,18 +617,20 @@ class StateProcessor:
     def process_frame(self, wire_state: np.ndarray) -> dict[str, np.ndarray]:
         features, mask, num_ents = extract_entities(wire_state, self.max_entities)
         global_ctx = extract_global_context(wire_state)
-        move_features, fire_features = build_action_features(features, mask, global_ctx)
-        # Append surround/"boxed-in" affordances so the trapped state is explicit
-        # in the global context rather than implicit across per-direction rays.
-        global_ctx = np.concatenate(
-            [global_ctx, _global_affordances(move_features)]
-        ).astype(np.float32)
+        # The per-direction move/fire ray features and the surround affordances
+        # are now computed on-device in the model (see model.compute_action_features
+        # / compute_global_affordances), which moves ~1 ms/frame of scalar Python
+        # off the CPU hot path onto the otherwise-idle inference GPU. We emit zero
+        # placeholders here so the buffer/wire shapes stay unchanged; the model
+        # ignores the stored action features and recomputes them. global_context
+        # stays raw (no affordances appended).
+        zero_actions = np.zeros((9, self.action_feature_dim), dtype=np.float32)
         return {
             "entity_features": features,
             "entity_mask": mask,
             "global_context": global_ctx,
-            "move_action_features": move_features,
-            "fire_action_features": fire_features,
+            "move_action_features": zero_actions,
+            "fire_action_features": zero_actions.copy(),
             "num_entities": num_ents,
         }
 
