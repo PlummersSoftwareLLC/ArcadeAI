@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # ==================================================================================================================
 # ||  ROBOTRON AI • DQN AGENT                                                                                    ||
-# ||  Branching Rainbow-lite agent: C51 + dueling + PER + n-step + target net + background training.              ||
+# ||  Joint Rainbow-lite agent: C51 + dueling + PER + n-step + target net + background training.                  ||
 # ==================================================================================================================
 """RainbowAgent — owns the online/target/inference networks, the replay buffer,
-the optimizer, and the background training thread.  Actions are factored into
-independent move and fire branches (9 options each, index 8 = idle)."""
+the optimizer, and the background training thread.  Actions are twin-stick joint
+move/fire decisions (9×9, index 8 = idle on each stick)."""
 
 if __name__ == "__main__":
     print("This is not the main application, run 'main.py' instead")
@@ -49,11 +49,11 @@ except ImportError:
 
 metrics = config_metrics
 
-ENGINE_VERSION = 3   # Robotron branching DQN
+ENGINE_VERSION = 4   # Robotron joint-head + object-attention DQN
 
 
 class RainbowAgent:
-    """Rainbow-lite agent with branching move/fire heads, C51, PER, n-step."""
+    """Rainbow-lite agent with joint move/fire values, C51, PER, n-step."""
 
     def __init__(self, state_size: int):
         self.state_size = state_size
@@ -189,16 +189,78 @@ class RainbowAgent:
                     return net.q_values_branched(states_t)
             return net.q_values_branched(states_t)
 
+    def _infer_q_joint(self, states_t: torch.Tensor):
+        """Return joint expected Q-values from the inference net."""
+        net = self.infer_net if self.use_separate_inference else self.online_net
+        net.eval()
+        with torch.no_grad():
+            if self._inference_stream is not None:
+                self._inference_stream.wait_event(self._sync_event)
+                with torch.cuda.stream(self._inference_stream):
+                    return net.q_values_joint(states_t)
+            elif self.use_separate_inference:
+                with self._sync_lock:
+                    return net.q_values_joint(states_t)
+            return net.q_values_joint(states_t)
+
+    @staticmethod
+    def _sample_from_scores(scores: np.ndarray, temperature: float) -> int:
+        scores = np.asarray(scores, dtype=np.float64)
+        if scores.size <= 0 or not np.isfinite(scores).any():
+            return 0
+        temp = max(1e-3, float(temperature))
+        centered = (scores - np.nanmax(scores)) / temp
+        weights = np.exp(np.clip(centered, -30.0, 30.0))
+        weights[~np.isfinite(weights)] = 0.0
+        total = float(weights.sum())
+        if total <= 0.0:
+            return int(np.nanargmax(scores))
+        return int(np.random.choice(np.arange(scores.size), p=weights / total))
+
+    def _safe_epsilon_action(self, state: np.ndarray) -> Tuple[int, int, bool]:
+        """Affordance-guided exploration instead of uniform random twin-stick noise."""
+        cfg = RL_CONFIG
+        if random.random() < float(getattr(cfg, "safe_epsilon_random_fraction", 0.10)):
+            return random.randrange(NUM_MOVE), random.randrange(NUM_FIRE), True
+        try:
+            start = int(cfg.core_features)
+            end = start + int(cfg.lane_count) * int(cfg.lane_features)
+            lanes = np.asarray(state[start:end], dtype=np.float32).reshape(cfg.lane_count, cfg.lane_features)
+            danger = lanes[:, 21]
+            projectile = lanes[:, 22]
+            blocker = lanes[:, 23]
+            human_pull = lanes[:, 24]
+            escape = lanes[:, 25]
+            move_scores = (
+                2.0 * escape + 0.6 * human_pull + 0.2 * lanes[:, 20]
+                - 1.4 * danger - 1.4 * projectile - 1.0 * blocker
+            )
+            pressure = float(np.nanmax(np.maximum.reduce([danger, projectile, blocker]))) if lanes.size else 1.0
+            idle_move = -0.25 + 0.35 * (1.0 - max(0.0, min(1.0, pressure)))
+            move_scores = np.concatenate([move_scores, np.asarray([idle_move], dtype=np.float32)])
+
+            fire_scores = (
+                1.5 * lanes[:, 26] + 1.3 * lanes[:, 27]
+                + 1.1 * lanes[:, 28] + 0.5 * lanes[:, 29]
+            )
+            target_pressure = float(np.nanmax(fire_scores)) if fire_scores.size else 0.0
+            idle_fire = 0.10 if target_pressure < 0.05 else -0.35
+            fire_scores = np.concatenate([fire_scores, np.asarray([idle_fire], dtype=np.float32)])
+            temp = float(getattr(cfg, "safe_epsilon_temperature", 0.25))
+            return self._sample_from_scores(move_scores, temp), self._sample_from_scores(fire_scores, temp), True
+        except Exception:
+            return random.randrange(NUM_MOVE), random.randrange(NUM_FIRE), True
+
     def act(self, state: np.ndarray, epsilon: float) -> Tuple[int, int, bool]:
         """Return (move_idx, fire_idx, is_epsilon)."""
         if random.random() < epsilon:
-            return random.randrange(NUM_MOVE), random.randrange(NUM_FIRE), True
+            return self._safe_epsilon_action(state)
 
         st = torch.from_numpy(state).float().unsqueeze(0).to(self.inference_device)
-        move_q, fire_q = self._infer_q_branched(st)
-        move_idx = int(move_q.argmax(dim=1).item())
-        fire_idx = int(fire_q.argmax(dim=1).item())
-        return move_idx, fire_idx, False
+        joint_q = self._infer_q_joint(st)
+        joint_idx = int(joint_q.argmax(dim=1).item())
+        move_idx, fire_idx = split_joint_action(joint_idx)
+        return int(move_idx), int(fire_idx), False
 
     def debug_q_spread(self, state: np.ndarray):
         """Diagnostic: return (move_q, fire_q) as python lists for one state.
@@ -207,7 +269,9 @@ class RainbowAgent:
         (near-identical Q across actions ⇒ argmax is effectively random).
         """
         st = torch.from_numpy(np.asarray(state, dtype=np.float32)).float().unsqueeze(0).to(self.inference_device)
-        move_q, fire_q = self._infer_q_branched(st)
+        joint_q = self._infer_q_joint(st).view(1, NUM_MOVE, NUM_FIRE)
+        move_q = joint_q.max(dim=2).values
+        fire_q = joint_q.max(dim=1).values
         return move_q.squeeze(0).detach().cpu().tolist(), fire_q.squeeze(0).detach().cpu().tolist()
 
     def act_batch(self, states: list, epsilons: list) -> list:
@@ -223,7 +287,7 @@ class RainbowAgent:
         for i in range(n):
             eps = float(epsilons[i])
             if random.random() < eps:
-                actions[i] = (random.randrange(NUM_MOVE), random.randrange(NUM_FIRE), True)
+                actions[i] = self._safe_epsilon_action(np.asarray(states[i], dtype=np.float32))
             else:
                 greedy_idx.append(i)
                 greedy_states.append(states[i])
@@ -231,10 +295,10 @@ class RainbowAgent:
         if greedy_idx:
             batch_np = np.asarray(greedy_states, dtype=np.float32)
             st = torch.from_numpy(batch_np).to(self.inference_device)
-            move_q, fire_q = self._infer_q_branched(st)
-            move_best = move_q.argmax(dim=1).detach().cpu().tolist()
-            fire_best = fire_q.argmax(dim=1).detach().cpu().tolist()
-            for pos, mi, fi in zip(greedy_idx, move_best, fire_best):
+            joint_q = self._infer_q_joint(st)
+            joint_best = joint_q.argmax(dim=1).detach().cpu().tolist()
+            for pos, ji in zip(greedy_idx, joint_best):
+                mi, fi = split_joint_action(int(ji))
                 actions[pos] = (int(mi), int(fi), False)
 
         return [a if a is not None else (0, 0, False) for a in actions]
@@ -355,11 +419,12 @@ class RainbowAgent:
         try:
             with metrics.lock:
                 fc = int(metrics.frame_count)
+                lfc = int(getattr(metrics, "learner_frame_count", 0))
                 ts = int(metrics.total_training_steps)
                 er = float(metrics.expert_ratio)
                 ep = float(metrics.epsilon)
         except Exception:
-            fc, ts, er, ep = 0, self.training_steps, RL_CONFIG.expert_ratio_start, RL_CONFIG.epsilon_start
+            fc, lfc, ts, er, ep = 0, 0, self.training_steps, RL_CONFIG.expert_ratio_start, RL_CONFIG.epsilon_start
 
         ckpt = {
             "online_state_dict": self.online_net.state_dict(),
@@ -367,6 +432,7 @@ class RainbowAgent:
             "optimizer_state_dict": self.optimizer.state_dict(),
             "training_steps": self.training_steps,
             "frame_count": fc,
+            "learner_frame_count": lfc,
             "total_training_steps": ts,
             "expert_ratio": er,
             "epsilon": ep,
@@ -451,12 +517,14 @@ class RainbowAgent:
                         metrics.expert_ratio = ckpt.get("expert_ratio", RL_CONFIG.expert_ratio_start)
                         metrics.epsilon = ckpt.get("epsilon", RL_CONFIG.epsilon_start)
                         metrics.frame_count = int(ckpt.get("frame_count", 0))
+                        metrics.learner_frame_count = int(ckpt.get("learner_frame_count", 0))
                         metrics.loaded_frame_count = metrics.frame_count
                         metrics.total_training_steps = int(ckpt.get("total_training_steps", self.training_steps))
                     else:
                         metrics.expert_ratio = RL_CONFIG.expert_ratio_start
                         metrics.epsilon = RL_CONFIG.epsilon_start
                         metrics.frame_count = 0
+                        metrics.learner_frame_count = 0
                         metrics.loaded_frame_count = 0
                         metrics.total_training_steps = self.training_steps
             except Exception:
@@ -491,9 +559,8 @@ class RainbowAgent:
             if batch is None:
                 return float("nan"), float("nan")
             st = torch.from_numpy(batch[0]).float().to(self.inference_device)
-            move_q, fire_q = self._infer_q_branched(st)
-            both = torch.cat([move_q, fire_q], dim=1)
-            return float(both.min().item()), float(both.max().item())
+            joint_q = self._infer_q_joint(st)
+            return float(joint_q.min().item()), float(joint_q.max().item())
         except Exception:
             return float("nan"), float("nan")
 

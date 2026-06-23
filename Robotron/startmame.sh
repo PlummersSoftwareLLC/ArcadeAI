@@ -88,12 +88,13 @@ else
 fi
 
 usage() {
-    echo "Usage: $0 [COUNT] [novideo] [--fg] [--throttle-client0] [--socket-address HOST:PORT] [--socket-host HOST] [--socket-port PORT] [-kill]"
+    echo "Usage: $0 [COUNT] [novideo] [nonaudio] [--fg] [--throttle-client0] [--socket-address HOST:PORT] [--socket-host HOST] [--socket-port PORT] [-kill]"
     echo "       $0 kill CLIENT_ID"
     echo "  COUNT              Desired number of MAME instances left running (default: 1, background mode only; 0 kills all)"
     echo "  novideo            Launch MAME headless with -video none and -sound none for faster operation"
+    echo "  nonaudio           Launch MAME with -sound none while keeping video behavior unchanged"
     echo "  ROBOTRON_VIDEO_ALL_CLIENTS=1 restores software video for every background client"
-    echo "  ROBOTRON_AUDIO_ALL_CLIENTS=1 restores audio capture for every background client unless novideo is set"
+    echo "  ROBOTRON_AUDIO_ALL_CLIENTS=1 restores audio capture for every background client unless novideo/nonaudio is set"
     echo "  --socket-address   Set the Python socket target for all clients"
     echo "  --socket-host      Set socket host (default: ubvmdell)"
     echo "  --socket-port      Set socket port (default: 9998)"
@@ -201,6 +202,7 @@ FOREGROUND=0
 COUNT="1"
 COUNT_SET=0
 NO_VIDEO=0
+NO_AUDIO=0
 THROTTLE_CLIENT0=0
 
 while [[ $# -gt 0 ]]; do
@@ -267,6 +269,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         novideo)
             NO_VIDEO=1
+            shift
+            ;;
+        nonaudio|--nonaudio|noaudio|--noaudio)
+            NO_AUDIO=1
             shift
             ;;
         -h|--help)
@@ -341,9 +347,12 @@ else
     cleanup_audio_fifos
 fi
 
-if [[ "$NO_VIDEO" -eq 1 ]]; then
+if [[ "$NO_VIDEO" -eq 1 || "$NO_AUDIO" -eq 1 ]]; then
     GAME_AUDIO_ENABLED=0
     AUDIO_ALL_CLIENTS=0
+fi
+
+if [[ "$NO_VIDEO" -eq 1 ]]; then
     VIDEO_FLAG="-video none"
     VIDEO_MODE_DESC="headless"
 else

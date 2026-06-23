@@ -3,7 +3,7 @@
 # ||  ROBOTRON AI • DQN SMOKE TEST                                                                               ||
 # ||  End-to-end validation: action coding, slicing, wire round-trip, model shapes, train_step, socket loop.     ||
 # ==================================================================================================================
-"""Standalone smoke test for the Robotron branching DQN.
+"""Standalone smoke test for the Robotron joint DQN.
 
 Run from Robotron/Scripts:
     python3 -m dqn.test_smoke
@@ -28,6 +28,7 @@ if _SCRIPTS not in sys.path:
 from dqn import config as C
 from dqn import model as M
 from dqn.agent import RainbowAgent
+from dqn.nstep_buffer import NStepReplayBuffer
 from dqn import socket_server as SS
 
 
@@ -74,6 +75,20 @@ def fake_wire(wave=1) -> np.ndarray:
     return w
 
 
+def add_pool_slot(w: np.ndarray, pool_name: str, slot_idx: int, values: list[float]) -> None:
+    off = C.TACTICAL_POOL_OFFSET
+    for name, max_slots, feat_per_slot in C.TACTICAL_POOL_DEFS:
+        if name == pool_name:
+            base = off + 1 + int(slot_idx) * feat_per_slot
+            w[off] = max(w[off], 1.0 / max(1, max_slots))
+            vals = list(values[:feat_per_slot])
+            vals += [0.0] * (feat_per_slot - len(vals))
+            w[base:base + feat_per_slot] = np.asarray(vals, dtype=np.float32)
+            return
+        off += 1 + max_slots * feat_per_slot
+    raise ValueError(pool_name)
+
+
 # ── Unit tests ──────────────────────────────────────────────────────────────
 def test_action_coding():
     print("\n[action coding]")
@@ -94,11 +109,77 @@ def test_slice():
     print("\n[state slice]")
     w = np.arange(C.WIRE_PARAMS_COUNT, dtype=np.float32)
     ms = C.slice_model_state(w)
-    check("slice length == 258", ms.shape[0] == C.MODEL_STATE_SIZE)
+    lane_end = C.CORE_FEATURES + C.LANE_COUNT * C.LANE_FEATURES
+    object_start = lane_end + C.EXTRA_FEATURES
+    check("slice length == MODEL_STATE_SIZE", ms.shape[0] == C.MODEL_STATE_SIZE)
     check("core[0] preserved", ms[0] == w[0])
     check("core[17] preserved", ms[17] == w[17])
     check("lane[0] == wire[40]", ms[C.CORE_FEATURES] == w[C.TACTICAL_LANE_OFFSET])
-    check("lane[-1] == wire[279]", ms[-1] == w[C.TACTICAL_LANE_END - 1])
+    check("last lane == wire[279]", ms[lane_end - 1] == w[C.TACTICAL_LANE_END - 1])
+    check("extra block present", object_start - lane_end == C.EXTRA_FEATURES)
+    check("object block present", ms.shape[0] - object_start == C.OBJECT_FEATURES)
+
+    # Derived proximity channels: 1 - nearest_*_dist (from core indices 9, 10).
+    enemy_prox = ms[lane_end + 0]
+    human_prox = ms[lane_end + 1]
+    check("enemy_prox == 1 - core[9]", np.isclose(enemy_prox, 1.0 - w[9]))
+    check("human_prox == 1 - core[10]", np.isclose(human_prox, 1.0 - w[10]))
+
+    # Derived global nearest-human direction, reconstructed from the lane whose
+    # human sub-block has the smallest distance.  With arange data every lane has
+    # a human present, so lane 0 (smallest values) is nearest.
+    human_dx = ms[lane_end + 2]
+    human_dy = ms[lane_end + 3]
+    li = int(np.argmin(
+        [w[C.TACTICAL_LANE_OFFSET + i * C.LANE_FEATURES + C._LANE_HUMAN_DIST]
+         for i in range(C.LANE_COUNT)]))
+    exp_dx = w[C.TACTICAL_LANE_OFFSET + li * C.LANE_FEATURES + C._LANE_HUMAN_DX]
+    exp_dy = w[C.TACTICAL_LANE_OFFSET + li * C.LANE_FEATURES + C._LANE_HUMAN_DY]
+    check("human_dx from nearest lane", human_dx == exp_dx)
+    check("human_dy from nearest lane", human_dy == exp_dy)
+
+    # When no humans are present anywhere, direction collapses to (0, 0).
+    w2 = np.arange(C.WIRE_PARAMS_COUNT, dtype=np.float32)
+    for i in range(C.LANE_COUNT):
+        w2[C.TACTICAL_LANE_OFFSET + i * C.LANE_FEATURES + C._LANE_HUMAN_COUNT] = 0.0
+    ms2 = C.slice_model_state(w2)
+    check("no-human dir == 0", ms2[lane_end + 2] == 0.0 and ms2[lane_end + 3] == 0.0)
+
+    w3 = np.zeros(C.WIRE_PARAMS_COUNT, dtype=np.float32)
+    ms3 = C.slice_model_state(w3)
+    check("empty lane enemy dist == far", ms3[C.CORE_FEATURES + C._LANE_ENEMY_DIST] == 1.0)
+    check("empty lane human dist == far", ms3[C.CORE_FEATURES + C._LANE_HUMAN_DIST] == 1.0)
+    check("empty lane projectile dist == far", ms3[C.CORE_FEATURES + C._LANE_PROJECTILE_DIST] == 1.0)
+    check("empty lane enemy ttc == far", ms3[C.CORE_FEATURES + C._LANE_ENEMY_TTC] == 1.0)
+    check("empty lane projectile ttc == far", ms3[C.CORE_FEATURES + C._LANE_PROJECTILE_TTC] == 1.0)
+    check("empty lane closest pass == far", ms3[C.CORE_FEATURES + C._LANE_PROJECTILE_CLOSEST_PASS] == 1.0)
+
+    w4 = np.zeros(C.WIRE_PARAMS_COUNT, dtype=np.float32)
+    add_pool_slot(w4, "human", 0, [1.0, 0.25, -0.25, 0.20, 0.0, 0.0, 0.1])
+    add_pool_slot(w4, "projectile", 0, [1.0, -0.1, 0.1, 0.08, 0.0, 0.0, 0.9, 0.2, 0.1, 0.5, 0.0])
+    ms4 = C.slice_model_state(w4)
+    obj = ms4[C.OBJECT_TOKEN_OFFSET:C.OBJECT_TOKEN_END].reshape(C.OBJECT_TOKEN_COUNT, C.OBJECT_TOKEN_FEATURES)
+    check("object token present flag", obj[0, 0] == 1.0)
+    check("object token sorted by priority", obj[0, 11] == C._ROLE_NORM["projectile"])
+
+
+def test_nstep_actor_boundaries():
+    print("\n[n-step actor boundaries]")
+    nbuf = NStepReplayBuffer(n_step=12, gamma=0.5)
+    s0 = np.array([0], dtype=np.float32)
+    s1 = np.array([1], dtype=np.float32)
+    s2 = np.array([2], dtype=np.float32)
+    s3 = np.array([3], dtype=np.float32)
+    out = []
+    out += nbuf.add(s0, 0, 1.0, s1, False, actor="dqn")
+    out += nbuf.add(s1, 1, 2.0, s2, False, actor="epsilon")
+    out += nbuf.add(s2, 2, 4.0, s3, False, actor="expert")
+    check("actor switch flushes learner prefix", len(out) == 2, f"len={len(out)}")
+    if len(out) >= 2:
+        check("dqn+epsilon grouped as learner", out[0][2] == 2.0 and out[0][6] == 2,
+              f"R={out[0][2]} h={out[0][6]}")
+        check("boundary does not include expert reward", out[1][2] == 2.0 and out[1][6] == 1,
+              f"R={out[1][2]} h={out[1][6]}")
 
 
 def test_parse_roundtrip():
@@ -152,14 +233,20 @@ def test_fire_hold():
 def test_model_shapes(agent):
     print("\n[model shapes]")
     import torch
-    st = torch.zeros(4, C.MODEL_STATE_SIZE)
+    dev = next(agent.online_net.parameters()).device
+    st = torch.zeros(4, C.MODEL_STATE_SIZE, device=dev)
     move_dist, fire_dist = agent.online_net(st, log=False)
+    joint_dist = agent.online_net.joint_dist(st, log=False)
     check("move_dist shape (4,9,51)", tuple(move_dist.shape) == (4, M.NUM_MOVE, C.RL_CONFIG.num_atoms))
     check("fire_dist shape (4,9,51)", tuple(fire_dist.shape) == (4, M.NUM_FIRE, C.RL_CONFIG.num_atoms))
-    check("move_dist sums to 1", torch.allclose(move_dist.sum(-1), torch.ones(4, M.NUM_MOVE), atol=1e-4))
+    check("joint_dist shape (4,81,51)", tuple(joint_dist.shape) == (4, M.NUM_JOINT, C.RL_CONFIG.num_atoms))
+    check("move_dist sums to 1", torch.allclose(move_dist.sum(-1), torch.ones(4, M.NUM_MOVE, device=dev), atol=1e-4))
+    check("joint_dist sums to 1", torch.allclose(joint_dist.sum(-1), torch.ones(4, M.NUM_JOINT, device=dev), atol=1e-4))
     mq, fq = agent.online_net.q_values_branched(st)
+    jq = agent.online_net.q_values_joint(st)
     check("move_q shape (4,9)", tuple(mq.shape) == (4, M.NUM_MOVE))
     check("fire_q shape (4,9)", tuple(fq.shape) == (4, M.NUM_FIRE))
+    check("joint_q shape (4,81)", tuple(jq.shape) == (4, M.NUM_JOINT))
 
 
 def test_act(agent):
@@ -173,6 +260,7 @@ def test_act(agent):
     batch = agent.act_batch([ms, ms, ms], [0.0, 1.0, 0.0])
     check("act_batch returns 3", len(batch) == 3)
     check("act_batch tuples valid", all(0 <= a[0] <= 8 and 0 <= a[1] <= 8 for a in batch))
+    check("safe epsilon returns valid", all(0 <= agent.act(ms, epsilon=1.0)[i] <= 8 for i in (0, 1)))
 
 
 def test_train_step(agent):
@@ -341,6 +429,7 @@ def main():
 
     test_action_coding()
     test_slice()
+    test_nstep_actor_boundaries()
     test_parse_roundtrip()
     test_fire_hold()
     test_expert()

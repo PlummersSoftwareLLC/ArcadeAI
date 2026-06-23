@@ -169,7 +169,7 @@ prev_potential = 0.0       -- previous-frame shaping potential Phi(s) (state-onl
 prev_fire_cmd = -1          -- fire direction from previous frame
 prev_move_cmd = -1          -- move direction from previous frame
 prev_aim_objects = nil      -- classified objects from previous frame
-last_action_source = 0      -- 0=none, 1=dqn, 2=epsilon, 3=expert, 4=forced_random
+last_action_source = 0      -- 0=none, 1=dqn, 2=epsilon, 3=expert, 4=eval/forced_random
 
 -- Fire-hold state:  The game's LSPROC laser routine (RRG23.ASM) requires
 -- the fire joystick to stay in the SAME direction for 3 consecutive frames
@@ -1746,7 +1746,7 @@ end
 local function _object_threat_score(obj)
     local base = CATEGORY_THREAT_WEIGHT[obj.category] or 0.4
     local proximity = 1.0 - clamp01(obj.dist_norm or 1.0)
-    local approach = clamp01((obj.approach or 0.0 + 1.0) * 0.5)
+    local approach = clamp01(((obj.approach or 0.0) + 1.0) * 0.5)
     if obj.category == "human" then
         return base * (0.35 + proximity)
     end
@@ -2232,7 +2232,7 @@ function draw_debug_hud()
     end
 
     -- Player hit box
-    -- Color by action source: green=DQN, red=epsilon, blue=expert, white=other
+    -- Color by action source: green=DQN, red=epsilon/eval, blue=expert, white=other
     local player_color = HUD_PLAYER_COLOR
     if last_action_source == 1 then
         player_color = 0xFF00FF00   -- green: DQN

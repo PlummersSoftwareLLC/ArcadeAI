@@ -1,27 +1,26 @@
 #!/usr/bin/env python3
 # ==================================================================================================================
 # ||  ROBOTRON AI • DQN CONFIGURATION                                                                            ||
-# ||  Rainbow-lite engine (C51 + dueling + PER + n-step + target net + expert BC), 8-lane state, factored        ||
-# ||  move/fire action heads.  Ported and refactored from the Tempest DQN.                                       ||
+# ||  Rainbow-lite engine (C51 + dueling + PER + n-step + target net + expert BC), lane/object attention,       ||
+# ||  and a joint twin-stick action head.  Ported and refactored from the Tempest DQN.                           ||
 # ==================================================================================================================
 """Central configuration: server, RL hyper-parameters, game settings, metrics.
 
 State representation
 --------------------
 Each frame the Lua client sends ``WIRE_PARAMS_COUNT`` (1478) big-endian f32 values.
-The DQN consumes a *compact slice* of that wire — the 18 core features plus the
-8 directional "lane" blocks (8 × 30) — for a model input of ``MODEL_STATE_SIZE``
-(258) floats.  The remaining wire fields (raw entity pools, the 9×9 tactical
-grid) are used by the heuristic expert but are too large to store in the replay
-buffer, so only the 258-float model slice is persisted.
+The DQN consumes a *compact slice* of that wire — the 18 core features, the
+8 directional "lane" blocks (8 × 30), 4 derived salience channels, and a compact
+top-K object-token summary from the tactical pools — for a model input of
+``MODEL_STATE_SIZE`` floats.  The 9×9 tactical grid remains unused by DQN.
 
 Action representation
 ---------------------
 Robotron is twin-stick: an independent 8-way movement stick and 8-way fire
-stick, each with an idle option (9 options per stick).  We model this with a
-*branching* dueling-distributional head: a shared value stream plus separate
-move (9) and fire (9) advantage streams.  The joint action index stored in the
-replay buffer is ``move * NUM_FIRE_ACTIONS + fire`` (0..80).
+stick, each with an idle option (9 options per stick).  The replay buffer stores
+the joint action index ``move * NUM_FIRE_ACTIONS + fire`` (0..80).  The main
+Bellman policy head is a joint 81-action C51 head; branch heads are retained for
+auxiliary expert imitation and diagnostics.
 """
 
 if __name__ == "__main__":
@@ -55,25 +54,203 @@ SETTINGS_PATH = os.path.join(MODEL_DIR, "game_settings.json")
 # Number of f32 values the Lua client packs into each frame's state payload.
 WIRE_PARAMS_COUNT = 1478
 
-# Compact model slice: 18 core features + 8 directional lanes × 30 features.
+# Compact model slice: 18 core features + 8 directional lanes × 30 features +
+# 4 derived salience features + compact object tokens from the tactical pools.
 CORE_FEATURES = 18                       # wire[0:18]
+ELIST_FEATURES = 22                      # wire[18:40], not used by DQN
 LANE_COUNT = 8                           # 8 fire/move directions
 LANE_FEATURES = 30                       # features per lane
 TACTICAL_LANE_OFFSET = 40                # wire index where lane blocks begin
 TACTICAL_LANE_END = TACTICAL_LANE_OFFSET + LANE_COUNT * LANE_FEATURES   # 280
-MODEL_STATE_SIZE = CORE_FEATURES + LANE_COUNT * LANE_FEATURES           # 258
+# Derived "salience" channels appended to the model state (DQN-only; computed in
+# slice_model_state from the wire, so main.lua / v3 PPO / the shared expert are
+# untouched).  These counter the observed near-sightedness + weak human-hunting:
+#   [0] enemy_proximity  = 1 - nearest_enemy_dist   (near things "pop")
+#   [1] human_proximity  = 1 - nearest_human_dist   (equalises human vs enemy salience)
+#   [2] nearest_human_dx  (global direction to the nearest human — the core block
+#   [3] nearest_human_dy   only carries human *distance*, not direction, unlike
+#                          the enemy/spawner which both get dx/dy)
+EXTRA_FEATURES = 4
+TACTICAL_GRID_FEATURES = 9 * 9 * 6
+TACTICAL_GRID_OFFSET = TACTICAL_LANE_END
+TACTICAL_GRID_END = TACTICAL_GRID_OFFSET + TACTICAL_GRID_FEATURES        # 766
+TACTICAL_POOL_OFFSET = TACTICAL_GRID_END
+
+# Compact object-token section.  This brings back the Tempest-style object-slot
+# attention signal without storing the full 712-float tactical pool payload.
+OBJECT_TOKEN_COUNT = 16
+OBJECT_TOKEN_FEATURES = 12
+OBJECT_FEATURES = OBJECT_TOKEN_COUNT * OBJECT_TOKEN_FEATURES
+OBJECT_TOKEN_OFFSET = CORE_FEATURES + LANE_COUNT * LANE_FEATURES + EXTRA_FEATURES
+OBJECT_TOKEN_END = OBJECT_TOKEN_OFFSET + OBJECT_FEATURES
+MODEL_STATE_SIZE = OBJECT_TOKEN_END                                           # 454
+
+# Pool layout mirrors main.lua tactical pool emission.
+TACTICAL_POOL_DEFS = (
+    ("projectile", 24, 11),
+    ("danger", 32, 10),
+    ("human", 12, 7),
+    ("electrode", 8, 5),
+)
+_ROLE_NORM = {"projectile": 0.25, "danger": 0.50, "human": 0.75, "electrode": 1.00}
+_TYPE_NORM_DEFAULT = {"projectile": 6.0 / 11.0, "danger": 0.0, "human": 7.0 / 11.0, "electrode": 8.0 / 11.0}
+
+# Indices within the 18-feature core block (see main.lua serialize_frame).
+_CORE_NEAREST_ENEMY_DIST = 9
+_CORE_NEAREST_HUMAN_DIST = 10
+# Indices within each 30-feature lane block (see main.lua lane emission).
+_LANE_ENEMY_DIST = 0
+_LANE_ENEMY_COUNT = 7
+_LANE_HUMAN_DIST = 8
+_LANE_HUMAN_DX = 9
+_LANE_HUMAN_DY = 10
+_LANE_HUMAN_COUNT = 11
+_LANE_ELECTRODE_DIST = 12
+_LANE_PROJECTILE_DIST = 13
+_LANE_PROJECTILE_TTC = 14
+_LANE_PROJECTILE_CLOSEST_PASS = 15
+_LANE_PROJECTILE_COUNT = 16
+_LANE_ENEMY_TTC = 17
+
+
+def _clip01(v: float) -> float:
+    try:
+        x = float(v)
+    except Exception:
+        return 0.0
+    if not math.isfinite(x):
+        return 0.0
+    return min(1.0, max(0.0, x))
+
+
+def _clip11(v: float) -> float:
+    try:
+        x = float(v)
+    except Exception:
+        return 0.0
+    if not math.isfinite(x):
+        return 0.0
+    return min(1.0, max(-1.0, x))
+
+
+def _extract_object_tokens(arr: np.ndarray) -> np.ndarray:
+    """Return top-K compact object tokens from the Lua tactical pools.
+
+    Token layout per row:
+    ``[present, dx, dy, dist, vx, vy, threat, ttc, closest_pass, approach,
+    type_norm, role_norm]``.
+    """
+    tokens = []
+    pools = arr[TACTICAL_POOL_OFFSET:]
+    pool_offset = 0
+
+    for pool_name, max_slots, feat_per_slot in TACTICAL_POOL_DEFS:
+        slot_start = pool_offset + 1
+        slot_end = slot_start + max_slots * feat_per_slot
+        if slot_end > len(pools):
+            pool_offset += 1 + max_slots * feat_per_slot
+            continue
+        raw = pools[slot_start:slot_end].reshape(max_slots, feat_per_slot)
+        for slot_idx in range(max_slots):
+            slot = raw[slot_idx]
+            if not np.isfinite(slot).all() or slot[0] <= 0.5:
+                continue
+
+            dx = _clip11(slot[1] if feat_per_slot > 1 else 0.0)
+            dy = _clip11(slot[2] if feat_per_slot > 2 else 0.0)
+            dist = _clip01(slot[3] if feat_per_slot > 3 else 1.0)
+            vx = _clip11(slot[4] if feat_per_slot > 4 else 0.0)
+            vy = _clip11(slot[5] if feat_per_slot > 5 else 0.0)
+            threat = 0.0
+            ttc = 1.0
+            closest_pass = dist
+            approach = 0.0
+            type_norm = _TYPE_NORM_DEFAULT.get(pool_name, 0.0)
+
+            if pool_name == "projectile":
+                threat = _clip01(slot[6] if feat_per_slot > 6 else 0.8)
+                ttc = _clip01(slot[7] if feat_per_slot > 7 else 1.0)
+                closest_pass = _clip01(slot[8] if feat_per_slot > 8 else dist)
+                approach = _clip11(slot[9] if feat_per_slot > 9 else 0.0)
+                if feat_per_slot > 10 and float(slot[10]) >= 0.5:
+                    type_norm = 9.0 / 11.0
+                priority = 3.0 * (1.0 - dist) + 2.0 * (1.0 - ttc) + threat
+            elif pool_name == "danger":
+                threat = _clip01(slot[6] if feat_per_slot > 6 else 0.6)
+                approach = _clip11(slot[7] if feat_per_slot > 7 else 0.0)
+                ttc = _clip01(slot[8] if feat_per_slot > 8 else 1.0)
+                if feat_per_slot > 9:
+                    type_norm = _clip01(float(slot[9]) * (8.0 / 11.0))
+                priority = 2.0 * (1.0 - dist) + threat + 0.5 * (1.0 - ttc)
+            elif pool_name == "human":
+                threat = _clip01(slot[6] if feat_per_slot > 6 else 0.0)
+                priority = 1.5 * (1.0 - dist) + 0.5
+            else:  # electrode
+                threat = _clip01(slot[4] if feat_per_slot > 4 else 0.7)
+                priority = 1.0 * (1.0 - dist) + threat
+
+            tokens.append((
+                float(priority),
+                [1.0, dx, dy, dist, vx, vy, threat, ttc, closest_pass, approach,
+                 type_norm, _ROLE_NORM.get(pool_name, 0.0)],
+            ))
+        pool_offset += 1 + max_slots * feat_per_slot
+
+    out = np.zeros((OBJECT_TOKEN_COUNT, OBJECT_TOKEN_FEATURES), dtype=np.float32)
+    if tokens:
+        tokens.sort(key=lambda item: item[0], reverse=True)
+        for row, (_, vals) in enumerate(tokens[:OBJECT_TOKEN_COUNT]):
+            out[row] = np.asarray(vals, dtype=np.float32)
+    return out.reshape(-1)
 
 
 def slice_model_state(wire) -> np.ndarray:
-    """Extract the compact 258-float model input from a full wire vector.
+    """Extract the compact model input from a full wire vector.
 
-    ``wire`` may be any sequence of length >= TACTICAL_LANE_END.  Returns a
-    contiguous float32 array of length ``MODEL_STATE_SIZE``.
+    ``wire`` may be any sequence of length >= TACTICAL_POOL_OFFSET.  Returns a
+    contiguous float32 array of length ``MODEL_STATE_SIZE`` laid out as
+    ``[core(18), lanes(8×30), extra(4), object_tokens(16×12)]``.  The extra and
+    object-token channels are derived here so the shared wire format / v3 PPO /
+    expert are unaffected.
     """
     arr = np.asarray(wire, dtype=np.float32)
     core = arr[0:CORE_FEATURES]
-    lanes = arr[TACTICAL_LANE_OFFSET:TACTICAL_LANE_END]
-    return np.concatenate([core, lanes]).astype(np.float32, copy=False)
+    lanes = arr[TACTICAL_LANE_OFFSET:TACTICAL_LANE_END].copy()
+    lanes2d = lanes.reshape(LANE_COUNT, LANE_FEATURES)
+
+    # Lua emits 0.0 for empty lane distances, which is also the numerical value
+    # for an entity directly on the player.  Preserve the wire format, but make
+    # the DQN slice unambiguous by mapping absent-lane distances to "far".
+    no_enemy = lanes2d[:, _LANE_ENEMY_COUNT] <= 0.0
+    lanes2d[no_enemy, _LANE_ENEMY_DIST] = 1.0
+    lanes2d[no_enemy, _LANE_ENEMY_TTC] = 1.0
+    lanes2d[lanes2d[:, _LANE_HUMAN_COUNT] <= 0.0, _LANE_HUMAN_DIST] = 1.0
+    no_projectile = lanes2d[:, _LANE_PROJECTILE_COUNT] <= 0.0
+    lanes2d[no_projectile, _LANE_PROJECTILE_DIST] = 1.0
+    lanes2d[no_projectile, _LANE_PROJECTILE_TTC] = 1.0
+    lanes2d[no_projectile, _LANE_PROJECTILE_CLOSEST_PASS] = 1.0
+    lanes2d[lanes2d[:, _LANE_ELECTRODE_DIST] <= 0.0, _LANE_ELECTRODE_DIST] = 1.0
+
+    # Option 3 — inverse-distance proximity.  Distances default to 1.0 when no
+    # entity exists, so proximity is 0.0 in that case (correct, no false signal).
+    enemy_prox = 1.0 - float(core[_CORE_NEAREST_ENEMY_DIST])
+    human_prox = 1.0 - float(core[_CORE_NEAREST_HUMAN_DIST])
+
+    # Option 2 — global nearest-human direction, reconstructed from the per-lane
+    # nearest-human sub-features (the lane-nearest human with the smallest dist
+    # IS the global nearest human).  Only lanes with a human present are eligible.
+    present = lanes2d[:, _LANE_HUMAN_COUNT] > 0.0
+    human_dx = 0.0
+    human_dy = 0.0
+    if present.any():
+        dist = np.where(present, lanes2d[:, _LANE_HUMAN_DIST], np.inf)
+        li = int(np.argmin(dist))
+        human_dx = float(lanes2d[li, _LANE_HUMAN_DX])
+        human_dy = float(lanes2d[li, _LANE_HUMAN_DY])
+
+    extra = np.array([enemy_prox, human_prox, human_dx, human_dy], dtype=np.float32)
+    objects = _extract_object_tokens(arr)
+    return np.concatenate([core, lanes, extra, objects]).astype(np.float32, copy=False)
 
 
 # ---------------------------------------------------------------------------
@@ -104,6 +281,9 @@ class RLConfigData:
     core_features: int = CORE_FEATURES
     lane_count: int = LANE_COUNT
     lane_features: int = LANE_FEATURES
+    extra_features: int = EXTRA_FEATURES
+    object_token_count: int = OBJECT_TOKEN_COUNT
+    object_token_features: int = OBJECT_TOKEN_FEATURES
 
     # ── network architecture ────────────────────────────────────────────
     trunk_hidden: int = 384
@@ -116,6 +296,15 @@ class RLConfigData:
     attn_heads: int = 8
     attn_dim: int = 128
 
+    # Tempest-style self-attention over compact Robotron object tokens.
+    use_object_attention: bool = True
+    object_attn_heads: int = 8
+    object_attn_dim: int = 128
+
+    # Main policy/value head.  Branch heads remain for auxiliary BC + metrics.
+    use_joint_head: bool = True
+    branch_aux_bc_weight: float = 0.25
+
     # Distributional C51.  Support [-100,100] keeps a ~20:1 ratio vs reward_clip
     # (=10) so the Bellman target never saturates for large kill/death rewards.
     use_distributional: bool = True
@@ -126,7 +315,11 @@ class RLConfigData:
     use_dueling: bool = True
 
     # ── training ────────────────────────────────────────────────────────
-    batch_size: int = 768
+    # Net is tiny (~779k params); the GPU is far from saturated at 768, so a
+    # larger batch raises samples/sec (and Rpl/F) at near-zero extra wall-time.
+    # Keep sampling/transfers inline: pinned-memory or background CUDA host work
+    # re-enables the GIL in the free-threaded Torch build and tanks MAME FPS.
+    batch_size: int = 1536
     lr: float = 1e-4
     lr_min: float = 4e-5
     lr_warmup_steps: int = 5_000
@@ -136,9 +329,10 @@ class RLConfigData:
     n_step: int = 12
     max_samples_per_frame: float = 20
 
-    # Replay (PER with proportional priorities).  Capacity trimmed from
-    # Tempest's 25M to keep host RAM bounded: 258 floats × 2M × 2 × 4B ≈ 4.1 GB.
-    memory_size: int = 2_000_000
+    # Replay (PER with proportional priorities).  10M capacity gives ~6-7 min of
+    # aggregate play history (vs ~80s at 2M), keeping rare deep/rescue/tank waves
+    # alive long enough to learn.  Host RAM cost: 454 floats × 10M × 2 × 4B ≈ 36 GB.
+    memory_size: int = 10_000_000
     priority_alpha: float = 0.7
     priority_beta_start: float = 0.4
     priority_beta_frames: int = 10_000_000
@@ -155,27 +349,27 @@ class RLConfigData:
 
     # ── exploration ─────────────────────────────────────────────────────
     epsilon_start: float = 1.0
-    epsilon_end: float = 0.01
-    epsilon_decay_frames: int = 500_000
+    epsilon_end: float = 0.05
+    epsilon_decay_frames: int = 5_000_000
+    safe_epsilon_random_fraction: float = 0.10
+    safe_epsilon_temperature: float = 0.25
     # Manual epsilon pulse (fired with P key, runs for N frames then auto-stops).
     manual_pulse_epsilon: float = 0.25
     manual_pulse_duration_frames: int = 750_000
     epsilon: float = 1.0
 
-    # Expert guidance
-    # Match the v3 schedule: the heuristic expert drives ~99% of frames early
-    # (clean human rescues / data quality), holds until decay_start_frame, then
-    # eases to the floor over decay_frames.  A low start ratio interleaves too
-    # many policy/epsilon frames and visibly wrecks rescue behaviour.
-    expert_ratio_start: float = 0.99
-    expert_ratio_end: float = 0.05
+    # Expert guidance.  Start with substantial demonstrations, but let the DQN
+    # get meaningful early control so n-step returns and epsilon exploration are
+    # not dominated by expert futures.
+    expert_ratio_start: float = 0.60
+    expert_ratio_end: float = 0.25
     # Decay is keyed to TRAINING STEPS, not frames.  At 20k+ fps the steady-state
     # frame:step ratio is ~200:1, so a frame-based 2M schedule completed in ~10k
     # gradient steps (2-3 wall-clock minutes) — the policy never had time to learn
     # before the expert handed off.  Steps are FPS-independent and track learning.
-    expert_ratio_decay_start_step: int = 50_000
-    expert_ratio_decay_steps: int = 1_000_000
-    expert_ratio: float = 0.99
+    expert_ratio_decay_start_step: int = 0
+    expert_ratio_decay_steps: int = 250_000
+    expert_ratio: float = 0.60
 
     # Expert BC — also step-based (same FPS-independence rationale as above).
     expert_bc_weight: float = 1.0
@@ -194,7 +388,7 @@ class RLConfigData:
     # Hold each fire direction stable for this many frames so the game
     # registers reliable shots.  Applied Python-side; the *effective* (held)
     # fire direction is what gets stored in replay and sent to Lua.
-    fire_hold_frames: int = 4
+    fire_hold_frames: int = 3
 
     # ── death attribution ───────────────────────────────────────────────
     death_priority_boost: float = 5.0
@@ -224,6 +418,12 @@ class RLConfigData:
     save_replay_on_autosave: bool = False # if True, periodic autosaves persist replay too
 
     enable_amp: bool = True
+
+    # Autonomous eval-only clients: no expert, fixed low epsilon, no replay writes.
+    # With 50 clients this makes client ids 9/19/29/39/49 eval by default.
+    eval_client_stride: int = 10
+    eval_client_offset: int = 9
+    eval_epsilon: float = 0.01
 
 
 RL_CONFIG = RLConfigData()
@@ -359,6 +559,7 @@ game_settings.load()
 @dataclass
 class MetricsData:
     frame_count: int = 0
+    learner_frame_count: int = 0
     total_controls: int = 0
     total_training_steps: int = 0
     memory_buffer_size: int = 0
@@ -384,6 +585,8 @@ class MetricsData:
     loss_count_interval: int = 0
     agree_sum_interval: float = 0.0
     agree_count_interval: int = 0
+    agree_move_sum_interval: float = 0.0
+    agree_fire_sum_interval: float = 0.0
     reward_sum_interval: float = 0.0
     reward_count_interval: int = 0
     reward_sum_interval_dqn: float = 0.0
@@ -392,6 +595,11 @@ class MetricsData:
     reward_count_interval_subj: int = 0
     reward_sum_interval_obj: float = 0.0
     reward_count_interval_obj: int = 0
+    eval_reward_sum_interval: float = 0.0
+    eval_score_sum_interval: float = 0.0
+    eval_level_sum_interval: float = 0.0
+    eval_length_sum_interval: float = 0.0
+    eval_count_interval: int = 0
     training_steps_interval: int = 0
     frames_count_interval: int = 0
     episode_length_sum_interval: int = 0
@@ -411,6 +619,11 @@ class MetricsData:
 
     average_level: float = 0.0
     average_game_score: float = 0.0
+    eval_average_reward: float = 0.0
+    eval_average_score: float = 0.0
+    eval_average_level: float = 0.0
+    eval_average_length: float = 0.0
+    eval_episode_count: int = 0
     peak_level: int = 0
     peak_episode_reward: float = 0.0
     peak_game_score: int = 0
@@ -450,6 +663,10 @@ class MetricsData:
                 self.fps = self.frames_last_second / elapsed
                 self.frames_last_second = 0
                 self.last_fps_time = now
+
+    def update_learner_frame_count(self, delta: int = 1):
+        with self.lock:
+            self.learner_frame_count += max(0, int(delta))
 
     def note_replay_drop(self, n: int = 1):
         """Record dropped replay transitions (queue overflow) for reporting."""
@@ -491,15 +708,15 @@ class MetricsData:
             return 0.0 if self.override_epsilon else float(self.epsilon)
 
     @staticmethod
-    def _natural_epsilon_for_frame(frame_count: int) -> float:
-        progress = min(1.0, frame_count / max(1, RL_CONFIG.epsilon_decay_frames))
+    def _natural_epsilon_for_learner_frame(learner_frame_count: int) -> float:
+        progress = min(1.0, learner_frame_count / max(1, RL_CONFIG.epsilon_decay_frames))
         return RL_CONFIG.epsilon_start + progress * (RL_CONFIG.epsilon_end - RL_CONFIG.epsilon_start)
 
     def update_epsilon(self):
         with self.lock:
             if self.manual_epsilon_override:
                 return self.epsilon
-            base = self._natural_epsilon_for_frame(int(self.frame_count))
+            base = self._natural_epsilon_for_learner_frame(int(self.learner_frame_count))
             if self.manual_pulse_active:
                 self.manual_pulse_frames_remaining -= 1
                 if self.manual_pulse_frames_remaining <= 0:
@@ -557,6 +774,28 @@ class MetricsData:
                 self.episode_length_count_interval += 1
             if float(total) > self.peak_episode_reward:
                 self.peak_episode_reward = float(total)
+
+    def add_eval_episode_reward(self, total, score, level, length=0):
+        with self.lock:
+            self.eval_episode_count += 1
+            self.eval_reward_sum_interval += float(total)
+            self.eval_score_sum_interval += float(score)
+            self.eval_level_sum_interval += float(level)
+            self.eval_length_sum_interval += float(length)
+            self.eval_count_interval += 1
+            n = min(50, self.eval_episode_count)
+            # Lightweight EMA-like rolling display without another deque.
+            if n <= 1:
+                self.eval_average_reward = float(total)
+                self.eval_average_score = float(score)
+                self.eval_average_level = float(level)
+                self.eval_average_length = float(length)
+            else:
+                a = 1.0 / float(n)
+                self.eval_average_reward = (1.0 - a) * self.eval_average_reward + a * float(total)
+                self.eval_average_score = (1.0 - a) * self.eval_average_score + a * float(score)
+                self.eval_average_level = (1.0 - a) * self.eval_average_level + a * float(level)
+                self.eval_average_length = (1.0 - a) * self.eval_average_length + a * float(length)
 
     def increment_total_controls(self):
         with self.lock:
@@ -655,7 +894,7 @@ class MetricsData:
     def restore_natural_epsilon(self, kb=None):
         with self.lock:
             self.manual_epsilon_override = False
-            self.epsilon = self._natural_epsilon_for_frame(int(self.frame_count))
+            self.epsilon = self._natural_epsilon_for_learner_frame(int(self.learner_frame_count))
 
 
 metrics = MetricsData()

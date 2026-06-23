@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 # ==================================================================================================================
 # ||  ROBOTRON AI • DQN TRAINING STEP                                                                            ||
-# ||  Branching C51 distributional Bellman update with PER and optional BC loss.                                  ||
+# ||  Joint C51 distributional Bellman update with PER and optional branch/joint BC loss.                         ||
 # ==================================================================================================================
-"""Single training step for the branching Rainbow-lite agent.
+"""Single training step for the Robotron Rainbow-lite agent.
 
 The replay buffer stores a joint action index ``move * num_fire + fire`` (0..80).
-Each step we split that into per-branch indices, run the C51 distributional
-Bellman projection independently for the move and fire branches (sharing the
-reward / discount / support), and sum the two cross-entropy losses.  The PER
-priority for a transition is the summed branch TD error.
+The Bellman update trains the joint 81-action C51 head.  Auxiliary move/fire
+branch heads are kept for expert imitation and diagnostics.
 """
 
 import time, math
@@ -42,7 +40,7 @@ def _bc_weight_schedule(training_step: int) -> float:
 
 
 def train_step(agent, prefetched_batch=None) -> float | None:
-    """Run one branching C51 distributional training step.
+    """Run one joint C51 distributional training step.
 
     Returns the scalar loss value, or None if training was skipped.
     """
@@ -100,7 +98,7 @@ def train_step(agent, prefetched_batch=None) -> float | None:
     scaler = agent.grad_scaler
     amp_ctx = torch.autocast(device_type="cuda", dtype=torch.float16) if use_amp else nullcontext()
 
-    # ── Branching C51 distributional update ─────────────────────────────
+    # ── Joint C51 distributional update ─────────────────────────────────
     num_atoms = cfg.num_atoms
     v_min, v_max = cfg.v_min, cfg.v_max
     delta_z = (v_max - v_min) / (num_atoms - 1)
@@ -108,20 +106,17 @@ def train_step(agent, prefetched_batch=None) -> float | None:
     arange = torch.arange(B, device=device)
 
     with amp_ctx:
-        # Current distributions (log-probabilities), per branch
-        move_log_p, fire_log_p = agent.online_net(states_t, log=True)   # each (B, A, N)
-        move_log_p_a = move_log_p[arange, move_actions_t]               # (B, N)
-        fire_log_p_a = fire_log_p[arange, fire_actions_t]               # (B, N)
+        # Current joint action distribution (log-probabilities)
+        joint_log_p = agent.online_net.joint_dist(states_t, log=True)    # (B, 81, N)
+        joint_log_p_a = joint_log_p[arange, actions_t]                   # (B, N)
 
         # Target distribution (Double-DQN: online selects, target evaluates)
         with torch.no_grad():
-            move_q_next, fire_q_next = agent.online_net.q_values_branched(next_states_t)
-            move_best = move_q_next.argmax(dim=1)          # (B,)
-            fire_best = fire_q_next.argmax(dim=1)          # (B,)
+            joint_q_next = agent.online_net.q_values_joint(next_states_t)
+            joint_best = joint_q_next.argmax(dim=1)          # (B,)
 
-            move_tp, fire_tp = agent.target_net(next_states_t, log=False)  # each (B, A, N)
-            move_tp_a = move_tp[arange, move_best]         # (B, N)
-            fire_tp_a = fire_tp[arange, fire_best]         # (B, N)
+            joint_tp = agent.target_net.joint_dist(next_states_t, log=False)  # (B, 81, N)
+            joint_tp_a = joint_tp[arange, joint_best]        # (B, N)
 
             # Shared projected Bellman support (same reward/discount for both branches)
             gamma_n = cfg.gamma ** horizons_t              # (B,)
@@ -135,36 +130,30 @@ def train_step(agent, prefetched_batch=None) -> float | None:
             eq_mask = (l == u)
             neq_mask = ~eq_mask
 
-            def _project(target_p_a: torch.Tensor) -> torch.Tensor:
-                """Distribute a target distribution onto the fixed support."""
-                m = torch.zeros(B, num_atoms, device=device, dtype=torch.float32)
-                m.view(-1).index_add_(0, (l + offset).view(-1), (target_p_a * (u.float() - b) * neq_mask.float()).view(-1))
-                m.view(-1).index_add_(0, (u + offset).view(-1), (target_p_a * (b - l.float()) * neq_mask.float()).view(-1))
-                # When l == u the two weights above are both 0 → assign full mass directly.
-                m.view(-1).index_add_(0, (l + offset).view(-1), (target_p_a * eq_mask.float()).view(-1))
-                return m
+            m_joint = torch.zeros(B, num_atoms, device=device, dtype=torch.float32)
+            m_joint.view(-1).index_add_(0, (l + offset).view(-1), (joint_tp_a * (u.float() - b) * neq_mask.float()).view(-1))
+            m_joint.view(-1).index_add_(0, (u + offset).view(-1), (joint_tp_a * (b - l.float()) * neq_mask.float()).view(-1))
+            # When l == u the two weights above are both 0 → assign full mass directly.
+            m_joint.view(-1).index_add_(0, (l + offset).view(-1), (joint_tp_a * eq_mask.float()).view(-1))
 
-            m_move = _project(move_tp_a)
-            m_fire = _project(fire_tp_a)
-
-        # Per-branch cross-entropy, averaged across the two heads so the C51
-        # loss/priority scale matches a single-head baseline (summing would
-        # double the TD scale and interact with LR / PER beta).
-        ce_move = -(m_move * move_log_p_a).sum(dim=1)      # (B,)
-        ce_fire = -(m_fire * fire_log_p_a).sum(dim=1)      # (B,)
-        ce_loss = 0.5 * (ce_move + ce_fire)                # (B,)
+        ce_loss = -(m_joint * joint_log_p_a).sum(dim=1)    # (B,)
         weighted_loss = (weights_t * ce_loss).mean()
 
-    # ── Optional BC loss on expert transitions (per branch) ─────────────
+    # ── Optional BC loss on expert transitions (joint + auxiliary branches) ──
     bc_loss_val = 0.0
     bc_w = _bc_weight_schedule(metrics.total_training_steps)
     if bc_w > 0.0 and is_expert_t.any():
         with amp_ctx:
             expert_idx = is_expert_t.nonzero(as_tuple=True)[0]
             if expert_idx.numel() > 0:
+                joint_q_e = agent.online_net.q_values_joint(states_t[expert_idx])
                 move_q_e, fire_q_e = agent.online_net.q_values_branched(states_t[expert_idx])
-                bc_loss = (F.cross_entropy(move_q_e, move_actions_t[expert_idx])
-                           + F.cross_entropy(fire_q_e, fire_actions_t[expert_idx]))
+                joint_bc = F.cross_entropy(joint_q_e, actions_t[expert_idx])
+                branch_bc = 0.5 * (
+                    F.cross_entropy(move_q_e, move_actions_t[expert_idx])
+                    + F.cross_entropy(fire_q_e, fire_actions_t[expert_idx])
+                )
+                bc_loss = joint_bc + float(getattr(cfg, "branch_aux_bc_weight", 0.25)) * branch_bc
                 # Scale BC by sampled expert fraction to avoid over-weighting when
                 # expert transitions are sparse but present in most batches.
                 bc_scale = float(expert_idx.numel()) / float(B)
@@ -224,10 +213,11 @@ def train_step(agent, prefetched_batch=None) -> float | None:
         # Directional agreement: argmax move/fire matches the stored action
         agree = 0.0
         with torch.no_grad():
-            move_q_all, fire_q_all = agent.online_net.q_values_branched(states_t)
-            metrics.last_q_mean = float(((move_q_all.mean() + fire_q_all.mean()) * 0.5).item())
-            pred_move = move_q_all.argmax(dim=1)
-            pred_fire = fire_q_all.argmax(dim=1)
+            joint_q_all = agent.online_net.q_values_joint(states_t)
+            metrics.last_q_mean = float(joint_q_all.mean().item())
+            pred_joint = joint_q_all.argmax(dim=1)
+            pred_move = pred_joint // num_fire
+            pred_fire = pred_joint % num_fire
             agree_move = (pred_move == move_actions_t).float().mean().item()
             agree_fire = (pred_fire == fire_actions_t).float().mean().item()
             agree = 0.5 * (agree_move + agree_fire)
@@ -235,6 +225,8 @@ def train_step(agent, prefetched_batch=None) -> float | None:
 
         if hasattr(metrics, "agree_sum_interval"):
             metrics.agree_sum_interval += agree
+            metrics.agree_move_sum_interval += agree_move
+            metrics.agree_fire_sum_interval += agree_fire
             metrics.agree_count_interval += 1
         if hasattr(metrics, "loss_sum_interval"):
             metrics.loss_sum_interval += loss_val

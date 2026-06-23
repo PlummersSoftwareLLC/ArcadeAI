@@ -166,7 +166,7 @@ class RLConfigData:
     inference_request_timeout_ms: float = 50.0
 
     # ── background training ─────────────────────────────────────────────
-    training_steps_per_cycle: int = 16
+    training_steps_per_cycle: int = 32
     save_interval: int = 10_000
 
     enable_amp: bool = True

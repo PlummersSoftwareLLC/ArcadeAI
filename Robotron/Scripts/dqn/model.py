@@ -4,16 +4,18 @@
 # ||                                                                                                              ||
 # ||  Rainbow-lite network refactored for Robotron's twin-stick control:                                          ||
 # ||    • C51 distributional value estimation                                                                     ||
-# ||    • BRANCHING factored heads — independent move (9) and fire (9) streams over a shared value stream         ||
-# ||    • Self-attention over the 8 directional "lane" tokens                                                      ||
+# ||    • JOINT 81-action head for coupled move/fire values                                                        ||
+# ||    • Auxiliary BRANCHING heads for move/fire imitation diagnostics                                             ||
+# ||    • Self-attention over directional lane tokens and compact object tokens                                     ||
 # ||    • Dueling architecture                                                                                     ||
 # ==================================================================================================================
 """Model + action helpers for the Robotron DQN.
 
-The state vector is the compact 258-float slice (18 core + 8 lanes × 30).  The
-8 lane blocks are contiguous at ``state[:, 18:258]`` so they reshape directly
-into ``(B, 8, 30)`` tokens — no scatter/gather needed (the Lua client already
-bins enemies into directional lanes).
+The state vector is the compact model slice (18 core + 8 lanes × 30 + 4 derived
+salience channels + 16 object tokens × 12).  Lane blocks are contiguous at
+``state[:, 18:258]``.  Object tokens are contiguous at ``state[:, 262:454]``.
+Both token groups get Tempest-style self-attention and the pooled summaries are
+concatenated with the raw state before the trunk.
 """
 
 if __name__ == "__main__":
@@ -121,6 +123,33 @@ class LaneSelfAttentionEncoder(nn.Module):
         return enriched.mean(dim=1)                     # (B, D)
 
 
+class ObjectSelfAttentionEncoder(nn.Module):
+    """Self-attention over compact object tokens with a presence mask."""
+
+    def __init__(self, token_features: int, embed_dim: int, num_heads: int):
+        super().__init__()
+        self.embed = nn.Linear(token_features, embed_dim)
+        self.norm = nn.LayerNorm(embed_dim)
+        self.attn = nn.MultiheadAttention(embed_dim, num_heads, batch_first=True)
+        self.attn_norm = nn.LayerNorm(embed_dim)
+        self.out_dim = embed_dim
+
+    def forward(self, tokens: torch.Tensor) -> torch.Tensor:
+        present = tokens[..., 0] > 0.5
+        key_padding_mask = ~present
+        all_empty = key_padding_mask.all(dim=1)
+        if all_empty.any():
+            key_padding_mask = key_padding_mask.clone()
+            key_padding_mask[all_empty, 0] = False
+        x = self.norm(self.embed(tokens))
+        attn_out, _ = self.attn(x, x, x, key_padding_mask=key_padding_mask)
+        enriched = self.attn_norm(x + attn_out)
+        weights = present.float().unsqueeze(-1)
+        pooled = (enriched * weights).sum(dim=1)
+        denom = weights.sum(dim=1).clamp_min(1.0)
+        return pooled / denom
+
+
 # ── Branching Distributional Dueling Network ────────────────────────────────
 class RainbowNet(nn.Module):
     """C51 distributional network with branching dueling heads.
@@ -151,6 +180,9 @@ class RainbowNet(nn.Module):
         self.core_features = cfg.core_features    # 18
         self.lane_count = cfg.lane_count          # 8
         self.lane_features = cfg.lane_features    # 30
+        self.extra_features = cfg.extra_features  # 4
+        self.object_token_count = cfg.object_token_count
+        self.object_token_features = cfg.object_token_features
 
         # ── Lane self-attention encoder ────────────────────────────────
         self.use_attn = cfg.use_lane_attention
@@ -163,8 +195,19 @@ class RainbowNet(nn.Module):
             )
             attn_out_dim = cfg.attn_dim
 
+        # ── Object self-attention encoder ──────────────────────────────
+        self.use_object_attn = cfg.use_object_attention
+        object_attn_out_dim = 0
+        if self.use_object_attn:
+            self.object_attn = ObjectSelfAttentionEncoder(
+                token_features=self.object_token_features,
+                embed_dim=cfg.object_attn_dim,
+                num_heads=cfg.object_attn_heads,
+            )
+            object_attn_out_dim = cfg.object_attn_dim
+
         # ── Trunk ──────────────────────────────────────────────────────
-        trunk_in = state_size + attn_out_dim
+        trunk_in = state_size + attn_out_dim + object_attn_out_dim
         layers = []
         for i in range(cfg.trunk_layers):
             out_dim = cfg.trunk_hidden
@@ -190,11 +233,18 @@ class RainbowNet(nn.Module):
             # Fire advantage stream → (num_fire × num_atoms)
             self.fire_adv_fc = nn.Linear(head_in, head_mid)
             self.fire_adv_out = nn.Linear(head_mid, self.num_fire * self.num_atoms)
+            # Joint move×fire value stream → (81 × atoms)
+            self.joint_val_fc = nn.Linear(head_in, head_mid)
+            self.joint_val_out = nn.Linear(head_mid, self.num_atoms)
+            self.joint_adv_fc = nn.Linear(head_in, head_mid)
+            self.joint_adv_out = nn.Linear(head_mid, NUM_JOINT * self.num_atoms)
         else:
             self.move_fc = nn.Linear(head_in, head_mid)
             self.move_out = nn.Linear(head_mid, self.num_move * self.num_atoms)
             self.fire_fc = nn.Linear(head_in, head_mid)
             self.fire_out = nn.Linear(head_mid, self.num_fire * self.num_atoms)
+            self.joint_fc = nn.Linear(head_in, head_mid)
+            self.joint_out = nn.Linear(head_mid, NUM_JOINT * self.num_atoms)
 
         self._init_weights()
 
@@ -217,6 +267,21 @@ class RainbowNet(nn.Module):
         end = start + self.lane_count * self.lane_features
         return state[:, start:end].reshape(B, self.lane_count, self.lane_features)
 
+    def _object_tokens(self, state: torch.Tensor) -> torch.Tensor:
+        B = state.shape[0]
+        start = self.core_features + self.lane_count * self.lane_features + self.extra_features
+        end = start + self.object_token_count * self.object_token_features
+        return state[:, start:end].reshape(B, self.object_token_count, self.object_token_features)
+
+    def _trunk_features(self, state: torch.Tensor) -> torch.Tensor:
+        parts = [state]
+        if self.use_attn:
+            parts.append(self.lane_attn(self._lane_tokens(state)))
+        if self.use_object_attn:
+            parts.append(self.object_attn(self._object_tokens(state)))
+        trunk_in = torch.cat(parts, dim=1) if len(parts) > 1 else state
+        return self.trunk(trunk_in)
+
     def forward(self, state: torch.Tensor, log: bool = False):
         """Return per-branch action-value distributions.
 
@@ -229,14 +294,7 @@ class RainbowNet(nn.Module):
         """
         B = state.shape[0]
 
-        if self.use_attn:
-            lane_tokens = self._lane_tokens(state)              # (B, 8, F)
-            pooled = self.lane_attn(lane_tokens)                # (B, D)
-            trunk_in = torch.cat([state, pooled], dim=1)
-        else:
-            trunk_in = state
-
-        h = self.trunk(trunk_in)
+        h = self._trunk_features(state)
 
         if self.use_dueling:
             val = F.relu(self.val_fc(h))
@@ -261,6 +319,31 @@ class RainbowNet(nn.Module):
                     F.softmax(fire_atoms, dim=2))
         else:
             return move_atoms.squeeze(2), fire_atoms.squeeze(2)
+
+    def joint_dist(self, state: torch.Tensor, log: bool = False) -> torch.Tensor:
+        """Return joint move×fire action distributions, shape ``(B, 81, atoms)``."""
+        B = state.shape[0]
+        h = self._trunk_features(state)
+        if self.use_dueling:
+            val = F.relu(self.joint_val_fc(h))
+            val = self.joint_val_out(val).view(B, 1, self.num_atoms)
+            adv = F.relu(self.joint_adv_fc(h))
+            adv = self.joint_adv_out(adv).view(B, NUM_JOINT, self.num_atoms)
+            atoms = val + adv - adv.mean(dim=1, keepdim=True)
+        else:
+            x = F.relu(self.joint_fc(h))
+            atoms = self.joint_out(x).view(B, NUM_JOINT, self.num_atoms)
+        if self.use_dist:
+            return F.log_softmax(atoms, dim=2) if log else F.softmax(atoms, dim=2)
+        return atoms
+
+    def q_values_joint(self, state: torch.Tensor) -> torch.Tensor:
+        """Expected joint Q-values, shape ``(B, 81)``."""
+        if self.use_dist:
+            probs = self.joint_dist(state, log=False)
+            sup = self.support.unsqueeze(0).unsqueeze(0)
+            return (probs * sup).sum(dim=2)
+        return self.joint_dist(state, log=False).squeeze(2)
 
     def q_values_branched(self, state: torch.Tensor):
         """Expected per-branch Q-values: ``(move_q (B,9), fire_q (B,9))``."""

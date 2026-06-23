@@ -38,6 +38,10 @@ class NStepReplayBuffer:
     def reset(self):
         self._deque.clear()
 
+    @staticmethod
+    def _actor_group(actor: str) -> str:
+        return "expert" if actor == "expert" else "learner"
+
     def _make_experience(self):
         R = 0.0
         priority_R = 0.0
@@ -72,10 +76,17 @@ class NStepReplayBuffer:
     def add(self, state, action, reward, next_state, done,
             actor: Optional[str] = None, priority_reward: Optional[float] = None):
         pr = priority_reward if priority_reward is not None else reward
+        actor = actor or "dqn"
+        results = []
+
+        if self._deque and self._actor_group(self._deque[-1].actor) != self._actor_group(actor):
+            while self._deque:
+                results.append(self._make_experience())
+                self._deque.popleft()
+
         self._deque.append(_PendingStep(state, int(action), float(reward),
                                          float(pr), next_state, bool(done),
-                                         actor or "dqn"))
-        results = []
+                                         actor))
         while self._should_emit():
             results.append(self._make_experience())
             self._deque.popleft()

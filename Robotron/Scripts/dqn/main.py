@@ -3,7 +3,7 @@
 # ||  ROBOTRON AI • DQN APPLICATION ENTRY POINT                                                                  ||
 # ||  Boots socket server, spawns keyboard/stats threads, coordinates shutdown.                                   ||
 # ==================================================================================================================
-"""Robotron AI DQN entry point — branching Rainbow-lite engine."""
+"""Robotron AI DQN entry point — joint Rainbow-lite engine."""
 
 import os, sys, time, threading, traceback
 import socket
@@ -255,7 +255,7 @@ def keyboard_handler(agent, kb):
 # ── Network info ────────────────────────────────────────────────────────────
 def print_network_info(agent, dashboard_status: str = "disabled"):
     print("\n" + "=" * 90)
-    print("ROBOTRON AI — Branching DQN Engine".center(90))
+    print("ROBOTRON AI — Joint DQN Engine".center(90))
     print("=" * 90)
 
     net = agent.online_net
@@ -263,10 +263,11 @@ def print_network_info(agent, dashboard_status: str = "disabled"):
     tr = sum(p.numel() for p in net.parameters() if p.requires_grad)
 
     print(f"\nArchitecture:")
-    print(f"   State size:       {agent.state_size}  ({RL_CONFIG.core_features} core + {RL_CONFIG.lane_count} lanes x {RL_CONFIG.lane_features})")
-    print(f"   Actions:          {RL_CONFIG.num_move_actions} move x {RL_CONFIG.num_fire_actions} fire (branching, idle=8)")
+    print(f"   State size:       {agent.state_size}  ({RL_CONFIG.core_features} core + {RL_CONFIG.lane_count} lanes x {RL_CONFIG.lane_features} + {RL_CONFIG.extra_features} derived + {RL_CONFIG.object_token_count} obj x {RL_CONFIG.object_token_features})")
+    print(f"   Actions:          {RL_CONFIG.num_move_actions} move x {RL_CONFIG.num_fire_actions} fire (joint 81-action head, idle=8)")
     print(f"   Trunk:            {RL_CONFIG.trunk_layers} layers x {RL_CONFIG.trunk_hidden} hidden")
     print(f"   Lane attention:   {'ON' if RL_CONFIG.use_lane_attention else 'OFF'} ({RL_CONFIG.attn_heads} heads, dim={RL_CONFIG.attn_dim})")
+    print(f"   Object attention: {'ON' if RL_CONFIG.use_object_attention else 'OFF'} ({RL_CONFIG.object_attn_heads} heads, dim={RL_CONFIG.object_attn_dim})")
     print(f"   Distributional:   {'C51 ({} atoms, [{}, {}])'.format(RL_CONFIG.num_atoms, RL_CONFIG.v_min, RL_CONFIG.v_max) if RL_CONFIG.use_distributional else 'OFF'}")
     print(f"   Dueling:          {'ON' if RL_CONFIG.use_dueling else 'OFF'}")
     print(f"   Parameters:       {tp:,} total, {tr:,} trainable")
@@ -280,9 +281,12 @@ def print_network_info(agent, dashboard_status: str = "disabled"):
     print(f"   Grad clip:        {RL_CONFIG.grad_clip_norm}")
 
     print(f"\nExploration:")
-    print(f"   eps:    {RL_CONFIG.epsilon_start} -> {RL_CONFIG.epsilon_end} over {RL_CONFIG.epsilon_decay_frames:,} frames")
-    print(f"   Expert: {RL_CONFIG.expert_ratio_start*100:.0f}% -> {RL_CONFIG.expert_ratio_end*100:.0f}% over {RL_CONFIG.expert_ratio_decay_steps:,} train steps (after {RL_CONFIG.expert_ratio_decay_start_step:,} step hold)")
+    print(f"   eps:    {RL_CONFIG.epsilon_start} -> {RL_CONFIG.epsilon_end} over {RL_CONFIG.epsilon_decay_frames:,} learner-controlled frames")
+    _xp_hold = int(RL_CONFIG.expert_ratio_decay_start_step)
+    _xp_hold_txt = f" (after {_xp_hold:,} step hold)" if _xp_hold > 0 else ""
+    print(f"   Expert: {RL_CONFIG.expert_ratio_start*100:.0f}% -> {RL_CONFIG.expert_ratio_end*100:.0f}% over {RL_CONFIG.expert_ratio_decay_steps:,} train steps{_xp_hold_txt}")
     print(f"   BC weight: {RL_CONFIG.expert_bc_weight} -> {RL_CONFIG.expert_bc_min_weight} over {RL_CONFIG.expert_bc_decay_steps:,} train steps (after {RL_CONFIG.expert_bc_decay_start_step:,} step hold)")
+    print(f"   Eval clients: every {RL_CONFIG.eval_client_stride}th client at eps={RL_CONFIG.eval_epsilon:.2f}, no replay writes")
 
     print(f"\nServices:")
     print(f"   Dashboard:        {dashboard_status}")

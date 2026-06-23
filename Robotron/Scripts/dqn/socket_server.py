@@ -11,8 +11,8 @@ Game-flow contract (Robotron-specific):
   • Inbound framing: 4-byte big-endian length prefix, then the payload.
   • Payload header ``>HddBIBBBIBB`` (n, subj, obj, done, score, player_alive,
     save, start_pressed, replay_level, num_lasers, wave), then n f32 (big-endian).
-  • The model consumes the compact 258-float slice of the wire (18 core + 8
-    lanes × 30); the full wire is only used for the heuristic expert.
+  • The model consumes the compact slice of the wire (18 core + 8 lanes × 30
+    + 4 derived channels); the full wire is only used for the heuristic expert.
   • Episodes terminate on ``frame.done``.  While ``player_alive`` is false (death
     animation / between lives) we send a neutral action and store no transitions.
   • Reward = clip(obj·obj_scale + subj·subj_scale); both terms are shaped Lua-side.
@@ -37,6 +37,7 @@ try:
         add_episode_to_dqn100k_window,
         add_episode_to_dqn1m_window,
         add_episode_to_dqn5m_window,
+        add_episode_to_dqn_perframe_window,
         add_episode_to_total_windows,
         add_episode_to_eplen_window,
     )
@@ -49,6 +50,7 @@ except ImportError:
         add_episode_to_dqn100k_window,
         add_episode_to_dqn1m_window,
         add_episode_to_dqn5m_window,
+        add_episode_to_dqn_perframe_window,
         add_episode_to_total_windows,
         add_episode_to_eplen_window,
     )
@@ -73,6 +75,7 @@ _SRC_NONE = 0
 _SRC_DQN = 1
 _SRC_EPSILON = 2
 _SRC_EXPERT = 3
+_SRC_EVAL = 4
 
 # Live action diagnostics (set DQN_DEBUG_ACTIONS=1 to enable).  Prints a throttled
 # line showing the chosen source, live entity counts, and the exact bytes sent.
@@ -378,10 +381,19 @@ class SocketServer:
                 cid += 1
             return cid
 
+    @staticmethod
+    def _is_eval_client(cid: int) -> bool:
+        stride = int(getattr(RL_CONFIG, "eval_client_stride", 0))
+        if stride <= 0:
+            return False
+        offset = int(getattr(RL_CONFIG, "eval_client_offset", stride - 1)) % stride
+        return (int(cid) % stride) == offset
+
     def _init_client(self, cid):
         n = max(1, int(getattr(RL_CONFIG, "n_step", 1)))
         gamma = float(getattr(RL_CONFIG, "gamma", 0.99))
         nstep = NStepReplayBuffer(n_step=n, gamma=gamma) if n > 1 else None
+        eval_only = self._is_eval_client(cid)
         with self.client_lock:
             self.client_states[cid] = {
                 "frames": 0, "last_time": time.time(), "fps": 0.0,
@@ -389,6 +401,8 @@ class SocketServer:
                 "prev_action_source": None,
                 "total_reward": 0.0, "ep_dqn_reward": 0.0, "ep_expert_reward": 0.0,
                 "ep_subj_reward": 0.0, "ep_obj_reward": 0.0, "ep_frames": 0,
+                "ep_dqn_frames": 0,
+                "eval_only": eval_only,
                 "was_done": False, "nstep": nstep,
                 "fire_hold_dir": -1, "fire_hold_count": 0, "fire_pending_dir": -1,
             }
@@ -472,7 +486,7 @@ class SocketServer:
                     sock.sendall(self._pack_action(-1, -1, _SRC_NONE))
                     continue
 
-                # Compact model input (18 core + 8 lanes × 30 = 258 floats)
+                # Compact model input (18 core + 8 lanes × 30 + 4 derived)
                 model_state = slice_model_state(frame.state)
 
                 with self.client_lock:
@@ -509,7 +523,8 @@ class SocketServer:
                     clip = RL_CONFIG.death_reward_clip if frame.done else RL_CONFIG.reward_clip
                     total_r = max(-clip, min(clip, total_r))
 
-                    if self.agent:
+                    eval_only = bool(cs.get("eval_only", False))
+                    if self.agent and not eval_only:
                         tag = cs.get("prev_action_source", "dqn")
                         nstep = cs.get("nstep")
                         if nstep is not None:
@@ -533,30 +548,39 @@ class SocketServer:
                     cs["ep_obj_reward"] = cs.get("ep_obj_reward", 0.0) + obj_r
                     cs["ep_frames"] = cs.get("ep_frames", 0) + 1
                     src = cs.get("prev_action_source")
-                    if src in ("dqn", "epsilon"):
+                    if eval_only:
+                        pass
+                    elif src in ("dqn", "epsilon"):
                         cs["ep_dqn_reward"] += total_r
+                        cs["ep_dqn_frames"] = cs.get("ep_dqn_frames", 0) + 1
                     elif src == "expert":
                         cs["ep_expert_reward"] += total_r
 
                 # ── Terminal ────────────────────────────────────────────
                 if frame.done:
-                    if self.async_buffer is not None:
+                    eval_only = bool(cs.get("eval_only", False))
+                    if self.async_buffer is not None and not eval_only:
                         self.async_buffer.boost_pre_death(cid)
                     if not cs.get("was_done", False):
-                        metrics.add_episode_reward(
-                            cs["total_reward"], cs["ep_dqn_reward"], cs["ep_expert_reward"],
-                            cs.get("ep_subj_reward", 0.0), cs.get("ep_obj_reward", 0.0),
-                            length=cs.get("ep_frames", 0))
-                        try:
-                            ep_dqn = cs["ep_dqn_reward"]
-                            ep_len = cs.get("ep_frames", 0)
-                            add_episode_to_dqn100k_window(ep_dqn, ep_len)
-                            add_episode_to_dqn1m_window(ep_dqn, ep_len)
-                            add_episode_to_dqn5m_window(ep_dqn, ep_len)
-                            add_episode_to_total_windows(cs["total_reward"], ep_len)
-                            add_episode_to_eplen_window(ep_len)
-                        except Exception:
-                            pass
+                        ep_len = cs.get("ep_frames", 0)
+                        if eval_only:
+                            metrics.add_eval_episode_reward(
+                                cs["total_reward"], frame.game_score, frame.level_number, length=ep_len)
+                        else:
+                            metrics.add_episode_reward(
+                                cs["total_reward"], cs["ep_dqn_reward"], cs["ep_expert_reward"],
+                                cs.get("ep_subj_reward", 0.0), cs.get("ep_obj_reward", 0.0),
+                                length=ep_len)
+                            try:
+                                ep_dqn = cs["ep_dqn_reward"]
+                                add_episode_to_dqn100k_window(ep_dqn, ep_len)
+                                add_episode_to_dqn1m_window(ep_dqn, ep_len)
+                                add_episode_to_dqn5m_window(ep_dqn, ep_len)
+                                add_episode_to_dqn_perframe_window(ep_dqn, cs.get("ep_dqn_frames", 0), ep_len)
+                                add_episode_to_total_windows(cs["total_reward"], ep_len)
+                                add_episode_to_eplen_window(ep_len)
+                            except Exception:
+                                pass
                     cs["was_done"] = True
                     try:
                         sock.sendall(self._pack_action(-1, -1, _SRC_NONE))
@@ -567,6 +591,7 @@ class SocketServer:
                     cs["total_reward"] = cs["ep_dqn_reward"] = cs["ep_expert_reward"] = 0.0
                     cs["ep_subj_reward"] = cs["ep_obj_reward"] = 0.0
                     cs["ep_frames"] = 0
+                    cs["ep_dqn_frames"] = 0
                     cs["fire_hold_dir"] = -1
                     cs["fire_hold_count"] = 0
                     cs["fire_pending_dir"] = -1
@@ -577,6 +602,7 @@ class SocketServer:
                     cs["total_reward"] = cs["ep_dqn_reward"] = cs["ep_expert_reward"] = 0.0
                     cs["ep_subj_reward"] = cs["ep_obj_reward"] = 0.0
                     cs["ep_frames"] = 0
+                    cs["ep_dqn_frames"] = 0
 
                 # ── Not playable (death animation / between lives) ──────
                 if not frame.player_alive:
@@ -608,8 +634,9 @@ class SocketServer:
                     locked_fire = max(0, min(8, held)) if held >= 0 else 8
 
                 if self.agent:
-                    expert_ratio = metrics.get_expert_ratio()
-                    use_expert = (random.random() < expert_ratio) and not metrics.override_expert
+                    eval_only = bool(cs.get("eval_only", False))
+                    expert_ratio = 0.0 if eval_only else metrics.get_expert_ratio()
+                    use_expert = (random.random() < expert_ratio) and not metrics.override_expert and not eval_only
 
                     if use_expert and get_expert_action is not None:
                         # Clamp wave to >=1 like v3 — the expert's rescue/tank-wave
@@ -619,16 +646,19 @@ class SocketServer:
                                                            locked_fire=locked_fire)
                         action_source = "expert"
                     else:
-                        epsilon = metrics.get_effective_epsilon()
+                        epsilon = float(getattr(RL_CONFIG, "eval_epsilon", 0.0)) if eval_only else metrics.get_effective_epsilon()
                         t0 = time.perf_counter()
                         if self.inference_batcher is not None:
                             mv_idx, fr_idx, is_eps = self.inference_batcher.infer(model_state, epsilon)
                         else:
                             mv_idx, fr_idx, is_eps = self.agent.act(model_state, epsilon)
                         metrics.add_inference_time(time.perf_counter() - t0)
-                        action_source = "epsilon" if is_eps else "dqn"
+                        action_source = "eval" if eval_only else ("epsilon" if is_eps else "dqn")
                     if locked_fire is not None:
                         fr_idx = locked_fire
+
+                if action_source in ("dqn", "epsilon"):
+                    metrics.update_learner_frame_count()
 
                 # Apply fire hold → the effective fire is what we send AND store.
                 effective_fire = _apply_fire_hold(cs, int(fr_idx))
@@ -640,7 +670,7 @@ class SocketServer:
                 move_cmd = action_index_to_wire_dir(int(mv_idx))
                 fire_cmd = action_index_to_wire_dir(int(effective_fire))
                 src_code = {"dqn": _SRC_DQN, "epsilon": _SRC_EPSILON,
-                            "expert": _SRC_EXPERT}.get(action_source, _SRC_NONE)
+                            "expert": _SRC_EXPERT, "eval": _SRC_EVAL}.get(action_source, _SRC_NONE)
 
                 if _DBG_ACTIONS:
                     dn = cs.get("dbg_n", 0) + 1

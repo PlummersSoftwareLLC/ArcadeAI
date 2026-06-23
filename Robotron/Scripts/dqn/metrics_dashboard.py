@@ -257,21 +257,29 @@ class _DashboardState:
                 param_count = sum(p.numel() for p in self.agent.online_net.parameters())
             else:
                 ad = cfg.attn_dim
+                od = cfg.object_attn_dim if getattr(cfg, 'use_object_attention', False) else 0
                 th = cfg.trunk_hidden
                 tl = cfg.trunk_layers
                 ss = cfg.state_size
-                na = cfg.num_move_actions + cfg.num_fire_actions
+                branch_na = cfg.num_move_actions + cfg.num_fire_actions
+                joint_na = cfg.num_move_actions * cfg.num_fire_actions
                 n_atoms = cfg.num_atoms if cfg.use_distributional else 1
                 hm = th // 2
                 attn_p = (5 * ad + ad) + 2 * ad + (14 * ad + ad) + 2 * ad + 4 * (ad * ad + ad) + 2 * ad
-                trunk_p = (ss + ad) * th + th + 2 * th
+                if od:
+                  attn_p += ((cfg.object_token_features * od + od) + 2 * od
+                         + 4 * (od * od + od) + 2 * od)
+                trunk_p = (ss + ad + od) * th + th + 2 * th
                 for _ in range(1, tl):
                     trunk_p += th * th + th + 2 * th
-                heads_p = 2 * (th * hm + hm) + hm * n_atoms + n_atoms + hm * (na * n_atoms) + na * n_atoms
+                heads_p = 3 * (th * hm + hm) + 3 * (hm * n_atoms + n_atoms)
+                heads_p += hm * (branch_na * n_atoms) + branch_na * n_atoms
+                heads_p += hm * (joint_na * n_atoms) + joint_na * n_atoms
                 param_count = attn_p + trunk_p + heads_p
         except Exception:
             param_count = 0
         trunk_in = cfg.state_size + (cfg.attn_dim if cfg.use_lane_attention else 0)
+        trunk_in += (cfg.object_attn_dim if getattr(cfg, 'use_object_attention', False) else 0)
         layers = [str(trunk_in)]
         for _ in range(cfg.trunk_layers):
             layers.append(str(cfg.trunk_hidden))
