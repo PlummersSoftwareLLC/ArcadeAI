@@ -17,6 +17,7 @@ class _PendingStep:
     action: int
     reward: float
     priority_reward: float
+    interest: float
     next_state: Any
     done: bool
     actor: str
@@ -45,6 +46,7 @@ class NStepReplayBuffer:
     def _make_experience(self):
         R = 0.0
         priority_R = 0.0
+        interest = 0.0
         done_flag = False
         last_next = None
         first = self._deque[0]
@@ -55,13 +57,14 @@ class NStepReplayBuffer:
             step = self._deque[i]
             R += (self.gamma ** i) * step.reward
             priority_R += (self.gamma ** i) * step.priority_reward
+            interest = max(interest, float(step.interest))
             last_next = step.next_state
             steps = i + 1
             if step.done:
                 done_flag = True
                 break
 
-        return (s0, a0, R, priority_R, last_next, done_flag, max(1, steps), actor0)
+        return (s0, a0, R, priority_R, last_next, done_flag, max(1, steps), actor0, interest)
 
     def _should_emit(self) -> bool:
         if not self._deque:
@@ -74,7 +77,8 @@ class NStepReplayBuffer:
         return False
 
     def add(self, state, action, reward, next_state, done,
-            actor: Optional[str] = None, priority_reward: Optional[float] = None):
+            actor: Optional[str] = None, priority_reward: Optional[float] = None,
+            interest: float = 0.0):
         pr = priority_reward if priority_reward is not None else reward
         actor = actor or "dqn"
         results = []
@@ -85,8 +89,8 @@ class NStepReplayBuffer:
                 self._deque.popleft()
 
         self._deque.append(_PendingStep(state, int(action), float(reward),
-                                         float(pr), next_state, bool(done),
-                                         actor))
+                         float(pr), float(interest), next_state,
+                         bool(done), actor))
         while self._should_emit():
             results.append(self._make_experience())
             self._deque.popleft()

@@ -12,21 +12,22 @@ that full payload. It keeps:
 - 16 compact object tokens, 12 features each, distilled from the Lua tactical
 	object pools at `wire[766:1478]`.
 
-Final raw DQN state size: `18 + (8 * 30) + 4 + (16 * 12) = 454` floats.
+Final raw DQN single-frame state size:
+`18 + (8 * 30) + 4 + (16 * 12) = 454` floats.
 
-With lane and object attention enabled, the model also reshapes `state[18:258]`
+With lane and object branches enabled, the model also reshapes `state[18:258]`
 into `(8, 30)` lane tokens and `state[262:454]` into `(16, 12)` object tokens.
-Those are pooled into two learned 128-float embeddings and concatenated with the
-raw 454-float state before the trunk. So the first trunk linear layer sees
-`454 + 128 + 128 = 710` floats, but only the first 454 are the explicit state bag
-listed below.
+Those are encoded into learned embeddings and concatenated with the raw stacked
+state before the trunk. With the default 2-frame stack, the first trunk layer
+sees `908 + 128 + 128 = 1164` floats. The auxiliary lane/object branches read
+the current frame.
 
 ## Top-Level Layout
 
 | Model index range | Count | Source | Contents |
 |---:|---:|---|---|
 | `0..17` | 18 | Lua `wire[0:18]` | Core scalar game/player/threat features. |
-| `18..257` | 240 | Lua `wire[40:280]` | 8 directional lanes * 30 features. Lane `L` starts at `18 + L * 30`, where `L = 0..7`. |
+| `18..257` | 240 | Lua `wire[40:280]`, reordered by Python | 8 directional lanes * 30 features. Model lane `L` starts at `18 + L * 30`, where `L = 0..7`. |
 | `258..261` | 4 | Python derived | Enemy/human proximity and nearest-human global direction. |
 | `262..453` | 192 | Python derived from Lua `wire[766:1478]` | 16 compact object tokens * 12 features, sorted by tactical priority. |
 
@@ -110,9 +111,27 @@ For lane `L` in `0..7`, the model index for a lane-local offset is:
 model_index = 18 + (L * 30) + lane_offset
 ```
 
-Lua lane `1..8` is the same physical order as model lane `0..7`. Lane identity is
-also embedded directly as `lane_sin` and `lane_cos`, based on 8 evenly spaced
-directions around the player.
+Model lane rows are in controller action order:
+
+```text
+0=N, 1=NE, 2=E, 3=SE, 4=S, 5=SW, 6=W, 7=NW
+```
+
+Lua emits lane rows in geometric order:
+
+```text
+0=E, 1=NE, 2=N, 3=NW, 4=W, 5=SW, 6=S, 7=SE
+```
+
+`slice_model_state` reorders Lua lane rows with:
+
+```text
+ACTION_LANE_WIRE_INDICES = [2, 1, 0, 7, 6, 5, 4, 3]
+```
+
+so each model lane row lines up with the same move/fire action index. Lane
+identity is also embedded directly as `lane_sin` and `lane_cos`, based on 8
+evenly spaced directions around the player.
 
 | Lane-local offset | Name | Source / formula | Range / notes |
 |---:|---|---|---|
@@ -187,11 +206,11 @@ masked by object attention.
 ## Lua Payload Values Not In The DQN State Bag
 
 These values are still sent by Lua for other consumers/debugging, but are not in
-the DQN replay state or the raw 454-float model input as full raw payloads:
+the DQN replay state or the raw 454-float single-frame model input as full raw
+payloads:
 
 | Lua wire range | Count | Contents |
 |---:|---:|---|
 | `18..39` | 22 | Raw `ZP1ENM`/ELIST bytes normalized by `/255.0`. |
 | `280..765` | 486 | 9x9 tactical grid, 6 channels per cell. |
 | `766..1477` | 712 | Tactical object pools; DQN keeps only the compact top-16 object-token projection. |
-q

@@ -20,25 +20,30 @@ except ImportError:
 
 row_counter = 0
 
-# Rolling DQN reward windows
+# Rolling DQN reward-per-DQN-frame windows. Eviction is keyed by total episode
+# frames so the windows advance at a stable wall-clock cadence even when the
+# expert ratio changes, but the value is normalized by DQN-controlled frames so
+# it does not rise just because episodes get longer or the policy gets more
+# control time.
 DQN100K_FRAMES = 100_000
 _dqn100k = deque()
-_dqn100k_frames = 0
+_dqn100k_dqn_frames = 0
+_dqn100k_total_frames = 0
 
 DQN1M_FRAMES = 1_000_000
 _dqn1m = deque()
-_dqn1m_frames = 0
+_dqn1m_dqn_frames = 0
+_dqn1m_total_frames = 0
 
 DQN5M_FRAMES = 5_000_000
 _dqn5m = deque()
-_dqn5m_frames = 0
+_dqn5m_dqn_frames = 0
+_dqn5m_total_frames = 0
 
-# Rolling DQN-reward-PER-DQN-FRAME window.  Unlike the DQN100K/1M/5M windows
-# (which average a per-episode *sum* and therefore grow purely as the expert
-# yields more frames to the policy), this is frame-weighted: total DQN reward
-# divided by total DQN-controlled frames.  It isolates per-frame policy quality
-# and is invariant to the expert ratio — the clean "is the DQN itself getting
-# better?" signal.
+# Longer rolling DQN-reward-per-DQN-frame window. Like DQN100K/F, DQN1M/F, and
+# DQN5M/F, this is frame-weighted: total DQN reward divided by total
+# DQN-controlled frames. It isolates per-frame policy quality and is invariant
+# to the expert ratio — the clean "is the DQN itself getting better?" signal.
 #
 # IMPORTANT: the window must evict on *total* frames (ep_len), NOT on DQN frames.
 # DQN-controlled frames are only ~(1 - expert_ratio) of play (≈1% early on), so a
@@ -70,16 +75,28 @@ _eplen1m = deque()
 _eplen1m_frames = 0
 
 
-def add_episode_to_dqn100k_window(dqn_reward: float, ep_len: int):
-    global _dqn100k_frames
-    if ep_len <= 0:
+def _add_episode_to_dqn_window(win, reward: float, dqn_frames: int, ep_len: int, limit: int, frame_refs: tuple[str, str]):
+    dqn_frames = int(dqn_frames)
+    ep_len = int(ep_len)
+    if dqn_frames <= 0 or ep_len <= 0:
         return
     with _dqn_windows_lock:
-        _dqn100k.append((float(dqn_reward), int(ep_len)))
-        _dqn100k_frames += ep_len
-        while _dqn100k and _dqn100k_frames > DQN100K_FRAMES:
-            _, l = _dqn100k.popleft()
-            _dqn100k_frames -= l
+        dqn_ref, total_ref = frame_refs
+        win.append((float(reward), dqn_frames, ep_len))
+        globals()[dqn_ref] += dqn_frames
+        globals()[total_ref] += ep_len
+        while win and globals()[total_ref] > limit:
+            _, old_dqn_frames, old_ep_len = win.popleft()
+            globals()[dqn_ref] -= old_dqn_frames
+            globals()[total_ref] -= old_ep_len
+
+
+def add_episode_to_dqn100k_window(dqn_reward: float, ep_len: int, dqn_frames: int | None = None):
+    frames = ep_len if dqn_frames is None else dqn_frames
+    _add_episode_to_dqn_window(
+        _dqn100k, dqn_reward, frames, ep_len, DQN100K_FRAMES,
+        ("_dqn100k_dqn_frames", "_dqn100k_total_frames"),
+    )
 
 
 def add_episode_to_dqn25k_window(dqn_reward: float, ep_len: int):
@@ -92,28 +109,20 @@ def add_episode_to_dqn1k_window(dqn_reward: float, ep_len: int):
     add_episode_to_dqn100k_window(dqn_reward, ep_len)
 
 
-def add_episode_to_dqn1m_window(dqn_reward: float, ep_len: int):
-    global _dqn1m_frames
-    if ep_len <= 0:
-        return
-    with _dqn_windows_lock:
-        _dqn1m.append((float(dqn_reward), int(ep_len)))
-        _dqn1m_frames += ep_len
-        while _dqn1m and _dqn1m_frames > DQN1M_FRAMES:
-            _, l = _dqn1m.popleft()
-            _dqn1m_frames -= l
+def add_episode_to_dqn1m_window(dqn_reward: float, ep_len: int, dqn_frames: int | None = None):
+    frames = ep_len if dqn_frames is None else dqn_frames
+    _add_episode_to_dqn_window(
+        _dqn1m, dqn_reward, frames, ep_len, DQN1M_FRAMES,
+        ("_dqn1m_dqn_frames", "_dqn1m_total_frames"),
+    )
 
 
-def add_episode_to_dqn5m_window(dqn_reward: float, ep_len: int):
-    global _dqn5m_frames
-    if ep_len <= 0:
-        return
-    with _dqn_windows_lock:
-        _dqn5m.append((float(dqn_reward), int(ep_len)))
-        _dqn5m_frames += ep_len
-        while _dqn5m and _dqn5m_frames > DQN5M_FRAMES:
-            _, l = _dqn5m.popleft()
-            _dqn5m_frames -= l
+def add_episode_to_dqn5m_window(dqn_reward: float, ep_len: int, dqn_frames: int | None = None):
+    frames = ep_len if dqn_frames is None else dqn_frames
+    _add_episode_to_dqn_window(
+        _dqn5m, dqn_reward, frames, ep_len, DQN5M_FRAMES,
+        ("_dqn5m_dqn_frames", "_dqn5m_total_frames"),
+    )
 
 
 def _avg_window(win):
@@ -122,9 +131,19 @@ def _avg_window(win):
     return sum(r for r, _ in win) / len(win)
 
 
+def _dqn_frame_average(win, dqn_frames: int) -> float:
+    if not win or dqn_frames <= 0:
+        return 0.0
+    return sum(r for r, _, _ in win) / max(1, dqn_frames)
+
+
 def get_dqn_window_averages() -> tuple[float, float, float]:
     with _dqn_windows_lock:
-        return _avg_window(_dqn100k), _avg_window(_dqn1m), _avg_window(_dqn5m)
+        return (
+            _dqn_frame_average(_dqn100k, _dqn100k_dqn_frames),
+            _dqn_frame_average(_dqn1m, _dqn1m_dqn_frames),
+            _dqn_frame_average(_dqn5m, _dqn5m_dqn_frames),
+        )
 
 
 def add_episode_to_dqn_perframe_window(dqn_reward: float, dqn_frames: int, ep_len: int = 0):
@@ -235,12 +254,12 @@ def display_metrics_header():
     hdr = (
         f"{'Frame':>11} {'Steps':>10} {'FPS':>7} {'Epsi':>7} {'Xprt':>7} "
         f"{'AvgScr':>9} {'AvgLvl':>6} "
-        f"{'Rwrd':>9} {'Obj':>9} {'Subj':>9} {'DQN100K':>9} {'DQN1M':>9} {'DQN5M':>9} {'DQN10M/F':>9} "
+        f"{'Rwrd':>9} {'Score':>9} {'Shape':>9} {'Death':>9} {'DQN100K/F':>9} {'DQN1M/F':>9} {'DQN5M/F':>9} {'DQN10M/F':>9} "
         f"{'EvalR':>8} {'EvalScr':>8} {'EvalLvl':>7} "
         f"{'Loss':>10} {'AgrM%':>6} {'AgrF%':>6} "
-        f"{'EpLen':>8} {'BCLoss':>8} "
+        f"{'EpLen':>8} {'BCLoss':>8} {'BCW':>6} {'ExpB%':>6} {'Sync':>5} "
         f"{'Clnt':>4} {'Web':>4} "
-        f"{'AvgInf':>7} {'Steps/s':>8} {'Rpl/F':>7} {'GrNorm':>8} {'Q-Range':>14} {'Mem':>10} {'LR':>9} {'Drop':>7}"
+        f"{'AvgInf':>7} {'Steps/s':>8} {'Rpl/F':>7} {'GrNorm':>8} {'Q-Range':>14} {'Mem':>10} {'LR':>9} {'Drop':>7} {'Tms S/X/C/P':>17}"
     )
     _print_line(hdr, is_header=True)
     try:
@@ -261,6 +280,7 @@ def display_metrics_row(agent, kb_handler):
     mean_reward = 0.0
     mean_subj = 0.0
     mean_obj = 0.0
+    mean_death = 0.0
     with metrics.lock:
         if metrics.reward_count_interval > 0:
             mean_reward = metrics.reward_sum_interval / max(1, metrics.reward_count_interval)
@@ -268,11 +288,14 @@ def display_metrics_row(agent, kb_handler):
             mean_subj = metrics.reward_sum_interval_subj / max(1, metrics.reward_count_interval_subj)
         if metrics.reward_count_interval_obj > 0:
             mean_obj = metrics.reward_sum_interval_obj / max(1, metrics.reward_count_interval_obj)
+        if metrics.reward_count_interval_death > 0:
+            mean_death = metrics.reward_sum_interval_death / max(1, metrics.reward_count_interval_death)
         # Reset
         metrics.reward_sum_interval = metrics.reward_count_interval = 0
         metrics.reward_sum_interval_dqn = metrics.reward_count_interval_dqn = 0
         metrics.reward_sum_interval_subj = metrics.reward_count_interval_subj = 0
         metrics.reward_sum_interval_obj = metrics.reward_count_interval_obj = 0
+        metrics.reward_sum_interval_death = metrics.reward_count_interval_death = 0
         if metrics.eval_count_interval > 0:
             eval_reward = metrics.eval_reward_sum_interval / max(1, metrics.eval_count_interval)
             eval_score = metrics.eval_score_sum_interval / max(1, metrics.eval_count_interval)
@@ -388,17 +411,23 @@ def display_metrics_row(agent, kb_handler):
     eps_pct = f"{eps_val:.0f}%{eps_mark}".rjust(7)
     xprt_pct = f"{xprt_val:.0f}%{xprt_mark}".rjust(7)
     replay_ratio = (steps_per_sec * float(RL_CONFIG.batch_size)) / max(1e-6, float(metrics.fps))
+    train_ms = (
+        f"{metrics.last_train_sample_ms:.0f}/"
+        f"{metrics.last_train_transfer_ms:.0f}/"
+        f"{metrics.last_train_compute_ms:.0f}/"
+        f"{metrics.last_train_priority_ms:.0f}"
+    )
 
     row = (
         f"{metrics.frame_count:>11,} {metrics.total_training_steps:>10,} {metrics.fps:>7.1f} {eps_pct} {xprt_pct} "
         f"{average_game_score:>9,.0f} {display_level:>6.1f} "
-        f"{_fr(mean_reward*_prs)} {_fr(mean_obj*_prs)} {_fr(mean_subj*_prs)} {_fr(dqn100k*_prs)} "
+        f"{_fr(mean_reward*_prs)} {_fr(mean_obj*_prs)} {_fr(mean_subj*_prs)} {_fr(mean_death*_prs)} {_fr(dqn100k*_prs)} "
         f"{_fr(dqn1m*_prs)} {_fr(dqn5m*_prs)} {_frp(dqn_pf*_prs, 9)} "
         f"{_fr(eval_reward*_prs, 8)} {eval_score:>8,.0f} {eval_level:>7.1f} "
         f"{loss_avg:>10.6f} {agree_move_avg*100:>5.1f}% {agree_fire_avg*100:>5.1f}% "
-        f"{avg_ep_len:>8.1f} {metrics.last_bc_loss:>8.4f} "
+        f"{avg_ep_len:>8.1f} {metrics.last_bc_loss:>8.4f} {metrics.last_bc_weight:>6.3f} {metrics.last_sample_expert_frac*100:>5.1f}% {metrics.last_inference_sync_age:>5} "
         f"{metrics.client_count:>4} {metrics.web_client_count:>4} "
         f"{avg_inf_ms:>7.2f} {steps_per_sec:>8.1f} "
-        f"{replay_ratio:>7.2f} {metrics.last_grad_norm:>8.3f} {q_range:>14} {mem_k:>8}k {lr_str:>9} {metrics.replay_dropped_steps:>7,}"
+        f"{replay_ratio:>7.2f} {metrics.last_grad_norm:>8.3f} {q_range:>14} {mem_k:>8}k {lr_str:>9} {metrics.replay_dropped_steps:>7,} {train_ms:>17}"
     )
     _print_line(row)

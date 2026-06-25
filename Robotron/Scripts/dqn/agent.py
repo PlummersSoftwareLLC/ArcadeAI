@@ -49,7 +49,7 @@ except ImportError:
 
 metrics = config_metrics
 
-ENGINE_VERSION = 4   # Robotron joint-head + object-attention DQN
+ENGINE_VERSION = 10  # Grid-path rollback; compact lane/object state
 
 
 class RainbowAgent:
@@ -251,13 +251,20 @@ class RainbowAgent:
         except Exception:
             return random.randrange(NUM_MOVE), random.randrange(NUM_FIRE), True
 
-    def act(self, state: np.ndarray, epsilon: float) -> Tuple[int, int, bool]:
+    def act(self, state: np.ndarray, epsilon: float, locked_fire: int | None = None) -> Tuple[int, int, bool]:
         """Return (move_idx, fire_idx, is_epsilon)."""
         if random.random() < epsilon:
-            return self._safe_epsilon_action(state)
+            mv, fr, is_eps = self._safe_epsilon_action(state)
+            if locked_fire is not None:
+                fr = max(0, min(NUM_FIRE - 1, int(locked_fire)))
+            return mv, fr, is_eps
 
         st = torch.from_numpy(state).float().unsqueeze(0).to(self.inference_device)
         joint_q = self._infer_q_joint(st)
+        if locked_fire is not None:
+            lf = max(0, min(NUM_FIRE - 1, int(locked_fire)))
+            move_idx = int(joint_q.view(1, NUM_MOVE, NUM_FIRE)[0, :, lf].argmax().item())
+            return move_idx, lf, False
         joint_idx = int(joint_q.argmax(dim=1).item())
         move_idx, fire_idx = split_joint_action(joint_idx)
         return int(move_idx), int(fire_idx), False
@@ -274,11 +281,13 @@ class RainbowAgent:
         fire_q = joint_q.max(dim=1).values
         return move_q.squeeze(0).detach().cpu().tolist(), fire_q.squeeze(0).detach().cpu().tolist()
 
-    def act_batch(self, states: list, epsilons: list) -> list:
+    def act_batch(self, states: list, epsilons: list, locked_fires: list | None = None) -> list:
         """Return batched (move_idx, fire_idx, is_epsilon) for aligned lists."""
         n = min(len(states), len(epsilons))
         if n <= 0:
             return []
+        if locked_fires is None:
+            locked_fires = [None] * n
 
         actions = [None] * n
         greedy_idx: list = []
@@ -286,8 +295,12 @@ class RainbowAgent:
 
         for i in range(n):
             eps = float(epsilons[i])
+            locked_fire = locked_fires[i] if i < len(locked_fires) else None
             if random.random() < eps:
-                actions[i] = self._safe_epsilon_action(np.asarray(states[i], dtype=np.float32))
+                mv, fr, is_eps = self._safe_epsilon_action(np.asarray(states[i], dtype=np.float32))
+                if locked_fire is not None:
+                    fr = max(0, min(NUM_FIRE - 1, int(locked_fire)))
+                actions[i] = (mv, fr, is_eps)
             else:
                 greedy_idx.append(i)
                 greedy_states.append(states[i])
@@ -297,14 +310,20 @@ class RainbowAgent:
             st = torch.from_numpy(batch_np).to(self.inference_device)
             joint_q = self._infer_q_joint(st)
             joint_best = joint_q.argmax(dim=1).detach().cpu().tolist()
-            for pos, ji in zip(greedy_idx, joint_best):
-                mi, fi = split_joint_action(int(ji))
+            joint_q_np = joint_q.detach().cpu().numpy().reshape(len(greedy_idx), NUM_MOVE, NUM_FIRE)
+            for row, (pos, ji) in enumerate(zip(greedy_idx, joint_best)):
+                locked_fire = locked_fires[pos] if pos < len(locked_fires) else None
+                if locked_fire is not None:
+                    fi = max(0, min(NUM_FIRE - 1, int(locked_fire)))
+                    mi = int(np.argmax(joint_q_np[row, :, fi]))
+                else:
+                    mi, fi = split_joint_action(int(ji))
                 actions[pos] = (int(mi), int(fi), False)
 
         return [a if a is not None else (0, 0, False) for a in actions]
 
     # ── Step (add experience) ───────────────────────────────────────────
-    def step(self, state, action, reward, next_state, done, actor="dqn", horizon=1, priority_reward=None):
+    def step(self, state, action, reward, next_state, done, actor="dqn", horizon=1, priority_reward=None, interest=0.0):
         if isinstance(action, (tuple, list)) and len(action) >= 2:
             action_idx = combine_action(action[0], action[1])
         else:
@@ -316,7 +335,8 @@ class RainbowAgent:
             boost = float(getattr(RL_CONFIG, "death_priority_boost", 0.0))
             if boost > 0:
                 pri = max(abs(pri), boost) * (-1.0 if pri < 0 else 1.0)
-        self.memory.add(state, action_idx, float(reward), next_state, bool(done), int(horizon), is_expert, priority_hint=pri)
+        self.memory.add(state, action_idx, float(reward), next_state, bool(done), int(horizon), is_expert,
+                priority_hint=pri, interest=interest)
         # Return the index of the just-written transition for pre-death tracking
         try:
             return int(self.memory.tree.data_ptr - 1) % self.memory.capacity
@@ -363,8 +383,12 @@ class RainbowAgent:
             if len(self.memory) < max(RL_CONFIG.min_replay_to_train, RL_CONFIG.batch_size):
                 return None
             beta = _beta_schedule(metrics.frame_count)
-            return self.memory.sample(RL_CONFIG.batch_size, beta=beta)
+            t0 = time.time()
+            batch = self.memory.sample(RL_CONFIG.batch_size, beta=beta)
+            self._pending_batch_sample_ms = (time.time() - t0) * 1000.0
+            return batch
         except Exception:
+            self._pending_batch_sample_ms = 0.0
             return None
 
     # ── Target update ───────────────────────────────────────────────────
@@ -390,19 +414,25 @@ class RainbowAgent:
         model_sd = model.state_dict()
         compatible = {}
         skipped = []
+        shape_mismatches = []
         for k, v in ckpt_sd.items():
+            if k == "support":
+                skipped.append(f"{k}: keeping configured C51 support")
+                continue
             if k in model_sd:
                 if model_sd[k].shape == v.shape:
                     compatible[k] = v
                 else:
-                    skipped.append(f"{k}: {tuple(v.shape)} → {tuple(model_sd[k].shape)}")
+                    msg = f"{k}: {tuple(v.shape)} → {tuple(model_sd[k].shape)}"
+                    skipped.append(msg)
+                    shape_mismatches.append(msg)
         if skipped:
-            print(f"  Skipped {len(skipped)} shape-mismatched keys:")
+            print(f"  Skipped {len(skipped)} checkpoint keys:")
             for s in skipped[:5]:
                 print(f"    {s}")
             if len(skipped) > 5:
                 print(f"    ... and {len(skipped) - 5} more")
-        return model.load_state_dict(compatible, strict=False)
+        return model.load_state_dict(compatible, strict=False), shape_mismatches
 
     @staticmethod
     def _text_progress(label: str, frac: float, width: int = 24):
@@ -437,6 +467,9 @@ class RainbowAgent:
             "expert_ratio": er,
             "epsilon": ep,
             "engine_version": ENGINE_VERSION,
+            "state_size": self.state_size,
+            "single_frame_state_size": int(getattr(RL_CONFIG, "single_frame_state_size", self.state_size)),
+            "frame_stack": int(getattr(RL_CONFIG, "frame_stack", 1)),
         }
         if hasattr(self, "grad_scaler") and self.grad_scaler is not None:
             ckpt["grad_scaler_state_dict"] = self.grad_scaler.state_dict()
@@ -486,16 +519,27 @@ class RainbowAgent:
                 print("⚠  Incompatible checkpoint engine version — starting fresh.")
                 return False
 
-            m1, u1 = self._load_compatible(self.online_net, ckpt.get("online_state_dict", {}))
-            m2, u2 = self._load_compatible(self.target_net,
+            load1, shape_skips1 = self._load_compatible(self.online_net, ckpt.get("online_state_dict", {}))
+            load2, shape_skips2 = self._load_compatible(self.target_net,
                 ckpt.get("target_state_dict", ckpt.get("online_state_dict", {})))
+            m1, u1 = load1
+            m2, u2 = load2
+            saved_state_size = ckpt.get("state_size")
+            arch_changed = bool(shape_skips1 or shape_skips2)
+            if saved_state_size is not None:
+                try:
+                    arch_changed = arch_changed or int(saved_state_size) != int(self.state_size)
+                except Exception:
+                    arch_changed = True
 
             opt_sd = ckpt.get("optimizer_state_dict")
-            if opt_sd:
+            if opt_sd and not arch_changed:
                 try:
                     self.optimizer.load_state_dict(opt_sd)
                 except Exception as e:
                     print(f"Optimizer state skipped: {e}")
+            elif opt_sd:
+                print("Optimizer state skipped: checkpoint state shape differs from current frame stack.")
 
             gs_sd = ckpt.get("grad_scaler_state_dict")
             if gs_sd and hasattr(self, "grad_scaler") and self.grad_scaler is not None:
@@ -533,12 +577,15 @@ class RainbowAgent:
             print(f"Loaded v{ENGINE_VERSION} model from {filepath}")
 
             # Load replay buffer if present alongside the model
-            buf_path = filepath.rsplit(".", 1)[0] + "_replay"
-            try:
-                if not self.memory.load(buf_path, verbose=bool(show_status)):
-                    print("  No replay buffer found — starting with empty buffer.")
-            except Exception as e:
-                print(f"  Replay buffer load failed: {e}")
+            if arch_changed:
+                print("  Replay buffer skipped — checkpoint state shape differs from current frame stack.")
+            else:
+                buf_path = filepath.rsplit(".", 1)[0] + "_replay"
+                try:
+                    if not self.memory.load(buf_path, verbose=bool(show_status)):
+                        print("  No replay buffer found — starting with empty buffer.")
+                except Exception as e:
+                    print(f"  Replay buffer load failed: {e}")
 
             return True
         except Exception as e:
@@ -558,7 +605,7 @@ class RainbowAgent:
             batch = self.memory.sample(64, beta=0.4)
             if batch is None:
                 return float("nan"), float("nan")
-            st = torch.from_numpy(batch[0]).float().to(self.inference_device)
+            st = torch.from_numpy(batch[0]).to(self.inference_device).float()
             joint_q = self._infer_q_joint(st)
             return float(joint_q.min().item()), float(joint_q.max().item())
         except Exception:
@@ -594,7 +641,7 @@ class RainbowAgent:
         batch = self.memory.sample(num_samples, beta=0.4)
         if batch is None:
             return "Could not sample from buffer."
-        states = torch.from_numpy(batch[0]).float().to(self.device)
+        states = torch.from_numpy(batch[0]).to(self.device).float()
         self.online_net.eval()
         with torch.no_grad():
             enc = self.online_net.lane_attn

@@ -103,6 +103,7 @@ def print_buffer_stats(agent, kb):
         print(f"  Total:   {total:>12,} / {cap:>12,}")
         print(f"  Agent:   {stats.get('dqn', 0):>12,}   ({stats.get('frac_dqn', 0)*100:>5.1f}%)")
         print(f"  Expert:  {stats.get('expert', 0):>12,}   ({stats.get('frac_expert', 0)*100:>5.1f}%)")
+        print(f"  Intrst:  {stats.get('interesting', 0):>12,}   ({stats.get('frac_interesting', 0)*100:>5.1f}%)")
         print("=" * 70 + "\n")
         if kb and IS_INTERACTIVE:
             kb.set_raw_mode()
@@ -263,7 +264,9 @@ def print_network_info(agent, dashboard_status: str = "disabled"):
     tr = sum(p.numel() for p in net.parameters() if p.requires_grad)
 
     print(f"\nArchitecture:")
-    print(f"   State size:       {agent.state_size}  ({RL_CONFIG.core_features} core + {RL_CONFIG.lane_count} lanes x {RL_CONFIG.lane_features} + {RL_CONFIG.extra_features} derived + {RL_CONFIG.object_token_count} obj x {RL_CONFIG.object_token_features})")
+    single_state = int(getattr(RL_CONFIG, "single_frame_state_size", agent.state_size))
+    frame_stack = int(getattr(RL_CONFIG, "frame_stack", 1))
+    print(f"   State size:       {agent.state_size}  ({single_state} x {frame_stack} frames; {RL_CONFIG.core_features} core + {RL_CONFIG.lane_count} lanes x {RL_CONFIG.lane_features} + {RL_CONFIG.extra_features} derived + {RL_CONFIG.object_token_count} obj x {RL_CONFIG.object_token_features})")
     print(f"   Actions:          {RL_CONFIG.num_move_actions} move x {RL_CONFIG.num_fire_actions} fire (joint 81-action head, idle=8)")
     print(f"   Trunk:            {RL_CONFIG.trunk_layers} layers x {RL_CONFIG.trunk_hidden} hidden")
     print(f"   Lane attention:   {'ON' if RL_CONFIG.use_lane_attention else 'OFF'} ({RL_CONFIG.attn_heads} heads, dim={RL_CONFIG.attn_dim})")

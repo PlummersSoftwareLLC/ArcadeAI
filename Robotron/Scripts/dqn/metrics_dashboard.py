@@ -291,7 +291,9 @@ class _DashboardState:
             p_str = f"{param_count / 1_000:.0f}K"
         else:
             p_str = str(param_count)
-        desc = f"Model: {arch_str} \u00b7 {p_str} params"
+        stack = int(getattr(cfg, 'frame_stack', 1))
+        stack_txt = f" \u00b7 stack {stack}f" if stack > 1 else ""
+        desc = f"Model: {arch_str} \u00b7 {p_str} params{stack_txt}"
         self._model_desc = desc
         return desc
 
@@ -394,6 +396,11 @@ class _DashboardState:
             "memory_buffer_k": memory_buffer_k,
             "memory_buffer_pct": memory_buffer_pct,
             "avg_inf_ms": avg_inf_ms,
+            "train_sample_ms": float(getattr(self.metrics, "last_train_sample_ms", 0.0)),
+            "train_transfer_ms": float(getattr(self.metrics, "last_train_transfer_ms", 0.0)),
+            "train_compute_ms": float(getattr(self.metrics, "last_train_compute_ms", 0.0)),
+            "train_priority_ms": float(getattr(self.metrics, "last_train_priority_ms", 0.0)),
+            "train_step_ms": float(getattr(self.metrics, "last_train_step_ms", 0.0)),
             "loss": last_loss,
             "grad_norm": last_grad_norm,
             "bc_loss": last_bc_loss,

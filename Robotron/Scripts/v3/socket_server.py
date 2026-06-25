@@ -1184,13 +1184,7 @@ class SocketServer:
         start_adv = 1 if GAME_SETTINGS.start_advanced else 0
         start_level = 1
         if start_adv:
-            # Curriculum: spread per-client start waves so some actors train on
-            # dense late-game object fields. Lua latches START_LEVEL_MIN per
-            # packet, so per-client values take effect without a Lua change.
-            spread = max(1, int(CONFIG.train.curriculum_wave_spread))
-            if self.agent.is_guidance_rescue_active():
-                spread = max(1, min(spread, int(getattr(CONFIG.train, "guidance_rescue_curriculum_wave_spread", spread))))
-            start_level = max(1, min(81, int(GAME_SETTINGS.start_level_min) + (int(client_slot) % spread)))
+            start_level = max(1, min(81, int(GAME_SETTINGS.start_level_min)))
         source_u8 = (int(source_code) & 0x0F)
         if preview_enabled:
             source_u8 |= 0x40

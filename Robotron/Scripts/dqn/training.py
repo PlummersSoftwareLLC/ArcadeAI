@@ -39,6 +39,46 @@ def _bc_weight_schedule(training_step: int) -> float:
     return cfg.expert_bc_weight + progress * (cfg.expert_bc_min_weight - cfg.expert_bc_weight)
 
 
+def _margin_weight_schedule(training_step: int) -> float:
+    """Anneal the expert Q-margin weight to its floor (keyed to training steps).
+
+    The margin term imitates directly into the acting joint head alongside the
+    Q-policy distillation loss; decaying it removes the demonstrator ceiling.
+    """
+    cfg = RL_CONFIG
+    start = float(getattr(cfg, "expert_q_margin_weight", 0.0))
+    floor = float(getattr(cfg, "expert_q_margin_min_weight", 0.0))
+    start_step = int(getattr(cfg, "expert_q_margin_decay_start_step", 0))
+    decay_steps = int(getattr(cfg, "expert_q_margin_decay_steps", 1))
+    if training_step < start_step:
+        return start
+    progress = min(1.0, (training_step - start_step) / max(1, decay_steps))
+    return start + progress * (floor - start)
+
+
+def _q_policy_weight_schedule(training_step: int) -> float:
+    """Anneal direct expert imitation on the deployed joint Q policy."""
+    cfg = RL_CONFIG
+    start = float(getattr(cfg, "expert_q_policy_weight", 0.0))
+    floor = float(getattr(cfg, "expert_q_policy_min_weight", 0.0))
+    start_step = int(getattr(cfg, "expert_q_policy_decay_start_step", 0))
+    decay_steps = int(getattr(cfg, "expert_q_policy_decay_steps", 1))
+    if training_step < start_step:
+        return start
+    progress = min(1.0, (training_step - start_step) / max(1, decay_steps))
+    return start + progress * (floor - start)
+
+
+def _state_array_to_device(arr: np.ndarray, use_amp: bool) -> torch.Tensor:
+    """Move replay state to the learner device with minimal host-side expansion."""
+    t = torch.from_numpy(arr)
+    if device.type == "cuda":
+        t = t.to(device)
+        return t if use_amp else t.float()
+    return t.float().to(device)
+
+
+
 def train_step(agent, prefetched_batch=None) -> float | None:
     """Run one joint C51 distributional training step.
 
@@ -66,25 +106,39 @@ def train_step(agent, prefetched_batch=None) -> float | None:
     except Exception:
         pass
 
+    step_t0 = time.perf_counter()
+
     # ── Sample ──────────────────────────────────────────────────────────
     beta = _beta_schedule(metrics.frame_count)
-    batch = prefetched_batch if prefetched_batch is not None else agent.memory.sample(RL_CONFIG.batch_size, beta=beta)
+    sample_ms = 0.0
+    sample_prefetched = prefetched_batch is not None
+    if prefetched_batch is not None:
+        batch = prefetched_batch
+        sample_ms = float(getattr(agent, "_pending_batch_sample_ms", 0.0))
+        agent._pending_batch_sample_ms = 0.0
+    else:
+        sample_t0 = time.perf_counter()
+        batch = agent.memory.sample(RL_CONFIG.batch_size, beta=beta)
+        sample_ms = (time.perf_counter() - sample_t0) * 1000.0
     if batch is None:
         return None
 
     states, actions, rewards, next_states, dones, horizons, is_expert, indices, weights = batch
 
-    states_t      = torch.from_numpy(states).float().to(device)
-    actions_t     = torch.from_numpy(actions).long().to(device)
-    rewards_t     = torch.from_numpy(rewards).float().to(device)
-    next_states_t = torch.from_numpy(next_states).float().to(device)
-    dones_t       = torch.from_numpy(dones).float().to(device)
-    horizons_t    = torch.from_numpy(horizons.astype(np.float32)).float().to(device)
-    weights_t     = torch.from_numpy(weights).float().to(device)
-    is_expert_t   = torch.from_numpy(is_expert).bool().to(device)
+    cfg = RL_CONFIG
+    use_amp = agent.use_amp and device.type == "cuda"
+    transfer_t0 = time.perf_counter()
+    states_t      = _state_array_to_device(states, use_amp)
+    actions_t     = torch.from_numpy(actions).to(device=device, dtype=torch.long)
+    rewards_t     = torch.from_numpy(rewards).to(device=device, dtype=torch.float32)
+    next_states_t = _state_array_to_device(next_states, use_amp)
+    dones_t       = torch.from_numpy(dones).to(device=device, dtype=torch.float32)
+    horizons_t    = torch.from_numpy(horizons.astype(np.float32, copy=False)).to(device=device, dtype=torch.float32)
+    weights_t     = torch.from_numpy(weights).to(device=device, dtype=torch.float32)
+    is_expert_t   = torch.from_numpy(is_expert).to(device=device, dtype=torch.bool)
+    transfer_ms = (time.perf_counter() - transfer_t0) * 1000.0
 
     B = states_t.shape[0]
-    cfg = RL_CONFIG
 
     # Split joint action → (move, fire) branch indices
     num_fire = cfg.num_fire_actions
@@ -94,9 +148,9 @@ def train_step(agent, prefetched_batch=None) -> float | None:
     agent.online_net.train()
     agent._update_lr()
 
-    use_amp = agent.use_amp and device.type == "cuda"
     scaler = agent.grad_scaler
     amp_ctx = torch.autocast(device_type="cuda", dtype=torch.float16) if use_amp else nullcontext()
+    compute_t0 = time.perf_counter()
 
     # ── Joint C51 distributional update ─────────────────────────────────
     num_atoms = cfg.num_atoms
@@ -142,23 +196,40 @@ def train_step(agent, prefetched_batch=None) -> float | None:
     # ── Optional BC loss on expert transitions (joint + auxiliary branches) ──
     bc_loss_val = 0.0
     bc_w = _bc_weight_schedule(metrics.total_training_steps)
-    if bc_w > 0.0 and is_expert_t.any():
+    sample_expert_frac = float(is_expert_t.float().mean().item()) if B > 0 else 0.0
+    expert_idx = is_expert_t.nonzero(as_tuple=True)[0] if is_expert_t.any() else None
+    if bc_w > 0.0 and expert_idx is not None and expert_idx.numel() > 0:
         with amp_ctx:
-            expert_idx = is_expert_t.nonzero(as_tuple=True)[0]
-            if expert_idx.numel() > 0:
-                joint_q_e = agent.online_net.q_values_joint(states_t[expert_idx])
-                move_q_e, fire_q_e = agent.online_net.q_values_branched(states_t[expert_idx])
-                joint_bc = F.cross_entropy(joint_q_e, actions_t[expert_idx])
-                branch_bc = 0.5 * (
-                    F.cross_entropy(move_q_e, move_actions_t[expert_idx])
-                    + F.cross_entropy(fire_q_e, fire_actions_t[expert_idx])
-                )
-                bc_loss = joint_bc + float(getattr(cfg, "branch_aux_bc_weight", 0.25)) * branch_bc
-                # Scale BC by sampled expert fraction to avoid over-weighting when
-                # expert transitions are sparse but present in most batches.
-                bc_scale = float(expert_idx.numel()) / float(B)
-                weighted_loss = weighted_loss + (bc_w * bc_scale) * bc_loss
-                bc_loss_val = float(bc_loss.detach().item())
+            joint_logits_e, move_logits_e, fire_logits_e = agent.online_net.bc_logits(states_t[expert_idx])
+            joint_bc = F.cross_entropy(joint_logits_e, actions_t[expert_idx])
+            branch_bc = 0.5 * (
+                F.cross_entropy(move_logits_e, move_actions_t[expert_idx])
+                + F.cross_entropy(fire_logits_e, fire_actions_t[expert_idx])
+            )
+            bc_loss = joint_bc + float(getattr(cfg, "branch_aux_bc_weight", 0.25)) * branch_bc
+            # Scale BC by sampled expert fraction to avoid over-weighting when
+            # expert transitions are sparse but present in most batches.
+            bc_scale = float(expert_idx.numel()) / float(B)
+            weighted_loss = weighted_loss + (bc_w * bc_scale) * bc_loss
+            bc_loss_val = float(bc_loss.detach().item())
+
+    q_policy_w = _q_policy_weight_schedule(metrics.total_training_steps)
+    margin_w = _margin_weight_schedule(metrics.total_training_steps)
+    if (q_policy_w > 0.0 or margin_w > 0.0) and expert_idx is not None and expert_idx.numel() > 0:
+        with amp_ctx:
+            joint_q_e = (joint_log_p[expert_idx].exp() * support.view(1, 1, -1)).sum(dim=2)
+            expert_actions = actions_t[expert_idx]
+            bc_scale = float(expert_idx.numel()) / float(B)
+            if q_policy_w > 0.0:
+                temp = max(1e-3, float(getattr(cfg, "expert_q_policy_temperature", 10.0)))
+                q_policy_loss = F.cross_entropy(joint_q_e / temp, expert_actions)
+                weighted_loss = weighted_loss + (q_policy_w * bc_scale) * q_policy_loss
+            if margin_w > 0.0:
+                expert_q = joint_q_e.gather(1, expert_actions.unsqueeze(1)).squeeze(1)
+                margin = torch.full_like(joint_q_e, float(getattr(cfg, "expert_q_margin", 0.5)))
+                margin.scatter_(1, expert_actions.unsqueeze(1), 0.0)
+                margin_loss = (joint_q_e + margin).max(dim=1).values - expert_q
+                weighted_loss = weighted_loss + margin_w * margin_loss.mean()
 
     # ── NaN / Inf guard ───────────────────────────────────────────────────
     if not torch.isfinite(weighted_loss):
@@ -183,9 +254,13 @@ def train_step(agent, prefetched_batch=None) -> float | None:
         grad_norm = torch.nn.utils.clip_grad_norm_(agent.online_net.parameters(), clip_norm)
         agent.optimizer.step()
 
+    compute_ms = (time.perf_counter() - compute_t0) * 1000.0
+
     # ── Update priorities (mean branch TD error) ────────────────────────
+    priority_t0 = time.perf_counter()
     td_errors = ce_loss.detach().cpu().numpy()
     agent.memory.update_priorities(indices, td_errors)
+    priority_ms = (time.perf_counter() - priority_t0) * 1000.0
 
     # ── Target network update ───────────────────────────────────────────
     agent.training_steps += 1
@@ -208,12 +283,19 @@ def train_step(agent, prefetched_batch=None) -> float | None:
         metrics.last_loss = loss_val
         metrics.last_grad_norm = gn
         metrics.last_bc_loss = bc_loss_val
+        metrics.last_bc_weight = float(bc_w)
+        metrics.last_sample_expert_frac = sample_expert_frac
+        metrics.last_inference_sync_age = int(max(0, int(agent.training_steps) - int(getattr(agent, "last_inference_sync", 0))))
         metrics.last_priority_mean = float(np.mean(td_errors))
+        metrics.last_train_sample_ms = float(sample_ms)
+        metrics.last_train_transfer_ms = float(transfer_ms)
+        metrics.last_train_compute_ms = float(compute_ms)
+        metrics.last_train_priority_ms = float(priority_ms)
 
         # Directional agreement: argmax move/fire matches the stored action
         agree = 0.0
         with torch.no_grad():
-            joint_q_all = agent.online_net.q_values_joint(states_t)
+            joint_q_all = (joint_log_p.detach().exp() * support.view(1, 1, -1)).sum(dim=2)
             metrics.last_q_mean = float(joint_q_all.mean().item())
             pred_joint = joint_q_all.argmax(dim=1)
             pred_move = pred_joint // num_fire
@@ -231,6 +313,10 @@ def train_step(agent, prefetched_batch=None) -> float | None:
         if hasattr(metrics, "loss_sum_interval"):
             metrics.loss_sum_interval += loss_val
             metrics.loss_count_interval += 1
+        total_ms = (time.perf_counter() - step_t0) * 1000.0
+        if sample_prefetched:
+            total_ms += sample_ms
+        metrics.last_train_step_ms = float(total_ms)
     except Exception:
         pass
 

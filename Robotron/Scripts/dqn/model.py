@@ -11,11 +11,12 @@
 # ==================================================================================================================
 """Model + action helpers for the Robotron DQN.
 
-The state vector is the compact model slice (18 core + 8 lanes × 30 + 4 derived
-salience channels + 16 object tokens × 12).  Lane blocks are contiguous at
-``state[:, 18:258]``.  Object tokens are contiguous at ``state[:, 262:454]``.
-Both token groups get Tempest-style self-attention and the pooled summaries are
-concatenated with the raw state before the trunk.
+The state vector is the model slice (18 core + 8 lanes × 30 + 4 derived salience
+channels + 16 object tokens × 12). Lane blocks are contiguous at
+``state[:, 18:258]`` of the current frame and object tokens live at the
+configured object-token offset. When frame stacking is enabled the raw stacked
+vector is still concatenated into the trunk, but attention branches read the
+current frame at the front of the stack.
 """
 
 if __name__ == "__main__":
@@ -134,7 +135,7 @@ class ObjectSelfAttentionEncoder(nn.Module):
         self.attn_norm = nn.LayerNorm(embed_dim)
         self.out_dim = embed_dim
 
-    def forward(self, tokens: torch.Tensor) -> torch.Tensor:
+    def encode_tokens(self, tokens: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         present = tokens[..., 0] > 0.5
         key_padding_mask = ~present
         all_empty = key_padding_mask.all(dim=1)
@@ -144,10 +145,52 @@ class ObjectSelfAttentionEncoder(nn.Module):
         x = self.norm(self.embed(tokens))
         attn_out, _ = self.attn(x, x, x, key_padding_mask=key_padding_mask)
         enriched = self.attn_norm(x + attn_out)
+        return enriched, present
+
+    def forward(self, tokens: torch.Tensor) -> torch.Tensor:
+        enriched, present = self.encode_tokens(tokens)
         weights = present.float().unsqueeze(-1)
         pooled = (enriched * weights).sum(dim=1)
         denom = weights.sum(dim=1).clamp_min(1.0)
         return pooled / denom
+
+
+class DirectionalObjectAttention(nn.Module):
+    """Action-direction queries attending over encoded object tokens."""
+
+    def __init__(self, lane_features: int, object_dim: int, num_actions: int, num_heads: int):
+        super().__init__()
+        self.num_actions = int(num_actions)
+        self.object_dim = int(object_dim)
+        self.dir_embedding = nn.Embedding(self.num_actions, self.object_dim)
+        self.lane_proj = nn.Linear(lane_features, self.object_dim)
+        self.query_norm = nn.LayerNorm(self.object_dim)
+        self.attn = nn.MultiheadAttention(self.object_dim, num_heads, batch_first=True)
+        self.out_norm = nn.LayerNorm(self.object_dim)
+
+    def forward(
+        self,
+        lane_tokens: torch.Tensor,
+        object_repr: torch.Tensor,
+        object_present: torch.Tensor,
+    ) -> torch.Tensor:
+        B = lane_tokens.shape[0]
+        idle = torch.zeros(B, 1, lane_tokens.shape[-1], device=lane_tokens.device, dtype=lane_tokens.dtype)
+        lane9 = torch.cat([lane_tokens, idle], dim=1)
+        action_ids = torch.arange(self.num_actions, device=lane_tokens.device)
+        q = self.dir_embedding(action_ids).unsqueeze(0).expand(B, -1, -1)
+        q = self.query_norm(q + self.lane_proj(lane9))
+
+        key_padding_mask = ~object_present.bool()
+        all_empty = key_padding_mask.all(dim=1)
+        if all_empty.any():
+            key_padding_mask = key_padding_mask.clone()
+            key_padding_mask[all_empty, 0] = False
+
+        attn_out, _ = self.attn(q, object_repr, object_repr, key_padding_mask=key_padding_mask, need_weights=False)
+        if all_empty.any():
+            attn_out = attn_out.masked_fill(all_empty.view(B, 1, 1), 0.0)
+        return self.out_norm(q + attn_out)
 
 
 # ── Branching Distributional Dueling Network ────────────────────────────────
@@ -183,6 +226,8 @@ class RainbowNet(nn.Module):
         self.extra_features = cfg.extra_features  # 4
         self.object_token_count = cfg.object_token_count
         self.object_token_features = cfg.object_token_features
+        self.single_frame_state_size = int(getattr(cfg, "single_frame_state_size", state_size))
+        self.frame_stack = max(1, int(getattr(cfg, "frame_stack", 1)))
 
         # ── Lane self-attention encoder ────────────────────────────────
         self.use_attn = cfg.use_lane_attention
@@ -206,6 +251,25 @@ class RainbowNet(nn.Module):
             )
             object_attn_out_dim = cfg.object_attn_dim
 
+        self.use_action_context = bool(getattr(cfg, "use_action_context_attention", False)) and self.use_object_attn
+        self.action_context_dim = object_attn_out_dim if self.use_action_context else 0
+        self.joint_move_ids = torch.arange(NUM_JOINT, dtype=torch.long) // NUM_FIRE
+        self.joint_fire_ids = torch.arange(NUM_JOINT, dtype=torch.long) % NUM_FIRE
+        if self.use_action_context:
+            heads = int(getattr(cfg, "action_context_heads", cfg.object_attn_heads))
+            self.move_context_attn = DirectionalObjectAttention(
+                lane_features=self.lane_features,
+                object_dim=self.action_context_dim,
+                num_actions=self.num_move,
+                num_heads=heads,
+            )
+            self.fire_context_attn = DirectionalObjectAttention(
+                lane_features=self.lane_features,
+                object_dim=self.action_context_dim,
+                num_actions=self.num_fire,
+                num_heads=heads,
+            )
+
         # ── Trunk ──────────────────────────────────────────────────────
         trunk_in = state_size + attn_out_dim + object_attn_out_dim
         layers = []
@@ -227,17 +291,42 @@ class RainbowNet(nn.Module):
             # Shared value stream → (num_atoms,)
             self.val_fc = nn.Linear(head_in, head_mid)
             self.val_out = nn.Linear(head_mid, self.num_atoms)
-            # Move advantage stream → (num_move × num_atoms)
-            self.move_adv_fc = nn.Linear(head_in, head_mid)
-            self.move_adv_out = nn.Linear(head_mid, self.num_move * self.num_atoms)
-            # Fire advantage stream → (num_fire × num_atoms)
-            self.fire_adv_fc = nn.Linear(head_in, head_mid)
-            self.fire_adv_out = nn.Linear(head_mid, self.num_fire * self.num_atoms)
             # Joint move×fire value stream → (81 × atoms)
             self.joint_val_fc = nn.Linear(head_in, head_mid)
             self.joint_val_out = nn.Linear(head_mid, self.num_atoms)
-            self.joint_adv_fc = nn.Linear(head_in, head_mid)
-            self.joint_adv_out = nn.Linear(head_mid, NUM_JOINT * self.num_atoms)
+            if self.use_action_context:
+                action_embed_dim = int(getattr(cfg, "joint_action_embed_dim", 32))
+                action_hidden = int(getattr(cfg, "action_head_hidden", head_mid))
+                self.move_action_embedding = nn.Embedding(self.num_move, action_embed_dim)
+                self.fire_action_embedding = nn.Embedding(self.num_fire, action_embed_dim)
+                self.joint_action_embedding = nn.Embedding(NUM_JOINT, action_embed_dim)
+                self.move_adv_scorer = nn.Sequential(
+                    nn.Linear(head_in + self.action_context_dim + action_embed_dim, action_hidden),
+                    nn.LayerNorm(action_hidden),
+                    nn.ReLU(),
+                    nn.Linear(action_hidden, self.num_atoms),
+                )
+                self.fire_adv_scorer = nn.Sequential(
+                    nn.Linear(head_in + self.action_context_dim + action_embed_dim, action_hidden),
+                    nn.LayerNorm(action_hidden),
+                    nn.ReLU(),
+                    nn.Linear(action_hidden, self.num_atoms),
+                )
+                self.joint_adv_scorer = nn.Sequential(
+                    nn.Linear(head_in + (2 * self.action_context_dim) + action_embed_dim, action_hidden),
+                    nn.LayerNorm(action_hidden),
+                    nn.ReLU(),
+                    nn.Linear(action_hidden, self.num_atoms),
+                )
+            else:
+                # Move advantage stream → (num_move × num_atoms)
+                self.move_adv_fc = nn.Linear(head_in, head_mid)
+                self.move_adv_out = nn.Linear(head_mid, self.num_move * self.num_atoms)
+                # Fire advantage stream → (num_fire × num_atoms)
+                self.fire_adv_fc = nn.Linear(head_in, head_mid)
+                self.fire_adv_out = nn.Linear(head_mid, self.num_fire * self.num_atoms)
+                self.joint_adv_fc = nn.Linear(head_in, head_mid)
+                self.joint_adv_out = nn.Linear(head_mid, NUM_JOINT * self.num_atoms)
         else:
             self.move_fc = nn.Linear(head_in, head_mid)
             self.move_out = nn.Linear(head_mid, self.num_move * self.num_atoms)
@@ -245,6 +334,25 @@ class RainbowNet(nn.Module):
             self.fire_out = nn.Linear(head_mid, self.num_fire * self.num_atoms)
             self.joint_fc = nn.Linear(head_in, head_mid)
             self.joint_out = nn.Linear(head_mid, NUM_JOINT * self.num_atoms)
+
+        # BC heads are policy-classification auxiliaries. Keep imitation away
+        # from Q magnitudes so Bellman values remain value estimates instead of
+        # being bent into expert-action logits.
+        self.bc_move_head = nn.Sequential(
+            nn.Linear(head_in, head_mid),
+            nn.ReLU(),
+            nn.Linear(head_mid, self.num_move),
+        )
+        self.bc_fire_head = nn.Sequential(
+            nn.Linear(head_in, head_mid),
+            nn.ReLU(),
+            nn.Linear(head_mid, self.num_fire),
+        )
+        self.bc_joint_head = nn.Sequential(
+            nn.Linear(head_in, head_mid),
+            nn.ReLU(),
+            nn.Linear(head_mid, NUM_JOINT),
+        )
 
         self._init_weights()
 
@@ -260,14 +368,21 @@ class RainbowNet(nn.Module):
                 nn.init.xavier_uniform_(m.weight, gain=1.0)
                 nn.init.constant_(m.bias, 0.0)
 
+    def _current_frame(self, state: torch.Tensor) -> torch.Tensor:
+        if self.frame_stack <= 1:
+            return state
+        return state[:, :self.single_frame_state_size]
+
     def _lane_tokens(self, state: torch.Tensor) -> torch.Tensor:
         """Reshape the contiguous lane slice into (B, 8, lane_features)."""
+        state = self._current_frame(state)
         B = state.shape[0]
         start = self.core_features
         end = start + self.lane_count * self.lane_features
         return state[:, start:end].reshape(B, self.lane_count, self.lane_features)
 
     def _object_tokens(self, state: torch.Tensor) -> torch.Tensor:
+        state = self._current_frame(state)
         B = state.shape[0]
         start = self.core_features + self.lane_count * self.lane_features + self.extra_features
         end = start + self.object_token_count * self.object_token_features
@@ -281,6 +396,44 @@ class RainbowNet(nn.Module):
             parts.append(self.object_attn(self._object_tokens(state)))
         trunk_in = torch.cat(parts, dim=1) if len(parts) > 1 else state
         return self.trunk(trunk_in)
+
+    def _action_contexts(self, state: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        lane_tokens = self._lane_tokens(state)
+        object_tokens = self._object_tokens(state)
+        object_repr, object_present = self.object_attn.encode_tokens(object_tokens)
+        move_ctx = self.move_context_attn(lane_tokens, object_repr, object_present)
+        fire_ctx = self.fire_context_attn(lane_tokens, object_repr, object_present)
+        return move_ctx, fire_ctx
+
+    def _score_branch_advantage(
+        self,
+        h: torch.Tensor,
+        action_ctx: torch.Tensor,
+        action_embedding: nn.Embedding,
+        scorer: nn.Module,
+        action_count: int,
+    ) -> torch.Tensor:
+        B = h.shape[0]
+        action_ids = torch.arange(action_count, device=h.device)
+        emb = action_embedding(action_ids).unsqueeze(0).expand(B, -1, -1)
+        h_exp = h.unsqueeze(1).expand(-1, action_count, -1)
+        x = torch.cat([h_exp, action_ctx, emb], dim=-1)
+        return scorer(x).view(B, action_count, self.num_atoms)
+
+    def _score_joint_advantage(self, h: torch.Tensor, move_ctx: torch.Tensor, fire_ctx: torch.Tensor) -> torch.Tensor:
+        B = h.shape[0]
+        move_ids = self.joint_move_ids.to(device=h.device)
+        fire_ids = self.joint_fire_ids.to(device=h.device)
+        joint_ctx = torch.cat([move_ctx[:, move_ids], fire_ctx[:, fire_ids]], dim=-1)
+        action_ids = torch.arange(NUM_JOINT, device=h.device)
+        emb = self.joint_action_embedding(action_ids).unsqueeze(0).expand(B, -1, -1)
+        h_exp = h.unsqueeze(1).expand(-1, NUM_JOINT, -1)
+        x = torch.cat([h_exp, joint_ctx, emb], dim=-1)
+        return self.joint_adv_scorer(x).view(B, NUM_JOINT, self.num_atoms)
+
+    def bc_logits(self, state: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        h = self._trunk_features(state)
+        return self.bc_joint_head(h), self.bc_move_head(h), self.bc_fire_head(h)
 
     def forward(self, state: torch.Tensor, log: bool = False):
         """Return per-branch action-value distributions.
@@ -299,10 +452,17 @@ class RainbowNet(nn.Module):
         if self.use_dueling:
             val = F.relu(self.val_fc(h))
             val = self.val_out(val).view(B, 1, self.num_atoms)
-            madv = F.relu(self.move_adv_fc(h))
-            madv = self.move_adv_out(madv).view(B, self.num_move, self.num_atoms)
-            fadv = F.relu(self.fire_adv_fc(h))
-            fadv = self.fire_adv_out(fadv).view(B, self.num_fire, self.num_atoms)
+            if self.use_action_context:
+                move_ctx, fire_ctx = self._action_contexts(state)
+                madv = self._score_branch_advantage(
+                    h, move_ctx, self.move_action_embedding, self.move_adv_scorer, self.num_move)
+                fadv = self._score_branch_advantage(
+                    h, fire_ctx, self.fire_action_embedding, self.fire_adv_scorer, self.num_fire)
+            else:
+                madv = F.relu(self.move_adv_fc(h))
+                madv = self.move_adv_out(madv).view(B, self.num_move, self.num_atoms)
+                fadv = F.relu(self.fire_adv_fc(h))
+                fadv = self.fire_adv_out(fadv).view(B, self.num_fire, self.num_atoms)
             move_atoms = val + madv - madv.mean(dim=1, keepdim=True)
             fire_atoms = val + fadv - fadv.mean(dim=1, keepdim=True)
         else:
@@ -327,8 +487,12 @@ class RainbowNet(nn.Module):
         if self.use_dueling:
             val = F.relu(self.joint_val_fc(h))
             val = self.joint_val_out(val).view(B, 1, self.num_atoms)
-            adv = F.relu(self.joint_adv_fc(h))
-            adv = self.joint_adv_out(adv).view(B, NUM_JOINT, self.num_atoms)
+            if self.use_action_context:
+                move_ctx, fire_ctx = self._action_contexts(state)
+                adv = self._score_joint_advantage(h, move_ctx, fire_ctx)
+            else:
+                adv = F.relu(self.joint_adv_fc(h))
+                adv = self.joint_adv_out(adv).view(B, NUM_JOINT, self.num_atoms)
             atoms = val + adv - adv.mean(dim=1, keepdim=True)
         else:
             x = F.relu(self.joint_fc(h))

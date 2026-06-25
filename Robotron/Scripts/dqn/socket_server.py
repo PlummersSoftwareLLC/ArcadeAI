@@ -15,7 +15,7 @@ Game-flow contract (Robotron-specific):
     + 4 derived channels); the full wire is only used for the heuristic expert.
   • Episodes terminate on ``frame.done``.  While ``player_alive`` is false (death
     animation / between lives) we send a neutral action and store no transitions.
-  • Reward = clip(obj·obj_scale + subj·subj_scale); both terms are shaped Lua-side.
+    • Reward = clipped game_score delta plus tightly clipped Lua subjective shaping.
 """
 
 if __name__ == "__main__":
@@ -86,6 +86,7 @@ _DBG_EVERY = max(1, int(os.environ.get("DQN_DEBUG_EVERY", "60")))
 # game registers reliable shots.  Applied Python-side (replaces the old Lua hold)
 # so the replay buffer stores the *effective* held fire action, not the raw request.
 FIRE_HOLD_FRAMES = max(1, int(getattr(RL_CONFIG, "fire_hold_frames", 4)))
+CLIENT_IDLE_TIMEOUT_S = max(1.0, float(os.environ.get("DQN_CLIENT_IDLE_TIMEOUT_S", "30.0")))
 
 
 def _apply_fire_hold(cs: dict, raw_fire: int) -> int:
@@ -148,6 +149,88 @@ def parse_frame_data(data: bytes) -> Optional[FrameData]:
     )
 
 
+def _transition_interest_score(prev_state: np.ndarray, next_state: np.ndarray,
+                               frame, obj_r: float, total_r: float) -> float:
+    """Sparse rare/elite-event score for replay sampling, independent of TD error."""
+    try:
+        cfg = RL_CONFIG
+        lane_start = int(cfg.core_features)
+        lane_end = lane_start + int(cfg.lane_count) * int(cfg.lane_features)
+
+        def lane_cues(state):
+            lanes = np.asarray(state[lane_start:lane_end], dtype=np.float32).reshape(cfg.lane_count, cfg.lane_features)
+            danger = float(np.nanmax(np.maximum(lanes[:, 21], lanes[:, 22])))
+            blocker = float(np.nanmax(lanes[:, 23]))
+            human_pull = float(np.nanmax(lanes[:, 24]))
+            target = float(np.nanmax(np.maximum.reduce([lanes[:, 26], lanes[:, 27], lanes[:, 28], lanes[:, 29]])))
+            return danger, blocker, human_pull, target
+
+        prev_danger, prev_blocker, prev_human, prev_target = lane_cues(prev_state)
+        next_danger, next_blocker, next_human, next_target = lane_cues(next_state)
+        danger = max(prev_danger, next_danger)
+        blocker = max(prev_blocker, next_blocker)
+        human = max(prev_human, next_human)
+        target = max(prev_target, next_target)
+
+        prev_wave = 0.0
+        if len(prev_state) > 4 and np.isfinite(prev_state[4]):
+            prev_wave = float(prev_state[4]) * 40.0
+        wave = max(1.0, float(frame.level_number))
+        wave_advance = 1.0 if wave > prev_wave + 0.5 else 0.0
+        deep_wave = max(0.0, min(1.0, (wave - 3.0) / 8.0))
+        terminal = 1.0 if frame.done else 0.0
+
+        def ramp(value: float, start: float) -> float:
+            return max(0.0, min(1.0, (float(value) - float(start)) / max(1e-6, 1.0 - float(start))))
+
+        score_burst = max(0.0, min(1.0, max(0.0, float(obj_r)) / 5.0))
+        positive_surprise = max(0.0, min(1.0, max(0.0, float(total_r)) / 5.0))
+        danger_event = ramp(danger, 0.55)
+        blocker_event = ramp(blocker, 0.65)
+        human_event = ramp(human, 0.55)
+        target_event = ramp(target, 0.55)
+        deep_tactical = deep_wave * max(danger_event, human_event, target_event)
+
+        return max(
+            score_burst,
+            0.95 * wave_advance,
+            0.90 * terminal,
+            0.75 * danger_event,
+            0.60 * blocker_event,
+            0.70 * target_event,
+            0.65 * human_event,
+            0.55 * deep_tactical,
+            0.35 * positive_surprise,
+        )
+    except Exception:
+        return 0.0
+
+
+def _clip_abs(value: float, limit: float) -> float:
+    limit = max(0.0, float(limit))
+    return max(-limit, min(limit, float(value)))
+
+
+def _shape_transition_reward(frame, last_game_score: int) -> tuple[float, float, float, float, int]:
+    """Reward from actual score delta plus tightly clipped subjective shaping."""
+    try:
+        score_delta = max(0, int(frame.game_score) - int(last_game_score))
+    except Exception:
+        score_delta = 0
+    score_r = min(
+        float(score_delta) * float(RL_CONFIG.score_reward_scale),
+        float(RL_CONFIG.score_reward_clip),
+    )
+    subj_r = _clip_abs(
+        float(frame.subjreward) * float(RL_CONFIG.subj_reward_scale),
+        float(RL_CONFIG.shaping_reward_clip),
+    )
+    death_r = -float(getattr(RL_CONFIG, "death_penalty", 0.0)) if bool(frame.done) else 0.0
+    total_r = score_r + subj_r + death_r
+    total_r = _clip_abs(total_r, float(RL_CONFIG.death_reward_clip if frame.done else RL_CONFIG.reward_clip))
+    return total_r, score_r, subj_r, death_r, score_delta
+
+
 # ── Async buffer (queues step() calls to avoid blocking the frame loop) ─────
 class AsyncReplayBuffer:
     def __init__(self, agent, batch_size=100, max_queue_size=20000):
@@ -157,6 +240,7 @@ class AsyncReplayBuffer:
         self.running = True
         self._lookback = int(getattr(RL_CONFIG, "pre_death_lookback", 120))
         self._client_indices = {}          # client_id -> deque(maxlen=lookback)
+        self._episode_indices = {}         # client_id -> replay indices for current episode
         # Drop accounting (queue overflow on non-critical frames only)
         self.dropped_steps = 0
         self._drop_lock = threading.Lock()
@@ -183,25 +267,22 @@ class AsyncReplayBuffer:
     def step_async(self, *args, client_id=None, **kwargs):
         is_terminal = bool(args[4]) if len(args) > 4 else False
         item = ("step", client_id, args, kwargs)
-        if is_terminal:
-            # Terminal transitions carry the episode-end / death signal — never
-            # drop them.  Block briefly (backpressure) instead of discarding.
-            try:
-                self.queue.put(item, timeout=2.0)
-            except queue.Full:
-                self._record_drop()
-            return
         try:
-            self.queue.put(item, timeout=0.05)
+            self.queue.put_nowait(item)
         except queue.Full:
             self._record_drop()
 
     def boost_pre_death(self, client_id):
-        # Death-priority boost is critical for credit assignment — don't drop.
         try:
-            self.queue.put(("boost", client_id, None, None), timeout=2.0)
+            self.queue.put_nowait(("boost", client_id, None, None))
         except queue.Full:
-            pass
+            self._record_drop()
+
+    def boost_elite_episode(self, client_id, score: int, level: int, total_reward: float, ep_len: int):
+        try:
+            self.queue.put_nowait(("elite", client_id, (int(score), int(level), float(total_reward), int(ep_len)), None))
+        except queue.Full:
+            self._record_drop()
 
     def _consume(self):
         while self.running:
@@ -223,8 +304,13 @@ class AsyncReplayBuffer:
                             if cid not in self._client_indices:
                                 self._client_indices[cid] = deque(maxlen=self._lookback)
                             self._client_indices[cid].append(idx)
+                            if cid not in self._episode_indices:
+                                self._episode_indices[cid] = []
+                            self._episode_indices[cid].append(idx)
                     elif cmd == "boost":
                         self._do_boost(cid)
+                    elif cmd == "elite":
+                        self._do_elite_episode_boost(cid, *(a or (0, 0, 0.0, 0)))
                 except Exception as e:
                     print(f"AsyncReplayBuffer error: {e}")
 
@@ -232,6 +318,10 @@ class AsyncReplayBuffer:
         indices = self._client_indices.get(client_id)
         if not indices:
             return
+        try:
+            self.agent.memory.apply_pre_death_penalty(list(indices))
+        except Exception as e:
+            print(f"  Pre-death reward penalty error: {e}")
         boost = float(getattr(RL_CONFIG, "pre_death_priority_boost", 2.0))
         if boost <= 1.0:
             indices.clear()
@@ -242,8 +332,30 @@ class AsyncReplayBuffer:
             print(f"  Pre-death boost error: {e}")
         indices.clear()
 
+    def _do_elite_episode_boost(self, client_id, score: int, level: int, total_reward: float, ep_len: int):
+        indices = self._episode_indices.get(client_id)
+        if not indices:
+            return
+        try:
+            elite = (
+                int(score) >= int(getattr(RL_CONFIG, "elite_episode_score_threshold", 120_000))
+                or int(level) >= int(getattr(RL_CONFIG, "elite_episode_level_threshold", 8))
+            )
+            if elite:
+                tail_len = max(1, int(getattr(RL_CONFIG, "elite_episode_tail_len", 768)))
+                tail = list(indices)[-tail_len:]
+                boost = float(getattr(RL_CONFIG, "elite_episode_priority_boost", 3.0))
+                interest = float(getattr(RL_CONFIG, "elite_episode_interest_score", 1.0))
+                self.agent.memory.boost_priorities(tail, boost)
+                self.agent.memory.mark_interesting(tail, interest)
+        except Exception as e:
+            print(f"  Elite episode boost error: {e}")
+        finally:
+            indices.clear()
+
     def remove_client(self, client_id):
         self._client_indices.pop(client_id, None)
+        self._episode_indices.pop(client_id, None)
 
     def stop(self):
         self.running = False
@@ -254,6 +366,8 @@ class AsyncReplayBuffer:
                     self.agent.step(*a, **kw)
                 elif cmd == "boost":
                     self._do_boost(cid)
+                elif cmd == "elite":
+                    self._do_elite_episode_boost(cid, *(a or (0, 0, 0.0, 0)))
             except queue.Empty:
                 break
             except Exception:
@@ -262,11 +376,12 @@ class AsyncReplayBuffer:
 
 
 class _InferenceRequest:
-    __slots__ = ("state", "epsilon", "event", "action")
+    __slots__ = ("state", "epsilon", "locked_fire", "event", "action")
 
-    def __init__(self, state, epsilon: float):
+    def __init__(self, state, epsilon: float, locked_fire=None):
         self.state = state
         self.epsilon = float(epsilon)
+        self.locked_fire = locked_fire
         self.event = threading.Event()
         self.action = None
 
@@ -284,16 +399,16 @@ class AsyncInferenceBatcher:
         self._thread = threading.Thread(target=self._consume, daemon=True, name="InferBatchWorker")
         self._thread.start()
 
-    def infer(self, state, epsilon: float):
+    def infer(self, state, epsilon: float, locked_fire=None):
         if not self.running:
-            return self.agent.act(state, epsilon)
-        req = _InferenceRequest(state, epsilon)
+            return self.agent.act(state, epsilon, locked_fire=locked_fire)
+        req = _InferenceRequest(state, epsilon, locked_fire=locked_fire)
         try:
             self.queue.put(req, timeout=self.request_timeout_s)
         except queue.Full:
-            return self.agent.act(state, epsilon)
+            return self.agent.act(state, epsilon, locked_fire=locked_fire)
         if not req.event.wait(timeout=self.request_timeout_s):
-            return self.agent.act(state, epsilon)
+            return self.agent.act(state, epsilon, locked_fire=locked_fire)
         return req.action if req.action is not None else (0, 0, False)
 
     def _consume(self):
@@ -317,7 +432,8 @@ class AsyncInferenceBatcher:
             try:
                 states = [r.state for r in batch]
                 epsilons = [r.epsilon for r in batch]
-                actions = self.agent.act_batch(states, epsilons)
+                locked_fires = [r.locked_fire for r in batch]
+                actions = self.agent.act_batch(states, epsilons, locked_fires=locked_fires)
             except Exception as e:
                 print(f"AsyncInferenceBatcher error: {e}")
                 actions = []
@@ -326,7 +442,7 @@ class AsyncInferenceBatcher:
                 act = actions[idx] if idx < len(actions) else None
                 if act is None:
                     try:
-                        act = self.agent.act(req.state, req.epsilon)
+                        act = self.agent.act(req.state, req.epsilon, locked_fire=req.locked_fire)
                     except Exception:
                         act = (0, 0, False)
                 req.action = act
@@ -377,9 +493,19 @@ class SocketServer:
     def _alloc_id(self):
         with self.client_lock:
             cid = 0
-            while cid in self.clients:
+            while cid in self.client_states or self.clients.get(cid) is not None:
                 cid += 1
             return cid
+
+    def _sync_client_count_locked(self):
+        count = len(self.client_states)
+        metrics.client_count = count
+        if self.metrics is not metrics:
+            try:
+                self.metrics.client_count = count
+            except Exception:
+                pass
+        return count
 
     @staticmethod
     def _is_eval_client(cid: int) -> bool:
@@ -398,19 +524,39 @@ class SocketServer:
             self.client_states[cid] = {
                 "frames": 0, "last_time": time.time(), "fps": 0.0,
                 "level_number": 0, "game_score": 0, "last_state": None, "last_action": None,
+                "last_game_score": 0,
                 "prev_action_source": None,
-                "total_reward": 0.0, "ep_dqn_reward": 0.0, "ep_expert_reward": 0.0,
+                "total_reward": 0.0, "ep_dqn_reward": 0.0, "ep_dqn_score_reward": 0.0, "ep_expert_reward": 0.0,
                 "ep_subj_reward": 0.0, "ep_obj_reward": 0.0, "ep_frames": 0,
+                "ep_death_reward": 0.0,
                 "ep_dqn_frames": 0,
                 "eval_only": eval_only,
                 "was_done": False, "nstep": nstep,
+                "frame_history": deque(maxlen=max(1, int(getattr(RL_CONFIG, "frame_stack", 1)))),
                 "fire_hold_dir": -1, "fire_hold_count": 0, "fire_pending_dir": -1,
             }
-            metrics.client_count = len(self.client_states)
+            self._sync_client_count_locked()
+
+    @staticmethod
+    def _stack_model_state(cs: dict, current_state: np.ndarray) -> np.ndarray:
+        depth = max(1, int(getattr(RL_CONFIG, "frame_stack", 1)))
+        cur = np.asarray(current_state, dtype=np.float32)
+        if depth <= 1:
+            return cur
+        hist = cs.get("frame_history")
+        if hist is None or getattr(hist, "maxlen", None) != depth:
+            hist = deque(maxlen=depth)
+            cs["frame_history"] = hist
+        hist.append(cur.copy())
+        frames = list(hist)
+        if len(frames) < depth:
+            pad = frames[0] if frames else cur
+            frames = [pad] * (depth - len(frames)) + frames
+        return np.concatenate(list(reversed(frames[-depth:]))).astype(np.float32, copy=False)
 
     @staticmethod
     def _recv_exact(sock, n, timeout_s=0.5):
-        """Read exactly *n* bytes from a non-blocking socket, or None on EOF/timeout."""
+        """Read exactly *n* bytes; return None on timeout, b"" on EOF/socket error."""
         buf = bytearray()
         deadline = time.time() + timeout_s
         while len(buf) < n:
@@ -420,7 +566,7 @@ class SocketServer:
             try:
                 r, _, _ = select.select([sock], [], [], min(0.05, remaining))
             except (OSError, ValueError):
-                return None
+                return b""
             if not r:
                 continue
             try:
@@ -428,16 +574,23 @@ class SocketServer:
             except BlockingIOError:
                 continue
             except OSError:
-                return None
+                return b""
             if not chunk:
-                return None
+                return b""
             buf += chunk
         return bytes(buf)
 
-    def _pack_action(self, move_cmd, fire_cmd, source_code):
+    def _pack_action(self, move_cmd, fire_cmd, source_code, cid: int = 0):
         _gs = game_settings.snapshot()
-        start_adv = 1 if _gs["start_advanced"] else 0
-        start_level = max(1, min(255, int(_gs["start_level_min"])))
+        start_adv = 1 if _gs["start_advanced"] or bool(_gs.get("auto_curriculum", False)) else 0
+        base_level = max(1, min(255, int(_gs["start_level_min"])))
+        if bool(_gs.get("auto_curriculum", False)):
+            base_level = max(base_level, int(getattr(RL_CONFIG, "hard_start_min_level", 5)))
+        start_level = base_level
+        if bool(_gs.get("auto_curriculum", False)):
+            spread = max(1, int(getattr(RL_CONFIG, "hard_start_wave_spread", 1)))
+            start_level = base_level + (int(cid) % spread)
+        start_level = max(1, min(255, int(start_level)))
         source_u8 = int(source_code) & 0x0F
         return struct.pack(">bbBBB", int(move_cmd), int(fire_cmd),
                            source_u8, start_adv, start_level)
@@ -456,12 +609,16 @@ class SocketServer:
                 raise ConnectionError("No handshake")
 
             BATCH = 8
+            last_payload_time = time.time()
 
             while self.running and not self.shutdown_event.is_set():
                 # Read 4-byte length header
                 hdr = self._recv_exact(sock, 4, timeout_s=0.25)
                 if hdr is None:
-                    # idle timeout — keep the connection alive
+                    if time.time() - last_payload_time >= CLIENT_IDLE_TIMEOUT_S:
+                        raise ConnectionError(
+                            f"idle timeout ({CLIENT_IDLE_TIMEOUT_S:.1f}s without frames)"
+                        )
                     continue
                 if len(hdr) < 4:
                     raise ConnectionError("EOF")
@@ -470,8 +627,9 @@ class SocketServer:
                     raise ConnectionError(f"Invalid payload length {dlen}")
 
                 data = self._recv_exact(sock, dlen, timeout_s=0.5)
-                if data is None:
+                if data is None or len(data) < dlen:
                     raise ConnectionError("Broken payload")
+                last_payload_time = time.time()
 
                 if len(data) >= 2:
                     n = struct.unpack(">H", data[:2])[0]
@@ -483,11 +641,11 @@ class SocketServer:
 
                 frame = parse_frame_data(data)
                 if not frame:
-                    sock.sendall(self._pack_action(-1, -1, _SRC_NONE))
+                    sock.sendall(self._pack_action(-1, -1, _SRC_NONE, cid))
                     continue
 
-                # Compact model input (18 core + 8 lanes × 30 + 4 derived)
-                model_state = slice_model_state(frame.state)
+                # Single-frame compact input; stacked current-first with recent history.
+                single_state = slice_model_state(frame.state)
 
                 with self.client_lock:
                     if cid not in self.client_states:
@@ -501,6 +659,8 @@ class SocketServer:
                     if el >= 1.0:
                         cs["fps"] = 1.0 / el
                         cs["last_time"] = now
+
+                model_state = self._stack_model_state(cs, single_state)
 
                 # Peak game score is shared metrics state — guard with metrics.lock
                 # (not client_lock) to stay consistent with dashboard reads.
@@ -517,11 +677,9 @@ class SocketServer:
                 # ── Process previous step ───────────────────────────────
                 if cs.get("last_state") is not None and cs.get("last_action") is not None:
                     mv_i, fr_i = cs["last_action"]
-                    subj_r = float(frame.subjreward) * RL_CONFIG.subj_reward_scale
-                    obj_r = float(frame.objreward) * RL_CONFIG.obj_reward_scale
-                    total_r = obj_r + subj_r
-                    clip = RL_CONFIG.death_reward_clip if frame.done else RL_CONFIG.reward_clip
-                    total_r = max(-clip, min(clip, total_r))
+                    total_r, score_r, subj_r, death_r, score_delta = _shape_transition_reward(
+                        frame, cs.get("last_game_score", frame.game_score))
+                    interest = _transition_interest_score(cs["last_state"], model_state, frame, score_r, total_r)
 
                     eval_only = bool(cs.get("eval_only", False))
                     if self.agent and not eval_only:
@@ -531,27 +689,32 @@ class SocketServer:
                             joint = combine_action(mv_i, fr_i)
                             matured = nstep.add(cs["last_state"], joint, total_r,
                                                 model_state, bool(frame.done),
-                                                actor=tag, priority_reward=total_r)
-                            for s0, a, Rn, pR, sn, dn, h, act in matured:
+                                                actor=tag, priority_reward=total_r,
+                                                interest=interest)
+                            for s0, a, Rn, pR, sn, dn, h, act, intr in matured:
                                 mv_n, fr_n = split_joint_action(a)
                                 self.async_buffer.step_async(
                                     s0, (mv_n, fr_n), Rn, sn, bool(dn),
-                                    client_id=cid, actor=act, horizon=int(h), priority_reward=pR)
+                                    client_id=cid, actor=act, horizon=int(h), priority_reward=pR,
+                                    interest=intr)
                         else:
                             self.async_buffer.step_async(
                                 cs["last_state"], (mv_i, fr_i), total_r,
                                 model_state, bool(frame.done), client_id=cid,
-                                actor=tag, horizon=1, priority_reward=total_r)
+                                actor=tag, horizon=1, priority_reward=total_r,
+                                interest=interest)
 
                     cs["total_reward"] += total_r
                     cs["ep_subj_reward"] = cs.get("ep_subj_reward", 0.0) + subj_r
-                    cs["ep_obj_reward"] = cs.get("ep_obj_reward", 0.0) + obj_r
+                    cs["ep_obj_reward"] = cs.get("ep_obj_reward", 0.0) + score_r
+                    cs["ep_death_reward"] = cs.get("ep_death_reward", 0.0) + death_r
                     cs["ep_frames"] = cs.get("ep_frames", 0) + 1
                     src = cs.get("prev_action_source")
                     if eval_only:
                         pass
                     elif src in ("dqn", "epsilon"):
                         cs["ep_dqn_reward"] += total_r
+                        cs["ep_dqn_score_reward"] = cs.get("ep_dqn_score_reward", 0.0) + score_r
                         cs["ep_dqn_frames"] = cs.get("ep_dqn_frames", 0) + 1
                     elif src == "expert":
                         cs["ep_expert_reward"] += total_r
@@ -570,37 +733,46 @@ class SocketServer:
                             metrics.add_episode_reward(
                                 cs["total_reward"], cs["ep_dqn_reward"], cs["ep_expert_reward"],
                                 cs.get("ep_subj_reward", 0.0), cs.get("ep_obj_reward", 0.0),
+                                cs.get("ep_death_reward", 0.0),
                                 length=ep_len)
+                            if self.async_buffer is not None:
+                                self.async_buffer.boost_elite_episode(
+                                    cid, frame.game_score, frame.level_number,
+                                    cs["total_reward"], ep_len)
                             try:
-                                ep_dqn = cs["ep_dqn_reward"]
-                                add_episode_to_dqn100k_window(ep_dqn, ep_len)
-                                add_episode_to_dqn1m_window(ep_dqn, ep_len)
-                                add_episode_to_dqn5m_window(ep_dqn, ep_len)
-                                add_episode_to_dqn_perframe_window(ep_dqn, cs.get("ep_dqn_frames", 0), ep_len)
+                                ep_dqn = cs.get("ep_dqn_score_reward", cs["ep_dqn_reward"])
+                                ep_dqn_frames = cs.get("ep_dqn_frames", 0)
+                                add_episode_to_dqn100k_window(ep_dqn, ep_len, ep_dqn_frames)
+                                add_episode_to_dqn1m_window(ep_dqn, ep_len, ep_dqn_frames)
+                                add_episode_to_dqn5m_window(ep_dqn, ep_len, ep_dqn_frames)
+                                add_episode_to_dqn_perframe_window(ep_dqn, ep_dqn_frames, ep_len)
                                 add_episode_to_total_windows(cs["total_reward"], ep_len)
                                 add_episode_to_eplen_window(ep_len)
                             except Exception:
                                 pass
                     cs["was_done"] = True
                     try:
-                        sock.sendall(self._pack_action(-1, -1, _SRC_NONE))
+                        sock.sendall(self._pack_action(-1, -1, _SRC_NONE, cid))
                     except Exception:
                         break
                     cs["last_state"] = cs["last_action"] = None
                     cs["prev_action_source"] = None
-                    cs["total_reward"] = cs["ep_dqn_reward"] = cs["ep_expert_reward"] = 0.0
-                    cs["ep_subj_reward"] = cs["ep_obj_reward"] = 0.0
+                    cs["total_reward"] = cs["ep_dqn_reward"] = cs["ep_dqn_score_reward"] = cs["ep_expert_reward"] = 0.0
+                    cs["ep_subj_reward"] = cs["ep_obj_reward"] = cs["ep_death_reward"] = 0.0
                     cs["ep_frames"] = 0
                     cs["ep_dqn_frames"] = 0
                     cs["fire_hold_dir"] = -1
                     cs["fire_hold_count"] = 0
                     cs["fire_pending_dir"] = -1
+                    hist = cs.get("frame_history")
+                    if hist is not None:
+                        hist.clear()
                     continue
 
                 if cs.get("was_done"):
                     cs["was_done"] = False
-                    cs["total_reward"] = cs["ep_dqn_reward"] = cs["ep_expert_reward"] = 0.0
-                    cs["ep_subj_reward"] = cs["ep_obj_reward"] = 0.0
+                    cs["total_reward"] = cs["ep_dqn_reward"] = cs["ep_dqn_score_reward"] = cs["ep_expert_reward"] = 0.0
+                    cs["ep_subj_reward"] = cs["ep_obj_reward"] = cs["ep_death_reward"] = 0.0
                     cs["ep_frames"] = 0
                     cs["ep_dqn_frames"] = 0
 
@@ -611,10 +783,13 @@ class SocketServer:
                     cs["fire_hold_dir"] = -1
                     cs["fire_hold_count"] = 0
                     cs["fire_pending_dir"] = -1
+                    hist = cs.get("frame_history")
+                    if hist is not None:
+                        hist.clear()
                     if (cs.get("nstep") is not None):
                         cs["nstep"].reset()
                     try:
-                        sock.sendall(self._pack_action(-1, -1, _SRC_NONE))
+                        sock.sendall(self._pack_action(-1, -1, _SRC_NONE, cid))
                     except Exception:
                         break
                     continue
@@ -649,9 +824,9 @@ class SocketServer:
                         epsilon = float(getattr(RL_CONFIG, "eval_epsilon", 0.0)) if eval_only else metrics.get_effective_epsilon()
                         t0 = time.perf_counter()
                         if self.inference_batcher is not None:
-                            mv_idx, fr_idx, is_eps = self.inference_batcher.infer(model_state, epsilon)
+                            mv_idx, fr_idx, is_eps = self.inference_batcher.infer(model_state, epsilon, locked_fire=locked_fire)
                         else:
-                            mv_idx, fr_idx, is_eps = self.agent.act(model_state, epsilon)
+                            mv_idx, fr_idx, is_eps = self.agent.act(model_state, epsilon, locked_fire=locked_fire)
                         metrics.add_inference_time(time.perf_counter() - t0)
                         action_source = "eval" if eval_only else ("epsilon" if is_eps else "dqn")
                     if locked_fire is not None:
@@ -665,6 +840,7 @@ class SocketServer:
 
                 cs["last_state"] = model_state
                 cs["last_action"] = (int(mv_idx), int(effective_fire))
+                cs["last_game_score"] = int(frame.game_score)
                 cs["prev_action_source"] = action_source
 
                 move_cmd = action_index_to_wire_dir(int(mv_idx))
@@ -699,10 +875,12 @@ class SocketServer:
                             f"{qinfo}", flush=True)
 
                 try:
-                    sock.sendall(self._pack_action(move_cmd, fire_cmd, src_code))
+                    sock.sendall(self._pack_action(move_cmd, fire_cmd, src_code, cid))
                 except Exception:
                     break
 
+        except ConnectionError as e:
+            print(f"Client {cid} disconnected: {e}")
         except Exception as e:
             print(f"Client {cid} error: {e}")
             traceback.print_exc()
@@ -726,7 +904,7 @@ class SocketServer:
             with self.client_lock:
                 self.client_states.pop(cid, None)
                 self.clients[cid] = None
-                metrics.client_count = sum(1 for v in self.clients.values() if v is not None)
+                self._sync_client_count_locked()
             if self.async_buffer is not None:
                 self.async_buffer.remove_client(cid)
             threading.Timer(1.0, self._cleanup).start()
@@ -736,7 +914,7 @@ class SocketServer:
             dead = [k for k, v in self.clients.items() if v is None]
             for k in dead:
                 del self.clients[k]
-            metrics.client_count = len(self.clients)
+            self._sync_client_count_locked()
 
     def _calc_avg_game_state(self):
         try:

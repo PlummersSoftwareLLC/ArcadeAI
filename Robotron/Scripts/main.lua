@@ -79,21 +79,19 @@ DEBUG_FORCE_ACTION_FRAMES = 0
 DEBUG_FORCE_MOVE_DIR = 2  -- right
 DEBUG_FORCE_FIRE_DIR = 2  -- right
 DEATH_PENALTY_POINTS = 25000
--- Subjective shaping rewards (raw points; scaled in Python by subj_reward_scale).
--- Goal: densify the objective (score/aim/evade/rescue) signal between scoring
--- events. NOTE: there is intentionally no survival bonus -- time-on-task has no
--- terminal value and a per-frame "stay alive" reward incentivized camping the
--- last enemy instead of clearing the wave.
 SUBJ_ENEMY_WEIGHT = 8.0
 SUBJ_HUMAN_WEIGHT = 12.0
-SUBJ_DEATH_PENALTY = 25.0
+-- Death is handled Python-side as an explicit Death reward component. Keeping
+-- another death subtraction inside Shape made the dashboard hard to read and
+-- double-counted the same event.
+SUBJ_DEATH_PENALTY = 0.0
 SUBJ_ENEMY_NEAR_NORM = 0.035
 SUBJ_ENEMY_FAR_NORM = 0.200
 SUBJ_HUMAN_NEAR_NORM = 0.120
 -- Discount used for potential-based shaping of the state-only terms (enemy
 -- spacing + human proximity).  MUST match RL_CONFIG.gamma on the Python side
 -- so the shaping F = gamma*Phi(s')-Phi(s) stays policy-invariant (Ng et al. 1999).
-POTENTIAL_GAMMA = 0.99
+POTENTIAL_GAMMA = 0.995
 ADVANCED_SHAPING = {
     priority_aim_weight = 10.0,
     brain_guard_weight = 8.0,
@@ -1368,6 +1366,43 @@ function movement_alignment_score(move_cmd, target_x, target_y)
     local tx = target_x / len
     local ty = target_y / len
     return clamp01((vec[1] * tx + vec[2] * ty) / 1.414)
+end
+
+function compute_contextual_wall_penalty(move_cmd, px16, py16, nearest_enemy_dist_norm)
+    if px16 == nil or py16 == nil then
+        return 0.0
+    end
+    local vec = MOVE_DIR_VEC[move_cmd] or {0, 0}
+    local px = norm_pos_x(px16)
+    local py = norm_pos_y(py16)
+    local danger_pressure = 0.0
+    if nearest_enemy_dist_norm ~= nil then
+        danger_pressure = clamp01((SUBJ_ENEMY_FAR_NORM - nearest_enemy_dist_norm) / math.max(1e-6, SUBJ_ENEMY_FAR_NORM))
+    end
+
+    local function wall_axis_penalty(depth, push_into_wall)
+        if depth <= 0.0 then
+            return 0.0
+        end
+        -- Penalize walls strongly when the chosen move pushes deeper into them,
+        -- and lightly when the player is near a wall under pressure. This avoids
+        -- punishing deliberate edge use when the safest move is away from danger.
+        local pressure = math.max(push_into_wall, 0.25 * danger_pressure)
+        return SUBJ_WALL_PENALTY * depth * pressure
+    end
+
+    local penalty = 0.0
+    if px < WALL_MARGIN_NORM_X then
+        penalty = penalty + wall_axis_penalty(clamp01((WALL_MARGIN_NORM_X - px) / WALL_MARGIN_NORM_X), clamp01(-vec[1]))
+    elseif px > (1.0 - WALL_MARGIN_NORM_X) then
+        penalty = penalty + wall_axis_penalty(clamp01((px - (1.0 - WALL_MARGIN_NORM_X)) / WALL_MARGIN_NORM_X), clamp01(vec[1]))
+    end
+    if py < WALL_MARGIN_NORM_Y then
+        penalty = penalty + wall_axis_penalty(clamp01((WALL_MARGIN_NORM_Y - py) / WALL_MARGIN_NORM_Y), clamp01(-vec[2]))
+    elseif py > (1.0 - WALL_MARGIN_NORM_Y) then
+        penalty = penalty + wall_axis_penalty(clamp01((py - (1.0 - WALL_MARGIN_NORM_Y)) / WALL_MARGIN_NORM_Y), clamp01(vec[2]))
+    end
+    return penalty
 end
 
 function priority_target_bonus(category, wave_number, num_humans, dist_norm)
@@ -3337,9 +3372,14 @@ function compute_frame_rewards(frame)
 
     local spacing_score = enemy_spacing_score(frame.obs.nearest_enemy_dist)
     local rescue_score = human_proximity_score(frame.obs.nearest_human_dist)
-    local aim_score = compute_aim_reward(prev_fire_cmd, prev_aim_px16, prev_aim_py16, prev_aim_objects)
+    local aim_score = compute_priority_aim_reward(
+        prev_fire_cmd, prev_aim_px16, prev_aim_py16,
+        prev_aim_objects, frame.wave_number, frame.num_humans)
     local evade_score = compute_evasion_reward(prev_move_cmd, prev_aim_px16, prev_aim_py16,
         prev_nearest_enemy_x16, prev_nearest_enemy_y16, prev_nearest_enemy_dist)
+    local brain_guard_score = compute_brain_guard_reward(
+        prev_move_cmd, prev_fire_cmd, prev_aim_px16, prev_aim_py16,
+        prev_aim_objects, frame.wave_number, frame.num_humans)
 
     -- Potential-based shaping (Ng et al. 1999) for the state-only terms.
     -- Phi(s) = enemy-spacing + human-proximity potential.  Emitting the per-frame
@@ -3364,28 +3404,21 @@ function compute_frame_rewards(frame)
     end
 
     local wall_penalty = 0.0
-    if player_alive == 1 and player_x16 then
-        local px = norm_pos_x(player_x16)
-        local py = norm_pos_y(frame.player_y16)
-        if px < WALL_MARGIN_NORM_X or px > (1.0 - WALL_MARGIN_NORM_X) then
-            wall_penalty = wall_penalty + SUBJ_WALL_PENALTY
-        end
-        if py < WALL_MARGIN_NORM_Y or py > (1.0 - WALL_MARGIN_NORM_Y) then
-            wall_penalty = wall_penalty + SUBJ_WALL_PENALTY
-        end
+    if player_alive == 1 then
+        wall_penalty = compute_contextual_wall_penalty(
+            prev_move_cmd, player_x16, frame.player_y16, frame.obs.nearest_enemy_dist)
     end
 
     local subj_reward = shaping
-        + (aim_score * SUBJ_AIM_WEIGHT)
+        + (aim_score * ADVANCED_SHAPING.priority_aim_weight)
         + (evade_score * SUBJ_EVADE_WEIGHT)
+        + (brain_guard_score * ADVANCED_SHAPING.brain_guard_weight)
         - wall_penalty
-    if done then
-        subj_reward = subj_reward - SUBJ_DEATH_PENALTY
-    end
 
     trace_log(frame_counter, "reward_calc",
-        string.format("score_delta=%d done=%s obj_reward=%.1f subj_reward=%.2f enemy_dist=%s human_dist=%s",
+        string.format("score_delta=%d done=%s obj_reward=%.1f subj_reward=%.2f shape=%.2f aim=%.2f evade=%.2f brain=%.2f wall=%.2f enemy_dist=%s human_dist=%s",
             score_delta, tostring(done), obj_reward, subj_reward,
+            shaping, aim_score, evade_score, brain_guard_score, wall_penalty,
             frame.obs.nearest_enemy_dist and string.format("%.4f", frame.obs.nearest_enemy_dist) or "nil",
             frame.obs.nearest_human_dist and string.format("%.4f", frame.obs.nearest_human_dist) or "nil"))
 

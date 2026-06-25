@@ -9,10 +9,12 @@
 State representation
 --------------------
 Each frame the Lua client sends ``WIRE_PARAMS_COUNT`` (1478) big-endian f32 values.
-The DQN consumes a *compact slice* of that wire — the 18 core features, the
-8 directional "lane" blocks (8 × 30), 4 derived salience channels, and a compact
-top-K object-token summary from the tactical pools — for a model input of
-``MODEL_STATE_SIZE`` floats.  The 9×9 tactical grid remains unused by DQN.
+The DQN consumes a compact single-frame slice of that wire — the 18 core
+features, the 8 directional "lane" blocks (8 × 30), 4 derived salience channels,
+and a compact top-K object-token summary from the tactical pools. The socket
+server stacks the current slice with recent prior slices for the final
+``MODEL_STATE_SIZE`` input. The 9×9 tactical grid remains on the wire for other
+consumers/debugging, but is not part of the DQN model state.
 
 Action representation
 ---------------------
@@ -54,7 +56,7 @@ SETTINGS_PATH = os.path.join(MODEL_DIR, "game_settings.json")
 # Number of f32 values the Lua client packs into each frame's state payload.
 WIRE_PARAMS_COUNT = 1478
 
-# Compact model slice: 18 core features + 8 directional lanes × 30 features +
+# Model slice: 18 core features + 8 directional lanes × 30 features +
 # 4 derived salience features + compact object tokens from the tactical pools.
 CORE_FEATURES = 18                       # wire[0:18]
 ELIST_FEATURES = 22                      # wire[18:40], not used by DQN
@@ -62,6 +64,12 @@ LANE_COUNT = 8                           # 8 fire/move directions
 LANE_FEATURES = 30                       # features per lane
 TACTICAL_LANE_OFFSET = 40                # wire index where lane blocks begin
 TACTICAL_LANE_END = TACTICAL_LANE_OFFSET + LANE_COUNT * LANE_FEATURES   # 280
+# Lua emits lane rows in geometric angle order:
+#   E, NE, N, NW, W, SW, S, SE
+# Model actions are controller order:
+#   N, NE, E, SE, S, SW, W, NW
+# Reorder lanes so model lane row N lines up with move/fire action N.
+ACTION_LANE_WIRE_INDICES = (2, 1, 0, 7, 6, 5, 4, 3)
 # Derived "salience" channels appended to the model state (DQN-only; computed in
 # slice_model_state from the wire, so main.lua / v3 PPO / the shared expert are
 # untouched).  These counter the observed near-sightedness + weak human-hunting:
@@ -75,15 +83,23 @@ TACTICAL_GRID_FEATURES = 9 * 9 * 6
 TACTICAL_GRID_OFFSET = TACTICAL_LANE_END
 TACTICAL_GRID_END = TACTICAL_GRID_OFFSET + TACTICAL_GRID_FEATURES        # 766
 TACTICAL_POOL_OFFSET = TACTICAL_GRID_END
+EXTRA_OFFSET = CORE_FEATURES + LANE_COUNT * LANE_FEATURES
+EXTRA_END = EXTRA_OFFSET + EXTRA_FEATURES
 
 # Compact object-token section.  This brings back the Tempest-style object-slot
 # attention signal without storing the full 712-float tactical pool payload.
 OBJECT_TOKEN_COUNT = 16
 OBJECT_TOKEN_FEATURES = 12
 OBJECT_FEATURES = OBJECT_TOKEN_COUNT * OBJECT_TOKEN_FEATURES
-OBJECT_TOKEN_OFFSET = CORE_FEATURES + LANE_COUNT * LANE_FEATURES + EXTRA_FEATURES
+OBJECT_TOKEN_OFFSET = EXTRA_END
 OBJECT_TOKEN_END = OBJECT_TOKEN_OFFSET + OBJECT_FEATURES
-MODEL_STATE_SIZE = OBJECT_TOKEN_END                                           # 454
+SINGLE_FRAME_STATE_SIZE = OBJECT_TOKEN_END                                    # 454
+_frame_stack_env = os.getenv("DQN_FRAME_STACK", os.getenv("ROBOTRON_DQN_FRAME_STACK", "2"))
+try:
+    FRAME_STACK_COUNT = max(1, int(_frame_stack_env))
+except Exception:
+    FRAME_STACK_COUNT = 2
+MODEL_STATE_SIZE = SINGLE_FRAME_STATE_SIZE * FRAME_STACK_COUNT
 
 # Pool layout mirrors main.lua tactical pool emission.
 TACTICAL_POOL_DEFS = (
@@ -208,15 +224,15 @@ def slice_model_state(wire) -> np.ndarray:
     """Extract the compact model input from a full wire vector.
 
     ``wire`` may be any sequence of length >= TACTICAL_POOL_OFFSET.  Returns a
-    contiguous float32 array of length ``MODEL_STATE_SIZE`` laid out as
-    ``[core(18), lanes(8×30), extra(4), object_tokens(16×12)]``.  The extra and
-    object-token channels are derived here so the shared wire format / v3 PPO /
-    expert are unaffected.
+    contiguous float32 array of length ``SINGLE_FRAME_STATE_SIZE`` laid out as
+    ``[core(18), lanes(8×30), extra(4), object_tokens(16×12)]``.
+    The extra and object-token channels are derived here so the shared wire
+    format / v3 PPO / expert are unaffected.
     """
     arr = np.asarray(wire, dtype=np.float32)
     core = arr[0:CORE_FEATURES]
-    lanes = arr[TACTICAL_LANE_OFFSET:TACTICAL_LANE_END].copy()
-    lanes2d = lanes.reshape(LANE_COUNT, LANE_FEATURES)
+    wire_lanes = arr[TACTICAL_LANE_OFFSET:TACTICAL_LANE_END].reshape(LANE_COUNT, LANE_FEATURES)
+    lanes2d = wire_lanes[list(ACTION_LANE_WIRE_INDICES)].copy()
 
     # Lua emits 0.0 for empty lane distances, which is also the numerical value
     # for an entity directly on the player.  Preserve the wire format, but make
@@ -250,6 +266,7 @@ def slice_model_state(wire) -> np.ndarray:
 
     extra = np.array([enemy_prox, human_prox, human_dx, human_dy], dtype=np.float32)
     objects = _extract_object_tokens(arr)
+    lanes = lanes2d.reshape(-1)
     return np.concatenate([core, lanes, extra, objects]).astype(np.float32, copy=False)
 
 
@@ -267,6 +284,8 @@ SERVER_CONFIG = ServerConfigData()
 @dataclass
 class RLConfigData:
     # ── state / action ──────────────────────────────────────────────────
+    single_frame_state_size: int = SINGLE_FRAME_STATE_SIZE
+    frame_stack: int = FRAME_STACK_COUNT
     state_size: int = MODEL_STATE_SIZE
 
     # Factored twin-stick action space.  Index 0..7 = direction, 8 = idle.
@@ -301,16 +320,25 @@ class RLConfigData:
     object_attn_heads: int = 8
     object_attn_dim: int = 128
 
+    # Action-conditioned attention for the DQN advantage heads. Directional lane
+    # queries attend over object tokens so each move/fire/joint action is scored
+    # with object evidence relevant to that candidate action, instead of only a
+    # globally pooled scene summary.
+    use_action_context_attention: bool = True
+    action_context_heads: int = 8
+    joint_action_embed_dim: int = 32
+    action_head_hidden: int = 192
+
     # Main policy/value head.  Branch heads remain for auxiliary BC + metrics.
     use_joint_head: bool = True
     branch_aux_bc_weight: float = 0.25
 
-    # Distributional C51.  Support [-100,100] keeps a ~20:1 ratio vs reward_clip
-    # (=10) so the Bellman target never saturates for large kill/death rewards.
+    # Distributional C51. Wider support is needed after score-delta rewards: a
+    # 150k game is roughly 150 score-reward units before shaping/death terms.
     use_distributional: bool = True
     num_atoms: int = 51
-    v_min: float = -100.0
-    v_max: float = 100.0
+    v_min: float = -200.0
+    v_max: float = 500.0
 
     use_dueling: bool = True
 
@@ -319,19 +347,20 @@ class RLConfigData:
     # larger batch raises samples/sec (and Rpl/F) at near-zero extra wall-time.
     # Keep sampling/transfers inline: pinned-memory or background CUDA host work
     # re-enables the GIL in the free-threaded Torch build and tanks MAME FPS.
-    batch_size: int = 1536
+    batch_size: int = 4096
     lr: float = 1e-4
-    lr_min: float = 4e-5
+    lr_min: float = 5e-5
     lr_warmup_steps: int = 5_000
-    lr_cosine_period: int = 3_000_000
+    lr_cosine_period: int = 1_000_000
     lr_use_restarts: bool = True
-    gamma: float = 0.99
+    gamma: float = 0.995
     n_step: int = 12
     max_samples_per_frame: float = 20
 
     # Replay (PER with proportional priorities).  10M capacity gives ~6-7 min of
     # aggregate play history (vs ~80s at 2M), keeping rare deep/rescue/tank waves
-    # alive long enough to learn.  Host RAM cost: 454 floats × 10M × 2 × 4B ≈ 36 GB.
+    # alive long enough to learn.  Host RAM cost for state/next_state alone with
+    # the default 2-frame stack is about 73 GB for the compact 454-float state.
     memory_size: int = 10_000_000
     priority_alpha: float = 0.7
     priority_beta_start: float = 0.4
@@ -340,8 +369,25 @@ class RLConfigData:
     per_new_priority_cap_multiplier: float = 3.0
     min_replay_to_train: int = 10_000
 
+    # Elite/rare-event replay. PER keeps surprising transitions hot, but once a
+    # valuable event becomes predictable its TD error can fall out of the sample
+    # stream. Reserve a small batch quota for broad "interesting" states:
+    # scoring bursts, wave transitions, close danger, target-rich fire lanes,
+    # human opportunities, and terminal/pre-death cues.
+    interesting_replay_fraction: float = 0.08
+    interesting_replay_min_score: float = 0.55
+    max_interesting_replay_fraction: float = 0.20
+    interesting_replay_over_cap_min_score: float = 0.95
+    legacy_interest_positive_reward: float = 0.75
+    interesting_replay_bank_size: int = 1_000_000
+
+    # Recent replay quota: keep the learner responsive to the behavior it is
+    # currently generating instead of letting a 10M buffer dilute new outcomes.
+    recent_replay_fraction: float = 0.35
+    recent_replay_window: int = 1_000_000
+
     # Target network (periodic hard sync)
-    target_update_period: int = 2_500
+    target_update_period: int = 1_000
     target_tau: float = 1.0
 
     # Gradient
@@ -351,8 +397,16 @@ class RLConfigData:
     epsilon_start: float = 1.0
     epsilon_end: float = 0.05
     epsilon_decay_frames: int = 5_000_000
-    safe_epsilon_random_fraction: float = 0.10
+    # Most epsilon steps were affordance-guided (a second mini-expert), so only
+    # this fraction broke out of the heuristic manifold.  Raised so exploration
+    # can actually discover better-than-expert behaviour.
+    safe_epsilon_random_fraction: float = 0.25
     safe_epsilon_temperature: float = 0.25
+    # While the expert is still injecting a meaningful share of actions, hold a
+    # minimum exploration floor so the agent keeps probing its own (non-expert)
+    # action space instead of collapsing to greedy + expert before handoff.
+    epsilon_expert_floor: float = 0.12
+    epsilon_expert_floor_until_ratio: float = 0.15
     # Manual epsilon pulse (fired with P key, runs for N frames then auto-stops).
     manual_pulse_epsilon: float = 0.25
     manual_pulse_duration_frames: int = 750_000
@@ -362,27 +416,67 @@ class RLConfigData:
     # get meaningful early control so n-step returns and epsilon exploration are
     # not dominated by expert futures.
     expert_ratio_start: float = 0.60
-    expert_ratio_end: float = 0.25
+    # End at zero: any permanent expert injection anchors the behaviour-policy
+    # state distribution to expert-reachable trajectories, capping the agent at
+    # demonstrator skill.  Let the policy eventually drive entirely on its own.
+    expert_ratio_end: float = 0.0
     # Decay is keyed to TRAINING STEPS, not frames.  At 20k+ fps the steady-state
     # frame:step ratio is ~200:1, so a frame-based 2M schedule completed in ~10k
     # gradient steps (2-3 wall-clock minutes) — the policy never had time to learn
     # before the expert handed off.  Steps are FPS-independent and track learning.
     expert_ratio_decay_start_step: int = 0
-    expert_ratio_decay_steps: int = 250_000
+    expert_ratio_decay_steps: int = 125_000
     expert_ratio: float = 0.60
 
     # Expert BC — also step-based (same FPS-independence rationale as above).
+    # This trains auxiliary bc_* heads and shared trunk features.  The acting
+    # policy below is trained by the direct Q-policy + margin losses, then all
+    # imitation anchors decay away so DQN can exceed the demonstrator.
     expert_bc_weight: float = 1.0
-    expert_bc_decay_start_step: int = 250_000
-    expert_bc_decay_steps: int = 1_000_000
-    expert_bc_min_weight: float = 0.001
+    expert_bc_decay_start_step: int = 0
+    expert_bc_decay_steps: int = 125_000
+    expert_bc_min_weight: float = 0.0
+    # Directly distill demonstrations into the deployed joint Q policy. Cross
+    # entropy treats Q(s, a) / temperature as action logits, giving the acting
+    # head a real expert-like launch instead of leaving imitation in side heads.
+    expert_q_policy_weight: float = 0.35
+    expert_q_policy_temperature: float = 10.0
+    expert_q_policy_decay_start_step: int = 0
+    expert_q_policy_decay_steps: int = 125_000
+    expert_q_policy_min_weight: float = 0.0
+    # Q-margin also imitates directly into the acting joint head by constraining
+    # Q(expert_action) >= Q(other) + margin on expert-visited states.  Left on
+    # permanently it is a hard ceiling, so decay it on the same step schedule.
+    expert_q_margin_weight: float = 0.05
+    expert_q_margin: float = 0.50
+    expert_q_margin_decay_start_step: int = 0
+    expert_q_margin_decay_steps: int = 125_000
+    expert_q_margin_min_weight: float = 0.0
 
     # ── reward ──────────────────────────────────────────────────────────
-    obj_reward_scale: float = 0.01
-    point_reward_scale: float = 1.0 / obj_reward_scale  # Derived: 100.0
-    subj_reward_scale: float = 0.005
-    reward_clip: float = 10.0
-    death_reward_clip: float = 10.0
+    # Score reward is based on actual game_score delta, not Lua objreward. A
+    # 1,000-point event maps to 1.0 reward and a 5,000-point rescue maps to 5.0,
+    # comfortably below score_reward_clip so it remains rank-ordered.
+    score_reward_scale: float = 0.001
+    point_reward_scale: float = 1.0 / score_reward_scale  # Derived: 1000.0
+    score_reward_clip: float = 25.0
+    subj_reward_scale: float = 0.001
+    shaping_reward_clip: float = 0.25
+    death_penalty: float = 12.0
+    reward_clip: float = 30.0
+    death_reward_clip: float = 40.0
+
+    # Deliberate hard-state starts when dashboard auto-curriculum is enabled.
+    hard_start_min_level: int = 5
+    hard_start_wave_spread: int = 8
+
+    # Episode-level elite replay: preserve tails from rare/high-performing
+    # episodes, not only individual interesting transitions.
+    elite_episode_score_threshold: int = 120_000
+    elite_episode_level_threshold: int = 8
+    elite_episode_tail_len: int = 768
+    elite_episode_priority_boost: float = 3.0
+    elite_episode_interest_score: float = 1.0
 
     # ── fire cadence ────────────────────────────────────────────────────
     # Hold each fire direction stable for this many frames so the game
@@ -393,14 +487,20 @@ class RLConfigData:
     # ── death attribution ───────────────────────────────────────────────
     death_priority_boost: float = 5.0
     pre_death_lookback: int = 120
-    pre_death_priority_boost: float = 2.0
+    pre_death_priority_boost: float = 3.0
+    pre_death_reward_lookback: int = 75
+    pre_death_base_penalty: float = 0.03
+    pre_death_danger_penalty: float = 0.45
+    pre_death_max_penalty: float = 0.65
+    pre_death_min_danger: float = 0.15
+    pre_death_penalize_expert: bool = False
 
     # ── inference ───────────────────────────────────────────────────────
     use_separate_inference_model: bool = True
     inference_on_cpu: bool = False         # agent falls back to CPU if no CUDA
     train_cuda_device_index: int = 0
     inference_cuda_device_index: int = 1
-    inference_sync_steps: int = 25
+    inference_sync_steps: int = 5
     inference_batching_enabled: bool = True
     inference_batch_max_size: int = 128
     inference_batch_wait_ms: float = 1.0
@@ -574,6 +674,7 @@ class MetricsData:
     expert_rewards: Deque[float] = field(default_factory=lambda: deque(maxlen=50))
     subj_rewards: Deque[float] = field(default_factory=lambda: deque(maxlen=50))
     obj_rewards: Deque[float] = field(default_factory=lambda: deque(maxlen=50))
+    death_rewards: Deque[float] = field(default_factory=lambda: deque(maxlen=50))
     losses: Deque[float] = field(default_factory=lambda: deque(maxlen=1000))
 
     fps: float = 0.0
@@ -595,6 +696,8 @@ class MetricsData:
     reward_count_interval_subj: int = 0
     reward_sum_interval_obj: float = 0.0
     reward_count_interval_obj: int = 0
+    reward_sum_interval_death: float = 0.0
+    reward_count_interval_death: int = 0
     eval_reward_sum_interval: float = 0.0
     eval_score_sum_interval: float = 0.0
     eval_level_sum_interval: float = 0.0
@@ -614,8 +717,16 @@ class MetricsData:
     last_loss: float = 0.0
     last_q_mean: float = 0.0
     last_bc_loss: float = 0.0
+    last_bc_weight: float = 0.0
+    last_sample_expert_frac: float = 0.0
+    last_inference_sync_age: int = 0
     last_priority_mean: float = 0.0
     last_agreement: float = 0.0
+    last_train_sample_ms: float = 0.0
+    last_train_transfer_ms: float = 0.0
+    last_train_compute_ms: float = 0.0
+    last_train_priority_ms: float = 0.0
+    last_train_step_ms: float = 0.0
 
     average_level: float = 0.0
     average_game_score: float = 0.0
@@ -717,6 +828,12 @@ class MetricsData:
             if self.manual_epsilon_override:
                 return self.epsilon
             base = self._natural_epsilon_for_learner_frame(int(self.learner_frame_count))
+            # While the expert still drives a meaningful share of frames, hold a
+            # minimum exploration floor so the learner keeps probing its own
+            # action space instead of collapsing to greedy before handoff.
+            floor_until = float(getattr(RL_CONFIG, "epsilon_expert_floor_until_ratio", 0.0))
+            if floor_until > 0.0 and float(self.expert_ratio) > floor_until:
+                base = max(base, float(getattr(RL_CONFIG, "epsilon_expert_floor", 0.0)))
             if self.manual_pulse_active:
                 self.manual_pulse_frames_remaining -= 1
                 if self.manual_pulse_frames_remaining <= 0:
@@ -749,7 +866,7 @@ class MetricsData:
             self.expert_ratio = RL_CONFIG.expert_ratio_start + progress * (RL_CONFIG.expert_ratio_end - RL_CONFIG.expert_ratio_start)
             return self.expert_ratio
 
-    def add_episode_reward(self, total, dqn, expert, subj=None, obj=None, length=0):
+    def add_episode_reward(self, total, dqn, expert, subj=None, obj=None, death=None, length=0):
         with self.lock:
             self.episodes_this_run += 1
             self.episode_rewards.append(float(total))
@@ -759,6 +876,8 @@ class MetricsData:
                 self.subj_rewards.append(float(subj))
             if obj is not None:
                 self.obj_rewards.append(float(obj))
+            if death is not None:
+                self.death_rewards.append(float(death))
             self.reward_sum_interval += float(total)
             self.reward_count_interval += 1
             self.reward_sum_interval_dqn += float(dqn)
@@ -769,6 +888,9 @@ class MetricsData:
             if obj is not None:
                 self.reward_sum_interval_obj += float(obj)
                 self.reward_count_interval_obj += 1
+            if death is not None:
+                self.reward_sum_interval_death += float(death)
+                self.reward_count_interval_death += 1
             if length > 0:
                 self.episode_length_sum_interval += length
                 self.episode_length_count_interval += 1
