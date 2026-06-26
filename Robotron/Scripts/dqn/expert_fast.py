@@ -1,15 +1,15 @@
 """Fast expert action for the DQN path.
 
-The shared ``v3.expert.get_expert_action`` builds the full ``(128, 32)`` entity
+The shared ``v3.expert.get_expert_action`` builds the full entity
 token tensor via ``extract_entities``/``_collect_entity_slots`` — one-hot type
 channels, box dims, threat/ttc/closest-pass trigonometry — and then throws all
 of it away inside ``_get_active_entities``, which only keeps
 ``(dx, dy, vx, vy, dist_norm, type_id)`` per active entity.
 
-That tensor exists for v3's *model* token input. The DQN model uses lane slices
-instead, so for the DQN expert path the whole tensor is dead weight (~86% of the
-0.72 ms/call cost). This module reads the wire role-pools directly into the six
-fields the expert actually consumes, then defers to the **unchanged** shared
+That tensor exists for v3's *model* token input. The DQN learner uses its own
+global/enemy-list slice instead, so for the DQN expert path the full tensor is
+dead weight. This module reads the wire role-pools directly into the six fields
+the expert actually consumes, then defers to the **unchanged** shared
 strategic-decision logic. Output is byte-identical (and identically ordered) to
 ``get_expert_action`` — verified by ``dqn.test_smoke``.
 

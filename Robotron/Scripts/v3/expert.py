@@ -823,7 +823,7 @@ def _get_strategic_expert_action(entities, px, py, wave_number=1, locked_fire=No
 def get_expert_action(
     wire_state: np.ndarray,
     wave_number: int = 1,
-    max_entities: int = 128,
+    max_entities: int = CONFIG.model.max_entities,
     locked_fire: Optional[int] = None,
 ) -> tuple[int, int]:
     """Compute expert action from raw wire state."""

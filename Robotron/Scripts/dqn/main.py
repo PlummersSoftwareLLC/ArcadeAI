@@ -266,11 +266,19 @@ def print_network_info(agent, dashboard_status: str = "disabled"):
     print(f"\nArchitecture:")
     single_state = int(getattr(RL_CONFIG, "single_frame_state_size", agent.state_size))
     frame_stack = int(getattr(RL_CONFIG, "frame_stack", 1))
-    print(f"   State size:       {agent.state_size}  ({single_state} x {frame_stack} frames; {RL_CONFIG.core_features} core + {RL_CONFIG.lane_count} lanes x {RL_CONFIG.lane_features} + {RL_CONFIG.extra_features} derived + {RL_CONFIG.object_token_count} obj x {RL_CONFIG.object_token_features})")
+    raw_trunk = int(getattr(agent.online_net, "raw_trunk_state_size", single_state * frame_stack))
+    trunk_in = raw_trunk
+    if getattr(agent.online_net, "use_attn", False):
+        trunk_in += int(getattr(RL_CONFIG, "attn_dim", 0))
+    if getattr(agent.online_net, "use_object_attn", False):
+        trunk_in += int(getattr(RL_CONFIG, "object_attn_dim", 0))
+    print(f"   State size:       {agent.state_size}  ({single_state} x {frame_stack} frames)")
+    print(f"   Single frame:     {RL_CONFIG.core_features} core + {RL_CONFIG.elist_features} ELIST + {RL_CONFIG.enemy_token_count} enemies x {RL_CONFIG.enemy_token_features}")
+    print(f"   Trunk input:      {trunk_in}  ({raw_trunk} stacked global + attention embeddings)")
     print(f"   Actions:          {RL_CONFIG.num_move_actions} move x {RL_CONFIG.num_fire_actions} fire (joint 81-action head, idle=8)")
     print(f"   Trunk:            {RL_CONFIG.trunk_layers} layers x {RL_CONFIG.trunk_hidden} hidden")
-    print(f"   Lane attention:   {'ON' if RL_CONFIG.use_lane_attention else 'OFF'} ({RL_CONFIG.attn_heads} heads, dim={RL_CONFIG.attn_dim})")
-    print(f"   Object attention: {'ON' if RL_CONFIG.use_object_attention else 'OFF'} ({RL_CONFIG.object_attn_heads} heads, dim={RL_CONFIG.object_attn_dim})")
+    print(f"   Lane attention:   OFF (removed from learner input)")
+    print(f"   Enemy attention:  {'ON' if RL_CONFIG.use_object_attention else 'OFF'} ({RL_CONFIG.object_attn_heads} heads, dim={RL_CONFIG.object_attn_dim})")
     print(f"   Distributional:   {'C51 ({} atoms, [{}, {}])'.format(RL_CONFIG.num_atoms, RL_CONFIG.v_min, RL_CONFIG.v_max) if RL_CONFIG.use_distributional else 'OFF'}")
     print(f"   Dueling:          {'ON' if RL_CONFIG.use_dueling else 'OFF'}")
     print(f"   Parameters:       {tp:,} total, {tr:,} trainable")

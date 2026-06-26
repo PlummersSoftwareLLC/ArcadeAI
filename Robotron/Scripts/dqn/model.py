@@ -6,17 +6,15 @@
 # ||    • C51 distributional value estimation                                                                     ||
 # ||    • JOINT 81-action head for coupled move/fire values                                                        ||
 # ||    • Auxiliary BRANCHING heads for move/fire imitation diagnostics                                             ||
-# ||    • Self-attention over directional lane tokens and compact object tokens                                     ||
+# ||    • Self-attention over a stable 96-row enemy list                                                           ||
 # ||    • Dueling architecture                                                                                     ||
 # ==================================================================================================================
 """Model + action helpers for the Robotron DQN.
 
-The state vector is the model slice (18 core + 8 lanes × 30 + 4 derived salience
-channels + 16 object tokens × 12). Lane blocks are contiguous at
-``state[:, 18:258]`` of the current frame and object tokens live at the
-configured object-token offset. When frame stacking is enabled the raw stacked
-vector is still concatenated into the trunk, but attention branches read the
-current frame at the front of the stack.
+The state vector is the model slice (18 core game/player scalars + 22
+ELIST/level-state scalars + 96 stable enemy rows × 10). When frame stacking is
+enabled, only the compact global/level slice from each frame is concatenated
+into the raw trunk. The current-frame enemy list is encoded by attention.
 """
 
 if __name__ == "__main__":
@@ -125,7 +123,7 @@ class LaneSelfAttentionEncoder(nn.Module):
 
 
 class ObjectSelfAttentionEncoder(nn.Module):
-    """Self-attention over compact object tokens with a presence mask."""
+    """Self-attention over stable enemy rows with a presence mask."""
 
     def __init__(self, token_features: int, embed_dim: int, num_heads: int):
         super().__init__()
@@ -156,30 +154,26 @@ class ObjectSelfAttentionEncoder(nn.Module):
 
 
 class DirectionalObjectAttention(nn.Module):
-    """Action-direction queries attending over encoded object tokens."""
+    """Action-direction queries attending over encoded enemy rows."""
 
-    def __init__(self, lane_features: int, object_dim: int, num_actions: int, num_heads: int):
+    def __init__(self, object_dim: int, num_actions: int, num_heads: int):
         super().__init__()
         self.num_actions = int(num_actions)
         self.object_dim = int(object_dim)
         self.dir_embedding = nn.Embedding(self.num_actions, self.object_dim)
-        self.lane_proj = nn.Linear(lane_features, self.object_dim)
         self.query_norm = nn.LayerNorm(self.object_dim)
         self.attn = nn.MultiheadAttention(self.object_dim, num_heads, batch_first=True)
         self.out_norm = nn.LayerNorm(self.object_dim)
 
     def forward(
         self,
-        lane_tokens: torch.Tensor,
         object_repr: torch.Tensor,
         object_present: torch.Tensor,
     ) -> torch.Tensor:
-        B = lane_tokens.shape[0]
-        idle = torch.zeros(B, 1, lane_tokens.shape[-1], device=lane_tokens.device, dtype=lane_tokens.dtype)
-        lane9 = torch.cat([lane_tokens, idle], dim=1)
-        action_ids = torch.arange(self.num_actions, device=lane_tokens.device)
+        B = object_repr.shape[0]
+        action_ids = torch.arange(self.num_actions, device=object_repr.device)
         q = self.dir_embedding(action_ids).unsqueeze(0).expand(B, -1, -1)
-        q = self.query_norm(q + self.lane_proj(lane9))
+        q = self.query_norm(q)
 
         key_padding_mask = ~object_present.bool()
         all_empty = key_padding_mask.all(dim=1)
@@ -220,17 +214,19 @@ class RainbowNet(nn.Module):
         self.num_move = NUM_MOVE
         self.num_fire = NUM_FIRE
 
-        self.core_features = cfg.core_features    # 18
-        self.lane_count = cfg.lane_count          # 8
-        self.lane_features = cfg.lane_features    # 30
-        self.extra_features = cfg.extra_features  # 4
-        self.object_token_count = cfg.object_token_count
-        self.object_token_features = cfg.object_token_features
+        self.core_features = cfg.core_features
+        self.elist_features = getattr(cfg, "elist_features", 22)
+        self.global_features = getattr(cfg, "global_features", self.core_features + self.elist_features)
+        self.lane_count = int(getattr(cfg, "lane_count", 0))
+        self.lane_features = int(getattr(cfg, "lane_features", 0))
+        self.extra_features = int(getattr(cfg, "extra_features", 0))
+        self.object_token_count = getattr(cfg, "enemy_token_count", cfg.object_token_count)
+        self.object_token_features = getattr(cfg, "enemy_token_features", cfg.object_token_features)
         self.single_frame_state_size = int(getattr(cfg, "single_frame_state_size", state_size))
         self.frame_stack = max(1, int(getattr(cfg, "frame_stack", 1)))
 
         # ── Lane self-attention encoder ────────────────────────────────
-        self.use_attn = cfg.use_lane_attention
+        self.use_attn = bool(getattr(cfg, "use_lane_attention", False)) and self.lane_count > 0 and self.lane_features > 0
         attn_out_dim = 0
         if self.use_attn:
             self.lane_attn = LaneSelfAttentionEncoder(
@@ -258,20 +254,19 @@ class RainbowNet(nn.Module):
         if self.use_action_context:
             heads = int(getattr(cfg, "action_context_heads", cfg.object_attn_heads))
             self.move_context_attn = DirectionalObjectAttention(
-                lane_features=self.lane_features,
                 object_dim=self.action_context_dim,
                 num_actions=self.num_move,
                 num_heads=heads,
             )
             self.fire_context_attn = DirectionalObjectAttention(
-                lane_features=self.lane_features,
                 object_dim=self.action_context_dim,
                 num_actions=self.num_fire,
                 num_heads=heads,
             )
 
         # ── Trunk ──────────────────────────────────────────────────────
-        trunk_in = state_size + attn_out_dim + object_attn_out_dim
+        self.raw_trunk_state_size = self.global_features * self.frame_stack
+        trunk_in = self.raw_trunk_state_size + attn_out_dim + object_attn_out_dim
         layers = []
         for i in range(cfg.trunk_layers):
             out_dim = cfg.trunk_hidden
@@ -373,36 +368,45 @@ class RainbowNet(nn.Module):
             return state
         return state[:, :self.single_frame_state_size]
 
+    def _stacked_frames(self, state: torch.Tensor) -> torch.Tensor:
+        B = state.shape[0]
+        return state.reshape(B, self.frame_stack, self.single_frame_state_size)
+
+    def _raw_trunk_state(self, state: torch.Tensor) -> torch.Tensor:
+        if self.frame_stack <= 1:
+            return state[:, :self.global_features]
+        return self._stacked_frames(state)[:, :, :self.global_features].reshape(
+            state.shape[0], self.raw_trunk_state_size)
+
     def _lane_tokens(self, state: torch.Tensor) -> torch.Tensor:
-        """Reshape the contiguous lane slice into (B, 8, lane_features)."""
+        """Legacy lane helper, used only if lane attention is re-enabled."""
         state = self._current_frame(state)
         B = state.shape[0]
-        start = self.core_features
+        start = self.global_features
         end = start + self.lane_count * self.lane_features
         return state[:, start:end].reshape(B, self.lane_count, self.lane_features)
 
     def _object_tokens(self, state: torch.Tensor) -> torch.Tensor:
         state = self._current_frame(state)
         B = state.shape[0]
-        start = self.core_features + self.lane_count * self.lane_features + self.extra_features
+        start = self.global_features
         end = start + self.object_token_count * self.object_token_features
         return state[:, start:end].reshape(B, self.object_token_count, self.object_token_features)
 
     def _trunk_features(self, state: torch.Tensor) -> torch.Tensor:
-        parts = [state]
+        parts = [self._raw_trunk_state(state)]
         if self.use_attn:
             parts.append(self.lane_attn(self._lane_tokens(state)))
         if self.use_object_attn:
             parts.append(self.object_attn(self._object_tokens(state)))
-        trunk_in = torch.cat(parts, dim=1) if len(parts) > 1 else state
+        trunk_in = torch.cat(parts, dim=1) if len(parts) > 1 else parts[0]
         return self.trunk(trunk_in)
 
     def _action_contexts(self, state: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        lane_tokens = self._lane_tokens(state)
         object_tokens = self._object_tokens(state)
         object_repr, object_present = self.object_attn.encode_tokens(object_tokens)
-        move_ctx = self.move_context_attn(lane_tokens, object_repr, object_present)
-        fire_ctx = self.fire_context_attn(lane_tokens, object_repr, object_present)
+        move_ctx = self.move_context_attn(object_repr, object_present)
+        fire_ctx = self.fire_context_attn(object_repr, object_present)
         return move_ctx, fire_ctx
 
     def _score_branch_advantage(

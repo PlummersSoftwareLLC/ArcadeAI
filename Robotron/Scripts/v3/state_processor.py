@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Robotron AI v3 - object/ray state processor.
 
-Lua still sends the same 1454-float packet so the socket and dashboard plumbing
-stay stable. The learner now ignores the legacy lane/grid block and uses the
-role pools, whose positions come from the same collision-center calculations as
-the debug HUD overlay.
+Lua sends the shared Robotron wire packet: core scalars, ELIST bytes, legacy
+lane/grid blocks, and role pools. The v3 learner ignores the legacy lane/grid
+block and uses the role pools, whose positions come from the same
+collision-center calculations as the debug HUD overlay.
 
 Processed observation:
   entity_features:      (max_entities, 32)
@@ -254,7 +254,7 @@ def _collect_entity_slots(wire_state: np.ndarray) -> list[dict[str, float]]:
 
 def extract_entities(
     wire_state: np.ndarray,
-    max_entities: int = 128,
+    max_entities: int = CONFIG.model.max_entities,
 ) -> tuple[np.ndarray, np.ndarray, int]:
     """Extract HUD-consistent object tokens from the Lua role pools."""
     entity_dim = ENTITY_FEATURE_DIM

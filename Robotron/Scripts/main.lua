@@ -8,8 +8,8 @@
         + 8 directional predictive lane summaries × 30 features computed from all visible objects
         + 9×9 local egocentric tactical grid × 6 channels
         + 4 role-specific pools:
-            projectile: 1 occupancy + 24 slots × 10 features
-            danger:     1 occupancy + 32 slots × 10 features
+            projectile: 1 occupancy + 24 slots × 11 features
+            danger:     1 occupancy + 96 slots × 10 features
             human:      1 occupancy + 12 slots × 7 features
             electrode:  1 occupancy + 8 slots × 5 features
       - Receives joystick commands: movement_dir (-1 neutral or 0..7) and firing_dir (-1 neutral or 0..7)
@@ -296,7 +296,7 @@ TACTICAL_GRID_LOOKAHEAD_FRAMES = 4.0
 TACTICAL_TTC_MAX_FRAMES = 24.0
 PROJECTILE_POOL_SLOTS = 24
 PROJECTILE_SLOT_FEATURES = 11
-DANGER_POOL_SLOTS = 32
+DANGER_POOL_SLOTS = 96
 DANGER_SLOT_FEATURES = 10
 HUMAN_POOL_SLOTS = 12
 HUMAN_SLOT_FEATURES = 7

@@ -347,16 +347,22 @@ class PrioritizedReplayBuffer:
                 if idxs.size <= 0:
                     return 0
 
-            lane_start = int(getattr(cfg, "core_features", 18))
-            lane_count = int(getattr(cfg, "lane_count", 8))
-            lane_features = int(getattr(cfg, "lane_features", 30))
-            lane_end = lane_start + lane_count * lane_features
+            enemy_start = int(getattr(cfg, "global_features", 40))
+            enemy_count = int(getattr(cfg, "enemy_token_count", 96))
+            enemy_features = int(getattr(cfg, "enemy_token_features", 10))
             danger = np.zeros(idxs.size, dtype=np.float32)
             try:
-                lanes = self.states[idxs, lane_start:lane_end].reshape(idxs.size, lane_count, lane_features)
-                direct_danger = np.maximum(lanes[:, :, 21], lanes[:, :, 22])
-                blocker = lanes[:, :, 23] if lane_features > 23 else 0.0
-                danger = np.nanmax(np.maximum(direct_danger, 0.5 * blocker), axis=1).astype(np.float32)
+                rows = self.states[
+                    idxs,
+                    enemy_start:enemy_start + enemy_count * enemy_features,
+                ].reshape(idxs.size, enemy_count, enemy_features)
+                present = rows[:, :, 0] > 0.5
+                dist = np.clip(rows[:, :, 3], 0.0, 1.0)
+                threat = np.clip(rows[:, :, 6], 0.0, 1.0)
+                ttc = np.clip(rows[:, :, 8], 0.0, 1.0) if enemy_features > 8 else np.ones_like(dist)
+                cue = np.maximum((1.0 - dist) * threat, (1.0 - dist) * (1.0 - ttc))
+                cue = np.where(present, cue, 0.0)
+                danger = np.nanmax(cue, axis=1).astype(np.float32)
             except Exception:
                 danger.fill(0.0)
             danger = np.nan_to_num(danger, nan=0.0, posinf=1.0, neginf=0.0)

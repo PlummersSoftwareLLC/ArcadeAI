@@ -11,8 +11,9 @@ Game-flow contract (Robotron-specific):
   • Inbound framing: 4-byte big-endian length prefix, then the payload.
   • Payload header ``>HddBIBBBIBB`` (n, subj, obj, done, score, player_alive,
     save, start_pressed, replay_level, num_lasers, wave), then n f32 (big-endian).
-  • The model consumes the compact slice of the wire (18 core + 8 lanes × 30
-    + 4 derived channels); the full wire is only used for the heuristic expert.
+  • The model consumes the compact slice of the wire (18 core + 22 ELIST values
+    + 96 stable enemy rows); the full wire is still used by the expert/debug
+    paths.
   • Episodes terminate on ``frame.done``.  While ``player_alive`` is false (death
     animation / between lives) we send a neutral action and store no transitions.
     • Reward = clipped game_score delta plus tightly clipped Lua subjective shaping.
@@ -61,8 +62,8 @@ if _SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, _SCRIPTS_DIR)
 try:
     # Lean DQN-only extractor: identical behavior to v3.expert.get_expert_action
-    # but skips the full (128,32) entity-token tensor the DQN model never uses
-    # (~7x faster — keeps high expert ratios from stalling the per-client loop).
+    # but skips the full entity-token tensor the DQN model never uses
+    # (keeps high expert ratios from stalling the per-client loop).
     from dqn.expert_fast import fast_expert_action as get_expert_action
 except Exception as e:                      # pragma: no cover - expert optional
     print(f"[WARN] Robotron expert unavailable ({e}); expert guidance disabled.")
@@ -154,22 +155,33 @@ def _transition_interest_score(prev_state: np.ndarray, next_state: np.ndarray,
     """Sparse rare/elite-event score for replay sampling, independent of TD error."""
     try:
         cfg = RL_CONFIG
-        lane_start = int(cfg.core_features)
-        lane_end = lane_start + int(cfg.lane_count) * int(cfg.lane_features)
+        enemy_start = int(getattr(cfg, "global_features", 40))
+        enemy_count = int(getattr(cfg, "enemy_token_count", 96))
+        enemy_features = int(getattr(cfg, "enemy_token_features", 10))
 
-        def lane_cues(state):
-            lanes = np.asarray(state[lane_start:lane_end], dtype=np.float32).reshape(cfg.lane_count, cfg.lane_features)
-            danger = float(np.nanmax(np.maximum(lanes[:, 21], lanes[:, 22])))
-            blocker = float(np.nanmax(lanes[:, 23]))
-            human_pull = float(np.nanmax(lanes[:, 24]))
-            target = float(np.nanmax(np.maximum.reduce([lanes[:, 26], lanes[:, 27], lanes[:, 28], lanes[:, 29]])))
-            return danger, blocker, human_pull, target
+        def enemy_cues(state):
+            rows = np.asarray(
+                state[enemy_start:enemy_start + enemy_count * enemy_features],
+                dtype=np.float32,
+            ).reshape(enemy_count, enemy_features)
+            present = rows[:, 0] > 0.5
+            if not np.any(present):
+                return 0.0, 0.0, 0.0, 0.0
+            active = rows[present]
+            dist = np.clip(active[:, 3], 0.0, 1.0)
+            threat = np.clip(active[:, 6], 0.0, 1.0)
+            ttc = np.clip(active[:, 8], 0.0, 1.0) if enemy_features > 8 else np.ones_like(dist)
+            closeness = 1.0 - dist
+            danger = float(np.nanmax(np.maximum(closeness * threat, closeness * (1.0 - ttc))))
+            target = float(np.nanmax(closeness * (0.25 + 0.75 * threat)))
+            crowd = float(min(1.0, active.shape[0] / 32.0))
+            return danger, 0.0, crowd, target
 
-        prev_danger, prev_blocker, prev_human, prev_target = lane_cues(prev_state)
-        next_danger, next_blocker, next_human, next_target = lane_cues(next_state)
+        prev_danger, prev_blocker, prev_crowd, prev_target = enemy_cues(prev_state)
+        next_danger, next_blocker, next_crowd, next_target = enemy_cues(next_state)
         danger = max(prev_danger, next_danger)
         blocker = max(prev_blocker, next_blocker)
-        human = max(prev_human, next_human)
+        crowd = max(prev_crowd, next_crowd)
         target = max(prev_target, next_target)
 
         prev_wave = 0.0
@@ -187,9 +199,9 @@ def _transition_interest_score(prev_state: np.ndarray, next_state: np.ndarray,
         positive_surprise = max(0.0, min(1.0, max(0.0, float(total_r)) / 5.0))
         danger_event = ramp(danger, 0.55)
         blocker_event = ramp(blocker, 0.65)
-        human_event = ramp(human, 0.55)
+        crowd_event = ramp(crowd, 0.55)
         target_event = ramp(target, 0.55)
-        deep_tactical = deep_wave * max(danger_event, human_event, target_event)
+        deep_tactical = deep_wave * max(danger_event, crowd_event, target_event)
 
         return max(
             score_burst,
@@ -198,7 +210,7 @@ def _transition_interest_score(prev_state: np.ndarray, next_state: np.ndarray,
             0.75 * danger_event,
             0.60 * blocker_event,
             0.70 * target_event,
-            0.65 * human_event,
+            0.65 * crowd_event,
             0.55 * deep_tactical,
             0.35 * positive_surprise,
         )

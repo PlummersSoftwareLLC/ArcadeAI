@@ -49,7 +49,7 @@ except ImportError:
 
 metrics = config_metrics
 
-ENGINE_VERSION = 10  # Grid-path rollback; compact lane/object state
+ENGINE_VERSION = 13  # Plain global + 96-enemy-list state
 
 
 class RainbowAgent:
@@ -223,29 +223,42 @@ class RainbowAgent:
         if random.random() < float(getattr(cfg, "safe_epsilon_random_fraction", 0.10)):
             return random.randrange(NUM_MOVE), random.randrange(NUM_FIRE), True
         try:
-            start = int(cfg.core_features)
-            end = start + int(cfg.lane_count) * int(cfg.lane_features)
-            lanes = np.asarray(state[start:end], dtype=np.float32).reshape(cfg.lane_count, cfg.lane_features)
-            danger = lanes[:, 21]
-            projectile = lanes[:, 22]
-            blocker = lanes[:, 23]
-            human_pull = lanes[:, 24]
-            escape = lanes[:, 25]
-            move_scores = (
-                2.0 * escape + 0.6 * human_pull + 0.2 * lanes[:, 20]
-                - 1.4 * danger - 1.4 * projectile - 1.0 * blocker
-            )
-            pressure = float(np.nanmax(np.maximum.reduce([danger, projectile, blocker]))) if lanes.size else 1.0
-            idle_move = -0.25 + 0.35 * (1.0 - max(0.0, min(1.0, pressure)))
-            move_scores = np.concatenate([move_scores, np.asarray([idle_move], dtype=np.float32)])
+            start = int(getattr(cfg, "global_features", 40))
+            count = int(getattr(cfg, "enemy_token_count", 96))
+            feats = int(getattr(cfg, "enemy_token_features", 10))
+            enemies = np.asarray(state[start:start + count * feats], dtype=np.float32).reshape(count, feats)
+            active = enemies[:, 0] > 0.5
+            if not np.any(active):
+                return random.randrange(NUM_MOVE), random.randrange(NUM_FIRE), True
 
-            fire_scores = (
-                1.5 * lanes[:, 26] + 1.3 * lanes[:, 27]
-                + 1.1 * lanes[:, 28] + 0.5 * lanes[:, 29]
-            )
-            target_pressure = float(np.nanmax(fire_scores)) if fire_scores.size else 0.0
+            e = enemies[active]
+            dx = e[:, 1]
+            dy = e[:, 2]
+            dist = np.clip(e[:, 3], 0.0, 1.0)
+            threat = np.clip(e[:, 6], 0.0, 1.0)
+            ttc = np.clip(e[:, 8], 0.0, 1.0) if feats > 8 else np.ones_like(dist)
+            closeness = 1.0 - dist
+            weight = (0.25 + 0.75 * threat) * (0.35 + 0.65 * closeness) * (0.5 + 0.5 * (1.0 - ttc))
+
+            dirs = np.asarray([
+                [0.0, -1.0], [1.0, -1.0], [1.0, 0.0], [1.0, 1.0],
+                [0.0, 1.0], [-1.0, 1.0], [-1.0, 0.0], [-1.0, -1.0],
+            ], dtype=np.float32)
+            dirs /= np.linalg.norm(dirs, axis=1, keepdims=True).clip(min=1.0)
+            vec = np.stack([dx, dy], axis=1)
+            vec /= np.linalg.norm(vec, axis=1, keepdims=True).clip(min=1e-6)
+
+            toward = dirs @ vec.T
+            move_scores8 = (np.clip(-toward, 0.0, None) * weight).sum(axis=1)
+            move_scores8 -= 0.75 * (np.clip(toward, 0.0, None) * weight).sum(axis=1)
+            pressure = float(np.nanmax(weight)) if weight.size else 0.0
+            idle_move = -0.35 if pressure > 0.15 else 0.05
+            move_scores = np.concatenate([move_scores8, np.asarray([idle_move], dtype=np.float32)])
+
+            fire_scores8 = (np.clip(toward, 0.0, None) * (0.25 + 0.75 * closeness) * (0.25 + 0.75 * threat)).sum(axis=1)
+            target_pressure = float(np.nanmax(fire_scores8)) if fire_scores8.size else 0.0
             idle_fire = 0.10 if target_pressure < 0.05 else -0.35
-            fire_scores = np.concatenate([fire_scores, np.asarray([idle_fire], dtype=np.float32)])
+            fire_scores = np.concatenate([fire_scores8, np.asarray([idle_fire], dtype=np.float32)])
             temp = float(getattr(cfg, "safe_epsilon_temperature", 0.25))
             return self._sample_from_scores(move_scores, temp), self._sample_from_scores(fire_scores, temp), True
         except Exception:
@@ -612,47 +625,92 @@ class RainbowAgent:
             return float("nan"), float("nan")
 
     def reset_attention_weights(self):
-        """Reinitialize only the lane self-attention weights, keeping trunk and heads intact."""
-        if not self.online_net.use_attn:
+        """Reinitialize enemy/action attention weights, keeping trunk and heads intact."""
+        def attention_modules(net):
+            mods = []
+            if getattr(net, "use_object_attn", False):
+                mods.append(net.object_attn)
+            if getattr(net, "use_action_context", False):
+                mods.append(net.move_context_attn)
+                mods.append(net.fire_context_attn)
+            if getattr(net, "use_attn", False):
+                mods.append(net.lane_attn)
+            return mods
+
+        modules = attention_modules(self.online_net)
+        if not modules:
             print("No attention layer to reset.")
             return
         for net in (self.online_net, self.target_net):
-            for m in net.lane_attn.modules():
-                if isinstance(m, nn.Linear):
-                    nn.init.xavier_uniform_(m.weight, gain=1.0)
-                    nn.init.constant_(m.bias, 0.0)
-                elif isinstance(m, nn.LayerNorm):
-                    nn.init.constant_(m.weight, 1.0)
-                    nn.init.constant_(m.bias, 0.0)
+            for root in attention_modules(net):
+                for m in root.modules():
+                    if isinstance(m, nn.MultiheadAttention):
+                        nn.init.xavier_uniform_(m.in_proj_weight, gain=1.0)
+                        if m.in_proj_bias is not None:
+                            nn.init.constant_(m.in_proj_bias, 0.0)
+                        nn.init.xavier_uniform_(m.out_proj.weight, gain=1.0)
+                        if m.out_proj.bias is not None:
+                            nn.init.constant_(m.out_proj.bias, 0.0)
+                    elif isinstance(m, nn.Linear):
+                        nn.init.xavier_uniform_(m.weight, gain=1.0)
+                        if m.bias is not None:
+                            nn.init.constant_(m.bias, 0.0)
+                    elif isinstance(m, nn.Embedding):
+                        nn.init.normal_(m.weight, mean=0.0, std=0.02)
+                    elif isinstance(m, nn.LayerNorm):
+                        nn.init.constant_(m.weight, 1.0)
+                        nn.init.constant_(m.bias, 0.0)
         self._sync_inference(force=True)
-        attn_param_ids = {id(p) for p in self.online_net.lane_attn.parameters()}
-        for group in self.optimizer.param_groups:
-            for p in group["params"]:
-                if id(p) in attn_param_ids and p in self.optimizer.state:
-                    del self.optimizer.state[p]
-        print("✓ Lane self-attention weights and optimizer state reset (trunk + heads preserved)")
+        attn_param_ids = {id(p) for root in modules for p in root.parameters()}
+        for p in list(self.optimizer.state.keys()):
+            if id(p) in attn_param_ids:
+                self.optimizer.state.pop(p, None)
+        print("✓ Enemy/action attention weights and optimizer state reset (trunk + heads preserved)")
 
     def diagnose_attention(self, num_samples: int = 256) -> str:
-        """Report lane self-attention entropy to gauge whether it's meaningful."""
-        if not self.online_net.use_attn:
-            return "Attention is disabled in this model."
+        """Report enemy self-attention entropy to gauge whether it's meaningful."""
+        if not getattr(self.online_net, "use_object_attn", False):
+            return "Enemy attention is disabled in this model."
         if len(self.memory) < num_samples:
             return f"Need {num_samples} samples in buffer, have {len(self.memory)}."
         batch = self.memory.sample(num_samples, beta=0.4)
         if batch is None:
             return "Could not sample from buffer."
         states = torch.from_numpy(batch[0]).to(self.device).float()
+        was_training = self.online_net.training
         self.online_net.eval()
         with torch.no_grad():
-            enc = self.online_net.lane_attn
-            tokens = self.online_net._lane_tokens(states)
+            enc = self.online_net.object_attn
+            tokens = self.online_net._object_tokens(states)
+            present = tokens[:, :, 0] > 0.5
+            active_counts = present.sum(dim=1)
+            if int(active_counts.max().item()) <= 1:
+                if was_training:
+                    self.online_net.train()
+                mean_active = float(active_counts.float().mean().item())
+                return f"Enemy self-attention: only {mean_active:.1f} active rows/sample; entropy not informative yet."
             x = enc.norm(enc.embed(tokens))
-            _, w = enc.attn(x, x, x, need_weights=True, average_attn_weights=True)  # (B, L, L)
-            ent = -(w * w.clamp_min(1e-9).log()).sum(dim=2).mean().item()
-            max_ent = math.log(self.online_net.lane_count)
+            key_padding_mask = ~present
+            all_empty = key_padding_mask.all(dim=1)
+            if all_empty.any():
+                key_padding_mask = key_padding_mask.clone()
+                key_padding_mask[all_empty, 0] = False
+            _, w = enc.attn(
+                x, x, x,
+                key_padding_mask=key_padding_mask,
+                need_weights=True,
+                average_attn_weights=True,
+            )  # (B, rows, rows)
+            ent_by_query = -(w * w.clamp_min(1e-9).log()).sum(dim=2)
+            valid = present & (active_counts > 1).unsqueeze(1)
+            ent = ent_by_query[valid].mean().item()
+            max_ent = active_counts.float().clamp_min(1.0).log().unsqueeze(1).expand_as(ent_by_query)[valid].mean().item()
+        if was_training:
+            self.online_net.train()
         pct = 100.0 * ent / max_ent if max_ent > 0 else 0.0
-        return (f"Lane self-attention: mean entropy {ent:.3f}/{max_ent:.3f} "
-                f"({pct:.0f}% of uniform) over {self.online_net.lane_count} lanes")
+        mean_active = float(active_counts.float().mean().item())
+        return (f"Enemy self-attention: mean entropy {ent:.3f}/{max_ent:.3f} "
+                f"({pct:.0f}% of uniform), {mean_active:.1f} active rows/sample")
 
     def stop(self):
         """Signal the background training thread to exit and wait for it."""

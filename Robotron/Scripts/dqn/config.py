@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 # ==================================================================================================================
 # ||  ROBOTRON AI • DQN CONFIGURATION                                                                            ||
-# ||  Rainbow-lite engine (C51 + dueling + PER + n-step + target net + expert BC), lane/object attention,       ||
+# ||  Rainbow-lite engine (C51 + dueling + PER + n-step + target net + expert BC), enemy-list attention,        ||
 # ||  and a joint twin-stick action head.  Ported and refactored from the Tempest DQN.                           ||
 # ==================================================================================================================
 """Central configuration: server, RL hyper-parameters, game settings, metrics.
 
 State representation
 --------------------
-Each frame the Lua client sends ``WIRE_PARAMS_COUNT`` (1478) big-endian f32 values.
-The DQN consumes a compact single-frame slice of that wire — the 18 core
-features, the 8 directional "lane" blocks (8 × 30), 4 derived salience channels,
-and a compact top-K object-token summary from the tactical pools. The socket
-server stacks the current slice with recent prior slices for the final
-``MODEL_STATE_SIZE`` input. The 9×9 tactical grid remains on the wire for other
-consumers/debugging, but is not part of the DQN model state.
+Each frame the Lua client sends ``WIRE_PARAMS_COUNT`` (2118) big-endian f32
+values. The DQN consumes a deliberately plain single-frame slice of that wire:
+the 18 core game/player scalars, the 22 raw ELIST/level-state bytes, and a
+stable 96-row enemy/danger list from the tactical pool. Lanes, grids,
+projectiles, humans, and electrodes remain on the wire for the expert/debugging
+path, but are not part of the DQN model input.
 
 Action representation
 ---------------------
@@ -54,12 +53,14 @@ SETTINGS_PATH = os.path.join(MODEL_DIR, "game_settings.json")
 #  Wire / state-slice geometry
 # ---------------------------------------------------------------------------
 # Number of f32 values the Lua client packs into each frame's state payload.
-WIRE_PARAMS_COUNT = 1478
+# The 96-slot danger pool adds 640 floats over the prior 1478-float wire.
+WIRE_PARAMS_COUNT = 2118
 
-# Model slice: 18 core features + 8 directional lanes × 30 features +
-# 4 derived salience features + compact object tokens from the tactical pools.
+# Model slice: 18 core game features + 22 ELIST/level-state features +
+# 96 stable enemy rows × 10 features.
 CORE_FEATURES = 18                       # wire[0:18]
-ELIST_FEATURES = 22                      # wire[18:40], not used by DQN
+ELIST_FEATURES = 22                      # wire[18:40]
+GLOBAL_FEATURES = CORE_FEATURES + ELIST_FEATURES
 LANE_COUNT = 8                           # 8 fire/move directions
 LANE_FEATURES = 30                       # features per lane
 TACTICAL_LANE_OFFSET = 40                # wire index where lane blocks begin
@@ -70,63 +71,33 @@ TACTICAL_LANE_END = TACTICAL_LANE_OFFSET + LANE_COUNT * LANE_FEATURES   # 280
 #   N, NE, E, SE, S, SW, W, NW
 # Reorder lanes so model lane row N lines up with move/fire action N.
 ACTION_LANE_WIRE_INDICES = (2, 1, 0, 7, 6, 5, 4, 3)
-# Derived "salience" channels appended to the model state (DQN-only; computed in
-# slice_model_state from the wire, so main.lua / v3 PPO / the shared expert are
-# untouched).  These counter the observed near-sightedness + weak human-hunting:
-#   [0] enemy_proximity  = 1 - nearest_enemy_dist   (near things "pop")
-#   [1] human_proximity  = 1 - nearest_human_dist   (equalises human vs enemy salience)
-#   [2] nearest_human_dx  (global direction to the nearest human — the core block
-#   [3] nearest_human_dy   only carries human *distance*, not direction, unlike
-#                          the enemy/spawner which both get dx/dy)
-EXTRA_FEATURES = 4
 TACTICAL_GRID_FEATURES = 9 * 9 * 6
 TACTICAL_GRID_OFFSET = TACTICAL_LANE_END
 TACTICAL_GRID_END = TACTICAL_GRID_OFFSET + TACTICAL_GRID_FEATURES        # 766
 TACTICAL_POOL_OFFSET = TACTICAL_GRID_END
-EXTRA_OFFSET = CORE_FEATURES + LANE_COUNT * LANE_FEATURES
-EXTRA_END = EXTRA_OFFSET + EXTRA_FEATURES
 
-# Compact object-token section.  This brings back the Tempest-style object-slot
-# attention signal without storing the full 712-float tactical pool payload.
-OBJECT_TOKEN_COUNT = 16
-OBJECT_TOKEN_FEATURES = 12
-OBJECT_FEATURES = OBJECT_TOKEN_COUNT * OBJECT_TOKEN_FEATURES
-OBJECT_TOKEN_OFFSET = EXTRA_END
-OBJECT_TOKEN_END = OBJECT_TOKEN_OFFSET + OBJECT_FEATURES
-SINGLE_FRAME_STATE_SIZE = OBJECT_TOKEN_END                                    # 454
-_frame_stack_env = os.getenv("DQN_FRAME_STACK", os.getenv("ROBOTRON_DQN_FRAME_STACK", "2"))
+# Plain enemy-list section. Rows are copied from Lua's stable danger-pool slots
+# without sorting so slot identity persists across frames.
+ENEMY_TOKEN_COUNT = 96
+ENEMY_TOKEN_FEATURES = 10
+ENEMY_FEATURES = ENEMY_TOKEN_COUNT * ENEMY_TOKEN_FEATURES
+ENEMY_TOKEN_OFFSET = GLOBAL_FEATURES
+ENEMY_TOKEN_END = ENEMY_TOKEN_OFFSET + ENEMY_FEATURES
+SINGLE_FRAME_STATE_SIZE = ENEMY_TOKEN_END                                     # 1000
+_frame_stack_env = os.getenv("DQN_FRAME_STACK", os.getenv("ROBOTRON_DQN_FRAME_STACK", "1"))
 try:
     FRAME_STACK_COUNT = max(1, int(_frame_stack_env))
 except Exception:
-    FRAME_STACK_COUNT = 2
+    FRAME_STACK_COUNT = 1
 MODEL_STATE_SIZE = SINGLE_FRAME_STATE_SIZE * FRAME_STACK_COUNT
 
 # Pool layout mirrors main.lua tactical pool emission.
 TACTICAL_POOL_DEFS = (
     ("projectile", 24, 11),
-    ("danger", 32, 10),
+    ("danger", 96, 10),
     ("human", 12, 7),
     ("electrode", 8, 5),
 )
-_ROLE_NORM = {"projectile": 0.25, "danger": 0.50, "human": 0.75, "electrode": 1.00}
-_TYPE_NORM_DEFAULT = {"projectile": 6.0 / 11.0, "danger": 0.0, "human": 7.0 / 11.0, "electrode": 8.0 / 11.0}
-
-# Indices within the 18-feature core block (see main.lua serialize_frame).
-_CORE_NEAREST_ENEMY_DIST = 9
-_CORE_NEAREST_HUMAN_DIST = 10
-# Indices within each 30-feature lane block (see main.lua lane emission).
-_LANE_ENEMY_DIST = 0
-_LANE_ENEMY_COUNT = 7
-_LANE_HUMAN_DIST = 8
-_LANE_HUMAN_DX = 9
-_LANE_HUMAN_DY = 10
-_LANE_HUMAN_COUNT = 11
-_LANE_ELECTRODE_DIST = 12
-_LANE_PROJECTILE_DIST = 13
-_LANE_PROJECTILE_TTC = 14
-_LANE_PROJECTILE_CLOSEST_PASS = 15
-_LANE_PROJECTILE_COUNT = 16
-_LANE_ENEMY_TTC = 17
 
 
 def _clip01(v: float) -> float:
@@ -149,14 +120,14 @@ def _clip11(v: float) -> float:
     return min(1.0, max(-1.0, x))
 
 
-def _extract_object_tokens(arr: np.ndarray) -> np.ndarray:
-    """Return top-K compact object tokens from the Lua tactical pools.
+def _extract_enemy_tokens(arr: np.ndarray) -> np.ndarray:
+    """Return the stable 96-row enemy/danger list from the Lua tactical pools.
 
-    Token layout per row:
-    ``[present, dx, dy, dist, vx, vy, threat, ttc, closest_pass, approach,
-    type_norm, role_norm]``.
+    Row layout:
+    ``[present, dx, dy, dist, vx, vy, threat, approach, ttc, type_norm]``.
+    Rows are kept in Lua's stable pool-slot order instead of priority sorting.
     """
-    tokens = []
+    out = np.zeros((ENEMY_TOKEN_COUNT, ENEMY_TOKEN_FEATURES), dtype=np.float32)
     pools = arr[TACTICAL_POOL_OFFSET:]
     pool_offset = 0
 
@@ -166,57 +137,28 @@ def _extract_object_tokens(arr: np.ndarray) -> np.ndarray:
         if slot_end > len(pools):
             pool_offset += 1 + max_slots * feat_per_slot
             continue
-        raw = pools[slot_start:slot_end].reshape(max_slots, feat_per_slot)
-        for slot_idx in range(max_slots):
-            slot = raw[slot_idx]
-            if not np.isfinite(slot).all() or slot[0] <= 0.5:
-                continue
-
-            dx = _clip11(slot[1] if feat_per_slot > 1 else 0.0)
-            dy = _clip11(slot[2] if feat_per_slot > 2 else 0.0)
-            dist = _clip01(slot[3] if feat_per_slot > 3 else 1.0)
-            vx = _clip11(slot[4] if feat_per_slot > 4 else 0.0)
-            vy = _clip11(slot[5] if feat_per_slot > 5 else 0.0)
-            threat = 0.0
-            ttc = 1.0
-            closest_pass = dist
-            approach = 0.0
-            type_norm = _TYPE_NORM_DEFAULT.get(pool_name, 0.0)
-
-            if pool_name == "projectile":
-                threat = _clip01(slot[6] if feat_per_slot > 6 else 0.8)
-                ttc = _clip01(slot[7] if feat_per_slot > 7 else 1.0)
-                closest_pass = _clip01(slot[8] if feat_per_slot > 8 else dist)
-                approach = _clip11(slot[9] if feat_per_slot > 9 else 0.0)
-                if feat_per_slot > 10 and float(slot[10]) >= 0.5:
-                    type_norm = 9.0 / 11.0
-                priority = 3.0 * (1.0 - dist) + 2.0 * (1.0 - ttc) + threat
-            elif pool_name == "danger":
-                threat = _clip01(slot[6] if feat_per_slot > 6 else 0.6)
-                approach = _clip11(slot[7] if feat_per_slot > 7 else 0.0)
-                ttc = _clip01(slot[8] if feat_per_slot > 8 else 1.0)
-                if feat_per_slot > 9:
-                    type_norm = _clip01(float(slot[9]) * (8.0 / 11.0))
-                priority = 2.0 * (1.0 - dist) + threat + 0.5 * (1.0 - ttc)
-            elif pool_name == "human":
-                threat = _clip01(slot[6] if feat_per_slot > 6 else 0.0)
-                priority = 1.5 * (1.0 - dist) + 0.5
-            else:  # electrode
-                threat = _clip01(slot[4] if feat_per_slot > 4 else 0.7)
-                priority = 1.0 * (1.0 - dist) + threat
-
-            tokens.append((
-                float(priority),
-                [1.0, dx, dy, dist, vx, vy, threat, ttc, closest_pass, approach,
-                 type_norm, _ROLE_NORM.get(pool_name, 0.0)],
-            ))
+        if pool_name == "danger":
+            raw = pools[slot_start:slot_end].reshape(max_slots, feat_per_slot)
+            rows = min(ENEMY_TOKEN_COUNT, max_slots)
+            for slot_idx in range(rows):
+                slot = raw[slot_idx]
+                if not np.isfinite(slot).all() or slot[0] <= 0.5:
+                    continue
+                out[slot_idx] = np.asarray([
+                    1.0,
+                    _clip11(slot[1] if feat_per_slot > 1 else 0.0),
+                    _clip11(slot[2] if feat_per_slot > 2 else 0.0),
+                    _clip01(slot[3] if feat_per_slot > 3 else 1.0),
+                    _clip11(slot[4] if feat_per_slot > 4 else 0.0),
+                    _clip11(slot[5] if feat_per_slot > 5 else 0.0),
+                    _clip01(slot[6] if feat_per_slot > 6 else 0.0),
+                    _clip11(slot[7] if feat_per_slot > 7 else 0.0),
+                    _clip01(slot[8] if feat_per_slot > 8 else 1.0),
+                    _clip01(slot[9] if feat_per_slot > 9 else 0.0),
+                ], dtype=np.float32)
+            break
         pool_offset += 1 + max_slots * feat_per_slot
 
-    out = np.zeros((OBJECT_TOKEN_COUNT, OBJECT_TOKEN_FEATURES), dtype=np.float32)
-    if tokens:
-        tokens.sort(key=lambda item: item[0], reverse=True)
-        for row, (_, vals) in enumerate(tokens[:OBJECT_TOKEN_COUNT]):
-            out[row] = np.asarray(vals, dtype=np.float32)
     return out.reshape(-1)
 
 
@@ -225,49 +167,12 @@ def slice_model_state(wire) -> np.ndarray:
 
     ``wire`` may be any sequence of length >= TACTICAL_POOL_OFFSET.  Returns a
     contiguous float32 array of length ``SINGLE_FRAME_STATE_SIZE`` laid out as
-    ``[core(18), lanes(8×30), extra(4), object_tokens(16×12)]``.
-    The extra and object-token channels are derived here so the shared wire
-    format / v3 PPO / expert are unaffected.
+    ``[core(18), elist(22), enemies(96×10)]``.
     """
     arr = np.asarray(wire, dtype=np.float32)
-    core = arr[0:CORE_FEATURES]
-    wire_lanes = arr[TACTICAL_LANE_OFFSET:TACTICAL_LANE_END].reshape(LANE_COUNT, LANE_FEATURES)
-    lanes2d = wire_lanes[list(ACTION_LANE_WIRE_INDICES)].copy()
-
-    # Lua emits 0.0 for empty lane distances, which is also the numerical value
-    # for an entity directly on the player.  Preserve the wire format, but make
-    # the DQN slice unambiguous by mapping absent-lane distances to "far".
-    no_enemy = lanes2d[:, _LANE_ENEMY_COUNT] <= 0.0
-    lanes2d[no_enemy, _LANE_ENEMY_DIST] = 1.0
-    lanes2d[no_enemy, _LANE_ENEMY_TTC] = 1.0
-    lanes2d[lanes2d[:, _LANE_HUMAN_COUNT] <= 0.0, _LANE_HUMAN_DIST] = 1.0
-    no_projectile = lanes2d[:, _LANE_PROJECTILE_COUNT] <= 0.0
-    lanes2d[no_projectile, _LANE_PROJECTILE_DIST] = 1.0
-    lanes2d[no_projectile, _LANE_PROJECTILE_TTC] = 1.0
-    lanes2d[no_projectile, _LANE_PROJECTILE_CLOSEST_PASS] = 1.0
-    lanes2d[lanes2d[:, _LANE_ELECTRODE_DIST] <= 0.0, _LANE_ELECTRODE_DIST] = 1.0
-
-    # Option 3 — inverse-distance proximity.  Distances default to 1.0 when no
-    # entity exists, so proximity is 0.0 in that case (correct, no false signal).
-    enemy_prox = 1.0 - float(core[_CORE_NEAREST_ENEMY_DIST])
-    human_prox = 1.0 - float(core[_CORE_NEAREST_HUMAN_DIST])
-
-    # Option 2 — global nearest-human direction, reconstructed from the per-lane
-    # nearest-human sub-features (the lane-nearest human with the smallest dist
-    # IS the global nearest human).  Only lanes with a human present are eligible.
-    present = lanes2d[:, _LANE_HUMAN_COUNT] > 0.0
-    human_dx = 0.0
-    human_dy = 0.0
-    if present.any():
-        dist = np.where(present, lanes2d[:, _LANE_HUMAN_DIST], np.inf)
-        li = int(np.argmin(dist))
-        human_dx = float(lanes2d[li, _LANE_HUMAN_DX])
-        human_dy = float(lanes2d[li, _LANE_HUMAN_DY])
-
-    extra = np.array([enemy_prox, human_prox, human_dx, human_dy], dtype=np.float32)
-    objects = _extract_object_tokens(arr)
-    lanes = lanes2d.reshape(-1)
-    return np.concatenate([core, lanes, extra, objects]).astype(np.float32, copy=False)
+    global_state = arr[0:GLOBAL_FEATURES]
+    enemies = _extract_enemy_tokens(arr)
+    return np.concatenate([global_state, enemies]).astype(np.float32, copy=False)
 
 
 # ---------------------------------------------------------------------------
@@ -298,11 +203,15 @@ class RLConfigData:
 
     # State-slice geometry (mirrors module constants, exposed for components)
     core_features: int = CORE_FEATURES
-    lane_count: int = LANE_COUNT
-    lane_features: int = LANE_FEATURES
-    extra_features: int = EXTRA_FEATURES
-    object_token_count: int = OBJECT_TOKEN_COUNT
-    object_token_features: int = OBJECT_TOKEN_FEATURES
+    elist_features: int = ELIST_FEATURES
+    global_features: int = GLOBAL_FEATURES
+    lane_count: int = 0
+    lane_features: int = 0
+    extra_features: int = 0
+    enemy_token_count: int = ENEMY_TOKEN_COUNT
+    enemy_token_features: int = ENEMY_TOKEN_FEATURES
+    object_token_count: int = ENEMY_TOKEN_COUNT      # compatibility alias
+    object_token_features: int = ENEMY_TOKEN_FEATURES
 
     # ── network architecture ────────────────────────────────────────────
     trunk_hidden: int = 384
@@ -310,20 +219,19 @@ class RLConfigData:
     use_layer_norm: bool = True
     dropout: float = 0.0
 
-    # Self-attention over the 8 directional lane tokens
-    use_lane_attention: bool = True
+    # Lane inputs are intentionally removed for the object-list experiment.
+    use_lane_attention: bool = False
     attn_heads: int = 8
     attn_dim: int = 128
 
-    # Tempest-style self-attention over compact Robotron object tokens.
+    # Self-attention over the 96 stable enemy/danger rows.
     use_object_attention: bool = True
     object_attn_heads: int = 8
     object_attn_dim: int = 128
 
-    # Action-conditioned attention for the DQN advantage heads. Directional lane
-    # queries attend over object tokens so each move/fire/joint action is scored
-    # with object evidence relevant to that candidate action, instead of only a
-    # globally pooled scene summary.
+    # Action-conditioned attention for the DQN advantage heads. Direction queries
+    # attend over enemy rows so each move/fire/joint action is scored with
+    # object evidence relevant to that candidate action.
     use_action_context_attention: bool = True
     action_context_heads: int = 8
     joint_action_embed_dim: int = 32
@@ -347,7 +255,7 @@ class RLConfigData:
     # larger batch raises samples/sec (and Rpl/F) at near-zero extra wall-time.
     # Keep sampling/transfers inline: pinned-memory or background CUDA host work
     # re-enables the GIL in the free-threaded Torch build and tanks MAME FPS.
-    batch_size: int = 4096
+    batch_size: int = 1024
     lr: float = 1e-4
     lr_min: float = 5e-5
     lr_warmup_steps: int = 5_000
@@ -357,10 +265,9 @@ class RLConfigData:
     n_step: int = 12
     max_samples_per_frame: float = 20
 
-    # Replay (PER with proportional priorities).  10M capacity gives ~6-7 min of
-    # aggregate play history (vs ~80s at 2M), keeping rare deep/rescue/tank waves
-    # alive long enough to learn.  Host RAM cost for state/next_state alone with
-    # the default 2-frame stack is about 73 GB for the compact 454-float state.
+    # Replay (PER with proportional priorities).  The 96-enemy representation is
+    # wider than the old compact lane slice: state/next_state alone cost about
+    # 80 GB at 10M transitions with the default 1-frame stack.
     memory_size: int = 10_000_000
     priority_alpha: float = 0.7
     priority_beta_start: float = 0.4
@@ -372,7 +279,7 @@ class RLConfigData:
     # Elite/rare-event replay. PER keeps surprising transitions hot, but once a
     # valuable event becomes predictable its TD error can fall out of the sample
     # stream. Reserve a small batch quota for broad "interesting" states:
-    # scoring bursts, wave transitions, close danger, target-rich fire lanes,
+    # scoring bursts, wave transitions, close danger, target-rich enemy rows,
     # human opportunities, and terminal/pre-death cues.
     interesting_replay_fraction: float = 0.08
     interesting_replay_min_score: float = 0.55

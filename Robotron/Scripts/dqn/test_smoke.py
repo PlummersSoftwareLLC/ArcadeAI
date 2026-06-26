@@ -69,7 +69,8 @@ def fake_wire(wave=1) -> np.ndarray:
     w[9] = 0.8      # nearest enemy dist
     w[10] = 0.7     # nearest human dist
     w[13] = 0.1     # humans-present proxy
-    # A little signal in the lane block.
+    # A little signal in the legacy lane block. The current DQN slice ignores
+    # it, but the expert/debug paths still consume the full wire.
     w[C.TACTICAL_LANE_OFFSET:C.TACTICAL_LANE_END] = np.random.rand(
         C.TACTICAL_LANE_END - C.TACTICAL_LANE_OFFSET).astype(np.float32) * 0.1
     return w
@@ -112,11 +113,13 @@ def test_action_coding():
 
 def test_slice():
     print("\n[state slice]")
-    w = np.arange(C.WIRE_PARAMS_COUNT, dtype=np.float32)
+    w = np.zeros(C.WIRE_PARAMS_COUNT, dtype=np.float32)
+    w[:C.GLOBAL_FEATURES] = np.arange(C.GLOBAL_FEATURES, dtype=np.float32)
+    add_pool_slot(w, "danger", 3, [1.0, 0.25, -0.50, 0.20, 0.05, -0.10, 0.80, 0.40, 0.30, 0.50])
+    add_pool_slot(w, "projectile", 0, [1.0, -0.1, 0.1, 0.08, 0.0, 0.0, 0.9, 0.2, 0.1, 0.5, 0.0])
+    add_pool_slot(w, "human", 0, [1.0, 0.75, 0.75, 0.10, 0.0, 0.0, 0.0])
+    add_pool_slot(w, "electrode", 0, [1.0, -0.75, -0.75, 0.10, 0.6])
     ms = C.slice_model_state(w)
-    lane_end = C.CORE_FEATURES + C.LANE_COUNT * C.LANE_FEATURES
-    extra_start = lane_end
-    object_start = extra_start + C.EXTRA_FEATURES
     check("slice length == SINGLE_FRAME_STATE_SIZE", ms.shape[0] == C.SINGLE_FRAME_STATE_SIZE)
     check("MODEL_STATE_SIZE includes frame stack",
           C.MODEL_STATE_SIZE == C.SINGLE_FRAME_STATE_SIZE * C.RL_CONFIG.frame_stack)
@@ -135,64 +138,16 @@ def test_slice():
         check("frame stack previous second", np.allclose(stk2[start:end], s1))
     check("core[0] preserved", ms[0] == w[0])
     check("core[17] preserved", ms[17] == w[17])
-    model_lanes = ms[C.CORE_FEATURES:lane_end].reshape(C.LANE_COUNT, C.LANE_FEATURES)
-    wire_lanes = w[C.TACTICAL_LANE_OFFSET:C.TACTICAL_LANE_END].reshape(C.LANE_COUNT, C.LANE_FEATURES)
-    mapped = all(
-        np.allclose(model_lanes[action_i], wire_lanes[wire_i])
-        for action_i, wire_i in enumerate(C.ACTION_LANE_WIRE_INDICES)
-    )
-    check("lanes reordered to action order", mapped)
-    w_block = np.zeros(C.WIRE_PARAMS_COUNT, dtype=np.float32)
-    w_block[C.TACTICAL_LANE_OFFSET + 0 * C.LANE_FEATURES + 23] = 1.0  # wire lane 0 = east/right
-    ms_block = C.slice_model_state(w_block)
-    block_lanes = ms_block[C.CORE_FEATURES:lane_end].reshape(C.LANE_COUNT, C.LANE_FEATURES)
-    check("east blocker maps to right action lane", block_lanes[2, 23] == 1.0 and block_lanes[0, 23] == 0.0)
-    check("grid excluded from compact DQN state", object_start == C.OBJECT_TOKEN_OFFSET)
-    check("extra block present", object_start - extra_start == C.EXTRA_FEATURES)
-    check("object block present", ms.shape[0] - object_start == C.OBJECT_FEATURES)
-
-    # Derived proximity channels: 1 - nearest_*_dist (from core indices 9, 10).
-    enemy_prox = ms[extra_start + 0]
-    human_prox = ms[extra_start + 1]
-    check("enemy_prox == 1 - core[9]", np.isclose(enemy_prox, 1.0 - w[9]))
-    check("human_prox == 1 - core[10]", np.isclose(human_prox, 1.0 - w[10]))
-
-    # Derived global nearest-human direction, reconstructed from the lane whose
-    # human sub-block has the smallest distance.  With arange data every lane has
-    # a human present, so lane 0 (smallest values) is nearest.
-    human_dx = ms[extra_start + 2]
-    human_dy = ms[extra_start + 3]
-    li = int(np.argmin(
-        [w[C.TACTICAL_LANE_OFFSET + i * C.LANE_FEATURES + C._LANE_HUMAN_DIST]
-         for i in range(C.LANE_COUNT)]))
-    exp_dx = w[C.TACTICAL_LANE_OFFSET + li * C.LANE_FEATURES + C._LANE_HUMAN_DX]
-    exp_dy = w[C.TACTICAL_LANE_OFFSET + li * C.LANE_FEATURES + C._LANE_HUMAN_DY]
-    check("human_dx from nearest lane", human_dx == exp_dx)
-    check("human_dy from nearest lane", human_dy == exp_dy)
-
-    # When no humans are present anywhere, direction collapses to (0, 0).
-    w2 = np.arange(C.WIRE_PARAMS_COUNT, dtype=np.float32)
-    for i in range(C.LANE_COUNT):
-        w2[C.TACTICAL_LANE_OFFSET + i * C.LANE_FEATURES + C._LANE_HUMAN_COUNT] = 0.0
-    ms2 = C.slice_model_state(w2)
-    check("no-human dir == 0", ms2[extra_start + 2] == 0.0 and ms2[extra_start + 3] == 0.0)
-
-    w3 = np.zeros(C.WIRE_PARAMS_COUNT, dtype=np.float32)
-    ms3 = C.slice_model_state(w3)
-    check("empty lane enemy dist == far", ms3[C.CORE_FEATURES + C._LANE_ENEMY_DIST] == 1.0)
-    check("empty lane human dist == far", ms3[C.CORE_FEATURES + C._LANE_HUMAN_DIST] == 1.0)
-    check("empty lane projectile dist == far", ms3[C.CORE_FEATURES + C._LANE_PROJECTILE_DIST] == 1.0)
-    check("empty lane enemy ttc == far", ms3[C.CORE_FEATURES + C._LANE_ENEMY_TTC] == 1.0)
-    check("empty lane projectile ttc == far", ms3[C.CORE_FEATURES + C._LANE_PROJECTILE_TTC] == 1.0)
-    check("empty lane closest pass == far", ms3[C.CORE_FEATURES + C._LANE_PROJECTILE_CLOSEST_PASS] == 1.0)
-
-    w4 = np.zeros(C.WIRE_PARAMS_COUNT, dtype=np.float32)
-    add_pool_slot(w4, "human", 0, [1.0, 0.25, -0.25, 0.20, 0.0, 0.0, 0.1])
-    add_pool_slot(w4, "projectile", 0, [1.0, -0.1, 0.1, 0.08, 0.0, 0.0, 0.9, 0.2, 0.1, 0.5, 0.0])
-    ms4 = C.slice_model_state(w4)
-    obj = ms4[C.OBJECT_TOKEN_OFFSET:C.OBJECT_TOKEN_END].reshape(C.OBJECT_TOKEN_COUNT, C.OBJECT_TOKEN_FEATURES)
-    check("object token present flag", obj[0, 0] == 1.0)
-    check("object token sorted by priority", obj[0, 11] == C._ROLE_NORM["projectile"])
+    check("elist[18] preserved", ms[18] == w[18])
+    check("elist[39] preserved", ms[39] == w[39])
+    check("enemy block starts after globals", C.ENEMY_TOKEN_OFFSET == C.GLOBAL_FEATURES)
+    check("enemy block size", ms.shape[0] - C.ENEMY_TOKEN_OFFSET == C.ENEMY_FEATURES)
+    enemies = ms[C.ENEMY_TOKEN_OFFSET:C.ENEMY_TOKEN_END].reshape(C.ENEMY_TOKEN_COUNT, C.ENEMY_TOKEN_FEATURES)
+    expected = np.asarray([1.0, 0.25, -0.50, 0.20, 0.05, -0.10, 0.80, 0.40, 0.30, 0.50], dtype=np.float32)
+    check("danger slot 3 maps to enemy row 3", np.allclose(enemies[3], expected), f"row3={enemies[3]}")
+    check("danger slot identity is stable", enemies[0, 0] == 0.0 and enemies[2, 0] == 0.0 and enemies[4, 0] == 0.0)
+    check("projectile/human/electrode pools excluded from model state",
+          int(np.count_nonzero(enemies[:, 0] > 0.5)) == 1)
 
 
 def test_nstep_actor_boundaries():
@@ -313,11 +268,14 @@ def test_reward_and_hard_starts():
 def test_transition_interest_policy():
     print("\n[transition interest]")
 
-    def model_state(wave: int, lane_feature: int | None = None, value: float = 0.0):
+    def model_state(wave: int, enemy_row: list[float] | None = None):
         s = np.zeros(C.MODEL_STATE_SIZE, dtype=np.float32)
         s[4] = max(0, min(40, int(wave))) / 40.0
-        if lane_feature is not None:
-            s[C.CORE_FEATURES + lane_feature] = float(value)
+        if enemy_row is not None:
+            vals = list(enemy_row[:C.ENEMY_TOKEN_FEATURES])
+            vals += [0.0] * (C.ENEMY_TOKEN_FEATURES - len(vals))
+            start = C.ENEMY_TOKEN_OFFSET
+            s[start:start + C.ENEMY_TOKEN_FEATURES] = np.asarray(vals, dtype=np.float32)
         return s
 
     def frame(wave: int, done=False):
@@ -330,13 +288,14 @@ def test_transition_interest_policy():
     threshold = C.RL_CONFIG.interesting_replay_min_score
     quiet = SS._transition_interest_score(model_state(10), model_state(10), frame(10), 0.0, 0.0)
     check("quiet deep wave is not interesting", quiet < threshold, f"score={quiet:.3f}")
-    crowded = model_state(10)
-    crowded[C.OBJECT_TOKEN_OFFSET:C.OBJECT_TOKEN_END:C.OBJECT_TOKEN_FEATURES] = 1.0
-    quiet_crowded = SS._transition_interest_score(model_state(10), crowded, frame(10), 0.0, 0.0)
-    check("filled object-token bank alone is not interesting", quiet_crowded < threshold,
-          f"score={quiet_crowded:.3f}")
-    target = SS._transition_interest_score(model_state(10), model_state(10, 26, 1.0), frame(10), 0.0, 0.0)
-    check("target-rich lane is interesting", target >= threshold, f"score={target:.3f}")
+    distant = SS._transition_interest_score(
+        model_state(10), model_state(10, [1.0, 0.9, 0.0, 0.95, 0.0, 0.0, 0.2, 0.0, 1.0, 0.0]),
+        frame(10), 0.0, 0.0)
+    check("distant enemy is not interesting", distant < threshold, f"score={distant:.3f}")
+    target = SS._transition_interest_score(
+        model_state(10), model_state(10, [1.0, 0.02, 0.0, 0.02, 0.0, 0.0, 1.0, 0.7, 0.0, 0.0]),
+        frame(10), 0.0, 0.0)
+    check("near threatening enemy is interesting", target >= threshold, f"score={target:.3f}")
     scored = SS._transition_interest_score(model_state(4), model_state(4), frame(4), 5.0, 5.0)
     check("rescue-sized score burst is interesting", scored >= threshold, f"score={scored:.3f}")
     terminal = SS._transition_interest_score(model_state(4), model_state(4), frame(4, done=True), 0.0, -1.0)
@@ -404,7 +363,10 @@ def test_pre_death_reward_penalty():
         idxs = []
         for i, danger in enumerate([0.0, 0.0, 0.25, 0.75, 1.0]):
             s = np.zeros(C.MODEL_STATE_SIZE, dtype=np.float32)
-            s[C.CORE_FEATURES + 22] = float(danger)
+            start = C.ENEMY_TOKEN_OFFSET
+            s[start:start + C.ENEMY_TOKEN_FEATURES] = np.asarray([
+                1.0, 0.0, 0.0, 0.20, 0.0, 0.0, float(danger), 0.0, 1.00, 0.0
+            ], dtype=np.float32)
             buf.add(s, 0, 0.0, s, False, expert=0)
             idxs.append(i)
         changed = buf.apply_pre_death_penalty(idxs)
@@ -416,7 +378,10 @@ def test_pre_death_reward_penalty():
 
         expert_buf = PrioritizedReplayBuffer(capacity=4, state_size=C.MODEL_STATE_SIZE)
         s = np.zeros(C.MODEL_STATE_SIZE, dtype=np.float32)
-        s[C.CORE_FEATURES + 22] = 1.0
+        start = C.ENEMY_TOKEN_OFFSET
+        s[start:start + C.ENEMY_TOKEN_FEATURES] = np.asarray([
+            1.0, 0.0, 0.0, 0.20, 0.0, 0.0, 1.0, 0.0, 1.00, 0.0
+        ], dtype=np.float32)
         expert_buf.add(s, 0, 0.0, s, False, expert=1)
         skipped = expert_buf.apply_pre_death_penalty([0])
         check("pre-death penalty skips expert by default", skipped == 0 and np.isclose(expert_buf.rewards[0], 0.0),
@@ -565,6 +530,18 @@ def test_model_shapes(agent):
     check("bc_joint logits shape (4,81)", tuple(bc_joint.shape) == (4, M.NUM_JOINT))
     check("bc_move logits shape (4,9)", tuple(bc_move.shape) == (4, M.NUM_MOVE))
     check("bc_fire logits shape (4,9)", tuple(bc_fire.shape) == (4, M.NUM_FIRE))
+    raw = agent.online_net._raw_trunk_state(st)
+    enemies = agent.online_net._object_tokens(st)
+    expected_raw = C.RL_CONFIG.global_features * C.RL_CONFIG.frame_stack
+    check("raw trunk keeps stacked globals only", tuple(raw.shape) == (4, expected_raw),
+          f"shape={tuple(raw.shape)} expected={(4, expected_raw)}")
+    check("enemy tokens shape (4,96,10)",
+          tuple(enemies.shape) == (4, C.ENEMY_TOKEN_COUNT, C.ENEMY_TOKEN_FEATURES),
+          f"shape={tuple(enemies.shape)}")
+    expected_trunk_in = expected_raw + (C.RL_CONFIG.object_attn_dim if C.RL_CONFIG.use_object_attention else 0)
+    first_linear = next(m for m in agent.online_net.trunk if isinstance(m, torch.nn.Linear))
+    check("trunk input excludes flattened enemy block", first_linear.in_features == expected_trunk_in,
+          f"in={first_linear.in_features} expected={expected_trunk_in}")
 
 
 def test_act(agent):

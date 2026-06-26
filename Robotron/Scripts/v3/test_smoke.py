@@ -9,8 +9,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 def test_config():
     from v3.config import CONFIG, WIRE_PARAMS_COUNT, AUGMENTED_PARAMS_COUNT
-    assert WIRE_PARAMS_COUNT == 1478, f"Expected 1478, got {WIRE_PARAMS_COUNT}"
-    assert AUGMENTED_PARAMS_COUNT == 1482
+    assert WIRE_PARAMS_COUNT == 2118, f"Expected 2118, got {WIRE_PARAMS_COUNT}"
+    assert AUGMENTED_PARAMS_COUNT == WIRE_PARAMS_COUNT + 4
+    assert CONFIG.model.max_entities == 140
     assert CONFIG.server.port == 9998
     assert CONFIG.model.num_move_actions == 9
     assert CONFIG.model.num_fire_actions == 9

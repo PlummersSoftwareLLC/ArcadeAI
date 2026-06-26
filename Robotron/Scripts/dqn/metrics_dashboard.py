@@ -256,20 +256,25 @@ class _DashboardState:
             if self.agent is not None and hasattr(self.agent, 'online_net'):
                 param_count = sum(p.numel() for p in self.agent.online_net.parameters())
             else:
-                ad = cfg.attn_dim
+                use_lane = bool(getattr(cfg, 'use_lane_attention', False)) and getattr(cfg, 'lane_count', 0) > 0
+                ad = cfg.attn_dim if use_lane else 0
                 od = cfg.object_attn_dim if getattr(cfg, 'use_object_attention', False) else 0
                 th = cfg.trunk_hidden
                 tl = cfg.trunk_layers
-                ss = cfg.state_size
+                stack = int(getattr(cfg, 'frame_stack', 1))
+                raw_state = int(getattr(cfg, 'global_features', getattr(cfg, 'core_features', 18) + getattr(cfg, 'elist_features', 22))) * stack
                 branch_na = cfg.num_move_actions + cfg.num_fire_actions
                 joint_na = cfg.num_move_actions * cfg.num_fire_actions
                 n_atoms = cfg.num_atoms if cfg.use_distributional else 1
                 hm = th // 2
-                attn_p = (5 * ad + ad) + 2 * ad + (14 * ad + ad) + 2 * ad + 4 * (ad * ad + ad) + 2 * ad
+                attn_p = 0
+                if use_lane:
+                  attn_p += ((cfg.lane_features * ad + ad) + 2 * ad
+                             + 4 * (ad * ad + ad) + 2 * ad)
                 if od:
                   attn_p += ((cfg.object_token_features * od + od) + 2 * od
                          + 4 * (od * od + od) + 2 * od)
-                trunk_p = (ss + ad + od) * th + th + 2 * th
+                trunk_p = (raw_state + ad + od) * th + th + 2 * th
                 for _ in range(1, tl):
                     trunk_p += th * th + th + 2 * th
                 heads_p = 3 * (th * hm + hm) + 3 * (hm * n_atoms + n_atoms)
@@ -278,7 +283,10 @@ class _DashboardState:
                 param_count = attn_p + trunk_p + heads_p
         except Exception:
             param_count = 0
-        trunk_in = cfg.state_size + (cfg.attn_dim if cfg.use_lane_attention else 0)
+        stack = int(getattr(cfg, 'frame_stack', 1))
+        raw_state = int(getattr(cfg, 'global_features', getattr(cfg, 'core_features', 18) + getattr(cfg, 'elist_features', 22))) * stack
+        use_lane = bool(getattr(cfg, 'use_lane_attention', False)) and getattr(cfg, 'lane_count', 0) > 0
+        trunk_in = raw_state + (cfg.attn_dim if use_lane else 0)
         trunk_in += (cfg.object_attn_dim if getattr(cfg, 'use_object_attention', False) else 0)
         layers = [str(trunk_in)]
         for _ in range(cfg.trunk_layers):

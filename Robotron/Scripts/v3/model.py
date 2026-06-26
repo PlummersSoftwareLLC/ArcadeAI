@@ -581,7 +581,7 @@ class RobotronPPONet(nn.Module):
     def __init__(
         self,
         entity_feature_dim: int = 32,
-        max_entities: int = 96,
+        max_entities: int = 140,
         embed_dim: int = 160,
         transformer_layers: int = 2,
         num_heads: int = 4,

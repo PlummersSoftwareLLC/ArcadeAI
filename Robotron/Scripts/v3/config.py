@@ -39,7 +39,7 @@ GLOBAL_EXTRA_FEATURES = 4
 # spark/shell) so the model can distinguish homing threats from straight shots.
 ENTITY_POOL_DEFS: list[tuple[str, int, int]] = [
     ("projectile", 24, 11),
-    ("danger",     32, 10),
+    ("danger",     96, 10),
     ("human",      12,  7),
     ("electrode",   8,  5),
 ]
@@ -84,7 +84,7 @@ class ModelConfig:
     # rel_xy, box_wh, velocity, and 12 type one-hot columns. The remaining
     # columns add HUD-consistent absolute position, timing, and role flags.
     entity_feature_dim: int = 32
-    max_entities: int = 96
+    max_entities: int = 140
 
     # Entity encoder
     embed_dim: int = 160
