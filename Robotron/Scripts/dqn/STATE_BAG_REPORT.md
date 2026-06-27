@@ -8,25 +8,35 @@ that full payload. It keeps only:
 
 - `wire[0:18]`: 18 scalar core game/player/threat features.
 - `wire[18:40]`: 22 raw ELIST/level-state bytes normalized by Lua.
-- `wire[1032:1992]`: the 96 stable danger/enemy pool slots, 10 features each.
+- `wire[40:280]`: only two values from each tactical lane row: enemy density
+  and human density, reordered into controller action order.
+- `model[56:59]`: Python-derived nearest destructible target `dx/dy/dist`,
+  computed from the packed object list.
+- A Python-derived 96-row object list distilled from the projectile, danger,
+  human, and electrode tactical pools in `wire[766:2118]`.
+
+`ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES=1` keeps the wire fast, but it no longer
+zeros DQN-critical cues. Lua still computes object `threat`, `approach`, `ttc`,
+`closest_pass`, and the lane enemy/human density fields consumed by this slice;
+only the heavier unused tactical grid and lane affordance details are skipped.
 
 Final raw DQN single-frame state size:
 
 ```text
-18 core + 22 ELIST + (96 enemies * 10 features) = 1000 floats
+18 core + 22 ELIST + 16 lane density + 3 nearest-target + (96 objects * 16 features) = 1595 floats
 ```
 
-With the default 1-frame stack, replay/inference state is also 1000 floats. The
-network trunk does not flatten all 1000 floats into the MLP: it concatenates the
-40 global/level floats from the current frame and the current-frame enemy
+With the default 1-frame stack, replay/inference state is also 1595 floats. The
+network trunk does not flatten all 1595 floats into the MLP: it concatenates the
+59 direct global/lane/target floats from the current frame and the current-frame object
 attention embedding. Default first trunk width is:
 
 ```text
-(40 globals * 1 frame) + 128 enemy-attention embedding = 168 floats
+(59 globals/lane/target * 1 frame) + 128 object-attention embedding = 187 floats
 ```
 
 If `DQN_FRAME_STACK=2` or `ROBOTRON_DQN_FRAME_STACK=2` is set, replay/inference
-state becomes 2000 floats and the first trunk width becomes `80 + 128 = 208`.
+state becomes 3190 floats and the first trunk width becomes `118 + 128 = 246`.
 
 ## DQN Model Layout
 
@@ -34,32 +44,67 @@ state becomes 2000 floats and the first trunk width becomes `80 + 128 = 208`.
 |---:|---:|---|---|
 | `0..17` | 18 | Lua `wire[0:18]` | Core scalar game/player/threat features. |
 | `18..39` | 22 | Lua `wire[18:40]` | Raw ELIST/level-state bytes. |
-| `40..999` | 960 | Lua danger pool `wire[1032:1992]` | 96 stable enemy rows * 10 features. |
+| `40..55` | 16 | Lua tactical lanes `wire[40:280]` | 8 action-order lanes * enemy density + human density. |
+| `56..58` | 3 | Python-derived from object rows | Nearest destructible target `dx/dy/dist`. |
+| `59..1594` | 1536 | Lua tactical pools `wire[766:2118]` | 96 priority-sorted role-aware object rows * 16 features. |
 
-For enemy row `R` in `0..95`:
+For lane row `R` in action order `N, NE, E, SE, S, SW, W, NW`:
 
 ```text
-model_index = 40 + (R * 10) + row_offset
+model_index = 40 + (R * 2) + lane_offset
 ```
 
-Rows are copied in Lua's stable danger-pool slot order. They are not sorted or
-top-K filtered, so row identity can persist across frames when Lua keeps the
-same object in the same slot.
+## Lane Density Features
 
-## Enemy Row Features
+| Lane offset | Name | Source / formula | Range / notes |
+|---:|---|---|---|
+| 0 | `enemy_density` | Lua lane feature 7, `enemy_count / 50` | Clamped `0..1`. |
+| 1 | `human_density` | Lua lane feature 11, `human_count / 16` | Clamped `0..1`. |
+
+## Nearest Destructible Target Features
+
+These features are computed after the Python role-aware object list is built.
+They point to the nearest present row with `destructible=1` and `rescue=0`;
+currently that includes normal shootable enemies and shootable projectiles, and
+excludes humans, hulks, and electrodes. If no target is present the value is
+`[0.0, 0.0, 1.0]`.
+
+| Model index | Name | Source / formula | Range / notes |
+|---:|---|---|---|
+| 56 | `nearest_target_dx` | Object row `dx` for nearest destructible target | Clamped `-1..1`; `0` if absent. |
+| 57 | `nearest_target_dy` | Object row `dy` for nearest destructible target | Clamped `-1..1`; `0` if absent. |
+| 58 | `nearest_target_dist` | Object row `dist` for nearest destructible target | Clamped `0..1`; `1` if absent. |
+
+For object row `R` in `0..95`:
+
+```text
+model_index = 59 + (R * 16) + row_offset
+```
+
+Rows are top-K priority sorted by immediate tactical relevance. Row identity is
+not stable across frames; the network should treat this as a set/list, not a
+slot-addressed table.
+
+## Object Row Features
 
 | Row offset | Name | Source / formula | Range / notes |
 |---:|---|---|---|
-| 0 | `present` | `1.0` for active slot | Empty rows are all zeros. |
-| 1 | `dx` | Relative X from player to enemy | Clamped `-1..1`. |
-| 2 | `dy` | Relative Y from player to enemy | Clamped `-1..1`. |
-| 3 | `dist` | Enemy distance from player | Clamped `0..1`; lower is closer. |
-| 4 | `vx` | Enemy velocity X | Clamped `-1..1`. |
-| 5 | `vy` | Enemy velocity Y | Clamped `-1..1`. |
-| 6 | `threat` | Lua danger/threat score | Clamped `0..1`. |
+| 0 | `present` | `1.0` for active row | Empty rows are all zeros. |
+| 1 | `dx` | Relative X from player to object | Clamped `-1..1`. |
+| 2 | `dy` | Relative Y from player to object | Clamped `-1..1`. |
+| 3 | `dist` | Object distance from player | Clamped `0..1`; lower is closer. |
+| 4 | `vx` | Object velocity X | Clamped `-1..1`; zero for static objects. |
+| 5 | `vy` | Object velocity Y | Clamped `-1..1`; zero for static objects. |
+| 6 | `threat` | Pool-specific danger/threat cue | Clamped `0..1`. |
 | 7 | `approach` | Radial approach score | Clamped `-1..1`; positive means approaching. |
 | 8 | `ttc` | Time-to-collision estimate | Clamped `0..1`; lower is sooner. |
-| 9 | `type_norm` | Lua enemy type id normalized by Lua | Clamped `0..1`. |
+| 9 | `closest_pass` | Projectile pass-distance or fallback distance | Clamped `0..1`. |
+| 10 | `type_norm` | Normalized Lua object/enemy type cue | Clamped `0..1`. |
+| 11 | `role_norm` | Object role id | `0.25` projectile, `0.50` danger, `0.75` human, `1.00` electrode. |
+| 12 | `destructible` | Target can be killed/shot | `0` or `1`; hulks/humans/electrodes are not marked targetable. |
+| 13 | `blocker` | Collision/static blocker cue | `0` or `1`; hulks and electrodes are blockers. |
+| 14 | `rescue` | Human/rescue cue | `0` or `1`. |
+| 15 | `projectile` | Projectile/missile cue | `0` or `1`. |
 
 ## Core Features
 
@@ -93,16 +138,16 @@ from the DQN model state unless listed above.
 |---:|---:|---|---|
 | `0..17` | 18 | Core scalar features | Kept. |
 | `18..39` | 22 | Raw ELIST/level-state bytes | Kept. |
-| `40..279` | 240 | Legacy tactical lanes | Excluded. |
+| `40..279` | 240 | Legacy tactical lanes | Enemy/human density only. |
 | `280..765` | 486 | 9x9 tactical grid, 6 channels per cell | Excluded. |
-| `766` | 1 | Projectile pool occupancy | Excluded. |
-| `767..1030` | 264 | 24 projectile slots * 11 features | Excluded. |
-| `1031` | 1 | Danger pool occupancy | Excluded. |
-| `1032..1991` | 960 | 96 danger/enemy slots * 10 features | Kept as model rows `40..999`. |
-| `1992` | 1 | Human pool occupancy | Excluded. |
-| `1993..2076` | 84 | 12 human slots * 7 features | Excluded. |
-| `2077` | 1 | Electrode pool occupancy | Excluded. |
-| `2078..2117` | 40 | 8 electrode slots * 5 features | Excluded. |
+| `766` | 1 | Projectile pool occupancy | Used to build object rows. |
+| `767..1030` | 264 | 24 projectile slots * 11 features | Used to build object rows. |
+| `1031` | 1 | Danger pool occupancy | Used to build object rows. |
+| `1032..1991` | 960 | 96 danger/enemy slots * 10 features | Used to build object rows. |
+| `1992` | 1 | Human pool occupancy | Used to build object rows. |
+| `1993..2076` | 84 | 12 human slots * 7 features | Used to build object rows. |
+| `2077` | 1 | Electrode pool occupancy | Used to build object rows. |
+| `2078..2117` | 40 | 8 electrode slots * 5 features | Used to build object rows. |
 
 ## Scaling Notes
 

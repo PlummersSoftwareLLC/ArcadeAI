@@ -12,8 +12,8 @@ Game-flow contract (Robotron-specific):
   • Payload header ``>HddBIBBBIBB`` (n, subj, obj, done, score, player_alive,
     save, start_pressed, replay_level, num_lasers, wave), then n f32 (big-endian).
   • The model consumes the compact slice of the wire (18 core + 22 ELIST values
-    + 96 stable enemy rows); the full wire is still used by the expert/debug
-    paths.
+    + 16 lane-density values + 96 role-aware object rows); the full wire is
+    still used by the expert/debug paths.
   • Episodes terminate on ``frame.done``.  While ``player_alive`` is false (death
     animation / between lives) we send a neutral action and store no transitions.
     • Reward = clipped game_score delta plus tightly clipped Lua subjective shaping.
@@ -155,34 +155,50 @@ def _transition_interest_score(prev_state: np.ndarray, next_state: np.ndarray,
     """Sparse rare/elite-event score for replay sampling, independent of TD error."""
     try:
         cfg = RL_CONFIG
-        enemy_start = int(getattr(cfg, "global_features", 40))
-        enemy_count = int(getattr(cfg, "enemy_token_count", 96))
-        enemy_features = int(getattr(cfg, "enemy_token_features", 10))
+        object_start = int(getattr(cfg, "global_features", 40))
+        object_count = int(getattr(cfg, "object_token_count", getattr(cfg, "enemy_token_count", 96)))
+        object_features = int(getattr(cfg, "object_token_features", getattr(cfg, "enemy_token_features", 10)))
 
-        def enemy_cues(state):
+        def object_cues(state):
             rows = np.asarray(
-                state[enemy_start:enemy_start + enemy_count * enemy_features],
+                state[object_start:object_start + object_count * object_features],
                 dtype=np.float32,
-            ).reshape(enemy_count, enemy_features)
+            ).reshape(object_count, object_features)
             present = rows[:, 0] > 0.5
             if not np.any(present):
-                return 0.0, 0.0, 0.0, 0.0
+                return 0.0, 0.0, 0.0, 0.0, 0.0
             active = rows[present]
             dist = np.clip(active[:, 3], 0.0, 1.0)
             threat = np.clip(active[:, 6], 0.0, 1.0)
-            ttc = np.clip(active[:, 8], 0.0, 1.0) if enemy_features > 8 else np.ones_like(dist)
+            ttc = np.clip(active[:, 8], 0.0, 1.0) if object_features > 8 else np.ones_like(dist)
+            destructible = np.clip(active[:, 12], 0.0, 1.0) if object_features > 12 else np.ones_like(dist)
+            blocker = np.clip(active[:, 13], 0.0, 1.0) if object_features > 13 else np.zeros_like(dist)
+            rescue = np.clip(active[:, 14], 0.0, 1.0) if object_features > 14 else np.zeros_like(dist)
+            projectile = np.clip(active[:, 15], 0.0, 1.0) if object_features > 15 else np.zeros_like(dist)
             closeness = 1.0 - dist
-            danger = float(np.nanmax(np.maximum(closeness * threat, closeness * (1.0 - ttc))))
-            target = float(np.nanmax(closeness * (0.25 + 0.75 * threat)))
+            imminent = 1.0 - ttc
+            danger_cue = np.maximum.reduce((
+                closeness * threat,
+                closeness * imminent * (0.4 + 0.6 * projectile),
+                closeness * blocker,
+            ))
+            target_cue = closeness * (0.25 + 0.75 * np.maximum(destructible, projectile)) * (
+                0.5 + 0.5 * np.maximum(threat, projectile)
+            ) * (1.0 - 0.95 * rescue)
+            danger = float(np.nanmax(danger_cue))
+            blocker_cue = float(np.nanmax(closeness * blocker))
+            target = float(np.nanmax(target_cue))
+            rescue_cue = float(np.nanmax(closeness * rescue))
             crowd = float(min(1.0, active.shape[0] / 32.0))
-            return danger, 0.0, crowd, target
+            return danger, blocker_cue, crowd, target, rescue_cue
 
-        prev_danger, prev_blocker, prev_crowd, prev_target = enemy_cues(prev_state)
-        next_danger, next_blocker, next_crowd, next_target = enemy_cues(next_state)
+        prev_danger, prev_blocker, prev_crowd, prev_target, prev_rescue = object_cues(prev_state)
+        next_danger, next_blocker, next_crowd, next_target, next_rescue = object_cues(next_state)
         danger = max(prev_danger, next_danger)
         blocker = max(prev_blocker, next_blocker)
         crowd = max(prev_crowd, next_crowd)
         target = max(prev_target, next_target)
+        rescue = max(prev_rescue, next_rescue)
 
         prev_wave = 0.0
         if len(prev_state) > 4 and np.isfinite(prev_state[4]):
@@ -201,7 +217,8 @@ def _transition_interest_score(prev_state: np.ndarray, next_state: np.ndarray,
         blocker_event = ramp(blocker, 0.65)
         crowd_event = ramp(crowd, 0.55)
         target_event = ramp(target, 0.55)
-        deep_tactical = deep_wave * max(danger_event, crowd_event, target_event)
+        rescue_event = ramp(rescue, 0.55)
+        deep_tactical = deep_wave * max(danger_event, blocker_event, crowd_event, target_event)
 
         return max(
             score_burst,
@@ -211,6 +228,7 @@ def _transition_interest_score(prev_state: np.ndarray, next_state: np.ndarray,
             0.60 * blocker_event,
             0.70 * target_event,
             0.65 * crowd_event,
+            0.50 * rescue_event,
             0.55 * deep_tactical,
             0.35 * positive_surprise,
         )
@@ -223,7 +241,52 @@ def _clip_abs(value: float, limit: float) -> float:
     return max(-limit, min(limit, float(value)))
 
 
-def _shape_transition_reward(frame, last_game_score: int) -> tuple[float, float, float, float, int]:
+def _destructible_target_count(model_state) -> int | None:
+    """Count current targetable objects in the compact model state."""
+    if model_state is None:
+        return None
+    try:
+        arr = np.asarray(model_state, dtype=np.float32)
+        start = int(getattr(RL_CONFIG, "global_features", 0))
+        count = int(getattr(RL_CONFIG, "object_token_count", 0))
+        feats = int(getattr(RL_CONFIG, "object_token_features", 0))
+        if count <= 0 or feats <= 0 or arr.size < start + count * feats:
+            return None
+        rows = arr[start:start + count * feats].reshape(count, feats)
+        present = rows[:, 0] > 0.5
+        destructible = rows[:, 12] > 0.5 if feats > 12 else present
+        rescue = rows[:, 14] > 0.5 if feats > 14 else np.zeros_like(present, dtype=bool)
+        return int(np.count_nonzero(present & destructible & ~rescue))
+    except Exception:
+        return None
+
+
+def _no_human_delay_penalty(frame, score_delta: int, model_state=None) -> float:
+    penalty = max(0.0, float(getattr(RL_CONFIG, "no_human_delay_penalty", 0.0)))
+    if penalty <= 0.0 or bool(frame.done) or not bool(frame.player_alive) or int(score_delta) > 0:
+        return 0.0
+
+    try:
+        state = frame.state
+        human_frac = float(state[13]) if len(state) > 13 else 1.0
+        nearest_enemy_dist = float(state[9]) if len(state) > 9 else 1.0
+    except Exception:
+        return 0.0
+    if not np.isfinite(human_frac) or not np.isfinite(nearest_enemy_dist):
+        return 0.0
+
+    # core[13] is num_humans/255 and core[9] is nearest enemy distance.
+    # Penalize only when a live enemy appears to remain, avoiding wave gaps.
+    target_count = _destructible_target_count(model_state)
+    max_targets = max(1, int(getattr(RL_CONFIG, "no_human_delay_max_targets", 2)))
+    if target_count is not None and target_count > max_targets:
+        return 0.0
+    if human_frac <= 1e-6 and nearest_enemy_dist < 0.999:
+        return -penalty
+    return 0.0
+
+
+def _shape_transition_reward(frame, last_game_score: int, model_state=None) -> tuple[float, float, float, float, int]:
     """Reward from actual score delta plus tightly clipped subjective shaping."""
     try:
         score_delta = max(0, int(frame.game_score) - int(last_game_score))
@@ -237,6 +300,7 @@ def _shape_transition_reward(frame, last_game_score: int) -> tuple[float, float,
         float(frame.subjreward) * float(RL_CONFIG.subj_reward_scale),
         float(RL_CONFIG.shaping_reward_clip),
     )
+    subj_r += _no_human_delay_penalty(frame, score_delta, model_state=model_state)
     death_r = -float(getattr(RL_CONFIG, "death_penalty", 0.0)) if bool(frame.done) else 0.0
     total_r = score_r + subj_r + death_r
     total_r = _clip_abs(total_r, float(RL_CONFIG.death_reward_clip if frame.done else RL_CONFIG.reward_clip))
@@ -282,18 +346,34 @@ class AsyncReplayBuffer:
         try:
             self.queue.put_nowait(item)
         except queue.Full:
+            if is_terminal:
+                try:
+                    self.queue.put(item, timeout=0.25)
+                    return
+                except queue.Full:
+                    pass
             self._record_drop()
 
     def boost_pre_death(self, client_id):
         try:
             self.queue.put_nowait(("boost", client_id, None, None))
         except queue.Full:
+            try:
+                self.queue.put(("boost", client_id, None, None), timeout=0.25)
+                return
+            except queue.Full:
+                pass
             self._record_drop()
 
     def boost_elite_episode(self, client_id, score: int, level: int, total_reward: float, ep_len: int):
         try:
             self.queue.put_nowait(("elite", client_id, (int(score), int(level), float(total_reward), int(ep_len)), None))
         except queue.Full:
+            try:
+                self.queue.put(("elite", client_id, (int(score), int(level), float(total_reward), int(ep_len)), None), timeout=0.25)
+                return
+            except queue.Full:
+                pass
             self._record_drop()
 
     def _consume(self):
@@ -330,10 +410,16 @@ class AsyncReplayBuffer:
         indices = self._client_indices.get(client_id)
         if not indices:
             return
+        penalized = 0
         try:
-            self.agent.memory.apply_pre_death_penalty(list(indices))
+            penalized = int(self.agent.memory.apply_pre_death_penalty(list(indices)) or 0)
         except Exception as e:
             print(f"  Pre-death reward penalty error: {e}")
+        if penalized > 0:
+            try:
+                metrics.note_pre_death_penalty(penalized)
+            except Exception:
+                pass
         boost = float(getattr(RL_CONFIG, "pre_death_priority_boost", 2.0))
         if boost <= 1.0:
             indices.clear()
@@ -527,6 +613,38 @@ class SocketServer:
         offset = int(getattr(RL_CONFIG, "eval_client_offset", stride - 1)) % stride
         return (int(cid) % stride) == offset
 
+    @staticmethod
+    def _expert_guidance_mode() -> str:
+        mode = str(getattr(RL_CONFIG, "expert_guidance_mode", "episode")).strip().lower()
+        if mode in ("frame", "per_frame", "per-frame"):
+            return "frame"
+        return "episode"
+
+    @staticmethod
+    def _reset_episode_control(cs: dict) -> None:
+        cs["episode_control_initialized"] = False
+        cs["episode_use_expert"] = False
+
+    def _episode_expert_enabled(self, cs: dict, eval_only: bool) -> bool:
+        """Return whether the current playable episode should use expert actions."""
+        expert_ratio = 0.0 if eval_only else metrics.get_expert_ratio()
+        force_off = bool(eval_only or metrics.override_expert or get_expert_action is None or expert_ratio <= 0.0)
+        if force_off:
+            cs["episode_control_initialized"] = True
+            cs["episode_use_expert"] = False
+            return False
+
+        force_on = bool(getattr(metrics, "expert_mode", False) or expert_ratio >= 0.999)
+        if force_on:
+            cs["episode_control_initialized"] = True
+            cs["episode_use_expert"] = True
+            return True
+
+        if not bool(cs.get("episode_control_initialized", False)):
+            cs["episode_use_expert"] = bool(random.random() < expert_ratio)
+            cs["episode_control_initialized"] = True
+        return bool(cs.get("episode_use_expert", False))
+
     def _init_client(self, cid):
         n = max(1, int(getattr(RL_CONFIG, "n_step", 1)))
         gamma = float(getattr(RL_CONFIG, "gamma", 0.99))
@@ -536,6 +654,7 @@ class SocketServer:
             self.client_states[cid] = {
                 "frames": 0, "last_time": time.time(), "fps": 0.0,
                 "level_number": 0, "game_score": 0, "last_state": None, "last_action": None,
+                "last_advisor_action": None,
                 "last_game_score": 0,
                 "prev_action_source": None,
                 "total_reward": 0.0, "ep_dqn_reward": 0.0, "ep_dqn_score_reward": 0.0, "ep_expert_reward": 0.0,
@@ -543,6 +662,7 @@ class SocketServer:
                 "ep_death_reward": 0.0,
                 "ep_dqn_frames": 0,
                 "eval_only": eval_only,
+                "episode_control_initialized": False, "episode_use_expert": False,
                 "was_done": False, "nstep": nstep,
                 "frame_history": deque(maxlen=max(1, int(getattr(RL_CONFIG, "frame_stack", 1)))),
                 "fire_hold_dir": -1, "fire_hold_count": 0, "fire_pending_dir": -1,
@@ -690,7 +810,7 @@ class SocketServer:
                 if cs.get("last_state") is not None and cs.get("last_action") is not None:
                     mv_i, fr_i = cs["last_action"]
                     total_r, score_r, subj_r, death_r, score_delta = _shape_transition_reward(
-                        frame, cs.get("last_game_score", frame.game_score))
+                        frame, cs.get("last_game_score", frame.game_score), model_state=model_state)
                     interest = _transition_interest_score(cs["last_state"], model_state, frame, score_r, total_r)
 
                     eval_only = bool(cs.get("eval_only", False))
@@ -699,22 +819,25 @@ class SocketServer:
                         nstep = cs.get("nstep")
                         if nstep is not None:
                             joint = combine_action(mv_i, fr_i)
+                            advisor = cs.get("last_advisor_action")
+                            advisor_joint = combine_action(advisor[0], advisor[1]) if advisor is not None else -1
                             matured = nstep.add(cs["last_state"], joint, total_r,
                                                 model_state, bool(frame.done),
                                                 actor=tag, priority_reward=total_r,
-                                                interest=interest)
-                            for s0, a, Rn, pR, sn, dn, h, act, intr in matured:
+                                                interest=interest,
+                                                advisor_action=advisor_joint)
+                            for s0, a, Rn, pR, sn, dn, h, act, intr, adv in matured:
                                 mv_n, fr_n = split_joint_action(a)
                                 self.async_buffer.step_async(
                                     s0, (mv_n, fr_n), Rn, sn, bool(dn),
                                     client_id=cid, actor=act, horizon=int(h), priority_reward=pR,
-                                    interest=intr)
+                                    interest=intr, advisor_action=adv)
                         else:
                             self.async_buffer.step_async(
                                 cs["last_state"], (mv_i, fr_i), total_r,
                                 model_state, bool(frame.done), client_id=cid,
                                 actor=tag, horizon=1, priority_reward=total_r,
-                                interest=interest)
+                                interest=interest, advisor_action=cs.get("last_advisor_action"))
 
                     cs["total_reward"] += total_r
                     cs["ep_subj_reward"] = cs.get("ep_subj_reward", 0.0) + subj_r
@@ -768,11 +891,13 @@ class SocketServer:
                     except Exception:
                         break
                     cs["last_state"] = cs["last_action"] = None
+                    cs["last_advisor_action"] = None
                     cs["prev_action_source"] = None
                     cs["total_reward"] = cs["ep_dqn_reward"] = cs["ep_dqn_score_reward"] = cs["ep_expert_reward"] = 0.0
                     cs["ep_subj_reward"] = cs["ep_obj_reward"] = cs["ep_death_reward"] = 0.0
                     cs["ep_frames"] = 0
                     cs["ep_dqn_frames"] = 0
+                    self._reset_episode_control(cs)
                     cs["fire_hold_dir"] = -1
                     cs["fire_hold_count"] = 0
                     cs["fire_pending_dir"] = -1
@@ -787,11 +912,14 @@ class SocketServer:
                     cs["ep_subj_reward"] = cs["ep_obj_reward"] = cs["ep_death_reward"] = 0.0
                     cs["ep_frames"] = 0
                     cs["ep_dqn_frames"] = 0
+                    self._reset_episode_control(cs)
 
                 # ── Not playable (death animation / between lives) ──────
                 if not frame.player_alive:
                     cs["last_state"] = cs["last_action"] = None
+                    cs["last_advisor_action"] = None
                     cs["prev_action_source"] = None
+                    self._reset_episode_control(cs)
                     cs["fire_hold_dir"] = -1
                     cs["fire_hold_count"] = 0
                     cs["fire_pending_dir"] = -1
@@ -810,6 +938,7 @@ class SocketServer:
                 metrics.increment_total_controls()
                 mv_idx, fr_idx = 8, 8           # idle defaults
                 action_source = "none"
+                advisor_action = None
 
                 # Fire-hold: while a hold is active, lock the fire direction so
                 # the expert/model don't fight the cadence — keeps move quality
@@ -823,14 +952,37 @@ class SocketServer:
                 if self.agent:
                     eval_only = bool(cs.get("eval_only", False))
                     expert_ratio = 0.0 if eval_only else metrics.get_expert_ratio()
-                    use_expert = (random.random() < expert_ratio) and not metrics.override_expert and not eval_only
+                    if (
+                        bool(getattr(RL_CONFIG, "advisor_labels_enabled", True))
+                        and not eval_only
+                        and get_expert_action is not None
+                    ):
+                        try:
+                            wave = max(1, int(frame.level_number))
+                            adv_mv, adv_fr = get_expert_action(frame.state, wave, locked_fire=locked_fire)
+                            advisor_action = (int(adv_mv), int(adv_fr))
+                        except Exception:
+                            advisor_action = None
+                    if self._expert_guidance_mode() == "frame":
+                        use_expert = (
+                            (random.random() < expert_ratio)
+                            and not metrics.override_expert
+                            and not eval_only
+                            and get_expert_action is not None
+                        )
+                    else:
+                        use_expert = self._episode_expert_enabled(cs, eval_only)
 
                     if use_expert and get_expert_action is not None:
                         # Clamp wave to >=1 like v3 — the expert's rescue/tank-wave
                         # logic keys off wave_number and misbehaves at 0.
-                        wave = max(1, int(frame.level_number))
-                        mv_idx, fr_idx = get_expert_action(frame.state, wave,
-                                                           locked_fire=locked_fire)
+                        if advisor_action is not None:
+                            mv_idx, fr_idx = advisor_action
+                        else:
+                            wave = max(1, int(frame.level_number))
+                            mv_idx, fr_idx = get_expert_action(frame.state, wave,
+                                                               locked_fire=locked_fire)
+                            advisor_action = (int(mv_idx), int(fr_idx))
                         action_source = "expert"
                     else:
                         epsilon = float(getattr(RL_CONFIG, "eval_epsilon", 0.0)) if eval_only else metrics.get_effective_epsilon()
@@ -852,6 +1004,11 @@ class SocketServer:
 
                 cs["last_state"] = model_state
                 cs["last_action"] = (int(mv_idx), int(effective_fire))
+                if advisor_action is not None:
+                    adv_mv, adv_fr = advisor_action
+                    cs["last_advisor_action"] = (int(adv_mv), int(adv_fr))
+                else:
+                    cs["last_advisor_action"] = None
                 cs["last_game_score"] = int(frame.game_score)
                 cs["prev_action_source"] = action_source
 

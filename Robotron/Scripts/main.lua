@@ -106,6 +106,8 @@ ADVANCED_SHAPING = {
 SUBJ_AIM_WEIGHT = 15.0        -- reward per frame when correctly aimed
 AIM_CROSS_THRESHOLD = 2048     -- 8 screen-pixels in x16 units (8 * 256)
 AIM_MIN_FORWARD = 1024         -- ~4 screen-pixels minimum forward distance
+AIM_CARDINAL_CLOSE_DISTANCE = 12288  -- ~48 px: close near-axis targets should prefer cardinals
+AIM_CARDINAL_AXIS_RATIO = 0.35       -- minor/major axis ratio below this snaps to N/E/S/W
 -- Categories that count as "targets" for aim reward (everything but humans).
 AIM_TARGET_CATS = {
     grunt = true, hulk = true, brain = true, tank = true,
@@ -1167,6 +1169,41 @@ local function _build_directional_affordances(player_x16, player_y16, dangerous_
     return lanes
 end
 
+local function _build_basic_lane_density_features(dangerous_bucket, human_bucket)
+    -- Fast-mode lane block for the DQN compact state. The current Python slice
+    -- consumes only enemy_count and human_count from each 30-feature lane row,
+    -- so keep those cheap cues alive even when skipping the heavier tactical
+    -- affordance/grid calculations.
+    local lanes = {}
+    for lane_i = 1, TACTICAL_LANE_COUNT do
+        lanes[lane_i] = {enemy_count = 0, human_count = 0}
+    end
+
+    for _, obj in ipairs(dangerous_bucket) do
+        local lane_i = lane_index_for_object(obj.rel_dx16 or 0.0, obj.rel_dy16 or 0.0)
+        lanes[lane_i].enemy_count = lanes[lane_i].enemy_count + 1
+    end
+
+    for _, obj in ipairs(human_bucket) do
+        local lane_i = lane_index_for_object(obj.rel_dx16 or 0.0, obj.rel_dy16 or 0.0)
+        lanes[lane_i].human_count = lanes[lane_i].human_count + 1
+    end
+
+    local out = {}
+    for lane_i = 1, TACTICAL_LANE_COUNT do
+        local lane = lanes[lane_i]
+        for feat_i = 1, TACTICAL_LANE_FEATURES do
+            out[#out + 1] = 0.0
+        end
+        local row_start = #out - TACTICAL_LANE_FEATURES
+        out[row_start + 8] = clamp01(lane.enemy_count / 50.0)
+        out[row_start + 12] = clamp01(lane.human_count / 16.0)
+        out[row_start + 19] = LANE_SIN[lane_i]
+        out[row_start + 20] = LANE_COS[lane_i]
+    end
+    return out
+end
+
 local function _build_lane_summary_features(player_x16, player_y16, dangerous_bucket, projectile_bucket, human_bucket, electrode_bucket)
     local lanes = {}
     for lane_i = 1, TACTICAL_LANE_COUNT do
@@ -1276,6 +1313,34 @@ local function human_proximity_score(nearest_dist_norm)
     return 1.0 - clamp01(nearest_dist_norm / math.max(1e-6, SUBJ_HUMAN_NEAR_NORM))
 end
 
+local function cardinal_fire_dir_for_close_target(dx, dy)
+    if dx == nil or dy == nil then
+        return nil
+    end
+    local ax = math.abs(dx)
+    local ay = math.abs(dy)
+    local major = math.max(ax, ay)
+    if major < 1.0 then
+        return nil
+    end
+    local dist = math.sqrt(dx * dx + dy * dy)
+    if dist > AIM_CARDINAL_CLOSE_DISTANCE then
+        return nil
+    end
+    if (math.min(ax, ay) / major) > AIM_CARDINAL_AXIS_RATIO then
+        return nil
+    end
+    if ax >= ay then
+        return (dx >= 0) and 2 or 6
+    end
+    return (dy >= 0) and 4 or 0
+end
+
+local function aim_direction_allowed_for_target(fire_cmd, dx, dy)
+    local snap_dir = cardinal_fire_dir_for_close_target(dx, dy)
+    return snap_dir == nil or fire_cmd == snap_dir
+end
+
 local function compute_aim_reward(fire_cmd, px16, py16, objects)
     -- Returns 0..1 aim score: 1 if fire_cmd is toward at least one aligned target.
     -- Only evaluates if fire_cmd is a valid direction (0-7).
@@ -1305,7 +1370,8 @@ local function compute_aim_reward(fire_cmd, px16, py16, objects)
             -- Cross component (absolute perpendicular distance, unnormalised)
             local cross = math.abs(dx * vy - dy * vx)
 
-            if forward >= AIM_MIN_FORWARD and cross <= cross_thresh then
+            if aim_direction_allowed_for_target(fire_cmd, dx, dy)
+                    and forward >= AIM_MIN_FORWARD and cross <= cross_thresh then
                 -- Score by inverse distance: closer targets give higher reward
                 local dist = math.sqrt(dx * dx + dy * dy)
                 local score = clamp01(1.0 - dist / 32768.0)
@@ -1444,7 +1510,8 @@ function compute_priority_aim_reward(fire_cmd, px16, py16, objects, wave_number,
             local dy = obj.y16 - py16
             local forward = dx * vx + dy * vy
             local cross = math.abs(dx * vy - dy * vx)
-            if forward >= AIM_MIN_FORWARD and cross <= cross_thresh then
+            if aim_direction_allowed_for_target(fire_cmd, dx, dy)
+                    and forward >= AIM_MIN_FORWARD and cross <= cross_thresh then
                 local dist = math.sqrt(dx * dx + dy * dy)
                 local base_score = clamp01(1.0 - dist / 32768.0)
                 local threat = clamp01(obj.threat or 0.0)
@@ -1495,7 +1562,8 @@ function compute_brain_guard_reward(move_cmd, fire_cmd, px16, py16, objects, wav
             local forward = dx * vec[1] + dy * vec[2]
             local cross = math.abs(dx * vec[2] - dy * vec[1])
             local cross_thresh = ((vec[1] ~= 0 and vec[2] ~= 0) and (AIM_CROSS_THRESHOLD * 1.414)) or AIM_CROSS_THRESHOLD
-            if forward >= AIM_MIN_FORWARD and cross <= cross_thresh then
+            if aim_direction_allowed_for_target(fire_cmd, dx, dy)
+                    and forward >= AIM_MIN_FORWARD and cross <= cross_thresh then
                 local dist = math.sqrt(dx * dx + dy * dy)
                 fire_score = clamp01(1.0 - dist / 32768.0)
             end
@@ -1928,7 +1996,7 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
     local dangerous_bucket = {}
     local human_bucket = buckets["human"]
     local electrode_bucket = buckets["electrode"]
-    local compute_full_tactical_features = not SKIP_UNUSED_TACTICAL_FEATURES
+    local compute_heavy_tactical_features = not SKIP_UNUSED_TACTICAL_FEATURES
     local current_sample_x = {}
     local current_sample_y = {}
     for _, obj in ipairs(all_objects) do
@@ -1953,32 +2021,25 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
             obj.vy16 = vy16
             obj.dx = clamp11((obj.rel_dx16 or 0.0) / POS_X_RANGE)
             obj.dy = clamp11((obj.rel_dy16 or 0.0) / POS_Y_RANGE)
-            if compute_full_tactical_features then
-                local dist_world = obj.dist_world or 0.0
-                if dist_world > 1.0 then
-                    obj.dir_x = clamp11((obj.rel_dx16 or 0.0) / dist_world)
-                    obj.dir_y = clamp11((obj.rel_dy16 or 0.0) / dist_world)
-                else
-                    obj.dir_x = 0.0
-                    obj.dir_y = 0.0
-                end
-                local radial = -((obj.vx * obj.dir_x) + (obj.vy * obj.dir_y))
-                obj.approach = clamp11(radial * 2.0)
-                obj.threat = _object_threat_score(obj)
-                local ttc_norm, closest_pass_norm = _predictive_motion_features(
-                    obj.rel_dx16 or 0.0,
-                    obj.rel_dy16 or 0.0,
-                    obj.vx16 or 0.0,
-                    obj.vy16 or 0.0
-                )
-                obj.ttc_norm = ttc_norm
-                obj.closest_pass_norm = closest_pass_norm
+            local dist_world = obj.dist_world or 0.0
+            if dist_world > 1.0 then
+                obj.dir_x = clamp11((obj.rel_dx16 or 0.0) / dist_world)
+                obj.dir_y = clamp11((obj.rel_dy16 or 0.0) / dist_world)
             else
-                obj.approach = 0.0
-                obj.threat = 0.0
-                obj.ttc_norm = 1.0
-                obj.closest_pass_norm = 1.0
+                obj.dir_x = 0.0
+                obj.dir_y = 0.0
             end
+            local radial = -((obj.vx * obj.dir_x) + (obj.vy * obj.dir_y))
+            obj.approach = clamp11(radial * 2.0)
+            obj.threat = _object_threat_score(obj)
+            local ttc_norm, closest_pass_norm = _predictive_motion_features(
+                obj.rel_dx16 or 0.0,
+                obj.rel_dy16 or 0.0,
+                obj.vx16 or 0.0,
+                obj.vy16 or 0.0
+            )
+            obj.ttc_norm = ttc_norm
+            obj.closest_pass_norm = closest_pass_norm
 
             counts[obj.category] = counts[obj.category] + 1
             current_sample_x[obj.ptr] = obj.x16
@@ -2022,9 +2083,9 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
     prev_object_sample_x = current_sample_x
     prev_object_sample_y = current_sample_y
 
-    local lane_summary_features = ZERO_TACTICAL_LANE_FEATURES
+    local lane_summary_features = _build_basic_lane_density_features(dangerous_bucket, human_bucket)
     local local_grid_features = ZERO_TACTICAL_GRID_FEATURES
-    if compute_full_tactical_features then
+    if compute_heavy_tactical_features then
         lane_summary_features = _build_lane_summary_features(
             player_center_x16,
             player_center_y16,
@@ -3639,7 +3700,7 @@ end
 
 print("Robotron socket target: " .. SOCKET_ADDRESS)
 if SKIP_UNUSED_TACTICAL_FEATURES then
-    print("Robotron tactical lanes/grid: skipped for fast V3 observations")
+    print("Robotron tactical lanes/grid: fast mode keeps DQN lane/object danger cues, skips heavy grid/affordances")
 end
 controls = Controls:new(manager)
 if not controls then

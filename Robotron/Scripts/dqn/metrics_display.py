@@ -9,7 +9,7 @@ if __name__ == "__main__":
     print("This is not the main application, run 'main.py' instead")
     exit(1)
 
-import sys, time, math, threading
+import os, sys, time, math, threading
 import numpy as np
 from collections import deque
 
@@ -19,6 +19,16 @@ except ImportError:
     from config import metrics, IS_INTERACTIVE, RL_CONFIG, game_settings
 
 row_counter = 0
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return bool(default)
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
+FULL_CONSOLE_REPORT = _env_flag("ROBOTRON_DQN_METRICS_FULL", False)
 
 # Rolling DQN reward-per-DQN-frame windows. Eviction is keyed by total episode
 # frames so the windows advance at a stable wall-clock cadence even when the
@@ -248,16 +258,81 @@ def _print_line(msg, is_header=False):
     sys.stdout.flush()
 
 
+def _fit_cell(value, width: int) -> str:
+    text = str(value)
+    if len(text) > width:
+        text = text[:width]
+    return text.rjust(width)
+
+
+def _compact_count(value, width: int) -> str:
+    try:
+        v = float(value)
+    except Exception:
+        return _fit_cell("0", width)
+    av = abs(v)
+    if av >= 1_000_000_000:
+        scaled, suffix = v / 1_000_000_000.0, "B"
+    elif av >= 1_000_000:
+        scaled, suffix = v / 1_000_000.0, "M"
+    elif av >= 1_000:
+        scaled, suffix = v / 1_000.0, "k"
+    else:
+        return _fit_cell(f"{v:.0f}", width)
+
+    text = f"{scaled:.1f}{suffix}"
+    if len(text) > width:
+        text = f"{scaled:.0f}{suffix}"
+    return _fit_cell(text, width)
+
+
+def _compact_float(value, width: int, decimals: int = 1) -> str:
+    try:
+        text = f"{float(value):.{decimals}f}"
+        if len(text) > width and decimals > 0:
+            text = f"{float(value):.0f}"
+    except Exception:
+        text = "0"
+    return _fit_cell(text, width)
+
+
+def _compact_pct(value, width: int, marker: str = "") -> str:
+    try:
+        text = f"{float(value):.0f}%{marker}"
+    except Exception:
+        text = f"0%{marker}"
+    return _fit_cell(text, width)
+
+
 def display_metrics_header():
     global row_counter
     row_counter = 0
+    if not FULL_CONSOLE_REPORT:
+        hdr = (
+            f"{'Frame':>13} {'Steps':>9} {'FPS':>4} {'Ep':>5} {'Xp':>5} "
+            f"{'Scr':>6} {'Lv':>3} {'Score':>5} "
+            f"{'D100':>4} {'D1M':>4} {'D5M':>4} {'D10':>4} "
+            f"{'Eval':>5} {'Bell':>5} {'Imit':>5} {'AAg':>4} {'ARk':>3} "
+            f"{'Len':>4} {'AQW':>4} {'Grad':>4} {'Steps/s':>7} {'Rpl':>4} {'Mem':>5} {'Drp':>3}"
+        )
+        _print_line(hdr, is_header=True)
+        try:
+            now = time.time()
+            with metrics.lock:
+                if metrics.last_fps_time <= 0:
+                    metrics.last_fps_time = now
+        except Exception:
+            pass
+        return
+
     hdr = (
-        f"{'Frame':>11} {'Steps':>10} {'FPS':>7} {'Epsi':>7} {'Xprt':>7} "
+        f"{'Frame':>13} {'Steps':>9} {'FPS':>7} {'Epsi':>7} {'Xprt':>7} "
         f"{'AvgScr':>9} {'AvgLvl':>6} "
         f"{'Rwrd':>9} {'Score':>9} {'Shape':>9} {'Death':>9} {'DQN100K/F':>9} {'DQN1M/F':>9} {'DQN5M/F':>9} {'DQN10M/F':>9} "
         f"{'EvalR':>8} {'EvalScr':>8} {'EvalLvl':>7} "
-        f"{'Loss':>10} {'AgrM%':>6} {'AgrF%':>6} "
-        f"{'EpLen':>8} {'BCLoss':>8} {'BCW':>6} {'ExpB%':>6} {'Sync':>5} "
+        f"{'Loss':>10} {'BellL':>7} {'ImitL':>7} {'AgrM%':>6} {'AgrF%':>6} "
+        f"{'EpLen':>8} {'BCLoss':>8} {'BCW':>6} {'AQW':>6} {'AMW':>6} {'ExpB%':>6} {'AdvB%':>6} {'Orig%':>11} {'NStp':>5} {'DoneB%':>7} {'PDeath':>7} {'Sync':>5} "
+        f"{'QAct/Tgt/Nxt':>18} {'TDQ':>8} {'TClip%':>8} {'PIdl%':>7} {'PEnt':>5} {'ERnk':>5} {'EMrg':>7} {'XAg%':>6} {'LAg%':>6} {'AAg%':>6} {'ARnk':>5} "
         f"{'Clnt':>4} {'Web':>4} "
         f"{'AvgInf':>7} {'Steps/s':>8} {'Rpl/F':>7} {'GrNorm':>8} {'Q-Range':>14} {'Mem':>10} {'LR':>9} {'Drop':>7} {'Tms S/X/C/P':>17}"
     )
@@ -356,6 +431,8 @@ def display_metrics_row(agent, kb_handler):
             avg_ep_len = metrics.episode_length_sum_interval / max(1, metrics.episode_length_count_interval)
         metrics.episode_length_sum_interval = 0
         metrics.episode_length_count_interval = 0
+        pre_death_interval = int(getattr(metrics, "pre_death_penalized_interval", 0))
+        metrics.pre_death_penalized_interval = 0
 
     # ── Wave / level ────────────────────────────────────────────────────
     display_level = metrics.average_level + 1.0
@@ -417,15 +494,72 @@ def display_metrics_row(agent, kb_handler):
         f"{metrics.last_train_compute_ms:.0f}/"
         f"{metrics.last_train_priority_ms:.0f}"
     )
+    origin_mix = (
+        f"{metrics.last_sample_per_frac*100:.0f}/"
+        f"{metrics.last_sample_expert_quota_frac*100:.0f}/"
+        f"{metrics.last_sample_interesting_frac*100:.0f}/"
+        f"{metrics.last_sample_recent_frac*100:.0f}"
+    )
+    q_diag = (
+        f"{metrics.last_current_q_action_mean:.1f}/"
+        f"{metrics.last_target_q_mean:.1f}/"
+        f"{metrics.last_next_q_max_mean:.1f}"
+    )
+    target_clip = (
+        f"{metrics.last_target_clip_low_frac*100:.0f}/"
+        f"{metrics.last_target_clip_high_frac*100:.0f}"
+    )
+    policy_idle = (
+        f"{metrics.last_policy_idle_move_frac*100:.0f}/"
+        f"{metrics.last_policy_idle_fire_frac*100:.0f}"
+    )
+
+    if not FULL_CONSOLE_REPORT:
+        row = (
+            f"{metrics.frame_count:>13,} "
+            f"{metrics.total_training_steps:>9,} "
+            f"{_compact_float(metrics.fps, 4, 0)} "
+            f"{_compact_pct(eps_val, 5, eps_mark)} "
+            f"{_compact_pct(xprt_val, 5, xprt_mark)} "
+            f"{_compact_count(average_game_score, 6)} "
+            f"{_compact_float(display_level, 3, 1)} "
+            f"{_compact_count(mean_obj*_prs, 5)} "
+            f"{_compact_float(dqn100k*_prs, 4, 1)} "
+            f"{_compact_float(dqn1m*_prs, 4, 1)} "
+            f"{_compact_float(dqn5m*_prs, 4, 1)} "
+            f"{_compact_float(dqn_pf*_prs, 4, 1)} "
+            f"{_compact_count(eval_score, 5)} "
+            f"{_compact_float(metrics.last_bellman_loss, 5, 3)} "
+            f"{_compact_float(metrics.last_imitation_loss, 5, 3)} "
+            f"{_compact_pct(metrics.last_advisor_joint_agreement*100, 4)} "
+            f"{_compact_float(metrics.last_advisor_q_rank_mean, 3, 1)} "
+            f"{_compact_float(avg_ep_len, 4, 0)} "
+            f"{_compact_float(metrics.last_advisor_q_policy_weight, 4, 2)} "
+            f"{_compact_float(metrics.last_grad_norm, 4, 2)} "
+            f"{_compact_float(steps_per_sec, 7, 1)} "
+            f"{_compact_float(replay_ratio, 4, 1)} "
+            f"{_compact_count(metrics.memory_buffer_size, 5)} "
+            f"{_compact_count(metrics.replay_dropped_steps, 3)}"
+        )
+        _print_line(row)
+        return
 
     row = (
-        f"{metrics.frame_count:>11,} {metrics.total_training_steps:>10,} {metrics.fps:>7.1f} {eps_pct} {xprt_pct} "
+        f"{metrics.frame_count:>13,} {metrics.total_training_steps:>9,} {metrics.fps:>7.1f} {eps_pct} {xprt_pct} "
         f"{average_game_score:>9,.0f} {display_level:>6.1f} "
         f"{_fr(mean_reward*_prs)} {_fr(mean_obj*_prs)} {_fr(mean_subj*_prs)} {_fr(mean_death*_prs)} {_fr(dqn100k*_prs)} "
         f"{_fr(dqn1m*_prs)} {_fr(dqn5m*_prs)} {_frp(dqn_pf*_prs, 9)} "
         f"{_fr(eval_reward*_prs, 8)} {eval_score:>8,.0f} {eval_level:>7.1f} "
-        f"{loss_avg:>10.6f} {agree_move_avg*100:>5.1f}% {agree_fire_avg*100:>5.1f}% "
-        f"{avg_ep_len:>8.1f} {metrics.last_bc_loss:>8.4f} {metrics.last_bc_weight:>6.3f} {metrics.last_sample_expert_frac*100:>5.1f}% {metrics.last_inference_sync_age:>5} "
+        f"{loss_avg:>10.6f} {metrics.last_bellman_loss:>7.4f} {metrics.last_imitation_loss:>7.4f} "
+        f"{agree_move_avg*100:>5.1f}% {agree_fire_avg*100:>5.1f}% "
+        f"{avg_ep_len:>8.1f} {metrics.last_bc_loss:>8.4f} {metrics.last_bc_weight:>6.3f} "
+        f"{metrics.last_advisor_q_policy_weight:>6.3f} {metrics.last_advisor_q_margin_weight:>6.3f} "
+        f"{metrics.last_sample_expert_frac*100:>5.1f}% {metrics.last_sample_advisor_frac*100:>5.1f}% {origin_mix:>11} "
+        f"{metrics.last_sample_horizon_mean:>5.1f} {metrics.last_sample_terminal_frac*100:>6.2f}% {pre_death_interval:>7,} {metrics.last_inference_sync_age:>5} "
+        f"{q_diag:>18} {metrics.last_td_q_mean:>8.2f} {target_clip:>8} {policy_idle:>7} {metrics.last_policy_action_entropy:>5.2f} "
+        f"{metrics.last_expert_q_rank_mean:>5.1f} {metrics.last_expert_q_margin_mean:>7.2f} "
+        f"{metrics.last_expert_joint_agreement*100:>5.1f}% {metrics.last_learner_joint_agreement*100:>5.1f}% "
+        f"{metrics.last_advisor_joint_agreement*100:>5.1f}% {metrics.last_advisor_q_rank_mean:>5.1f} "
         f"{metrics.client_count:>4} {metrics.web_client_count:>4} "
         f"{avg_inf_ms:>7.2f} {steps_per_sec:>8.1f} "
         f"{replay_ratio:>7.2f} {metrics.last_grad_norm:>8.3f} {q_range:>14} {mem_k:>8}k {lr_str:>9} {metrics.replay_dropped_steps:>7,} {train_ms:>17}"

@@ -62,6 +62,8 @@ _PROJECTILE_DANGER_DIST = 6144.0 / _POS_MAX_DIAG  # ~24px
 
 _ALIGN_HALF_WINDOW_PX = 8.0
 _ALIGN_HALF_WINDOW_WORLD = _ALIGN_HALF_WINDOW_PX * _WORLD_UNITS_PER_PIXEL
+_CARDINAL_SNAP_CLOSE_WORLD = 48.0 * _WORLD_UNITS_PER_PIXEL
+_CARDINAL_SNAP_AXIS_RATIO = 0.35
 
 # ── Perimeter orbit constants ──────────────────────────────────────────────
 
@@ -194,6 +196,21 @@ def _move_dir_vector(move_dir: int) -> tuple[float, float]:
 def _move_dir_endpoint_world(move_dir: int) -> tuple[float, float]:
     vx, vy = _move_dir_vector(move_dir)
     return vx * _MOVE_SAFETY_LOOKAHEAD_WORLD, vy * _MOVE_SAFETY_LOOKAHEAD_WORLD
+
+
+def _cardinal_fire_dir_for_close_target(world_dx: float, world_dy: float) -> int | None:
+    ax = abs(world_dx)
+    ay = abs(world_dy)
+    major = max(ax, ay)
+    if major <= 1e-6:
+        return None
+    if math.hypot(world_dx, world_dy) > _CARDINAL_SNAP_CLOSE_WORLD:
+        return None
+    if (min(ax, ay) / major) > _CARDINAL_SNAP_AXIS_RATIO:
+        return None
+    if ax >= ay:
+        return 2 if world_dx >= 0.0 else 6
+    return 4 if world_dy >= 0.0 else 0
 
 
 # ── Entity data extraction helpers ─────────────────────────────────────────
@@ -379,7 +396,10 @@ def _nearest_aligned_fire(entities, allowed_types=None):
         world_dist = math.hypot(world_dx, world_dy)
         if world_dist < 1e-3:
             continue
+        snap_fire_dir = _cardinal_fire_dir_for_close_target(world_dx, world_dy)
         for fire_dir, (dir_x, dir_y) in enumerate(_DIR8_VECTORS):
+            if snap_fire_dir is not None and fire_dir != snap_fire_dir:
+                continue
             forward = world_dx * dir_x + world_dy * dir_y
             if forward <= 0.0:
                 continue

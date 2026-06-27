@@ -7,9 +7,9 @@ of it away inside ``_get_active_entities``, which only keeps
 ``(dx, dy, vx, vy, dist_norm, type_id)`` per active entity.
 
 That tensor exists for v3's *model* token input. The DQN learner uses its own
-global/enemy-list slice instead, so for the DQN expert path the full tensor is
-dead weight. This module reads the wire role-pools directly into the six fields
-the expert actually consumes, then defers to the **unchanged** shared
+global/lane/object-list slice instead, so for the DQN expert path the full
+tensor is dead weight. This module reads the wire role-pools directly into the
+six fields the expert actually consumes, then defers to the **unchanged** shared
 strategic-decision logic. Output is byte-identical (and identically ordered) to
 ``get_expert_action`` — verified by ``dqn.test_smoke``.
 

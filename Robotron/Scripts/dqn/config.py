@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # ==================================================================================================================
 # ||  ROBOTRON AI • DQN CONFIGURATION                                                                            ||
-# ||  Rainbow-lite engine (C51 + dueling + PER + n-step + target net + expert BC), enemy-list attention,        ||
+# ||  Rainbow-lite engine (C51 + dueling + PER + n-step + target net + expert BC), object-list attention,       ||
 # ||  and a joint twin-stick action head.  Ported and refactored from the Tempest DQN.                           ||
 # ==================================================================================================================
 """Central configuration: server, RL hyper-parameters, game settings, metrics.
@@ -10,10 +10,11 @@ State representation
 --------------------
 Each frame the Lua client sends ``WIRE_PARAMS_COUNT`` (2118) big-endian f32
 values. The DQN consumes a deliberately plain single-frame slice of that wire:
-the 18 core game/player scalars, the 22 raw ELIST/level-state bytes, and a
-stable 96-row enemy/danger list from the tactical pool. Lanes, grids,
-projectiles, humans, and electrodes remain on the wire for the expert/debugging
-path, but are not part of the DQN model input.
+the 18 core game/player scalars, the 22 raw ELIST/level-state bytes, 16
+directional lane-density scalars, 3 nearest-destructible-target scalars, and
+96 role-aware object rows distilled from the projectile, danger, human, and
+electrode tactical pools. The full lane and grid blocks remain on the wire for
+expert/debugging paths, but are not part of the DQN model input.
 
 Action representation
 ---------------------
@@ -57,13 +58,21 @@ SETTINGS_PATH = os.path.join(MODEL_DIR, "game_settings.json")
 WIRE_PARAMS_COUNT = 2118
 
 # Model slice: 18 core game features + 22 ELIST/level-state features +
-# 96 stable enemy rows × 10 features.
+# 16 lane-density features + nearest target dx/dy/dist +
+# 96 role-aware object rows × 16 features.
 CORE_FEATURES = 18                       # wire[0:18]
 ELIST_FEATURES = 22                      # wire[18:40]
-GLOBAL_FEATURES = CORE_FEATURES + ELIST_FEATURES
+CORE_ELIST_FEATURES = CORE_FEATURES + ELIST_FEATURES
 LANE_COUNT = 8                           # 8 fire/move directions
 LANE_FEATURES = 30                       # features per lane
-TACTICAL_LANE_OFFSET = 40                # wire index where lane blocks begin
+LANE_SUMMARY_FEATURES = LANE_COUNT * 2   # enemy density + human density per action direction
+LANE_SUMMARY_OFFSET = CORE_ELIST_FEATURES
+LANE_SUMMARY_END = LANE_SUMMARY_OFFSET + LANE_SUMMARY_FEATURES
+TARGET_SUMMARY_FEATURES = 3              # nearest destructible target dx, dy, dist
+TARGET_SUMMARY_OFFSET = LANE_SUMMARY_END
+TARGET_SUMMARY_END = TARGET_SUMMARY_OFFSET + TARGET_SUMMARY_FEATURES
+GLOBAL_FEATURES = CORE_ELIST_FEATURES + LANE_SUMMARY_FEATURES + TARGET_SUMMARY_FEATURES
+TACTICAL_LANE_OFFSET = CORE_ELIST_FEATURES
 TACTICAL_LANE_END = TACTICAL_LANE_OFFSET + LANE_COUNT * LANE_FEATURES   # 280
 # Lua emits lane rows in geometric angle order:
 #   E, NE, N, NW, W, SW, S, SE
@@ -76,14 +85,15 @@ TACTICAL_GRID_OFFSET = TACTICAL_LANE_END
 TACTICAL_GRID_END = TACTICAL_GRID_OFFSET + TACTICAL_GRID_FEATURES        # 766
 TACTICAL_POOL_OFFSET = TACTICAL_GRID_END
 
-# Plain enemy-list section. Rows are copied from Lua's stable danger-pool slots
-# without sorting so slot identity persists across frames.
-ENEMY_TOKEN_COUNT = 96
-ENEMY_TOKEN_FEATURES = 10
-ENEMY_FEATURES = ENEMY_TOKEN_COUNT * ENEMY_TOKEN_FEATURES
-ENEMY_TOKEN_OFFSET = GLOBAL_FEATURES
-ENEMY_TOKEN_END = ENEMY_TOKEN_OFFSET + ENEMY_FEATURES
-SINGLE_FRAME_STATE_SIZE = ENEMY_TOKEN_END                                     # 1000
+# Role-aware object-token section. Rows are distilled from all Lua tactical
+# pools, sorted by immediate action relevance, and capped to keep the model
+# compact.
+OBJECT_TOKEN_COUNT = 96
+OBJECT_TOKEN_FEATURES = 16
+OBJECT_FEATURES = OBJECT_TOKEN_COUNT * OBJECT_TOKEN_FEATURES
+OBJECT_TOKEN_OFFSET = GLOBAL_FEATURES
+OBJECT_TOKEN_END = OBJECT_TOKEN_OFFSET + OBJECT_FEATURES
+SINGLE_FRAME_STATE_SIZE = OBJECT_TOKEN_END                                    # 1595
 _frame_stack_env = os.getenv("DQN_FRAME_STACK", os.getenv("ROBOTRON_DQN_FRAME_STACK", "1"))
 try:
     FRAME_STACK_COUNT = max(1, int(_frame_stack_env))
@@ -98,6 +108,19 @@ TACTICAL_POOL_DEFS = (
     ("human", 12, 7),
     ("electrode", 8, 5),
 )
+
+# Compatibility aliases for callers/tests that still use the previous enemy-list
+# names. The representation is now a unified object list, not danger-only.
+ENEMY_TOKEN_COUNT = OBJECT_TOKEN_COUNT
+ENEMY_TOKEN_FEATURES = OBJECT_TOKEN_FEATURES
+ENEMY_FEATURES = OBJECT_FEATURES
+ENEMY_TOKEN_OFFSET = OBJECT_TOKEN_OFFSET
+ENEMY_TOKEN_END = OBJECT_TOKEN_END
+
+_ROLE_NORM = {"projectile": 0.25, "danger": 0.50, "human": 0.75, "electrode": 1.00}
+_TYPE_NORM_DEFAULT = {"projectile": 6.0 / 11.0, "danger": 0.0, "human": 7.0 / 11.0, "electrode": 8.0 / 11.0}
+_LANE_ENEMY_COUNT_OFFSET = 7
+_LANE_HUMAN_COUNT_OFFSET = 11
 
 
 def _clip01(v: float) -> float:
@@ -120,14 +143,30 @@ def _clip11(v: float) -> float:
     return min(1.0, max(-1.0, x))
 
 
-def _extract_enemy_tokens(arr: np.ndarray) -> np.ndarray:
-    """Return the stable 96-row enemy/danger list from the Lua tactical pools.
+def _extract_lane_density_features(arr: np.ndarray) -> np.ndarray:
+    """Return 8×(enemy_density, human_density) in controller action order."""
+    out = np.zeros((LANE_COUNT, 2), dtype=np.float32)
+    start = TACTICAL_LANE_OFFSET
+    end = TACTICAL_LANE_END
+    if len(arr) < end:
+        return out.reshape(-1)
+    lanes = arr[start:end].reshape(LANE_COUNT, LANE_FEATURES)
+    for action_idx, wire_lane_idx in enumerate(ACTION_LANE_WIRE_INDICES):
+        if 0 <= wire_lane_idx < LANE_COUNT:
+            lane = lanes[wire_lane_idx]
+            out[action_idx, 0] = _clip01(lane[_LANE_ENEMY_COUNT_OFFSET])
+            out[action_idx, 1] = _clip01(lane[_LANE_HUMAN_COUNT_OFFSET])
+    return out.reshape(-1)
+
+
+def _extract_object_tokens(arr: np.ndarray) -> np.ndarray:
+    """Return a role-aware top-K object list from the Lua tactical pools.
 
     Row layout:
-    ``[present, dx, dy, dist, vx, vy, threat, approach, ttc, type_norm]``.
-    Rows are kept in Lua's stable pool-slot order instead of priority sorting.
+    ``[present, dx, dy, dist, vx, vy, threat, approach, ttc, closest_pass,
+    type_norm, role_norm, destructible, blocker, rescue, projectile]``.
     """
-    out = np.zeros((ENEMY_TOKEN_COUNT, ENEMY_TOKEN_FEATURES), dtype=np.float32)
+    tokens = []
     pools = arr[TACTICAL_POOL_OFFSET:]
     pool_offset = 0
 
@@ -137,29 +176,93 @@ def _extract_enemy_tokens(arr: np.ndarray) -> np.ndarray:
         if slot_end > len(pools):
             pool_offset += 1 + max_slots * feat_per_slot
             continue
-        if pool_name == "danger":
-            raw = pools[slot_start:slot_end].reshape(max_slots, feat_per_slot)
-            rows = min(ENEMY_TOKEN_COUNT, max_slots)
-            for slot_idx in range(rows):
-                slot = raw[slot_idx]
-                if not np.isfinite(slot).all() or slot[0] <= 0.5:
-                    continue
-                out[slot_idx] = np.asarray([
-                    1.0,
-                    _clip11(slot[1] if feat_per_slot > 1 else 0.0),
-                    _clip11(slot[2] if feat_per_slot > 2 else 0.0),
-                    _clip01(slot[3] if feat_per_slot > 3 else 1.0),
-                    _clip11(slot[4] if feat_per_slot > 4 else 0.0),
-                    _clip11(slot[5] if feat_per_slot > 5 else 0.0),
-                    _clip01(slot[6] if feat_per_slot > 6 else 0.0),
-                    _clip11(slot[7] if feat_per_slot > 7 else 0.0),
-                    _clip01(slot[8] if feat_per_slot > 8 else 1.0),
-                    _clip01(slot[9] if feat_per_slot > 9 else 0.0),
-                ], dtype=np.float32)
-            break
+        raw = pools[slot_start:slot_end].reshape(max_slots, feat_per_slot)
+        for slot_idx in range(max_slots):
+            slot = raw[slot_idx]
+            if not np.isfinite(slot).all() or slot[0] <= 0.5:
+                continue
+
+            dx = _clip11(slot[1] if feat_per_slot > 1 else 0.0)
+            dy = _clip11(slot[2] if feat_per_slot > 2 else 0.0)
+            dist = _clip01(slot[3] if feat_per_slot > 3 else 1.0)
+            vx = _clip11(slot[4] if feat_per_slot > 4 else 0.0)
+            vy = _clip11(slot[5] if feat_per_slot > 5 else 0.0)
+            threat = 0.0
+            approach = 0.0
+            ttc = 1.0
+            closest_pass = dist
+            type_norm = _TYPE_NORM_DEFAULT.get(pool_name, 0.0)
+            destructible = 0.0
+            blocker = 0.0
+            rescue = 0.0
+            projectile = 0.0
+
+            if pool_name == "projectile":
+                threat = _clip01(slot[6] if feat_per_slot > 6 else 0.8)
+                ttc = _clip01(slot[7] if feat_per_slot > 7 else 1.0)
+                closest_pass = _clip01(slot[8] if feat_per_slot > 8 else dist)
+                approach = _clip11(slot[9] if feat_per_slot > 9 else 0.0)
+                if feat_per_slot > 10 and float(slot[10]) >= 0.5:
+                    type_norm = 9.0 / 11.0
+                destructible = 1.0
+                projectile = 1.0
+                priority = 5.0 * (1.0 - dist) + 3.0 * (1.0 - ttc) + 2.0 * threat + 1.0
+            elif pool_name == "danger":
+                threat = _clip01(slot[6] if feat_per_slot > 6 else 0.6)
+                approach = _clip11(slot[7] if feat_per_slot > 7 else 0.0)
+                ttc = _clip01(slot[8] if feat_per_slot > 8 else 1.0)
+                if feat_per_slot > 9:
+                    type_norm = _clip01(float(slot[9]) * (8.0 / 11.0))
+                is_hulk = abs(type_norm - (1.0 / 11.0)) < 0.05
+                destructible = 0.0 if is_hulk else 1.0
+                blocker = 1.0 if is_hulk else 0.0
+                priority = 4.0 * (1.0 - dist) + 2.0 * threat + 1.0 * (1.0 - ttc) + 0.5 * blocker
+            elif pool_name == "human":
+                threat = _clip01(slot[6] if feat_per_slot > 6 else 0.0)
+                rescue = 1.0
+                priority = 1.6 * (1.0 - dist) + 0.25
+            else:  # electrode
+                threat = _clip01(slot[4] if feat_per_slot > 4 else 0.7)
+                blocker = 1.0
+                priority = 3.0 * (1.0 - dist) + 2.0 * threat + 0.75
+
+            tokens.append((
+                float(priority),
+                [
+                    1.0, dx, dy, dist, vx, vy, threat, approach, ttc, closest_pass,
+                    type_norm, _ROLE_NORM.get(pool_name, 0.0),
+                    destructible, blocker, rescue, projectile,
+                ],
+            ))
         pool_offset += 1 + max_slots * feat_per_slot
 
+    out = np.zeros((OBJECT_TOKEN_COUNT, OBJECT_TOKEN_FEATURES), dtype=np.float32)
+    if tokens:
+        tokens.sort(key=lambda item: item[0], reverse=True)
+        for row, (_, vals) in enumerate(tokens[:OBJECT_TOKEN_COUNT]):
+            out[row] = np.asarray(vals, dtype=np.float32)
     return out.reshape(-1)
+
+
+def _extract_nearest_destructible_target_features(objects: np.ndarray) -> np.ndarray:
+    """Return ``[dx, dy, dist]`` for the nearest targetable object."""
+    try:
+        rows = np.asarray(objects, dtype=np.float32).reshape(OBJECT_TOKEN_COUNT, OBJECT_TOKEN_FEATURES)
+    except Exception:
+        return np.asarray([0.0, 0.0, 1.0], dtype=np.float32)
+    present = rows[:, 0] > 0.5
+    destructible = rows[:, 12] > 0.5 if OBJECT_TOKEN_FEATURES > 12 else present
+    rescue = rows[:, 14] > 0.5 if OBJECT_TOKEN_FEATURES > 14 else np.zeros_like(present, dtype=bool)
+    target = present & destructible & ~rescue
+    if not np.any(target):
+        return np.asarray([0.0, 0.0, 1.0], dtype=np.float32)
+    dist = np.where(target, np.clip(rows[:, 3], 0.0, 1.0), np.inf)
+    idx = int(np.argmin(dist))
+    return np.asarray([
+        _clip11(rows[idx, 1]),
+        _clip11(rows[idx, 2]),
+        _clip01(rows[idx, 3]),
+    ], dtype=np.float32)
 
 
 def slice_model_state(wire) -> np.ndarray:
@@ -167,12 +270,14 @@ def slice_model_state(wire) -> np.ndarray:
 
     ``wire`` may be any sequence of length >= TACTICAL_POOL_OFFSET.  Returns a
     contiguous float32 array of length ``SINGLE_FRAME_STATE_SIZE`` laid out as
-    ``[core(18), elist(22), enemies(96×10)]``.
+    ``[core(18), elist(22), lane_density(8×2), target(3), objects(96×16)]``.
     """
     arr = np.asarray(wire, dtype=np.float32)
-    global_state = arr[0:GLOBAL_FEATURES]
-    enemies = _extract_enemy_tokens(arr)
-    return np.concatenate([global_state, enemies]).astype(np.float32, copy=False)
+    core_elist = arr[0:CORE_ELIST_FEATURES]
+    lane_density = _extract_lane_density_features(arr)
+    objects = _extract_object_tokens(arr)
+    target = _extract_nearest_destructible_target_features(objects)
+    return np.concatenate([core_elist, lane_density, target, objects]).astype(np.float32, copy=False)
 
 
 # ---------------------------------------------------------------------------
@@ -204,14 +309,17 @@ class RLConfigData:
     # State-slice geometry (mirrors module constants, exposed for components)
     core_features: int = CORE_FEATURES
     elist_features: int = ELIST_FEATURES
+    core_elist_features: int = CORE_ELIST_FEATURES
+    lane_summary_features: int = LANE_SUMMARY_FEATURES
+    target_summary_features: int = TARGET_SUMMARY_FEATURES
     global_features: int = GLOBAL_FEATURES
     lane_count: int = 0
     lane_features: int = 0
     extra_features: int = 0
-    enemy_token_count: int = ENEMY_TOKEN_COUNT
-    enemy_token_features: int = ENEMY_TOKEN_FEATURES
-    object_token_count: int = ENEMY_TOKEN_COUNT      # compatibility alias
-    object_token_features: int = ENEMY_TOKEN_FEATURES
+    object_token_count: int = OBJECT_TOKEN_COUNT
+    object_token_features: int = OBJECT_TOKEN_FEATURES
+    enemy_token_count: int = OBJECT_TOKEN_COUNT      # compatibility alias
+    enemy_token_features: int = OBJECT_TOKEN_FEATURES
 
     # ── network architecture ────────────────────────────────────────────
     trunk_hidden: int = 384
@@ -219,21 +327,24 @@ class RLConfigData:
     use_layer_norm: bool = True
     dropout: float = 0.0
 
-    # Lane inputs are intentionally removed for the object-list experiment.
+    # Full 8x30 lane attention remains off; the trunk gets only the compact
+    # 16-scalar enemy/human lane-density summary above.
     use_lane_attention: bool = False
     attn_heads: int = 8
     attn_dim: int = 128
 
-    # Self-attention over the 96 stable enemy/danger rows.
+    # Self-attention over the 96 role-aware object rows.
     use_object_attention: bool = True
     object_attn_heads: int = 8
     object_attn_dim: int = 128
 
-    # Action-conditioned attention for the DQN advantage heads. Direction queries
-    # attend over enemy rows so each move/fire/joint action is scored with
-    # object evidence relevant to that candidate action.
+    # Action-conditioned attention for the DQN advantage heads. Fixed direction
+    # queries attend over object rows with a Tempest-style geometry bias so each
+    # move/fire/joint action starts with the relevant spatial prior.
     use_action_context_attention: bool = True
     action_context_heads: int = 8
+    action_context_geometry_bias: bool = True
+    action_context_geometry_bias_strength: float = 1.75
     joint_action_embed_dim: int = 32
     action_head_hidden: int = 192
 
@@ -241,12 +352,14 @@ class RLConfigData:
     use_joint_head: bool = True
     branch_aux_bc_weight: float = 0.25
 
-    # Distributional C51. Wider support is needed after score-delta rewards: a
-    # 150k game is roughly 150 score-reward units before shaping/death terms.
+    # Distributional C51. Keep the support tight enough that ordinary score,
+    # death, and cleanup tradeoffs move several atoms. The previous [-200, 500]
+    # support made the post-handoff Bellman loss tiny while Q-values collapsed
+    # into a low-contrast band.
     use_distributional: bool = True
     num_atoms: int = 51
-    v_min: float = -200.0
-    v_max: float = 500.0
+    v_min: float = -80.0
+    v_max: float = 220.0
 
     use_dueling: bool = True
 
@@ -255,7 +368,7 @@ class RLConfigData:
     # larger batch raises samples/sec (and Rpl/F) at near-zero extra wall-time.
     # Keep sampling/transfers inline: pinned-memory or background CUDA host work
     # re-enables the GIL in the free-threaded Torch build and tanks MAME FPS.
-    batch_size: int = 1024
+    batch_size: int = 1536
     lr: float = 1e-4
     lr_min: float = 5e-5
     lr_warmup_steps: int = 5_000
@@ -265,9 +378,9 @@ class RLConfigData:
     n_step: int = 12
     max_samples_per_frame: float = 20
 
-    # Replay (PER with proportional priorities).  The 96-enemy representation is
-    # wider than the old compact lane slice: state/next_state alone cost about
-    # 80 GB at 10M transitions with the default 1-frame stack.
+    # Replay (PER with proportional priorities).  The 96-object representation
+    # is wider than the old compact lane slice: state/next_state alone cost
+    # about 127 GB at 10M transitions with the default 1-frame stack.
     memory_size: int = 10_000_000
     priority_alpha: float = 0.7
     priority_beta_start: float = 0.4
@@ -279,9 +392,9 @@ class RLConfigData:
     # Elite/rare-event replay. PER keeps surprising transitions hot, but once a
     # valuable event becomes predictable its TD error can fall out of the sample
     # stream. Reserve a small batch quota for broad "interesting" states:
-    # scoring bursts, wave transitions, close danger, target-rich enemy rows,
+    # scoring bursts, wave transitions, close danger, target-rich object rows,
     # human opportunities, and terminal/pre-death cues.
-    interesting_replay_fraction: float = 0.08
+    interesting_replay_fraction: float = 0.12
     interesting_replay_min_score: float = 0.55
     max_interesting_replay_fraction: float = 0.20
     interesting_replay_over_cap_min_score: float = 0.95
@@ -290,8 +403,13 @@ class RLConfigData:
 
     # Recent replay quota: keep the learner responsive to the behavior it is
     # currently generating instead of letting a 10M buffer dilute new outcomes.
-    recent_replay_fraction: float = 0.35
+    recent_replay_fraction: float = 0.30
     recent_replay_window: int = 1_000_000
+    # Demonstration replay quota: keep competent trajectories visible to the
+    # Bellman head after live expert actions and BC decay away. This is a small
+    # DQfD-style anchor, not permanent expert control.
+    expert_replay_fraction: float = 0.12
+    expert_replay_bank_size: int = 1_000_000
 
     # Target network (periodic hard sync)
     target_update_period: int = 1_000
@@ -332,16 +450,21 @@ class RLConfigData:
     # gradient steps (2-3 wall-clock minutes) — the policy never had time to learn
     # before the expert handed off.  Steps are FPS-independent and track learning.
     expert_ratio_decay_start_step: int = 0
-    expert_ratio_decay_steps: int = 125_000
+    expert_ratio_decay_steps: int = 75_000
     expert_ratio: float = 0.60
+    # Demonstrations are sampled per episode/trajectory by default, not per
+    # frame. Per-frame expert mixing chops learner n-step returns whenever the
+    # actor flips, which hides the delayed death credit Robotron needs.
+    expert_guidance_mode: str = "episode"  # "episode" or legacy "frame"
 
     # Expert BC — also step-based (same FPS-independence rationale as above).
     # This trains auxiliary bc_* heads and shared trunk features.  The acting
-    # policy below is trained by the direct Q-policy + margin losses, then all
-    # imitation anchors decay away so DQN can exceed the demonstrator.
+    # policy below is trained by the direct Q-policy + margin losses. These
+    # auxiliary losses age out with the expert handoff; advisor labels carry the
+    # short stabilizing bridge after that.
     expert_bc_weight: float = 1.0
     expert_bc_decay_start_step: int = 0
-    expert_bc_decay_steps: int = 125_000
+    expert_bc_decay_steps: int = 75_000
     expert_bc_min_weight: float = 0.0
     # Directly distill demonstrations into the deployed joint Q policy. Cross
     # entropy treats Q(s, a) / temperature as action logits, giving the acting
@@ -349,16 +472,35 @@ class RLConfigData:
     expert_q_policy_weight: float = 0.35
     expert_q_policy_temperature: float = 10.0
     expert_q_policy_decay_start_step: int = 0
-    expert_q_policy_decay_steps: int = 125_000
+    expert_q_policy_decay_steps: int = 75_000
     expert_q_policy_min_weight: float = 0.0
     # Q-margin also imitates directly into the acting joint head by constraining
     # Q(expert_action) >= Q(other) + margin on expert-visited states.  Left on
-    # permanently it is a hard ceiling, so decay it on the same step schedule.
+    # after handoff it is a hard ceiling, so it decays out with the expert.
     expert_q_margin_weight: float = 0.05
     expert_q_margin: float = 0.50
     expert_q_margin_decay_start_step: int = 0
-    expert_q_margin_decay_steps: int = 125_000
+    expert_q_margin_decay_steps: int = 75_000
     expert_q_margin_min_weight: float = 0.0
+
+    # DAgger-style advisor labels.  The expert still does not act once expert
+    # control decays out, but we can ask it what it would have done on learner
+    # states. This plugs the BC distribution-shift hole without taking control
+    # away from the DQN policy.
+    advisor_labels_enabled: bool = True
+    # Keep advisor imitation strong through the expert handoff, then release it
+    # entirely. A permanent floor stabilized the handoff but plateaued the
+    # policy near the advisor; by 300k learner steps Bellman/self-play should be
+    # the only acting-head objective.
+    advisor_q_policy_weight: float = 0.10
+    advisor_q_policy_min_weight: float = 0.0
+    advisor_q_policy_temperature: float = 10.0
+    advisor_q_policy_decay_start_step: int = 0
+    advisor_q_policy_decay_steps: int = 300_000
+    advisor_q_margin_weight: float = 0.02
+    advisor_q_margin_min_weight: float = 0.0
+    advisor_q_margin_decay_start_step: int = 0
+    advisor_q_margin_decay_steps: int = 300_000
 
     # ── reward ──────────────────────────────────────────────────────────
     # Score reward is based on actual game_score delta, not Lua objreward. A
@@ -369,6 +511,11 @@ class RLConfigData:
     score_reward_clip: float = 25.0
     subj_reward_scale: float = 0.001
     shaping_reward_clip: float = 0.25
+    # Once all humans are gone, stalling the last enemies can extend episodes
+    # without strategic value. Penalize no-score live frames only in cleanup
+    # states; applying this to all no-human combat swamped the score objective.
+    no_human_delay_penalty: float = 0.003
+    no_human_delay_max_targets: int = 2
     death_penalty: float = 12.0
     reward_clip: float = 30.0
     death_reward_clip: float = 40.0
@@ -379,8 +526,8 @@ class RLConfigData:
 
     # Episode-level elite replay: preserve tails from rare/high-performing
     # episodes, not only individual interesting transitions.
-    elite_episode_score_threshold: int = 120_000
-    elite_episode_level_threshold: int = 8
+    elite_episode_score_threshold: int = 90_000
+    elite_episode_level_threshold: int = 7
     elite_episode_tail_len: int = 768
     elite_episode_priority_boost: float = 3.0
     elite_episode_interest_score: float = 1.0
@@ -623,12 +770,69 @@ class MetricsData:
     last_grad_norm: float = 0.0
     last_loss: float = 0.0
     last_q_mean: float = 0.0
+    last_bellman_loss: float = 0.0
+    last_imitation_loss: float = 0.0
     last_bc_loss: float = 0.0
     last_bc_weight: float = 0.0
+    last_bc_loss_contrib: float = 0.0
+    last_expert_q_policy_loss: float = 0.0
+    last_expert_q_policy_weight: float = 0.0
+    last_expert_q_policy_loss_contrib: float = 0.0
+    last_expert_q_margin_loss: float = 0.0
+    last_expert_q_margin_weight: float = 0.0
+    last_expert_q_margin_loss_contrib: float = 0.0
+    last_advisor_q_policy_loss: float = 0.0
+    last_advisor_q_policy_weight: float = 0.0
+    last_advisor_q_policy_loss_contrib: float = 0.0
+    last_advisor_q_margin_loss: float = 0.0
+    last_advisor_q_margin_weight: float = 0.0
+    last_advisor_q_margin_loss_contrib: float = 0.0
     last_sample_expert_frac: float = 0.0
+    last_sample_advisor_frac: float = 0.0
+    last_sample_per_frac: float = 0.0
+    last_sample_expert_quota_frac: float = 0.0
+    last_sample_interesting_frac: float = 0.0
+    last_sample_recent_frac: float = 0.0
+    last_sample_horizon_mean: float = 0.0
+    last_sample_terminal_frac: float = 0.0
     last_inference_sync_age: int = 0
     last_priority_mean: float = 0.0
     last_agreement: float = 0.0
+    last_expert_joint_agreement: float = 0.0
+    last_learner_joint_agreement: float = 0.0
+    last_advisor_joint_agreement: float = 0.0
+    last_expert_q_rank_mean: float = 0.0
+    last_expert_q_margin_mean: float = 0.0
+    last_advisor_q_rank_mean: float = 0.0
+    last_advisor_q_margin_mean: float = 0.0
+    last_current_q_action_mean: float = 0.0
+    last_target_q_mean: float = 0.0
+    last_unclamped_target_q_mean: float = 0.0
+    last_next_q_max_mean: float = 0.0
+    last_target_next_q_mean: float = 0.0
+    last_double_q_gap_mean: float = 0.0
+    last_td_q_mean: float = 0.0
+    last_td_q_abs_mean: float = 0.0
+    last_q_gap_mean: float = 0.0
+    last_target_clip_low_frac: float = 0.0
+    last_target_clip_high_frac: float = 0.0
+    last_target_low_atom_mass: float = 0.0
+    last_target_high_atom_mass: float = 0.0
+    last_target_mass_error_mean: float = 0.0
+    last_policy_idle_move_frac: float = 0.0
+    last_policy_idle_fire_frac: float = 0.0
+    last_policy_noop_frac: float = 0.0
+    last_policy_top_action_frac: float = 0.0
+    last_policy_action_entropy: float = 0.0
+    last_sample_idle_move_frac: float = 0.0
+    last_sample_idle_fire_frac: float = 0.0
+    last_sample_noop_frac: float = 0.0
+    last_sample_top_action_frac: float = 0.0
+    last_sample_action_entropy: float = 0.0
+    last_sample_reward_mean: float = 0.0
+    last_sample_reward_abs_mean: float = 0.0
+    last_sample_reward_min: float = 0.0
+    last_sample_reward_max: float = 0.0
     last_train_sample_ms: float = 0.0
     last_train_transfer_ms: float = 0.0
     last_train_compute_ms: float = 0.0
@@ -646,6 +850,8 @@ class MetricsData:
     peak_episode_reward: float = 0.0
     peak_game_score: int = 0
     replay_dropped_steps: int = 0
+    pre_death_penalized_steps: int = 0
+    pre_death_penalized_interval: int = 0
     episodes_this_run: int = 0
     last_target_update_step: int = 0
     last_target_update_time: float = 0.0
@@ -690,6 +896,13 @@ class MetricsData:
         """Record dropped replay transitions (queue overflow) for reporting."""
         with self.lock:
             self.replay_dropped_steps += max(0, int(n))
+
+    def note_pre_death_penalty(self, n: int = 1):
+        """Record replay rows that received pre-death reward penalties."""
+        with self.lock:
+            d = max(0, int(n))
+            self.pre_death_penalized_steps += d
+            self.pre_death_penalized_interval += d
 
     def note_game_score(self, score: int):
         """Thread-safe peak game-score update."""

@@ -27,7 +27,11 @@ if _SCRIPTS not in sys.path:
 
 from dqn import config as C
 from dqn import model as M
-from dqn.agent import RainbowAgent
+from dqn.agent import (
+    RainbowAgent,
+    _close_cardinal_target_dir_from_state,
+    _prefer_cardinal_fire_for_close_target,
+)
 from dqn.nstep_buffer import NStepReplayBuffer
 from dqn import socket_server as SS
 
@@ -114,7 +118,15 @@ def test_action_coding():
 def test_slice():
     print("\n[state slice]")
     w = np.zeros(C.WIRE_PARAMS_COUNT, dtype=np.float32)
-    w[:C.GLOBAL_FEATURES] = np.arange(C.GLOBAL_FEATURES, dtype=np.float32)
+    w[:C.CORE_ELIST_FEATURES] = np.arange(C.CORE_ELIST_FEATURES, dtype=np.float32)
+    expected_lane = []
+    for action_idx, wire_lane_idx in enumerate(C.ACTION_LANE_WIRE_INDICES):
+        enemy_density = 0.10 + 0.01 * action_idx
+        human_density = 0.20 + 0.01 * action_idx
+        base = C.TACTICAL_LANE_OFFSET + wire_lane_idx * C.LANE_FEATURES
+        w[base + 7] = enemy_density
+        w[base + 11] = human_density
+        expected_lane.extend([enemy_density, human_density])
     add_pool_slot(w, "danger", 3, [1.0, 0.25, -0.50, 0.20, 0.05, -0.10, 0.80, 0.40, 0.30, 0.50])
     add_pool_slot(w, "projectile", 0, [1.0, -0.1, 0.1, 0.08, 0.0, 0.0, 0.9, 0.2, 0.1, 0.5, 0.0])
     add_pool_slot(w, "human", 0, [1.0, 0.75, 0.75, 0.10, 0.0, 0.0, 0.0])
@@ -140,14 +152,38 @@ def test_slice():
     check("core[17] preserved", ms[17] == w[17])
     check("elist[18] preserved", ms[18] == w[18])
     check("elist[39] preserved", ms[39] == w[39])
-    check("enemy block starts after globals", C.ENEMY_TOKEN_OFFSET == C.GLOBAL_FEATURES)
-    check("enemy block size", ms.shape[0] - C.ENEMY_TOKEN_OFFSET == C.ENEMY_FEATURES)
-    enemies = ms[C.ENEMY_TOKEN_OFFSET:C.ENEMY_TOKEN_END].reshape(C.ENEMY_TOKEN_COUNT, C.ENEMY_TOKEN_FEATURES)
-    expected = np.asarray([1.0, 0.25, -0.50, 0.20, 0.05, -0.10, 0.80, 0.40, 0.30, 0.50], dtype=np.float32)
-    check("danger slot 3 maps to enemy row 3", np.allclose(enemies[3], expected), f"row3={enemies[3]}")
-    check("danger slot identity is stable", enemies[0, 0] == 0.0 and enemies[2, 0] == 0.0 and enemies[4, 0] == 0.0)
-    check("projectile/human/electrode pools excluded from model state",
-          int(np.count_nonzero(enemies[:, 0] > 0.5)) == 1)
+    lane_summary = ms[C.LANE_SUMMARY_OFFSET:C.LANE_SUMMARY_END]
+    check("lane density summary is action-ordered",
+          np.allclose(lane_summary, np.asarray(expected_lane, dtype=np.float32), atol=1e-6),
+          f"lane_summary={lane_summary}")
+    target_summary = ms[C.TARGET_SUMMARY_OFFSET:C.TARGET_SUMMARY_END]
+    check("nearest destructible target summary",
+          np.allclose(target_summary, np.asarray([-0.1, 0.1, 0.08], dtype=np.float32), atol=1e-6),
+          f"target_summary={target_summary}")
+    empty_ms = C.slice_model_state(np.zeros(C.WIRE_PARAMS_COUNT, dtype=np.float32))
+    check("empty nearest target defaults absent",
+          np.allclose(empty_ms[C.TARGET_SUMMARY_OFFSET:C.TARGET_SUMMARY_END],
+                      np.asarray([0.0, 0.0, 1.0], dtype=np.float32)),
+          f"target_summary={empty_ms[C.TARGET_SUMMARY_OFFSET:C.TARGET_SUMMARY_END]}")
+    check("object block starts after globals", C.OBJECT_TOKEN_OFFSET == C.GLOBAL_FEATURES)
+    check("object block follows target summary", C.OBJECT_TOKEN_OFFSET == C.TARGET_SUMMARY_END)
+    check("object block size", ms.shape[0] - C.OBJECT_TOKEN_OFFSET == C.OBJECT_FEATURES)
+    objects = ms[C.OBJECT_TOKEN_OFFSET:C.OBJECT_TOKEN_END].reshape(C.OBJECT_TOKEN_COUNT, C.OBJECT_TOKEN_FEATURES)
+    active = objects[objects[:, 0] > 0.5]
+    check("all tactical pools become object rows", active.shape[0] == 4, f"active={active.shape[0]}")
+    roles = set(np.round(active[:, 11], 2).tolist())
+    check("projectile/danger/human/electrode roles present",
+          {0.25, 0.50, 0.75, 1.00}.issubset(roles), f"roles={roles}")
+    check("highest-priority projectile sorts first",
+          np.isclose(objects[0, 15], 1.0) and np.isclose(objects[0, 12], 1.0),
+          f"row0={objects[0]}")
+    check("danger row keeps motion/threat fields",
+          np.any(np.all(np.isclose(active[:, 1:10],
+                                   np.asarray([0.25, -0.50, 0.20, 0.05, -0.10, 0.80, 0.40, 0.30, 0.20],
+                                              dtype=np.float32), atol=1e-5), axis=1)),
+          f"active={active}")
+    check("electrode blocker flag present", np.any((active[:, 11] > 0.95) & (active[:, 13] > 0.5)))
+    check("human rescue flag present", np.any((active[:, 11] > 0.70) & (active[:, 11] < 0.80) & (active[:, 14] > 0.5)))
 
 
 def test_nstep_actor_boundaries():
@@ -158,13 +194,14 @@ def test_nstep_actor_boundaries():
     s2 = np.array([2], dtype=np.float32)
     s3 = np.array([3], dtype=np.float32)
     out = []
-    out += nbuf.add(s0, 0, 1.0, s1, False, actor="dqn")
+    out += nbuf.add(s0, 0, 1.0, s1, False, actor="dqn", advisor_action=7)
     out += nbuf.add(s1, 1, 2.0, s2, False, actor="epsilon")
     out += nbuf.add(s2, 2, 4.0, s3, False, actor="expert")
     check("actor switch flushes learner prefix", len(out) == 2, f"len={len(out)}")
     if len(out) >= 2:
         check("dqn+epsilon grouped as learner", out[0][2] == 2.0 and out[0][6] == 2,
               f"R={out[0][2]} h={out[0][6]}")
+        check("n-step preserves first advisor action", out[0][9] == 7, f"advisor={out[0][9]}")
         check("boundary does not include expert reward", out[1][2] == 2.0 and out[1][6] == 1,
               f"R={out[1][2]} h={out[1][6]}")
 
@@ -175,6 +212,46 @@ def test_nstep_actor_boundaries():
         out2 += nbuf2.add(s2, 2, 1.0, s3, False, actor="dqn", interest=0.4)
         check("n-step carries max interest", len(out2) == 1 and np.isclose(out2[0][8], 0.8),
             f"out={out2}")
+
+
+def test_episode_level_expert_guidance():
+    print("\n[episode-level expert guidance]")
+    server = SS.SocketServer("127.0.0.1", 0, None)
+    saved_mode = getattr(C.RL_CONFIG, "expert_guidance_mode", "episode")
+    saved_expert = SS.get_expert_action
+    saved_game_expert_pct = C.game_settings.expert_pct
+    with C.metrics.lock:
+        saved_ratio = C.metrics.expert_ratio
+        saved_override = C.metrics.override_expert
+        saved_expert_mode = C.metrics.expert_mode
+    try:
+        C.RL_CONFIG.expert_guidance_mode = "episode"
+        C.game_settings.expert_pct = -1
+        SS.get_expert_action = lambda *args, **kwargs: (8, 8)
+        with C.metrics.lock:
+            C.metrics.expert_ratio = 1.0
+            C.metrics.override_expert = False
+            C.metrics.expert_mode = False
+        cs = {"episode_control_initialized": False, "episode_use_expert": False}
+        check("episode ratio 100 enables expert episode",
+              server._episode_expert_enabled(cs, eval_only=False) is True)
+        check("episode gate initializes once", cs["episode_control_initialized"] is True)
+
+        with C.metrics.lock:
+            C.metrics.expert_ratio = 0.0
+        check("episode ratio 0 disables current expert episode",
+              server._episode_expert_enabled(cs, eval_only=False) is False)
+        check("frame mode remains configurable",
+              setattr(C.RL_CONFIG, "expert_guidance_mode", "frame") is None
+              and server._expert_guidance_mode() == "frame")
+    finally:
+        C.RL_CONFIG.expert_guidance_mode = saved_mode
+        C.game_settings.expert_pct = saved_game_expert_pct
+        SS.get_expert_action = saved_expert
+        with C.metrics.lock:
+            C.metrics.expert_ratio = saved_ratio
+            C.metrics.override_expert = saved_override
+            C.metrics.expert_mode = saved_expert_mode
 
 
 def test_parse_roundtrip():
@@ -241,6 +318,69 @@ def test_reward_and_hard_starts():
     _, score_r2, _, _, _ = SS._shape_transition_reward(frame2, last_game_score=0)
     check("1000 score delta maps to reward 1.0", np.isclose(score_r2, 1.0), f"score_r={score_r2}")
 
+    no_human_state = fake_wire()
+    no_human_state[13] = 0.0
+    no_human_state[9] = 0.4
+    frame_delay = SS.FrameData(
+        state=no_human_state, subjreward=0.0, objreward=0.0,
+        done=False, player_alive=True, save_signal=False, start_pressed=False,
+        level_number=1, game_score=0, num_lasers=0)
+    total_delay, _, subj_delay, _, _ = SS._shape_transition_reward(frame_delay, last_game_score=0)
+    expected_delay = -float(C.RL_CONFIG.no_human_delay_penalty)
+    check("no-human delay penalty applies",
+          np.isclose(subj_delay, expected_delay) and np.isclose(total_delay, expected_delay),
+          f"subj={subj_delay} total={total_delay} expected={expected_delay}")
+
+    crowded_model_state = np.zeros(C.MODEL_STATE_SIZE, dtype=np.float32)
+    obj_start = int(C.RL_CONFIG.global_features)
+    obj_feats = int(C.RL_CONFIG.object_token_features)
+    for i in range(int(C.RL_CONFIG.no_human_delay_max_targets) + 1):
+        off = obj_start + i * obj_feats
+        crowded_model_state[off + 0] = 1.0  # present
+        crowded_model_state[off + 3] = 0.4  # dist
+        crowded_model_state[off + 12] = 1.0 # destructible
+    crowded_total, _, crowded_subj, _, _ = SS._shape_transition_reward(
+        frame_delay, last_game_score=0, model_state=crowded_model_state)
+    check("no-human delay penalty skips crowded combat",
+          np.isclose(crowded_subj, 0.0) and np.isclose(crowded_total, 0.0),
+          f"subj={crowded_subj} total={crowded_total}")
+
+    cleanup_model_state = np.zeros(C.MODEL_STATE_SIZE, dtype=np.float32)
+    for i in range(int(C.RL_CONFIG.no_human_delay_max_targets)):
+        off = obj_start + i * obj_feats
+        cleanup_model_state[off + 0] = 1.0
+        cleanup_model_state[off + 3] = 0.4
+        cleanup_model_state[off + 12] = 1.0
+    cleanup_total, _, cleanup_subj, _, _ = SS._shape_transition_reward(
+        frame_delay, last_game_score=0, model_state=cleanup_model_state)
+    check("no-human delay penalty applies in cleanup",
+          np.isclose(cleanup_subj, expected_delay) and np.isclose(cleanup_total, expected_delay),
+          f"subj={cleanup_subj} total={cleanup_total} expected={expected_delay}")
+
+    human_state = fake_wire()
+    human_state[13] = 1.0 / 255.0
+    human_state[9] = 0.4
+    frame_humans = SS.FrameData(
+        state=human_state, subjreward=0.0, objreward=0.0,
+        done=False, player_alive=True, save_signal=False, start_pressed=False,
+        level_number=1, game_score=0, num_lasers=0)
+    total_humans, _, subj_humans, _, _ = SS._shape_transition_reward(frame_humans, last_game_score=0)
+    check("no-human delay penalty skips live-human states",
+          np.isclose(subj_humans, 0.0) and np.isclose(total_humans, 0.0),
+          f"subj={subj_humans} total={total_humans}")
+
+    frame_score_no_humans = SS.FrameData(
+        state=no_human_state, subjreward=0.0, objreward=0.0,
+        done=False, player_alive=True, save_signal=False, start_pressed=False,
+        level_number=1, game_score=1000, num_lasers=0)
+    total_score_no_humans, score_no_humans, subj_score_no_humans, _, _ = SS._shape_transition_reward(
+        frame_score_no_humans, last_game_score=0)
+    check("no-human delay penalty skips scoring frames",
+          np.isclose(score_no_humans, 1.0)
+          and np.isclose(subj_score_no_humans, 0.0)
+          and np.isclose(total_score_no_humans, 1.0),
+          f"score={score_no_humans} subj={subj_score_no_humans} total={total_score_no_humans}")
+
     old_start_adv = C.game_settings.start_advanced
     old_auto = C.game_settings.auto_curriculum
     old_level = C.game_settings.start_level_min
@@ -268,14 +408,14 @@ def test_reward_and_hard_starts():
 def test_transition_interest_policy():
     print("\n[transition interest]")
 
-    def model_state(wave: int, enemy_row: list[float] | None = None):
+    def model_state(wave: int, object_row: list[float] | None = None):
         s = np.zeros(C.MODEL_STATE_SIZE, dtype=np.float32)
         s[4] = max(0, min(40, int(wave))) / 40.0
-        if enemy_row is not None:
-            vals = list(enemy_row[:C.ENEMY_TOKEN_FEATURES])
-            vals += [0.0] * (C.ENEMY_TOKEN_FEATURES - len(vals))
-            start = C.ENEMY_TOKEN_OFFSET
-            s[start:start + C.ENEMY_TOKEN_FEATURES] = np.asarray(vals, dtype=np.float32)
+        if object_row is not None:
+            vals = list(object_row[:C.OBJECT_TOKEN_FEATURES])
+            vals += [0.0] * (C.OBJECT_TOKEN_FEATURES - len(vals))
+            start = C.OBJECT_TOKEN_OFFSET
+            s[start:start + C.OBJECT_TOKEN_FEATURES] = np.asarray(vals, dtype=np.float32)
         return s
 
     def frame(wave: int, done=False):
@@ -291,11 +431,11 @@ def test_transition_interest_policy():
     distant = SS._transition_interest_score(
         model_state(10), model_state(10, [1.0, 0.9, 0.0, 0.95, 0.0, 0.0, 0.2, 0.0, 1.0, 0.0]),
         frame(10), 0.0, 0.0)
-    check("distant enemy is not interesting", distant < threshold, f"score={distant:.3f}")
+    check("distant object is not interesting", distant < threshold, f"score={distant:.3f}")
     target = SS._transition_interest_score(
         model_state(10), model_state(10, [1.0, 0.02, 0.0, 0.02, 0.0, 0.0, 1.0, 0.7, 0.0, 0.0]),
         frame(10), 0.0, 0.0)
-    check("near threatening enemy is interesting", target >= threshold, f"score={target:.3f}")
+    check("near threatening object is interesting", target >= threshold, f"score={target:.3f}")
     scored = SS._transition_interest_score(model_state(4), model_state(4), frame(4), 5.0, 5.0)
     check("rescue-sized score burst is interesting", scored >= threshold, f"score={scored:.3f}")
     terminal = SS._transition_interest_score(model_state(4), model_state(4), frame(4, done=True), 0.0, -1.0)
@@ -363,10 +503,12 @@ def test_pre_death_reward_penalty():
         idxs = []
         for i, danger in enumerate([0.0, 0.0, 0.25, 0.75, 1.0]):
             s = np.zeros(C.MODEL_STATE_SIZE, dtype=np.float32)
-            start = C.ENEMY_TOKEN_OFFSET
-            s[start:start + C.ENEMY_TOKEN_FEATURES] = np.asarray([
-                1.0, 0.0, 0.0, 0.20, 0.0, 0.0, float(danger), 0.0, 1.00, 0.0
-            ], dtype=np.float32)
+            start = C.OBJECT_TOKEN_OFFSET
+            row = [
+                1.0, 0.0, 0.0, 0.20, 0.0, 0.0, float(danger), 0.0,
+                1.00, 0.0, 0.0, 0.50, 1.0, 0.0, 0.0, 0.0,
+            ]
+            s[start:start + C.OBJECT_TOKEN_FEATURES] = np.asarray(row, dtype=np.float32)
             buf.add(s, 0, 0.0, s, False, expert=0)
             idxs.append(i)
         changed = buf.apply_pre_death_penalty(idxs)
@@ -378,10 +520,12 @@ def test_pre_death_reward_penalty():
 
         expert_buf = PrioritizedReplayBuffer(capacity=4, state_size=C.MODEL_STATE_SIZE)
         s = np.zeros(C.MODEL_STATE_SIZE, dtype=np.float32)
-        start = C.ENEMY_TOKEN_OFFSET
-        s[start:start + C.ENEMY_TOKEN_FEATURES] = np.asarray([
-            1.0, 0.0, 0.0, 0.20, 0.0, 0.0, 1.0, 0.0, 1.00, 0.0
-        ], dtype=np.float32)
+        start = C.OBJECT_TOKEN_OFFSET
+        row = [
+            1.0, 0.0, 0.0, 0.20, 0.0, 0.0, 1.0, 0.0,
+            1.00, 0.0, 0.0, 0.50, 1.0, 0.0, 0.0, 0.0,
+        ]
+        s[start:start + C.OBJECT_TOKEN_FEATURES] = np.asarray(row, dtype=np.float32)
         expert_buf.add(s, 0, 0.0, s, False, expert=1)
         skipped = expert_buf.apply_pre_death_penalty([0])
         check("pre-death penalty skips expert by default", skipped == 0 and np.isclose(expert_buf.rewards[0], 0.0),
@@ -397,9 +541,56 @@ def test_pre_death_reward_penalty():
         ) = saved
 
 
+def test_expert_replay_quota():
+    print("\n[expert replay quota]")
+    from dqn.replay_buffer import PrioritizedReplayBuffer
+
+    cfg = C.RL_CONFIG
+    saved = (
+        cfg.expert_replay_fraction,
+        cfg.interesting_replay_fraction,
+        cfg.recent_replay_fraction,
+    )
+    try:
+        cfg.expert_replay_fraction = 0.25
+        cfg.interesting_replay_fraction = 0.0
+        cfg.recent_replay_fraction = 0.0
+        buf = PrioritizedReplayBuffer(capacity=64, state_size=C.MODEL_STATE_SIZE)
+        s = np.zeros(C.MODEL_STATE_SIZE, dtype=np.float32)
+        for i in range(48):
+            buf.add(s, i % M.NUM_JOINT, 0.0, s, False, expert=0, advisor_action=(i + 1) % M.NUM_JOINT)
+        for i in range(16):
+            buf.add(s, i % M.NUM_JOINT, 0.0, s, False, expert=1)
+        batch = buf.sample(32, beta=0.4)
+        expert_count = int(batch[6].sum()) if batch is not None else 0
+        origins = getattr(buf, "last_sample_origin_counts", {})
+        advisor_actions = batch[9] if batch is not None and len(batch) >= 10 else np.asarray([], dtype=np.int64)
+        check("expert replay quota samples demonstrations",
+              batch is not None and expert_count >= 8,
+              f"expert_count={expert_count}")
+        check("expert replay quota origin tracked",
+              int(origins.get("expert", 0)) >= 8,
+              f"origins={origins}")
+        check("advisor actions sampled",
+              batch is not None and advisor_actions.shape[0] == 32,
+              f"advisor_shape={advisor_actions.shape}")
+    finally:
+        (
+            cfg.expert_replay_fraction,
+            cfg.interesting_replay_fraction,
+            cfg.recent_replay_fraction,
+        ) = saved
+
+
 def test_expert_anchor_decay():
     print("\n[expert anchor decay]")
-    from dqn.training import _bc_weight_schedule, _margin_weight_schedule, _q_policy_weight_schedule
+    from dqn.training import (
+        _advisor_margin_weight_schedule,
+        _advisor_q_policy_weight_schedule,
+        _bc_weight_schedule,
+        _margin_weight_schedule,
+        _q_policy_weight_schedule,
+    )
     cfg = C.RL_CONFIG
 
     # BC weight decays from start to its floor over the configured step window.
@@ -418,7 +609,7 @@ def test_expert_anchor_decay():
           f"q_start={q_start}")
     check("q-policy weight monotonically decreasing", q_start >= q_mid >= q_end,
           f"start={q_start} mid={q_mid} end={q_end}")
-    check("q-policy weight decays to zero floor", np.isclose(q_end, cfg.expert_q_policy_min_weight),
+    check("q-policy weight decays to configured floor", np.isclose(q_end, cfg.expert_q_policy_min_weight),
           f"q_end={q_end}")
 
     # Margin weight also imitates into the acting head and decays to 0.
@@ -429,8 +620,32 @@ def test_expert_anchor_decay():
           f"m_start={m_start}")
     check("margin weight monotonically decreasing", m_start >= m_mid >= m_end,
           f"start={m_start} mid={m_mid} end={m_end}")
-    check("margin weight decays to zero floor", np.isclose(m_end, cfg.expert_q_margin_min_weight),
+    check("margin weight decays to configured floor", np.isclose(m_end, cfg.expert_q_margin_min_weight),
           f"m_end={m_end}")
+
+    # Advisor imitation should bridge the handoff but not become a permanent
+    # ceiling on the acting Q-policy.
+    aq_start = _advisor_q_policy_weight_schedule(0)
+    aq_handoff = _advisor_q_policy_weight_schedule(cfg.expert_ratio_decay_steps)
+    aq_end = _advisor_q_policy_weight_schedule(cfg.advisor_q_policy_decay_start_step + cfg.advisor_q_policy_decay_steps + 10_000)
+    check("advisor q-policy starts at configured weight", np.isclose(aq_start, cfg.advisor_q_policy_weight),
+          f"aq_start={aq_start}")
+    check("advisor q-policy remains active at handoff",
+          aq_handoff > cfg.advisor_q_policy_min_weight,
+          f"handoff={aq_handoff} floor={cfg.advisor_q_policy_min_weight}")
+    check("advisor q-policy releases to floor", np.isclose(aq_end, cfg.advisor_q_policy_min_weight),
+          f"aq_end={aq_end}")
+
+    am_start = _advisor_margin_weight_schedule(0)
+    am_handoff = _advisor_margin_weight_schedule(cfg.expert_ratio_decay_steps)
+    am_end = _advisor_margin_weight_schedule(cfg.advisor_q_margin_decay_start_step + cfg.advisor_q_margin_decay_steps + 10_000)
+    check("advisor margin starts at configured weight", np.isclose(am_start, cfg.advisor_q_margin_weight),
+          f"am_start={am_start}")
+    check("advisor margin remains active at handoff",
+          am_handoff > cfg.advisor_q_margin_min_weight,
+          f"handoff={am_handoff} floor={cfg.advisor_q_margin_min_weight}")
+    check("advisor margin releases to floor", np.isclose(am_end, cfg.advisor_q_margin_min_weight),
+          f"am_end={am_end}")
 
 
 def test_epsilon_expert_floor():
@@ -531,17 +746,41 @@ def test_model_shapes(agent):
     check("bc_move logits shape (4,9)", tuple(bc_move.shape) == (4, M.NUM_MOVE))
     check("bc_fire logits shape (4,9)", tuple(bc_fire.shape) == (4, M.NUM_FIRE))
     raw = agent.online_net._raw_trunk_state(st)
-    enemies = agent.online_net._object_tokens(st)
+    objects = agent.online_net._object_tokens(st)
     expected_raw = C.RL_CONFIG.global_features * C.RL_CONFIG.frame_stack
-    check("raw trunk keeps stacked globals only", tuple(raw.shape) == (4, expected_raw),
+    check("raw trunk keeps stacked globals/lane/target summary only", tuple(raw.shape) == (4, expected_raw),
           f"shape={tuple(raw.shape)} expected={(4, expected_raw)}")
-    check("enemy tokens shape (4,96,10)",
-          tuple(enemies.shape) == (4, C.ENEMY_TOKEN_COUNT, C.ENEMY_TOKEN_FEATURES),
-          f"shape={tuple(enemies.shape)}")
+    check("object tokens shape (4,96,16)",
+          tuple(objects.shape) == (4, C.OBJECT_TOKEN_COUNT, C.OBJECT_TOKEN_FEATURES),
+          f"shape={tuple(objects.shape)}")
     expected_trunk_in = expected_raw + (C.RL_CONFIG.object_attn_dim if C.RL_CONFIG.use_object_attention else 0)
     first_linear = next(m for m in agent.online_net.trunk if isinstance(m, torch.nn.Linear))
-    check("trunk input excludes flattened enemy block", first_linear.in_features == expected_trunk_in,
+    check("trunk input excludes flattened object block", first_linear.in_features == expected_trunk_in,
           f"in={first_linear.in_features} expected={expected_trunk_in}")
+
+
+def test_dashboard_model_summary(agent):
+    print("\n[dashboard model summary]")
+    from dqn.metrics_dashboard import _DashboardState
+    desc = _DashboardState(C.metrics, agent)._get_model_desc()
+    expected_state = f"state {C.RL_CONFIG.state_size}"
+    expected_trunk = f"trunk {expected_trunk_in(agent)}"
+    expected_objects = f"object-attn {C.RL_CONFIG.object_token_count}x{C.RL_CONFIG.object_token_features}"
+    check("summary includes full state size", expected_state in desc, desc)
+    check("summary includes lane density size", f"{C.RL_CONFIG.lane_summary_features}lane" in desc, desc)
+    check("summary includes nearest-target size", f"{C.RL_CONFIG.target_summary_features}target" in desc, desc)
+    check("summary includes post-attention trunk shape", expected_trunk in desc, desc)
+    check("summary includes object-token shape", expected_objects in desc, desc)
+    check("summary marks geometry bias", "geom" in desc, desc)
+    check("summary includes parameter count", "params" in desc and "1.2M" in desc, desc)
+
+
+def expected_trunk_in(agent) -> str:
+    import torch
+    first_linear = next(m for m in agent.online_net.trunk if isinstance(m, torch.nn.Linear))
+    layers = [str(first_linear.in_features)]
+    layers += [str(C.RL_CONFIG.trunk_hidden)] * int(C.RL_CONFIG.trunk_layers)
+    return " \u00bb ".join(layers)
 
 
 def test_act(agent):
@@ -561,6 +800,20 @@ def test_act(agent):
     check("act_batch tuples valid", all(0 <= a[0] <= 8 and 0 <= a[1] <= 8 for a in batch))
     check("act_batch respects fire locks", batch[1][1] == 5 and batch[2][1] == 6, f"batch={batch}")
     check("safe epsilon returns valid", all(0 <= agent.act(ms, epsilon=1.0)[i] <= 8 for i in (0, 1)))
+
+    snap_single = np.zeros(C.SINGLE_FRAME_STATE_SIZE, dtype=np.float32)
+    snap_single[C.TARGET_SUMMARY_OFFSET:C.TARGET_SUMMARY_OFFSET + 3] = (-0.12, 0.02, 0.13)
+    q = np.zeros((M.NUM_MOVE, M.NUM_FIRE), dtype=np.float32)
+    q[0, 5] = 10.0
+    q[1, 6] = 9.2
+    snap_state = stack_state(snap_single)
+    check("close near-axis target resolves to W", _close_cardinal_target_dir_from_state(snap_state) == 6)
+    check("close diagonal fire snaps to W", _prefer_cardinal_fire_for_close_target(snap_state, q, 0, 5) == (1, 6))
+
+    snap_single[C.TARGET_SUMMARY_OFFSET:C.TARGET_SUMMARY_OFFSET + 3] = (-0.12, 0.12, 0.18)
+    diag_state = stack_state(snap_single)
+    check("true diagonal target does not cardinal-snap",
+          _prefer_cardinal_fire_for_close_target(diag_state, q, 0, 5) == (0, 5))
 
 
 def test_train_step(agent):
@@ -597,7 +850,9 @@ def test_train_step(agent):
             done = bool(i % 50 == 0)
             actor = "expert" if (i % 4 == 0) else "dqn"
             interest = 0.9 if (i % 13 == 0) else 0.0
-            agent.step(s, (mv, fr), r, ns, done, actor=actor, horizon=1, priority_reward=r, interest=interest)
+            advisor = ((mv + 1) % 9, fr) if actor != "expert" else (mv, fr)
+            agent.step(s, (mv, fr), r, ns, done, actor=actor, horizon=1,
+                       priority_reward=r, interest=interest, advisor_action=advisor)
         check("buffer filled", len(agent.memory) >= C.RL_CONFIG.batch_size)
         stats = agent.memory.get_partition_stats()
         check("interesting transitions tracked", stats.get("interesting", 0) > 0,
@@ -610,6 +865,74 @@ def test_train_step(agent):
         # q-value range should be finite after a couple of updates
         lo, hi = agent.get_q_value_range()
         check("q-range finite", np.isfinite(lo) and np.isfinite(hi), f"({lo},{hi})")
+        diag_vals = [
+            C.metrics.last_current_q_action_mean,
+            C.metrics.last_bellman_loss,
+            C.metrics.last_imitation_loss,
+            C.metrics.last_bc_loss_contrib,
+            C.metrics.last_expert_q_policy_weight,
+            C.metrics.last_expert_q_policy_loss_contrib,
+            C.metrics.last_expert_q_margin_weight,
+            C.metrics.last_expert_q_margin_loss_contrib,
+            C.metrics.last_advisor_q_policy_weight,
+            C.metrics.last_advisor_q_policy_loss_contrib,
+            C.metrics.last_advisor_q_margin_weight,
+            C.metrics.last_advisor_q_margin_loss_contrib,
+            C.metrics.last_target_q_mean,
+            C.metrics.last_unclamped_target_q_mean,
+            C.metrics.last_next_q_max_mean,
+            C.metrics.last_target_next_q_mean,
+            C.metrics.last_double_q_gap_mean,
+            C.metrics.last_td_q_mean,
+            C.metrics.last_td_q_abs_mean,
+            C.metrics.last_q_gap_mean,
+            C.metrics.last_target_clip_low_frac,
+            C.metrics.last_target_clip_high_frac,
+            C.metrics.last_target_low_atom_mass,
+            C.metrics.last_target_high_atom_mass,
+            C.metrics.last_target_mass_error_mean,
+            C.metrics.last_policy_idle_move_frac,
+            C.metrics.last_policy_idle_fire_frac,
+            C.metrics.last_policy_noop_frac,
+            C.metrics.last_policy_top_action_frac,
+            C.metrics.last_policy_action_entropy,
+            C.metrics.last_sample_idle_move_frac,
+            C.metrics.last_sample_idle_fire_frac,
+            C.metrics.last_sample_noop_frac,
+            C.metrics.last_sample_top_action_frac,
+            C.metrics.last_sample_action_entropy,
+            C.metrics.last_sample_reward_mean,
+            C.metrics.last_sample_reward_abs_mean,
+            C.metrics.last_sample_advisor_frac,
+            C.metrics.last_advisor_joint_agreement,
+            C.metrics.last_advisor_q_rank_mean,
+            C.metrics.last_advisor_q_margin_mean,
+        ]
+        check("Bellman diagnostics finite",
+              all(np.isfinite(float(v)) for v in diag_vals),
+              f"diag={diag_vals}")
+        origin_sum = (
+            C.metrics.last_sample_per_frac
+            + C.metrics.last_sample_expert_quota_frac
+            + C.metrics.last_sample_interesting_frac
+            + C.metrics.last_sample_recent_frac
+        )
+        check("sample origin fractions sum to one",
+              abs(origin_sum - 1.0) < 1e-6,
+              f"origin_sum={origin_sum}")
+        check("expert rank diagnostic populated",
+              C.metrics.last_expert_q_rank_mean >= 1.0,
+              f"rank={C.metrics.last_expert_q_rank_mean}")
+        check("advisor diagnostic populated",
+              C.metrics.last_sample_advisor_frac > 0.0 and C.metrics.last_advisor_q_rank_mean >= 1.0,
+              f"frac={C.metrics.last_sample_advisor_frac} rank={C.metrics.last_advisor_q_rank_mean}")
+        check("projected target distribution preserves mass",
+              C.metrics.last_target_mass_error_mean < 1e-4,
+              f"mass_error={C.metrics.last_target_mass_error_mean}")
+        check("action entropy diagnostics bounded",
+              0.0 <= C.metrics.last_policy_action_entropy <= 1.0
+              and 0.0 <= C.metrics.last_sample_action_entropy <= 1.0,
+              f"policy={C.metrics.last_policy_action_entropy} sample={C.metrics.last_sample_action_entropy}")
     finally:
         C.RL_CONFIG.min_replay_to_train = _saved_min
 
@@ -737,12 +1060,14 @@ def main():
     test_action_coding()
     test_slice()
     test_nstep_actor_boundaries()
+    test_episode_level_expert_guidance()
     test_parse_roundtrip()
     test_fire_hold()
     test_reward_and_hard_starts()
     test_transition_interest_policy()
     test_legacy_interest_sanitizer()
     test_pre_death_reward_penalty()
+    test_expert_replay_quota()
     test_expert_anchor_decay()
     test_epsilon_expert_floor()
     test_dqn_window_math()
@@ -754,6 +1079,7 @@ def main():
     print(f"  device = {agent.device}")
 
     test_model_shapes(agent)
+    test_dashboard_model_summary(agent)
     test_act(agent)
     test_train_step(agent)
     test_socket_integration(agent)

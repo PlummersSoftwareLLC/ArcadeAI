@@ -6,15 +6,17 @@
 # ||    • C51 distributional value estimation                                                                     ||
 # ||    • JOINT 81-action head for coupled move/fire values                                                        ||
 # ||    • Auxiliary BRANCHING heads for move/fire imitation diagnostics                                             ||
-# ||    • Self-attention over a stable 96-row enemy list                                                           ||
+# ||    • Self-attention over a 96-row role-aware object list                                                      ||
 # ||    • Dueling architecture                                                                                     ||
 # ==================================================================================================================
 """Model + action helpers for the Robotron DQN.
 
 The state vector is the model slice (18 core game/player scalars + 22
-ELIST/level-state scalars + 96 stable enemy rows × 10). When frame stacking is
-enabled, only the compact global/level slice from each frame is concatenated
-into the raw trunk. The current-frame enemy list is encoded by attention.
+ELIST/level-state scalars + 16 directional lane-density scalars + 3 nearest
+destructible-target scalars + 96 role-aware object rows × 16). When frame
+stacking is enabled, only the compact
+global/lane/target slice from each frame is concatenated into the raw trunk. The
+current-frame object list is encoded by attention.
 """
 
 if __name__ == "__main__":
@@ -123,7 +125,7 @@ class LaneSelfAttentionEncoder(nn.Module):
 
 
 class ObjectSelfAttentionEncoder(nn.Module):
-    """Self-attention over stable enemy rows with a presence mask."""
+    """Self-attention over role-aware object rows with a presence mask."""
 
     def __init__(self, token_features: int, embed_dim: int, num_heads: int):
         super().__init__()
@@ -154,34 +156,149 @@ class ObjectSelfAttentionEncoder(nn.Module):
 
 
 class DirectionalObjectAttention(nn.Module):
-    """Action-direction queries attending over encoded enemy rows."""
+    """Action-direction queries attending over encoded object rows.
 
-    def __init__(self, object_dim: int, num_actions: int, num_heads: int):
+    The learned query is seeded with a fixed controller-direction embedding.
+    A lightweight additive attention bias gives the model the same kind of
+    geometry prior that helped Tempest: move actions inspect nearby hazards in
+    that direction, while fire actions inspect target-like objects along the
+    firing ray. The bias is only a prior; the attention/value projections remain
+    fully learned.
+    """
+
+    def __init__(
+        self,
+        object_dim: int,
+        num_actions: int,
+        num_heads: int,
+        mode: str,
+        geometry_bias: bool = True,
+        geometry_bias_strength: float = 1.75,
+    ):
         super().__init__()
         self.num_actions = int(num_actions)
         self.object_dim = int(object_dim)
+        self.num_heads = int(num_heads)
+        self.mode = str(mode)
+        self.geometry_bias = bool(geometry_bias)
+        self.geometry_bias_strength = float(geometry_bias_strength)
+
+        dirs = torch.tensor([
+            [0.0, -1.0], [1.0, -1.0], [1.0, 0.0], [1.0, 1.0],
+            [0.0, 1.0], [-1.0, 1.0], [-1.0, 0.0], [-1.0, -1.0],
+            [0.0, 0.0],
+        ], dtype=torch.float32)
+        dirs = dirs / dirs.norm(dim=1, keepdim=True).clamp_min(1.0)
+        idle = torch.zeros((dirs.shape[0], 1), dtype=torch.float32)
+        idle[IDLE_INDEX, 0] = 1.0
+        action_features = torch.cat([dirs, idle], dim=1)
+        self.register_buffer("action_dirs", dirs[:self.num_actions], persistent=False)
+        self.register_buffer("action_features", action_features[:self.num_actions], persistent=False)
+
+        self.dir_proj = nn.Linear(3, self.object_dim)
         self.dir_embedding = nn.Embedding(self.num_actions, self.object_dim)
         self.query_norm = nn.LayerNorm(self.object_dim)
         self.attn = nn.MultiheadAttention(self.object_dim, num_heads, batch_first=True)
         self.out_norm = nn.LayerNorm(self.object_dim)
 
+    def _geometry_attn_mask(
+        self,
+        object_tokens: torch.Tensor,
+        object_present: torch.Tensor,
+    ) -> torch.Tensor | None:
+        if not self.geometry_bias or object_tokens is None:
+            return None
+
+        present = object_present.bool()
+        B, rows, feats = object_tokens.shape
+        if rows <= 0:
+            return None
+
+        def col(idx: int, default: float = 0.0) -> torch.Tensor:
+            if feats > idx:
+                return object_tokens[:, :, idx]
+            return torch.full((B, rows), float(default), device=object_tokens.device, dtype=object_tokens.dtype)
+
+        xy = object_tokens[:, :, 1:3]
+        xy_norm = xy.norm(dim=-1, keepdim=True).clamp_min(1e-6)
+        obj_dir = xy / xy_norm
+        align = torch.einsum("ad,bnd->ban", self.action_dirs.to(dtype=object_tokens.dtype), obj_dir)
+        forward = align.clamp_min(0.0)
+
+        dist = col(3, 1.0).clamp(0.0, 1.0)
+        threat = col(6, 0.0).clamp(0.0, 1.0)
+        ttc = col(8, 1.0).clamp(0.0, 1.0)
+        destructible = col(12, 0.0).clamp(0.0, 1.0)
+        blocker = col(13, 0.0).clamp(0.0, 1.0)
+        rescue = col(14, 0.0).clamp(0.0, 1.0)
+        projectile = col(15, 0.0).clamp(0.0, 1.0)
+
+        closeness = (1.0 - dist).unsqueeze(1)
+        imminent = (1.0 - ttc).unsqueeze(1)
+        threat_u = threat.unsqueeze(1)
+        projectile_u = projectile.unsqueeze(1)
+        blocker_u = blocker.unsqueeze(1)
+        destructible_u = destructible.unsqueeze(1)
+        rescue_u = rescue.unsqueeze(1)
+
+        strength = torch.as_tensor(self.geometry_bias_strength, device=object_tokens.device, dtype=object_tokens.dtype)
+        if self.mode == "move":
+            # Humans are present in the same object list but should not become
+            # movement hazards. Projectiles, electrodes, hulks/blockers, and
+            # high-threat enemies get the strongest prior.
+            hazard = torch.maximum(threat_u, torch.maximum(projectile_u, blocker_u))
+            hazard = hazard * (1.0 - 0.85 * rescue_u)
+            cue = 0.35 + 1.20 * hazard + 0.50 * imminent
+            bias = strength * (0.35 * closeness + 0.65 * forward) * cue
+            if self.num_actions > IDLE_INDEX:
+                idle_bias = strength * closeness.squeeze(1) * (
+                    hazard.squeeze(1) + 0.25 * imminent.squeeze(1)
+                )
+                bias[:, IDLE_INDEX, :] = idle_bias
+        else:
+            # Fire queries should be target-seeking. Rescue rows are visible to
+            # the model, but the initial fire bias de-emphasizes them.
+            target = torch.maximum(destructible_u, projectile_u) * (1.0 - 0.95 * rescue_u)
+            cue = 0.25 + 1.40 * target + 0.40 * threat_u
+            bias = strength * forward.pow(2) * (0.35 + 0.65 * closeness) * cue
+            if self.num_actions > IDLE_INDEX:
+                bias[:, IDLE_INDEX, :] = 0.0
+
+        bias = bias * present.unsqueeze(1).to(dtype=object_tokens.dtype)
+        bias = bias.clamp(-6.0, 6.0)
+        return bias.repeat_interleave(self.num_heads, dim=0)
+
     def forward(
         self,
         object_repr: torch.Tensor,
         object_present: torch.Tensor,
+        object_tokens: torch.Tensor,
     ) -> torch.Tensor:
         B = object_repr.shape[0]
         action_ids = torch.arange(self.num_actions, device=object_repr.device)
-        q = self.dir_embedding(action_ids).unsqueeze(0).expand(B, -1, -1)
+        action_features = self.action_features.to(device=object_repr.device, dtype=object_repr.dtype)
+        q0 = self.dir_proj(action_features) + self.dir_embedding(action_ids)
+        q = q0.unsqueeze(0).expand(B, -1, -1)
         q = self.query_norm(q)
 
-        key_padding_mask = ~object_present.bool()
-        all_empty = key_padding_mask.all(dim=1)
+        key_padding_bool = ~object_present.bool()
+        all_empty = key_padding_bool.all(dim=1)
         if all_empty.any():
-            key_padding_mask = key_padding_mask.clone()
-            key_padding_mask[all_empty, 0] = False
+            key_padding_bool = key_padding_bool.clone()
+            key_padding_bool[all_empty, 0] = False
+        key_padding_mask = torch.zeros_like(key_padding_bool, dtype=q.dtype)
+        key_padding_mask = key_padding_mask.masked_fill(key_padding_bool, float("-inf"))
 
-        attn_out, _ = self.attn(q, object_repr, object_repr, key_padding_mask=key_padding_mask, need_weights=False)
+        bias_tokens = object_tokens.to(device=object_repr.device, dtype=object_repr.dtype)
+        attn_mask = self._geometry_attn_mask(bias_tokens, object_present)
+        attn_out, _ = self.attn(
+            q,
+            object_repr,
+            object_repr,
+            key_padding_mask=key_padding_mask,
+            attn_mask=attn_mask,
+            need_weights=False,
+        )
         if all_empty.any():
             attn_out = attn_out.masked_fill(all_empty.view(B, 1, 1), 0.0)
         return self.out_norm(q + attn_out)
@@ -220,8 +337,8 @@ class RainbowNet(nn.Module):
         self.lane_count = int(getattr(cfg, "lane_count", 0))
         self.lane_features = int(getattr(cfg, "lane_features", 0))
         self.extra_features = int(getattr(cfg, "extra_features", 0))
-        self.object_token_count = getattr(cfg, "enemy_token_count", cfg.object_token_count)
-        self.object_token_features = getattr(cfg, "enemy_token_features", cfg.object_token_features)
+        self.object_token_count = getattr(cfg, "object_token_count", getattr(cfg, "enemy_token_count", 96))
+        self.object_token_features = getattr(cfg, "object_token_features", getattr(cfg, "enemy_token_features", 10))
         self.single_frame_state_size = int(getattr(cfg, "single_frame_state_size", state_size))
         self.frame_stack = max(1, int(getattr(cfg, "frame_stack", 1)))
 
@@ -257,11 +374,17 @@ class RainbowNet(nn.Module):
                 object_dim=self.action_context_dim,
                 num_actions=self.num_move,
                 num_heads=heads,
+                mode="move",
+                geometry_bias=bool(getattr(cfg, "action_context_geometry_bias", True)),
+                geometry_bias_strength=float(getattr(cfg, "action_context_geometry_bias_strength", 1.75)),
             )
             self.fire_context_attn = DirectionalObjectAttention(
                 object_dim=self.action_context_dim,
                 num_actions=self.num_fire,
                 num_heads=heads,
+                mode="fire",
+                geometry_bias=bool(getattr(cfg, "action_context_geometry_bias", True)),
+                geometry_bias_strength=float(getattr(cfg, "action_context_geometry_bias_strength", 1.75)),
             )
 
         # ── Trunk ──────────────────────────────────────────────────────
@@ -362,6 +485,8 @@ class RainbowNet(nn.Module):
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight, gain=1.0)
                 nn.init.constant_(m.bias, 0.0)
+            elif isinstance(m, nn.Embedding):
+                nn.init.normal_(m.weight, mean=0.0, std=0.02)
 
     def _current_frame(self, state: torch.Tensor) -> torch.Tensor:
         if self.frame_stack <= 1:
@@ -405,8 +530,8 @@ class RainbowNet(nn.Module):
     def _action_contexts(self, state: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         object_tokens = self._object_tokens(state)
         object_repr, object_present = self.object_attn.encode_tokens(object_tokens)
-        move_ctx = self.move_context_attn(object_repr, object_present)
-        fire_ctx = self.fire_context_attn(object_repr, object_present)
+        move_ctx = self.move_context_attn(object_repr, object_present, object_tokens)
+        fire_ctx = self.fire_context_attn(object_repr, object_present, object_tokens)
         return move_ctx, fire_ctx
 
     def _score_branch_advantage(

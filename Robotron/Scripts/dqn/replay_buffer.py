@@ -130,6 +130,7 @@ class PrioritizedReplayBuffer:
         self.states      = np.zeros((self.capacity, self.state_size), dtype=np.float32)
         self.next_states = np.zeros((self.capacity, self.state_size), dtype=np.float32)
         self.actions     = np.zeros(self.capacity, dtype=np.int64)
+        self.advisor_actions = np.full(self.capacity, -1, dtype=np.int64)
         self.rewards     = np.zeros(self.capacity, dtype=np.float32)
         self.dones       = np.zeros(self.capacity, dtype=np.float32)
         self.horizons    = np.ones(self.capacity, dtype=np.int32)
@@ -140,10 +141,15 @@ class PrioritizedReplayBuffer:
         self.size = 0
         self._n_expert = 0          # O(1) expert tracking
         self._n_interesting = 0
+        expert_bank_size = int(getattr(RL_CONFIG, "expert_replay_bank_size", 1_000_000))
+        self._expert_bank = np.full(max(1, expert_bank_size), -1, dtype=np.int64)
+        self._expert_bank_ptr = 0
+        self._expert_bank_count = 0
         bank_size = int(getattr(RL_CONFIG, "interesting_replay_bank_size", 1_000_000))
         self._interesting_bank = np.full(max(1, bank_size), -1, dtype=np.int64)
         self._interesting_bank_ptr = 0
         self._interesting_bank_count = 0
+        self.last_sample_origin_counts = {"per": 0, "expert": 0, "interesting": 0, "recent": 0}
 
     @staticmethod
     def _progress_bar(label: str, frac: float, width: int = 28):
@@ -158,7 +164,7 @@ class PrioritizedReplayBuffer:
 
     def add(self, state, action: int, reward: float, next_state, done: bool,
             horizon: int = 1, expert: int = 0, priority_hint: float = 0.0,
-            interest: float = 0.0):
+            interest: float = 0.0, advisor_action: int = -1):
         with self.lock:
             priority = self.tree.max_priority
             cap_mult = float(getattr(RL_CONFIG, "per_new_priority_cap_multiplier", 0.0))
@@ -182,6 +188,7 @@ class PrioritizedReplayBuffer:
             self.states[idx]      = np.asarray(state, dtype=np.float32)
             self.next_states[idx] = np.asarray(next_state, dtype=np.float32)
             self.actions[idx]     = int(action)
+            self.advisor_actions[idx] = int(advisor_action)
             self.rewards[idx]     = float(reward)
             self.dones[idx]       = 1.0 if done else 0.0
             self.horizons[idx]    = max(1, int(horizon))
@@ -198,12 +205,43 @@ class PrioritizedReplayBuffer:
                     interest_val = 0.0
             self.interesting[idx] = interest_val
             self._n_expert += int(expert)
+            if int(expert):
+                self._expert_bank[self._expert_bank_ptr] = idx
+                self._expert_bank_ptr = (self._expert_bank_ptr + 1) % len(self._expert_bank)
+                self._expert_bank_count = min(self._expert_bank_count + 1, len(self._expert_bank))
             if interest_val > 0.0:
                 self._n_interesting += 1
                 self._interesting_bank[self._interesting_bank_ptr] = idx
                 self._interesting_bank_ptr = (self._interesting_bank_ptr + 1) % len(self._interesting_bank)
                 self._interesting_bank_count = min(self._interesting_bank_count + 1, len(self._interesting_bank))
             self.size = self.tree.size
+
+    def _sample_expert_indices(self, count: int) -> np.ndarray:
+        if count <= 0 or self._n_expert <= 0 or self._expert_bank_count <= 0:
+            return np.empty(0, dtype=np.int64)
+        found = []
+        attempts = 0
+        max_attempts = max(count * 12, 32)
+        bank_n = self._expert_bank_count
+        while len(found) < count and attempts < max_attempts:
+            take = min(max((count - len(found)) * 3, 8), bank_n)
+            pos = np.random.randint(0, bank_n, size=take)
+            idxs = self._expert_bank[pos]
+            valid = idxs[(idxs >= 0) & (idxs < self.size)]
+            if valid.size:
+                valid = valid[self.is_expert[valid] > 0]
+                if valid.size:
+                    priorities = np.maximum(1e-10, self.tree.tree[valid + self.tree.capacity].astype(np.float64))
+                    total = float(priorities.sum())
+                    if total > 0.0:
+                        pick_n = min(count - len(found), valid.size)
+                        replace = valid.size < pick_n
+                        picks = np.random.choice(valid, size=pick_n, replace=replace, p=priorities / total)
+                        found.extend(int(x) for x in picks)
+            attempts += take
+        if not found:
+            return np.empty(0, dtype=np.int64)
+        return np.asarray(found[:count], dtype=np.int64)
 
     def _sample_interesting_indices(self, count: int) -> np.ndarray:
         if count <= 0 or self._n_interesting <= 0 or self._interesting_bank_count <= 0:
@@ -243,9 +281,12 @@ class PrioritizedReplayBuffer:
         newest = (self.tree.data_ptr - 1) % self.capacity
         return (newest - offsets) % self.capacity
 
-    def sample(self, batch_size: int, beta: float = 0.4):
-        """Sample a prioritised batch. Returns (states, actions, rewards,
-        next_states, dones, horizons, is_expert, indices, weights)."""
+    def sample(self, batch_size: int, beta: float = 0.4, track_origins: bool = True):
+        """Sample a prioritised batch.
+
+        Returns ``(states, actions, rewards, next_states, dones, horizons,
+        is_expert, indices, weights, advisor_actions)``.
+        """
         with self.lock:
             if self.size < batch_size:
                 return None
@@ -256,15 +297,19 @@ class PrioritizedReplayBuffer:
 
             frac = max(0.0, min(0.75, float(getattr(RL_CONFIG, "interesting_replay_fraction", 0.0))))
             recent_frac = max(0.0, min(0.75, float(getattr(RL_CONFIG, "recent_replay_fraction", 0.0))))
-            if frac + recent_frac > 0.90:
-                scale = 0.90 / (frac + recent_frac)
+            expert_frac = max(0.0, min(0.75, float(getattr(RL_CONFIG, "expert_replay_fraction", 0.0))))
+            if frac + recent_frac + expert_frac > 0.90:
+                scale = 0.90 / (frac + recent_frac + expert_frac)
                 frac *= scale
                 recent_frac *= scale
-            interesting_count = min(batch_size - 1, int(round(batch_size * frac))) if frac > 0.0 else 0
+                expert_frac *= scale
+            expert_count = min(batch_size - 1, int(round(batch_size * expert_frac))) if expert_frac > 0.0 else 0
+            expert_indices = self._sample_expert_indices(expert_count)
+            interesting_count = min(batch_size - int(expert_indices.size) - 1, int(round(batch_size * frac))) if frac > 0.0 else 0
             interesting_indices = self._sample_interesting_indices(interesting_count)
-            recent_count = min(batch_size - int(interesting_indices.size) - 1, int(round(batch_size * recent_frac))) if recent_frac > 0.0 else 0
+            recent_count = min(batch_size - int(expert_indices.size) - int(interesting_indices.size) - 1, int(round(batch_size * recent_frac))) if recent_frac > 0.0 else 0
             recent_indices = self._sample_recent_indices(recent_count)
-            per_count = batch_size - int(interesting_indices.size) - int(recent_indices.size)
+            per_count = batch_size - int(expert_indices.size) - int(interesting_indices.size) - int(recent_indices.size)
 
             # Stratified sampling — one uniform draw per segment (vectorised)
             segment = total / max(1, per_count)
@@ -274,7 +319,14 @@ class PrioritizedReplayBuffer:
             per_indices = self.tree.batch_get(values) if per_count > 0 else np.empty(0, dtype=np.int64)
             if per_indices.size:
                 np.clip(per_indices, 0, self.size - 1, out=per_indices)
-            indices = np.concatenate([per_indices, interesting_indices, recent_indices])
+            indices = np.concatenate([per_indices, expert_indices, interesting_indices, recent_indices])
+            if track_origins:
+                self.last_sample_origin_counts = {
+                    "per": int(per_indices.size),
+                    "expert": int(expert_indices.size),
+                    "interesting": int(interesting_indices.size),
+                    "recent": int(recent_indices.size),
+                }
 
             # Gather priorities in one vectorised read
             priorities = np.maximum(1e-10, self.tree.tree[indices + self.tree.capacity])
@@ -294,6 +346,7 @@ class PrioritizedReplayBuffer:
                 self.is_expert[indices],
                 indices,
                 weights.astype(np.float32),
+                self.advisor_actions[indices],
             )
 
     def update_priorities(self, indices, td_errors):
@@ -347,20 +400,27 @@ class PrioritizedReplayBuffer:
                 if idxs.size <= 0:
                     return 0
 
-            enemy_start = int(getattr(cfg, "global_features", 40))
-            enemy_count = int(getattr(cfg, "enemy_token_count", 96))
-            enemy_features = int(getattr(cfg, "enemy_token_features", 10))
+            object_start = int(getattr(cfg, "global_features", 40))
+            object_count = int(getattr(cfg, "object_token_count", getattr(cfg, "enemy_token_count", 96)))
+            object_features = int(getattr(cfg, "object_token_features", getattr(cfg, "enemy_token_features", 10)))
             danger = np.zeros(idxs.size, dtype=np.float32)
             try:
                 rows = self.states[
                     idxs,
-                    enemy_start:enemy_start + enemy_count * enemy_features,
-                ].reshape(idxs.size, enemy_count, enemy_features)
+                    object_start:object_start + object_count * object_features,
+                ].reshape(idxs.size, object_count, object_features)
                 present = rows[:, :, 0] > 0.5
                 dist = np.clip(rows[:, :, 3], 0.0, 1.0)
                 threat = np.clip(rows[:, :, 6], 0.0, 1.0)
-                ttc = np.clip(rows[:, :, 8], 0.0, 1.0) if enemy_features > 8 else np.ones_like(dist)
-                cue = np.maximum((1.0 - dist) * threat, (1.0 - dist) * (1.0 - ttc))
+                ttc = np.clip(rows[:, :, 8], 0.0, 1.0) if object_features > 8 else np.ones_like(dist)
+                blocker = np.clip(rows[:, :, 13], 0.0, 1.0) if object_features > 13 else np.zeros_like(dist)
+                projectile = np.clip(rows[:, :, 15], 0.0, 1.0) if object_features > 15 else np.zeros_like(dist)
+                closeness = 1.0 - dist
+                cue = np.maximum.reduce((
+                    closeness * threat,
+                    closeness * (1.0 - ttc) * (0.4 + 0.6 * projectile),
+                    closeness * blocker,
+                ))
                 cue = np.where(present, cue, 0.0)
                 danger = np.nanmax(cue, axis=1).astype(np.float32)
             except Exception:
@@ -452,6 +512,7 @@ class PrioritizedReplayBuffer:
                 "states":      self.states[:n].copy(),
                 "next_states": self.next_states[:n].copy(),
                 "actions":     self.actions[:n].copy(),
+                "advisor_actions": self.advisor_actions[:n].copy(),
                 "rewards":     self.rewards[:n].copy(),
                 "dones":       self.dones[:n].copy(),
                 "horizons":    self.horizons[:n].copy(),
@@ -530,6 +591,9 @@ class PrioritizedReplayBuffer:
         interesting_path = os.path.join(dirpath, "interesting.npy")
         if os.path.isfile(interesting_path):
             arch["interesting"] = np.load(interesting_path)
+        advisor_path = os.path.join(dirpath, "advisor_actions.npy")
+        if os.path.isfile(advisor_path):
+            arch["advisor_actions"] = np.load(advisor_path)
 
         return self._restore_from_arrays(arch, data_ptr, max_priority, t0, dirpath, verbose)
 
@@ -585,6 +649,10 @@ class PrioritizedReplayBuffer:
             self.states[:n]      = arch["states"][offset:offset + n]
             self.next_states[:n] = arch["next_states"][offset:offset + n]
             self.actions[:n]     = arch["actions"][offset:offset + n]
+            if "advisor_actions" in arch:
+                self.advisor_actions[:n] = arch["advisor_actions"][offset:offset + n]
+            else:
+                self.advisor_actions[:n] = -1
             self.rewards[:n]     = arch["rewards"][offset:offset + n]
             self.dones[:n]       = arch["dones"][offset:offset + n]
             self.horizons[:n]    = arch["horizons"][offset:offset + n]
@@ -595,6 +663,7 @@ class PrioritizedReplayBuffer:
                 self.interesting[:n] = 0.0
             if n < self.capacity:
                 self.interesting[n:] = 0.0
+                self.advisor_actions[n:] = -1
             if verbose:
                 self._progress_bar("  Replay load", 0.62)
 
@@ -618,6 +687,7 @@ class PrioritizedReplayBuffer:
 
             self.size = n
             self._n_expert = int(self.is_expert[:n].sum())
+            self._rebuild_expert_bank_locked(n)
             self._sanitize_interesting_after_load_locked(n, verbose)
             self._rebuild_interesting_bank_locked(n)
 
@@ -703,6 +773,19 @@ class PrioritizedReplayBuffer:
         self._interesting_bank_count = bank_n
         self._interesting_bank_ptr = bank_n % len(self._interesting_bank)
 
+    def _rebuild_expert_bank_locked(self, n: int):
+        expert = np.nonzero(self.is_expert[:n] > 0)[0]
+        self._n_expert = int(expert.size)
+        self._expert_bank.fill(-1)
+        if expert.size <= 0:
+            self._expert_bank_ptr = 0
+            self._expert_bank_count = 0
+            return
+        bank_n = min(len(self._expert_bank), int(expert.size))
+        self._expert_bank[:bank_n] = expert[-bank_n:].astype(np.int64)
+        self._expert_bank_count = bank_n
+        self._expert_bank_ptr = bank_n % len(self._expert_bank)
+
     def load(self, filepath: str, verbose: bool = True) -> bool:
         """Load replay buffer: tries directory format first, then falls back to legacy .npz."""
         # Try directory format (new fast path)
@@ -729,13 +812,18 @@ class PrioritizedReplayBuffer:
             self.size = 0
             self._n_expert = 0
             self._n_interesting = 0
+            self._expert_bank.fill(-1)
+            self._expert_bank_ptr = 0
+            self._expert_bank_count = 0
             self._interesting_bank.fill(-1)
             self._interesting_bank_ptr = 0
             self._interesting_bank_count = 0
+            self.last_sample_origin_counts = {"per": 0, "expert": 0, "interesting": 0, "recent": 0}
             # Zero the storage arrays so stale data can't leak
             self.states.fill(0)
             self.next_states.fill(0)
             self.actions.fill(0)
+            self.advisor_actions.fill(-1)
             self.rewards.fill(0)
             self.dones.fill(0)
             self.horizons.fill(1)

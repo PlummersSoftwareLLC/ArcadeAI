@@ -252,56 +252,65 @@ class _DashboardState:
         if self._model_desc is not None:
             return self._model_desc
         cfg = RL_CONFIG
+        # Keep this dashboard line in sync with model.py/config.py whenever the
+        # DQN architecture or state representation changes. See agent.md.
         try:
             if self.agent is not None and hasattr(self.agent, 'online_net'):
                 param_count = sum(p.numel() for p in self.agent.online_net.parameters())
             else:
-                use_lane = bool(getattr(cfg, 'use_lane_attention', False)) and getattr(cfg, 'lane_count', 0) > 0
-                ad = cfg.attn_dim if use_lane else 0
-                od = cfg.object_attn_dim if getattr(cfg, 'use_object_attention', False) else 0
-                th = cfg.trunk_hidden
-                tl = cfg.trunk_layers
-                stack = int(getattr(cfg, 'frame_stack', 1))
-                raw_state = int(getattr(cfg, 'global_features', getattr(cfg, 'core_features', 18) + getattr(cfg, 'elist_features', 22))) * stack
-                branch_na = cfg.num_move_actions + cfg.num_fire_actions
-                joint_na = cfg.num_move_actions * cfg.num_fire_actions
-                n_atoms = cfg.num_atoms if cfg.use_distributional else 1
-                hm = th // 2
-                attn_p = 0
-                if use_lane:
-                  attn_p += ((cfg.lane_features * ad + ad) + 2 * ad
-                             + 4 * (ad * ad + ad) + 2 * ad)
-                if od:
-                  attn_p += ((cfg.object_token_features * od + od) + 2 * od
-                         + 4 * (od * od + od) + 2 * od)
-                trunk_p = (raw_state + ad + od) * th + th + 2 * th
-                for _ in range(1, tl):
-                    trunk_p += th * th + th + 2 * th
-                heads_p = 3 * (th * hm + hm) + 3 * (hm * n_atoms + n_atoms)
-                heads_p += hm * (branch_na * n_atoms) + branch_na * n_atoms
-                heads_p += hm * (joint_na * n_atoms) + joint_na * n_atoms
-                param_count = attn_p + trunk_p + heads_p
+                try:
+                    from .model import RainbowNet
+                except ImportError:
+                    from model import RainbowNet
+                probe = RainbowNet(int(getattr(cfg, 'state_size', 0)))
+                param_count = sum(p.numel() for p in probe.parameters())
         except Exception:
             param_count = 0
         stack = int(getattr(cfg, 'frame_stack', 1))
-        raw_state = int(getattr(cfg, 'global_features', getattr(cfg, 'core_features', 18) + getattr(cfg, 'elist_features', 22))) * stack
+        single_state = int(getattr(cfg, 'single_frame_state_size', getattr(cfg, 'state_size', 0)))
+        state_size = int(getattr(cfg, 'state_size', single_state * stack))
+        global_features = int(getattr(cfg, 'global_features', getattr(cfg, 'core_features', 18) + getattr(cfg, 'elist_features', 22)))
+        core_elist_features = int(getattr(cfg, 'core_elist_features',
+                                  getattr(cfg, 'core_features', 18) + getattr(cfg, 'elist_features', 22)))
+        lane_summary_features = int(getattr(cfg, 'lane_summary_features', 0))
+        target_summary_features = int(getattr(cfg, 'target_summary_features', 0))
+        raw_state = global_features * stack
         use_lane = bool(getattr(cfg, 'use_lane_attention', False)) and getattr(cfg, 'lane_count', 0) > 0
         trunk_in = raw_state + (cfg.attn_dim if use_lane else 0)
-        trunk_in += (cfg.object_attn_dim if getattr(cfg, 'use_object_attention', False) else 0)
+        use_object = bool(getattr(cfg, 'use_object_attention', False))
+        trunk_in += (cfg.object_attn_dim if use_object else 0)
         layers = [str(trunk_in)]
         for _ in range(cfg.trunk_layers):
             layers.append(str(cfg.trunk_hidden))
-        layers.append(str(cfg.trunk_hidden // 2))
-        arch_str = " \u00bb ".join(layers)
+        trunk_str = " \u00bb ".join(layers)
+        head_hidden = int(getattr(cfg, 'action_head_hidden', cfg.trunk_hidden // 2)) \
+            if bool(getattr(cfg, 'use_action_context_attention', False)) else int(cfg.trunk_hidden // 2)
+        object_count = int(getattr(cfg, 'object_token_count', getattr(cfg, 'enemy_token_count', 0)))
+        object_features = int(getattr(cfg, 'object_token_features', getattr(cfg, 'enemy_token_features', 0)))
         if param_count >= 1_000_000:
             p_str = f"{param_count / 1_000_000:.1f}M"
         elif param_count >= 1_000:
             p_str = f"{param_count / 1_000:.0f}K"
         else:
             p_str = str(param_count)
-        stack = int(getattr(cfg, 'frame_stack', 1))
-        stack_txt = f" \u00b7 stack {stack}f" if stack > 1 else ""
-        desc = f"Model: {arch_str} \u00b7 {p_str} params{stack_txt}"
+        stack_txt = f"x{stack}f" if stack > 1 else ""
+        state_txt = f"state {state_size}"
+        if single_state and stack > 1:
+            state_txt += f" ({single_state}{stack_txt})"
+        if object_count > 0 and object_features > 0:
+            lane_txt = f"+{lane_summary_features}lane" if lane_summary_features > 0 else ""
+            target_txt = f"+{target_summary_features}target" if target_summary_features > 0 else ""
+            state_txt += f" ({core_elist_features}g{lane_txt}{target_txt}+{object_count}x{object_features})"
+        attn_bits = []
+        if use_object and object_count > 0 and object_features > 0:
+            obj_txt = f"object-attn {object_count}x{object_features}"
+            if bool(getattr(cfg, 'action_context_geometry_bias', False)):
+                obj_txt += " geom"
+            attn_bits.append(obj_txt)
+        if use_lane:
+            attn_bits.append(f"lane-attn {getattr(cfg, 'lane_count', 0)}x{getattr(cfg, 'lane_features', 0)}")
+        attn_txt = (" \u00b7 " + " + ".join(attn_bits)) if attn_bits else ""
+        desc = f"Model: {state_txt} -> trunk {trunk_str} -> heads {head_hidden}{attn_txt} \u00b7 {p_str} params"
         self._model_desc = desc
         return desc
 
@@ -332,7 +341,22 @@ class _DashboardState:
             total_training_steps = int(self.metrics.total_training_steps)
             last_loss = float(self.metrics.last_loss)
             last_grad_norm = float(self.metrics.last_grad_norm)
+            last_bellman_loss = float(getattr(self.metrics, "last_bellman_loss", 0.0))
+            last_imitation_loss = float(getattr(self.metrics, "last_imitation_loss", 0.0))
             last_bc_loss = float(self.metrics.last_bc_loss)
+            last_bc_loss_contrib = float(getattr(self.metrics, "last_bc_loss_contrib", 0.0))
+            last_expert_q_policy_loss = float(getattr(self.metrics, "last_expert_q_policy_loss", 0.0))
+            last_expert_q_policy_weight = float(getattr(self.metrics, "last_expert_q_policy_weight", 0.0))
+            last_expert_q_policy_loss_contrib = float(getattr(self.metrics, "last_expert_q_policy_loss_contrib", 0.0))
+            last_expert_q_margin_loss = float(getattr(self.metrics, "last_expert_q_margin_loss", 0.0))
+            last_expert_q_margin_weight = float(getattr(self.metrics, "last_expert_q_margin_weight", 0.0))
+            last_expert_q_margin_loss_contrib = float(getattr(self.metrics, "last_expert_q_margin_loss_contrib", 0.0))
+            last_advisor_q_policy_loss = float(getattr(self.metrics, "last_advisor_q_policy_loss", 0.0))
+            last_advisor_q_policy_weight = float(getattr(self.metrics, "last_advisor_q_policy_weight", 0.0))
+            last_advisor_q_policy_loss_contrib = float(getattr(self.metrics, "last_advisor_q_policy_loss_contrib", 0.0))
+            last_advisor_q_margin_loss = float(getattr(self.metrics, "last_advisor_q_margin_loss", 0.0))
+            last_advisor_q_margin_weight = float(getattr(self.metrics, "last_advisor_q_margin_weight", 0.0))
+            last_advisor_q_margin_loss_contrib = float(getattr(self.metrics, "last_advisor_q_margin_loss_contrib", 0.0))
             last_q_mean = float(self.metrics.last_q_mean)
             training_enabled = bool(self.metrics.training_enabled)
             override_expert = bool(self.metrics.override_expert)
@@ -340,6 +364,50 @@ class _DashboardState:
             inference_requests = int(self.metrics.total_inference_requests)
             inference_time = float(self.metrics.total_inference_time)
             last_agreement = float(self.metrics.last_agreement)
+            last_sample_expert_frac = float(getattr(self.metrics, "last_sample_expert_frac", 0.0))
+            last_sample_advisor_frac = float(getattr(self.metrics, "last_sample_advisor_frac", 0.0))
+            last_sample_per_frac = float(getattr(self.metrics, "last_sample_per_frac", 0.0))
+            last_sample_expert_quota_frac = float(getattr(self.metrics, "last_sample_expert_quota_frac", 0.0))
+            last_sample_interesting_frac = float(getattr(self.metrics, "last_sample_interesting_frac", 0.0))
+            last_sample_recent_frac = float(getattr(self.metrics, "last_sample_recent_frac", 0.0))
+            last_sample_horizon_mean = float(getattr(self.metrics, "last_sample_horizon_mean", 0.0))
+            last_sample_terminal_frac = float(getattr(self.metrics, "last_sample_terminal_frac", 0.0))
+            last_expert_joint_agreement = float(getattr(self.metrics, "last_expert_joint_agreement", 0.0))
+            last_learner_joint_agreement = float(getattr(self.metrics, "last_learner_joint_agreement", 0.0))
+            last_advisor_joint_agreement = float(getattr(self.metrics, "last_advisor_joint_agreement", 0.0))
+            last_expert_q_rank_mean = float(getattr(self.metrics, "last_expert_q_rank_mean", 0.0))
+            last_expert_q_margin_mean = float(getattr(self.metrics, "last_expert_q_margin_mean", 0.0))
+            last_advisor_q_rank_mean = float(getattr(self.metrics, "last_advisor_q_rank_mean", 0.0))
+            last_advisor_q_margin_mean = float(getattr(self.metrics, "last_advisor_q_margin_mean", 0.0))
+            last_current_q_action_mean = float(getattr(self.metrics, "last_current_q_action_mean", 0.0))
+            last_target_q_mean = float(getattr(self.metrics, "last_target_q_mean", 0.0))
+            last_unclamped_target_q_mean = float(getattr(self.metrics, "last_unclamped_target_q_mean", 0.0))
+            last_next_q_max_mean = float(getattr(self.metrics, "last_next_q_max_mean", 0.0))
+            last_target_next_q_mean = float(getattr(self.metrics, "last_target_next_q_mean", 0.0))
+            last_double_q_gap_mean = float(getattr(self.metrics, "last_double_q_gap_mean", 0.0))
+            last_td_q_mean = float(getattr(self.metrics, "last_td_q_mean", 0.0))
+            last_td_q_abs_mean = float(getattr(self.metrics, "last_td_q_abs_mean", 0.0))
+            last_q_gap_mean = float(getattr(self.metrics, "last_q_gap_mean", 0.0))
+            last_target_clip_low_frac = float(getattr(self.metrics, "last_target_clip_low_frac", 0.0))
+            last_target_clip_high_frac = float(getattr(self.metrics, "last_target_clip_high_frac", 0.0))
+            last_target_low_atom_mass = float(getattr(self.metrics, "last_target_low_atom_mass", 0.0))
+            last_target_high_atom_mass = float(getattr(self.metrics, "last_target_high_atom_mass", 0.0))
+            last_target_mass_error_mean = float(getattr(self.metrics, "last_target_mass_error_mean", 0.0))
+            last_policy_idle_move_frac = float(getattr(self.metrics, "last_policy_idle_move_frac", 0.0))
+            last_policy_idle_fire_frac = float(getattr(self.metrics, "last_policy_idle_fire_frac", 0.0))
+            last_policy_noop_frac = float(getattr(self.metrics, "last_policy_noop_frac", 0.0))
+            last_policy_top_action_frac = float(getattr(self.metrics, "last_policy_top_action_frac", 0.0))
+            last_policy_action_entropy = float(getattr(self.metrics, "last_policy_action_entropy", 0.0))
+            last_sample_idle_move_frac = float(getattr(self.metrics, "last_sample_idle_move_frac", 0.0))
+            last_sample_idle_fire_frac = float(getattr(self.metrics, "last_sample_idle_fire_frac", 0.0))
+            last_sample_noop_frac = float(getattr(self.metrics, "last_sample_noop_frac", 0.0))
+            last_sample_top_action_frac = float(getattr(self.metrics, "last_sample_top_action_frac", 0.0))
+            last_sample_action_entropy = float(getattr(self.metrics, "last_sample_action_entropy", 0.0))
+            last_sample_reward_mean = float(getattr(self.metrics, "last_sample_reward_mean", 0.0))
+            last_sample_reward_abs_mean = float(getattr(self.metrics, "last_sample_reward_abs_mean", 0.0))
+            last_sample_reward_min = float(getattr(self.metrics, "last_sample_reward_min", 0.0))
+            last_sample_reward_max = float(getattr(self.metrics, "last_sample_reward_max", 0.0))
+            pre_death_penalized_steps = int(getattr(self.metrics, "pre_death_penalized_steps", 0))
 
             reward_total = _tail_mean(self.metrics.episode_rewards) * _prs
             reward_dqn = _tail_mean(self.metrics.dqn_rewards) * _prs
@@ -411,7 +479,22 @@ class _DashboardState:
             "train_step_ms": float(getattr(self.metrics, "last_train_step_ms", 0.0)),
             "loss": last_loss,
             "grad_norm": last_grad_norm,
+            "bellman_loss": last_bellman_loss,
+            "imitation_loss": last_imitation_loss,
             "bc_loss": last_bc_loss,
+            "bc_loss_contrib": last_bc_loss_contrib,
+            "expert_q_policy_loss": last_expert_q_policy_loss,
+            "expert_q_policy_weight": last_expert_q_policy_weight,
+            "expert_q_policy_loss_contrib": last_expert_q_policy_loss_contrib,
+            "expert_q_margin_loss": last_expert_q_margin_loss,
+            "expert_q_margin_weight": last_expert_q_margin_weight,
+            "expert_q_margin_loss_contrib": last_expert_q_margin_loss_contrib,
+            "advisor_q_policy_loss": last_advisor_q_policy_loss,
+            "advisor_q_policy_weight": last_advisor_q_policy_weight,
+            "advisor_q_policy_loss_contrib": last_advisor_q_policy_loss_contrib,
+            "advisor_q_margin_loss": last_advisor_q_margin_loss,
+            "advisor_q_margin_weight": last_advisor_q_margin_weight,
+            "advisor_q_margin_loss_contrib": last_advisor_q_margin_loss_contrib,
             "q_mean": last_q_mean,
             "reward_total": reward_total,
             "reward_dqn": reward_dqn,
@@ -447,6 +530,50 @@ class _DashboardState:
             "episodes_this_run": int(self.metrics.episodes_this_run),
             "agreement": last_agreement,
             "agreement_1m": agreement_1m,
+            "expert_joint_agreement": last_expert_joint_agreement,
+            "learner_joint_agreement": last_learner_joint_agreement,
+            "advisor_joint_agreement": last_advisor_joint_agreement,
+            "expert_q_rank_mean": last_expert_q_rank_mean,
+            "expert_q_margin_mean": last_expert_q_margin_mean,
+            "advisor_q_rank_mean": last_advisor_q_rank_mean,
+            "advisor_q_margin_mean": last_advisor_q_margin_mean,
+            "current_q_action_mean": last_current_q_action_mean,
+            "target_q_mean": last_target_q_mean,
+            "unclamped_target_q_mean": last_unclamped_target_q_mean,
+            "next_q_max_mean": last_next_q_max_mean,
+            "target_next_q_mean": last_target_next_q_mean,
+            "double_q_gap_mean": last_double_q_gap_mean,
+            "td_q_mean": last_td_q_mean,
+            "td_q_abs_mean": last_td_q_abs_mean,
+            "q_gap_mean": last_q_gap_mean,
+            "target_clip_low_frac": last_target_clip_low_frac,
+            "target_clip_high_frac": last_target_clip_high_frac,
+            "target_low_atom_mass": last_target_low_atom_mass,
+            "target_high_atom_mass": last_target_high_atom_mass,
+            "target_mass_error_mean": last_target_mass_error_mean,
+            "policy_idle_move_frac": last_policy_idle_move_frac,
+            "policy_idle_fire_frac": last_policy_idle_fire_frac,
+            "policy_noop_frac": last_policy_noop_frac,
+            "policy_top_action_frac": last_policy_top_action_frac,
+            "policy_action_entropy": last_policy_action_entropy,
+            "sample_idle_move_frac": last_sample_idle_move_frac,
+            "sample_idle_fire_frac": last_sample_idle_fire_frac,
+            "sample_noop_frac": last_sample_noop_frac,
+            "sample_top_action_frac": last_sample_top_action_frac,
+            "sample_action_entropy": last_sample_action_entropy,
+            "sample_expert_frac": last_sample_expert_frac,
+            "sample_advisor_frac": last_sample_advisor_frac,
+            "sample_per_frac": last_sample_per_frac,
+            "sample_expert_quota_frac": last_sample_expert_quota_frac,
+            "sample_interesting_frac": last_sample_interesting_frac,
+            "sample_recent_frac": last_sample_recent_frac,
+            "sample_horizon_mean": last_sample_horizon_mean,
+            "sample_terminal_frac": last_sample_terminal_frac,
+            "sample_reward_mean": last_sample_reward_mean,
+            "sample_reward_abs_mean": last_sample_reward_abs_mean,
+            "sample_reward_min": last_sample_reward_min,
+            "sample_reward_max": last_sample_reward_max,
+            "pre_death_penalized_steps": pre_death_penalized_steps,
             "model_desc": self._get_model_desc(),
             "pulse_state": plateau_pulser.state,
             "pulse_remaining": int(self.metrics.manual_pulse_frames_remaining),

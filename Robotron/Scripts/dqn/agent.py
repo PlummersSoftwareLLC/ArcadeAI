@@ -32,7 +32,8 @@ except Exception:                                   # pragma: no cover - non-Win
 
 try:
     from .config import (RL_CONFIG, MODEL_DIR, LATEST_MODEL_PATH,
-                         metrics as config_metrics, RESET_METRICS, IS_INTERACTIVE)
+                         metrics as config_metrics, RESET_METRICS, IS_INTERACTIVE,
+                         SINGLE_FRAME_STATE_SIZE, TARGET_SUMMARY_OFFSET)
     from .model import (device, _cuda_device, RainbowNet,
                         NUM_MOVE, NUM_FIRE, NUM_JOINT,
                         combine_action, split_joint_action)
@@ -40,7 +41,8 @@ try:
     from .replay_buffer import PrioritizedReplayBuffer
 except ImportError:
     from config import (RL_CONFIG, MODEL_DIR, LATEST_MODEL_PATH,
-                        metrics as config_metrics, RESET_METRICS, IS_INTERACTIVE)
+                        metrics as config_metrics, RESET_METRICS, IS_INTERACTIVE,
+                        SINGLE_FRAME_STATE_SIZE, TARGET_SUMMARY_OFFSET)
     from model import (device, _cuda_device, RainbowNet,
                        NUM_MOVE, NUM_FIRE, NUM_JOINT,
                        combine_action, split_joint_action)
@@ -49,7 +51,69 @@ except ImportError:
 
 metrics = config_metrics
 
-ENGINE_VERSION = 13  # Plain global + 96-enemy-list state
+ENGINE_VERSION = 16  # Add nearest destructible target dx/dy/dist trunk features
+
+_CARDINAL_FIRE_SNAP_RATIO = 0.35
+_CARDINAL_FIRE_SNAP_CLOSE_DIST = 0.20
+_CARDINAL_FIRE_SNAP_Q_MARGIN = 1.25
+_ADJACENT_DIAGONALS_BY_CARDINAL = {
+    0: (1, 7),
+    2: (1, 3),
+    4: (3, 5),
+    6: (5, 7),
+}
+
+
+def _close_cardinal_target_dir_from_state(state: np.ndarray) -> int | None:
+    arr = np.asarray(state, dtype=np.float32).reshape(-1)
+    single_size = max(1, int(SINGLE_FRAME_STATE_SIZE))
+    base = max(0, arr.size - single_size)
+    off = base + int(TARGET_SUMMARY_OFFSET)
+    if off + 2 >= arr.size:
+        return None
+
+    dx = float(arr[off])
+    dy = float(arr[off + 1])
+    dist = float(arr[off + 2])
+    if not (math.isfinite(dx) and math.isfinite(dy) and math.isfinite(dist)):
+        return None
+    if dist <= 0.0 or dist > _CARDINAL_FIRE_SNAP_CLOSE_DIST:
+        return None
+
+    ax = abs(dx)
+    ay = abs(dy)
+    major = max(ax, ay)
+    if major <= 1e-6:
+        return None
+    if (min(ax, ay) / major) > _CARDINAL_FIRE_SNAP_RATIO:
+        return None
+    if ax >= ay:
+        return 2 if dx >= 0.0 else 6
+    return 4 if dy >= 0.0 else 0
+
+
+def _prefer_cardinal_fire_for_close_target(
+    state: np.ndarray,
+    joint_q_2d: np.ndarray,
+    move_idx: int,
+    fire_idx: int,
+) -> tuple[int, int]:
+    snap_fire = _close_cardinal_target_dir_from_state(state)
+    if snap_fire is None or fire_idx == snap_fire:
+        return int(move_idx), int(fire_idx)
+    if int(fire_idx) not in _ADJACENT_DIAGONALS_BY_CARDINAL.get(int(snap_fire), ()):
+        return int(move_idx), int(fire_idx)
+
+    q = np.asarray(joint_q_2d, dtype=np.float32).reshape(NUM_MOVE, NUM_FIRE)
+    move_idx = max(0, min(NUM_MOVE - 1, int(move_idx)))
+    fire_idx = max(0, min(NUM_FIRE - 1, int(fire_idx)))
+    snap_fire = max(0, min(NUM_FIRE - 1, int(snap_fire)))
+    chosen_q = float(q[move_idx, fire_idx])
+    snap_move = int(np.argmax(q[:, snap_fire]))
+    snap_q = float(q[snap_move, snap_fire])
+    if snap_q >= chosen_q - _CARDINAL_FIRE_SNAP_Q_MARGIN:
+        return snap_move, snap_fire
+    return move_idx, fire_idx
 
 
 class RainbowAgent:
@@ -224,21 +288,28 @@ class RainbowAgent:
             return random.randrange(NUM_MOVE), random.randrange(NUM_FIRE), True
         try:
             start = int(getattr(cfg, "global_features", 40))
-            count = int(getattr(cfg, "enemy_token_count", 96))
-            feats = int(getattr(cfg, "enemy_token_features", 10))
-            enemies = np.asarray(state[start:start + count * feats], dtype=np.float32).reshape(count, feats)
-            active = enemies[:, 0] > 0.5
+            count = int(getattr(cfg, "object_token_count", getattr(cfg, "enemy_token_count", 96)))
+            feats = int(getattr(cfg, "object_token_features", getattr(cfg, "enemy_token_features", 10)))
+            objects = np.asarray(state[start:start + count * feats], dtype=np.float32).reshape(count, feats)
+            active = objects[:, 0] > 0.5
             if not np.any(active):
                 return random.randrange(NUM_MOVE), random.randrange(NUM_FIRE), True
 
-            e = enemies[active]
+            e = objects[active]
             dx = e[:, 1]
             dy = e[:, 2]
             dist = np.clip(e[:, 3], 0.0, 1.0)
             threat = np.clip(e[:, 6], 0.0, 1.0)
             ttc = np.clip(e[:, 8], 0.0, 1.0) if feats > 8 else np.ones_like(dist)
+            destructible = np.clip(e[:, 12], 0.0, 1.0) if feats > 12 else np.ones_like(dist)
+            blocker = np.clip(e[:, 13], 0.0, 1.0) if feats > 13 else np.zeros_like(dist)
+            rescue = np.clip(e[:, 14], 0.0, 1.0) if feats > 14 else np.zeros_like(dist)
+            projectile = np.clip(e[:, 15], 0.0, 1.0) if feats > 15 else np.zeros_like(dist)
             closeness = 1.0 - dist
-            weight = (0.25 + 0.75 * threat) * (0.35 + 0.65 * closeness) * (0.5 + 0.5 * (1.0 - ttc))
+            imminent = 1.0 - ttc
+            hazard = np.maximum(threat, np.maximum(projectile, blocker))
+            hazard *= (1.0 - 0.85 * rescue)
+            weight = (0.20 + 0.80 * hazard) * (0.35 + 0.65 * closeness) * (0.50 + 0.50 * imminent)
 
             dirs = np.asarray([
                 [0.0, -1.0], [1.0, -1.0], [1.0, 0.0], [1.0, 1.0],
@@ -255,7 +326,9 @@ class RainbowAgent:
             idle_move = -0.35 if pressure > 0.15 else 0.05
             move_scores = np.concatenate([move_scores8, np.asarray([idle_move], dtype=np.float32)])
 
-            fire_scores8 = (np.clip(toward, 0.0, None) * (0.25 + 0.75 * closeness) * (0.25 + 0.75 * threat)).sum(axis=1)
+            target = np.maximum(destructible, projectile) * (1.0 - 0.95 * rescue)
+            fire_weight = (0.15 + 0.85 * target) * (0.25 + 0.75 * closeness) * (0.25 + 0.75 * np.maximum(threat, projectile))
+            fire_scores8 = (np.clip(toward, 0.0, None) * fire_weight).sum(axis=1)
             target_pressure = float(np.nanmax(fire_scores8)) if fire_scores8.size else 0.0
             idle_fire = 0.10 if target_pressure < 0.05 else -0.35
             fire_scores = np.concatenate([fire_scores8, np.asarray([idle_fire], dtype=np.float32)])
@@ -278,8 +351,10 @@ class RainbowAgent:
             lf = max(0, min(NUM_FIRE - 1, int(locked_fire)))
             move_idx = int(joint_q.view(1, NUM_MOVE, NUM_FIRE)[0, :, lf].argmax().item())
             return move_idx, lf, False
-        joint_idx = int(joint_q.argmax(dim=1).item())
+        joint_q_np = joint_q.detach().cpu().numpy().reshape(NUM_MOVE, NUM_FIRE)
+        joint_idx = int(joint_q_np.reshape(-1).argmax())
         move_idx, fire_idx = split_joint_action(joint_idx)
+        move_idx, fire_idx = _prefer_cardinal_fire_for_close_target(state, joint_q_np, move_idx, fire_idx)
         return int(move_idx), int(fire_idx), False
 
     def debug_q_spread(self, state: np.ndarray):
@@ -331,16 +406,28 @@ class RainbowAgent:
                     mi = int(np.argmax(joint_q_np[row, :, fi]))
                 else:
                     mi, fi = split_joint_action(int(ji))
+                    mi, fi = _prefer_cardinal_fire_for_close_target(
+                        batch_np[row], joint_q_np[row], mi, fi
+                    )
                 actions[pos] = (int(mi), int(fi), False)
 
         return [a if a is not None else (0, 0, False) for a in actions]
 
     # ── Step (add experience) ───────────────────────────────────────────
-    def step(self, state, action, reward, next_state, done, actor="dqn", horizon=1, priority_reward=None, interest=0.0):
+    def step(self, state, action, reward, next_state, done, actor="dqn", horizon=1,
+             priority_reward=None, interest=0.0, advisor_action=None):
         if isinstance(action, (tuple, list)) and len(action) >= 2:
             action_idx = combine_action(action[0], action[1])
         else:
             action_idx = int(max(0, min(NUM_JOINT - 1, int(action))))
+        if isinstance(advisor_action, (tuple, list)) and len(advisor_action) >= 2:
+            advisor_idx = combine_action(advisor_action[0], advisor_action[1])
+        elif advisor_action is None:
+            advisor_idx = action_idx if actor == "expert" else -1
+        else:
+            advisor_idx = int(advisor_action)
+            if not (0 <= advisor_idx < NUM_JOINT):
+                advisor_idx = -1
         is_expert = 1 if actor == "expert" else 0
         pri = float(priority_reward) if priority_reward is not None else 0.0
         # Ensure terminal transitions get a minimum priority floor
@@ -349,7 +436,7 @@ class RainbowAgent:
             if boost > 0:
                 pri = max(abs(pri), boost) * (-1.0 if pri < 0 else 1.0)
         self.memory.add(state, action_idx, float(reward), next_state, bool(done), int(horizon), is_expert,
-                priority_hint=pri, interest=interest)
+                priority_hint=pri, interest=interest, advisor_action=advisor_idx)
         # Return the index of the just-written transition for pre-death tracking
         try:
             return int(self.memory.tree.data_ptr - 1) % self.memory.capacity
@@ -615,7 +702,7 @@ class RainbowAgent:
         try:
             if len(self.memory) < 64:
                 return float("nan"), float("nan")
-            batch = self.memory.sample(64, beta=0.4)
+            batch = self.memory.sample(64, beta=0.4, track_origins=False)
             if batch is None:
                 return float("nan"), float("nan")
             st = torch.from_numpy(batch[0]).to(self.inference_device).float()
@@ -625,7 +712,7 @@ class RainbowAgent:
             return float("nan"), float("nan")
 
     def reset_attention_weights(self):
-        """Reinitialize enemy/action attention weights, keeping trunk and heads intact."""
+        """Reinitialize object/action attention weights, keeping trunk and heads intact."""
         def attention_modules(net):
             mods = []
             if getattr(net, "use_object_attn", False):
@@ -665,15 +752,15 @@ class RainbowAgent:
         for p in list(self.optimizer.state.keys()):
             if id(p) in attn_param_ids:
                 self.optimizer.state.pop(p, None)
-        print("✓ Enemy/action attention weights and optimizer state reset (trunk + heads preserved)")
+        print("✓ Object/action attention weights and optimizer state reset (trunk + heads preserved)")
 
     def diagnose_attention(self, num_samples: int = 256) -> str:
-        """Report enemy self-attention entropy to gauge whether it's meaningful."""
+        """Report object self-attention entropy to gauge whether it's meaningful."""
         if not getattr(self.online_net, "use_object_attn", False):
-            return "Enemy attention is disabled in this model."
+            return "Object attention is disabled in this model."
         if len(self.memory) < num_samples:
             return f"Need {num_samples} samples in buffer, have {len(self.memory)}."
-        batch = self.memory.sample(num_samples, beta=0.4)
+        batch = self.memory.sample(num_samples, beta=0.4, track_origins=False)
         if batch is None:
             return "Could not sample from buffer."
         states = torch.from_numpy(batch[0]).to(self.device).float()
@@ -688,7 +775,7 @@ class RainbowAgent:
                 if was_training:
                     self.online_net.train()
                 mean_active = float(active_counts.float().mean().item())
-                return f"Enemy self-attention: only {mean_active:.1f} active rows/sample; entropy not informative yet."
+                return f"Object self-attention: only {mean_active:.1f} active rows/sample; entropy not informative yet."
             x = enc.norm(enc.embed(tokens))
             key_padding_mask = ~present
             all_empty = key_padding_mask.all(dim=1)
@@ -709,7 +796,7 @@ class RainbowAgent:
             self.online_net.train()
         pct = 100.0 * ent / max_ent if max_ent > 0 else 0.0
         mean_active = float(active_counts.float().mean().item())
-        return (f"Enemy self-attention: mean entropy {ent:.3f}/{max_ent:.3f} "
+        return (f"Object self-attention: mean entropy {ent:.3f}/{max_ent:.3f} "
                 f"({pct:.0f}% of uniform), {mean_active:.1f} active rows/sample")
 
     def stop(self):

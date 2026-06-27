@@ -273,12 +273,13 @@ def print_network_info(agent, dashboard_status: str = "disabled"):
     if getattr(agent.online_net, "use_object_attn", False):
         trunk_in += int(getattr(RL_CONFIG, "object_attn_dim", 0))
     print(f"   State size:       {agent.state_size}  ({single_state} x {frame_stack} frames)")
-    print(f"   Single frame:     {RL_CONFIG.core_features} core + {RL_CONFIG.elist_features} ELIST + {RL_CONFIG.enemy_token_count} enemies x {RL_CONFIG.enemy_token_features}")
+    print(f"   Single frame:     {RL_CONFIG.core_features} core + {RL_CONFIG.elist_features} ELIST + {RL_CONFIG.lane_summary_features} lane density + {RL_CONFIG.target_summary_features} target + {RL_CONFIG.object_token_count} object rows x {RL_CONFIG.object_token_features}")
     print(f"   Trunk input:      {trunk_in}  ({raw_trunk} stacked global + attention embeddings)")
     print(f"   Actions:          {RL_CONFIG.num_move_actions} move x {RL_CONFIG.num_fire_actions} fire (joint 81-action head, idle=8)")
     print(f"   Trunk:            {RL_CONFIG.trunk_layers} layers x {RL_CONFIG.trunk_hidden} hidden")
     print(f"   Lane attention:   OFF (removed from learner input)")
-    print(f"   Enemy attention:  {'ON' if RL_CONFIG.use_object_attention else 'OFF'} ({RL_CONFIG.object_attn_heads} heads, dim={RL_CONFIG.object_attn_dim})")
+    print(f"   Object attention: {'ON' if RL_CONFIG.use_object_attention else 'OFF'} ({RL_CONFIG.object_attn_heads} heads, dim={RL_CONFIG.object_attn_dim})")
+    print(f"   Action geometry:  {'ON' if RL_CONFIG.action_context_geometry_bias else 'OFF'} (strength={RL_CONFIG.action_context_geometry_bias_strength})")
     print(f"   Distributional:   {'C51 ({} atoms, [{}, {}])'.format(RL_CONFIG.num_atoms, RL_CONFIG.v_min, RL_CONFIG.v_max) if RL_CONFIG.use_distributional else 'OFF'}")
     print(f"   Dueling:          {'ON' if RL_CONFIG.use_dueling else 'OFF'}")
     print(f"   Parameters:       {tp:,} total, {tr:,} trainable")
@@ -296,7 +297,9 @@ def print_network_info(agent, dashboard_status: str = "disabled"):
     _xp_hold = int(RL_CONFIG.expert_ratio_decay_start_step)
     _xp_hold_txt = f" (after {_xp_hold:,} step hold)" if _xp_hold > 0 else ""
     print(f"   Expert: {RL_CONFIG.expert_ratio_start*100:.0f}% -> {RL_CONFIG.expert_ratio_end*100:.0f}% over {RL_CONFIG.expert_ratio_decay_steps:,} train steps{_xp_hold_txt}")
+    print(f"   Expert guidance: {getattr(RL_CONFIG, 'expert_guidance_mode', 'episode')} level")
     print(f"   BC weight: {RL_CONFIG.expert_bc_weight} -> {RL_CONFIG.expert_bc_min_weight} over {RL_CONFIG.expert_bc_decay_steps:,} train steps (after {RL_CONFIG.expert_bc_decay_start_step:,} step hold)")
+    print(f"   No-human delay penalty: {getattr(RL_CONFIG, 'no_human_delay_penalty', 0.0):.3f} per no-score live frame")
     print(f"   Eval clients: every {RL_CONFIG.eval_client_stride}th client at eps={RL_CONFIG.eval_epsilon:.2f}, no replay writes")
 
     print(f"\nServices:")
