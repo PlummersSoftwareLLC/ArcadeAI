@@ -8,12 +8,14 @@
 
 State representation
 --------------------
-Each frame the Lua client sends ``WIRE_PARAMS_COUNT`` (2118) big-endian f32
+Each frame the Lua client sends ``WIRE_PARAMS_COUNT`` (2130) big-endian f32
 values. The DQN consumes a deliberately plain single-frame slice of that wire:
 the 18 core game/player scalars, the 22 raw ELIST/level-state bytes, 16
-directional lane-density scalars, 3 nearest-destructible-target scalars, and
-96 role-aware object rows distilled from the projectile, danger, human, and
-electrode tactical pools. The full lane and grid blocks remain on the wire for
+directional lane-density scalars, 3 nearest-destructible-target scalars, 16
+nearest typed-object scalars, and 96 role-aware object rows distilled from the
+projectile, danger, human, and electrode tactical pools. Each object row also
+includes compact shot-alignment geometry for the nearest useful fire ray. The
+full lane and grid blocks plus a diagnostics trailer remain on the wire for
 expert/debugging paths, but are not part of the DQN model input.
 
 Action representation
@@ -55,11 +57,11 @@ SETTINGS_PATH = os.path.join(MODEL_DIR, "game_settings.json")
 # ---------------------------------------------------------------------------
 # Number of f32 values the Lua client packs into each frame's state payload.
 # The 96-slot danger pool adds 640 floats over the prior 1478-float wire.
-WIRE_PARAMS_COUNT = 2118
+WIRE_PARAMS_COUNT = 2130
 
 # Model slice: 18 core game features + 22 ELIST/level-state features +
-# 16 lane-density features + nearest target dx/dy/dist +
-# 96 role-aware object rows × 16 features.
+# 16 lane-density features + nearest target dx/dy/dist + nearest typed-object
+# summaries + 96 role-aware object rows × 21 features.
 CORE_FEATURES = 18                       # wire[0:18]
 ELIST_FEATURES = 22                      # wire[18:40]
 CORE_ELIST_FEATURES = CORE_FEATURES + ELIST_FEATURES
@@ -71,7 +73,10 @@ LANE_SUMMARY_END = LANE_SUMMARY_OFFSET + LANE_SUMMARY_FEATURES
 TARGET_SUMMARY_FEATURES = 3              # nearest destructible target dx, dy, dist
 TARGET_SUMMARY_OFFSET = LANE_SUMMARY_END
 TARGET_SUMMARY_END = TARGET_SUMMARY_OFFSET + TARGET_SUMMARY_FEATURES
-GLOBAL_FEATURES = CORE_ELIST_FEATURES + LANE_SUMMARY_FEATURES + TARGET_SUMMARY_FEATURES
+TYPE_NEAREST_FEATURES = 16               # grunt/hulk/projectile/blocker/human nearest summaries
+TYPE_NEAREST_OFFSET = TARGET_SUMMARY_END
+TYPE_NEAREST_END = TYPE_NEAREST_OFFSET + TYPE_NEAREST_FEATURES
+GLOBAL_FEATURES = TYPE_NEAREST_END
 TACTICAL_LANE_OFFSET = CORE_ELIST_FEATURES
 TACTICAL_LANE_END = TACTICAL_LANE_OFFSET + LANE_COUNT * LANE_FEATURES   # 280
 # Lua emits lane rows in geometric angle order:
@@ -89,17 +94,31 @@ TACTICAL_POOL_OFFSET = TACTICAL_GRID_END
 # pools, sorted by immediate action relevance, and capped to keep the model
 # compact.
 OBJECT_TOKEN_COUNT = 96
-OBJECT_TOKEN_FEATURES = 16
+OBJECT_BASE_FEATURES = 16
+SHOT_ALIGNMENT_FEATURES = 5
+OBJECT_TOKEN_FEATURES = OBJECT_BASE_FEATURES + SHOT_ALIGNMENT_FEATURES
+OBJECT_SHOT_DIR_X = 16
+OBJECT_SHOT_DIR_Y = 17
+OBJECT_SHOT_ALIGN_DX = 18
+OBJECT_SHOT_ALIGN_DY = 19
+OBJECT_SHOT_ALIGN_DIST = 20
 OBJECT_FEATURES = OBJECT_TOKEN_COUNT * OBJECT_TOKEN_FEATURES
 OBJECT_TOKEN_OFFSET = GLOBAL_FEATURES
 OBJECT_TOKEN_END = OBJECT_TOKEN_OFFSET + OBJECT_FEATURES
-SINGLE_FRAME_STATE_SIZE = OBJECT_TOKEN_END                                    # 1595
+SINGLE_FRAME_STATE_SIZE = OBJECT_TOKEN_END                                    # 2091
 _frame_stack_env = os.getenv("DQN_FRAME_STACK", os.getenv("ROBOTRON_DQN_FRAME_STACK", "1"))
 try:
     FRAME_STACK_COUNT = max(1, int(_frame_stack_env))
 except Exception:
     FRAME_STACK_COUNT = 1
 MODEL_STATE_SIZE = SINGLE_FRAME_STATE_SIZE * FRAME_STACK_COUNT
+
+
+def _env_int(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, str(default)))
+    except Exception:
+        return int(default)
 
 # Pool layout mirrors main.lua tactical pool emission.
 TACTICAL_POOL_DEFS = (
@@ -108,6 +127,11 @@ TACTICAL_POOL_DEFS = (
     ("human", 12, 7),
     ("electrode", 8, 5),
 )
+TACTICAL_POOL_FEATURES = sum(1 + max_slots * feat_per_slot for _, max_slots, feat_per_slot in TACTICAL_POOL_DEFS)
+TACTICAL_POOL_END = TACTICAL_POOL_OFFSET + TACTICAL_POOL_FEATURES        # 2118
+TACTICAL_DIAG_OFFSET = TACTICAL_POOL_END
+TACTICAL_DIAG_FEATURES = 12
+TACTICAL_DIAG_END = TACTICAL_DIAG_OFFSET + TACTICAL_DIAG_FEATURES        # 2130
 
 # Compatibility aliases for callers/tests that still use the previous enemy-list
 # names. The representation is now a unified object list, not danger-only.
@@ -121,6 +145,11 @@ _ROLE_NORM = {"projectile": 0.25, "danger": 0.50, "human": 0.75, "electrode": 1.
 _TYPE_NORM_DEFAULT = {"projectile": 6.0 / 11.0, "danger": 0.0, "human": 7.0 / 11.0, "electrode": 8.0 / 11.0}
 _LANE_ENEMY_COUNT_OFFSET = 7
 _LANE_HUMAN_COUNT_OFFSET = 11
+_FIRE_DIRS = np.asarray([
+    [0.0, -1.0], [1.0, -1.0], [1.0, 0.0], [1.0, 1.0],
+    [0.0, 1.0], [-1.0, 1.0], [-1.0, 0.0], [-1.0, -1.0],
+], dtype=np.float32)
+_FIRE_DIRS = _FIRE_DIRS / np.maximum(np.linalg.norm(_FIRE_DIRS, axis=1, keepdims=True), 1.0)
 
 
 def _clip01(v: float) -> float:
@@ -159,12 +188,39 @@ def _extract_lane_density_features(arr: np.ndarray) -> np.ndarray:
     return out.reshape(-1)
 
 
+def _shot_alignment_features(dx: float, dy: float) -> list[float]:
+    """Return best fire ray plus player movement residual to line up that shot.
+
+    The residual is the movement delta the player would need, in normalized
+    relative-position units, so the target lies exactly on the chosen 8-way fire
+    ray. Example: target right and slightly up -> best ray right, residual
+    y negative, meaning move up to align the shot.
+    """
+    x = _clip11(dx)
+    y = _clip11(dy)
+    mag = math.hypot(x, y)
+    if mag <= 1e-6:
+        return [0.0, 0.0, 0.0, 0.0, 0.0]
+
+    unit = np.asarray([x / mag, y / mag], dtype=np.float32)
+    idx = int(np.argmax(_FIRE_DIRS @ unit))
+    fx = float(_FIRE_DIRS[idx, 0])
+    fy = float(_FIRE_DIRS[idx, 1])
+    forward = (x * fx) + (y * fy)
+    align_x = _clip11(x - (fx * forward))
+    align_y = _clip11(y - (fy * forward))
+    align_dist = _clip01(math.hypot(align_x, align_y))
+    return [fx, fy, align_x, align_y, align_dist]
+
+
 def _extract_object_tokens(arr: np.ndarray) -> np.ndarray:
     """Return a role-aware top-K object list from the Lua tactical pools.
 
     Row layout:
     ``[present, dx, dy, dist, vx, vy, threat, approach, ttc, closest_pass,
-    type_norm, role_norm, destructible, blocker, rescue, projectile]``.
+    type_norm, role_norm, destructible, blocker, rescue, projectile,
+    best_fire_dx, best_fire_dy, shot_align_dx, shot_align_dy,
+    shot_align_dist]``.
     """
     tokens = []
     pools = arr[TACTICAL_POOL_OFFSET:]
@@ -226,12 +282,14 @@ def _extract_object_tokens(arr: np.ndarray) -> np.ndarray:
                 blocker = 1.0
                 priority = 3.0 * (1.0 - dist) + 2.0 * threat + 0.75
 
+            shot = _shot_alignment_features(dx, dy)
             tokens.append((
                 float(priority),
                 [
                     1.0, dx, dy, dist, vx, vy, threat, approach, ttc, closest_pass,
                     type_norm, _ROLE_NORM.get(pool_name, 0.0),
                     destructible, blocker, rescue, projectile,
+                    *shot,
                 ],
             ))
         pool_offset += 1 + max_slots * feat_per_slot
@@ -242,6 +300,76 @@ def _extract_object_tokens(arr: np.ndarray) -> np.ndarray:
         for row, (_, vals) in enumerate(tokens[:OBJECT_TOKEN_COUNT]):
             out[row] = np.asarray(vals, dtype=np.float32)
     return out.reshape(-1)
+
+
+def extract_tactical_diagnostics(wire, model_state=None) -> dict:
+    """Return runtime diagnostics for Lua tactical pools and Python object rows.
+
+    These values are observability-only; they are not appended to the DQN model
+    input.  Lua emits a 12-float trailer after the tactical pools:
+    raw counts, emitted slot counts, then Lua pool drops for projectile, danger,
+    human, and electrode.
+    """
+    arr = np.asarray(wire, dtype=np.float32)
+    diag: dict[str, float] = {}
+    role_names = ("projectile", "danger", "human", "electrode")
+
+    slot_active: dict[str, int] = {}
+    off = TACTICAL_POOL_OFFSET
+    for pool_name, max_slots, feat_per_slot in TACTICAL_POOL_DEFS:
+        active_slots = 0
+        slot_start = off + 1
+        slot_end = slot_start + max_slots * feat_per_slot
+        if slot_end <= len(arr):
+            raw = arr[slot_start:slot_end].reshape(max_slots, feat_per_slot)
+            active_slots = int(np.count_nonzero(np.isfinite(raw[:, 0]) & (raw[:, 0] > 0.5)))
+        slot_active[pool_name] = active_slots
+        off += 1 + max_slots * feat_per_slot
+
+    if len(arr) >= TACTICAL_DIAG_END:
+        vals = np.asarray(arr[TACTICAL_DIAG_OFFSET:TACTICAL_DIAG_END], dtype=np.float32)
+        raw_counts = {name: max(0, int(round(float(vals[i])))) for i, name in enumerate(role_names)}
+        emit_counts = {name: max(0, int(round(float(vals[i + 4])))) for i, name in enumerate(role_names)}
+        drop_counts = {name: max(0, int(round(float(vals[i + 8])))) for i, name in enumerate(role_names)}
+    else:
+        raw_counts = dict(slot_active)
+        emit_counts = dict(slot_active)
+        drop_counts = {name: 0 for name in role_names}
+
+    for name in role_names:
+        diag[f"lua_pool_{name}"] = float(raw_counts.get(name, 0))
+        diag[f"lua_emitted_{name}"] = float(emit_counts.get(name, slot_active.get(name, 0)))
+        diag[f"lua_dropped_{name}"] = float(drop_counts.get(name, 0))
+        diag[f"wire_slots_{name}"] = float(slot_active.get(name, 0))
+
+    lua_dropped_total = sum(drop_counts.get(name, 0) for name in role_names)
+    emitted_total = sum(max(slot_active.get(name, 0), emit_counts.get(name, 0)) for name in role_names)
+    diag["lua_pool_dropped"] = float(lua_dropped_total)
+    diag["wire_slots_active"] = float(sum(slot_active.values()))
+
+    try:
+        ms = np.asarray(model_state if model_state is not None else slice_model_state(arr), dtype=np.float32)
+        rows = ms[OBJECT_TOKEN_OFFSET:OBJECT_TOKEN_END].reshape(OBJECT_TOKEN_COUNT, OBJECT_TOKEN_FEATURES)
+        present = np.isfinite(rows[:, 0]) & (rows[:, 0] > 0.5)
+        roles = rows[:, 11] if OBJECT_TOKEN_FEATURES > 11 else np.zeros(rows.shape[0], dtype=np.float32)
+        row_counts = {
+            "projectile": int(np.count_nonzero(present & (np.abs(roles - _ROLE_NORM["projectile"]) < 0.08))),
+            "danger": int(np.count_nonzero(present & (np.abs(roles - _ROLE_NORM["danger"]) < 0.08))),
+            "human": int(np.count_nonzero(present & (np.abs(roles - _ROLE_NORM["human"]) < 0.08))),
+            "electrode": int(np.count_nonzero(present & (np.abs(roles - _ROLE_NORM["electrode"]) < 0.08))),
+        }
+        active_rows = int(np.count_nonzero(present))
+    except Exception:
+        row_counts = {name: 0 for name in role_names}
+        active_rows = 0
+
+    for name in role_names:
+        diag[f"py_rows_{name}"] = float(row_counts.get(name, 0))
+    py_clipped = max(0, emitted_total - active_rows)
+    diag["py_rows_active"] = float(active_rows)
+    diag["py_rows_clipped"] = float(py_clipped)
+    diag["object_rows_dropped_total"] = float(lua_dropped_total + py_clipped)
+    return diag
 
 
 def _extract_nearest_destructible_target_features(objects: np.ndarray) -> np.ndarray:
@@ -265,19 +393,75 @@ def _extract_nearest_destructible_target_features(objects: np.ndarray) -> np.nda
     ], dtype=np.float32)
 
 
+def _nearest_row_features(rows: np.ndarray, mask: np.ndarray, include_ttc: bool = False) -> np.ndarray:
+    out_len = 4 if include_ttc else 3
+    out = np.zeros(out_len, dtype=np.float32)
+    out[2] = 1.0
+    if include_ttc:
+        out[3] = 1.0
+    if rows.size <= 0 or not np.any(mask):
+        return out
+
+    dist = np.where(mask, np.clip(rows[:, 3], 0.0, 1.0), np.inf)
+    idx = int(np.argmin(dist))
+    if not np.isfinite(dist[idx]):
+        return out
+    out[0] = _clip11(rows[idx, 1])
+    out[1] = _clip11(rows[idx, 2])
+    out[2] = _clip01(rows[idx, 3])
+    if include_ttc:
+        out[3] = _clip01(rows[idx, 8] if rows.shape[1] > 8 else 1.0)
+    return out
+
+
+def _extract_type_nearest_features(objects: np.ndarray) -> np.ndarray:
+    """Return nearest typed-object summaries.
+
+    Layout:
+    ``grunt dx/dy/dist, hulk dx/dy/dist, projectile dx/dy/dist/ttc,
+    blocker dx/dy/dist, human dx/dy/dist``.
+    """
+    try:
+        rows = np.asarray(objects, dtype=np.float32).reshape(OBJECT_TOKEN_COUNT, OBJECT_TOKEN_FEATURES)
+    except Exception:
+        return np.asarray([0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
+                           0.0, 0.0, 1.0, 0.0, 0.0, 1.0], dtype=np.float32)
+
+    present = rows[:, 0] > 0.5
+    role = rows[:, 11] if OBJECT_TOKEN_FEATURES > 11 else np.zeros(rows.shape[0], dtype=np.float32)
+    type_norm = rows[:, 10] if OBJECT_TOKEN_FEATURES > 10 else np.zeros(rows.shape[0], dtype=np.float32)
+    projectile = rows[:, 15] > 0.5 if OBJECT_TOKEN_FEATURES > 15 else np.zeros(rows.shape[0], dtype=bool)
+    blocker = rows[:, 13] > 0.5 if OBJECT_TOKEN_FEATURES > 13 else np.zeros(rows.shape[0], dtype=bool)
+    rescue = rows[:, 14] > 0.5 if OBJECT_TOKEN_FEATURES > 14 else np.zeros(rows.shape[0], dtype=bool)
+    danger_role = np.abs(role - _ROLE_NORM["danger"]) < 0.08
+
+    grunt = present & danger_role & (type_norm < 0.04)
+    hulk = present & danger_role & (np.abs(type_norm - (1.0 / 11.0)) < 0.05)
+    pieces = [
+        _nearest_row_features(rows, grunt),
+        _nearest_row_features(rows, hulk),
+        _nearest_row_features(rows, present & projectile, include_ttc=True),
+        _nearest_row_features(rows, present & blocker),
+        _nearest_row_features(rows, present & rescue),
+    ]
+    return np.concatenate(pieces).astype(np.float32, copy=False)
+
+
 def slice_model_state(wire) -> np.ndarray:
     """Extract the compact model input from a full wire vector.
 
     ``wire`` may be any sequence of length >= TACTICAL_POOL_OFFSET.  Returns a
     contiguous float32 array of length ``SINGLE_FRAME_STATE_SIZE`` laid out as
-    ``[core(18), elist(22), lane_density(8×2), target(3), objects(96×16)]``.
+    ``[core(18), elist(22), lane_density(8×2), target(3), type_nearest(16),
+    objects(96×21)]``.
     """
     arr = np.asarray(wire, dtype=np.float32)
     core_elist = arr[0:CORE_ELIST_FEATURES]
     lane_density = _extract_lane_density_features(arr)
     objects = _extract_object_tokens(arr)
     target = _extract_nearest_destructible_target_features(objects)
-    return np.concatenate([core_elist, lane_density, target, objects]).astype(np.float32, copy=False)
+    type_nearest = _extract_type_nearest_features(objects)
+    return np.concatenate([core_elist, lane_density, target, type_nearest, objects]).astype(np.float32, copy=False)
 
 
 # ---------------------------------------------------------------------------
@@ -312,7 +496,9 @@ class RLConfigData:
     core_elist_features: int = CORE_ELIST_FEATURES
     lane_summary_features: int = LANE_SUMMARY_FEATURES
     target_summary_features: int = TARGET_SUMMARY_FEATURES
+    type_nearest_features: int = TYPE_NEAREST_FEATURES
     global_features: int = GLOBAL_FEATURES
+    type_nearest_offset: int = TYPE_NEAREST_OFFSET
     lane_count: int = 0
     lane_features: int = 0
     extra_features: int = 0
@@ -320,6 +506,7 @@ class RLConfigData:
     object_token_features: int = OBJECT_TOKEN_FEATURES
     enemy_token_count: int = OBJECT_TOKEN_COUNT      # compatibility alias
     enemy_token_features: int = OBJECT_TOKEN_FEATURES
+    tactical_diagnostics_sample_every: int = max(1, _env_int("ROBOTRON_TACTICAL_DIAG_EVERY", 30))
 
     # ── network architecture ────────────────────────────────────────────
     trunk_hidden: int = 384
@@ -345,6 +532,7 @@ class RLConfigData:
     action_context_heads: int = 8
     action_context_geometry_bias: bool = True
     action_context_geometry_bias_strength: float = 1.75
+    action_context_fire_alignment_width: float = 0.075
     joint_action_embed_dim: int = 32
     action_head_hidden: int = 192
 
@@ -368,7 +556,7 @@ class RLConfigData:
     # larger batch raises samples/sec (and Rpl/F) at near-zero extra wall-time.
     # Keep sampling/transfers inline: pinned-memory or background CUDA host work
     # re-enables the GIL in the free-threaded Torch build and tanks MAME FPS.
-    batch_size: int = 1536
+    batch_size: int = 1024
     lr: float = 1e-4
     lr_min: float = 5e-5
     lr_warmup_steps: int = 5_000
@@ -852,6 +1040,12 @@ class MetricsData:
     replay_dropped_steps: int = 0
     pre_death_penalized_steps: int = 0
     pre_death_penalized_interval: int = 0
+    preview_payload_frames: int = 0
+    preview_payload_bytes: int = 0
+    preview_payload_interval: int = 0
+    tactical_diag_last: dict = field(default_factory=dict)
+    tactical_diag_sum_interval: dict = field(default_factory=dict)
+    tactical_diag_count_interval: int = 0
     episodes_this_run: int = 0
     last_target_update_step: int = 0
     last_target_update_time: float = 0.0
@@ -903,6 +1097,52 @@ class MetricsData:
             d = max(0, int(n))
             self.pre_death_penalized_steps += d
             self.pre_death_penalized_interval += d
+
+    def note_preview_payload(self, byte_count: int):
+        """Record unexpected preview image payloads from Lua clients."""
+        try:
+            n = max(0, int(byte_count))
+        except Exception:
+            n = 0
+        if n <= 0:
+            return
+        with self.lock:
+            self.preview_payload_frames += 1
+            self.preview_payload_bytes += n
+            self.preview_payload_interval += 1
+
+    def note_tactical_diagnostics(self, diag: dict):
+        """Record sampled Lua pool / Python object-row diagnostics."""
+        if not diag:
+            return
+        clean = {}
+        for key, value in dict(diag).items():
+            try:
+                v = float(value)
+            except Exception:
+                continue
+            if math.isfinite(v):
+                clean[str(key)] = v
+        if not clean:
+            return
+        with self.lock:
+            self.tactical_diag_last = clean
+            for key, value in clean.items():
+                self.tactical_diag_sum_interval[key] = self.tactical_diag_sum_interval.get(key, 0.0) + value
+            self.tactical_diag_count_interval += 1
+
+    def consume_tactical_diagnostics_interval(self) -> tuple[dict, dict]:
+        """Return average sampled tactical diagnostics since the last display row."""
+        with self.lock:
+            last = dict(self.tactical_diag_last)
+            count = int(self.tactical_diag_count_interval)
+            if count > 0:
+                avg = {key: value / max(1, count) for key, value in self.tactical_diag_sum_interval.items()}
+            else:
+                avg = {}
+            self.tactical_diag_sum_interval = {}
+            self.tactical_diag_count_interval = 0
+        return avg, last
 
     def note_game_score(self, score: int):
         """Thread-safe peak game-score update."""

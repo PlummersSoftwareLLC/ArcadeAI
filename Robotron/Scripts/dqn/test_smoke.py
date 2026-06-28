@@ -52,12 +52,15 @@ def check(name, cond, detail=""):
 
 # ── Wire helpers (mirror the Lua client) ────────────────────────────────────
 def make_payload(state: np.ndarray, *, subj=0.0, obj=0.0, done=0, score=0,
-                 alive=1, save=0, start=0, replay=0, lasers=0, wave=1) -> bytes:
+                 alive=1, save=0, start=0, replay=0, lasers=0, wave=1,
+                 preview: bytes = b"") -> bytes:
     n = int(state.shape[0])
     hdr = struct.pack(SS._HDR_FMT, n, float(subj), float(obj), int(done),
                       int(score), int(alive), int(save), int(start),
                       int(replay), int(lasers), int(wave))
     body = state.astype(">f4").tobytes()
+    if preview:
+        return hdr + body + struct.pack(">I", len(preview)) + preview
     return hdr + body
 
 
@@ -127,7 +130,8 @@ def test_slice():
         w[base + 7] = enemy_density
         w[base + 11] = human_density
         expected_lane.extend([enemy_density, human_density])
-    add_pool_slot(w, "danger", 3, [1.0, 0.25, -0.50, 0.20, 0.05, -0.10, 0.80, 0.40, 0.30, 0.50])
+    add_pool_slot(w, "danger", 3, [1.0, 0.25, -0.50, 0.20, 0.05, -0.10, 0.80, 0.40, 0.30, 0.0])
+    add_pool_slot(w, "danger", 4, [1.0, -0.30, -0.20, 0.12, 0.0, 0.0, 0.70, 0.20, 0.40, 0.125])
     add_pool_slot(w, "projectile", 0, [1.0, -0.1, 0.1, 0.08, 0.0, 0.0, 0.9, 0.2, 0.1, 0.5, 0.0])
     add_pool_slot(w, "human", 0, [1.0, 0.75, 0.75, 0.10, 0.0, 0.0, 0.0])
     add_pool_slot(w, "electrode", 0, [1.0, -0.75, -0.75, 0.10, 0.6])
@@ -160,23 +164,54 @@ def test_slice():
     check("nearest destructible target summary",
           np.allclose(target_summary, np.asarray([-0.1, 0.1, 0.08], dtype=np.float32), atol=1e-6),
           f"target_summary={target_summary}")
+    type_nearest = ms[C.TYPE_NEAREST_OFFSET:C.TYPE_NEAREST_END]
+    expected_type_nearest = np.asarray([
+        0.25, -0.50, 0.20,        # grunt
+        -0.30, -0.20, 0.12,       # hulk
+        -0.10, 0.10, 0.08, 0.20,  # projectile + ttc
+        -0.75, -0.75, 0.10,       # nearest blocker (electrode beats hulk by dist)
+        0.75, 0.75, 0.10,         # human
+    ], dtype=np.float32)
+    check("nearest typed summaries",
+          np.allclose(type_nearest, expected_type_nearest, atol=1e-6),
+          f"type_nearest={type_nearest}")
     empty_ms = C.slice_model_state(np.zeros(C.WIRE_PARAMS_COUNT, dtype=np.float32))
     check("empty nearest target defaults absent",
           np.allclose(empty_ms[C.TARGET_SUMMARY_OFFSET:C.TARGET_SUMMARY_END],
                       np.asarray([0.0, 0.0, 1.0], dtype=np.float32)),
           f"target_summary={empty_ms[C.TARGET_SUMMARY_OFFSET:C.TARGET_SUMMARY_END]}")
+    check("empty nearest typed defaults absent",
+          np.allclose(empty_ms[C.TYPE_NEAREST_OFFSET:C.TYPE_NEAREST_END],
+                      np.asarray([0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
+                                  0.0, 0.0, 1.0, 0.0, 0.0, 1.0], dtype=np.float32)),
+          f"type_nearest={empty_ms[C.TYPE_NEAREST_OFFSET:C.TYPE_NEAREST_END]}")
     check("object block starts after globals", C.OBJECT_TOKEN_OFFSET == C.GLOBAL_FEATURES)
-    check("object block follows target summary", C.OBJECT_TOKEN_OFFSET == C.TARGET_SUMMARY_END)
+    check("object block follows type nearest", C.OBJECT_TOKEN_OFFSET == C.TYPE_NEAREST_END)
     check("object block size", ms.shape[0] - C.OBJECT_TOKEN_OFFSET == C.OBJECT_FEATURES)
     objects = ms[C.OBJECT_TOKEN_OFFSET:C.OBJECT_TOKEN_END].reshape(C.OBJECT_TOKEN_COUNT, C.OBJECT_TOKEN_FEATURES)
     active = objects[objects[:, 0] > 0.5]
-    check("all tactical pools become object rows", active.shape[0] == 4, f"active={active.shape[0]}")
+    check("all tactical pools become object rows", active.shape[0] == 5, f"active={active.shape[0]}")
     roles = set(np.round(active[:, 11], 2).tolist())
     check("projectile/danger/human/electrode roles present",
           {0.25, 0.50, 0.75, 1.00}.issubset(roles), f"roles={roles}")
     check("highest-priority projectile sorts first",
           np.isclose(objects[0, 15], 1.0) and np.isclose(objects[0, 12], 1.0),
           f"row0={objects[0]}")
+    diag = np.float32(1.0 / np.sqrt(2.0))
+    check("object row includes best fire ray",
+          np.allclose(
+              objects[0, C.OBJECT_SHOT_DIR_X:C.OBJECT_SHOT_ALIGN_DX],
+              np.asarray([-diag, diag], dtype=np.float32),
+              atol=1e-5,
+          ),
+          f"row0={objects[0]}")
+    check("object row includes shot alignment residual",
+          np.isclose(objects[0, C.OBJECT_SHOT_ALIGN_DIST], 0.0, atol=1e-5),
+          f"row0={objects[0]}")
+    shot = C._shot_alignment_features(0.25, -0.02)
+    check("shot alignment says move up for right target",
+          np.allclose(shot, np.asarray([1.0, 0.0, 0.0, -0.02, 0.02], dtype=np.float32), atol=1e-6),
+          f"shot={shot}")
     check("danger row keeps motion/threat fields",
           np.any(np.all(np.isclose(active[:, 1:10],
                                    np.asarray([0.25, -0.50, 0.20, 0.05, -0.10, 0.80, 0.40, 0.30, 0.20],
@@ -184,6 +219,35 @@ def test_slice():
           f"active={active}")
     check("electrode blocker flag present", np.any((active[:, 11] > 0.95) & (active[:, 13] > 0.5)))
     check("human rescue flag present", np.any((active[:, 11] > 0.70) & (active[:, 11] < 0.80) & (active[:, 14] > 0.5)))
+    diag = C.extract_tactical_diagnostics(w, ms)
+    check("diagnostics count Python object rows", int(diag.get("py_rows_active", -1)) == 5,
+          f"diag={diag}")
+    check("diagnostics role rows",
+          int(diag.get("py_rows_projectile", -1)) == 1
+          and int(diag.get("py_rows_danger", -1)) == 2
+          and int(diag.get("py_rows_human", -1)) == 1
+          and int(diag.get("py_rows_electrode", -1)) == 1,
+          f"diag={diag}")
+    if C.TACTICAL_DIAG_END <= w.shape[0]:
+        w[C.TACTICAL_DIAG_OFFSET:C.TACTICAL_DIAG_END] = np.asarray(
+            [30, 99, 12, 9, 24, 96, 12, 8, 6, 3, 0, 1], dtype=np.float32)
+        trailer_diag = C.extract_tactical_diagnostics(w, ms)
+        check("diagnostics decode Lua trailer",
+              int(trailer_diag.get("lua_pool_projectile", -1)) == 30
+              and int(trailer_diag.get("lua_pool_dropped", -1)) == 10,
+              f"diag={trailer_diag}")
+
+    crowded = np.zeros(C.WIRE_PARAMS_COUNT, dtype=np.float32)
+    for i in range(96):
+        add_pool_slot(crowded, "danger", i, [1.0, 0.01 * (i % 10), -0.01 * (i % 7), 0.40, 0.0, 0.0, 0.20, 0.0, 1.0, 0.0])
+    for i in range(12):
+        add_pool_slot(crowded, "human", i, [1.0, -0.02 * i, 0.02 * i, 0.60, 0.0, 0.0, 0.0])
+    crowded_ms = C.slice_model_state(crowded)
+    crowded_diag = C.extract_tactical_diagnostics(crowded, crowded_ms)
+    check("diagnostics detect Python top-K clipping",
+          int(crowded_diag.get("py_rows_active", -1)) == C.OBJECT_TOKEN_COUNT
+          and int(crowded_diag.get("py_rows_clipped", -1)) == 12,
+          f"diag={crowded_diag}")
 
 
 def test_nstep_actor_boundaries():
@@ -268,6 +332,12 @@ def test_parse_roundtrip():
         check("wave parsed", frame.level_number == 7)
         check("alive parsed", frame.player_alive is True)
         check("state[5] preserved", abs(float(frame.state[5]) - 0.5) < 1e-4)
+        check("no preview payload by default", frame.preview_bytes == 0, f"preview={frame.preview_bytes}")
+    preview_payload = make_payload(w, preview=b"abcde")
+    preview_frame = SS.parse_frame_data(preview_payload)
+    check("preview payload length detected",
+          preview_frame is not None and preview_frame.preview_bytes == 5,
+          f"frame={preview_frame}")
     bad = SS.parse_frame_data(b"\x00\x01")
     check("short payload -> None", bad is None)
 
@@ -399,6 +469,13 @@ def test_reward_and_hard_starts():
         _, _, _, sadv, slvl = struct.unpack(">bbBBB", server._pack_action(-1, -1, 0, cid=7))
         check("manual advanced start uses selected level exactly", sadv == 1 and slvl == 3,
               f"sadv={sadv} slvl={slvl}")
+        old_preview_bits = SS._ENABLE_PREVIEW_BITS
+        try:
+            SS._ENABLE_PREVIEW_BITS = False
+            _, _, src, _, _ = struct.unpack(">bbBBB", server._pack_action(-1, -1, 0xCF, cid=7))
+            check("preview/HUD bits stripped by default", src == 0x0F, f"src=0x{src:02x}")
+        finally:
+            SS._ENABLE_PREVIEW_BITS = old_preview_bits
     finally:
         C.game_settings.start_advanced = old_start_adv
         C.game_settings.auto_curriculum = old_auto
@@ -508,6 +585,7 @@ def test_pre_death_reward_penalty():
                 1.0, 0.0, 0.0, 0.20, 0.0, 0.0, float(danger), 0.0,
                 1.00, 0.0, 0.0, 0.50, 1.0, 0.0, 0.0, 0.0,
             ]
+            row += [0.0] * (C.OBJECT_TOKEN_FEATURES - len(row))
             s[start:start + C.OBJECT_TOKEN_FEATURES] = np.asarray(row, dtype=np.float32)
             buf.add(s, 0, 0.0, s, False, expert=0)
             idxs.append(i)
@@ -525,6 +603,7 @@ def test_pre_death_reward_penalty():
             1.0, 0.0, 0.0, 0.20, 0.0, 0.0, 1.0, 0.0,
             1.00, 0.0, 0.0, 0.50, 1.0, 0.0, 0.0, 0.0,
         ]
+        row += [0.0] * (C.OBJECT_TOKEN_FEATURES - len(row))
         s[start:start + C.OBJECT_TOKEN_FEATURES] = np.asarray(row, dtype=np.float32)
         expert_buf.add(s, 0, 0.0, s, False, expert=1)
         skipped = expert_buf.apply_pre_death_penalty([0])
@@ -724,6 +803,43 @@ def test_dqn_window_math():
         MD._dqn5m_dqn_frames = d5mf; MD._dqn5m_total_frames = d5mtf
 
 
+def test_dashboard_gpu_parser():
+    print("\n[dashboard GPU parser]")
+    from dqn.metrics_dashboard import _DashboardState, _parse_nvidia_smi_gpu_csv
+    sample = (
+        "0, NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition, 71, 44, 4570, 97887, 81, 271.15, 300.00, 2175, 52\n"
+        "1, NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition, 9, 0, 891, 97887, 57, 84.91, 300.00, 2317, 30\n"
+    )
+    rows = _parse_nvidia_smi_gpu_csv(sample)
+    check("GPU parser returns two devices", len(rows) == 2, f"rows={rows}")
+    check("GPU parser keeps device index", rows and rows[0]["index"] == 0 and rows[1]["index"] == 1, f"rows={rows}")
+    check("GPU parser reads utilization", rows and rows[0]["gpu_util_pct"] == 71.0 and rows[1]["gpu_util_pct"] == 9.0, f"rows={rows}")
+    flat = _DashboardState._flatten_gpus(rows)
+    check("GPU flatten exposes gpu0 util", flat.get("gpu0_util") == 71.0, f"flat={flat}")
+    check("GPU flatten exposes gpu1 memory", flat.get("gpu1_mem_used_mib") == 891.0, f"flat={flat}")
+
+
+def test_dashboard_system_parser():
+    print("\n[dashboard system parser]")
+    from dqn.metrics_dashboard import _cpu_util_from_times, _parse_proc_meminfo, _parse_proc_stat_cpu_times
+    stat0 = "cpu  100 0 50 850 0 0 0 0 0 0\n"
+    stat1 = "cpu  150 0 70 880 0 0 0 0 0 0\n"
+    t0 = _parse_proc_stat_cpu_times(stat0)
+    t1 = _parse_proc_stat_cpu_times(stat1)
+    check("CPU parser reads idle/total", t0 == (850.0, 1000.0) and t1 == (880.0, 1100.0), f"t0={t0} t1={t1}")
+    util = _cpu_util_from_times(t0, t1)
+    check("CPU delta utilization", np.isclose(util, 70.0), f"util={util}")
+    mem = _parse_proc_meminfo(
+        "MemTotal:       1048576 kB\n"
+        "MemFree:         131072 kB\n"
+        "MemAvailable:    786432 kB\n"
+        "Buffers:          32768 kB\n"
+        "Cached:           65536 kB\n"
+    )
+    check("meminfo available MiB", np.isclose(mem.get("ram_available_mib"), 768.0), f"mem={mem}")
+    check("meminfo free percent", np.isclose(mem.get("ram_free_pct"), 75.0), f"mem={mem}")
+
+
 def test_model_shapes(agent):
     print("\n[model shapes]")
     import torch
@@ -748,9 +864,9 @@ def test_model_shapes(agent):
     raw = agent.online_net._raw_trunk_state(st)
     objects = agent.online_net._object_tokens(st)
     expected_raw = C.RL_CONFIG.global_features * C.RL_CONFIG.frame_stack
-    check("raw trunk keeps stacked globals/lane/target summary only", tuple(raw.shape) == (4, expected_raw),
+    check("raw trunk keeps stacked global/nearest summaries only", tuple(raw.shape) == (4, expected_raw),
           f"shape={tuple(raw.shape)} expected={(4, expected_raw)}")
-    check("object tokens shape (4,96,16)",
+    check(f"object tokens shape (4,{C.OBJECT_TOKEN_COUNT},{C.OBJECT_TOKEN_FEATURES})",
           tuple(objects.shape) == (4, C.OBJECT_TOKEN_COUNT, C.OBJECT_TOKEN_FEATURES),
           f"shape={tuple(objects.shape)}")
     expected_trunk_in = expected_raw + (C.RL_CONFIG.object_attn_dim if C.RL_CONFIG.use_object_attention else 0)
@@ -769,6 +885,7 @@ def test_dashboard_model_summary(agent):
     check("summary includes full state size", expected_state in desc, desc)
     check("summary includes lane density size", f"{C.RL_CONFIG.lane_summary_features}lane" in desc, desc)
     check("summary includes nearest-target size", f"{C.RL_CONFIG.target_summary_features}target" in desc, desc)
+    check("summary includes nearest-type size", f"{C.RL_CONFIG.type_nearest_features}near" in desc, desc)
     check("summary includes post-attention trunk shape", expected_trunk in desc, desc)
     check("summary includes object-token shape", expected_objects in desc, desc)
     check("summary marks geometry bias", "geom" in desc, desc)
@@ -1071,6 +1188,8 @@ def main():
     test_expert_anchor_decay()
     test_epsilon_expert_floor()
     test_dqn_window_math()
+    test_dashboard_gpu_parser()
+    test_dashboard_system_parser()
     test_expert()
 
     print("\n[building agent]")

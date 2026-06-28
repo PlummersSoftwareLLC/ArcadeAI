@@ -333,6 +333,7 @@ def display_metrics_header():
         f"{'Loss':>10} {'BellL':>7} {'ImitL':>7} {'AgrM%':>6} {'AgrF%':>6} "
         f"{'EpLen':>8} {'BCLoss':>8} {'BCW':>6} {'AQW':>6} {'AMW':>6} {'ExpB%':>6} {'AdvB%':>6} {'Orig%':>11} {'NStp':>5} {'DoneB%':>7} {'PDeath':>7} {'Sync':>5} "
         f"{'QAct/Tgt/Nxt':>18} {'TDQ':>8} {'TClip%':>8} {'PIdl%':>7} {'PEnt':>5} {'ERnk':>5} {'EMrg':>7} {'XAg%':>6} {'LAg%':>6} {'AAg%':>6} {'ARnk':>5} "
+        f"{'PoolP/D/H/E':>11} {'RowsP/D/H/E':>11} {'DropL/P':>8} "
         f"{'Clnt':>4} {'Web':>4} "
         f"{'AvgInf':>7} {'Steps/s':>8} {'Rpl/F':>7} {'GrNorm':>8} {'Q-Range':>14} {'Mem':>10} {'LR':>9} {'Drop':>7} {'Tms S/X/C/P':>17}"
     )
@@ -433,6 +434,8 @@ def display_metrics_row(agent, kb_handler):
         metrics.episode_length_count_interval = 0
         pre_death_interval = int(getattr(metrics, "pre_death_penalized_interval", 0))
         metrics.pre_death_penalized_interval = 0
+    diag_avg, diag_last = metrics.consume_tactical_diagnostics_interval()
+    diag = diag_avg if diag_avg else diag_last
 
     # ── Wave / level ────────────────────────────────────────────────────
     display_level = metrics.average_level + 1.0
@@ -513,6 +516,22 @@ def display_metrics_row(agent, kb_handler):
         f"{metrics.last_policy_idle_move_frac*100:.0f}/"
         f"{metrics.last_policy_idle_fire_frac*100:.0f}"
     )
+    pool_mix = (
+        f"{float(diag.get('lua_pool_projectile', 0.0)):.0f}/"
+        f"{float(diag.get('lua_pool_danger', 0.0)):.0f}/"
+        f"{float(diag.get('lua_pool_human', 0.0)):.0f}/"
+        f"{float(diag.get('lua_pool_electrode', 0.0)):.0f}"
+    )
+    row_mix = (
+        f"{float(diag.get('py_rows_projectile', 0.0)):.0f}/"
+        f"{float(diag.get('py_rows_danger', 0.0)):.0f}/"
+        f"{float(diag.get('py_rows_human', 0.0)):.0f}/"
+        f"{float(diag.get('py_rows_electrode', 0.0)):.0f}"
+    )
+    drop_mix = (
+        f"{float(diag.get('lua_pool_dropped', 0.0)):.0f}/"
+        f"{float(diag.get('py_rows_clipped', 0.0)):.0f}"
+    )
 
     if not FULL_CONSOLE_REPORT:
         row = (
@@ -560,6 +579,7 @@ def display_metrics_row(agent, kb_handler):
         f"{metrics.last_expert_q_rank_mean:>5.1f} {metrics.last_expert_q_margin_mean:>7.2f} "
         f"{metrics.last_expert_joint_agreement*100:>5.1f}% {metrics.last_learner_joint_agreement*100:>5.1f}% "
         f"{metrics.last_advisor_joint_agreement*100:>5.1f}% {metrics.last_advisor_q_rank_mean:>5.1f} "
+        f"{pool_mix:>11} {row_mix:>11} {drop_mix:>8} "
         f"{metrics.client_count:>4} {metrics.web_client_count:>4} "
         f"{avg_inf_ms:>7.2f} {steps_per_sec:>8.1f} "
         f"{replay_ratio:>7.2f} {metrics.last_grad_norm:>8.3f} {q_range:>14} {mem_k:>8}k {lr_str:>9} {metrics.replay_dropped_steps:>7,} {train_ms:>17}"

@@ -310,7 +310,8 @@ TACTICAL_POOL_TOTAL_FEATURES =
     + (1 + (DANGER_POOL_SLOTS * DANGER_SLOT_FEATURES))
     + (1 + (HUMAN_POOL_SLOTS * HUMAN_SLOT_FEATURES))
     + (1 + (ELECTRODE_POOL_SLOTS * ELECTRODE_SLOT_FEATURES))
-EXPECTED_STATE_VALUES = LEGACY_CORE_FEATURES + ZP1ENM_EMIT_COUNT + TACTICAL_LANE_TOTAL_FEATURES + TACTICAL_GRID_FEATURES + TACTICAL_POOL_TOTAL_FEATURES
+TACTICAL_POOL_DIAG_FEATURES = 12
+EXPECTED_STATE_VALUES = LEGACY_CORE_FEATURES + ZP1ENM_EMIT_COUNT + TACTICAL_LANE_TOTAL_FEATURES + TACTICAL_GRID_FEATURES + TACTICAL_POOL_TOTAL_FEATURES + TACTICAL_POOL_DIAG_FEATURES
 
 local function _make_zero_feature_block(count)
     local out = {}
@@ -511,8 +512,9 @@ hud_key_was_down = false         -- edge-detect so hold doesn't strobe
 PREVIEW_FORMAT_RGB565 = 1
 PREVIEW_FORMAT_RGB565_LZSS = 2
 PREVIEW_FORMAT_RGB565_RLE = 3
--- Enable preview support; server controls streaming per-client via action source flags.
-PREVIEW_CAPTURE_ENABLED = true
+-- Preview is expensive and the current dashboard does not expose client preview
+-- ownership. Keep capture fully disabled unless explicitly requested.
+PREVIEW_CAPTURE_ENABLED = env_flag("ROBOTRON_PREVIEW_CAPTURE", false)
 PREVIEW_FPS = math.max(1, math.floor(env_number("ROBOTRON_PREVIEW_FPS", 30) or 30))
 PREVIEW_MIN_INTERVAL_S = (1.0 / PREVIEW_FPS)
 -- Capture near dashboard size at the source; sending full-resolution snapshots
@@ -1779,7 +1781,7 @@ local function try_resolve_7x16(all_objects, enemy_state)
             unresolved_7x16[c.ocvect] = nil
             if DEBUG_LOG_DISCOVERY then print(string.format("[DISCOVERY] OCVECT 0x%04X → brain (count=%d matches BRNCNT)", c.ocvect, c.count)) end
             changed = true
-        elseif c.count == tnkcnt and (hlkcnt == 0 or c.count ~= tnkcnt) and (brncnt == 0 or c.count ~= tnkcnt) then
+        elseif c.count == tnkcnt and (hlkcnt == 0 or c.count ~= hlkcnt) and (brncnt == 0 or c.count ~= brncnt) then
             ocvect_category_cache[c.ocvect] = "tank"
             unresolved_7x16[c.ocvect] = nil
             if DEBUG_LOG_DISCOVERY then print(string.format("[DISCOVERY] OCVECT 0x%04X → tank (count=%d matches TNKCNT)", c.ocvect, c.count)) end
@@ -2045,9 +2047,7 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
             current_sample_x[obj.ptr] = obj.x16
             current_sample_y[obj.ptr] = obj.y16
             buckets[obj.category][#buckets[obj.category] + 1] = obj
-            if obj.category == "projectile" then
-                -- projectile_bucket already aliases buckets["projectile"]
-            elseif obj.category ~= "human" and obj.category ~= "electrode" then
+            if obj.category ~= "projectile" and obj.category ~= "human" and obj.category ~= "electrode" then
                 dangerous_bucket[#dangerous_bucket + 1] = obj
             end
             object_count = object_count + 1
@@ -2209,6 +2209,21 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
         end
     end
 
+    local pool_diag_features = {
+        #projectile_bucket,
+        #dangerous_bucket,
+        #human_bucket,
+        #electrode_bucket,
+        projectile_count,
+        danger_count,
+        human_count,
+        electrode_count,
+        math.max(0, #projectile_bucket - projectile_count),
+        math.max(0, #dangerous_bucket - danger_count),
+        math.max(0, #human_bucket - human_count),
+        math.max(0, #electrode_bucket - electrode_count),
+    }
+
     local num_humans = counts["human"] or 0
     local num_spawners = counts["spawner"] or 0
 
@@ -2232,6 +2247,8 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
         lane_summary_features = lane_summary_features,
         local_grid_features = local_grid_features,
         pool_features = pool_features,
+        pool_diag_features = pool_diag_features,
+        reward_objects = classified_objects,
     }
 end
 
@@ -2825,7 +2842,7 @@ local function open_socket()
             -- Required 2-byte handshake:
             --   bit0     = preview-capable flag
             --   bits1-15 = launcher slot (stable audio/video identity)
-            local preview_capable = (PREVIEW_CLIENT_FLAG ~= 0) and 1 or 0
+            local preview_capable = ((PREVIEW_CLIENT_FLAG ~= 0) and PREVIEW_CAPTURE_ENABLED) and 1 or 0
             local handshake_u16 = math.max(0, math.min(65535, (CLIENT_SLOT * 2) + preview_capable))
             sock:write(string.pack(">H", handshake_u16))
             current_socket = sock
@@ -3143,7 +3160,7 @@ local function serialize_frame(player_alive, score, replay_level, num_lasers, wa
                                nearest_enemy_dist, nearest_human_dist,
                                nearest_enemy_dx, nearest_enemy_dy, num_humans,
                                nearest_spawner_dist, nearest_spawner_dx, nearest_spawner_dy, num_spawners,
-                               enemy_state, lane_values, grid_values, pool_values,
+                               enemy_state, lane_values, grid_values, pool_values, pool_diag_values,
                                done, subj_reward, obj_reward, save_signal, start_cmd,
                                preview_w, preview_h, preview_fmt, preview_blob)
     local score_u32 = math.max(0, math.min(4294967295, math.floor(score or 0)))
@@ -3193,6 +3210,9 @@ local function serialize_frame(player_alive, score, replay_level, num_lasers, wa
     end
     for i = 1, #(pool_values or {}) do
         state_values[#state_values + 1] = pool_values[i]
+    end
+    for i = 1, TACTICAL_POOL_DIAG_FEATURES do
+        state_values[#state_values + 1] = (pool_diag_values or {})[i] or 0.0
     end
     local num_values = #state_values
     if num_values ~= EXPECTED_STATE_VALUES then
@@ -3564,7 +3584,7 @@ function frame_callback()
         rel_pos_x(frame.obs.nearest_spawner_x16 or frame.player_x16, frame.player_x16),
         rel_pos_y(frame.obs.nearest_spawner_y16 or frame.player_y16, frame.player_y16),
         frame.obs.num_spawners,
-        frame.enemy_state, frame.obs.lane_summary_features, frame.obs.local_grid_features, frame.obs.pool_features,
+        frame.enemy_state, frame.obs.lane_summary_features, frame.obs.local_grid_features, frame.obs.pool_features, frame.obs.pool_diag_features,
         rewards.done, rewards.subj_reward, rewards.obj_reward, save_signal, start_cmd,
         preview.w, preview.h, preview.fmt, preview.blob
     )
@@ -3573,7 +3593,7 @@ function frame_callback()
         return true
     end
     local payload = payload_or_err
-    local payload_count = LEGACY_CORE_FEATURES + ZP1ENM_EMIT_COUNT + #(frame.obs.lane_summary_features or {}) + #(frame.obs.local_grid_features or {}) + #(frame.obs.pool_features or {})
+    local payload_count = LEGACY_CORE_FEATURES + ZP1ENM_EMIT_COUNT + #(frame.obs.lane_summary_features or {}) + #(frame.obs.local_grid_features or {}) + #(frame.obs.pool_features or {}) + TACTICAL_POOL_DIAG_FEATURES
     trace_log(frame_counter, "serialize_frame", "num_values=" .. tostring(payload_count) .. " bytes=" .. tostring(#payload))
 
     local move_cmd, fire_cmd = -1, -1
@@ -3639,7 +3659,7 @@ function frame_callback()
     -- aim-reward attribution.
     prev_fire_cmd = effective_fire
     prev_move_cmd = move_cmd
-    prev_aim_objects = hud_objects   -- reuse the same reference (set in extract_world_features)
+    prev_aim_objects = frame.obs.reward_objects or hud_objects
     prev_aim_px16 = frame.player_x16
     prev_aim_py16 = frame.player_y16
     prev_nearest_enemy_x16 = frame.obs.nearest_enemy_x16
@@ -3717,10 +3737,9 @@ previous_wave_number = math.max(0, math.floor(read_wave_number(mem) or 0))
 
 global_callback_ref = register_frame_callback(frame_callback)
 
--- All preview-capable instances register the frame_done callback.  The server
--- decides per-frame which client should actually capture/stream preview data by
--- toggling the preview flag in the action source byte.
-if PREVIEW_CLIENT_FLAG == 1 then
+-- All preview-capable instances register the frame_done callback.  Preview is
+-- opt-in because the current dashboard has no client preview selector.
+if PREVIEW_CLIENT_FLAG == 1 and PREVIEW_CAPTURE_ENABLED then
     print(string.format(
         "[HUD] Preview capture configured: %dfps max=%dx%d rle=%s",
         PREVIEW_FPS, PREVIEW_MAX_WIDTH, PREVIEW_MAX_HEIGHT, tostring(PREVIEW_TRY_RLE)

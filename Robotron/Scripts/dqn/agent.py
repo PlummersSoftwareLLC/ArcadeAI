@@ -51,7 +51,7 @@ except ImportError:
 
 metrics = config_metrics
 
-ENGINE_VERSION = 16  # Add nearest destructible target dx/dy/dist trunk features
+ENGINE_VERSION = 20  # Add object shot-alignment features and fire ray bias
 
 _CARDINAL_FIRE_SNAP_RATIO = 0.35
 _CARDINAL_FIRE_SNAP_CLOSE_DIST = 0.20

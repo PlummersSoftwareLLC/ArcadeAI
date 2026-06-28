@@ -273,13 +273,22 @@ def print_network_info(agent, dashboard_status: str = "disabled"):
     if getattr(agent.online_net, "use_object_attn", False):
         trunk_in += int(getattr(RL_CONFIG, "object_attn_dim", 0))
     print(f"   State size:       {agent.state_size}  ({single_state} x {frame_stack} frames)")
-    print(f"   Single frame:     {RL_CONFIG.core_features} core + {RL_CONFIG.elist_features} ELIST + {RL_CONFIG.lane_summary_features} lane density + {RL_CONFIG.target_summary_features} target + {RL_CONFIG.object_token_count} object rows x {RL_CONFIG.object_token_features}")
+    print(
+        f"   Single frame:     {RL_CONFIG.core_features} core + {RL_CONFIG.elist_features} ELIST "
+        f"+ {RL_CONFIG.lane_summary_features} lane density + {RL_CONFIG.target_summary_features} target "
+        f"+ {RL_CONFIG.type_nearest_features} nearest-type "
+        f"+ {RL_CONFIG.object_token_count} object rows x {RL_CONFIG.object_token_features}"
+    )
     print(f"   Trunk input:      {trunk_in}  ({raw_trunk} stacked global + attention embeddings)")
     print(f"   Actions:          {RL_CONFIG.num_move_actions} move x {RL_CONFIG.num_fire_actions} fire (joint 81-action head, idle=8)")
     print(f"   Trunk:            {RL_CONFIG.trunk_layers} layers x {RL_CONFIG.trunk_hidden} hidden")
     print(f"   Lane attention:   OFF (removed from learner input)")
     print(f"   Object attention: {'ON' if RL_CONFIG.use_object_attention else 'OFF'} ({RL_CONFIG.object_attn_heads} heads, dim={RL_CONFIG.object_attn_dim})")
-    print(f"   Action geometry:  {'ON' if RL_CONFIG.action_context_geometry_bias else 'OFF'} (strength={RL_CONFIG.action_context_geometry_bias_strength})")
+    print(
+        f"   Action geometry:  {'ON' if RL_CONFIG.action_context_geometry_bias else 'OFF'} "
+        f"(strength={RL_CONFIG.action_context_geometry_bias_strength}, "
+        f"fire_width={RL_CONFIG.action_context_fire_alignment_width})"
+    )
     print(f"   Distributional:   {'C51 ({} atoms, [{}, {}])'.format(RL_CONFIG.num_atoms, RL_CONFIG.v_min, RL_CONFIG.v_max) if RL_CONFIG.use_distributional else 'OFF'}")
     print(f"   Dueling:          {'ON' if RL_CONFIG.use_dueling else 'OFF'}")
     print(f"   Parameters:       {tp:,} total, {tr:,} trainable")

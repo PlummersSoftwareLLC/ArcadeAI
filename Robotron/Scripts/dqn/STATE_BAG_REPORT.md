@@ -3,7 +3,7 @@
 This is the flattened input state used by the DQN model, as produced by
 `dqn.config.slice_model_state(wire)`.
 
-Lua sends 2118 big-endian `float32` values per frame. The DQN does not train on
+Lua sends 2130 big-endian `float32` values per frame. The DQN does not train on
 that full payload. It keeps only:
 
 - `wire[0:18]`: 18 scalar core game/player/threat features.
@@ -12,8 +12,14 @@ that full payload. It keeps only:
   and human density, reordered into controller action order.
 - `model[56:59]`: Python-derived nearest destructible target `dx/dy/dist`,
   computed from the packed object list.
+- `model[59:75]`: Python-derived nearest typed-object summaries for grunts,
+  hulks, projectiles, blockers, and humans.
 - A Python-derived 96-row object list distilled from the projectile, danger,
   human, and electrode tactical pools in `wire[766:2118]`.
+
+The final `wire[2118:2130]` values are diagnostics only. They report Lua raw
+pool counts, emitted slot counts, and Lua pool drops for projectile, danger,
+human, and electrode pools. They are intentionally not part of the model input.
 
 `ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES=1` keeps the wire fast, but it no longer
 zeros DQN-critical cues. Lua still computes object `threat`, `approach`, `ttc`,
@@ -23,20 +29,20 @@ only the heavier unused tactical grid and lane affordance details are skipped.
 Final raw DQN single-frame state size:
 
 ```text
-18 core + 22 ELIST + 16 lane density + 3 nearest-target + (96 objects * 16 features) = 1595 floats
+18 core + 22 ELIST + 16 lane density + 3 nearest-target + 16 nearest-type + (96 objects * 21 features) = 2091 floats
 ```
 
-With the default 1-frame stack, replay/inference state is also 1595 floats. The
-network trunk does not flatten all 1595 floats into the MLP: it concatenates the
-59 direct global/lane/target floats from the current frame and the current-frame object
-attention embedding. Default first trunk width is:
+With the default 1-frame stack, replay/inference state is also 2091 floats. The
+network trunk does not flatten all 2091 floats into the MLP: it concatenates the
+75 direct global/lane/target/nearest-type floats from the current frame and the
+current-frame object attention embedding. Default first trunk width is:
 
 ```text
-(59 globals/lane/target * 1 frame) + 128 object-attention embedding = 187 floats
+(75 globals/lane/target/nearest-type * 1 frame) + 128 object-attention embedding = 203 floats
 ```
 
 If `DQN_FRAME_STACK=2` or `ROBOTRON_DQN_FRAME_STACK=2` is set, replay/inference
-state becomes 3190 floats and the first trunk width becomes `118 + 128 = 246`.
+state becomes 4182 floats and the first trunk width becomes `150 + 128 = 278`.
 
 ## DQN Model Layout
 
@@ -46,7 +52,19 @@ state becomes 3190 floats and the first trunk width becomes `118 + 128 = 246`.
 | `18..39` | 22 | Lua `wire[18:40]` | Raw ELIST/level-state bytes. |
 | `40..55` | 16 | Lua tactical lanes `wire[40:280]` | 8 action-order lanes * enemy density + human density. |
 | `56..58` | 3 | Python-derived from object rows | Nearest destructible target `dx/dy/dist`. |
-| `59..1594` | 1536 | Lua tactical pools `wire[766:2118]` | 96 priority-sorted role-aware object rows * 16 features. |
+| `59..74` | 16 | Python-derived from object rows | Nearest typed-object summaries. |
+| `75..2090` | 2016 | Python-derived from Lua tactical pools `wire[766:2118]` | 96 priority-sorted role-aware object rows * 21 features. |
+
+## Raw Wire Diagnostics
+
+These values are exposed through runtime metrics and dashboard diagnostics, not
+through the model state:
+
+| Wire range | Count | Contents |
+|---:|---:|---|
+| `2118..2121` | 4 | Lua raw pool counts: projectile, danger, human, electrode. |
+| `2122..2125` | 4 | Lua emitted slot counts after per-pool caps. |
+| `2126..2129` | 4 | Lua dropped counts before the wire slots. |
 
 For lane row `R` in action order `N, NE, E, SE, S, SW, W, NW`:
 
@@ -75,10 +93,23 @@ excludes humans, hulks, and electrodes. If no target is present the value is
 | 57 | `nearest_target_dy` | Object row `dy` for nearest destructible target | Clamped `-1..1`; `0` if absent. |
 | 58 | `nearest_target_dist` | Object row `dist` for nearest destructible target | Clamped `0..1`; `1` if absent. |
 
+## Nearest Typed-Object Features
+
+These are derived from the 96 role-aware object rows after priority sorting.
+Absent objects use `dx=0`, `dy=0`, `dist=1`, and projectile `ttc=1`.
+
+| Model range | Name | Contents |
+|---:|---|---|
+| `59..61` | `nearest_grunt` | `dx, dy, dist`. |
+| `62..64` | `nearest_hulk` | `dx, dy, dist`. |
+| `65..68` | `nearest_projectile` | `dx, dy, dist, ttc`. |
+| `69..71` | `nearest_blocker` | `dx, dy, dist`; hulks and electrodes. |
+| `72..74` | `nearest_human` | `dx, dy, dist`. |
+
 For object row `R` in `0..95`:
 
 ```text
-model_index = 59 + (R * 16) + row_offset
+model_index = 75 + (R * 21) + row_offset
 ```
 
 Rows are top-K priority sorted by immediate tactical relevance. Row identity is
@@ -105,6 +136,11 @@ slot-addressed table.
 | 13 | `blocker` | Collision/static blocker cue | `0` or `1`; hulks and electrodes are blockers. |
 | 14 | `rescue` | Human/rescue cue | `0` or `1`. |
 | 15 | `projectile` | Projectile/missile cue | `0` or `1`. |
+| 16 | `best_fire_dx` | Unit X of nearest 8-way fire ray for this object | `-1..1`; cardinal/diagonal direction component. |
+| 17 | `best_fire_dy` | Unit Y of nearest 8-way fire ray for this object | `-1..1`; cardinal/diagonal direction component. |
+| 18 | `shot_align_dx` | Player X movement residual needed to align that shot | Clamped `-1..1`; positive means move right. |
+| 19 | `shot_align_dy` | Player Y movement residual needed to align that shot | Clamped `-1..1`; positive means move down. |
+| 20 | `shot_align_dist` | Magnitude of the alignment residual | Clamped `0..1`; lower means already lined up. |
 
 ## Core Features
 

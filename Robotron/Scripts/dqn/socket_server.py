@@ -12,8 +12,8 @@ Game-flow contract (Robotron-specific):
   • Payload header ``>HddBIBBBIBB`` (n, subj, obj, done, score, player_alive,
     save, start_pressed, replay_level, num_lasers, wave), then n f32 (big-endian).
   • The model consumes the compact slice of the wire (18 core + 22 ELIST values
-    + 16 lane-density values + 96 role-aware object rows); the full wire is
-    still used by the expert/debug paths.
+    + 16 lane-density values + nearest target/type summaries + 96 role-aware
+    object rows); the full wire is still used by the expert/debug paths.
   • Episodes terminate on ``frame.done``.  While ``player_alive`` is false (death
     animation / between lives) we send a neutral action and store no transitions.
     • Reward = clipped game_score delta plus tightly clipped Lua subjective shaping.
@@ -31,7 +31,8 @@ from typing import Optional
 
 try:
     from .config import (RL_CONFIG, SERVER_CONFIG, metrics, LATEST_MODEL_PATH,
-                         game_settings, slice_model_state, WIRE_PARAMS_COUNT)
+                         game_settings, slice_model_state, WIRE_PARAMS_COUNT,
+                         extract_tactical_diagnostics)
     from .nstep_buffer import NStepReplayBuffer
     from .model import combine_action, split_joint_action, action_index_to_wire_dir
     from .metrics_display import (
@@ -44,7 +45,8 @@ try:
     )
 except ImportError:
     from config import (RL_CONFIG, SERVER_CONFIG, metrics, LATEST_MODEL_PATH,
-                        game_settings, slice_model_state, WIRE_PARAMS_COUNT)
+                        game_settings, slice_model_state, WIRE_PARAMS_COUNT,
+                        extract_tactical_diagnostics)
     from nstep_buffer import NStepReplayBuffer
     from model import combine_action, split_joint_action, action_index_to_wire_dir
     from metrics_display import (
@@ -77,6 +79,9 @@ _SRC_DQN = 1
 _SRC_EPSILON = 2
 _SRC_EXPERT = 3
 _SRC_EVAL = 4
+_PREVIEW_FLAG = 0x40
+_HUD_FLAG = 0x80
+_ENABLE_PREVIEW_BITS = os.environ.get("ROBOTRON_DQN_ENABLE_PREVIEW_BITS", "") not in ("", "0", "false", "False")
 
 # Live action diagnostics (set DQN_DEBUG_ACTIONS=1 to enable).  Prints a throttled
 # line showing the chosen source, live entity counts, and the exact bytes sent.
@@ -121,6 +126,7 @@ class FrameData:
     level_number: int
     game_score: int
     num_lasers: int
+    preview_bytes: int = 0
 
 
 _HDR_FMT = ">HddBIBBBIBB"
@@ -142,11 +148,19 @@ def parse_frame_data(data: bytes) -> Optional[FrameData]:
     state = np.frombuffer(data[_HDR_SIZE:base_len], dtype=">f4", count=n).astype(np.float32)
     if state.shape[0] != n:
         return None
+    preview_bytes = 0
+    if len(data) >= base_len + 4:
+        try:
+            preview_len = int(struct.unpack(">I", data[base_len:base_len + 4])[0])
+            if preview_len > 0 and len(data) >= base_len + 4 + preview_len:
+                preview_bytes = preview_len
+        except struct.error:
+            preview_bytes = 0
     return FrameData(
         state=state, subjreward=float(subj), objreward=float(obj),
         done=bool(done), player_alive=bool(alive), save_signal=bool(save),
         start_pressed=bool(start), level_number=int(wave),
-        game_score=int(score), num_lasers=int(lasers),
+        game_score=int(score), num_lasers=int(lasers), preview_bytes=preview_bytes,
     )
 
 
@@ -587,6 +601,7 @@ class SocketServer:
         self.clients = {}
         self.client_states = {}
         self.client_lock = threading.Lock()
+        self._last_preview_payload_warn = 0.0
 
     def _alloc_id(self):
         with self.client_lock:
@@ -723,7 +738,10 @@ class SocketServer:
             spread = max(1, int(getattr(RL_CONFIG, "hard_start_wave_spread", 1)))
             start_level = base_level + (int(cid) % spread)
         start_level = max(1, min(255, int(start_level)))
-        source_u8 = int(source_code) & 0x0F
+        raw_source = int(source_code) & 0xFF
+        source_u8 = raw_source & 0x0F
+        if _ENABLE_PREVIEW_BITS:
+            source_u8 |= raw_source & (_PREVIEW_FLAG | _HUD_FLAG)
         return struct.pack(">bbBBB", int(move_cmd), int(fire_cmd),
                            source_u8, start_adv, start_level)
 
@@ -775,6 +793,19 @@ class SocketServer:
                 if not frame:
                     sock.sendall(self._pack_action(-1, -1, _SRC_NONE, cid))
                     continue
+                if int(getattr(frame, "preview_bytes", 0)) > 0:
+                    try:
+                        self.metrics.note_preview_payload(int(frame.preview_bytes))
+                    except Exception:
+                        pass
+                    now_warn = time.time()
+                    if now_warn - self._last_preview_payload_warn >= 10.0:
+                        self._last_preview_payload_warn = now_warn
+                        print(
+                            f"[WARN] Client {cid} sent preview payload "
+                            f"({int(frame.preview_bytes):,} bytes) while preview is disabled by default",
+                            flush=True,
+                        )
 
                 # Single-frame compact input; stacked current-first with recent history.
                 single_state = slice_model_state(frame.state)
@@ -784,6 +815,7 @@ class SocketServer:
                         break
                     cs = self.client_states[cid]
                     cs["frames"] += 1
+                    client_frame_count = int(cs["frames"])
                     cs["level_number"] = frame.level_number
                     cs["game_score"] = frame.game_score
                     now = time.time()
@@ -793,6 +825,12 @@ class SocketServer:
                         cs["last_time"] = now
 
                 model_state = self._stack_model_state(cs, single_state)
+                diag_every = max(1, int(getattr(RL_CONFIG, "tactical_diagnostics_sample_every", 30)))
+                if client_frame_count % diag_every == 0:
+                    try:
+                        metrics.note_tactical_diagnostics(extract_tactical_diagnostics(frame.state, single_state))
+                    except Exception:
+                        pass
 
                 # Peak game score is shared metrics state — guard with metrics.lock
                 # (not client_lock) to stay consistent with dashboard reads.

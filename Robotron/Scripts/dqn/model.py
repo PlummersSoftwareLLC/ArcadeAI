@@ -13,10 +13,10 @@
 
 The state vector is the model slice (18 core game/player scalars + 22
 ELIST/level-state scalars + 16 directional lane-density scalars + 3 nearest
-destructible-target scalars + 96 role-aware object rows × 16). When frame
-stacking is enabled, only the compact
-global/lane/target slice from each frame is concatenated into the raw trunk. The
-current-frame object list is encoded by attention.
+destructible-target scalars + 16 nearest typed-object scalars + 96 role-aware
+object rows × 21). When frame stacking is enabled, only the compact
+global/lane/target/nearest-type slice from each frame is concatenated into the
+raw trunk. The current-frame object list is encoded by attention.
 """
 
 if __name__ == "__main__":
@@ -174,6 +174,7 @@ class DirectionalObjectAttention(nn.Module):
         mode: str,
         geometry_bias: bool = True,
         geometry_bias_strength: float = 1.75,
+        fire_alignment_width: float = 0.075,
     ):
         super().__init__()
         self.num_actions = int(num_actions)
@@ -182,6 +183,7 @@ class DirectionalObjectAttention(nn.Module):
         self.mode = str(mode)
         self.geometry_bias = bool(geometry_bias)
         self.geometry_bias_strength = float(geometry_bias_strength)
+        self.fire_alignment_width = float(fire_alignment_width)
 
         dirs = torch.tensor([
             [0.0, -1.0], [1.0, -1.0], [1.0, 0.0], [1.0, 1.0],
@@ -222,7 +224,8 @@ class DirectionalObjectAttention(nn.Module):
         xy = object_tokens[:, :, 1:3]
         xy_norm = xy.norm(dim=-1, keepdim=True).clamp_min(1e-6)
         obj_dir = xy / xy_norm
-        align = torch.einsum("ad,bnd->ban", self.action_dirs.to(dtype=object_tokens.dtype), obj_dir)
+        action_dirs = self.action_dirs.to(device=object_tokens.device, dtype=object_tokens.dtype)
+        align = torch.einsum("ad,bnd->ban", action_dirs, obj_dir)
         forward = align.clamp_min(0.0)
 
         dist = col(3, 1.0).clamp(0.0, 1.0)
@@ -257,10 +260,23 @@ class DirectionalObjectAttention(nn.Module):
                 bias[:, IDLE_INDEX, :] = idle_bias
         else:
             # Fire queries should be target-seeking. Rescue rows are visible to
-            # the model, but the initial fire bias de-emphasizes them.
+            # the model, but the initial fire bias de-emphasizes them. A second
+            # ray-alignment term asks whether this specific fire direction is
+            # already lined up, which is more precise than "roughly in front."
             target = torch.maximum(destructible_u, projectile_u) * (1.0 - 0.95 * rescue_u)
             cue = 0.25 + 1.40 * target + 0.40 * threat_u
-            bias = strength * forward.pow(2) * (0.35 + 0.65 * closeness) * cue
+            projection = torch.einsum("ad,bnd->ban", action_dirs, xy)
+            lateral_vec = xy.unsqueeze(1) - action_dirs.view(1, self.num_actions, 1, 2) * projection.unsqueeze(-1)
+            lateral = lateral_vec.norm(dim=-1).clamp(0.0, 1.0)
+            line_width = torch.as_tensor(
+                self.fire_alignment_width,
+                device=object_tokens.device,
+                dtype=object_tokens.dtype,
+            ).clamp_min(1e-4)
+            line_ready = torch.exp(-torch.square(lateral / line_width))
+            line_ready = line_ready * (projection > 0.0).to(dtype=object_tokens.dtype)
+            directional = (0.40 * forward.pow(2)) + (0.60 * line_ready)
+            bias = strength * directional * (0.35 + 0.65 * closeness) * cue
             if self.num_actions > IDLE_INDEX:
                 bias[:, IDLE_INDEX, :] = 0.0
 
@@ -385,6 +401,7 @@ class RainbowNet(nn.Module):
                 mode="fire",
                 geometry_bias=bool(getattr(cfg, "action_context_geometry_bias", True)),
                 geometry_bias_strength=float(getattr(cfg, "action_context_geometry_bias_strength", 1.75)),
+                fire_alignment_width=float(getattr(cfg, "action_context_fire_alignment_width", 0.075)),
             )
 
         # ── Trunk ──────────────────────────────────────────────────────
@@ -549,7 +566,12 @@ class RainbowNet(nn.Module):
         x = torch.cat([h_exp, action_ctx, emb], dim=-1)
         return scorer(x).view(B, action_count, self.num_atoms)
 
-    def _score_joint_advantage(self, h: torch.Tensor, move_ctx: torch.Tensor, fire_ctx: torch.Tensor) -> torch.Tensor:
+    def _score_joint_advantage(
+        self,
+        h: torch.Tensor,
+        move_ctx: torch.Tensor,
+        fire_ctx: torch.Tensor,
+    ) -> torch.Tensor:
         B = h.shape[0]
         move_ids = self.joint_move_ids.to(device=h.device)
         fire_ids = self.joint_fire_ids.to(device=h.device)
