@@ -6,7 +6,9 @@
         + 18 core/player values
         + 22 ELIST bytes (first 22 of 50; rest are reserved padding)
         + 8 directional predictive lane summaries × 30 features computed from all visible objects
-        + 9×9 local egocentric tactical grid × 6 channels
+        + 9×9 local egocentric tactical grid × 6 channels, retained for
+          compatibility and zero-filled by default because the DQN slice no
+          longer consumes it
         + 4 role-specific pools:
             projectile: 1 occupancy + 24 slots × 11 features
             danger:     1 occupancy + 96 slots × 10 features
@@ -49,7 +51,7 @@ function env_flag(name, default)
 end
 
 RRCHRIS_PATCH_ENABLED = env_flag("ROBOTRON_ENABLE_RRCHRIS_PATCH", false)
-SKIP_UNUSED_TACTICAL_FEATURES = env_flag("ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES", false)
+SKIP_UNUSED_TACTICAL_FEATURES = env_flag("ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES", true)
 RRCHRIS_PATCH_REGION = ":maincpu"
 ROMTAB_BASE_ADDR = 0xFFB5
 RRCHRIS_PATCH_CHUNKS = {
@@ -329,6 +331,32 @@ end
 ZERO_TACTICAL_LANE_FEATURES = _make_zero_feature_block(TACTICAL_LANE_TOTAL_FEATURES)
 ZERO_TACTICAL_GRID_FEATURES = _make_zero_feature_block(TACTICAL_GRID_FEATURES)
 
+FLOAT_PACK_CHUNK_SIZE = 128
+local float_pack_formats = {}
+
+local function _float_pack_format(count)
+    local fmt = float_pack_formats[count]
+    if fmt == nil then
+        fmt = ">" .. string.rep("f", count)
+        float_pack_formats[count] = fmt
+    end
+    return fmt
+end
+
+local function _pack_float_values(values, num_values)
+    local parts = {}
+    local part_count = 0
+    local start_idx = 1
+    while start_idx <= num_values do
+        local end_idx = math.min(num_values, start_idx + FLOAT_PACK_CHUNK_SIZE - 1)
+        local count = (end_idx - start_idx) + 1
+        part_count = part_count + 1
+        parts[part_count] = string.pack(_float_pack_format(count), unpack(values, start_idx, end_idx))
+        start_idx = end_idx + 1
+    end
+    return table.concat(parts)
+end
+
 -- Type ID mapping for unified pool (0-8, normalized by /8.0 in emission)
 UNIFIED_TYPE_ID = {
     grunt = 0,
@@ -400,35 +428,25 @@ _reset_legacy_slot_assignments()
 
 local function _select_top_k_sorted(bucket, limit, better_fn)
     local selected = {}
-    local selected_n = 0
     limit = math.max(0, math.floor(tonumber(limit) or 0))
     if limit <= 0 then
         return selected, 0
     end
 
-    for i = 1, #bucket do
-        local obj = bucket[i]
-        if selected_n < limit then
-            selected_n = selected_n + 1
-            local insert_pos = selected_n
-            while insert_pos > 1 and better_fn(obj, selected[insert_pos - 1]) do
-                selected[insert_pos] = selected[insert_pos - 1]
-                insert_pos = insert_pos - 1
-            end
-            selected[insert_pos] = obj
-        else
-            local worst = selected[selected_n]
-            if better_fn(obj, worst) then
-                local insert_pos = selected_n
-                while insert_pos > 1 and better_fn(obj, selected[insert_pos - 1]) do
-                    selected[insert_pos] = selected[insert_pos - 1]
-                    insert_pos = insert_pos - 1
-                end
-                selected[insert_pos] = obj
-            end
-        end
+    local bucket_n = #bucket
+    if bucket_n <= 0 then
+        return selected, 0
     end
 
+    for i = 1, bucket_n do
+        selected[i] = bucket[i]
+    end
+    table.sort(selected, better_fn)
+
+    local selected_n = math.min(bucket_n, limit)
+    for i = selected_n + 1, bucket_n do
+        selected[i] = nil
+    end
     return selected, selected_n
 end
 
@@ -516,7 +534,7 @@ hud_objects = nil                -- last frame's classified object list (referen
 hud_player_x16 = nil
 hud_player_y16 = nil
 hud_player_box = nil
-DEBUG_HUD_ENABLED = true         -- default ON; toggle with H hotkey
+DEBUG_HUD_ENABLED = false        -- server-controlled via preview/HUD source flags
 hud_key_code = nil               -- MAME input code for 'H' key (lazy-init)
 hud_key_was_down = false         -- edge-detect so hold doesn't strobe
 PREVIEW_FORMAT_RGB565 = 1
@@ -922,26 +940,30 @@ local function _build_local_tactical_grid(dangerous_bucket, projectile_bucket, h
         _accumulate_tactical_grid_value(grid, future_x, future_y, future_ch, value)
     end
 
-    for _, obj in ipairs(dangerous_bucket) do
+    for i = 1, #dangerous_bucket do
+        local obj = dangerous_bucket[i]
         local closeness = 1.0 - clamp01(obj.dist_norm or 1.0)
         local value = clamp01((obj.threat or 0.0) * (0.55 + (0.45 * closeness)))
         place_now_and_future(obj, TACTICAL_GRID_CH_ROBOT, TACTICAL_GRID_CH_ROBOT_FUTURE, value)
     end
 
-    for _, obj in ipairs(projectile_bucket) do
+    for i = 1, #projectile_bucket do
+        local obj = projectile_bucket[i]
         local closeness = 1.0 - clamp01(obj.dist_norm or 1.0)
         local imminence = 1.0 - clamp01(obj.ttc_norm or 1.0)
         local value = clamp01(math.max(obj.threat or 0.0, 0.35 + (0.65 * imminence)) * (0.45 + (0.55 * closeness)))
         place_now_and_future(obj, TACTICAL_GRID_CH_PROJECTILE, TACTICAL_GRID_CH_PROJECTILE_FUTURE, value)
     end
 
-    for _, obj in ipairs(electrode_bucket) do
+    for i = 1, #electrode_bucket do
+        local obj = electrode_bucket[i]
         local closeness = 1.0 - clamp01(obj.dist_norm or 1.0)
         local value = clamp01((obj.threat or 0.0) * (0.35 + (0.65 * closeness)))
         _accumulate_tactical_grid_value(grid, obj.rel_dx16 or 0.0, obj.rel_dy16 or 0.0, TACTICAL_GRID_CH_ELECTRODE, value)
     end
 
-    for _, obj in ipairs(human_bucket) do
+    for i = 1, #human_bucket do
+        local obj = human_bucket[i]
         local value = clamp01(1.0 - clamp01(obj.dist_norm or 1.0))
         _accumulate_tactical_grid_value(grid, obj.rel_dx16 or 0.0, obj.rel_dy16 or 0.0, TACTICAL_GRID_CH_HUMAN, value)
     end
@@ -1028,7 +1050,8 @@ local function _build_directional_affordances(player_x16, player_y16, dangerous_
         )
     end
 
-    for _, obj in ipairs(dangerous_bucket) do
+    for i = 1, #dangerous_bucket do
+        local obj = dangerous_bucket[i]
         local cat = obj.category
         local priority_bonus = ADVANCED_SHAPING.priority_aim_bonus[cat] or 1.0
         local close = 1.0 - clamp01(obj.dist_norm or 1.0)
@@ -1084,7 +1107,8 @@ local function _build_directional_affordances(player_x16, player_y16, dangerous_
         end
     end
 
-    for _, obj in ipairs(projectile_bucket) do
+    for i = 1, #projectile_bucket do
+        local obj = projectile_bucket[i]
         local close = 1.0 - clamp01(obj.dist_norm or 1.0)
         local imminence = math.max(
             1.0 - clamp01(obj.ttc_norm or 1.0),
@@ -1123,7 +1147,8 @@ local function _build_directional_affordances(player_x16, player_y16, dangerous_
         end
     end
 
-    for _, obj in ipairs(human_bucket) do
+    for i = 1, #human_bucket do
+        local obj = human_bucket[i]
         local close = 1.0 - clamp01(obj.dist_norm or 1.0)
         for lane_i = 1, TACTICAL_LANE_COUNT do
             local lane = lanes[lane_i]
@@ -1138,7 +1163,8 @@ local function _build_directional_affordances(player_x16, player_y16, dangerous_
         end
     end
 
-    for _, obj in ipairs(electrode_bucket) do
+    for i = 1, #electrode_bucket do
+        local obj = electrode_bucket[i]
         local close = 1.0 - clamp01(obj.dist_norm or 1.0)
         local threat = clamp01(obj.threat or 0.0)
         for lane_i = 1, TACTICAL_LANE_COUNT do
@@ -1190,12 +1216,14 @@ local function _build_basic_lane_density_features(dangerous_bucket, human_bucket
         lanes[lane_i] = {enemy_count = 0, human_count = 0}
     end
 
-    for _, obj in ipairs(dangerous_bucket) do
+    for i = 1, #dangerous_bucket do
+        local obj = dangerous_bucket[i]
         local lane_i = lane_index_for_object(obj.rel_dx16 or 0.0, obj.rel_dy16 or 0.0)
         lanes[lane_i].enemy_count = lanes[lane_i].enemy_count + 1
     end
 
-    for _, obj in ipairs(human_bucket) do
+    for i = 1, #human_bucket do
+        local obj = human_bucket[i]
         local lane_i = lane_index_for_object(obj.rel_dx16 or 0.0, obj.rel_dy16 or 0.0)
         lanes[lane_i].human_count = lanes[lane_i].human_count + 1
     end
@@ -1230,7 +1258,8 @@ local function _build_lane_summary_features(player_x16, player_y16, dangerous_bu
     end
 
     local function visit_bucket(bucket, kind)
-        for _, obj in ipairs(bucket) do
+        for i = 1, #bucket do
+            local obj = bucket[i]
             local lane_i = lane_index_for_object(obj.rel_dx16 or 0.0, obj.rel_dy16 or 0.0)
             local lane = lanes[lane_i]
             if kind == "enemy" then
@@ -1371,7 +1400,8 @@ local function compute_aim_reward(fire_cmd, px16, py16, objects)
     local cross_thresh = is_diagonal and (AIM_CROSS_THRESHOLD * 1.414) or AIM_CROSS_THRESHOLD
 
     local best_score = 0.0
-    for _, obj in ipairs(objects) do
+    for i = 1, #objects do
+        local obj = objects[i]
         if obj.category and AIM_TARGET_CATS[obj.category] then
             local dx = obj.x16 - px16
             local dy = obj.y16 - py16
@@ -1499,7 +1529,8 @@ function compute_blocker_move_penalty(move_cmd, px16, py16, objects)
     if vlen < 1e-6 then return 0.0 end
 
     local best = 0.0
-    for _, obj in ipairs(objects) do
+    for i = 1, #objects do
+        local obj = objects[i]
         if obj.category and CATEGORY_IS_BLOCKER[obj.category] then
             local dx = obj.x16 - px16
             local dy = obj.y16 - py16
@@ -1554,7 +1585,8 @@ function compute_priority_aim_reward(fire_cmd, px16, py16, objects, wave_number,
     local cross_thresh = is_diagonal and (AIM_CROSS_THRESHOLD * 1.414) or AIM_CROSS_THRESHOLD
 
     local best_score = 0.0
-    for _, obj in ipairs(objects) do
+    for i = 1, #objects do
+        local obj = objects[i]
         local cat = obj.category
         if cat and AIM_TARGET_CATS[cat] then
             local dx = obj.x16 - px16
@@ -1589,7 +1621,8 @@ function compute_brain_guard_reward(move_cmd, fire_cmd, px16, py16, objects, wav
 
     local best = nil
     local best_score = -1.0
-    for _, obj in ipairs(objects) do
+    for i = 1, #objects do
+        local obj = objects[i]
         if obj.category == "brain" then
             local dist = tonumber(obj.dist_norm) or 1.0
             local score = clamp01(1.0 - dist) + clamp01(obj.threat or 0.0)
@@ -1762,7 +1795,8 @@ local function try_resolve_7x16(all_objects, enemy_state)
 
     -- Count 7×16 objects on RPTR grouped by OCVECT (excluding already-resolved)
     local ocv_counts = {}
-    for _, obj in ipairs(all_objects) do
+    for i = 1, #all_objects do
+        local obj = all_objects[i]
         if obj.list_name == "rptr" and obj.width == 7 and obj.height == 16
            and unresolved_7x16[obj.ocvect] then
             ocv_counts[obj.ocvect] = (ocv_counts[obj.ocvect] or 0) + 1
@@ -2019,7 +2053,8 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
 
     if next(unresolved_7x16) then
         if try_resolve_7x16(all_objects, enemy_state) then
-            for _, obj in ipairs(all_objects) do
+            for i = 1, #all_objects do
+                local obj = all_objects[i]
                 if obj.category == nil then
                     obj.category = ocvect_category_cache[obj.ocvect]
                 end
@@ -2038,7 +2073,8 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
     local nearest_enemy_y16 = nil
     local nearest_spawner_x16 = nil
     local nearest_spawner_y16 = nil
-    for _, cat in ipairs(ENTITY_CATEGORIES) do
+    for i = 1, #ENTITY_CATEGORIES do
+        local cat = ENTITY_CATEGORIES[i]
         buckets[cat.name] = {}
         counts[cat.name] = 0
     end
@@ -2050,7 +2086,8 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
     local compute_heavy_tactical_features = not SKIP_UNUSED_TACTICAL_FEATURES
     local current_sample_x = {}
     local current_sample_y = {}
-    for _, obj in ipairs(all_objects) do
+    for i = 1, #all_objects do
+        local obj = all_objects[i]
         if obj.category == nil and obj.list_name == "rptr" then
             obj.category = "hulk"
         end
@@ -2151,7 +2188,8 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
     local electrode_assigned, electrode_count = _stable_assign_pool_slots("electrode", electrode_bucket, ELECTRODE_POOL_SLOTS, _nearest_distance_better)
 
     if hud_enabled then
-        for _, cat in ipairs(ENTITY_CATEGORIES) do
+        for cat_i = 1, #ENTITY_CATEGORIES do
+            local cat = ENTITY_CATEGORIES[cat_i]
             local bucket = buckets[cat.name]
             if #bucket > 0 then
                 local ranked = {}
@@ -2164,7 +2202,8 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
                     end
                     return a.threat > b.threat
                 end)
-                for i, obj in ipairs(ranked) do
+                for i = 1, #ranked do
+                    local obj = ranked[i]
                     obj.rank = i
                 end
             end
@@ -2261,9 +2300,15 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
     local num_humans = counts["human"] or 0
     local num_spawners = counts["spawner"] or 0
 
-    hud_player_x16 = memory:read_u8(PLOBJ_ADDR + OBJX_OFF)
-    hud_player_y16 = memory:read_u8(PLOBJ_ADDR + OBJY_OFF)
-    hud_player_box = {x = player_hit_off_x, y = player_hit_off_y, w = player_hit_w, h = player_hit_h}
+    if hud_enabled then
+        hud_player_x16 = memory:read_u8(PLOBJ_ADDR + OBJX_OFF)
+        hud_player_y16 = memory:read_u8(PLOBJ_ADDR + OBJY_OFF)
+        hud_player_box = {x = player_hit_off_x, y = player_hit_off_y, w = player_hit_w, h = player_hit_h}
+    else
+        hud_player_x16 = nil
+        hud_player_y16 = nil
+        hud_player_box = nil
+    end
 
     return {
         object_count = object_count,
@@ -3264,11 +3309,7 @@ local function serialize_frame(player_alive, score, replay_level, num_lasers, wa
         wave_u8
     )
 
-    local state_payload_parts = {}
-    for i = 1, num_values do
-        state_payload_parts[#state_payload_parts + 1] = string.pack(">f", state_values[i])
-    end
-    local state_payload = table.concat(state_payload_parts)
+    local state_payload = _pack_float_values(state_values, num_values)
 
     local preview_chunk = ""
     local pw = math.max(0, math.floor(preview_w or 0))
