@@ -16,7 +16,7 @@
 --]]
 
 RAW_SOCKET_ADDRESS = os.getenv("ROBOTRON_SOCKET_ADDRESS") or "m2macpro:9998"
-PREVIEW_CLIENT_FLAG = (os.getenv("ROBOTRON_PREVIEW_CLIENT") == "1") and 1 or 0
+PREVIEW_CLIENT_FLAG = 0
 CLIENT_SLOT = math.max(0, math.floor(tonumber(os.getenv("ROBOTRON_CLIENT_SLOT") or "0") or 0))
 SOCKET_ADDRESS = RAW_SOCKET_ADDRESS
 if string.sub(SOCKET_ADDRESS, 1, 7) ~= "socket." then
@@ -506,15 +506,15 @@ hud_objects = nil                -- last frame's classified object list (referen
 hud_player_x16 = nil
 hud_player_y16 = nil
 hud_player_box = nil
-DEBUG_HUD_ENABLED = true         -- default ON; toggle with H hotkey
+DEBUG_HUD_ENABLED = false        -- preview/HUD overlay disabled for training throughput
 hud_key_code = nil               -- MAME input code for 'H' key (lazy-init)
 hud_key_was_down = false         -- edge-detect so hold doesn't strobe
 PREVIEW_FORMAT_RGB565 = 1
 PREVIEW_FORMAT_RGB565_LZSS = 2
 PREVIEW_FORMAT_RGB565_RLE = 3
 -- Preview is expensive and the current dashboard does not expose client preview
--- ownership. Keep capture fully disabled unless explicitly requested.
-PREVIEW_CAPTURE_ENABLED = env_flag("ROBOTRON_PREVIEW_CAPTURE", false)
+-- ownership. Keep capture fully disabled; clients must not prepare/send it.
+PREVIEW_CAPTURE_ENABLED = false
 PREVIEW_FPS = math.max(1, math.floor(env_number("ROBOTRON_PREVIEW_FPS", 30) or 30))
 PREVIEW_MIN_INTERVAL_S = (1.0 / PREVIEW_FPS)
 -- Capture near dashboard size at the source; sending full-resolution snapshots
@@ -2607,10 +2607,8 @@ local function capture_game_preview()
 end
 
 local function frame_done_callback()
-    -- Only draw HUD / capture screen when this client is the active preview
-    -- source.  The server toggles preview_stream_enabled per-frame via bit 0x40
-    -- in the action source byte, so non-active clients skip the expensive
-    -- snapshot_pixels() call and all HUD draw_line/draw_text work entirely.
+    -- Preview/HUD work is disabled in the training client. Keep this callback
+    -- inert unless preview support is deliberately reintroduced later.
     if not preview_stream_enabled then
         clear_pending_preview()
         return
@@ -3240,15 +3238,7 @@ local function serialize_frame(player_alive, score, replay_level, num_lasers, wa
     end
     local state_payload = table.concat(state_payload_parts)
 
-    local preview_chunk = ""
-    local pw = math.max(0, math.floor(preview_w or 0))
-    local ph = math.max(0, math.floor(preview_h or 0))
-    local pf = math.max(0, math.min(255, math.floor(preview_fmt or PREVIEW_FORMAT_RGB565)))
-    if preview_blob and pw > 0 and ph > 0 and #preview_blob > 0 and #preview_blob <= PREVIEW_MAX_BYTES then
-        preview_chunk = string.pack(">HHB", pw, ph, pf) .. preview_blob
-    end
-    local preview_len = #preview_chunk
-    local payload = header .. state_payload .. string.pack(">I4", preview_len) .. preview_chunk
+    local payload = header .. state_payload .. string.pack(">I4", 0)
     if #payload > SOCKET_MAX_PAYLOAD_BYTES then
         payload = header .. state_payload .. string.pack(">I4", 0)
     end
@@ -3340,16 +3330,12 @@ local function process_frame_via_socket(frame_payload, frame_idx)
 
     local move_dir, fire_dir, source = unpack(read_result)
     local source_u8 = (source or 0) & 0xFF
-    if PREVIEW_CAPTURE_ENABLED then
-        preview_stream_enabled = (source_u8 & 0x40) ~= 0
-    else
-        preview_stream_enabled = false
-    end
+    preview_stream_enabled = false
     -- Source byte bits:
     --   low nibble = action source
     --   0x40 = preview enabled
     --   0x80 = HUD enabled
-    DEBUG_HUD_ENABLED = (source_u8 & 0x80) ~= 0
+    DEBUG_HUD_ENABLED = false
     last_action_source = source_u8 & 0x0F
     return move_dir or -1, fire_dir or -1, true
 end
@@ -3511,17 +3497,8 @@ function compute_frame_rewards(frame)
 end
 
 function capture_preview_payload()
-    if preview_stream_enabled and pending_preview_blob then
-        local out = {
-            w = pending_preview_w,
-            h = pending_preview_h,
-            fmt = pending_preview_fmt or PREVIEW_FORMAT_RGB565,
-            blob = pending_preview_blob,
-        }
-        clear_pending_preview()
-        return out
-    end
-    return {w = 0, h = 0, fmt = PREVIEW_FORMAT_RGB565, blob = nil}
+    clear_pending_preview()
+    return nil
 end
 
 function frame_callback()
@@ -3570,8 +3547,6 @@ function frame_callback()
         last_save_time = now
     end
 
-    local preview = capture_preview_payload()
-
     local ok_payload, payload_or_err = pcall(
         serialize_frame,
         frame.player_alive, frame.score, frame.replay_level, frame.num_lasers, frame.wave_number,
@@ -3586,7 +3561,7 @@ function frame_callback()
         frame.obs.num_spawners,
         frame.enemy_state, frame.obs.lane_summary_features, frame.obs.local_grid_features, frame.obs.pool_features, frame.obs.pool_diag_features,
         rewards.done, rewards.subj_reward, rewards.obj_reward, save_signal, start_cmd,
-        preview.w, preview.h, preview.fmt, preview.blob
+        0, 0, PREVIEW_FORMAT_RGB565, nil
     )
     if not ok_payload then
         trace_log(frame_counter, "serialize_frame_error", tostring(payload_or_err), true)

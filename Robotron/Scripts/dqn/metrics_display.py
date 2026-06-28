@@ -439,7 +439,7 @@ def display_metrics_row(agent, kb_handler):
 
     # ── Wave / level ────────────────────────────────────────────────────
     display_level = metrics.average_level + 1.0
-    average_game_score = metrics.average_game_score
+    average_game_score, _completed_score_count = metrics.consume_completed_game_score_interval()
 
     # ── DQN windows ─────────────────────────────────────────────────────
     dqn100k, dqn1m, dqn5m = get_dqn_window_averages()

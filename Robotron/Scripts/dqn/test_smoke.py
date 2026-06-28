@@ -471,9 +471,9 @@ def test_reward_and_hard_starts():
               f"sadv={sadv} slvl={slvl}")
         old_preview_bits = SS._ENABLE_PREVIEW_BITS
         try:
-            SS._ENABLE_PREVIEW_BITS = False
+            SS._ENABLE_PREVIEW_BITS = True
             _, _, src, _, _ = struct.unpack(">bbBBB", server._pack_action(-1, -1, 0xCF, cid=7))
-            check("preview/HUD bits stripped by default", src == 0x0F, f"src=0x{src:02x}")
+            check("preview/HUD bits hard-stripped", src == 0x0F, f"src=0x{src:02x}")
         finally:
             SS._ENABLE_PREVIEW_BITS = old_preview_bits
     finally:
@@ -840,6 +840,21 @@ def test_dashboard_system_parser():
     check("meminfo free percent", np.isclose(mem.get("ram_free_pct"), 75.0), f"mem={mem}")
 
 
+def test_completed_score_interval():
+    print("\n[completed score interval]")
+    m = C.MetricsData()
+    m.note_completed_game_score(10_000)
+    m.note_completed_game_score(30_000)
+    avg, count = m.consume_completed_game_score_interval()
+    check("completed scores average per report interval",
+          count == 2 and np.isclose(avg, 20_000.0),
+          f"avg={avg} count={count}")
+    avg2, count2 = m.consume_completed_game_score_interval()
+    check("completed score interval resets after consume",
+          count2 == 0 and np.isclose(avg2, 0.0),
+          f"avg={avg2} count={count2}")
+
+
 def test_model_shapes(agent):
     print("\n[model shapes]")
     import torch
@@ -1190,6 +1205,7 @@ def main():
     test_dqn_window_math()
     test_dashboard_gpu_parser()
     test_dashboard_system_parser()
+    test_completed_score_interval()
     test_expert()
 
     print("\n[building agent]")

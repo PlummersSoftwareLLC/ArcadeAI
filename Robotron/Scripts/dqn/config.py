@@ -949,6 +949,8 @@ class MetricsData:
     frames_count_interval: int = 0
     episode_length_sum_interval: int = 0
     episode_length_count_interval: int = 0
+    completed_score_sum_interval: float = 0.0
+    completed_score_count_interval: int = 0
     level_sum_interval: float = 0.0
     level_count_interval: int = 0
 
@@ -1149,6 +1151,29 @@ class MetricsData:
         with self.lock:
             if score > self.peak_game_score:
                 self.peak_game_score = int(score)
+
+    def note_completed_game_score(self, score: int | float):
+        """Record a completed training episode's final game score for the next report row."""
+        try:
+            s = float(score)
+        except Exception:
+            return
+        if not math.isfinite(s):
+            return
+        with self.lock:
+            self.completed_score_sum_interval += s
+            self.completed_score_count_interval += 1
+            if int(s) > self.peak_game_score:
+                self.peak_game_score = int(s)
+
+    def consume_completed_game_score_interval(self) -> tuple[float, int]:
+        """Return and reset the average final game score since the last report row."""
+        with self.lock:
+            count = int(self.completed_score_count_interval)
+            avg = self.completed_score_sum_interval / max(1, count) if count > 0 else 0.0
+            self.completed_score_sum_interval = 0.0
+            self.completed_score_count_interval = 0
+        return float(avg), count
 
     def note_game_state_averages(self, average_level: float, average_game_score: float, peak_level: int | None = None):
         """Thread-safe live game-state aggregate update."""

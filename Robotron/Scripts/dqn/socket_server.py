@@ -81,7 +81,10 @@ _SRC_EXPERT = 3
 _SRC_EVAL = 4
 _PREVIEW_FLAG = 0x40
 _HUD_FLAG = 0x80
-_ENABLE_PREVIEW_BITS = os.environ.get("ROBOTRON_DQN_ENABLE_PREVIEW_BITS", "") not in ("", "0", "false", "False")
+# Preview/HUD source bits are intentionally hard-disabled. The current
+# dashboard does not consume client preview streams, and enabling these bits
+# makes Lua do expensive screen/HUD preparation work.
+_ENABLE_PREVIEW_BITS = False
 
 # Live action diagnostics (set DQN_DEBUG_ACTIONS=1 to enable).  Prints a throttled
 # line showing the chosen source, live entity counts, and the exact bytes sent.
@@ -740,8 +743,6 @@ class SocketServer:
         start_level = max(1, min(255, int(start_level)))
         raw_source = int(source_code) & 0xFF
         source_u8 = raw_source & 0x0F
-        if _ENABLE_PREVIEW_BITS:
-            source_u8 |= raw_source & (_PREVIEW_FLAG | _HUD_FLAG)
         return struct.pack(">bbBBB", int(move_cmd), int(fire_cmd),
                            source_u8, start_adv, start_level)
 
@@ -903,6 +904,7 @@ class SocketServer:
                             metrics.add_eval_episode_reward(
                                 cs["total_reward"], frame.game_score, frame.level_number, length=ep_len)
                         else:
+                            metrics.note_completed_game_score(frame.game_score)
                             metrics.add_episode_reward(
                                 cs["total_reward"], cs["ep_dqn_reward"], cs["ep_expert_reward"],
                                 cs.get("ep_subj_reward", 0.0), cs.get("ep_obj_reward", 0.0),
