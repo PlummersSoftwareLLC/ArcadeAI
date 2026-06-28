@@ -88,6 +88,9 @@ SUBJ_DEATH_PENALTY = 0.0
 SUBJ_ENEMY_NEAR_NORM = 0.035
 SUBJ_ENEMY_FAR_NORM = 0.200
 SUBJ_HUMAN_NEAR_NORM = 0.120
+SUBJ_BLOCKER_MOVE_WEIGHT = 14.0
+SUBJ_BLOCKER_DANGER_NORM = 0.120
+SUBJ_BLOCKER_MIN_ALIGN = 0.35
 -- Discount used for potential-based shaping of the state-only terms (enemy
 -- spacing + human proximity).  MUST match RL_CONFIG.gamma on the Python side
 -- so the shaping F = gamma*Phi(s')-Phi(s) stays policy-invariant (Ng et al. 1999).
@@ -144,6 +147,9 @@ MOVE_DIR_VEC = FIRE_DIR_VEC    -- same 8-way mapping for move directions
 -- Wall-hugging penalty: per-axis penalty when within 16 px of a wall.
 -- Stacks additively so a corner costs double.
 SUBJ_WALL_PENALTY  = 15.0      -- penalty per wall axis per frame
+SUBJ_WALL_TOUCH_PENALTY = 3.0  -- passive penalty for riding a wall even while moving parallel/away
+SUBJ_CORNER_PENALTY = 12.0     -- extra trap penalty when near two walls at once
+SUBJ_WALL_DANGER_BOOST = 0.75  -- walls are worse when nearby enemies/projectiles are active
 -- WALL_MARGIN_NORM_X/Y defined after POS_X/Y_RANGE (see below).
 
 -- Abandoned-human penalty: one-shot penalty per surviving human when a wave
@@ -355,6 +361,11 @@ local CATEGORY_IS_DANGEROUS = {
 }
 
 local CATEGORY_IS_STATIC = {
+    electrode = true,
+}
+
+local CATEGORY_IS_BLOCKER = {
+    hulk = true,
     electrode = true,
 }
 
@@ -1446,6 +1457,14 @@ function compute_contextual_wall_penalty(move_cmd, px16, py16, nearest_enemy_dis
         danger_pressure = clamp01((SUBJ_ENEMY_FAR_NORM - nearest_enemy_dist_norm) / math.max(1e-6, SUBJ_ENEMY_FAR_NORM))
     end
 
+    local left_depth = (px < WALL_MARGIN_NORM_X) and clamp01((WALL_MARGIN_NORM_X - px) / WALL_MARGIN_NORM_X) or 0.0
+    local right_depth = (px > (1.0 - WALL_MARGIN_NORM_X)) and clamp01((px - (1.0 - WALL_MARGIN_NORM_X)) / WALL_MARGIN_NORM_X) or 0.0
+    local top_depth = (py < WALL_MARGIN_NORM_Y) and clamp01((WALL_MARGIN_NORM_Y - py) / WALL_MARGIN_NORM_Y) or 0.0
+    local bottom_depth = (py > (1.0 - WALL_MARGIN_NORM_Y)) and clamp01((py - (1.0 - WALL_MARGIN_NORM_Y)) / WALL_MARGIN_NORM_Y) or 0.0
+    local x_wall_depth = math.max(left_depth, right_depth)
+    local y_wall_depth = math.max(top_depth, bottom_depth)
+    local passive_pressure = 1.0 + (SUBJ_WALL_DANGER_BOOST * danger_pressure)
+
     local function wall_axis_penalty(depth, push_into_wall)
         if depth <= 0.0 then
             return 0.0
@@ -1457,18 +1476,50 @@ function compute_contextual_wall_penalty(move_cmd, px16, py16, nearest_enemy_dis
         return SUBJ_WALL_PENALTY * depth * pressure
     end
 
-    local penalty = 0.0
-    if px < WALL_MARGIN_NORM_X then
-        penalty = penalty + wall_axis_penalty(clamp01((WALL_MARGIN_NORM_X - px) / WALL_MARGIN_NORM_X), clamp01(-vec[1]))
-    elseif px > (1.0 - WALL_MARGIN_NORM_X) then
-        penalty = penalty + wall_axis_penalty(clamp01((px - (1.0 - WALL_MARGIN_NORM_X)) / WALL_MARGIN_NORM_X), clamp01(vec[1]))
-    end
-    if py < WALL_MARGIN_NORM_Y then
-        penalty = penalty + wall_axis_penalty(clamp01((WALL_MARGIN_NORM_Y - py) / WALL_MARGIN_NORM_Y), clamp01(-vec[2]))
-    elseif py > (1.0 - WALL_MARGIN_NORM_Y) then
-        penalty = penalty + wall_axis_penalty(clamp01((py - (1.0 - WALL_MARGIN_NORM_Y)) / WALL_MARGIN_NORM_Y), clamp01(vec[2]))
-    end
+    local penalty = SUBJ_WALL_TOUCH_PENALTY * (x_wall_depth + y_wall_depth) * passive_pressure
+    penalty = penalty + (SUBJ_CORNER_PENALTY * x_wall_depth * y_wall_depth * passive_pressure)
+
+    penalty = penalty + wall_axis_penalty(left_depth, clamp01(-vec[1]))
+    penalty = penalty + wall_axis_penalty(right_depth, clamp01(vec[1]))
+    penalty = penalty + wall_axis_penalty(top_depth, clamp01(-vec[2]))
+    penalty = penalty + wall_axis_penalty(bottom_depth, clamp01(vec[2]))
     return penalty
+end
+
+function compute_blocker_move_penalty(move_cmd, px16, py16, objects)
+    if move_cmd == nil or move_cmd < 0 or move_cmd > 7 then
+        return 0.0
+    end
+    if px16 == nil or py16 == nil or objects == nil then
+        return 0.0
+    end
+    local vec = MOVE_DIR_VEC[move_cmd]
+    if vec == nil then return 0.0 end
+    local vlen = math.sqrt((vec[1] * vec[1]) + (vec[2] * vec[2]))
+    if vlen < 1e-6 then return 0.0 end
+
+    local best = 0.0
+    for _, obj in ipairs(objects) do
+        if obj.category and CATEGORY_IS_BLOCKER[obj.category] then
+            local dx = obj.x16 - px16
+            local dy = obj.y16 - py16
+            local dist = math.sqrt((dx * dx) + (dy * dy))
+            if dist > 1.0 then
+                local dist_norm = clamp01(obj.dist_norm or (dist / POS_MAX_DIAG))
+                if dist_norm <= SUBJ_BLOCKER_DANGER_NORM then
+                    local align = ((dx * vec[1]) + (dy * vec[2])) / (dist * vlen)
+                    if align > SUBJ_BLOCKER_MIN_ALIGN then
+                        local closeness = clamp01(1.0 - (dist_norm / math.max(1e-6, SUBJ_BLOCKER_DANGER_NORM)))
+                        local score = clamp01(((align - SUBJ_BLOCKER_MIN_ALIGN) / (1.0 - SUBJ_BLOCKER_MIN_ALIGN)) * closeness)
+                        if score > best then
+                            best = score
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return best * SUBJ_BLOCKER_MOVE_WEIGHT
 end
 
 function priority_target_bonus(category, wave_number, num_humans, dist_norm)
@@ -1978,7 +2029,7 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
 
     local buckets = {}
     local counts = {}
-    local classified_objects = hud_enabled and {} or nil
+    local classified_objects = {}
     local object_count = 0
     local nearest_enemy_dist = nil
     local nearest_human_dist = nil
@@ -2045,15 +2096,11 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
             current_sample_x[obj.ptr] = obj.x16
             current_sample_y[obj.ptr] = obj.y16
             buckets[obj.category][#buckets[obj.category] + 1] = obj
-            if obj.category == "projectile" then
-                -- projectile_bucket already aliases buckets["projectile"]
-            elseif obj.category ~= "human" and obj.category ~= "electrode" then
+            if obj.category ~= "projectile" and obj.category ~= "human" and obj.category ~= "electrode" then
                 dangerous_bucket[#dangerous_bucket + 1] = obj
             end
             object_count = object_count + 1
-            if hud_enabled then
-                classified_objects[#classified_objects + 1] = obj
-            end
+            classified_objects[#classified_objects + 1] = obj
 
             if obj.category == "human" then
                 if nearest_human_dist == nil or obj.dist_norm < nearest_human_dist then
@@ -2083,17 +2130,19 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
     prev_object_sample_x = current_sample_x
     prev_object_sample_y = current_sample_y
 
-    local lane_summary_features = _build_basic_lane_density_features(dangerous_bucket, human_bucket)
+    -- The DQN compact state now consumes selected per-direction affordance
+    -- features from the 8x30 lane block, so keep that lane block populated even
+    -- in fast mode. Fast mode still skips only the expensive local grid.
+    local lane_summary_features = _build_lane_summary_features(
+        player_center_x16,
+        player_center_y16,
+        dangerous_bucket,
+        projectile_bucket,
+        human_bucket,
+        electrode_bucket
+    )
     local local_grid_features = ZERO_TACTICAL_GRID_FEATURES
     if compute_heavy_tactical_features then
-        lane_summary_features = _build_lane_summary_features(
-            player_center_x16,
-            player_center_y16,
-            dangerous_bucket,
-            projectile_bucket,
-            human_bucket,
-            electrode_bucket
-        )
         local_grid_features = _build_local_tactical_grid(dangerous_bucket, projectile_bucket, human_bucket, electrode_bucket)
     end
     local projectile_assigned, projectile_count = _stable_assign_pool_slots("projectile", projectile_bucket, PROJECTILE_POOL_SLOTS, _projectile_priority_better)
@@ -2232,6 +2281,7 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
         lane_summary_features = lane_summary_features,
         local_grid_features = local_grid_features,
         pool_features = pool_features,
+        reward_objects = classified_objects,
     }
 end
 
@@ -3441,6 +3491,8 @@ function compute_frame_rewards(frame)
     local brain_guard_score = compute_brain_guard_reward(
         prev_move_cmd, prev_fire_cmd, prev_aim_px16, prev_aim_py16,
         prev_aim_objects, frame.wave_number, frame.num_humans)
+    local blocker_penalty = compute_blocker_move_penalty(
+        prev_move_cmd, prev_aim_px16, prev_aim_py16, prev_aim_objects)
 
     -- Potential-based shaping (Ng et al. 1999) for the state-only terms.
     -- Phi(s) = enemy-spacing + human-proximity potential.  Emitting the per-frame
@@ -3474,12 +3526,13 @@ function compute_frame_rewards(frame)
         + (aim_score * ADVANCED_SHAPING.priority_aim_weight)
         + (evade_score * SUBJ_EVADE_WEIGHT)
         + (brain_guard_score * ADVANCED_SHAPING.brain_guard_weight)
+        - blocker_penalty
         - wall_penalty
 
     trace_log(frame_counter, "reward_calc",
-        string.format("score_delta=%d done=%s obj_reward=%.1f subj_reward=%.2f shape=%.2f aim=%.2f evade=%.2f brain=%.2f wall=%.2f enemy_dist=%s human_dist=%s",
+        string.format("score_delta=%d done=%s obj_reward=%.1f subj_reward=%.2f shape=%.2f aim=%.2f evade=%.2f brain=%.2f blocker=%.2f wall=%.2f enemy_dist=%s human_dist=%s",
             score_delta, tostring(done), obj_reward, subj_reward,
-            shaping, aim_score, evade_score, brain_guard_score, wall_penalty,
+            shaping, aim_score, evade_score, brain_guard_score, blocker_penalty, wall_penalty,
             frame.obs.nearest_enemy_dist and string.format("%.4f", frame.obs.nearest_enemy_dist) or "nil",
             frame.obs.nearest_human_dist and string.format("%.4f", frame.obs.nearest_human_dist) or "nil"))
 
@@ -3639,7 +3692,7 @@ function frame_callback()
     -- aim-reward attribution.
     prev_fire_cmd = effective_fire
     prev_move_cmd = move_cmd
-    prev_aim_objects = hud_objects   -- reuse the same reference (set in extract_world_features)
+    prev_aim_objects = frame.obs.reward_objects or hud_objects
     prev_aim_px16 = frame.player_x16
     prev_aim_py16 = frame.player_y16
     prev_nearest_enemy_x16 = frame.obs.nearest_enemy_x16
@@ -3700,7 +3753,7 @@ end
 
 print("Robotron socket target: " .. SOCKET_ADDRESS)
 if SKIP_UNUSED_TACTICAL_FEATURES then
-    print("Robotron tactical lanes/grid: fast mode keeps DQN lane/object danger cues, skips heavy grid/affordances")
+    print("Robotron tactical lanes/grid: fast mode keeps DQN lane/object/affordance cues, skips heavy grid")
 end
 controls = Controls:new(manager)
 if not controls then

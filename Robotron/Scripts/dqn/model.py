@@ -13,10 +13,12 @@
 
 The state vector is the model slice (18 core game/player scalars + 22
 ELIST/level-state scalars + 16 directional lane-density scalars + 3 nearest
-destructible-target scalars + 96 role-aware object rows × 16). When frame
-stacking is enabled, only the compact
-global/lane/target slice from each frame is concatenated into the raw trunk. The
-current-frame object list is encoded by attention.
+destructible-target scalars + 112 per-action affordance scalars + 16 nearest
+typed-object scalars + 96 role-aware object rows × 16). When frame stacking is
+enabled, only the compact global/action-summary slice from each frame is
+concatenated into the raw trunk. The current-frame object list is encoded by
+attention, and the current-frame move/fire affordance rows are fed directly into
+the action scorers.
 """
 
 if __name__ == "__main__":
@@ -337,6 +339,18 @@ class RainbowNet(nn.Module):
         self.lane_count = int(getattr(cfg, "lane_count", 0))
         self.lane_features = int(getattr(cfg, "lane_features", 0))
         self.extra_features = int(getattr(cfg, "extra_features", 0))
+        self.move_affordance_features = int(getattr(cfg, "move_affordance_features", 0))
+        self.fire_affordance_features = int(getattr(cfg, "fire_affordance_features", 0))
+        self.action_affordance_features = int(getattr(cfg, "action_affordance_features", 0))
+        self.action_affordance_offset = int(getattr(cfg, "action_affordance_offset", self.global_features))
+        self.use_action_affordance = (
+            self.move_affordance_features > 0
+            and self.fire_affordance_features > 0
+            and self.action_affordance_features >= (
+                (self.num_move - 1) * self.move_affordance_features
+                + (self.num_fire - 1) * self.fire_affordance_features
+            )
+        )
         self.object_token_count = getattr(cfg, "object_token_count", getattr(cfg, "enemy_token_count", 96))
         self.object_token_features = getattr(cfg, "object_token_features", getattr(cfg, "enemy_token_features", 10))
         self.single_frame_state_size = int(getattr(cfg, "single_frame_state_size", state_size))
@@ -415,23 +429,25 @@ class RainbowNet(nn.Module):
             if self.use_action_context:
                 action_embed_dim = int(getattr(cfg, "joint_action_embed_dim", 32))
                 action_hidden = int(getattr(cfg, "action_head_hidden", head_mid))
+                move_aff_dim = self.move_affordance_features if self.use_action_affordance else 0
+                fire_aff_dim = self.fire_affordance_features if self.use_action_affordance else 0
                 self.move_action_embedding = nn.Embedding(self.num_move, action_embed_dim)
                 self.fire_action_embedding = nn.Embedding(self.num_fire, action_embed_dim)
                 self.joint_action_embedding = nn.Embedding(NUM_JOINT, action_embed_dim)
                 self.move_adv_scorer = nn.Sequential(
-                    nn.Linear(head_in + self.action_context_dim + action_embed_dim, action_hidden),
+                    nn.Linear(head_in + self.action_context_dim + action_embed_dim + move_aff_dim, action_hidden),
                     nn.LayerNorm(action_hidden),
                     nn.ReLU(),
                     nn.Linear(action_hidden, self.num_atoms),
                 )
                 self.fire_adv_scorer = nn.Sequential(
-                    nn.Linear(head_in + self.action_context_dim + action_embed_dim, action_hidden),
+                    nn.Linear(head_in + self.action_context_dim + action_embed_dim + fire_aff_dim, action_hidden),
                     nn.LayerNorm(action_hidden),
                     nn.ReLU(),
                     nn.Linear(action_hidden, self.num_atoms),
                 )
                 self.joint_adv_scorer = nn.Sequential(
-                    nn.Linear(head_in + (2 * self.action_context_dim) + action_embed_dim, action_hidden),
+                    nn.Linear(head_in + (2 * self.action_context_dim) + action_embed_dim + move_aff_dim + fire_aff_dim, action_hidden),
                     nn.LayerNorm(action_hidden),
                     nn.ReLU(),
                     nn.Linear(action_hidden, self.num_atoms),
@@ -518,6 +534,29 @@ class RainbowNet(nn.Module):
         end = start + self.object_token_count * self.object_token_features
         return state[:, start:end].reshape(B, self.object_token_count, self.object_token_features)
 
+    def _action_affordances(self, state: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        state = self._current_frame(state)
+        B = state.shape[0]
+        move = torch.zeros(
+            B, self.num_move, self.move_affordance_features,
+            device=state.device, dtype=state.dtype,
+        )
+        fire = torch.zeros(
+            B, self.num_fire, self.fire_affordance_features,
+            device=state.device, dtype=state.dtype,
+        )
+        if not self.use_action_affordance:
+            return move, fire
+
+        start = self.action_affordance_offset
+        move_end = start + (8 * self.move_affordance_features)
+        fire_end = move_end + (8 * self.fire_affordance_features)
+        if fire_end > state.shape[1]:
+            return move, fire
+        move[:, :8, :] = state[:, start:move_end].reshape(B, 8, self.move_affordance_features)
+        fire[:, :8, :] = state[:, move_end:fire_end].reshape(B, 8, self.fire_affordance_features)
+        return move, fire
+
     def _trunk_features(self, state: torch.Tensor) -> torch.Tensor:
         parts = [self._raw_trunk_state(state)]
         if self.use_attn:
@@ -541,15 +580,26 @@ class RainbowNet(nn.Module):
         action_embedding: nn.Embedding,
         scorer: nn.Module,
         action_count: int,
+        action_affordance: torch.Tensor | None = None,
     ) -> torch.Tensor:
         B = h.shape[0]
         action_ids = torch.arange(action_count, device=h.device)
         emb = action_embedding(action_ids).unsqueeze(0).expand(B, -1, -1)
         h_exp = h.unsqueeze(1).expand(-1, action_count, -1)
-        x = torch.cat([h_exp, action_ctx, emb], dim=-1)
+        parts = [h_exp, action_ctx, emb]
+        if action_affordance is not None:
+            parts.append(action_affordance)
+        x = torch.cat(parts, dim=-1)
         return scorer(x).view(B, action_count, self.num_atoms)
 
-    def _score_joint_advantage(self, h: torch.Tensor, move_ctx: torch.Tensor, fire_ctx: torch.Tensor) -> torch.Tensor:
+    def _score_joint_advantage(
+        self,
+        h: torch.Tensor,
+        move_ctx: torch.Tensor,
+        fire_ctx: torch.Tensor,
+        move_affordance: torch.Tensor | None = None,
+        fire_affordance: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         B = h.shape[0]
         move_ids = self.joint_move_ids.to(device=h.device)
         fire_ids = self.joint_fire_ids.to(device=h.device)
@@ -557,7 +607,10 @@ class RainbowNet(nn.Module):
         action_ids = torch.arange(NUM_JOINT, device=h.device)
         emb = self.joint_action_embedding(action_ids).unsqueeze(0).expand(B, -1, -1)
         h_exp = h.unsqueeze(1).expand(-1, NUM_JOINT, -1)
-        x = torch.cat([h_exp, joint_ctx, emb], dim=-1)
+        parts = [h_exp, joint_ctx, emb]
+        if move_affordance is not None and fire_affordance is not None:
+            parts.append(torch.cat([move_affordance[:, move_ids], fire_affordance[:, fire_ids]], dim=-1))
+        x = torch.cat(parts, dim=-1)
         return self.joint_adv_scorer(x).view(B, NUM_JOINT, self.num_atoms)
 
     def bc_logits(self, state: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -583,10 +636,13 @@ class RainbowNet(nn.Module):
             val = self.val_out(val).view(B, 1, self.num_atoms)
             if self.use_action_context:
                 move_ctx, fire_ctx = self._action_contexts(state)
+                move_aff, fire_aff = self._action_affordances(state)
                 madv = self._score_branch_advantage(
-                    h, move_ctx, self.move_action_embedding, self.move_adv_scorer, self.num_move)
+                    h, move_ctx, self.move_action_embedding, self.move_adv_scorer, self.num_move,
+                    move_aff if self.use_action_affordance else None)
                 fadv = self._score_branch_advantage(
-                    h, fire_ctx, self.fire_action_embedding, self.fire_adv_scorer, self.num_fire)
+                    h, fire_ctx, self.fire_action_embedding, self.fire_adv_scorer, self.num_fire,
+                    fire_aff if self.use_action_affordance else None)
             else:
                 madv = F.relu(self.move_adv_fc(h))
                 madv = self.move_adv_out(madv).view(B, self.num_move, self.num_atoms)
@@ -618,7 +674,12 @@ class RainbowNet(nn.Module):
             val = self.joint_val_out(val).view(B, 1, self.num_atoms)
             if self.use_action_context:
                 move_ctx, fire_ctx = self._action_contexts(state)
-                adv = self._score_joint_advantage(h, move_ctx, fire_ctx)
+                move_aff, fire_aff = self._action_affordances(state)
+                adv = self._score_joint_advantage(
+                    h, move_ctx, fire_ctx,
+                    move_aff if self.use_action_affordance else None,
+                    fire_aff if self.use_action_affordance else None,
+                )
             else:
                 adv = F.relu(self.joint_adv_fc(h))
                 adv = self.joint_adv_out(adv).view(B, NUM_JOINT, self.num_atoms)

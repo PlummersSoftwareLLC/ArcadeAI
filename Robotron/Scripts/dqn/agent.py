@@ -33,7 +33,8 @@ except Exception:                                   # pragma: no cover - non-Win
 try:
     from .config import (RL_CONFIG, MODEL_DIR, LATEST_MODEL_PATH,
                          metrics as config_metrics, RESET_METRICS, IS_INTERACTIVE,
-                         SINGLE_FRAME_STATE_SIZE, TARGET_SUMMARY_OFFSET)
+                         SINGLE_FRAME_STATE_SIZE, TARGET_SUMMARY_OFFSET,
+                         OBJECT_TOKEN_COUNT, OBJECT_TOKEN_FEATURES, OBJECT_TOKEN_OFFSET)
     from .model import (device, _cuda_device, RainbowNet,
                         NUM_MOVE, NUM_FIRE, NUM_JOINT,
                         combine_action, split_joint_action)
@@ -42,7 +43,8 @@ try:
 except ImportError:
     from config import (RL_CONFIG, MODEL_DIR, LATEST_MODEL_PATH,
                         metrics as config_metrics, RESET_METRICS, IS_INTERACTIVE,
-                        SINGLE_FRAME_STATE_SIZE, TARGET_SUMMARY_OFFSET)
+                        SINGLE_FRAME_STATE_SIZE, TARGET_SUMMARY_OFFSET,
+                        OBJECT_TOKEN_COUNT, OBJECT_TOKEN_FEATURES, OBJECT_TOKEN_OFFSET)
     from model import (device, _cuda_device, RainbowNet,
                        NUM_MOVE, NUM_FIRE, NUM_JOINT,
                        combine_action, split_joint_action)
@@ -51,7 +53,7 @@ except ImportError:
 
 metrics = config_metrics
 
-ENGINE_VERSION = 16  # Add nearest destructible target dx/dy/dist trunk features
+ENGINE_VERSION = 17  # Add action affordances + nearest typed-object state features
 
 _CARDINAL_FIRE_SNAP_RATIO = 0.35
 _CARDINAL_FIRE_SNAP_CLOSE_DIST = 0.20
@@ -62,6 +64,15 @@ _ADJACENT_DIAGONALS_BY_CARDINAL = {
     4: (3, 5),
     6: (5, 7),
 }
+_DIR8 = np.asarray([
+    [0.0, -1.0], [1.0, -1.0], [1.0, 0.0], [1.0, 1.0],
+    [0.0, 1.0], [-1.0, 1.0], [-1.0, 0.0], [-1.0, -1.0],
+], dtype=np.float32)
+_DIR8 /= np.linalg.norm(_DIR8, axis=1, keepdims=True).clip(min=1.0)
+_BLOCKER_AVOID_DIST = 0.14
+_BLOCKER_AVOID_ALIGN = 0.45
+_BLOCKER_AVOID_Q_MARGIN = 2.0
+_BLOCKER_FORCE_DIST = 0.07
 
 
 def _close_cardinal_target_dir_from_state(state: np.ndarray) -> int | None:
@@ -114,6 +125,82 @@ def _prefer_cardinal_fire_for_close_target(
     if snap_q >= chosen_q - _CARDINAL_FIRE_SNAP_Q_MARGIN:
         return snap_move, snap_fire
     return move_idx, fire_idx
+
+
+def _nearest_close_blocker_from_state(state: np.ndarray) -> tuple[float, float, float] | None:
+    arr = np.asarray(state, dtype=np.float32).reshape(-1)
+    single_size = max(1, int(SINGLE_FRAME_STATE_SIZE))
+    base = max(0, arr.size - single_size)
+    off = base + int(OBJECT_TOKEN_OFFSET)
+    length = int(OBJECT_TOKEN_COUNT) * int(OBJECT_TOKEN_FEATURES)
+    if off + length > arr.size:
+        return None
+    try:
+        rows = arr[off:off + length].reshape(OBJECT_TOKEN_COUNT, OBJECT_TOKEN_FEATURES)
+    except Exception:
+        return None
+    present = rows[:, 0] > 0.5
+    blocker = rows[:, 13] > 0.5 if OBJECT_TOKEN_FEATURES > 13 else np.zeros_like(present)
+    cand = present & blocker
+    if not np.any(cand):
+        return None
+    dists = np.where(cand, np.clip(rows[:, 3], 0.0, 1.0), np.inf)
+    idx = int(np.argmin(dists))
+    dist = float(dists[idx])
+    if not math.isfinite(dist) or dist <= 0.0 or dist > _BLOCKER_AVOID_DIST:
+        return None
+    dx = float(rows[idx, 1])
+    dy = float(rows[idx, 2])
+    if not (math.isfinite(dx) and math.isfinite(dy)):
+        return None
+    mag = math.hypot(dx, dy)
+    if mag <= 1e-6:
+        return None
+    return dx / mag, dy / mag, dist
+
+
+def _dir8_from_unit(dx: float, dy: float, default_dir: int = 0) -> int:
+    if not (math.isfinite(dx) and math.isfinite(dy)):
+        return int(default_dir)
+    mag = math.hypot(dx, dy)
+    if mag <= 1e-6:
+        return int(default_dir)
+    v = np.asarray([dx / mag, dy / mag], dtype=np.float32)
+    return int(np.argmax(_DIR8 @ v))
+
+
+def _avoid_close_blocker_move(
+    state: np.ndarray,
+    joint_q_2d: np.ndarray,
+    move_idx: int,
+    fire_idx: int,
+) -> tuple[int, int]:
+    if not (0 <= int(move_idx) < 8):
+        return int(move_idx), int(fire_idx)
+    blocker = _nearest_close_blocker_from_state(state)
+    if blocker is None:
+        return int(move_idx), int(fire_idx)
+
+    bx, by, dist = blocker
+    toward = float(_DIR8[int(move_idx), 0] * bx + _DIR8[int(move_idx), 1] * by)
+    if toward < _BLOCKER_AVOID_ALIGN:
+        return int(move_idx), int(fire_idx)
+
+    q = np.asarray(joint_q_2d, dtype=np.float32).reshape(NUM_MOVE, NUM_FIRE)
+    current_fire = max(0, min(NUM_FIRE - 1, int(fire_idx)))
+    blocker_fire = _dir8_from_unit(bx, by, default_dir=current_fire)
+    chosen_q = float(q[int(move_idx), current_fire])
+    move_align = _DIR8[:, 0] * bx + _DIR8[:, 1] * by
+    safe_moves = np.where(move_align <= 0.05)[0]
+    if safe_moves.size == 0:
+        safe_moves = np.asarray([int(np.argmin(move_align))], dtype=np.int64)
+    safe_q = q[safe_moves, blocker_fire]
+    best_pos = int(np.argmax(safe_q))
+    best_move = int(safe_moves[best_pos])
+    best_q = float(safe_q[best_pos])
+    if dist <= _BLOCKER_FORCE_DIST or best_q >= chosen_q - _BLOCKER_AVOID_Q_MARGIN:
+        return best_move, blocker_fire
+    return int(move_idx), current_fire
 
 
 class RainbowAgent:
@@ -355,6 +442,7 @@ class RainbowAgent:
         joint_idx = int(joint_q_np.reshape(-1).argmax())
         move_idx, fire_idx = split_joint_action(joint_idx)
         move_idx, fire_idx = _prefer_cardinal_fire_for_close_target(state, joint_q_np, move_idx, fire_idx)
+        move_idx, fire_idx = _avoid_close_blocker_move(state, joint_q_np, move_idx, fire_idx)
         return int(move_idx), int(fire_idx), False
 
     def debug_q_spread(self, state: np.ndarray):
@@ -407,6 +495,9 @@ class RainbowAgent:
                 else:
                     mi, fi = split_joint_action(int(ji))
                     mi, fi = _prefer_cardinal_fire_for_close_target(
+                        batch_np[row], joint_q_np[row], mi, fi
+                    )
+                    mi, fi = _avoid_close_blocker_move(
                         batch_np[row], joint_q_np[row], mi, fi
                     )
                 actions[pos] = (int(mi), int(fi), False)

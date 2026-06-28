@@ -274,6 +274,8 @@ class _DashboardState:
                                   getattr(cfg, 'core_features', 18) + getattr(cfg, 'elist_features', 22)))
         lane_summary_features = int(getattr(cfg, 'lane_summary_features', 0))
         target_summary_features = int(getattr(cfg, 'target_summary_features', 0))
+        action_affordance_features = int(getattr(cfg, 'action_affordance_features', 0))
+        type_nearest_features = int(getattr(cfg, 'type_nearest_features', 0))
         raw_state = global_features * stack
         use_lane = bool(getattr(cfg, 'use_lane_attention', False)) and getattr(cfg, 'lane_count', 0) > 0
         trunk_in = raw_state + (cfg.attn_dim if use_lane else 0)
@@ -300,12 +302,16 @@ class _DashboardState:
         if object_count > 0 and object_features > 0:
             lane_txt = f"+{lane_summary_features}lane" if lane_summary_features > 0 else ""
             target_txt = f"+{target_summary_features}target" if target_summary_features > 0 else ""
-            state_txt += f" ({core_elist_features}g{lane_txt}{target_txt}+{object_count}x{object_features})"
+            afford_txt = f"+{action_affordance_features}aff" if action_affordance_features > 0 else ""
+            nearest_txt = f"+{type_nearest_features}near" if type_nearest_features > 0 else ""
+            state_txt += f" ({core_elist_features}g{lane_txt}{target_txt}{afford_txt}{nearest_txt}+{object_count}x{object_features})"
         attn_bits = []
         if use_object and object_count > 0 and object_features > 0:
             obj_txt = f"object-attn {object_count}x{object_features}"
             if bool(getattr(cfg, 'action_context_geometry_bias', False)):
                 obj_txt += " geom"
+            if action_affordance_features > 0:
+                obj_txt += " + action-aff"
             attn_bits.append(obj_txt)
         if use_lane:
             attn_bits.append(f"lane-attn {getattr(cfg, 'lane_count', 0)}x{getattr(cfg, 'lane_features', 0)}")

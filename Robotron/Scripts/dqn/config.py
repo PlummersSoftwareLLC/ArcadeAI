@@ -9,12 +9,13 @@
 State representation
 --------------------
 Each frame the Lua client sends ``WIRE_PARAMS_COUNT`` (2118) big-endian f32
-values. The DQN consumes a deliberately plain single-frame slice of that wire:
-the 18 core game/player scalars, the 22 raw ELIST/level-state bytes, 16
-directional lane-density scalars, 3 nearest-destructible-target scalars, and
-96 role-aware object rows distilled from the projectile, danger, human, and
-electrode tactical pools. The full lane and grid blocks remain on the wire for
-expert/debugging paths, but are not part of the DQN model input.
+values. The DQN consumes a deliberately action-shaped single-frame slice of that
+wire: the 18 core game/player scalars, the 22 raw ELIST/level-state bytes, 16
+directional lane-density scalars, 3 nearest-destructible-target scalars, 112
+per-action move/fire affordance scalars, 16 nearest typed-object scalars, and 96
+role-aware object rows distilled from the projectile, danger, human, and
+electrode tactical pools. The full grid block remains on the wire for
+expert/debugging paths, but is not part of the DQN model input.
 
 Action representation
 ---------------------
@@ -58,8 +59,9 @@ SETTINGS_PATH = os.path.join(MODEL_DIR, "game_settings.json")
 WIRE_PARAMS_COUNT = 2118
 
 # Model slice: 18 core game features + 22 ELIST/level-state features +
-# 16 lane-density features + nearest target dx/dy/dist +
-# 96 role-aware object rows × 16 features.
+# 16 lane-density features + nearest target dx/dy/dist + per-action
+# affordances + nearest typed-object summaries + 96 role-aware object rows ×
+# 16 features.
 CORE_FEATURES = 18                       # wire[0:18]
 ELIST_FEATURES = 22                      # wire[18:40]
 CORE_ELIST_FEATURES = CORE_FEATURES + ELIST_FEATURES
@@ -71,7 +73,19 @@ LANE_SUMMARY_END = LANE_SUMMARY_OFFSET + LANE_SUMMARY_FEATURES
 TARGET_SUMMARY_FEATURES = 3              # nearest destructible target dx, dy, dist
 TARGET_SUMMARY_OFFSET = LANE_SUMMARY_END
 TARGET_SUMMARY_END = TARGET_SUMMARY_OFFSET + TARGET_SUMMARY_FEATURES
-GLOBAL_FEATURES = CORE_ELIST_FEATURES + LANE_SUMMARY_FEATURES + TARGET_SUMMARY_FEATURES
+MOVE_AFFORDANCE_FEATURES = 8             # per move direction
+FIRE_AFFORDANCE_FEATURES = 6             # per fire direction
+ACTION_AFFORDANCE_FEATURES = LANE_COUNT * (MOVE_AFFORDANCE_FEATURES + FIRE_AFFORDANCE_FEATURES)
+ACTION_AFFORDANCE_OFFSET = TARGET_SUMMARY_END
+MOVE_AFFORDANCE_OFFSET = ACTION_AFFORDANCE_OFFSET
+MOVE_AFFORDANCE_END = MOVE_AFFORDANCE_OFFSET + (LANE_COUNT * MOVE_AFFORDANCE_FEATURES)
+FIRE_AFFORDANCE_OFFSET = MOVE_AFFORDANCE_END
+FIRE_AFFORDANCE_END = FIRE_AFFORDANCE_OFFSET + (LANE_COUNT * FIRE_AFFORDANCE_FEATURES)
+ACTION_AFFORDANCE_END = FIRE_AFFORDANCE_END
+TYPE_NEAREST_FEATURES = 16               # grunt/hulk/projectile/blocker/human nearest summaries
+TYPE_NEAREST_OFFSET = ACTION_AFFORDANCE_END
+TYPE_NEAREST_END = TYPE_NEAREST_OFFSET + TYPE_NEAREST_FEATURES
+GLOBAL_FEATURES = TYPE_NEAREST_END
 TACTICAL_LANE_OFFSET = CORE_ELIST_FEATURES
 TACTICAL_LANE_END = TACTICAL_LANE_OFFSET + LANE_COUNT * LANE_FEATURES   # 280
 # Lua emits lane rows in geometric angle order:
@@ -93,7 +107,7 @@ OBJECT_TOKEN_FEATURES = 16
 OBJECT_FEATURES = OBJECT_TOKEN_COUNT * OBJECT_TOKEN_FEATURES
 OBJECT_TOKEN_OFFSET = GLOBAL_FEATURES
 OBJECT_TOKEN_END = OBJECT_TOKEN_OFFSET + OBJECT_FEATURES
-SINGLE_FRAME_STATE_SIZE = OBJECT_TOKEN_END                                    # 1595
+SINGLE_FRAME_STATE_SIZE = OBJECT_TOKEN_END                                    # 1723
 _frame_stack_env = os.getenv("DQN_FRAME_STACK", os.getenv("ROBOTRON_DQN_FRAME_STACK", "1"))
 try:
     FRAME_STACK_COUNT = max(1, int(_frame_stack_env))
@@ -121,6 +135,26 @@ _ROLE_NORM = {"projectile": 0.25, "danger": 0.50, "human": 0.75, "electrode": 1.
 _TYPE_NORM_DEFAULT = {"projectile": 6.0 / 11.0, "danger": 0.0, "human": 7.0 / 11.0, "electrode": 8.0 / 11.0}
 _LANE_ENEMY_COUNT_OFFSET = 7
 _LANE_HUMAN_COUNT_OFFSET = 11
+_LANE_ENEMY_DIST_OFFSET = 0
+_LANE_ELECTRODE_DIST_OFFSET = 12
+_LANE_PROJECTILE_DIST_OFFSET = 13
+_LANE_MOVE_CLEARANCE_OFFSET = 20
+_LANE_MOVE_DANGER_OFFSET = 21
+_LANE_MOVE_PROJECTILE_OFFSET = 22
+_LANE_MOVE_BLOCKER_OFFSET = 23
+_LANE_MOVE_HUMAN_OFFSET = 24
+_LANE_MOVE_ESCAPE_OFFSET = 25
+_LANE_FIRE_TARGET_OFFSET = 26
+_LANE_FIRE_PROJECTILE_INTERCEPT_OFFSET = 27
+_LANE_FIRE_PRIORITY_OFFSET = 28
+_LANE_FIRE_TARGET_DENSITY_OFFSET = 29
+
+_ACTION_DIRS = (
+    (0.0, -1.0), (1.0, -1.0), (1.0, 0.0), (1.0, 1.0),
+    (0.0, 1.0), (-1.0, 1.0), (-1.0, 0.0), (-1.0, -1.0),
+)
+_WALL_MARGIN_NORM_X = 4096.0 / 34816.0
+_WALL_MARGIN_NORM_Y = 4096.0 / 53760.0
 
 
 def _clip01(v: float) -> float:
@@ -157,6 +191,82 @@ def _extract_lane_density_features(arr: np.ndarray) -> np.ndarray:
             out[action_idx, 0] = _clip01(lane[_LANE_ENEMY_COUNT_OFFSET])
             out[action_idx, 1] = _clip01(lane[_LANE_HUMAN_COUNT_OFFSET])
     return out.reshape(-1)
+
+
+def _positive_dist_or_absent(v: float) -> float:
+    d = _clip01(v)
+    return d if d > 1e-6 else 1.0
+
+
+def _corner_risk_for_action(player_x: float, player_y: float, action_idx: int) -> float:
+    px = _clip01(player_x)
+    py = _clip01(player_y)
+    left = ((_WALL_MARGIN_NORM_X - px) / max(1e-6, _WALL_MARGIN_NORM_X)) if px < _WALL_MARGIN_NORM_X else 0.0
+    right = ((px - (1.0 - _WALL_MARGIN_NORM_X)) / max(1e-6, _WALL_MARGIN_NORM_X)) if px > (1.0 - _WALL_MARGIN_NORM_X) else 0.0
+    top = ((_WALL_MARGIN_NORM_Y - py) / max(1e-6, _WALL_MARGIN_NORM_Y)) if py < _WALL_MARGIN_NORM_Y else 0.0
+    bottom = ((py - (1.0 - _WALL_MARGIN_NORM_Y)) / max(1e-6, _WALL_MARGIN_NORM_Y)) if py > (1.0 - _WALL_MARGIN_NORM_Y) else 0.0
+    x_depth = max(0.0, left, right)
+    y_depth = max(0.0, top, bottom)
+    if not (0 <= action_idx < len(_ACTION_DIRS)):
+        return _clip01(x_depth * y_depth)
+    dx, dy = _ACTION_DIRS[action_idx]
+    push_x = max(0.0, (-dx * left) + (dx * right))
+    push_y = max(0.0, (-dy * top) + (dy * bottom))
+    return _clip01((x_depth * y_depth) + (0.50 * push_x * y_depth) + (0.50 * push_y * x_depth) + (0.25 * push_x * push_y))
+
+
+def _extract_action_affordance_features(arr: np.ndarray) -> np.ndarray:
+    """Return action-order move/fire affordances from the 8×30 Lua lane block.
+
+    Move row layout:
+    ``[wall_clearance, enemy_pressure, projectile_pressure, blocker_pressure,
+    human_pull, escape_score, corner_risk, nearest_hazard_dist]``.
+
+    Fire row layout:
+    ``[target_score, nearest_target_dist, projectile_intercept,
+    priority_target_score, target_density, human_risk]``.
+    """
+    move = np.zeros((LANE_COUNT, MOVE_AFFORDANCE_FEATURES), dtype=np.float32)
+    fire = np.zeros((LANE_COUNT, FIRE_AFFORDANCE_FEATURES), dtype=np.float32)
+    start = TACTICAL_LANE_OFFSET
+    end = TACTICAL_LANE_END
+    if len(arr) < end:
+        return np.concatenate([move.reshape(-1), fire.reshape(-1)]).astype(np.float32, copy=False)
+    lanes = arr[start:end].reshape(LANE_COUNT, LANE_FEATURES)
+    player_x = float(arr[5]) if len(arr) > 5 else 0.5
+    player_y = float(arr[6]) if len(arr) > 6 else 0.5
+
+    for action_idx, wire_lane_idx in enumerate(ACTION_LANE_WIRE_INDICES):
+        if not (0 <= wire_lane_idx < LANE_COUNT):
+            continue
+        lane = lanes[wire_lane_idx]
+        enemy_dist = _positive_dist_or_absent(lane[_LANE_ENEMY_DIST_OFFSET])
+        projectile_dist = _positive_dist_or_absent(lane[_LANE_PROJECTILE_DIST_OFFSET])
+        electrode_dist = _positive_dist_or_absent(lane[_LANE_ELECTRODE_DIST_OFFSET])
+        nearest_hazard = min(enemy_dist, projectile_dist, electrode_dist)
+        nearest_target = min(enemy_dist, projectile_dist, electrode_dist)
+
+        move[action_idx] = np.asarray([
+            _clip01(lane[_LANE_MOVE_CLEARANCE_OFFSET]),
+            _clip01(lane[_LANE_MOVE_DANGER_OFFSET]),
+            _clip01(lane[_LANE_MOVE_PROJECTILE_OFFSET]),
+            _clip01(lane[_LANE_MOVE_BLOCKER_OFFSET]),
+            _clip01(lane[_LANE_MOVE_HUMAN_OFFSET]),
+            _clip01(lane[_LANE_MOVE_ESCAPE_OFFSET]),
+            _corner_risk_for_action(player_x, player_y, action_idx),
+            _clip01(nearest_hazard),
+        ], dtype=np.float32)
+
+        fire[action_idx] = np.asarray([
+            _clip01(lane[_LANE_FIRE_TARGET_OFFSET]),
+            _clip01(nearest_target),
+            _clip01(lane[_LANE_FIRE_PROJECTILE_INTERCEPT_OFFSET]),
+            _clip01(lane[_LANE_FIRE_PRIORITY_OFFSET]),
+            _clip01(lane[_LANE_FIRE_TARGET_DENSITY_OFFSET]),
+            max(_clip01(lane[_LANE_HUMAN_COUNT_OFFSET]), _clip01(lane[_LANE_MOVE_HUMAN_OFFSET])),
+        ], dtype=np.float32)
+
+    return np.concatenate([move.reshape(-1), fire.reshape(-1)]).astype(np.float32, copy=False)
 
 
 def _extract_object_tokens(arr: np.ndarray) -> np.ndarray:
@@ -244,6 +354,59 @@ def _extract_object_tokens(arr: np.ndarray) -> np.ndarray:
     return out.reshape(-1)
 
 
+def _nearest_row_features(rows: np.ndarray, mask: np.ndarray, include_ttc: bool = False) -> np.ndarray:
+    out_len = 4 if include_ttc else 3
+    out = np.zeros(out_len, dtype=np.float32)
+    out[2] = 1.0
+    if include_ttc:
+        out[3] = 1.0
+    if rows.size <= 0 or not np.any(mask):
+        return out
+    dist = np.where(mask, np.clip(rows[:, 3], 0.0, 1.0), np.inf)
+    idx = int(np.argmin(dist))
+    if not np.isfinite(dist[idx]):
+        return out
+    out[0] = _clip11(rows[idx, 1])
+    out[1] = _clip11(rows[idx, 2])
+    out[2] = _clip01(rows[idx, 3])
+    if include_ttc:
+        out[3] = _clip01(rows[idx, 8] if rows.shape[1] > 8 else 1.0)
+    return out
+
+
+def _extract_type_nearest_features(objects: np.ndarray) -> np.ndarray:
+    """Return nearest typed-object summaries.
+
+    Layout:
+    ``grunt dx/dy/dist, hulk dx/dy/dist, projectile dx/dy/dist/ttc,
+    blocker dx/dy/dist, human dx/dy/dist``.
+    """
+    try:
+        rows = np.asarray(objects, dtype=np.float32).reshape(OBJECT_TOKEN_COUNT, OBJECT_TOKEN_FEATURES)
+    except Exception:
+        return np.asarray([0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
+                           0.0, 0.0, 1.0, 0.0, 0.0, 1.0], dtype=np.float32)
+
+    present = rows[:, 0] > 0.5
+    role = rows[:, 11] if OBJECT_TOKEN_FEATURES > 11 else np.zeros(rows.shape[0], dtype=np.float32)
+    type_norm = rows[:, 10] if OBJECT_TOKEN_FEATURES > 10 else np.zeros(rows.shape[0], dtype=np.float32)
+    projectile = rows[:, 15] > 0.5 if OBJECT_TOKEN_FEATURES > 15 else np.zeros(rows.shape[0], dtype=bool)
+    blocker = rows[:, 13] > 0.5 if OBJECT_TOKEN_FEATURES > 13 else np.zeros(rows.shape[0], dtype=bool)
+    rescue = rows[:, 14] > 0.5 if OBJECT_TOKEN_FEATURES > 14 else np.zeros(rows.shape[0], dtype=bool)
+    danger_role = np.abs(role - _ROLE_NORM["danger"]) < 0.08
+
+    grunt = present & danger_role & (type_norm < 0.04)
+    hulk = present & danger_role & (np.abs(type_norm - (1.0 / 11.0)) < 0.05)
+    pieces = [
+        _nearest_row_features(rows, grunt),
+        _nearest_row_features(rows, hulk),
+        _nearest_row_features(rows, present & projectile, include_ttc=True),
+        _nearest_row_features(rows, present & blocker),
+        _nearest_row_features(rows, present & rescue),
+    ]
+    return np.concatenate(pieces).astype(np.float32, copy=False)
+
+
 def _extract_nearest_destructible_target_features(objects: np.ndarray) -> np.ndarray:
     """Return ``[dx, dy, dist]`` for the nearest targetable object."""
     try:
@@ -270,14 +433,24 @@ def slice_model_state(wire) -> np.ndarray:
 
     ``wire`` may be any sequence of length >= TACTICAL_POOL_OFFSET.  Returns a
     contiguous float32 array of length ``SINGLE_FRAME_STATE_SIZE`` laid out as
-    ``[core(18), elist(22), lane_density(8×2), target(3), objects(96×16)]``.
+    ``[core(18), elist(22), lane_density(8×2), target(3),
+    action_affordances(8×14), type_nearest(16), objects(96×16)]``.
     """
     arr = np.asarray(wire, dtype=np.float32)
     core_elist = arr[0:CORE_ELIST_FEATURES]
     lane_density = _extract_lane_density_features(arr)
+    action_affordances = _extract_action_affordance_features(arr)
     objects = _extract_object_tokens(arr)
     target = _extract_nearest_destructible_target_features(objects)
-    return np.concatenate([core_elist, lane_density, target, objects]).astype(np.float32, copy=False)
+    type_nearest = _extract_type_nearest_features(objects)
+    return np.concatenate([
+        core_elist,
+        lane_density,
+        target,
+        action_affordances,
+        type_nearest,
+        objects,
+    ]).astype(np.float32, copy=False)
 
 
 # ---------------------------------------------------------------------------
@@ -312,7 +485,15 @@ class RLConfigData:
     core_elist_features: int = CORE_ELIST_FEATURES
     lane_summary_features: int = LANE_SUMMARY_FEATURES
     target_summary_features: int = TARGET_SUMMARY_FEATURES
+    move_affordance_features: int = MOVE_AFFORDANCE_FEATURES
+    fire_affordance_features: int = FIRE_AFFORDANCE_FEATURES
+    action_affordance_features: int = ACTION_AFFORDANCE_FEATURES
+    type_nearest_features: int = TYPE_NEAREST_FEATURES
     global_features: int = GLOBAL_FEATURES
+    action_affordance_offset: int = ACTION_AFFORDANCE_OFFSET
+    move_affordance_offset: int = MOVE_AFFORDANCE_OFFSET
+    fire_affordance_offset: int = FIRE_AFFORDANCE_OFFSET
+    type_nearest_offset: int = TYPE_NEAREST_OFFSET
     lane_count: int = 0
     lane_features: int = 0
     extra_features: int = 0

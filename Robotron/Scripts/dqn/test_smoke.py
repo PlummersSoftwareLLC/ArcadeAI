@@ -29,6 +29,7 @@ from dqn import config as C
 from dqn import model as M
 from dqn.agent import (
     RainbowAgent,
+    _avoid_close_blocker_move,
     _close_cardinal_target_dir_from_state,
     _prefer_cardinal_fire_for_close_target,
 )
@@ -119,15 +120,51 @@ def test_slice():
     print("\n[state slice]")
     w = np.zeros(C.WIRE_PARAMS_COUNT, dtype=np.float32)
     w[:C.CORE_ELIST_FEATURES] = np.arange(C.CORE_ELIST_FEATURES, dtype=np.float32)
+    w[5] = 0.5
+    w[6] = 0.5
     expected_lane = []
+    expected_move = []
+    expected_fire = []
     for action_idx, wire_lane_idx in enumerate(C.ACTION_LANE_WIRE_INDICES):
         enemy_density = 0.10 + 0.01 * action_idx
         human_density = 0.20 + 0.01 * action_idx
         base = C.TACTICAL_LANE_OFFSET + wire_lane_idx * C.LANE_FEATURES
+        w[base + 0] = 0.30 + 0.01 * action_idx
         w[base + 7] = enemy_density
         w[base + 11] = human_density
+        w[base + 12] = 0.40 + 0.01 * action_idx
+        w[base + 13] = 0.20 + 0.01 * action_idx
+        w[base + 20] = 0.50 + 0.01 * action_idx
+        w[base + 21] = 0.15 + 0.01 * action_idx
+        w[base + 22] = 0.25 + 0.01 * action_idx
+        w[base + 23] = 0.35 + 0.01 * action_idx
+        w[base + 24] = 0.05 + 0.01 * action_idx
+        w[base + 25] = 0.65 + 0.01 * action_idx
+        w[base + 26] = 0.45 + 0.01 * action_idx
+        w[base + 27] = 0.55 + 0.01 * action_idx
+        w[base + 28] = 0.75 + 0.01 * action_idx
+        w[base + 29] = 0.85 + 0.01 * action_idx
         expected_lane.extend([enemy_density, human_density])
-    add_pool_slot(w, "danger", 3, [1.0, 0.25, -0.50, 0.20, 0.05, -0.10, 0.80, 0.40, 0.30, 0.50])
+        expected_move.extend([
+            0.50 + 0.01 * action_idx,
+            0.15 + 0.01 * action_idx,
+            0.25 + 0.01 * action_idx,
+            0.35 + 0.01 * action_idx,
+            0.05 + 0.01 * action_idx,
+            0.65 + 0.01 * action_idx,
+            0.0,
+            0.20 + 0.01 * action_idx,
+        ])
+        expected_fire.extend([
+            0.45 + 0.01 * action_idx,
+            0.20 + 0.01 * action_idx,
+            0.55 + 0.01 * action_idx,
+            0.75 + 0.01 * action_idx,
+            0.85 + 0.01 * action_idx,
+            human_density,
+        ])
+    add_pool_slot(w, "danger", 3, [1.0, 0.25, -0.50, 0.20, 0.05, -0.10, 0.80, 0.40, 0.30, 0.0])
+    add_pool_slot(w, "danger", 4, [1.0, -0.20, 0.00, 0.09, 0.00, 0.00, 0.95, 0.20, 0.40, 1.0 / 8.0])
     add_pool_slot(w, "projectile", 0, [1.0, -0.1, 0.1, 0.08, 0.0, 0.0, 0.9, 0.2, 0.1, 0.5, 0.0])
     add_pool_slot(w, "human", 0, [1.0, 0.75, 0.75, 0.10, 0.0, 0.0, 0.0])
     add_pool_slot(w, "electrode", 0, [1.0, -0.75, -0.75, 0.10, 0.6])
@@ -160,17 +197,38 @@ def test_slice():
     check("nearest destructible target summary",
           np.allclose(target_summary, np.asarray([-0.1, 0.1, 0.08], dtype=np.float32), atol=1e-6),
           f"target_summary={target_summary}")
+    move_aff = ms[C.MOVE_AFFORDANCE_OFFSET:C.MOVE_AFFORDANCE_END]
+    fire_aff = ms[C.FIRE_AFFORDANCE_OFFSET:C.FIRE_AFFORDANCE_END]
+    check("move affordance summary is action-ordered",
+          np.allclose(move_aff, np.asarray(expected_move, dtype=np.float32), atol=1e-6),
+          f"move_aff={move_aff}")
+    check("fire affordance summary is action-ordered",
+          np.allclose(fire_aff, np.asarray(expected_fire, dtype=np.float32), atol=1e-6),
+          f"fire_aff={fire_aff}")
+    typed = ms[C.TYPE_NEAREST_OFFSET:C.TYPE_NEAREST_END]
+    expected_typed = np.asarray([
+        0.25, -0.50, 0.20,
+        -0.20, 0.00, 0.09,
+        -0.10, 0.10, 0.08, 0.20,
+        -0.20, 0.00, 0.09,
+        0.75, 0.75, 0.10,
+    ], dtype=np.float32)
+    check("nearest typed summaries",
+          np.allclose(typed, expected_typed, atol=1e-6),
+          f"typed={typed}")
     empty_ms = C.slice_model_state(np.zeros(C.WIRE_PARAMS_COUNT, dtype=np.float32))
     check("empty nearest target defaults absent",
           np.allclose(empty_ms[C.TARGET_SUMMARY_OFFSET:C.TARGET_SUMMARY_END],
                       np.asarray([0.0, 0.0, 1.0], dtype=np.float32)),
           f"target_summary={empty_ms[C.TARGET_SUMMARY_OFFSET:C.TARGET_SUMMARY_END]}")
     check("object block starts after globals", C.OBJECT_TOKEN_OFFSET == C.GLOBAL_FEATURES)
-    check("object block follows target summary", C.OBJECT_TOKEN_OFFSET == C.TARGET_SUMMARY_END)
+    check("action affordances follow target summary", C.ACTION_AFFORDANCE_OFFSET == C.TARGET_SUMMARY_END)
+    check("type nearest follows action affordances", C.TYPE_NEAREST_OFFSET == C.ACTION_AFFORDANCE_END)
+    check("object block follows type nearest", C.OBJECT_TOKEN_OFFSET == C.TYPE_NEAREST_END)
     check("object block size", ms.shape[0] - C.OBJECT_TOKEN_OFFSET == C.OBJECT_FEATURES)
     objects = ms[C.OBJECT_TOKEN_OFFSET:C.OBJECT_TOKEN_END].reshape(C.OBJECT_TOKEN_COUNT, C.OBJECT_TOKEN_FEATURES)
     active = objects[objects[:, 0] > 0.5]
-    check("all tactical pools become object rows", active.shape[0] == 4, f"active={active.shape[0]}")
+    check("all tactical pools become object rows", active.shape[0] == 5, f"active={active.shape[0]}")
     roles = set(np.round(active[:, 11], 2).tolist())
     check("projectile/danger/human/electrode roles present",
           {0.25, 0.50, 0.75, 1.00}.issubset(roles), f"roles={roles}")
@@ -748,7 +806,7 @@ def test_model_shapes(agent):
     raw = agent.online_net._raw_trunk_state(st)
     objects = agent.online_net._object_tokens(st)
     expected_raw = C.RL_CONFIG.global_features * C.RL_CONFIG.frame_stack
-    check("raw trunk keeps stacked globals/lane/target summary only", tuple(raw.shape) == (4, expected_raw),
+    check("raw trunk keeps stacked global/action summaries only", tuple(raw.shape) == (4, expected_raw),
           f"shape={tuple(raw.shape)} expected={(4, expected_raw)}")
     check("object tokens shape (4,96,16)",
           tuple(objects.shape) == (4, C.OBJECT_TOKEN_COUNT, C.OBJECT_TOKEN_FEATURES),
@@ -757,6 +815,13 @@ def test_model_shapes(agent):
     first_linear = next(m for m in agent.online_net.trunk if isinstance(m, torch.nn.Linear))
     check("trunk input excludes flattened object block", first_linear.in_features == expected_trunk_in,
           f"in={first_linear.in_features} expected={expected_trunk_in}")
+    move_aff, fire_aff = agent.online_net._action_affordances(st)
+    check("move affordance tensor shape (4,9,F)",
+          tuple(move_aff.shape) == (4, M.NUM_MOVE, C.RL_CONFIG.move_affordance_features),
+          f"shape={tuple(move_aff.shape)}")
+    check("fire affordance tensor shape (4,9,F)",
+          tuple(fire_aff.shape) == (4, M.NUM_FIRE, C.RL_CONFIG.fire_affordance_features),
+          f"shape={tuple(fire_aff.shape)}")
 
 
 def test_dashboard_model_summary(agent):
@@ -769,10 +834,13 @@ def test_dashboard_model_summary(agent):
     check("summary includes full state size", expected_state in desc, desc)
     check("summary includes lane density size", f"{C.RL_CONFIG.lane_summary_features}lane" in desc, desc)
     check("summary includes nearest-target size", f"{C.RL_CONFIG.target_summary_features}target" in desc, desc)
+    check("summary includes action-affordance size", f"{C.RL_CONFIG.action_affordance_features}aff" in desc, desc)
+    check("summary includes nearest-type size", f"{C.RL_CONFIG.type_nearest_features}near" in desc, desc)
     check("summary includes post-attention trunk shape", expected_trunk in desc, desc)
     check("summary includes object-token shape", expected_objects in desc, desc)
     check("summary marks geometry bias", "geom" in desc, desc)
-    check("summary includes parameter count", "params" in desc and "1.2M" in desc, desc)
+    check("summary marks action affordances", "action-aff" in desc, desc)
+    check("summary includes parameter count", "params" in desc, desc)
 
 
 def expected_trunk_in(agent) -> str:
@@ -814,6 +882,18 @@ def test_act(agent):
     diag_state = stack_state(snap_single)
     check("true diagonal target does not cardinal-snap",
           _prefer_cardinal_fire_for_close_target(diag_state, q, 0, 5) == (0, 5))
+
+    blocker_single = np.zeros(C.SINGLE_FRAME_STATE_SIZE, dtype=np.float32)
+    row = C.OBJECT_TOKEN_OFFSET
+    blocker_single[row:row + C.OBJECT_TOKEN_FEATURES] = np.asarray([
+        1.0, -0.08, 0.0, 0.08, 0.0, 0.0, 1.0, 0.0,
+        1.0, 0.08, 1.0 / 11.0, 0.50, 0.0, 1.0, 0.0, 0.0,
+    ], dtype=np.float32)
+    q2 = np.zeros((M.NUM_MOVE, M.NUM_FIRE), dtype=np.float32)
+    q2[6, 8] = 10.0  # W moves straight into the blocker.
+    q2[2, 6] = 8.5   # E is safely away; W fire shoots the blocker.
+    check("close blocker move guard avoids W and shoots blocker",
+          _avoid_close_blocker_move(stack_state(blocker_single), q2, 6, 8) == (2, 6))
 
 
 def test_train_step(agent):
