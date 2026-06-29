@@ -406,13 +406,14 @@ local discovered_tank_ocvect = nil     -- TNKIL address once discovered via grow
 local unresolved_7x16 = {}             -- {[ocvect] = true} for ambiguous 7×16 on RPTR
 local DEBUG_LOG_DISCOVERY = false      -- set true to log OCVECT classification discoveries
 
--- Debug HUD overlay state (draws entity letters on screen each frame).
+-- Debug HUD overlay state (draws entity hitboxes on the local MAME screen).
 mame_screen = nil                -- MAME screen device for draw_text
 hud_objects = nil                -- last frame's classified object list (reference)
 hud_player_x16 = nil
 hud_player_y16 = nil
 hud_player_box = nil
-DEBUG_HUD_ENABLED = true         -- default ON; toggle with H hotkey
+DEBUG_HUD_ENABLED = env_flag("ROBOTRON_LOCAL_HUD", false) -- local MAME HUD; toggle with H
+PREVIEW_HUD_ENABLED = false      -- server-controlled preview overlay request
 hud_key_code = nil               -- MAME input code for 'H' key (lazy-init)
 hud_key_was_down = false         -- edge-detect so hold doesn't strobe
 PREVIEW_FORMAT_RGB565 = 1
@@ -441,6 +442,11 @@ preview_source_h = 0
 preview_target_w = 0
 preview_target_h = 0
 picture_bounds_cache = {}
+
+function hud_draw_requested()
+    return DEBUG_HUD_ENABLED or (preview_stream_enabled and PREVIEW_HUD_ENABLED)
+end
+
 START_ADVANCED = false
 START_LEVEL_MIN = 1
 ACTION_RX_BUFFER = ""
@@ -1709,7 +1715,7 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
     local player_center_y16 = collision_center_y16(player_y16, player_hit_off_y, player_hit_h)
 
     local all_objects = {}
-    local hud_enabled = DEBUG_HUD_ENABLED
+    local hud_enabled = hud_draw_requested()
     for _, list_def in ipairs(ACTIVE_LISTS) do
         local ptr = read_u16_be(memory, list_def.addr)
         local seen = {}
@@ -2075,14 +2081,14 @@ function draw_debug_hud()
             if ok_pressed then
                 if down and not hud_key_was_down then
                     DEBUG_HUD_ENABLED = not DEBUG_HUD_ENABLED
-                    print("[HUD] toggled " .. (DEBUG_HUD_ENABLED and "ON" or "OFF"))
+                    print("[HUD] local HUD toggled " .. (DEBUG_HUD_ENABLED and "ON" or "OFF"))
                 end
                 hud_key_was_down = down
             end
         end
     end
 
-    if not DEBUG_HUD_ENABLED then return end
+    if not hud_draw_requested() then return end
 
     -- Lazy-init: grab the screen device on first use.
     if not mame_screen then
@@ -2393,16 +2399,8 @@ local function capture_game_preview()
 end
 
 local function frame_done_callback()
-    -- Only draw HUD / capture screen when this client is the active preview
-    -- source.  The server toggles preview_stream_enabled per-frame via bit 0x40
-    -- in the action source byte, so non-active clients skip the expensive
-    -- snapshot_pixels() call and all HUD draw_line/draw_text work entirely.
-    if not preview_stream_enabled then
-        clear_pending_preview()
-        return
-    end
     draw_debug_hud()
-    if PREVIEW_CAPTURE_ENABLED then
+    if PREVIEW_CAPTURE_ENABLED and preview_stream_enabled then
         capture_game_preview()
     else
         clear_pending_preview()
@@ -2615,6 +2613,7 @@ local function close_socket()
     end
     ACTION_RX_BUFFER = ""
     preview_stream_enabled = false
+    PREVIEW_HUD_ENABLED = false
 end
 
 local function open_socket()
@@ -3131,8 +3130,8 @@ local function process_frame_via_socket(frame_payload, frame_idx)
     -- Source byte bits:
     --   low nibble = action source
     --   0x40 = preview enabled
-    --   0x80 = HUD enabled
-    DEBUG_HUD_ENABLED = (source_u8 & 0x80) ~= 0
+    --   0x80 = preview HUD overlay enabled
+    PREVIEW_HUD_ENABLED = (source_u8 & 0x80) ~= 0
     last_action_source = source_u8 & 0x0F
     return move_dir or -1, fire_dir or -1, true
 end
@@ -3519,19 +3518,23 @@ previous_wave_number = math.max(0, math.floor(read_wave_number(mem) or 0))
 
 global_callback_ref = register_frame_callback(frame_callback)
 
--- All preview-capable instances register the frame_done callback.  The server
--- decides per-frame which client should actually capture/stream preview data by
--- toggling the preview flag in the action source byte.
+-- All instances register the frame-done callback so the local H hotkey can draw
+-- a HUD independent of preview streaming.  The server still decides per-frame
+-- which client should capture/stream preview data via the action source byte.
 if PREVIEW_CLIENT_FLAG == 1 then
     print(string.format(
         "[HUD] Preview capture configured: %dfps max=%dx%d rle=%s",
         PREVIEW_FPS, PREVIEW_MAX_WIDTH, PREVIEW_MAX_HEIGHT, tostring(PREVIEW_TRY_RLE)
     ))
-    if register_frame_done_callback(frame_done_callback) ~= nil or emu.register_frame_done ~= nil then
-        print("[HUD] Registered frame_done callback for debug overlay + preview capture")
+end
+if register_frame_done_callback(frame_done_callback) ~= nil or emu.register_frame_done ~= nil then
+    if PREVIEW_CLIENT_FLAG == 1 then
+        print("[HUD] Registered frame_done callback for local HUD + preview capture")
     else
-        print("[HUD] Frame-done callback unavailable in this MAME build; preview capture disabled")
+        print("[HUD] Registered frame_done callback for local HUD")
     end
+else
+    print("[HUD] Frame-done callback unavailable in this MAME build; local HUD/preview overlay disabled")
 end
 
 register_stop_callback(on_mame_exit)

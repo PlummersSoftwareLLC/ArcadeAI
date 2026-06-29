@@ -63,6 +63,7 @@ default wave.
 
 Lua debug controls in `Robotron/Scripts/main.lua`:
 
+- Press `H` in a MAME window to toggle the local hitbox HUD. Set `ROBOTRON_LOCAL_HUD=1` to start it enabled.
 - `DEBUG_STARTUP_TRACE` (default `false`)
 - `DEBUG_TRACE_FRAMES` (default `10`)
 - `DEBUG_BYPASS_SOCKET_FOR_FRAMES` (default `0`)
