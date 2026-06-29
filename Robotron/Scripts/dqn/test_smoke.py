@@ -115,10 +115,11 @@ def test_slice():
     print("\n[state slice]")
     w = np.zeros(C.WIRE_PARAMS_COUNT, dtype=np.float32)
     w[:C.GLOBAL_FEATURES] = np.arange(C.GLOBAL_FEATURES, dtype=np.float32)
-    add_pool_slot(w, "danger", 3, [1.0, 0.25, -0.50, 0.20, 0.05, -0.10, 0.80, 0.40, 0.30, 0.50])
-    add_pool_slot(w, "projectile", 0, [1.0, -0.1, 0.1, 0.08, 0.0, 0.0, 0.9, 0.2, 0.1, 0.5, 0.0])
-    add_pool_slot(w, "human", 0, [1.0, 0.75, 0.75, 0.10, 0.0, 0.0, 0.0])
-    add_pool_slot(w, "electrode", 0, [1.0, -0.75, -0.75, 0.10, 0.6])
+    add_pool_slot(w, "destructible", 3, [1.0, 0.25, -0.50, 0.20, 0.05, -0.10, 0.80, 0.40, 0.30, 0.25])
+    add_pool_slot(w, "destructible", 0, [1.0, -0.10, 0.10, 0.08, 0.0, 0.0, 0.90, 0.50, 0.20, 0.75])
+    add_pool_slot(w, "hulk", 0, [1.0, 0.50, 0.0, 0.12, 0.0, 0.0, 0.7, 0.0, 1.0, 0.125])
+    add_pool_slot(w, "obstacle", 0, [1.0, -0.75, -0.75, 0.10, 0.0, 0.0, 0.6, 0.0, 1.0, 1.0])
+    add_pool_slot(w, "human", 0, [1.0, 0.75, 0.75, 0.10, 0.0, 0.0, 0.0, 0.0, 1.0, 0.875])
     ms = C.slice_model_state(w)
     check("slice length == SINGLE_FRAME_STATE_SIZE", ms.shape[0] == C.SINGLE_FRAME_STATE_SIZE)
     check("MODEL_STATE_SIZE includes frame stack",
@@ -143,11 +144,18 @@ def test_slice():
     check("enemy block starts after globals", C.ENEMY_TOKEN_OFFSET == C.GLOBAL_FEATURES)
     check("enemy block size", ms.shape[0] - C.ENEMY_TOKEN_OFFSET == C.ENEMY_FEATURES)
     enemies = ms[C.ENEMY_TOKEN_OFFSET:C.ENEMY_TOKEN_END].reshape(C.ENEMY_TOKEN_COUNT, C.ENEMY_TOKEN_FEATURES)
-    expected = np.asarray([1.0, 0.25, -0.50, 0.20, 0.05, -0.10, 0.80, 0.40, 0.30, 0.50], dtype=np.float32)
-    check("danger slot 3 maps to enemy row 3", np.allclose(enemies[3], expected), f"row3={enemies[3]}")
-    check("danger slot identity is stable", enemies[0, 0] == 0.0 and enemies[2, 0] == 0.0 and enemies[4, 0] == 0.0)
-    check("projectile/human/electrode pools excluded from model state",
-          int(np.count_nonzero(enemies[:, 0] > 0.5)) == 1)
+    near = np.asarray([1.0, -0.10, 0.10, 0.08, 0.0, 0.0, 0.90, 0.50, 0.20, 0.75], dtype=np.float32)
+    far = np.asarray([1.0, 0.25, -0.50, 0.20, 0.05, -0.10, 0.80, 0.40, 0.30, 0.25], dtype=np.float32)
+    check("destructible rows distance-sort nearest first", np.allclose(enemies[0], near), f"row0={enemies[0]}")
+    check("destructible group keeps farther row second", np.allclose(enemies[1], far), f"row1={enemies[1]}")
+    hulk_start = C.TOKEN_GROUP_RANGES["hulk"][0]
+    obstacle_start = C.TOKEN_GROUP_RANGES["obstacle"][0]
+    human_start = C.TOKEN_GROUP_RANGES["human"][0]
+    check("hulk group starts after destructibles", enemies[hulk_start, 9] == 0.125, f"row={enemies[hulk_start]}")
+    check("obstacle group included in model state", enemies[obstacle_start, 9] == 1.0, f"row={enemies[obstacle_start]}")
+    check("human group included in model state", enemies[human_start, 9] == 0.875, f"row={enemies[human_start]}")
+    check("all four groups contribute active rows",
+          int(np.count_nonzero(enemies[:, 0] > 0.5)) == 5)
 
 
 def test_nstep_actor_boundaries():
@@ -263,6 +271,43 @@ def test_reward_and_hard_starts():
         C.game_settings.start_advanced = old_start_adv
         C.game_settings.auto_curriculum = old_auto
         C.game_settings.start_level_min = old_level
+
+
+def test_score_level_1m_metrics():
+    print("\n[score/level 1M metrics]")
+    m = C.MetricsData()
+    m.score_1m_window = 3
+    m.level_1m_window = 3
+
+    m.note_game_score(10, 1)
+    m.note_game_score(20, 2)
+    m.note_game_score(30, 3)
+    check("Scr1M averages initial window", np.isclose(m.score_1m_average, 20.0),
+          f"avg={m.score_1m_average}")
+    check("Lvl1M averages initial window", np.isclose(m.level_1m_average, 2.0),
+          f"avg={m.level_1m_average}")
+
+    m.note_game_score(40, 4)
+    check("Scr1M evicts oldest sample", np.isclose(m.score_1m_average, 30.0),
+          f"avg={m.score_1m_average}")
+    check("Lvl1M evicts oldest sample", np.isclose(m.level_1m_average, 3.0),
+          f"avg={m.level_1m_average}")
+
+    m.note_game_state_averages(99.0, 888.0)
+    check("live average score remains separate", np.isclose(m.average_game_score, 888.0),
+          f"live={m.average_game_score}")
+    check("live average level remains separate", np.isclose(m.average_level, 99.0),
+          f"live={m.average_level}")
+    check("live averages do not overwrite Scr1M", np.isclose(m.score_1m_average, 30.0),
+          f"avg={m.score_1m_average}")
+    check("live averages do not overwrite Lvl1M", np.isclose(m.level_1m_average, 3.0),
+          f"avg={m.level_1m_average}")
+
+    m.note_game_score(50)
+    check("score-only update leaves Lvl1M unchanged", np.isclose(m.level_1m_average, 3.0),
+          f"avg={m.level_1m_average}")
+    check("score-only update still updates Scr1M", np.isclose(m.score_1m_average, 40.0),
+          f"avg={m.score_1m_average}")
 
 
 def test_transition_interest_policy():
@@ -509,6 +554,43 @@ def test_dqn_window_math():
         MD._dqn5m_dqn_frames = d5mf; MD._dqn5m_total_frames = d5mtf
 
 
+def test_dashboard_gpu_parser():
+    print("\n[dashboard GPU parser]")
+    from dqn.metrics_dashboard import _DashboardState, _parse_nvidia_smi_gpu_csv
+    sample = (
+        "0, NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition, 71, 44, 4570, 97887, 81, 271.15, 300.00, 2175, 52\n"
+        "1, NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition, 9, 0, 891, 97887, 57, 84.91, 300.00, 2317, 30\n"
+    )
+    rows = _parse_nvidia_smi_gpu_csv(sample)
+    check("GPU parser returns two devices", len(rows) == 2, f"rows={rows}")
+    check("GPU parser keeps device index", rows and rows[0]["index"] == 0 and rows[1]["index"] == 1, f"rows={rows}")
+    check("GPU parser reads utilization", rows and rows[0]["gpu_util_pct"] == 71.0 and rows[1]["gpu_util_pct"] == 9.0, f"rows={rows}")
+    flat = _DashboardState._flatten_gpus(rows)
+    check("GPU flatten exposes gpu0 util", flat.get("gpu0_util") == 71.0, f"flat={flat}")
+    check("GPU flatten exposes gpu1 memory", flat.get("gpu1_mem_used_mib") == 891.0, f"flat={flat}")
+
+
+def test_dashboard_system_parser():
+    print("\n[dashboard system parser]")
+    from dqn.metrics_dashboard import _cpu_util_from_times, _parse_proc_meminfo, _parse_proc_stat_cpu_times
+    stat0 = "cpu  100 0 50 850 0 0 0 0 0 0\n"
+    stat1 = "cpu  150 0 70 880 0 0 0 0 0 0\n"
+    t0 = _parse_proc_stat_cpu_times(stat0)
+    t1 = _parse_proc_stat_cpu_times(stat1)
+    check("CPU parser reads idle/total", t0 == (850.0, 1000.0) and t1 == (880.0, 1100.0), f"t0={t0} t1={t1}")
+    util = _cpu_util_from_times(t0, t1)
+    check("CPU delta utilization", np.isclose(util, 70.0), f"util={util}")
+    mem = _parse_proc_meminfo(
+        "MemTotal:       1048576 kB\n"
+        "MemFree:         131072 kB\n"
+        "MemAvailable:    786432 kB\n"
+        "Buffers:          32768 kB\n"
+        "Cached:           65536 kB\n"
+    )
+    check("meminfo available MiB", np.isclose(mem.get("ram_available_mib"), 768.0), f"mem={mem}")
+    check("meminfo free percent", np.isclose(mem.get("ram_free_pct"), 75.0), f"mem={mem}")
+
+
 def test_model_shapes(agent):
     print("\n[model shapes]")
     import torch
@@ -535,7 +617,7 @@ def test_model_shapes(agent):
     expected_raw = C.RL_CONFIG.global_features * C.RL_CONFIG.frame_stack
     check("raw trunk keeps stacked globals only", tuple(raw.shape) == (4, expected_raw),
           f"shape={tuple(raw.shape)} expected={(4, expected_raw)}")
-    check("enemy tokens shape (4,96,10)",
+    check("enemy tokens shape (4,112,10)",
           tuple(enemies.shape) == (4, C.ENEMY_TOKEN_COUNT, C.ENEMY_TOKEN_FEATURES),
           f"shape={tuple(enemies.shape)}")
     expected_trunk_in = expected_raw + (C.RL_CONFIG.object_attn_dim if C.RL_CONFIG.use_object_attention else 0)
@@ -740,12 +822,15 @@ def main():
     test_parse_roundtrip()
     test_fire_hold()
     test_reward_and_hard_starts()
+    test_score_level_1m_metrics()
     test_transition_interest_policy()
     test_legacy_interest_sanitizer()
     test_pre_death_reward_penalty()
     test_expert_anchor_decay()
     test_epsilon_expert_floor()
     test_dqn_window_math()
+    test_dashboard_gpu_parser()
+    test_dashboard_system_parser()
     test_expert()
 
     print("\n[building agent]")

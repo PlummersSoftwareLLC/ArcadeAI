@@ -649,10 +649,10 @@ class RobotronPPONet(nn.Module):
             nn.GELU(),
         )
 
-        # Per-slot temporal fusion: combine each object's embedding across the
-        # frame stack BEFORE the transformer. Because the Lua side keeps stable
-        # slot assignments, slot i is the same object over time, so this MLP
-        # learns per-object motion/identity instead of pooling whole frames.
+        # Per-row temporal fusion: combine each group/rank embedding across the
+        # frame stack BEFORE the transformer. Rows are distance ranks within
+        # object groups, so this captures short-horizon rank-local motion rather
+        # than stable object-pointer identity.
         self.temporal_fusion = nn.Sequential(
             nn.Linear(self.frame_stack * self.embed_dim, self.embed_dim),
             nn.LayerNorm(self.embed_dim),

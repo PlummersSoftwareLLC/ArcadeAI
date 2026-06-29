@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 def test_config():
     from v3.config import CONFIG, WIRE_PARAMS_COUNT, AUGMENTED_PARAMS_COUNT
-    assert WIRE_PARAMS_COUNT == 2118, f"Expected 2118, got {WIRE_PARAMS_COUNT}"
+    assert WIRE_PARAMS_COUNT == 1890, f"Expected 1890, got {WIRE_PARAMS_COUNT}"
     assert AUGMENTED_PARAMS_COUNT == WIRE_PARAMS_COUNT + 4
     assert CONFIG.model.max_entities == 140
     assert CONFIG.server.port == 9998
@@ -105,6 +105,7 @@ def test_action_feature_parity():
         TYPE_ELECTRODE,
         TYPE_MISSILE,
         NUM_ENTITY_CLASSES,
+        _DESTRUCTIBLE_TYPES,
     )
 
     N = CONFIG.model.max_entities
@@ -132,7 +133,7 @@ def test_action_feature_parity():
         entities[i, 28] = 1.0 if tid in {TYPE_PROJECTILE, TYPE_MISSILE} else 0.0
         entities[i, 29] = 1.0 if tid == TYPE_HUMAN else 0.0
         entities[i, 30] = 1.0 if tid in {TYPE_HULK, TYPE_ELECTRODE} else 0.0
-        entities[i, 31] = 1.0 if tid != TYPE_HUMAN and tid != TYPE_HULK and tid != TYPE_ELECTRODE else 0.0
+        entities[i, 31] = 1.0 if tid in _DESTRUCTIBLE_TYPES else 0.0
         mask[i] = False
 
     ctx = np.zeros(CONFIG.model.global_context_dim, dtype=np.float32)

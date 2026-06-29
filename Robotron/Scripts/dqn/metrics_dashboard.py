@@ -10,6 +10,7 @@ if __name__ == "__main__":
     raise SystemExit(1)
 
 import atexit
+import csv
 import json
 import math
 import mimetypes
@@ -62,9 +63,198 @@ LEVEL_1M_FRAMES = 1_000_000
 LEVEL_5M_FRAMES = 5_000_000
 WEB_CLIENT_TIMEOUT_S = 5.0
 DASH_HISTORY_LIMIT = 40_000
+GPU_SAMPLE_INTERVAL_S = 1.0
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac"}
 FONT_EXTENSIONS = {".ttf", ".otf", ".woff", ".woff2"}
 VIDEO_EXTENSIONS = {".mov", ".mp4", ".webm", ".ogv"}
+
+_NVIDIA_SMI_QUERY_FIELDS = (
+    "index",
+    "name",
+    "utilization.gpu",
+    "utilization.memory",
+    "memory.used",
+    "memory.total",
+    "temperature.gpu",
+    "power.draw",
+    "power.limit",
+    "clocks.gr",
+    "fan.speed",
+)
+
+
+def _gpu_float(value) -> float | None:
+    try:
+        text = str(value).strip()
+    except Exception:
+        return None
+    if not text or text.upper() in {"N/A", "[N/A]", "NOT SUPPORTED", "[NOT SUPPORTED]"}:
+        return None
+    try:
+        val = float(text)
+    except Exception:
+        return None
+    return val if math.isfinite(val) else None
+
+
+def _gpu_int(value) -> int | None:
+    val = _gpu_float(value)
+    return None if val is None else int(round(val))
+
+
+def _parse_nvidia_smi_gpu_csv(text: str) -> list[dict[str, Any]]:
+    rows = []
+    for raw in csv.reader((text or "").splitlines()):
+        if len(raw) < len(_NVIDIA_SMI_QUERY_FIELDS):
+            continue
+        idx = _gpu_int(raw[0])
+        if idx is None:
+            continue
+        mem_used = _gpu_float(raw[4])
+        mem_total = _gpu_float(raw[5])
+        mem_util = _gpu_float(raw[3])
+        if mem_util is None and mem_used is not None and mem_total and mem_total > 0:
+            mem_util = (mem_used / mem_total) * 100.0
+        rows.append({
+            "index": idx,
+            "name": str(raw[1]).strip(),
+            "gpu_util_pct": _gpu_float(raw[2]),
+            "mem_util_pct": mem_util,
+            "mem_used_mib": mem_used,
+            "mem_total_mib": mem_total,
+            "temp_c": _gpu_float(raw[6]),
+            "power_w": _gpu_float(raw[7]),
+            "power_limit_w": _gpu_float(raw[8]),
+            "clock_mhz": _gpu_float(raw[9]),
+            "fan_pct": _gpu_float(raw[10]),
+        })
+    rows.sort(key=lambda row: int(row.get("index", 0)))
+    return rows
+
+
+def _query_nvidia_smi_gpus() -> list[dict[str, Any]]:
+    exe = shutil.which("nvidia-smi")
+    if not exe:
+        return []
+    cmd = [
+        exe,
+        f"--query-gpu={','.join(_NVIDIA_SMI_QUERY_FIELDS)}",
+        "--format=csv,noheader,nounits",
+    ]
+    try:
+        proc = subprocess.run(
+            cmd,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=0.85,
+        )
+    except Exception:
+        return []
+    if proc.returncode != 0:
+        return []
+    return _parse_nvidia_smi_gpu_csv(proc.stdout)
+
+
+def _parse_proc_stat_cpu_times(text: str) -> tuple[float, float] | None:
+    for line in (text or "").splitlines():
+        if not line.startswith("cpu "):
+            continue
+        parts = line.split()[1:]
+        try:
+            vals = [float(p) for p in parts[:8]]
+        except Exception:
+            return None
+        if len(vals) < 4:
+            return None
+        user = vals[0]
+        nice = vals[1] if len(vals) > 1 else 0.0
+        system = vals[2] if len(vals) > 2 else 0.0
+        idle = vals[3] if len(vals) > 3 else 0.0
+        iowait = vals[4] if len(vals) > 4 else 0.0
+        irq = vals[5] if len(vals) > 5 else 0.0
+        softirq = vals[6] if len(vals) > 6 else 0.0
+        steal = vals[7] if len(vals) > 7 else 0.0
+        idle_all = idle + iowait
+        non_idle = user + nice + system + irq + softirq + steal
+        total = idle_all + non_idle
+        return idle_all, total
+    return None
+
+
+def _cpu_util_from_times(prev: tuple[float, float] | None, cur: tuple[float, float] | None) -> float | None:
+    if prev is None or cur is None:
+        return None
+    idle_delta = float(cur[0]) - float(prev[0])
+    total_delta = float(cur[1]) - float(prev[1])
+    if total_delta <= 0:
+        return None
+    busy = max(0.0, min(total_delta, total_delta - idle_delta))
+    return max(0.0, min(100.0, (busy / total_delta) * 100.0))
+
+
+def _read_proc_cpu_times() -> tuple[float, float] | None:
+    try:
+        with open("/proc/stat", "r", encoding="utf-8") as fh:
+            return _parse_proc_stat_cpu_times(fh.read())
+    except Exception:
+        return None
+
+
+def _parse_proc_meminfo(text: str) -> dict[str, Any]:
+    vals: dict[str, float] = {}
+    for line in (text or "").splitlines():
+        if ":" not in line:
+            continue
+        key, rest = line.split(":", 1)
+        parts = rest.strip().split()
+        if not parts:
+            continue
+        try:
+            vals[key] = float(parts[0])
+        except Exception:
+            continue
+
+    total_kib = vals.get("MemTotal")
+    free_kib = vals.get("MemFree")
+    available_kib = vals.get("MemAvailable")
+    if available_kib is None:
+        available_kib = (free_kib or 0.0) + vals.get("Buffers", 0.0) + vals.get("Cached", 0.0)
+
+    def mib(kib):
+        return None if kib is None else float(kib) / 1024.0
+
+    total_mib = mib(total_kib)
+    available_mib = mib(available_kib)
+    free_mib = mib(free_kib)
+    used_mib = None
+    free_pct = None
+    if total_mib and total_mib > 0 and available_mib is not None:
+        used_mib = max(0.0, total_mib - available_mib)
+        free_pct = max(0.0, min(100.0, (available_mib / total_mib) * 100.0))
+
+    return {
+        "ram_total_mib": total_mib,
+        "ram_available_mib": available_mib,
+        "ram_free_mib": free_mib,
+        "ram_used_mib": used_mib,
+        "ram_free_pct": free_pct,
+    }
+
+
+def _read_proc_meminfo() -> dict[str, Any]:
+    try:
+        with open("/proc/meminfo", "r", encoding="utf-8") as fh:
+            return _parse_proc_meminfo(fh.read())
+    except Exception:
+        return {
+            "ram_total_mib": None,
+            "ram_available_mib": None,
+            "ram_free_mib": None,
+            "ram_used_mib": None,
+            "ram_free_pct": None,
+        }
 
 
 def _audio_dir() -> str:
@@ -130,6 +320,96 @@ class _DashboardState:
         # Skip initial samples to let values stabilize
         self._sample_count: int = 0
         self._first_sample_time: float | None = None
+        self._gpu_last_sample_time: float = 0.0
+        self._gpu_last_devices: list[dict[str, Any]] = []
+        self._last_cpu_times: tuple[float, float] | None = None
+
+    def _system_snapshot(self) -> dict[str, Any]:
+        cur_cpu = _read_proc_cpu_times()
+        cpu_util = _cpu_util_from_times(self._last_cpu_times, cur_cpu)
+        if cur_cpu is not None:
+            self._last_cpu_times = cur_cpu
+
+        mem = _read_proc_meminfo()
+        total_mib = mem.get("ram_total_mib")
+        available_mib = mem.get("ram_available_mib")
+        free_mib = mem.get("ram_free_mib")
+        used_mib = mem.get("ram_used_mib")
+        try:
+            load1, load5, load15 = os.getloadavg()
+        except Exception:
+            load1 = load5 = load15 = None
+
+        def gib(mib):
+            return None if mib is None else float(mib) / 1024.0
+
+        return {
+            "cpu_util": cpu_util,
+            "cpu_count": os.cpu_count() or 0,
+            "cpu_load_1m": load1,
+            "cpu_load_5m": load5,
+            "cpu_load_15m": load15,
+            "ram_total_mib": total_mib,
+            "ram_available_mib": available_mib,
+            "ram_free_mib": free_mib,
+            "ram_used_mib": used_mib,
+            "ram_total_gib": gib(total_mib),
+            "ram_available_gib": gib(available_mib),
+            "ram_free_gib": gib(free_mib),
+            "ram_used_gib": gib(used_mib),
+            "ram_free_pct": mem.get("ram_free_pct"),
+        }
+
+    def _gpu_snapshot(self, now_ts: float) -> list[dict[str, Any]]:
+        if (now_ts - self._gpu_last_sample_time) < GPU_SAMPLE_INTERVAL_S:
+            return self._gpu_last_devices
+        self._gpu_last_sample_time = now_ts
+        devices = _query_nvidia_smi_gpus()
+        self._gpu_last_devices = devices
+        return devices
+
+    @staticmethod
+    def _flatten_gpus(devices: list[dict[str, Any]], count: int = 2) -> dict[str, Any]:
+        by_index = {}
+        for pos, dev in enumerate(devices or []):
+            idx = dev.get("index")
+            try:
+                by_index[int(idx)] = dev
+            except Exception:
+                by_index[pos] = dev
+        out: dict[str, Any] = {}
+        for gpu_idx in range(count):
+            dev = by_index.get(gpu_idx)
+            prefix = f"gpu{gpu_idx}"
+            if not dev:
+                out.update({
+                    f"{prefix}_present": False,
+                    f"{prefix}_name": "",
+                    f"{prefix}_util": None,
+                    f"{prefix}_mem_util": None,
+                    f"{prefix}_mem_used_mib": None,
+                    f"{prefix}_mem_total_mib": None,
+                    f"{prefix}_temp_c": None,
+                    f"{prefix}_power_w": None,
+                    f"{prefix}_power_limit_w": None,
+                    f"{prefix}_clock_mhz": None,
+                    f"{prefix}_fan_pct": None,
+                })
+                continue
+            out.update({
+                f"{prefix}_present": True,
+                f"{prefix}_name": dev.get("name") or "",
+                f"{prefix}_util": dev.get("gpu_util_pct"),
+                f"{prefix}_mem_util": dev.get("mem_util_pct"),
+                f"{prefix}_mem_used_mib": dev.get("mem_used_mib"),
+                f"{prefix}_mem_total_mib": dev.get("mem_total_mib"),
+                f"{prefix}_temp_c": dev.get("temp_c"),
+                f"{prefix}_power_w": dev.get("power_w"),
+                f"{prefix}_power_limit_w": dev.get("power_limit_w"),
+                f"{prefix}_clock_mhz": dev.get("clock_mhz"),
+                f"{prefix}_fan_pct": dev.get("fan_pct"),
+            })
+        return out
 
     def _clear_level_windows(self):
         for win in self._level_windows.values():
@@ -368,6 +648,9 @@ class _DashboardState:
         self.last_steps = total_training_steps
         self.last_steps_time = now
         replay_per_frame = (steps_per_sec * float(getattr(RL_CONFIG, "batch_size", 1))) / max(1e-6, float(fps))
+        system_flat = self._system_snapshot()
+        gpu_devices = self._gpu_snapshot(now)
+        gpu_flat = self._flatten_gpus(gpu_devices)
 
         lr = None
         q_min = None
@@ -453,6 +736,9 @@ class _DashboardState:
             "pulse_count": plateau_pulser.total_pulses,
             "pulse_enabled": True,  # manual pulse is always available
             "game_settings": game_settings.snapshot(),
+            **system_flat,
+            "gpus": gpu_devices,
+            **gpu_flat,
         }
 
     @staticmethod
@@ -1105,6 +1391,63 @@ def _render_dashboard_html() -> str:
       position: relative;
       z-index: 2;
     }
+    .gpu-panel {
+      grid-template-rows: auto auto auto auto 1fr;
+    }
+    .gpu-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      position: relative;
+      z-index: 2;
+    }
+    .gpu-live {
+      font-family: "LED Dot-Matrix", "Dot Matrix", "DotGothic16", "Courier New", monospace;
+      font-size: 22px;
+      color: #70f7ff;
+      text-shadow:
+        0 0 5px rgba(0, 229, 255, 0.8),
+        0 0 18px rgba(0, 229, 255, 0.42);
+      white-space: nowrap;
+    }
+    .gpu-name {
+      color: #9cb6d4;
+      font-size: 11px;
+      letter-spacing: 0.3px;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      position: relative;
+      z-index: 2;
+    }
+    .gpu-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      position: relative;
+      z-index: 2;
+    }
+    .gpu-stat {
+      min-width: 0;
+      border: 1px solid rgba(0, 229, 255, 0.18);
+      border-radius: 8px;
+      padding: 5px 7px;
+      background: rgba(2, 6, 23, 0.48);
+      box-shadow: inset 0 0 12px rgba(0, 229, 255, 0.08);
+    }
+    .gpu-stat .record-label {
+      display: block;
+      margin-bottom: 2px;
+    }
+    .gpu-stat .record-value {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+    }
     /* ── Responsive breakpoints ───────────────────────────────────── */
     @media (max-width: 1300px) {
       .cards { grid-template-columns: repeat(8, minmax(0, 1fr)); }
@@ -1310,6 +1653,81 @@ def _render_dashboard_html() -> str:
         <canvas id="cAgreement"></canvas>
       </article>
 
+      <article class="panel gpu-panel">
+        <div class="gpu-head">
+          <h2>GPU 0</h2>
+          <div class="gpu-live" id="gpu0Live">--%</div>
+        </div>
+        <div class="gpu-name" id="gpu0Name">Waiting for nvidia-smi...</div>
+        <div class="gpu-stats">
+          <div class="gpu-stat"><span class="record-label">Memory</span><span class="record-value" id="gpu0Mem">-</span></div>
+          <div class="gpu-stat"><span class="record-label">Temp</span><span class="record-value" id="gpu0Temp">-</span></div>
+          <div class="gpu-stat"><span class="record-label">Power</span><span class="record-value" id="gpu0Power">-</span></div>
+          <div class="gpu-stat"><span class="record-label">Fan</span><span class="record-value" id="gpu0Fan">-</span></div>
+        </div>
+        <div class="legend">
+          <span><span class="sw" style="background:#00e5ff;"></span>GPU %</span>
+          <span><span class="sw" style="background:#ffe600;"></span>MEM %</span>
+        </div>
+        <canvas id="cGpu0"></canvas>
+      </article>
+
+      <article class="panel gpu-panel">
+        <div class="gpu-head">
+          <h2>GPU 1</h2>
+          <div class="gpu-live" id="gpu1Live">--%</div>
+        </div>
+        <div class="gpu-name" id="gpu1Name">Waiting for nvidia-smi...</div>
+        <div class="gpu-stats">
+          <div class="gpu-stat"><span class="record-label">Memory</span><span class="record-value" id="gpu1Mem">-</span></div>
+          <div class="gpu-stat"><span class="record-label">Temp</span><span class="record-value" id="gpu1Temp">-</span></div>
+          <div class="gpu-stat"><span class="record-label">Power</span><span class="record-value" id="gpu1Power">-</span></div>
+          <div class="gpu-stat"><span class="record-label">Fan</span><span class="record-value" id="gpu1Fan">-</span></div>
+        </div>
+        <div class="legend">
+          <span><span class="sw" style="background:#00e5ff;"></span>GPU %</span>
+          <span><span class="sw" style="background:#ffe600;"></span>MEM %</span>
+        </div>
+        <canvas id="cGpu1"></canvas>
+      </article>
+
+      <article class="panel gpu-panel">
+        <div class="gpu-head">
+          <h2>CPU</h2>
+          <div class="gpu-live" id="cpuLive">--%</div>
+        </div>
+        <div class="gpu-name" id="cpuName">System processor</div>
+        <div class="gpu-stats">
+          <div class="gpu-stat"><span class="record-label">Load 1m</span><span class="record-value" id="cpuLoad1">-</span></div>
+          <div class="gpu-stat"><span class="record-label">Load 5m</span><span class="record-value" id="cpuLoad5">-</span></div>
+          <div class="gpu-stat"><span class="record-label">Cores</span><span class="record-value" id="cpuCores">-</span></div>
+          <div class="gpu-stat"><span class="record-label">Load/Core</span><span class="record-value" id="cpuLoadCore">-</span></div>
+        </div>
+        <div class="legend">
+          <span><span class="sw" style="background:#ff4d8d;"></span>CPU %</span>
+        </div>
+        <canvas id="cCpu"></canvas>
+      </article>
+
+      <article class="panel gpu-panel">
+        <div class="gpu-head">
+          <h2>Free RAM</h2>
+          <div class="gpu-live" id="ramLive">--G</div>
+        </div>
+        <div class="gpu-name" id="ramName">System memory available</div>
+        <div class="gpu-stats">
+          <div class="gpu-stat"><span class="record-label">Available</span><span class="record-value" id="ramAvailable">-</span></div>
+          <div class="gpu-stat"><span class="record-label">Total</span><span class="record-value" id="ramTotal">-</span></div>
+          <div class="gpu-stat"><span class="record-label">Used</span><span class="record-value" id="ramUsed">-</span></div>
+          <div class="gpu-stat"><span class="record-label">Free %</span><span class="record-value" id="ramPct">-</span></div>
+        </div>
+        <div class="legend">
+          <span><span class="sw" style="background:#39ff14;"></span>Free GiB</span>
+          <span><span class="sw" style="background:#00e5ff;"></span>Free %</span>
+        </div>
+        <canvas id="cRam"></canvas>
+      </article>
+
     </section>
     <section class="top">
       <div class="title">
@@ -1504,6 +1922,40 @@ def _render_dashboard_html() -> str:
     const EP_RATE_WINDOW = 30; /* seconds */
     const fpsGaugeCanvas = document.getElementById("cFpsGauge");
     const stepGaugeCanvas = document.getElementById("cStepGauge");
+    const gpuPanels = [
+      {
+        live: document.getElementById("gpu0Live"),
+        name: document.getElementById("gpu0Name"),
+        mem: document.getElementById("gpu0Mem"),
+        temp: document.getElementById("gpu0Temp"),
+        power: document.getElementById("gpu0Power"),
+        fan: document.getElementById("gpu0Fan"),
+      },
+      {
+        live: document.getElementById("gpu1Live"),
+        name: document.getElementById("gpu1Name"),
+        mem: document.getElementById("gpu1Mem"),
+        temp: document.getElementById("gpu1Temp"),
+        power: document.getElementById("gpu1Power"),
+        fan: document.getElementById("gpu1Fan"),
+      },
+    ];
+    const cpuPanel = {
+      live: document.getElementById("cpuLive"),
+      name: document.getElementById("cpuName"),
+      load1: document.getElementById("cpuLoad1"),
+      load5: document.getElementById("cpuLoad5"),
+      cores: document.getElementById("cpuCores"),
+      loadCore: document.getElementById("cpuLoadCore"),
+    };
+    const ramPanel = {
+      live: document.getElementById("ramLive"),
+      name: document.getElementById("ramName"),
+      available: document.getElementById("ramAvailable"),
+      total: document.getElementById("ramTotal"),
+      used: document.getElementById("ramUsed"),
+      pct: document.getElementById("ramPct"),
+    };
 
     // ── Gauge needle damping ────────────────────────────────────────
     // Time-constant in seconds: the needle closes ~63% of the gap
@@ -1612,6 +2064,58 @@ def _render_dashboard_html() -> str:
           }
         ]
       },
+      gpu0: {
+        canvas: document.getElementById("cGpu0"),
+        series: [
+          {
+            key: "gpu0_util",
+            color: "#00e5ff",
+            axis: { side: "left", min: 0, max: 100, ticks: [0, 25, 50, 75, 100], tick_decimals: 0, group_keys: ["gpu0_util", "gpu0_mem_util"] },
+            smooth_alpha: 0.34,
+          },
+          { key: "gpu0_mem_util", color: "#ffe600", axis_ref: "gpu0_util", smooth_alpha: 0.34 }
+        ]
+      },
+      gpu1: {
+        canvas: document.getElementById("cGpu1"),
+        series: [
+          {
+            key: "gpu1_util",
+            color: "#00e5ff",
+            axis: { side: "left", min: 0, max: 100, ticks: [0, 25, 50, 75, 100], tick_decimals: 0, group_keys: ["gpu1_util", "gpu1_mem_util"] },
+            smooth_alpha: 0.34,
+          },
+          { key: "gpu1_mem_util", color: "#ffe600", axis_ref: "gpu1_util", smooth_alpha: 0.34 }
+        ]
+      },
+      cpu: {
+        canvas: document.getElementById("cCpu"),
+        series: [
+          {
+            key: "cpu_util",
+            color: "#ff4d8d",
+            axis: { side: "left", min: 0, max: 100, ticks: [0, 25, 50, 75, 100], tick_decimals: 0 },
+            smooth_alpha: 0.34,
+          }
+        ]
+      },
+      ram: {
+        canvas: document.getElementById("cRam"),
+        series: [
+          {
+            key: "ram_available_gib",
+            color: "#39ff14",
+            axis: { side: "left", min: 0, max_floor: 32, group_keys: ["ram_available_gib"], tick_decimals: 0 },
+            smooth_alpha: 0.28,
+          },
+          {
+            key: "ram_free_pct",
+            color: "#00e5ff",
+            axis: { side: "right", min: 0, max: 100, ticks: [0, 25, 50, 75, 100], tick_decimals: 0, group_keys: ["ram_free_pct"] },
+            smooth_alpha: 0.28,
+          }
+        ]
+      },
       qRange: {
         canvas: document.getElementById("cQRange"),
         fill_between: ["q_max", "q_min", "#22c55e", "#38bdf8"],
@@ -1680,6 +2184,76 @@ def _render_dashboard_html() -> str:
     function fmtFloat(v, d = 2) {
       if (v === null || v === undefined || Number.isNaN(v)) return "0";
       return Number(v).toFixed(d);
+    }
+
+    function fmtMiB(v) {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return "-";
+      if (Math.abs(n) >= 1024) return (n / 1024).toFixed(1) + "G";
+      return Math.round(n) + "M";
+    }
+
+    function updateGpuPanels(now) {
+      for (let i = 0; i < gpuPanels.length; i++) {
+        const panel = gpuPanels[i];
+        if (!panel || !panel.live) continue;
+        const prefix = `gpu${i}`;
+        const present = !!now[`${prefix}_present`];
+        const util = Number(now[`${prefix}_util`]);
+        const memUtil = Number(now[`${prefix}_mem_util`]);
+        const memUsed = now[`${prefix}_mem_used_mib`];
+        const memTotal = now[`${prefix}_mem_total_mib`];
+        const temp = Number(now[`${prefix}_temp_c`]);
+        const power = Number(now[`${prefix}_power_w`]);
+        const powerLimit = Number(now[`${prefix}_power_limit_w`]);
+        const fan = Number(now[`${prefix}_fan_pct`]);
+        const clock = Number(now[`${prefix}_clock_mhz`]);
+        const name = now[`${prefix}_name`] || "";
+
+        if (!present) {
+          panel.live.textContent = "--%";
+          panel.name.textContent = "nvidia-smi unavailable";
+          panel.mem.textContent = "-";
+          panel.temp.textContent = "-";
+          panel.power.textContent = "-";
+          panel.fan.textContent = "-";
+          continue;
+        }
+
+        panel.live.textContent = Number.isFinite(util) ? `${Math.round(util)}%` : "--%";
+        panel.name.textContent = name || `GPU ${i}`;
+        panel.mem.textContent = `${fmtMiB(memUsed)} / ${fmtMiB(memTotal)} (${Number.isFinite(memUtil) ? Math.round(memUtil) + "%" : "-"})`;
+        panel.temp.textContent = Number.isFinite(temp) ? `${Math.round(temp)}C` : "-";
+        panel.power.textContent = Number.isFinite(power)
+          ? `${Math.round(power)}${Number.isFinite(powerLimit) ? " / " + Math.round(powerLimit) : ""} W`
+          : "-";
+        panel.fan.textContent = `${Number.isFinite(fan) ? Math.round(fan) + "%" : "-"}${Number.isFinite(clock) ? " / " + Math.round(clock) + "MHz" : ""}`;
+      }
+    }
+
+    function updateSystemPanels(now) {
+      const cpuUtil = Number(now.cpu_util);
+      const cpuCount = Number(now.cpu_count);
+      const load1 = Number(now.cpu_load_1m);
+      const load5 = Number(now.cpu_load_5m);
+      if (cpuPanel.live) cpuPanel.live.textContent = Number.isFinite(cpuUtil) ? `${Math.round(cpuUtil)}%` : "--%";
+      if (cpuPanel.cores) cpuPanel.cores.textContent = Number.isFinite(cpuCount) && cpuCount > 0 ? String(Math.round(cpuCount)) : "-";
+      if (cpuPanel.load1) cpuPanel.load1.textContent = Number.isFinite(load1) ? load1.toFixed(2) : "-";
+      if (cpuPanel.load5) cpuPanel.load5.textContent = Number.isFinite(load5) ? load5.toFixed(2) : "-";
+      if (cpuPanel.loadCore) {
+        const perCore = (Number.isFinite(load1) && Number.isFinite(cpuCount) && cpuCount > 0) ? load1 / cpuCount : NaN;
+        cpuPanel.loadCore.textContent = Number.isFinite(perCore) ? perCore.toFixed(2) : "-";
+      }
+
+      const avail = Number(now.ram_available_mib);
+      const total = Number(now.ram_total_mib);
+      const used = Number(now.ram_used_mib);
+      const pct = Number(now.ram_free_pct);
+      if (ramPanel.live) ramPanel.live.textContent = Number.isFinite(avail) ? `${(avail / 1024).toFixed(1)}G` : "--G";
+      if (ramPanel.available) ramPanel.available.textContent = fmtMiB(avail);
+      if (ramPanel.total) ramPanel.total.textContent = fmtMiB(total);
+      if (ramPanel.used) ramPanel.used.textContent = fmtMiB(used);
+      if (ramPanel.pct) ramPanel.pct.textContent = Number.isFinite(pct) ? `${Math.round(pct)}%` : "-";
     }
 
     function fmtSignedFloat(v, d = 2) {
@@ -3500,6 +4074,8 @@ def _render_dashboard_html() -> str:
 
       // ── Model description ─────────────────────────────────────────
       if (now.model_desc && modelDescEl) modelDescEl.textContent = now.model_desc;
+      updateGpuPanels(now);
+      updateSystemPanels(now);
 
       // ── Game settings sync ────────────────────────────────────────
       if (!_gsIgnoreSync && now.game_settings) {
@@ -3541,6 +4117,10 @@ def _render_dashboard_html() -> str:
       drawChart(charts.rewards.canvas, chartHistory60m, charts.rewards.series, 60 * 60);
       drawChart(charts.learning.canvas, chartHistory1m, charts.learning.series, 60, true);
       drawChart(charts.agreement.canvas, chartHistory60m, charts.agreement.series, 60 * 60);
+      drawChart(charts.gpu0.canvas, chartHistory60m, charts.gpu0.series, 60 * 60);
+      drawChart(charts.gpu1.canvas, chartHistory60m, charts.gpu1.series, 60 * 60);
+      drawChart(charts.cpu.canvas, chartHistory60m, charts.cpu.series, 60 * 60);
+      drawChart(charts.ram.canvas, chartHistory60m, charts.ram.series, 60 * 60);
       drawMiniChart(charts.qRange.canvas, history60m, charts.qRange.series, charts.qRange.fill_between);
       drawMiniChart(charts.rewardMini.canvas, history60m, charts.rewardMini.series);
       drawMiniChart(charts.level1m.canvas, history60m, charts.level1m.series);

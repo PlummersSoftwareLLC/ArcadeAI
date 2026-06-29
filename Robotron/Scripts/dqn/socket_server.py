@@ -12,7 +12,7 @@ Game-flow contract (Robotron-specific):
   • Payload header ``>HddBIBBBIBB`` (n, subj, obj, done, score, player_alive,
     save, start_pressed, replay_level, num_lasers, wave), then n f32 (big-endian).
   • The model consumes the compact slice of the wire (18 core + 22 ELIST values
-    + 96 stable enemy rows); the full wire is still used by the expert/debug
+    + 112 grouped object rows); the full wire is still used by the expert/debug
     paths.
   • Episodes terminate on ``frame.done``.  While ``player_alive`` is false (death
     animation / between lives) we send a neutral action and store no transitions.
@@ -171,9 +171,16 @@ def _transition_interest_score(prev_state: np.ndarray, next_state: np.ndarray,
             dist = np.clip(active[:, 3], 0.0, 1.0)
             threat = np.clip(active[:, 6], 0.0, 1.0)
             ttc = np.clip(active[:, 8], 0.0, 1.0) if enemy_features > 8 else np.ones_like(dist)
+            type_id = np.zeros(active.shape[0], dtype=np.int32)
+            if enemy_features > 9:
+                type_id = np.rint(np.clip(active[:, 9], 0.0, 1.0) * 8.0).astype(np.int32)
+            dangerous = type_id != 7
+            targetable = np.isin(type_id, np.asarray([0, 2, 3, 4, 5, 6, 8], dtype=np.int32))
             closeness = 1.0 - dist
-            danger = float(np.nanmax(np.maximum(closeness * threat, closeness * (1.0 - ttc))))
-            target = float(np.nanmax(closeness * (0.25 + 0.75 * threat)))
+            danger_cue = np.where(dangerous, np.maximum(closeness * threat, closeness * (1.0 - ttc)), 0.0)
+            target_cue = np.where(targetable, closeness * (0.25 + 0.75 * threat), 0.0)
+            danger = float(np.nanmax(danger_cue))
+            target = float(np.nanmax(target_cue))
             crowd = float(min(1.0, active.shape[0] / 32.0))
             return danger, 0.0, crowd, target
 
@@ -674,9 +681,9 @@ class SocketServer:
 
                 model_state = self._stack_model_state(cs, single_state)
 
-                # Peak game score is shared metrics state — guard with metrics.lock
-                # (not client_lock) to stay consistent with dashboard reads.
-                metrics.note_game_score(frame.game_score)
+                # Peak score and rolling score/level telemetry are shared
+                # metrics state; guard with metrics.lock for dashboard reads.
+                metrics.note_game_score(frame.game_score, frame.level_number)
 
                 local_accum += 1
                 if local_accum >= BATCH:
@@ -868,9 +875,11 @@ class SocketServer:
                             from v3.state_processor import _collect_entity_slots as _ces
                             slots = _ces(np.asarray(frame.state, dtype=np.float32))
                             nh = sum(1 for s in slots if s["pool"] == "human")
-                            nd = sum(1 for s in slots if s["pool"] == "danger")
+                            nt = sum(1 for s in slots if s["pool"] == "destructible")
+                            nb = sum(1 for s in slots if s["pool"] == "hulk")
+                            no = sum(1 for s in slots if s["pool"] == "obstacle")
                         except Exception as _e:
-                            slots, nh, nd = [], -1, -1
+                            slots, nh, nt, nb, no = [], -1, -1, -1, -1
                         try:
                             mq, fq = self.agent.debug_q_spread(model_state)
                             mspread = max(mq) - min(mq)
@@ -881,7 +890,7 @@ class SocketServer:
                             qinfo = "qspread=err"
                         print(
                             f"[DBG] src={action_source:<7} n={len(frame.state)} "
-                            f"ents={len(slots)}(H{nh}/D{nd}) wave={int(frame.level_number)} "
+                            f"ents={len(slots)}(T{nt}/B{nb}/O{no}/H{nh}) wave={int(frame.level_number)} "
                             f"mv={int(mv_idx)}->{move_cmd} fr={int(effective_fire)}->{fire_cmd} "
                             f"xr={metrics.get_expert_ratio():.2f} eps={metrics.get_effective_epsilon():.2f} "
                             f"{qinfo}", flush=True)

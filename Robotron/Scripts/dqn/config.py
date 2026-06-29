@@ -8,12 +8,13 @@
 
 State representation
 --------------------
-Each frame the Lua client sends ``WIRE_PARAMS_COUNT`` (2118) big-endian f32
+Each frame the Lua client sends ``WIRE_PARAMS_COUNT`` (1890) big-endian f32
 values. The DQN consumes a deliberately plain single-frame slice of that wire:
 the 18 core game/player scalars, the 22 raw ELIST/level-state bytes, and a
-stable 96-row enemy/danger list from the tactical pool. Lanes, grids,
-projectiles, humans, and electrodes remain on the wire for the expert/debugging
-path, but are not part of the DQN model input.
+112-row distance-sorted object state bag:
+64 destructible enemies/projectiles, 16 hulks, 16 obstacles, and 16 humans.
+Legacy lanes/grids remain on the wire for the expert/debugging path, but are
+not part of the DQN model input.
 
 Action representation
 ---------------------
@@ -53,11 +54,11 @@ SETTINGS_PATH = os.path.join(MODEL_DIR, "game_settings.json")
 #  Wire / state-slice geometry
 # ---------------------------------------------------------------------------
 # Number of f32 values the Lua client packs into each frame's state payload.
-# The 96-slot danger pool adds 640 floats over the prior 1478-float wire.
-WIRE_PARAMS_COUNT = 2118
+# Lua emits four distance-sorted 10-wide state-bag groups after lane/grid data.
+WIRE_PARAMS_COUNT = 1890
 
 # Model slice: 18 core game features + 22 ELIST/level-state features +
-# 96 stable enemy rows × 10 features.
+# 112 grouped object rows × 10 features.
 CORE_FEATURES = 18                       # wire[0:18]
 ELIST_FEATURES = 22                      # wire[18:40]
 GLOBAL_FEATURES = CORE_FEATURES + ELIST_FEATURES
@@ -76,14 +77,23 @@ TACTICAL_GRID_OFFSET = TACTICAL_LANE_END
 TACTICAL_GRID_END = TACTICAL_GRID_OFFSET + TACTICAL_GRID_FEATURES        # 766
 TACTICAL_POOL_OFFSET = TACTICAL_GRID_END
 
-# Plain enemy-list section. Rows are copied from Lua's stable danger-pool slots
-# without sorting so slot identity persists across frames.
-ENEMY_TOKEN_COUNT = 96
+# Grouped object-list section. Each group is sorted nearest-first; overflow is
+# dropped by Lua and defensively re-sorted here.
+DESTRUCTIBLE_TOKEN_COUNT = 64
+HULK_TOKEN_COUNT = 16
+OBSTACLE_TOKEN_COUNT = 16
+HUMAN_TOKEN_COUNT = 16
+ENEMY_TOKEN_COUNT = (
+    DESTRUCTIBLE_TOKEN_COUNT
+    + HULK_TOKEN_COUNT
+    + OBSTACLE_TOKEN_COUNT
+    + HUMAN_TOKEN_COUNT
+)
 ENEMY_TOKEN_FEATURES = 10
 ENEMY_FEATURES = ENEMY_TOKEN_COUNT * ENEMY_TOKEN_FEATURES
 ENEMY_TOKEN_OFFSET = GLOBAL_FEATURES
 ENEMY_TOKEN_END = ENEMY_TOKEN_OFFSET + ENEMY_FEATURES
-SINGLE_FRAME_STATE_SIZE = ENEMY_TOKEN_END                                     # 1000
+SINGLE_FRAME_STATE_SIZE = ENEMY_TOKEN_END                                     # 1160
 _frame_stack_env = os.getenv("DQN_FRAME_STACK", os.getenv("ROBOTRON_DQN_FRAME_STACK", "1"))
 try:
     FRAME_STACK_COUNT = max(1, int(_frame_stack_env))
@@ -93,11 +103,24 @@ MODEL_STATE_SIZE = SINGLE_FRAME_STATE_SIZE * FRAME_STACK_COUNT
 
 # Pool layout mirrors main.lua tactical pool emission.
 TACTICAL_POOL_DEFS = (
-    ("projectile", 24, 11),
-    ("danger", 96, 10),
-    ("human", 12, 7),
-    ("electrode", 8, 5),
+    ("destructible", DESTRUCTIBLE_TOKEN_COUNT, ENEMY_TOKEN_FEATURES),
+    ("hulk", HULK_TOKEN_COUNT, ENEMY_TOKEN_FEATURES),
+    ("obstacle", OBSTACLE_TOKEN_COUNT, ENEMY_TOKEN_FEATURES),
+    ("human", HUMAN_TOKEN_COUNT, ENEMY_TOKEN_FEATURES),
 )
+
+TOKEN_GROUP_RANGES = {
+    "destructible": (0, DESTRUCTIBLE_TOKEN_COUNT),
+    "hulk": (DESTRUCTIBLE_TOKEN_COUNT, DESTRUCTIBLE_TOKEN_COUNT + HULK_TOKEN_COUNT),
+    "obstacle": (
+        DESTRUCTIBLE_TOKEN_COUNT + HULK_TOKEN_COUNT,
+        DESTRUCTIBLE_TOKEN_COUNT + HULK_TOKEN_COUNT + OBSTACLE_TOKEN_COUNT,
+    ),
+    "human": (
+        DESTRUCTIBLE_TOKEN_COUNT + HULK_TOKEN_COUNT + OBSTACLE_TOKEN_COUNT,
+        ENEMY_TOKEN_COUNT,
+    ),
+}
 
 
 def _clip01(v: float) -> float:
@@ -120,43 +143,58 @@ def _clip11(v: float) -> float:
     return min(1.0, max(-1.0, x))
 
 
+def _state_bag_row(slot: np.ndarray, feat_per_slot: int) -> np.ndarray | None:
+    if not np.isfinite(slot).all() or slot[0] <= 0.5:
+        return None
+    return np.asarray([
+        1.0,
+        _clip11(slot[1] if feat_per_slot > 1 else 0.0),
+        _clip11(slot[2] if feat_per_slot > 2 else 0.0),
+        _clip01(slot[3] if feat_per_slot > 3 else 1.0),
+        _clip11(slot[4] if feat_per_slot > 4 else 0.0),
+        _clip11(slot[5] if feat_per_slot > 5 else 0.0),
+        _clip01(slot[6] if feat_per_slot > 6 else 0.0),
+        _clip11(slot[7] if feat_per_slot > 7 else 0.0),
+        _clip01(slot[8] if feat_per_slot > 8 else 1.0),
+        _clip01(slot[9] if feat_per_slot > 9 else 0.0),
+    ], dtype=np.float32)
+
+
 def _extract_enemy_tokens(arr: np.ndarray) -> np.ndarray:
-    """Return the stable 96-row enemy/danger list from the Lua tactical pools.
+    """Return the 112-row grouped object state bag from Lua tactical pools.
 
     Row layout:
     ``[present, dx, dy, dist, vx, vy, threat, approach, ttc, type_norm]``.
-    Rows are kept in Lua's stable pool-slot order instead of priority sorting.
+    Groups are laid out as destructible, hulk, obstacle, human. Active rows are
+    distance-sorted within each group and overflow is ignored.
     """
     out = np.zeros((ENEMY_TOKEN_COUNT, ENEMY_TOKEN_FEATURES), dtype=np.float32)
     pools = arr[TACTICAL_POOL_OFFSET:]
     pool_offset = 0
+    out_offset = 0
 
     for pool_name, max_slots, feat_per_slot in TACTICAL_POOL_DEFS:
         slot_start = pool_offset + 1
         slot_end = slot_start + max_slots * feat_per_slot
         if slot_end > len(pools):
+            out_offset += max_slots
             pool_offset += 1 + max_slots * feat_per_slot
             continue
-        if pool_name == "danger":
-            raw = pools[slot_start:slot_end].reshape(max_slots, feat_per_slot)
-            rows = min(ENEMY_TOKEN_COUNT, max_slots)
-            for slot_idx in range(rows):
-                slot = raw[slot_idx]
-                if not np.isfinite(slot).all() or slot[0] <= 0.5:
-                    continue
-                out[slot_idx] = np.asarray([
-                    1.0,
-                    _clip11(slot[1] if feat_per_slot > 1 else 0.0),
-                    _clip11(slot[2] if feat_per_slot > 2 else 0.0),
-                    _clip01(slot[3] if feat_per_slot > 3 else 1.0),
-                    _clip11(slot[4] if feat_per_slot > 4 else 0.0),
-                    _clip11(slot[5] if feat_per_slot > 5 else 0.0),
-                    _clip01(slot[6] if feat_per_slot > 6 else 0.0),
-                    _clip11(slot[7] if feat_per_slot > 7 else 0.0),
-                    _clip01(slot[8] if feat_per_slot > 8 else 1.0),
-                    _clip01(slot[9] if feat_per_slot > 9 else 0.0),
-                ], dtype=np.float32)
-            break
+
+        rows = []
+        raw = pools[slot_start:slot_end].reshape(max_slots, feat_per_slot)
+        for slot_idx in range(max_slots):
+            row = _state_bag_row(raw[slot_idx], feat_per_slot)
+            if row is not None:
+                rows.append(row)
+        rows.sort(key=lambda row: float(row[3]))
+        for i, row in enumerate(rows[:max_slots]):
+            dst = out_offset + i
+            if dst >= ENEMY_TOKEN_COUNT:
+                break
+            out[dst] = row
+
+        out_offset += max_slots
         pool_offset += 1 + max_slots * feat_per_slot
 
     return out.reshape(-1)
@@ -167,7 +205,7 @@ def slice_model_state(wire) -> np.ndarray:
 
     ``wire`` may be any sequence of length >= TACTICAL_POOL_OFFSET.  Returns a
     contiguous float32 array of length ``SINGLE_FRAME_STATE_SIZE`` laid out as
-    ``[core(18), elist(22), enemies(96×10)]``.
+    ``[core(18), elist(22), grouped_objects(112×10)]``.
     """
     arr = np.asarray(wire, dtype=np.float32)
     global_state = arr[0:GLOBAL_FEATURES]
@@ -224,7 +262,7 @@ class RLConfigData:
     attn_heads: int = 8
     attn_dim: int = 128
 
-    # Self-attention over the 96 stable enemy/danger rows.
+    # Self-attention over the 112 grouped object rows.
     use_object_attention: bool = True
     object_attn_heads: int = 8
     object_attn_dim: int = 128
@@ -265,7 +303,7 @@ class RLConfigData:
     n_step: int = 12
     max_samples_per_frame: float = 20
 
-    # Replay (PER with proportional priorities).  The 96-enemy representation is
+    # Replay (PER with proportional priorities).  The grouped-object representation is
     # wider than the old compact lane slice: state/next_state alone cost about
     # 80 GB at 10M transitions with the default 1-frame stack.
     memory_size: int = 10_000_000
@@ -563,6 +601,14 @@ game_settings.load()
 # ---------------------------------------------------------------------------
 #  Metrics
 # ---------------------------------------------------------------------------
+SCORE_1M_WINDOW_FRAMES = 1_000_000
+LEVEL_1M_WINDOW_FRAMES = 1_000_000
+
+
+def _new_metric_ring(size: int) -> np.ndarray:
+    return np.zeros(max(1, int(size)), dtype=np.float64)
+
+
 @dataclass
 class MetricsData:
     frame_count: int = 0
@@ -637,6 +683,18 @@ class MetricsData:
 
     average_level: float = 0.0
     average_game_score: float = 0.0
+    score_1m_window: int = SCORE_1M_WINDOW_FRAMES
+    score_1m_values: np.ndarray = field(default_factory=lambda: _new_metric_ring(SCORE_1M_WINDOW_FRAMES))
+    score_1m_pos: int = 0
+    score_1m_count: int = 0
+    score_1m_sum: float = 0.0
+    score_1m_average: float = 0.0
+    level_1m_window: int = LEVEL_1M_WINDOW_FRAMES
+    level_1m_values: np.ndarray = field(default_factory=lambda: _new_metric_ring(LEVEL_1M_WINDOW_FRAMES))
+    level_1m_pos: int = 0
+    level_1m_count: int = 0
+    level_1m_sum: float = 0.0
+    level_1m_average: float = 0.0
     eval_average_reward: float = 0.0
     eval_average_score: float = 0.0
     eval_average_level: float = 0.0
@@ -691,11 +749,56 @@ class MetricsData:
         with self.lock:
             self.replay_dropped_steps += max(0, int(n))
 
-    def note_game_score(self, score: int):
-        """Thread-safe peak game-score update."""
+    def _push_score_1m_locked(self, value: float):
+        window = max(1, int(self.score_1m_window))
+        if self.score_1m_values.shape[0] != window:
+            self.score_1m_values = _new_metric_ring(window)
+            self.score_1m_pos = 0
+            self.score_1m_count = 0
+            self.score_1m_sum = 0.0
+            self.score_1m_average = 0.0
+        pos = int(self.score_1m_pos) % window
+        v = float(value)
+        if self.score_1m_count < window:
+            self.score_1m_values[pos] = v
+            self.score_1m_sum += v
+            self.score_1m_count += 1
+        else:
+            old = float(self.score_1m_values[pos])
+            self.score_1m_values[pos] = v
+            self.score_1m_sum += v - old
+        self.score_1m_pos = (pos + 1) % window
+        self.score_1m_average = self.score_1m_sum / max(1, self.score_1m_count)
+
+    def _push_level_1m_locked(self, value: float):
+        window = max(1, int(self.level_1m_window))
+        if self.level_1m_values.shape[0] != window:
+            self.level_1m_values = _new_metric_ring(window)
+            self.level_1m_pos = 0
+            self.level_1m_count = 0
+            self.level_1m_sum = 0.0
+            self.level_1m_average = 0.0
+        pos = int(self.level_1m_pos) % window
+        v = float(value)
+        if self.level_1m_count < window:
+            self.level_1m_values[pos] = v
+            self.level_1m_sum += v
+            self.level_1m_count += 1
+        else:
+            old = float(self.level_1m_values[pos])
+            self.level_1m_values[pos] = v
+            self.level_1m_sum += v - old
+        self.level_1m_pos = (pos + 1) % window
+        self.level_1m_average = self.level_1m_sum / max(1, self.level_1m_count)
+
+    def note_game_score(self, score: int, level: int | float | None = None):
+        """Thread-safe peak score plus rolling 1M-frame score/level metrics."""
         with self.lock:
             if score > self.peak_game_score:
                 self.peak_game_score = int(score)
+            self._push_score_1m_locked(float(score))
+            if level is not None:
+                self._push_level_1m_locked(float(level))
 
     def note_game_state_averages(self, average_level: float, average_game_score: float, peak_level: int | None = None):
         """Thread-safe live game-state aggregate update."""

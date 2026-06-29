@@ -49,7 +49,7 @@ except ImportError:
 
 metrics = config_metrics
 
-ENGINE_VERSION = 13  # Plain global + 96-enemy-list state
+ENGINE_VERSION = 14  # Plain global + 112-row grouped object state bag
 
 
 class RainbowAgent:
@@ -232,11 +232,20 @@ class RainbowAgent:
                 return random.randrange(NUM_MOVE), random.randrange(NUM_FIRE), True
 
             e = enemies[active]
-            dx = e[:, 1]
-            dy = e[:, 2]
-            dist = np.clip(e[:, 3], 0.0, 1.0)
-            threat = np.clip(e[:, 6], 0.0, 1.0)
-            ttc = np.clip(e[:, 8], 0.0, 1.0) if feats > 8 else np.ones_like(dist)
+            type_id = np.zeros(e.shape[0], dtype=np.int32)
+            if feats > 9:
+                type_id = np.rint(np.clip(e[:, 9], 0.0, 1.0) * 8.0).astype(np.int32)
+            move_mask = type_id != 7  # ignore humans as danger.
+            fire_mask = np.isin(type_id, np.asarray([0, 2, 3, 4, 5, 6, 8], dtype=np.int32))
+
+            move_e = e[move_mask]
+            if move_e.size == 0:
+                move_e = e
+            dx = move_e[:, 1]
+            dy = move_e[:, 2]
+            dist = np.clip(move_e[:, 3], 0.0, 1.0)
+            threat = np.clip(move_e[:, 6], 0.0, 1.0)
+            ttc = np.clip(move_e[:, 8], 0.0, 1.0) if feats > 8 else np.ones_like(dist)
             closeness = 1.0 - dist
             weight = (0.25 + 0.75 * threat) * (0.35 + 0.65 * closeness) * (0.5 + 0.5 * (1.0 - ttc))
 
@@ -255,7 +264,23 @@ class RainbowAgent:
             idle_move = -0.35 if pressure > 0.15 else 0.05
             move_scores = np.concatenate([move_scores8, np.asarray([idle_move], dtype=np.float32)])
 
-            fire_scores8 = (np.clip(toward, 0.0, None) * (0.25 + 0.75 * closeness) * (0.25 + 0.75 * threat)).sum(axis=1)
+            target_e = e[fire_mask]
+            if target_e.size > 0:
+                target_dx = target_e[:, 1]
+                target_dy = target_e[:, 2]
+                target_dist = np.clip(target_e[:, 3], 0.0, 1.0)
+                target_threat = np.clip(target_e[:, 6], 0.0, 1.0)
+                target_close = 1.0 - target_dist
+                target_vec = np.stack([target_dx, target_dy], axis=1)
+                target_vec /= np.linalg.norm(target_vec, axis=1, keepdims=True).clip(min=1e-6)
+                target_toward = dirs @ target_vec.T
+                fire_scores8 = (
+                    np.clip(target_toward, 0.0, None)
+                    * (0.25 + 0.75 * target_close)
+                    * (0.25 + 0.75 * target_threat)
+                ).sum(axis=1)
+            else:
+                fire_scores8 = np.zeros(8, dtype=np.float32)
             target_pressure = float(np.nanmax(fire_scores8)) if fire_scores8.size else 0.0
             idle_fire = 0.10 if target_pressure < 0.05 else -0.35
             fire_scores = np.concatenate([fire_scores8, np.asarray([idle_fire], dtype=np.float32)])
@@ -670,7 +695,7 @@ class RainbowAgent:
     def diagnose_attention(self, num_samples: int = 256) -> str:
         """Report enemy self-attention entropy to gauge whether it's meaningful."""
         if not getattr(self.online_net, "use_object_attn", False):
-            return "Enemy attention is disabled in this model."
+            return "Object attention is disabled in this model."
         if len(self.memory) < num_samples:
             return f"Need {num_samples} samples in buffer, have {len(self.memory)}."
         batch = self.memory.sample(num_samples, beta=0.4)

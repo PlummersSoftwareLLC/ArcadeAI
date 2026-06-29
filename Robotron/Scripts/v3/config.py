@@ -35,13 +35,13 @@ PY_CONTROL_CONTEXT_FEATURES = 4
 GLOBAL_EXTRA_FEATURES = 4
 
 # Entity pool definitions: (name, max_slots, features_per_slot)
-# The projectile pool carries an extra subtype channel (cruise missile vs
-# spark/shell) so the model can distinguish homing threats from straight shots.
+# Lua emits common 10-wide rows, distance-sorted within each group:
+# [present, dx, dy, dist, vx, vy, threat, approach, ttc, type_norm].
 ENTITY_POOL_DEFS: list[tuple[str, int, int]] = [
-    ("projectile", 24, 11),
-    ("danger",     96, 10),
-    ("human",      12,  7),
-    ("electrode",   8,  5),
+    ("destructible", 64, 10),
+    ("hulk",         16, 10),
+    ("obstacle",     16, 10),
+    ("human",        16, 10),
 ]
 
 # Total Lua wire payload size

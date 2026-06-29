@@ -7,11 +7,11 @@
         + 22 ELIST bytes (first 22 of 50; rest are reserved padding)
         + 8 directional predictive lane summaries × 30 features computed from all visible objects
         + 9×9 local egocentric tactical grid × 6 channels
-        + 4 role-specific pools:
-            projectile: 1 occupancy + 24 slots × 11 features
-            danger:     1 occupancy + 96 slots × 10 features
-            human:      1 occupancy + 12 slots × 7 features
-            electrode:  1 occupancy + 8 slots × 5 features
+        + 4 distance-sorted state-bag pools, each row using 10 common features:
+            destructible: 1 occupancy + 64 slots × 10 features
+            hulk:         1 occupancy + 16 slots × 10 features
+            obstacle:     1 occupancy + 16 slots × 10 features
+            human:        1 occupancy + 16 slots × 10 features
       - Receives joystick commands: movement_dir (-1 neutral or 0..7) and firing_dir (-1 neutral or 0..7)
 --]]
 
@@ -294,20 +294,17 @@ TACTICAL_GRID_HALF_RANGE_Y = (TACTICAL_GRID_H * TACTICAL_GRID_CELL_SIZE) * 0.5
 TACTICAL_GRID_FEATURES = TACTICAL_GRID_W * TACTICAL_GRID_H * TACTICAL_GRID_CHANNELS
 TACTICAL_GRID_LOOKAHEAD_FRAMES = 4.0
 TACTICAL_TTC_MAX_FRAMES = 24.0
-PROJECTILE_POOL_SLOTS = 24
-PROJECTILE_SLOT_FEATURES = 11
-DANGER_POOL_SLOTS = 96
-DANGER_SLOT_FEATURES = 10
-HUMAN_POOL_SLOTS = 12
-HUMAN_SLOT_FEATURES = 7
-ELECTRODE_POOL_SLOTS = 8
-ELECTRODE_SLOT_FEATURES = 5
+STATE_BAG_SLOT_FEATURES = 10
+DESTRUCTIBLE_POOL_SLOTS = 64
+HULK_POOL_SLOTS = 16
+OBSTACLE_POOL_SLOTS = 16
+HUMAN_POOL_SLOTS = 16
 TACTICAL_LANE_TOTAL_FEATURES = TACTICAL_LANE_COUNT * TACTICAL_LANE_FEATURES
 TACTICAL_POOL_TOTAL_FEATURES =
-    (1 + (PROJECTILE_POOL_SLOTS * PROJECTILE_SLOT_FEATURES))
-    + (1 + (DANGER_POOL_SLOTS * DANGER_SLOT_FEATURES))
-    + (1 + (HUMAN_POOL_SLOTS * HUMAN_SLOT_FEATURES))
-    + (1 + (ELECTRODE_POOL_SLOTS * ELECTRODE_SLOT_FEATURES))
+    (1 + (DESTRUCTIBLE_POOL_SLOTS * STATE_BAG_SLOT_FEATURES))
+    + (1 + (HULK_POOL_SLOTS * STATE_BAG_SLOT_FEATURES))
+    + (1 + (OBSTACLE_POOL_SLOTS * STATE_BAG_SLOT_FEATURES))
+    + (1 + (HUMAN_POOL_SLOTS * STATE_BAG_SLOT_FEATURES))
 EXPECTED_STATE_VALUES = LEGACY_CORE_FEATURES + ZP1ENM_EMIT_COUNT + TACTICAL_LANE_TOTAL_FEATURES + TACTICAL_GRID_FEATURES + TACTICAL_POOL_TOTAL_FEATURES
 
 local function _make_zero_feature_block(count)
@@ -352,38 +349,17 @@ local CATEGORY_IS_DANGEROUS = {
     spawner = true, enforcer = true, projectile = true, electrode = true,
 }
 
+local CATEGORY_IS_DESTRUCTIBLE = {
+    grunt = true, brain = true, tank = true,
+    spawner = true, enforcer = true, projectile = true,
+}
+
 local CATEGORY_IS_STATIC = {
     electrode = true,
 }
 
 local prev_object_sample_x = {}
 local prev_object_sample_y = {}
-
-local function _empty_slot_ptrs(slot_count)
-    local out = {}
-    for i = 1, slot_count do
-        out[i] = 0
-    end
-    return out
-end
-
-local prev_pool_slot_ptrs = {
-    projectile = _empty_slot_ptrs(PROJECTILE_POOL_SLOTS),
-    danger = _empty_slot_ptrs(DANGER_POOL_SLOTS),
-    human = _empty_slot_ptrs(HUMAN_POOL_SLOTS),
-    electrode = _empty_slot_ptrs(ELECTRODE_POOL_SLOTS),
-}
-
-local function _reset_legacy_slot_assignments()
-    prev_pool_slot_ptrs = {
-        projectile = _empty_slot_ptrs(PROJECTILE_POOL_SLOTS),
-        danger = _empty_slot_ptrs(DANGER_POOL_SLOTS),
-        human = _empty_slot_ptrs(HUMAN_POOL_SLOTS),
-        electrode = _empty_slot_ptrs(ELECTRODE_POOL_SLOTS),
-    }
-end
-
-_reset_legacy_slot_assignments()
 
 local function _select_top_k_sorted(bucket, limit, better_fn)
     local selected = {}
@@ -419,76 +395,9 @@ local function _select_top_k_sorted(bucket, limit, better_fn)
     return selected, selected_n
 end
 
-local function _dangerous_priority_better(a, b)
-    if b == nil then return true end
-    local ta, tb = tonumber(a.threat) or 0.0, tonumber(b.threat) or 0.0
-    if ta ~= tb then
-        return ta > tb
-    end
-    return (tonumber(a.dist_norm) or 1.0) < (tonumber(b.dist_norm) or 1.0)
-end
-
 local function _nearest_distance_better(a, b)
     if b == nil then return true end
     return (tonumber(a.dist_norm) or 1.0) < (tonumber(b.dist_norm) or 1.0)
-end
-
-local function _projectile_priority_better(a, b)
-    if b == nil then return true end
-    local tta = tonumber(a.ttc_norm) or 1.0
-    local ttb = tonumber(b.ttc_norm) or 1.0
-    if tta ~= ttb then
-        return tta < ttb
-    end
-    local ca = tonumber(a.closest_pass_norm) or 1.0
-    local cb = tonumber(b.closest_pass_norm) or 1.0
-    if ca ~= cb then
-        return ca < cb
-    end
-    return (tonumber(a.dist_norm) or 1.0) < (tonumber(b.dist_norm) or 1.0)
-end
-
-local function _stable_assign_pool_slots(pool_name, bucket, slot_count, better_fn)
-    local selected, selected_n = _select_top_k_sorted(bucket, slot_count, better_fn)
-    local assigned = {}
-    local selected_by_ptr = {}
-    for i = 1, selected_n do
-        selected_by_ptr[selected[i].ptr] = selected[i]
-    end
-
-    local prev_slots = prev_pool_slot_ptrs[pool_name] or _empty_slot_ptrs(slot_count)
-    for slot_idx = 1, slot_count do
-        local prev_ptr = prev_slots[slot_idx]
-        local obj = prev_ptr and prev_ptr ~= 0 and selected_by_ptr[prev_ptr] or nil
-        if obj ~= nil then
-            assigned[slot_idx] = obj
-            selected_by_ptr[prev_ptr] = nil
-        end
-    end
-
-    -- Fill remaining holes in priority order
-    local fill_idx = 1
-    for slot_idx = 1, slot_count do
-        if assigned[slot_idx] == nil then
-            while fill_idx <= selected_n do
-                local obj = selected[fill_idx]
-                fill_idx = fill_idx + 1
-                if obj ~= nil and selected_by_ptr[obj.ptr] ~= nil then
-                    assigned[slot_idx] = obj
-                    selected_by_ptr[obj.ptr] = nil
-                    break
-                end
-            end
-        end
-    end
-
-    local next_slots = {}
-    for i = 1, slot_count do
-        next_slots[i] = assigned[i] and assigned[i].ptr or 0
-    end
-    prev_pool_slot_ptrs[pool_name] = next_slots
-
-    return assigned, selected_n
 end
 
 -- OCVECT-based entity classification (auto-discovered at runtime).
@@ -1926,8 +1835,10 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
 
     local projectile_bucket = buckets["projectile"]
     local dangerous_bucket = {}
+    local destructible_bucket = {}
+    local hulk_bucket = buckets["hulk"]
     local human_bucket = buckets["human"]
-    local electrode_bucket = buckets["electrode"]
+    local obstacle_bucket = buckets["electrode"]
     local compute_full_tactical_features = not SKIP_UNUSED_TACTICAL_FEATURES
     local current_sample_x = {}
     local current_sample_y = {}
@@ -1984,6 +1895,9 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
             current_sample_x[obj.ptr] = obj.x16
             current_sample_y[obj.ptr] = obj.y16
             buckets[obj.category][#buckets[obj.category] + 1] = obj
+            if CATEGORY_IS_DESTRUCTIBLE[obj.category] then
+                destructible_bucket[#destructible_bucket + 1] = obj
+            end
             if obj.category == "projectile" then
                 -- projectile_bucket already aliases buckets["projectile"]
             elseif obj.category ~= "human" and obj.category ~= "electrode" then
@@ -2031,14 +1945,14 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
             dangerous_bucket,
             projectile_bucket,
             human_bucket,
-            electrode_bucket
+            obstacle_bucket
         )
-        local_grid_features = _build_local_tactical_grid(dangerous_bucket, projectile_bucket, human_bucket, electrode_bucket)
+        local_grid_features = _build_local_tactical_grid(dangerous_bucket, projectile_bucket, human_bucket, obstacle_bucket)
     end
-    local projectile_assigned, projectile_count = _stable_assign_pool_slots("projectile", projectile_bucket, PROJECTILE_POOL_SLOTS, _projectile_priority_better)
-    local danger_assigned, danger_count = _stable_assign_pool_slots("danger", dangerous_bucket, DANGER_POOL_SLOTS, _dangerous_priority_better)
-    local human_assigned, human_count = _stable_assign_pool_slots("human", human_bucket, HUMAN_POOL_SLOTS, _nearest_distance_better)
-    local electrode_assigned, electrode_count = _stable_assign_pool_slots("electrode", electrode_bucket, ELECTRODE_POOL_SLOTS, _nearest_distance_better)
+    local destructible_assigned, destructible_count = _select_top_k_sorted(destructible_bucket, DESTRUCTIBLE_POOL_SLOTS, _nearest_distance_better)
+    local hulk_assigned, hulk_count = _select_top_k_sorted(hulk_bucket, HULK_POOL_SLOTS, _nearest_distance_better)
+    local obstacle_assigned, obstacle_count = _select_top_k_sorted(obstacle_bucket, OBSTACLE_POOL_SLOTS, _nearest_distance_better)
+    local human_assigned, human_count = _select_top_k_sorted(human_bucket, HUMAN_POOL_SLOTS, _nearest_distance_better)
 
     if hud_enabled then
         for _, cat in ipairs(ENTITY_CATEGORIES) do
@@ -2064,89 +1978,39 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
         hud_objects = nil
     end
 
-    -- ── Emit tactical pools ───────────────────────────────────────────
+    -- ── Emit distance-sorted state-bag pools ─────────────────────────
+    -- Common 10-wide row:
+    -- [present, dx, dy, dist, vx, vy, threat, approach, ttc, type_norm]
     local pool_features = {}
     local type_denom = math.max(1, UNIFIED_NUM_TYPES - 1)
-    pool_features[#pool_features + 1] = math.min(1.0, projectile_count / PROJECTILE_POOL_SLOTS)
-    for i = 1, PROJECTILE_POOL_SLOTS do
-        local obj = projectile_assigned[i]
-        if obj then
-            pool_features[#pool_features + 1] = 1.0
-            pool_features[#pool_features + 1] = obj.dx
-            pool_features[#pool_features + 1] = obj.dy
-            pool_features[#pool_features + 1] = obj.dist_norm
-            pool_features[#pool_features + 1] = obj.vx or 0.0
-            pool_features[#pool_features + 1] = obj.vy or 0.0
-            pool_features[#pool_features + 1] = obj.threat or 0.0
-            pool_features[#pool_features + 1] = obj.ttc_norm or 1.0
-            pool_features[#pool_features + 1] = obj.closest_pass_norm or obj.dist_norm or 1.0
-            pool_features[#pool_features + 1] = obj.approach or 0.0
-            -- Subtype: 1.0 for homing cruise missiles (RPTR list), 0.0 for
-            -- straight enforcer sparks/shells. Lets the model treat the seeking
-            -- threat differently from a predictable shot.
-            pool_features[#pool_features + 1] = (obj.list_name == "rptr") and 1.0 or 0.0
-        else
-            for _ = 1, PROJECTILE_SLOT_FEATURES do
-                pool_features[#pool_features + 1] = 0.0
+    local function emit_state_bag_pool(assigned, selected_count, slot_count)
+        pool_features[#pool_features + 1] = math.min(1.0, selected_count / math.max(1, slot_count))
+        for i = 1, slot_count do
+            local obj = assigned[i]
+            if obj then
+                local type_id = UNIFIED_TYPE_ID[obj.category] or 0
+                pool_features[#pool_features + 1] = 1.0
+                pool_features[#pool_features + 1] = obj.dx
+                pool_features[#pool_features + 1] = obj.dy
+                pool_features[#pool_features + 1] = obj.dist_norm
+                pool_features[#pool_features + 1] = obj.vx or 0.0
+                pool_features[#pool_features + 1] = obj.vy or 0.0
+                pool_features[#pool_features + 1] = obj.threat or 0.0
+                pool_features[#pool_features + 1] = obj.approach or 0.0
+                pool_features[#pool_features + 1] = obj.ttc_norm or 1.0
+                pool_features[#pool_features + 1] = type_id / type_denom
+            else
+                for _ = 1, STATE_BAG_SLOT_FEATURES do
+                    pool_features[#pool_features + 1] = 0.0
+                end
             end
         end
     end
 
-    pool_features[#pool_features + 1] = math.min(1.0, danger_count / DANGER_POOL_SLOTS)
-    for i = 1, DANGER_POOL_SLOTS do
-        local obj = danger_assigned[i]
-        if obj then
-            local type_id = UNIFIED_TYPE_ID[obj.category] or 0
-            pool_features[#pool_features + 1] = 1.0
-            pool_features[#pool_features + 1] = obj.dx
-            pool_features[#pool_features + 1] = obj.dy
-            pool_features[#pool_features + 1] = obj.dist_norm
-            pool_features[#pool_features + 1] = obj.vx or 0.0
-            pool_features[#pool_features + 1] = obj.vy or 0.0
-            pool_features[#pool_features + 1] = obj.threat or 0.0
-            pool_features[#pool_features + 1] = obj.approach or 0.0
-            pool_features[#pool_features + 1] = obj.ttc_norm or 1.0
-            pool_features[#pool_features + 1] = type_id / type_denom
-        else
-            for _ = 1, DANGER_SLOT_FEATURES do
-                pool_features[#pool_features + 1] = 0.0
-            end
-        end
-    end
-
-    pool_features[#pool_features + 1] = math.min(1.0, human_count / HUMAN_POOL_SLOTS)
-    for i = 1, HUMAN_POOL_SLOTS do
-        local obj = human_assigned[i]
-        if obj then
-            pool_features[#pool_features + 1] = 1.0
-            pool_features[#pool_features + 1] = obj.dx
-            pool_features[#pool_features + 1] = obj.dy
-            pool_features[#pool_features + 1] = obj.dist_norm
-            pool_features[#pool_features + 1] = obj.vx or 0.0
-            pool_features[#pool_features + 1] = obj.vy or 0.0
-            pool_features[#pool_features + 1] = obj.threat or 0.0
-        else
-            for _ = 1, HUMAN_SLOT_FEATURES do
-                pool_features[#pool_features + 1] = 0.0
-            end
-        end
-    end
-
-    pool_features[#pool_features + 1] = math.min(1.0, electrode_count / ELECTRODE_POOL_SLOTS)
-    for i = 1, ELECTRODE_POOL_SLOTS do
-        local obj = electrode_assigned[i]
-        if obj then
-            pool_features[#pool_features + 1] = 1.0
-            pool_features[#pool_features + 1] = obj.dx
-            pool_features[#pool_features + 1] = obj.dy
-            pool_features[#pool_features + 1] = obj.dist_norm
-            pool_features[#pool_features + 1] = obj.threat or 0.0
-        else
-            for _ = 1, ELECTRODE_SLOT_FEATURES do
-                pool_features[#pool_features + 1] = 0.0
-            end
-        end
-    end
+    emit_state_bag_pool(destructible_assigned, destructible_count, DESTRUCTIBLE_POOL_SLOTS)
+    emit_state_bag_pool(hulk_assigned, hulk_count, HULK_POOL_SLOTS)
+    emit_state_bag_pool(obstacle_assigned, obstacle_count, OBSTACLE_POOL_SLOTS)
+    emit_state_bag_pool(human_assigned, human_count, HUMAN_POOL_SLOTS)
 
     local num_humans = counts["human"] or 0
     local num_spawners = counts["spawner"] or 0
@@ -3476,7 +3340,6 @@ function frame_callback()
         dead_frame_counter = dead_frame_counter + 1
         prev_object_sample_x = {}
         prev_object_sample_y = {}
-        _reset_legacy_slot_assignments()
     else
         dead_frame_counter = 0
     end

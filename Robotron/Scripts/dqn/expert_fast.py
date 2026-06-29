@@ -32,10 +32,9 @@ from v3.state_processor import (
     _POS_MAX_DIAG,
     _slot_type,
 )
-from v3.expert import TYPE_MISSILE, _get_strategic_expert_action
+from v3.expert import _get_strategic_expert_action
 
-_PROJECTILE = "projectile"
-_VEL_POOLS = frozenset({"projectile", "danger", "human"})
+_VEL_POOLS = frozenset({"destructible", "hulk", "obstacle", "human"})
 _TYPE_HI = NUM_ENTITY_CLASSES - 1
 
 
@@ -65,7 +64,6 @@ def _active_entities_fast(wire_state: np.ndarray):
 
         raw = pools_data[slot_start:slot_end].reshape(max_slots, feat_per_slot)
         is_vel = pool_name in _VEL_POOLS and feat_per_slot > 5
-        is_proj = pool_name == _PROJECTILE
         for slot_idx in range(max_slots):
             slot = raw[slot_idx]
             if slot[0] <= 0.5 or not np.isfinite(slot).all():
@@ -80,11 +78,6 @@ def _active_entities_fast(wire_state: np.ndarray):
             if is_vel:
                 vx = _clamp11(float(slot[4]))
                 vy = _clamp11(float(slot[5]))
-
-            if is_proj:
-                subtype = float(slot[10]) if feat_per_slot > 10 else 0.0
-                if subtype >= 0.5:
-                    type_id = TYPE_MISSILE
 
             type_id = 0 if type_id < 0 else (_TYPE_HI if type_id > _TYPE_HI else int(type_id))
 

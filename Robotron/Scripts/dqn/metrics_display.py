@@ -253,7 +253,7 @@ def display_metrics_header():
     row_counter = 0
     hdr = (
         f"{'Frame':>11} {'Steps':>10} {'FPS':>7} {'Epsi':>7} {'Xprt':>7} "
-        f"{'AvgScr':>9} {'AvgLvl':>6} "
+        f"{'Scr1M':>9} {'Lvl1M':>6} "
         f"{'Rwrd':>9} {'Score':>9} {'Shape':>9} {'Death':>9} {'DQN100K/F':>9} {'DQN1M/F':>9} {'DQN5M/F':>9} {'DQN10M/F':>9} "
         f"{'EvalR':>8} {'EvalScr':>8} {'EvalLvl':>7} "
         f"{'Loss':>10} {'AgrM%':>6} {'AgrF%':>6} "
@@ -357,9 +357,9 @@ def display_metrics_row(agent, kb_handler):
         metrics.episode_length_sum_interval = 0
         metrics.episode_length_count_interval = 0
 
-    # ── Wave / level ────────────────────────────────────────────────────
-    display_level = metrics.average_level + 1.0
-    average_game_score = metrics.average_game_score
+    # ── Rolling score / wave ────────────────────────────────────────────
+    display_level = metrics.level_1m_average + 1.0
+    average_game_score = metrics.score_1m_average
 
     # ── DQN windows ─────────────────────────────────────────────────────
     dqn100k, dqn1m, dqn5m = get_dqn_window_averages()

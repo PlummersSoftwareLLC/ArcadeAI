@@ -6,15 +6,15 @@
 # ||    • C51 distributional value estimation                                                                     ||
 # ||    • JOINT 81-action head for coupled move/fire values                                                        ||
 # ||    • Auxiliary BRANCHING heads for move/fire imitation diagnostics                                             ||
-# ||    • Self-attention over a stable 96-row enemy list                                                           ||
+# ||    • Self-attention over a grouped 112-row object state bag                                                   ||
 # ||    • Dueling architecture                                                                                     ||
 # ==================================================================================================================
 """Model + action helpers for the Robotron DQN.
 
 The state vector is the model slice (18 core game/player scalars + 22
-ELIST/level-state scalars + 96 stable enemy rows × 10). When frame stacking is
-enabled, only the compact global/level slice from each frame is concatenated
-into the raw trunk. The current-frame enemy list is encoded by attention.
+ELIST/level-state scalars + 112 grouped object rows × 10). When frame stacking
+is enabled, only the compact global/level slice from each frame is concatenated
+into the raw trunk. The current-frame object bag is encoded by attention.
 """
 
 if __name__ == "__main__":
@@ -123,7 +123,7 @@ class LaneSelfAttentionEncoder(nn.Module):
 
 
 class ObjectSelfAttentionEncoder(nn.Module):
-    """Self-attention over stable enemy rows with a presence mask."""
+    """Self-attention over grouped object rows with a presence mask."""
 
     def __init__(self, token_features: int, embed_dim: int, num_heads: int):
         super().__init__()

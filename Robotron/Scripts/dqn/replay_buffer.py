@@ -360,8 +360,12 @@ class PrioritizedReplayBuffer:
                 dist = np.clip(rows[:, :, 3], 0.0, 1.0)
                 threat = np.clip(rows[:, :, 6], 0.0, 1.0)
                 ttc = np.clip(rows[:, :, 8], 0.0, 1.0) if enemy_features > 8 else np.ones_like(dist)
+                dangerous = np.ones_like(present, dtype=bool)
+                if enemy_features > 9:
+                    type_id = np.rint(np.clip(rows[:, :, 9], 0.0, 1.0) * 8.0).astype(np.int32)
+                    dangerous = type_id != 7
                 cue = np.maximum((1.0 - dist) * threat, (1.0 - dist) * (1.0 - ttc))
-                cue = np.where(present, cue, 0.0)
+                cue = np.where(present & dangerous, cue, 0.0)
                 danger = np.nanmax(cue, axis=1).astype(np.float32)
             except Exception:
                 danger.fill(0.0)

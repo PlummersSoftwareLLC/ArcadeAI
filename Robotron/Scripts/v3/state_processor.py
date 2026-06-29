@@ -2,9 +2,9 @@
 """Robotron AI v3 - object/ray state processor.
 
 Lua sends the shared Robotron wire packet: core scalars, ELIST bytes, legacy
-lane/grid blocks, and role pools. The v3 learner ignores the legacy lane/grid
-block and uses the role pools, whose positions come from the same
-collision-center calculations as the debug HUD overlay.
+lane/grid blocks, and distance-sorted state-bag pools. The v3 learner ignores
+the legacy lane/grid block and uses the state-bag pools, whose positions come
+from the same collision-center calculations as the debug HUD overlay.
 
 Processed observation:
   entity_features:      (max_entities, 32)
@@ -110,7 +110,7 @@ _DANGEROUS_TYPES = frozenset({
 _PROJECTILE_TYPES = frozenset({TYPE_PROJECTILE, TYPE_MISSILE, TYPE_SPARK})
 _DESTRUCTIBLE_TYPES = frozenset({
     TYPE_GRUNT, TYPE_BRAIN, TYPE_TANK, TYPE_SPAWNER, TYPE_ENFORCER,
-    TYPE_PROJECTILE, TYPE_MISSILE, TYPE_SPARK, TYPE_PROG,
+    TYPE_PROJECTILE, TYPE_ELECTRODE, TYPE_MISSILE, TYPE_SPARK, TYPE_PROG,
 })
 _PRIORITY_FIRE_TYPES = frozenset({
     TYPE_BRAIN, TYPE_TANK, TYPE_SPAWNER, TYPE_ENFORCER,
@@ -119,18 +119,15 @@ _PRIORITY_FIRE_TYPES = frozenset({
 _STATIC_BLOCKER_TYPES = frozenset({TYPE_HULK, TYPE_ELECTRODE})
 
 _POOL_TYPE_DEFAULT = {
-    "projectile": TYPE_PROJECTILE,
-    "danger": TYPE_GRUNT,
+    "destructible": TYPE_GRUNT,
+    "hulk": TYPE_HULK,
+    "obstacle": TYPE_ELECTRODE,
     "human": TYPE_HUMAN,
-    "electrode": TYPE_ELECTRODE,
 }
 
-# Stable per-pool base offset into the flattened entity array. Each Lua pool
-# slot maps to a FIXED model index (base[pool] + slot_idx) so that, frame to
-# frame, model index i is always the same object (Lua keeps slots stable by
-# object pointer via _stable_assign_pool_slots). This is what makes the per-slot
-# temporal fusion in the model valid; compacting active entities to contiguous
-# indices would shift identities whenever any lower-indexed object spawns/dies.
+# Per-pool base offset into the flattened entity array. Rows are distance-sorted
+# within each group, so indices encode group and distance rank rather than a
+# stable object pointer identity.
 _POOL_GLOBAL_BASE: dict[str, int] = {}
 _ENTITY_SLOT_TOTAL = 0
 for _pname, _pslots, _pfeats in ENTITY_POOL_DEFS:
@@ -173,7 +170,7 @@ def _dist_from_rel(dx: float, dy: float) -> float:
 
 
 def _slot_type(pool_name: str, slot: np.ndarray) -> int:
-    if pool_name == "danger" and slot.shape[0] > 9:
+    if slot.shape[0] > 9:
         return max(0, min(NUM_ENTITY_CLASSES - 1, _decode_unified_type_id(slot[9])))
     return _POOL_TYPE_DEFAULT.get(pool_name, TYPE_GRUNT)
 
@@ -204,33 +201,12 @@ def _collect_entity_slots(wire_state: np.ndarray) -> list[dict[str, float]]:
             if dist <= 1e-6:
                 dist = _dist_from_rel(dx, dy)
 
-            vx = 0.0
-            vy = 0.0
-            if pool_name in {"projectile", "danger", "human"} and feat_per_slot > 5:
-                vx = float(_clamp11(slot[4]))
-                vy = float(_clamp11(slot[5]))
-
-            threat = 0.0
-            approach = 0.0
-            ttc_norm = 1.0
+            vx = float(_clamp11(slot[4])) if feat_per_slot > 4 else 0.0
+            vy = float(_clamp11(slot[5])) if feat_per_slot > 5 else 0.0
+            threat = float(_clamp01(slot[6] if feat_per_slot > 6 else 0.0))
+            approach = float(_clamp11(slot[7] if feat_per_slot > 7 else 0.0))
+            ttc_norm = float(_clamp01(slot[8] if feat_per_slot > 8 else 1.0))
             closest_pass_norm = dist
-            if pool_name == "projectile":
-                threat = float(_clamp01(slot[6] if feat_per_slot > 6 else 0.8))
-                ttc_norm = float(_clamp01(slot[7] if feat_per_slot > 7 else 1.0))
-                closest_pass_norm = float(_clamp01(slot[8] if feat_per_slot > 8 else dist))
-                approach = float(_clamp11(slot[9] if feat_per_slot > 9 else 0.0))
-                # Subtype channel: 1.0 => homing cruise missile, else straight shot.
-                subtype = float(slot[10]) if feat_per_slot > 10 else 0.0
-                if subtype >= 0.5:
-                    type_id = TYPE_MISSILE
-            elif pool_name == "danger":
-                threat = float(_clamp01(slot[6] if feat_per_slot > 6 else 0.6))
-                approach = float(_clamp11(slot[7] if feat_per_slot > 7 else 0.0))
-                ttc_norm = float(_clamp01(slot[8] if feat_per_slot > 8 else 1.0))
-            elif pool_name == "human":
-                threat = float(_clamp01(slot[6] if feat_per_slot > 6 else 0.0))
-            elif pool_name == "electrode":
-                threat = float(_clamp01(slot[4] if feat_per_slot > 4 else 0.7))
 
             out.append({
                 "pool": pool_name,
@@ -256,7 +232,7 @@ def extract_entities(
     wire_state: np.ndarray,
     max_entities: int = CONFIG.model.max_entities,
 ) -> tuple[np.ndarray, np.ndarray, int]:
-    """Extract HUD-consistent object tokens from the Lua role pools."""
+    """Extract HUD-consistent object tokens from the Lua state-bag pools."""
     entity_dim = ENTITY_FEATURE_DIM
     features = np.zeros((max_entities, entity_dim), dtype=np.float32)
     mask = np.ones(max_entities, dtype=bool)
@@ -265,10 +241,10 @@ def extract_entities(
     py = _safe_float(wire_state[6], 0.5) if wire_state.shape[0] > 6 else 0.5
     slots = _collect_entity_slots(wire_state)
 
-    # Place each entity at its STABLE global index (pool base + slot). Holes
-    # (inactive slots) stay masked. num_entities is returned as an exclusive
-    # upper bound on occupied indices, so consumers that iterate range(n) with a
-    # mask check (e.g. the expert) still visit every active row.
+    # Place each entity at its group/rank index (pool base + slot). Holes stay
+    # masked. num_entities is returned as an exclusive upper bound on occupied
+    # indices, so consumers that iterate range(n) with a mask check still visit
+    # every active row.
     max_idx = -1
     for slot in slots:
         gidx = _POOL_GLOBAL_BASE[slot["pool"]] + int(slot["slot"])

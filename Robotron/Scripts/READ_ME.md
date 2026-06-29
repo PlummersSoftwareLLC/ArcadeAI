@@ -4,12 +4,12 @@ This `Robotron/Scripts` project is now a stripped baseline for Robotron-specific
 
 ## Current Scope
 
-- Lua sends a **1454-value wire packet** each frame:
+- Lua sends a **1890-value wire packet** each frame:
   - 18 core player/game values
   - 22 `ZP1ENM` / ELIST bytes
   - legacy lane/grid sections kept on the wire for server stability
-  - role pools for projectile, danger, human, and electrode objects
-- Python v3 now converts those role pools into an **object-ray representation**:
+  - distance-sorted state-bag pools for 64 destructibles/projectiles, 16 hulks, 16 obstacles, and 16 humans
+- Python v3 now converts those state-bag pools into an **object-ray representation**:
   - HUD-consistent collision-center object positions from `OPTR`, `HPTR`, `RPTR`, and `PPTR`
   - 32-feature entity tokens with relative/absolute position, velocity, timing, threat, type, and role flags
   - per-action move/fire ray features so each joystick direction is scored against the current geometry
@@ -21,7 +21,7 @@ This `Robotron/Scripts` project is now a stripped baseline for Robotron-specific
 ## Protocol (Lua -> Python)
 
 - Header format: `>HddBIBBIBB`
-  - `H`: number of float state values (currently `2210`)
+  - `H`: number of float state values (currently `1890`)
   - `d`: subjective reward
   - `d`: objective reward
   - `B`: done flag
