@@ -49,7 +49,7 @@ except ImportError:
 
 metrics = config_metrics
 
-ENGINE_VERSION = 14  # Plain global + 112-row grouped object state bag
+ENGINE_VERSION = 15  # Flat compact-state trunk ablation
 
 
 class RainbowAgent:
