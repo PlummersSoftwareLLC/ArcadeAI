@@ -139,6 +139,13 @@ SUBJ_EVADE_WEIGHT = 10.0       -- reward when moving away from nearest threat
 EVADE_DANGER_NORM  = 0.08      -- only reward evasion when enemy within this normalised dist
 MOVE_DIR_VEC = FIRE_DIR_VEC    -- same 8-way mapping for move directions
 
+-- End-of-wave anti-stall pressure. Once there are no humans left, the useful
+-- job is clearing the board, not farming evasion reward by kiting stragglers.
+SUBJ_NO_HUMAN_EVADE_SCALE = 0.25
+SUBJ_NO_HUMAN_CLEAR_PENALTY = 4.0
+SUBJ_NO_HUMAN_CLEAR_NEAR_NORM = EVADE_DANGER_NORM
+SUBJ_NO_HUMAN_CLEAR_FAR_NORM = SUBJ_ENEMY_FAR_NORM
+
 -- Wall-hugging penalty: per-axis penalty when within 16 px of a wall.
 -- Stacks additively so a corner costs double.
 SUBJ_WALL_PENALTY  = 15.0      -- penalty per wall axis per frame
@@ -1266,6 +1273,30 @@ local function compute_evasion_reward(move_cmd, px16, py16, enemy_x16, enemy_y16
     -- Scale by proximity: closer = more reward for correct evasion
     local proximity = clamp01(1.0 - enemy_dist_norm / EVADE_DANGER_NORM)
     return score * proximity
+end
+
+local function compute_no_human_clear_penalty(player_alive, done, score_delta, num_humans, nearest_enemy_dist_norm)
+    if player_alive ~= 1 or done then
+        return 0.0
+    end
+    if (tonumber(num_humans) or 0) > 0 then
+        return 0.0
+    end
+    if (tonumber(score_delta) or 0) > 0 then
+        return 0.0
+    end
+    if nearest_enemy_dist_norm == nil then
+        return 0.0
+    end
+
+    local enemy_dist = clamp01(nearest_enemy_dist_norm)
+    if enemy_dist >= 0.999 then
+        return 0.0
+    end
+
+    local span = math.max(1e-6, SUBJ_NO_HUMAN_CLEAR_FAR_NORM - SUBJ_NO_HUMAN_CLEAR_NEAR_NORM)
+    local far_factor = clamp01((enemy_dist - SUBJ_NO_HUMAN_CLEAR_NEAR_NORM) / span)
+    return SUBJ_NO_HUMAN_CLEAR_PENALTY * (0.5 + (0.5 * far_factor))
 end
 
 function movement_alignment_score(move_cmd, target_x, target_y)
@@ -3266,6 +3297,10 @@ function compute_frame_rewards(frame)
     local brain_guard_score = compute_brain_guard_reward(
         prev_move_cmd, prev_fire_cmd, prev_aim_px16, prev_aim_py16,
         prev_aim_objects, frame.wave_number, frame.num_humans)
+    local no_humans_left = (tonumber(frame.num_humans) or 0) <= 0
+    if no_humans_left then
+        evade_score = evade_score * SUBJ_NO_HUMAN_EVADE_SCALE
+    end
 
     -- Potential-based shaping (Ng et al. 1999) for the state-only terms.
     -- Phi(s) = enemy-spacing + human-proximity potential.  Emitting the per-frame
@@ -3294,17 +3329,25 @@ function compute_frame_rewards(frame)
         wall_penalty = compute_contextual_wall_penalty(
             prev_move_cmd, player_x16, frame.player_y16, frame.obs.nearest_enemy_dist)
     end
+    local no_human_clear_penalty = compute_no_human_clear_penalty(
+        player_alive,
+        done,
+        score_delta,
+        frame.num_humans,
+        frame.obs.nearest_enemy_dist
+    )
 
     local subj_reward = shaping
         + (aim_score * ADVANCED_SHAPING.priority_aim_weight)
         + (evade_score * SUBJ_EVADE_WEIGHT)
         + (brain_guard_score * ADVANCED_SHAPING.brain_guard_weight)
         - wall_penalty
+        - no_human_clear_penalty
 
     trace_log(frame_counter, "reward_calc",
-        string.format("score_delta=%d done=%s obj_reward=%.1f subj_reward=%.2f shape=%.2f aim=%.2f evade=%.2f brain=%.2f wall=%.2f enemy_dist=%s human_dist=%s",
+        string.format("score_delta=%d done=%s obj_reward=%.1f subj_reward=%.2f shape=%.2f aim=%.2f evade=%.2f brain=%.2f wall=%.2f clear=%.2f enemy_dist=%s human_dist=%s",
             score_delta, tostring(done), obj_reward, subj_reward,
-            shaping, aim_score, evade_score, brain_guard_score, wall_penalty,
+            shaping, aim_score, evade_score, brain_guard_score, wall_penalty, no_human_clear_penalty,
             frame.obs.nearest_enemy_dist and string.format("%.4f", frame.obs.nearest_enemy_dist) or "nil",
             frame.obs.nearest_human_dist and string.format("%.4f", frame.obs.nearest_human_dist) or "nil"))
 
