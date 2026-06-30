@@ -374,7 +374,7 @@ class RLConfigData:
     # gradient steps (2-3 wall-clock minutes) — the policy never had time to learn
     # before the expert handed off.  Steps are FPS-independent and track learning.
     expert_ratio_decay_start_step: int = 0
-    expert_ratio_decay_steps: int = 62_500
+    expert_ratio_decay_steps: int = 125_000
     expert_ratio: float = 0.60
 
     # Expert BC — also step-based (same FPS-independence rationale as above).
@@ -383,7 +383,7 @@ class RLConfigData:
     # imitation anchors decay away so DQN can exceed the demonstrator.
     expert_bc_weight: float = 1.0
     expert_bc_decay_start_step: int = 0
-    expert_bc_decay_steps: int = 62_500
+    expert_bc_decay_steps: int = 125_000
     expert_bc_min_weight: float = 0.0
     # Directly distill demonstrations into the deployed joint Q policy. Cross
     # entropy treats Q(s, a) / temperature as action logits, giving the acting
@@ -391,7 +391,7 @@ class RLConfigData:
     expert_q_policy_weight: float = 0.35
     expert_q_policy_temperature: float = 10.0
     expert_q_policy_decay_start_step: int = 0
-    expert_q_policy_decay_steps: int = 62_500
+    expert_q_policy_decay_steps: int = 125_000
     expert_q_policy_min_weight: float = 0.0
     # Q-margin also imitates directly into the acting joint head by constraining
     # Q(expert_action) >= Q(other) + margin on expert-visited states.  Left on
@@ -399,7 +399,7 @@ class RLConfigData:
     expert_q_margin_weight: float = 0.05
     expert_q_margin: float = 0.50
     expert_q_margin_decay_start_step: int = 0
-    expert_q_margin_decay_steps: int = 62_500
+    expert_q_margin_decay_steps: int = 125_000
     expert_q_margin_min_weight: float = 0.0
 
     # ── reward ──────────────────────────────────────────────────────────
