@@ -405,16 +405,15 @@ class RLConfigData:
     score_reward_scale: float = 0.001
     point_reward_scale: float = 1.0 / score_reward_scale  # Derived: 1000.0
     score_reward_clip: float = 25.0
-    # Score-only experiment: ignore all Lua subjective shaping.  The remaining
-    # reward is score delta plus the explicit terminal death penalty below.
+    # Score-only experiment: ignore all Lua subjective shaping and explicit
+    # death reward.  Death is bad only because it ends future point collection.
     subj_reward_scale: float = 0.0
     subj_positive_weight: float = 0.0
     subj_positive_decay_start_step: int = 0
     subj_positive_decay_steps: int = 125_000
     subj_positive_min_weight: float = 0.0
     shaping_reward_clip: float = 0.25
-    # Stored rewards are in score_reward_scale units: -5.0 == -5000 points.
-    death_penalty: float = 5.0
+    death_penalty: float = 0.0
     reward_clip: float = 30.0
     death_reward_clip: float = 40.0
 

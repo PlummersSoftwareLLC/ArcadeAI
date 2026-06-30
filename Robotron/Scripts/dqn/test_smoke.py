@@ -236,7 +236,7 @@ def test_fire_hold():
 def test_reward_and_hard_starts():
     print("\n[reward + hard starts]")
     frame = SS.FrameData(
-        state=fake_wire(), subjreward=100.0, objreward=-5000.0,
+        state=fake_wire(), subjreward=100.0, objreward=0.0,
         done=False, player_alive=True, save_signal=False, start_pressed=False,
         level_number=1, game_score=5000, num_lasers=0)
     total, score_r, subj_r, death_r, score_delta = SS._shape_transition_reward(frame, last_game_score=0)
@@ -250,13 +250,13 @@ def test_reward_and_hard_starts():
     _, score_r2, _, _, _ = SS._shape_transition_reward(frame2, last_game_score=0)
     check("1000 score delta maps to reward 1.0", np.isclose(score_r2, 1.0), f"score_r={score_r2}")
     dead_frame = SS.FrameData(
-        state=fake_wire(), subjreward=-100.0, objreward=-5000.0,
+        state=fake_wire(), subjreward=-100.0, objreward=0.0,
         done=True, player_alive=False, save_signal=False, start_pressed=False,
         level_number=1, game_score=0, num_lasers=0)
     dead_total, _, dead_subj, dead_r, _ = SS._shape_transition_reward(dead_frame, last_game_score=0)
     check("negative subjective shaping is ignored", np.isclose(dead_subj, 0.0), f"subj_r={dead_subj}")
-    check("death penalty is -5000 points", np.isclose(dead_r, -5.0), f"death_r={dead_r}")
-    check("terminal no-score reward is death only", np.isclose(dead_total, -5.0), f"total={dead_total}")
+    check("death has no explicit reward penalty", np.isclose(dead_r, 0.0), f"death_r={dead_r}")
+    check("terminal no-score reward is zero", np.isclose(dead_total, 0.0), f"total={dead_total}")
 
     old_start_adv = C.game_settings.start_advanced
     old_auto = C.game_settings.auto_curriculum
