@@ -81,6 +81,12 @@ DEBUG_FORCE_FIRE_DIR = 2  -- right
 DEATH_PENALTY_POINTS = 25000
 SUBJ_ENEMY_WEIGHT = 8.0
 SUBJ_HUMAN_WEIGHT = 12.0
+SUBJ_HUMAN_STALL_BASE_PENALTY = 1.5
+SUBJ_HUMAN_STALL_PENALTY = 4.0
+SUBJ_HUMAN_PROGRESS_EPS = 0.003
+SUBJ_LAST_HUMAN_STALL_MULT = 1.75
+SUBJ_HUMAN_EVADE_SCALE = 0.35
+SUBJ_LAST_HUMAN_EVADE_SCALE = 0.20
 -- Death is handled Python-side as an explicit Death reward component. Keeping
 -- another death subtraction inside Shape made the dashboard hard to read and
 -- double-counted the same event.
@@ -111,6 +117,9 @@ AIM_TARGET_CATS = {
     grunt = true, hulk = true, brain = true, tank = true,
     spawner = true, enforcer = true, projectile = true, electrode = true,
 }
+SUBJ_HUMAN_GENERIC_AIM_SCALE = 0.20
+SUBJ_HUMAN_PROTECT_RADIUS_NORM = 0.16
+SUBJ_HUMAN_PROTECT_THREAT_MIN = 0.45
 ADVANCED_SHAPING.priority_aim_bonus = {
     grunt = 1.00,
     hulk = 0.85,
@@ -189,6 +198,7 @@ prev_aim_py16 = nil         -- player y16 from previous frame
 prev_nearest_enemy_x16 = nil
 prev_nearest_enemy_y16 = nil
 prev_nearest_enemy_dist = nil
+prev_nearest_human_dist = nil
 
 -- Autoboot input sequence (MAME input level, no game-specific memory logic required).
 -- Every cycle: pulse Coin 1, then pulse 1P Start shortly after.
@@ -1299,6 +1309,44 @@ local function compute_no_human_clear_penalty(player_alive, done, score_delta, n
     return SUBJ_NO_HUMAN_CLEAR_PENALTY * (0.5 + (0.5 * far_factor))
 end
 
+local function compute_human_rescue_stall_penalty(
+    player_alive,
+    done,
+    score_delta,
+    num_humans,
+    nearest_human_dist_norm,
+    prev_human_dist_norm
+)
+    if player_alive ~= 1 or done then
+        return 0.0
+    end
+    local humans = math.max(0, math.floor(tonumber(num_humans) or 0))
+    if humans <= 0 then
+        return 0.0
+    end
+    if (tonumber(score_delta) or 0) > 0 then
+        return 0.0
+    end
+    if nearest_human_dist_norm == nil or prev_human_dist_norm == nil then
+        return 0.0
+    end
+
+    local cur_dist = clamp01(nearest_human_dist_norm)
+    local prev_dist = clamp01(prev_human_dist_norm)
+    local progress = prev_dist - cur_dist
+    if progress > SUBJ_HUMAN_PROGRESS_EPS then
+        return 0.0
+    end
+
+    local dist_factor = clamp01(cur_dist / math.max(1e-6, SUBJ_HUMAN_NEAR_NORM))
+    local stall_penalty = SUBJ_HUMAN_STALL_BASE_PENALTY +
+        (SUBJ_HUMAN_STALL_PENALTY * (0.35 + (0.65 * dist_factor)))
+    if humans == 1 then
+        stall_penalty = stall_penalty * SUBJ_LAST_HUMAN_STALL_MULT
+    end
+    return stall_penalty
+end
+
 function movement_alignment_score(move_cmd, target_x, target_y)
     if move_cmd == nil or move_cmd < 0 or move_cmd > 7 then
         return 0.0
@@ -1351,6 +1399,38 @@ function compute_contextual_wall_penalty(move_cmd, px16, py16, nearest_enemy_dis
     return penalty
 end
 
+local function target_is_near_human(obj, objects)
+    if obj == nil or objects == nil or obj.x16 == nil or obj.y16 == nil then
+        return false
+    end
+    for _, other in ipairs(objects) do
+        if other.category == "human" and other.x16 ~= nil and other.y16 ~= nil then
+            local dx = (obj.x16 or 0) - other.x16
+            local dy = (obj.y16 or 0) - other.y16
+            local d = math.sqrt((dx * dx) + (dy * dy)) / math.max(1e-6, POS_MAX_DIAG)
+            if d <= SUBJ_HUMAN_PROTECT_RADIUS_NORM then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function human_aware_aim_scale(category, obj, objects, num_humans)
+    if math.max(0, math.floor(tonumber(num_humans) or 0)) <= 0 then
+        return 1.0
+    end
+    if category == "brain" or category == "projectile" then
+        return 1.0
+    end
+    if CATEGORY_IS_DANGEROUS[category] and not CATEGORY_IS_STATIC[category] and
+       clamp01(obj.threat or 0.0) >= SUBJ_HUMAN_PROTECT_THREAT_MIN and
+       target_is_near_human(obj, objects) then
+        return 1.0
+    end
+    return SUBJ_HUMAN_GENERIC_AIM_SCALE
+end
+
 function priority_target_bonus(category, wave_number, num_humans, dist_norm)
     local bonus = ADVANCED_SHAPING.priority_aim_bonus[category] or 1.0
     local wave = math.max(0, math.floor(tonumber(wave_number) or 0))
@@ -1395,7 +1475,8 @@ function compute_priority_aim_reward(fire_cmd, px16, py16, objects, wave_number,
                 local base_score = clamp01(1.0 - dist / 32768.0)
                 local threat = clamp01(obj.threat or 0.0)
                 local bonus = priority_target_bonus(cat, wave_number, num_humans, obj.dist_norm)
-                local score = clamp01((0.55 * base_score + 0.45 * threat) * bonus)
+                local aim_scale = human_aware_aim_scale(cat, obj, objects, num_humans)
+                local score = clamp01((0.55 * base_score + 0.45 * threat) * bonus * aim_scale)
                 if score > best_score then
                     best_score = score
                 end
@@ -1879,7 +1960,7 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
 
     local buckets = {}
     local counts = {}
-    local classified_objects = hud_enabled and {} or nil
+    local classified_objects = {}
     local object_count = 0
     local nearest_enemy_dist = nil
     local nearest_human_dist = nil
@@ -1964,9 +2045,7 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
                 dangerous_bucket[#dangerous_bucket + 1] = obj
             end
             object_count = object_count + 1
-            if hud_enabled then
-                classified_objects[#classified_objects + 1] = obj
-            end
+            classified_objects[#classified_objects + 1] = obj
 
             if obj.category == "human" then
                 if nearest_human_dist == nil or obj.dist_norm < nearest_human_dist then
@@ -2095,6 +2174,7 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
         lane_summary_features = lane_summary_features,
         local_grid_features = local_grid_features,
         pool_features = pool_features,
+        reward_objects = classified_objects,
     }
 end
 
@@ -3297,8 +3377,13 @@ function compute_frame_rewards(frame)
     local brain_guard_score = compute_brain_guard_reward(
         prev_move_cmd, prev_fire_cmd, prev_aim_px16, prev_aim_py16,
         prev_aim_objects, frame.wave_number, frame.num_humans)
-    local no_humans_left = (tonumber(frame.num_humans) or 0) <= 0
-    if no_humans_left then
+    local humans_left = math.max(0, math.floor(tonumber(frame.num_humans) or 0))
+    local no_humans_left = humans_left <= 0
+    if humans_left == 1 then
+        evade_score = evade_score * SUBJ_LAST_HUMAN_EVADE_SCALE
+    elseif humans_left > 1 then
+        evade_score = evade_score * SUBJ_HUMAN_EVADE_SCALE
+    elseif no_humans_left then
         evade_score = evade_score * SUBJ_NO_HUMAN_EVADE_SCALE
     end
 
@@ -3336,6 +3421,18 @@ function compute_frame_rewards(frame)
         frame.num_humans,
         frame.obs.nearest_enemy_dist
     )
+    local prev_human_dist_for_reward = nil
+    if previous_player_alive == 1 and previous_wave_number == frame.wave_number and prev_num_humans == humans_left then
+        prev_human_dist_for_reward = prev_nearest_human_dist
+    end
+    local human_stall_penalty = compute_human_rescue_stall_penalty(
+        player_alive,
+        done,
+        score_delta,
+        humans_left,
+        frame.obs.nearest_human_dist,
+        prev_human_dist_for_reward
+    )
 
     local subj_reward = shaping
         + (aim_score * ADVANCED_SHAPING.priority_aim_weight)
@@ -3343,11 +3440,12 @@ function compute_frame_rewards(frame)
         + (brain_guard_score * ADVANCED_SHAPING.brain_guard_weight)
         - wall_penalty
         - no_human_clear_penalty
+        - human_stall_penalty
 
     trace_log(frame_counter, "reward_calc",
-        string.format("score_delta=%d done=%s obj_reward=%.1f subj_reward=%.2f shape=%.2f aim=%.2f evade=%.2f brain=%.2f wall=%.2f clear=%.2f enemy_dist=%s human_dist=%s",
+        string.format("score_delta=%d done=%s obj_reward=%.1f subj_reward=%.2f shape=%.2f aim=%.2f evade=%.2f brain=%.2f wall=%.2f clear=%.2f hstall=%.2f enemy_dist=%s human_dist=%s",
             score_delta, tostring(done), obj_reward, subj_reward,
-            shaping, aim_score, evade_score, brain_guard_score, wall_penalty, no_human_clear_penalty,
+            shaping, aim_score, evade_score, brain_guard_score, wall_penalty, no_human_clear_penalty, human_stall_penalty,
             frame.obs.nearest_enemy_dist and string.format("%.4f", frame.obs.nearest_enemy_dist) or "nil",
             frame.obs.nearest_human_dist and string.format("%.4f", frame.obs.nearest_human_dist) or "nil"))
 
@@ -3506,12 +3604,17 @@ function frame_callback()
     -- aim-reward attribution.
     prev_fire_cmd = effective_fire
     prev_move_cmd = move_cmd
-    prev_aim_objects = hud_objects   -- reuse the same reference (set in extract_world_features)
+    prev_aim_objects = frame.obs.reward_objects
     prev_aim_px16 = frame.player_x16
     prev_aim_py16 = frame.player_y16
     prev_nearest_enemy_x16 = frame.obs.nearest_enemy_x16
     prev_nearest_enemy_y16 = frame.obs.nearest_enemy_y16
     prev_nearest_enemy_dist = frame.obs.nearest_enemy_dist
+    if player_alive == 1 and (frame.num_humans or 0) > 0 then
+        prev_nearest_human_dist = frame.obs.nearest_human_dist
+    else
+        prev_nearest_human_dist = nil
+    end
 
     trace_log(frame_counter, "frame_end", "done=" .. tostring(rewards.done))
     frame_counter = frame_counter + 1
