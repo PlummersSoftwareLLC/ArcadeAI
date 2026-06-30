@@ -11,6 +11,12 @@ that full payload. It keeps only:
 - Four distance-sorted object groups from the Lua state-bag pools:
   64 destructible enemies/projectiles, 16 hulks, 16 obstacles, and 16 humans.
 
+The object geometry is HUD-derived: Lua computes player/object centers from the
+same `OBJX`/`OBJY` screen position, parsed sprite non-zero bitmap bounds, and
+hitbox anchor offsets used by the local MAME HUD outline renderer. The raw
+`OX16`/`OY16` fields are only fallback inputs when a HUD screen coordinate is
+unavailable.
+
 Final raw DQN single-frame state size:
 
 ```text
@@ -54,9 +60,9 @@ more than 64 destructible objects, only the nearest 64 are represented.
 | Row offset | Name | Source / formula | Range / notes |
 |---:|---|---|---|
 | 0 | `present` | `1.0` for active slot | Empty rows are all zeros. |
-| 1 | `dx` | Relative X from player to object | Clamped `-1..1`. |
-| 2 | `dy` | Relative Y from player to object | Clamped `-1..1`. |
-| 3 | `dist` | Object distance from player | Clamped `0..1`; lower is closer. |
+| 1 | `dx` | Relative X from player HUD-box center to object HUD-box center | Clamped `-1..1`. |
+| 2 | `dy` | Relative Y from player HUD-box center to object HUD-box center | Clamped `-1..1`. |
+| 3 | `dist` | HUD-box-center distance from player | Clamped `0..1`; lower is closer. |
 | 4 | `vx` | Object velocity X | Clamped `-1..1`. |
 | 5 | `vy` | Object velocity Y | Clamped `-1..1`. |
 | 6 | `threat` | Lua threat score | Clamped `0..1`. |

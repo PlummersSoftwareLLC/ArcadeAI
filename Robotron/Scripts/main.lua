@@ -1551,6 +1551,30 @@ local function collision_center_y16(base_y16, off_y_px, box_h_px)
     return math.floor((tonumber(base_y16) or 0.0) + (shift_px * 256.0) + 0.5)
 end
 
+local function hud_collision_center_x16(obj_x_px, off_x_px, box_w_px, fallback_base_x16)
+    if obj_x_px == nil then
+        return collision_center_x16(fallback_base_x16, off_x_px, box_w_px)
+    end
+    local center_screen_x =
+        ((tonumber(obj_x_px) or 0.0) * HUD_SCREEN_X_SCALE) +
+        (tonumber(off_x_px) or 0.0) +
+        (0.5 * math.max(1.0, tonumber(box_w_px) or 1.0)) -
+        6.0
+    return math.floor(((center_screen_x / HUD_SCREEN_X_SCALE) * 256.0) + 0.5)
+end
+
+local function hud_collision_center_y16(obj_y_px, off_y_px, box_h_px, fallback_base_y16)
+    if obj_y_px == nil then
+        return collision_center_y16(fallback_base_y16, off_y_px, box_h_px)
+    end
+    local center_y =
+        (tonumber(obj_y_px) or 0.0) +
+        (tonumber(off_y_px) or 0.0) +
+        (0.5 * math.max(1.0, tonumber(box_h_px) or 1.0)) -
+        7.0
+    return math.floor((center_y * 256.0) + 0.5)
+end
+
 local function try_resolve_7x16(all_objects, enemy_state)
     -- Try to resolve ambiguous 7×16 RPTR objects (hulk / brain / tank)
     -- by matching per-OCVECT counts to ELIST counters.
@@ -1711,8 +1735,10 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
 
     local player_pict_ptr = read_u16_be(memory, PLOBJ_ADDR + OPICT_OFF)
     local player_hit_off_x, player_hit_off_y, player_hit_w, player_hit_h = picture_collision_bounds(memory, player_pict_ptr)
-    local player_center_x16 = collision_center_x16(player_x16, player_hit_off_x, player_hit_w)
-    local player_center_y16 = collision_center_y16(player_y16, player_hit_off_y, player_hit_h)
+    local player_objx = memory:read_u8(PLOBJ_ADDR + OBJX_OFF)
+    local player_objy = memory:read_u8(PLOBJ_ADDR + OBJY_OFF)
+    local player_center_x16 = hud_collision_center_x16(player_objx, player_hit_off_x, player_hit_w, player_x16)
+    local player_center_y16 = hud_collision_center_y16(player_objy, player_hit_off_y, player_hit_h, player_y16)
 
     local all_objects = {}
     local hud_enabled = hud_draw_requested()
@@ -1732,8 +1758,8 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
             else
                 local raw_x16 = read_u16_be(memory, ptr + OX16_OFF)
                 local raw_y16 = read_u16_be(memory, ptr + OY16_OFF)
-                local objx = hud_enabled and (memory:read_u8(ptr + OBJX_OFF) or 0) or nil
-                local objy = hud_enabled and (memory:read_u8(ptr + OBJY_OFF) or 0) or nil
+                local objx = memory:read_u8(ptr + OBJX_OFF)
+                local objy = memory:read_u8(ptr + OBJY_OFF)
                 local pict_ptr = read_u16_be(memory, ptr + OPICT_OFF)
                 local fonipc_ptr = read_u16_be(memory, ptr + FONIPC_OFF)
                 local width, height = 0, 0
@@ -1743,8 +1769,8 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
                 end
                 local collision_pict_ptr = (fonipc_ptr ~= nil and fonipc_ptr ~= 0) and fonipc_ptr or pict_ptr
                 local hit_off_x, hit_off_y, hit_w, hit_h = picture_collision_bounds(memory, collision_pict_ptr)
-                local x16 = collision_center_x16(raw_x16, hit_off_x, hit_w)
-                local y16 = collision_center_y16(raw_y16, hit_off_y, hit_h)
+                local x16 = hud_collision_center_x16(objx, hit_off_x, hit_w, raw_x16)
+                local y16 = hud_collision_center_y16(objy, hit_off_y, hit_h, raw_y16)
 
                 local rel_dx16 = 0
                 local rel_dy16 = 0
@@ -1795,19 +1821,16 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
                     height = height,
                     hit_w = hit_w,
                     hit_h = hit_h,
+                    objx = objx,
+                    objy = objy,
+                    hit_off_x = hit_off_x,
+                    hit_off_y = hit_off_y,
                     rel_dx16 = rel_dx16,
                     rel_dy16 = rel_dy16,
                     dist_world = dist_world,
                     dist_norm = dnorm,
                     category = cat,
                 }
-                if hud_enabled then
-                    local obj = all_objects[#all_objects]
-                    obj.objx = objx
-                    obj.objy = objy
-                    obj.hit_off_x = hit_off_x
-                    obj.hit_off_y = hit_off_y
-                end
                 ptr = read_u16_be(memory, ptr + OLINK_OFF)
             end
         end
@@ -2021,8 +2044,8 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
     local num_humans = counts["human"] or 0
     local num_spawners = counts["spawner"] or 0
 
-    hud_player_x16 = memory:read_u8(PLOBJ_ADDR + OBJX_OFF)
-    hud_player_y16 = memory:read_u8(PLOBJ_ADDR + OBJY_OFF)
+    hud_player_x16 = player_objx
+    hud_player_y16 = player_objy
     hud_player_box = {x = player_hit_off_x, y = player_hit_off_y, w = player_hit_w, h = player_hit_h}
 
     return {
