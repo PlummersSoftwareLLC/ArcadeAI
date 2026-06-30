@@ -539,10 +539,13 @@ class _DashboardState:
                 use_lane = bool(getattr(cfg, 'use_lane_attention', False)) and getattr(cfg, 'lane_count', 0) > 0
                 ad = cfg.attn_dim if use_lane else 0
                 od = cfg.object_attn_dim if getattr(cfg, 'use_object_attention', False) else 0
-                th = cfg.trunk_hidden
-                tl = cfg.trunk_layers
                 stack = int(getattr(cfg, 'frame_stack', 1))
-                raw_state = int(getattr(cfg, 'global_features', getattr(cfg, 'core_features', 18) + getattr(cfg, 'elist_features', 22))) * stack
+                raw_frame = int(getattr(cfg, 'single_frame_state_size', 0)) if bool(getattr(cfg, 'flat_state_to_trunk', False)) else int(getattr(cfg, 'global_features', getattr(cfg, 'core_features', 18) + getattr(cfg, 'elist_features', 22)))
+                raw_state = raw_frame * stack
+                trunk_layer_sizes = tuple(int(v) for v in getattr(cfg, 'trunk_layer_sizes', ()) if int(v) > 0)
+                if not trunk_layer_sizes:
+                    trunk_layer_sizes = tuple([int(cfg.trunk_hidden)] * int(cfg.trunk_layers))
+                th = int(trunk_layer_sizes[-1])
                 branch_na = cfg.num_move_actions + cfg.num_fire_actions
                 joint_na = cfg.num_move_actions * cfg.num_fire_actions
                 n_atoms = cfg.num_atoms if cfg.use_distributional else 1
@@ -554,9 +557,13 @@ class _DashboardState:
                 if od:
                   attn_p += ((cfg.object_token_features * od + od) + 2 * od
                          + 4 * (od * od + od) + 2 * od)
-                trunk_p = (raw_state + ad + od) * th + th + 2 * th
-                for _ in range(1, tl):
-                    trunk_p += th * th + th + 2 * th
+                trunk_p = 0
+                in_dim = raw_state + ad + od
+                for out_dim in trunk_layer_sizes:
+                    trunk_p += in_dim * out_dim + out_dim
+                    if bool(getattr(cfg, 'use_layer_norm', False)):
+                        trunk_p += 2 * out_dim
+                    in_dim = out_dim
                 heads_p = 3 * (th * hm + hm) + 3 * (hm * n_atoms + n_atoms)
                 heads_p += hm * (branch_na * n_atoms) + branch_na * n_atoms
                 heads_p += hm * (joint_na * n_atoms) + joint_na * n_atoms
@@ -564,14 +571,18 @@ class _DashboardState:
         except Exception:
             param_count = 0
         stack = int(getattr(cfg, 'frame_stack', 1))
-        raw_state = int(getattr(cfg, 'global_features', getattr(cfg, 'core_features', 18) + getattr(cfg, 'elist_features', 22))) * stack
+        raw_frame = int(getattr(cfg, 'single_frame_state_size', 0)) if bool(getattr(cfg, 'flat_state_to_trunk', False)) else int(getattr(cfg, 'global_features', getattr(cfg, 'core_features', 18) + getattr(cfg, 'elist_features', 22)))
+        raw_state = raw_frame * stack
         use_lane = bool(getattr(cfg, 'use_lane_attention', False)) and getattr(cfg, 'lane_count', 0) > 0
         trunk_in = raw_state + (cfg.attn_dim if use_lane else 0)
         trunk_in += (cfg.object_attn_dim if getattr(cfg, 'use_object_attention', False) else 0)
+        trunk_layer_sizes = tuple(int(v) for v in getattr(cfg, 'trunk_layer_sizes', ()) if int(v) > 0)
+        if not trunk_layer_sizes:
+            trunk_layer_sizes = tuple([int(cfg.trunk_hidden)] * int(cfg.trunk_layers))
         layers = [str(trunk_in)]
-        for _ in range(cfg.trunk_layers):
-            layers.append(str(cfg.trunk_hidden))
-        layers.append(str(cfg.trunk_hidden // 2))
+        for size in trunk_layer_sizes:
+            layers.append(str(size))
+        layers.append(str(int(trunk_layer_sizes[-1]) // 2))
         arch_str = " \u00bb ".join(layers)
         if param_count >= 1_000_000:
             p_str = f"{param_count / 1_000_000:.1f}M"

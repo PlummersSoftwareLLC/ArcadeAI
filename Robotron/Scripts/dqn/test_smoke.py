@@ -669,16 +669,18 @@ def test_model_shapes(agent):
     check("bc_fire logits shape (4,9)", tuple(bc_fire.shape) == (4, M.NUM_FIRE))
     raw = agent.online_net._raw_trunk_state(st)
     enemies = agent.online_net._object_tokens(st)
-    expected_raw = C.RL_CONFIG.global_features * C.RL_CONFIG.frame_stack
-    check("raw trunk keeps stacked globals only", tuple(raw.shape) == (4, expected_raw),
+    expected_raw = C.RL_CONFIG.single_frame_state_size * C.RL_CONFIG.frame_stack
+    check("raw trunk uses full compact state", tuple(raw.shape) == (4, expected_raw),
           f"shape={tuple(raw.shape)} expected={(4, expected_raw)}")
     check("enemy tokens shape (4,112,10)",
           tuple(enemies.shape) == (4, C.ENEMY_TOKEN_COUNT, C.ENEMY_TOKEN_FEATURES),
           f"shape={tuple(enemies.shape)}")
-    expected_trunk_in = expected_raw + (C.RL_CONFIG.object_attn_dim if C.RL_CONFIG.use_object_attention else 0)
-    first_linear = next(m for m in agent.online_net.trunk if isinstance(m, torch.nn.Linear))
-    check("trunk input excludes flattened enemy block", first_linear.in_features == expected_trunk_in,
-          f"in={first_linear.in_features} expected={expected_trunk_in}")
+    trunk_linears = [m for m in agent.online_net.trunk if isinstance(m, torch.nn.Linear)]
+    check("flat trunk first layer consumes compact state", trunk_linears[0].in_features == expected_raw,
+          f"in={trunk_linears[0].in_features} expected={expected_raw}")
+    check("flat trunk layers are 512 -> 384",
+          trunk_linears[0].out_features == 512 and trunk_linears[1].out_features == 384,
+          f"layers={[m.out_features for m in trunk_linears]}")
 
 
 def test_act(agent):

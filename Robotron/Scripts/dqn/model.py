@@ -265,21 +265,27 @@ class RainbowNet(nn.Module):
             )
 
         # ── Trunk ──────────────────────────────────────────────────────
-        self.raw_trunk_state_size = self.global_features * self.frame_stack
+        self.flat_state_to_trunk = bool(getattr(cfg, "flat_state_to_trunk", False))
+        self.raw_trunk_frame_features = self.single_frame_state_size if self.flat_state_to_trunk else self.global_features
+        self.raw_trunk_state_size = self.raw_trunk_frame_features * self.frame_stack
         trunk_in = self.raw_trunk_state_size + attn_out_dim + object_attn_out_dim
+        configured_layers = tuple(int(v) for v in getattr(cfg, "trunk_layer_sizes", ()) if int(v) > 0)
+        trunk_layer_sizes = configured_layers or tuple([int(cfg.trunk_hidden)] * int(cfg.trunk_layers))
         layers = []
-        for i in range(cfg.trunk_layers):
-            out_dim = cfg.trunk_hidden
-            layers.append(nn.Linear(trunk_in if i == 0 else cfg.trunk_hidden, out_dim))
+        in_dim = trunk_in
+        for out_dim in trunk_layer_sizes:
+            layers.append(nn.Linear(in_dim, out_dim))
             if cfg.use_layer_norm:
                 layers.append(nn.LayerNorm(out_dim))
             layers.append(nn.ReLU())
             if cfg.dropout > 0:
                 layers.append(nn.Dropout(cfg.dropout))
+            in_dim = out_dim
         self.trunk = nn.Sequential(*layers)
+        self.trunk_output_dim = int(trunk_layer_sizes[-1])
 
         # ── Branching heads ────────────────────────────────────────────
-        head_in = cfg.trunk_hidden
+        head_in = self.trunk_output_dim
         head_mid = head_in // 2
 
         if self.use_dueling:
@@ -374,8 +380,8 @@ class RainbowNet(nn.Module):
 
     def _raw_trunk_state(self, state: torch.Tensor) -> torch.Tensor:
         if self.frame_stack <= 1:
-            return state[:, :self.global_features]
-        return self._stacked_frames(state)[:, :, :self.global_features].reshape(
+            return state[:, :self.raw_trunk_frame_features]
+        return self._stacked_frames(state)[:, :, :self.raw_trunk_frame_features].reshape(
             state.shape[0], self.raw_trunk_state_size)
 
     def _lane_tokens(self, state: torch.Tensor) -> torch.Tensor:
