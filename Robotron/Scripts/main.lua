@@ -78,7 +78,8 @@ DEBUG_TRACE_FILE = "logs/startup_trace.log"
 DEBUG_FORCE_ACTION_FRAMES = 0
 DEBUG_FORCE_MOVE_DIR = 2  -- right
 DEBUG_FORCE_FIRE_DIR = 2  -- right
-DEATH_PENALTY_POINTS = 25000
+DEATH_PENALTY_POINTS = 5000
+SUBJECTIVE_REWARD_ENABLED = false
 SUBJ_ENEMY_WEIGHT = 8.0
 SUBJ_HUMAN_WEIGHT = 12.0
 SUBJ_HUMAN_STALL_BASE_PENALTY = 1.5
@@ -3441,6 +3442,9 @@ function compute_frame_rewards(frame)
         - wall_penalty
         - no_human_clear_penalty
         - human_stall_penalty
+    if not SUBJECTIVE_REWARD_ENABLED then
+        subj_reward = 0.0
+    end
 
     trace_log(frame_counter, "reward_calc",
         string.format("score_delta=%d done=%s obj_reward=%.1f subj_reward=%.2f shape=%.2f aim=%.2f evade=%.2f brain=%.2f wall=%.2f clear=%.2f hstall=%.2f enemy_dist=%s human_dist=%s",

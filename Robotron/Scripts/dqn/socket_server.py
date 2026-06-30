@@ -16,7 +16,8 @@ Game-flow contract (Robotron-specific):
     paths.
   • Episodes terminate on ``frame.done``.  While ``player_alive`` is false (death
     animation / between lives) we send a neutral action and store no transitions.
-    • Reward = clipped game_score delta plus tightly clipped Lua subjective shaping.
+    • Reward = clipped game_score delta plus terminal death penalty; Lua
+      subjective shaping is ignored for the score-only experiment.
 """
 
 if __name__ == "__main__":

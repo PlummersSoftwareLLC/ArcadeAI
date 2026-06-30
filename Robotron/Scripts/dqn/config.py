@@ -405,17 +405,16 @@ class RLConfigData:
     score_reward_scale: float = 0.001
     point_reward_scale: float = 1.0 / score_reward_scale  # Derived: 1000.0
     score_reward_clip: float = 25.0
-    subj_reward_scale: float = 0.001
-    # Positive subjective shaping is a scaffold, so fade it independently from
-    # BCW.  BCW controls imitation loss; SubjW controls dense Lua bonuses.  The
-    # socket reward path applies this only when the Lua subjective term is net
-    # positive, leaving no-human/human-stall/wall guardrail penalties full size.
-    subj_positive_weight: float = 1.0
+    # Score-only experiment: ignore all Lua subjective shaping.  The remaining
+    # reward is score delta plus the explicit terminal death penalty below.
+    subj_reward_scale: float = 0.0
+    subj_positive_weight: float = 0.0
     subj_positive_decay_start_step: int = 0
     subj_positive_decay_steps: int = 125_000
-    subj_positive_min_weight: float = 0.25
+    subj_positive_min_weight: float = 0.0
     shaping_reward_clip: float = 0.25
-    death_penalty: float = 12.0
+    # Stored rewards are in score_reward_scale units: -5.0 == -5000 points.
+    death_penalty: float = 5.0
     reward_clip: float = 30.0
     death_reward_clip: float = 40.0
 
@@ -441,10 +440,10 @@ class RLConfigData:
     death_priority_boost: float = 5.0
     pre_death_lookback: int = 120
     pre_death_priority_boost: float = 3.0
-    pre_death_reward_lookback: int = 75
-    pre_death_base_penalty: float = 0.03
-    pre_death_danger_penalty: float = 0.45
-    pre_death_max_penalty: float = 0.65
+    pre_death_reward_lookback: int = 0
+    pre_death_base_penalty: float = 0.0
+    pre_death_danger_penalty: float = 0.0
+    pre_death_max_penalty: float = 0.0
     pre_death_min_danger: float = 0.15
     pre_death_penalize_expert: bool = False
 
