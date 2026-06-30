@@ -613,6 +613,7 @@ class _DashboardState:
             last_loss = float(self.metrics.last_loss)
             last_grad_norm = float(self.metrics.last_grad_norm)
             last_bc_loss = float(self.metrics.last_bc_loss)
+            subj_positive_weight = float(getattr(self.metrics, "last_subj_positive_weight", 1.0))
             last_q_mean = float(self.metrics.last_q_mean)
             training_enabled = bool(self.metrics.training_enabled)
             override_expert = bool(self.metrics.override_expert)
@@ -695,6 +696,7 @@ class _DashboardState:
             "loss": last_loss,
             "grad_norm": last_grad_norm,
             "bc_loss": last_bc_loss,
+            "subj_positive_weight": subj_positive_weight,
             "q_mean": last_q_mean,
             "reward_total": reward_total,
             "reward_dqn": reward_dqn,

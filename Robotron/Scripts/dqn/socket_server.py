@@ -230,6 +230,20 @@ def _clip_abs(value: float, limit: float) -> float:
     return max(-limit, min(limit, float(value)))
 
 
+def _subj_positive_weight_schedule(training_step: int) -> float:
+    """Anneal positive subjective shaping separately from BCW."""
+    cfg = RL_CONFIG
+    start = max(0.0, float(getattr(cfg, "subj_positive_weight", 1.0)))
+    floor = max(0.0, float(getattr(cfg, "subj_positive_min_weight", start)))
+    start_step = int(getattr(cfg, "subj_positive_decay_start_step", 0))
+    decay_steps = max(1, int(getattr(cfg, "subj_positive_decay_steps", 1)))
+    step = max(0, int(training_step))
+    if step < start_step:
+        return start
+    progress = min(1.0, (step - start_step) / decay_steps)
+    return start + progress * (floor - start)
+
+
 def _shape_transition_reward(frame, last_game_score: int) -> tuple[float, float, float, float, int]:
     """Reward from actual score delta plus tightly clipped subjective shaping."""
     try:
@@ -240,8 +254,16 @@ def _shape_transition_reward(frame, last_game_score: int) -> tuple[float, float,
         float(score_delta) * float(RL_CONFIG.score_reward_scale),
         float(RL_CONFIG.score_reward_clip),
     )
+    subj_weight = _subj_positive_weight_schedule(getattr(metrics, "total_training_steps", 0))
+    try:
+        metrics.last_subj_positive_weight = float(subj_weight)
+    except Exception:
+        pass
+    subj_raw = float(frame.subjreward) * float(RL_CONFIG.subj_reward_scale)
+    if subj_raw > 0.0:
+        subj_raw *= subj_weight
     subj_r = _clip_abs(
-        float(frame.subjreward) * float(RL_CONFIG.subj_reward_scale),
+        subj_raw,
         float(RL_CONFIG.shaping_reward_clip),
     )
     death_r = -float(getattr(RL_CONFIG, "death_penalty", 0.0)) if bool(frame.done) else 0.0

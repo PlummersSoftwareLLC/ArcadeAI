@@ -478,6 +478,70 @@ def test_expert_anchor_decay():
           f"m_end={m_end}")
 
 
+def test_subjective_positive_weight_decay():
+    print("\n[subjective positive weight decay]")
+    cfg = C.RL_CONFIG
+    m = C.metrics
+    saved_cfg = (
+        cfg.subj_positive_weight,
+        cfg.subj_positive_decay_start_step,
+        cfg.subj_positive_decay_steps,
+        cfg.subj_positive_min_weight,
+    )
+    with m.lock:
+        saved_steps = m.total_training_steps
+        saved_last = m.last_subj_positive_weight
+    try:
+        cfg.subj_positive_weight = 1.0
+        cfg.subj_positive_decay_start_step = 10
+        cfg.subj_positive_decay_steps = 100
+        cfg.subj_positive_min_weight = 0.25
+
+        w0 = SS._subj_positive_weight_schedule(0)
+        w_mid = SS._subj_positive_weight_schedule(60)
+        w_end = SS._subj_positive_weight_schedule(120)
+        check("SubjW starts at configured weight", np.isclose(w0, 1.0), f"w0={w0}")
+        check("SubjW decays independently", np.isclose(w_mid, 0.625), f"w_mid={w_mid}")
+        check("SubjW reaches floor", np.isclose(w_end, 0.25), f"w_end={w_end}")
+
+        with m.lock:
+            m.total_training_steps = 60
+
+        def reward_for(raw_subj):
+            frame = SS.FrameData(
+                state=np.zeros(C.WIRE_PARAMS_COUNT, dtype=np.float32),
+                subjreward=float(raw_subj),
+                objreward=0.0,
+                done=False,
+                player_alive=True,
+                save_signal=False,
+                start_pressed=False,
+                level_number=1,
+                game_score=0,
+                num_lasers=0,
+            )
+            return SS._shape_transition_reward(frame, 0)[2]
+
+        pos = reward_for(100.0)
+        neg = reward_for(-100.0)
+        check("positive subjective reward uses SubjW",
+              np.isclose(pos, 100.0 * cfg.subj_reward_scale * w_mid),
+              f"pos={pos} expected={100.0 * cfg.subj_reward_scale * w_mid}")
+        check("negative subjective reward stays full strength",
+              np.isclose(neg, -100.0 * cfg.subj_reward_scale),
+              f"neg={neg} expected={-100.0 * cfg.subj_reward_scale}")
+    finally:
+        (
+            cfg.subj_positive_weight,
+            cfg.subj_positive_decay_start_step,
+            cfg.subj_positive_decay_steps,
+            cfg.subj_positive_min_weight,
+        ) = saved_cfg
+        with m.lock:
+            m.total_training_steps = saved_steps
+            m.last_subj_positive_weight = saved_last
+
+
 def test_epsilon_expert_floor():
     print("\n[epsilon expert floor]")
     cfg = C.RL_CONFIG
@@ -827,6 +891,7 @@ def main():
     test_legacy_interest_sanitizer()
     test_pre_death_reward_penalty()
     test_expert_anchor_decay()
+    test_subjective_positive_weight_decay()
     test_epsilon_expert_floor()
     test_dqn_window_math()
     test_dashboard_gpu_parser()

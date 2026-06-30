@@ -406,6 +406,14 @@ class RLConfigData:
     point_reward_scale: float = 1.0 / score_reward_scale  # Derived: 1000.0
     score_reward_clip: float = 25.0
     subj_reward_scale: float = 0.001
+    # Positive subjective shaping is a scaffold, so fade it independently from
+    # BCW.  BCW controls imitation loss; SubjW controls dense Lua bonuses.  The
+    # socket reward path applies this only when the Lua subjective term is net
+    # positive, leaving no-human/human-stall/wall guardrail penalties full size.
+    subj_positive_weight: float = 1.0
+    subj_positive_decay_start_step: int = 0
+    subj_positive_decay_steps: int = 125_000
+    subj_positive_min_weight: float = 0.25
     shaping_reward_clip: float = 0.25
     death_penalty: float = 12.0
     reward_clip: float = 30.0
@@ -671,6 +679,7 @@ class MetricsData:
     last_q_mean: float = 0.0
     last_bc_loss: float = 0.0
     last_bc_weight: float = 0.0
+    last_subj_positive_weight: float = 1.0
     last_sample_expert_frac: float = 0.0
     last_inference_sync_age: int = 0
     last_priority_mean: float = 0.0
