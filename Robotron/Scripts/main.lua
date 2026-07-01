@@ -378,6 +378,7 @@ local CATEGORY_IS_STATIC = {
 
 local prev_object_sample_x = {}
 local prev_object_sample_y = {}
+local prev_object_sample_category = {}
 
 local function _select_top_k_sorted(bucket, limit, better_fn)
     local selected = {}
@@ -733,6 +734,7 @@ local POS_Y_MIN   = GAME_YMIN * 256                        -- 6144
 local POS_Y_RANGE = (GAME_YMAX - GAME_YMIN) * 256          -- 53760
 local POS_MAX_DIAG = math.sqrt(POS_X_RANGE * POS_X_RANGE
                              + POS_Y_RANGE * POS_Y_RANGE)  -- ≈64022
+local VELOCITY_REUSE_MAX_DELTA_WORLD = 8192.0  -- 32px; larger jumps are slot reuse/spawn churn
 
 local WALL_MARGIN_NORM_X = 4096.0 / POS_X_RANGE  -- 16 px normalised (~0.118)
 local WALL_MARGIN_NORM_Y = 4096.0 / POS_Y_RANGE  -- 16 px normalised (~0.076)
@@ -1984,6 +1986,7 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
     local compute_full_tactical_features = not SKIP_UNUSED_TACTICAL_FEATURES
     local current_sample_x = {}
     local current_sample_y = {}
+    local current_sample_category = {}
     for _, obj in ipairs(all_objects) do
         if obj.category == nil and obj.list_name == "rptr" then
             obj.category = "hulk"
@@ -1993,10 +1996,20 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
             local vy = 0.0
             local vx16 = 0.0
             local vy16 = 0.0
-            local prev_x = prev_object_sample_x[obj.ptr]
-            if prev_x ~= nil then
-                vx16 = (obj.x16 - prev_x)
-                vy16 = (obj.y16 - (prev_object_sample_y[obj.ptr] or obj.y16))
+            local prev_rel_x = prev_object_sample_x[obj.ptr]
+            local prev_rel_y = prev_object_sample_y[obj.ptr]
+            local prev_cat = prev_object_sample_category[obj.ptr]
+            if prev_rel_x ~= nil and prev_rel_y ~= nil and prev_cat == obj.category then
+                vx16 = (obj.rel_dx16 or 0.0) - prev_rel_x
+                vy16 = (obj.rel_dy16 or 0.0) - prev_rel_y
+                local velocity_jump = (
+                    math.abs(vx16) > VELOCITY_REUSE_MAX_DELTA_WORLD
+                    or math.abs(vy16) > VELOCITY_REUSE_MAX_DELTA_WORLD
+                )
+                if velocity_jump then
+                    vx16 = 0.0
+                    vy16 = 0.0
+                end
                 vx = clamp11(vx16 / POS_X_RANGE)
                 vy = clamp11(vy16 / POS_Y_RANGE)
             end
@@ -2034,8 +2047,9 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
             end
 
             counts[obj.category] = counts[obj.category] + 1
-            current_sample_x[obj.ptr] = obj.x16
-            current_sample_y[obj.ptr] = obj.y16
+            current_sample_x[obj.ptr] = obj.rel_dx16 or 0.0
+            current_sample_y[obj.ptr] = obj.rel_dy16 or 0.0
+            current_sample_category[obj.ptr] = obj.category
             buckets[obj.category][#buckets[obj.category] + 1] = obj
             if CATEGORY_IS_DESTRUCTIBLE[obj.category] then
                 destructible_bucket[#destructible_bucket + 1] = obj
@@ -2075,6 +2089,7 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
 
     prev_object_sample_x = current_sample_x
     prev_object_sample_y = current_sample_y
+    prev_object_sample_category = current_sample_category
 
     local lane_summary_features = ZERO_TACTICAL_LANE_FEATURES
     local local_grid_features = ZERO_TACTICAL_GRID_FEATURES
@@ -3507,6 +3522,7 @@ function frame_callback()
         dead_frame_counter = dead_frame_counter + 1
         prev_object_sample_x = {}
         prev_object_sample_y = {}
+        prev_object_sample_category = {}
     else
         dead_frame_counter = 0
     end

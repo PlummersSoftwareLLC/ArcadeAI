@@ -12,9 +12,10 @@
 """Model + action helpers for the Robotron DQN.
 
 The state vector is the model slice (18 core game/player scalars + 22
-ELIST/level-state scalars + 112 grouped object rows × 10). When frame stacking
-is enabled, only the compact global/level slice from each frame is concatenated
-into the raw trunk. The current-frame object bag is encoded by attention.
+ELIST/level-state scalars + 112 grouped object rows x 10). The trunk consumes
+the full compact state directly. Object attention is additive: the current-frame
+object bag is encoded into a learned summary and concatenated beside the raw
+state rather than replacing it.
 """
 
 if __name__ == "__main__":

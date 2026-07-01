@@ -252,8 +252,8 @@ class RLConfigData:
     object_token_features: int = ENEMY_TOKEN_FEATURES
 
     # ── network architecture ────────────────────────────────────────────
-    # Flat-state ablation: feed the compact state vector directly into the MLP
-    # instead of compressing object rows through attention first.
+    # Feed the complete compact state directly into the MLP. Object attention is
+    # additive: its learned summary is concatenated beside these raw floats.
     flat_state_to_trunk: bool = True
     trunk_layer_sizes: tuple[int, ...] = (512, 384)
     trunk_hidden: int = 384
@@ -266,15 +266,16 @@ class RLConfigData:
     attn_heads: int = 8
     attn_dim: int = 128
 
-    # Self-attention over the 112 grouped object rows.
-    use_object_attention: bool = False
+    # Self-attention over the 112 grouped object rows. This does not replace the
+    # flat state input; it adds a relational digest to the first trunk layer.
+    use_object_attention: bool = True
     object_attn_heads: int = 8
     object_attn_dim: int = 128
 
     # Action-conditioned attention for the DQN advantage heads. Direction queries
     # attend over enemy rows so each move/fire/joint action is scored with
     # object evidence relevant to that candidate action.
-    use_action_context_attention: bool = False
+    use_action_context_attention: bool = True
     action_context_heads: int = 8
     joint_action_embed_dim: int = 32
     action_head_hidden: int = 192

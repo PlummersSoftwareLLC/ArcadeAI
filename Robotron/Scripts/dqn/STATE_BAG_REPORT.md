@@ -24,16 +24,19 @@ Final raw DQN single-frame state size:
 ```
 
 With the default 1-frame stack, replay/inference state is also 1160 floats. The
-network trunk does not flatten all 1160 floats into the MLP: it concatenates the
-40 global/level floats from the current frame and the current-frame object
-attention embedding. Default first trunk width is:
+network trunk consumes all 1160 compact-state floats directly. Object attention
+is additive: the current-frame object bag also produces a 128-float learned
+summary, and that summary is concatenated beside the raw compact state. Default
+first trunk width is:
 
 ```text
-(40 globals * 1 frame) + 128 object-attention embedding = 168 floats
+(1160 compact-state floats * 1 frame) + 128 object-attention embedding = 1288 floats
 ```
 
 If `DQN_FRAME_STACK=2` or `ROBOTRON_DQN_FRAME_STACK=2` is set, replay/inference
-state becomes 2320 floats and the first trunk width becomes `80 + 128 = 208`.
+state becomes 2320 floats and the first trunk width becomes `2320 + 128 = 2448`.
+The object-attention summary is still computed from the current frame's object
+rows; stacked prior frames remain available through the raw compact-state input.
 
 ## DQN Model Layout
 
@@ -63,8 +66,8 @@ more than 64 destructible objects, only the nearest 64 are represented.
 | 1 | `dx` | Relative X from player HUD-box center to object HUD-box center | Clamped `-1..1`. |
 | 2 | `dy` | Relative Y from player HUD-box center to object HUD-box center | Clamped `-1..1`. |
 | 3 | `dist` | HUD-box-center distance from player | Clamped `0..1`; lower is closer. |
-| 4 | `vx` | Object velocity X | Clamped `-1..1`. |
-| 5 | `vy` | Object velocity Y | Clamped `-1..1`. |
+| 4 | `vx` | Frame-to-frame change in relative object X | Clamped `-1..1`; same coordinate frame as `dx`. |
+| 5 | `vy` | Frame-to-frame change in relative object Y | Clamped `-1..1`; same coordinate frame as `dy`. |
 | 6 | `threat` | Lua threat score | Clamped `0..1`. |
 | 7 | `approach` | Radial approach score | Clamped `-1..1`; positive means approaching. |
 | 8 | `ttc` | Time-to-collision estimate | Clamped `0..1`; lower is sooner. |

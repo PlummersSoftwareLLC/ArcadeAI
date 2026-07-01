@@ -49,7 +49,7 @@ except ImportError:
 
 metrics = config_metrics
 
-ENGINE_VERSION = 15  # Flat compact-state trunk ablation
+ENGINE_VERSION = 16  # Additive object/action attention on full compact state
 
 
 class RainbowAgent:

@@ -15,7 +15,7 @@ Processed observation:
   fire_action_features: (9, 12) zero placeholder; computed on-device in the model
 
 The first 18 entity columns intentionally remain compatible with the expert:
-  [rel_x, rel_y, box_w, box_h, vx, vy, type_one_hot(12)]
+  [rel_x, rel_y, box_w, box_h, rel_vx, rel_vy, type_one_hot(12)]
 """
 
 from __future__ import annotations

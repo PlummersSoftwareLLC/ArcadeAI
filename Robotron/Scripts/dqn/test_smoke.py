@@ -670,14 +670,23 @@ def test_model_shapes(agent):
     raw = agent.online_net._raw_trunk_state(st)
     enemies = agent.online_net._object_tokens(st)
     expected_raw = C.RL_CONFIG.single_frame_state_size * C.RL_CONFIG.frame_stack
+    expected_attn = 0
+    if getattr(agent.online_net, "use_attn", False):
+        expected_attn += int(getattr(C.RL_CONFIG, "attn_dim", 0))
+    if getattr(agent.online_net, "use_object_attn", False):
+        expected_attn += int(getattr(C.RL_CONFIG, "object_attn_dim", 0))
+    expected_trunk_in = expected_raw + expected_attn
     check("raw trunk uses full compact state", tuple(raw.shape) == (4, expected_raw),
           f"shape={tuple(raw.shape)} expected={(4, expected_raw)}")
     check("enemy tokens shape (4,112,10)",
           tuple(enemies.shape) == (4, C.ENEMY_TOKEN_COUNT, C.ENEMY_TOKEN_FEATURES),
           f"shape={tuple(enemies.shape)}")
     trunk_linears = [m for m in agent.online_net.trunk if isinstance(m, torch.nn.Linear)]
-    check("flat trunk first layer consumes compact state", trunk_linears[0].in_features == expected_raw,
-          f"in={trunk_linears[0].in_features} expected={expected_raw}")
+    check("trunk first layer consumes compact state plus additive attention",
+          trunk_linears[0].in_features == expected_trunk_in,
+          f"in={trunk_linears[0].in_features} expected={expected_trunk_in} raw={expected_raw} attn={expected_attn}")
+    check("object attention enabled", getattr(agent.online_net, "use_object_attn", False))
+    check("action-context attention enabled", getattr(agent.online_net, "use_action_context", False))
     check("flat trunk layers are 512 -> 384",
           trunk_linears[0].out_features == 512 and trunk_linears[1].out_features == 384,
           f"layers={[m.out_features for m in trunk_linears]}")
@@ -762,6 +771,106 @@ def test_expert():
     mv, fr = SS.get_expert_action(w, 3)
     check("expert move in 0..8", 0 <= int(mv) <= 8, f"mv={mv}")
     check("expert fire in 0..8", 0 <= int(fr) <= 8, f"fr={fr}")
+
+    try:
+        from v3 import expert as EX
+
+        def ent(dx, dy, tid, vx=0.0, vy=0.0):
+            dist = float(np.hypot(dx * EX._REL_POS_X_RANGE, dy * EX._REL_POS_Y_RANGE) / EX._POS_MAX_DIAG)
+            return (float(dx), float(dy), float(vx), float(vy), dist, int(tid))
+
+        mv, fr = EX._get_strategic_expert_action(
+            [ent(0.20, 0.0, EX.TYPE_GRUNT), ent(0.10, 0.08, EX.TYPE_HUMAN)],
+            0.5, 0.5, 3,
+        )
+        check("expert milks last grunt while humans remain", fr == 8, f"mv={mv} fr={fr}")
+
+        mv, fr = EX._get_strategic_expert_action(
+            [ent(0.025, 0.0, EX.TYPE_GRUNT), ent(0.10, 0.08, EX.TYPE_HUMAN)],
+            0.5, 0.5, 3,
+        )
+        check("expert breaks milking to shoot lethal grunt", fr == 2, f"mv={mv} fr={fr}")
+
+        mv, fr = EX._get_strategic_expert_action(
+            [ent(0.05, 0.0, EX.TYPE_PROJECTILE, vx=-0.02)],
+            0.5, 0.5, 3,
+        )
+        check("expert fires at imminent projectile", fr == 2, f"mv={mv} fr={fr}")
+
+        mv, fr = EX._get_strategic_expert_action(
+            [ent(0.20, 0.0, EX.TYPE_HUMAN), ent(0.22, 0.05, EX.TYPE_HUMAN)],
+            0.5, 0.5, 3,
+        )
+        check("expert APF moves toward human cluster", mv in {2, 3}, f"mv={mv} fr={fr}")
+
+        mv, fr = EX._get_strategic_expert_action(
+            [ent(0.030, 0.0, EX.TYPE_HUMAN), ent(0.120, 0.0, EX.TYPE_GRUNT)],
+            0.5, 0.5, 3,
+        )
+        check("expert locally prioritizes close safe human", mv == 2, f"mv={mv} fr={fr}")
+
+        mv, fr = EX._get_strategic_expert_action(
+            [ent(0.030, 0.0, EX.TYPE_HUMAN), ent(0.040, 0.0, EX.TYPE_GRUNT)],
+            0.5, 0.5, 3,
+        )
+        check("expert refuses fatal local human step", mv != 2, f"mv={mv} fr={fr}")
+
+        mv, fr = EX._get_strategic_expert_action(
+            [ent(0.700, 0.0, EX.TYPE_HUMAN), ent(0.600, 0.0, EX.TYPE_GRUNT)],
+            0.5, 0.5, 3,
+        )
+        check("expert crosses screen toward humans when clear", mv == 2, f"mv={mv} fr={fr}")
+
+        mv, fr = EX._get_strategic_expert_action([], 0.08, 0.08, 3)
+        check("expert exits corner when clear", mv == 3, f"mv={mv} fr={fr}")
+
+        mv, fr = EX._get_strategic_expert_action(
+            [ent(0.12, 0.10, EX.TYPE_ENFORCER), ent(0.10, 0.10, EX.TYPE_PROJECTILE)],
+            0.08, 0.08, 6,
+        )
+        check("expert avoids projectile pressure into corner", mv in {2, 3, 4}, f"mv={mv} fr={fr}")
+
+        mv, fr = EX._get_strategic_expert_action(
+            [ent(0.025, 0.0, EX.TYPE_GRUNT)],
+            0.5, 0.5, 3,
+        )
+        check("expert APF flees close grunt", mv == 6, f"mv={mv} fr={fr}")
+
+        mv, fr = EX._get_strategic_expert_action(
+            [ent(-0.20, 0.0, EX.TYPE_SPAWNER), ent(0.40, 0.0, EX.TYPE_GRUNT)],
+            0.5, 0.5, 3,
+        )
+        check("expert prioritizes spawner fire", fr == 6, f"mv={mv} fr={fr}")
+
+        mv, fr = EX._get_strategic_expert_action(
+            [ent(0.12, 0.0, EX.TYPE_HULK), ent(0.28, 0.0, EX.TYPE_HUMAN)],
+            0.5, 0.5, 3,
+        )
+        check("expert fires at Hulk blocking human", fr == 2, f"mv={mv} fr={fr}")
+
+        swarm = [ent(0.20 + 0.01 * (i % 3), -0.06 + 0.03 * (i // 3), EX.TYPE_GRUNT) for i in range(9)]
+        mv, fr = EX._get_strategic_expert_action(swarm, 0.5, 0.5, 6)
+        check("expert fires into grunt density", fr in {1, 2, 3}, f"mv={mv} fr={fr}")
+
+        wave9_clear_left = [ent(-0.20 + 0.04 * (i % 4), 0.20 + 0.04 * (i // 4), EX.TYPE_GRUNT) for i in range(12)]
+        mv, fr = EX._get_strategic_expert_action(wave9_clear_left, 0.5, 0.5, 9)
+        check("expert wave-9 takes clear left hole", (mv, fr) == (6, 6), f"mv={mv} fr={fr}")
+
+        wave9_blocked_left = [ent(-0.025, 0.0, EX.TYPE_GRUNT)] + [
+            ent(0.12 + 0.03 * (i % 4), 0.10 + 0.04 * (i // 4), EX.TYPE_GRUNT)
+            for i in range(11)
+        ]
+        mv, fr = EX._get_strategic_expert_action(wave9_blocked_left, 0.5, 0.5, 9)
+        check("expert wave-9 avoids blocked left lane", mv != 6 and fr != 6, f"mv={mv} fr={fr}")
+
+        wave9_push_left = [ent(-0.16, 0.0, EX.TYPE_GRUNT)] + [
+            ent(0.14 + 0.03 * (i % 4), 0.11 + 0.04 * (i // 4), EX.TYPE_GRUNT)
+            for i in range(11)
+        ]
+        mv, fr = EX._get_strategic_expert_action(wave9_push_left, 0.5, 0.5, 9)
+        check("expert wave-9 presses pushable left lane", (mv, fr) == (6, 6), f"mv={mv} fr={fr}")
+    except Exception as e:
+        check("document expert policy checks", False, f"error: {e}")
 
     # Parity: the lean DQN extractor must match the shared v3 expert exactly.
     try:
