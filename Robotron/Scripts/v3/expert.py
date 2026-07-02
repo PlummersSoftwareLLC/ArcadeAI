@@ -186,6 +186,16 @@ _WAVE9_PATH_PRESSURE_PERP_PX = 23.0
 _WAVE9_PUSH_MIN_FORWARD_PX = 10.0
 _WAVE9_HOLE_DIRS = (6, 7, 5, 0, 4, 2, 1, 3)
 _WAVE9_WALL_DIRS = (0, 4, 1, 3)
+_WAVE9_ESCAPE_DIRS = (0, 6, 4, 2)  # N, W, S, E
+_WAVE9_ROUTE_PERP_PX = 68.0
+_WAVE9_ROUTE_HULK_PERP_PX = 92.0
+_WAVE9_WALL_REACHED_MARGIN = 0.045
+_WAVE9_ROUTE_TIE_BIAS = {
+    0: 0.00,  # N
+    6: 0.03,  # W
+    4: 0.06,  # S
+    2: 0.09,  # E
+}
 _WAVE9_DIR_BIAS = {
     6: 0.00, 7: 0.35, 5: 0.35, 0: 1.05, 4: 1.05,
     2: 3.00, 1: 3.35, 3: 3.35,
@@ -1242,20 +1252,106 @@ def _wave9_lane_status(entities, move_dir: int) -> int:
     return 2
 
 
-def _wave9_best_hole_dir(entities, candidate_dirs=_WAVE9_HOLE_DIRS) -> int:
-    if 6 in candidate_dirs and _wave9_lane_status(entities, 6) <= 1:
-        return 6
+def _wave9_wall_distance_px(px: float, py: float, move_dir: int) -> float:
+    if move_dir == 6:  # W
+        return max(0.0, (float(px) - _LAVA_X) * _REL_POS_X_RANGE / _WORLD_UNITS_PER_PIXEL)
+    if move_dir == 2:  # E
+        return max(0.0, ((1.0 - _LAVA_X) - float(px)) * _REL_POS_X_RANGE / _WORLD_UNITS_PER_PIXEL)
+    if move_dir == 0:  # N
+        return max(0.0, (float(py) - _LAVA_Y) * _REL_POS_Y_RANGE / _WORLD_UNITS_PER_PIXEL)
+    if move_dir == 4:  # S
+        return max(0.0, ((1.0 - _LAVA_Y) - float(py)) * _REL_POS_Y_RANGE / _WORLD_UNITS_PER_PIXEL)
+    return float("inf")
 
-    best_dir = 6
+
+def _wave9_escape_wall_reached(px: float, py: float, move_dir: int) -> bool:
+    margin = _WAVE9_WALL_REACHED_MARGIN
+    if move_dir == 6:
+        return float(px) <= _LAVA_X + margin
+    if move_dir == 2:
+        return float(px) >= 1.0 - _LAVA_X - margin
+    if move_dir == 0:
+        return float(py) <= _LAVA_Y + margin
+    if move_dir == 4:
+        return float(py) >= 1.0 - _LAVA_Y - margin
+    return False
+
+
+def _wave9_any_edge_reached(px: float, py: float) -> bool:
+    margin = _WAVE9_WALL_REACHED_MARGIN
+    return (
+        float(px) <= _LAVA_X + margin
+        or float(px) >= 1.0 - _LAVA_X - margin
+        or float(py) <= _LAVA_Y + margin
+        or float(py) >= 1.0 - _LAVA_Y - margin
+    )
+
+
+def _wave9_route_pressure(entities, px: float, py: float, move_dir: int) -> tuple[float, float, float, float]:
+    """Return broad route cost toward a cardinal wall.
+
+    This is deliberately wider than the immediate collision lane.  Wave 9 needs
+    an opening choice, not a twitchy per-frame dodge, so hulks and dense grunt
+    bands ahead of the route dominate the score.
+    """
+    if move_dir not in _WAVE9_ESCAPE_DIRS:
+        return float("inf"), 0.0, 0.0, float("inf")
+    dir_x, dir_y = _move_dir_vector(move_dir)
+    route_len = max(18.0, _wave9_wall_distance_px(px, py, move_dir))
+    route_horizon = route_len + 46.0
+    density = 0.0
+    hulk_pressure = 0.0
+    nearest_forward = float("inf")
+
+    for ent in entities:
+        tid = _entity_type(ent)
+        if tid not in _APF_DANGER_TYPES:
+            continue
+        wx, wy = _entity_world(ent)
+        forward_px = (wx * dir_x + wy * dir_y) / _WORLD_UNITS_PER_PIXEL
+        if forward_px < -8.0 or forward_px > route_horizon:
+            continue
+        perp_px = abs(wx * dir_y - wy * dir_x) / _WORLD_UNITS_PER_PIXEL
+        width = _WAVE9_ROUTE_HULK_PERP_PX if tid == TYPE_HULK else _WAVE9_ROUTE_PERP_PX
+        if perp_px > width:
+            continue
+
+        nearest_forward = min(nearest_forward, max(0.0, forward_px))
+        forward_term = 1.0 - max(0.0, min(route_horizon, forward_px)) / max(1.0, route_horizon)
+        align_term = 1.0 - perp_px / max(1.0, width)
+        type_mul = {
+            TYPE_GRUNT: 1.00,
+            TYPE_PROG: 1.15,
+            TYPE_HULK: 4.25,
+            TYPE_TANK: 2.00,
+            TYPE_SPAWNER: 1.80,
+            TYPE_BRAIN: 1.55,
+            TYPE_ENFORCER: 1.50,
+            TYPE_ELECTRODE: 1.35,
+        }.get(tid, 1.60)
+        score = type_mul * (0.30 + 0.70 * forward_term) * (0.25 + 0.75 * align_term)
+        density += score
+        if tid == TYPE_HULK:
+            hulk_pressure += score
+
+    immediate_block, immediate_pressure, immediate_forward = _wave9_lane_metrics(entities, move_dir)
+    nearest_forward = min(nearest_forward, immediate_forward)
+    density += 0.85 * immediate_block + 0.35 * immediate_pressure
+    return density, hulk_pressure, immediate_block, nearest_forward
+
+
+def _wave9_choose_escape_dir(entities, px: float, py: float) -> int:
+    best_dir = 0
     best_key = None
-    for cand_dir in candidate_dirs:
-        block, pressure, nearest_forward = _wave9_lane_metrics(entities, cand_dir)
-        status = _wave9_lane_status(entities, cand_dir)
+    for cand_dir in _WAVE9_ESCAPE_DIRS:
+        density, hulk_pressure, immediate_block, nearest_forward = _wave9_route_pressure(
+            entities, px, py, cand_dir)
         key = (
-            status,
-            pressure,
-            _WAVE9_DIR_BIAS.get(cand_dir, 5.0),
-            block,
+            hulk_pressure,
+            density,
+            immediate_block,
+            _wave9_wall_distance_px(px, py, cand_dir),
+            _WAVE9_ROUTE_TIE_BIAS.get(cand_dir, 0.0),
             nearest_forward,
         )
         if best_key is None or key < best_key:
@@ -1270,27 +1366,58 @@ def _wave9_idle_safe(entities) -> bool:
     return penalty <= 1e-6 and clearance >= 0.0
 
 
-def _wave9_best_move_dir(entities, preferred_dir: int, candidate_dirs=_WAVE9_HOLE_DIRS) -> int:
-    if _wave9_lane_status(entities, preferred_dir) <= 1:
-        return preferred_dir
+def _wave9_route_move_candidates(escape_dir: int) -> tuple[int, ...]:
+    return {
+        0: (0, 7, 1, 6, 2),
+        2: (2, 1, 3, 0, 4),
+        4: (4, 5, 3, 6, 2),
+        6: (6, 7, 5, 0, 4),
+    }.get(int(escape_dir), (int(escape_dir),))
 
-    preferred_x, preferred_y = _move_dir_vector(preferred_dir)
+
+def _wave9_committed_move_dir(entities, escape_dir: int) -> int:
+    if escape_dir not in _WAVE9_ESCAPE_DIRS:
+        return escape_dir
+    if _wave9_lane_status(entities, escape_dir) <= 1:
+        return escape_dir
+
+    route_x, route_y = _move_dir_vector(escape_dir)
+    hazards = _nearby_hazards(entities)
     best_dir = None
     best_key = None
-    for cand_dir in candidate_dirs:
+    fallback_dir = None
+    fallback_key = None
+    for cand_dir in _wave9_route_move_candidates(escape_dir):
         cand_dir = max(0, min(7, int(cand_dir)))
-        status = _wave9_lane_status(entities, cand_dir)
-        if status > 1:
-            continue
-        block, pressure, nearest_forward = _wave9_lane_metrics(entities, cand_dir)
         cand_x, cand_y = _move_dir_vector(cand_dir)
-        preferred_align = preferred_x * cand_x + preferred_y * cand_y
-        key = (
-            status,
+        route_align = route_x * cand_x + route_y * cand_y
+        if route_align < -1e-6:
+            continue
+        cand_pen, cand_clearance = _move_candidate_hazard_score(cand_dir, hazards)
+        block, pressure, nearest_forward = _wave9_lane_metrics(entities, cand_dir)
+        fallback = (
+            0 if cand_dir != escape_dir else 1,
+            cand_pen,
+            -cand_clearance,
+            0 if route_align > 0.5 else 1,
             pressure,
-            _WAVE9_DIR_BIAS.get(cand_dir, 5.0),
-            -preferred_align,
             block,
+            -route_align,
+            nearest_forward,
+        )
+        if fallback_key is None or fallback < fallback_key:
+            fallback_key = fallback
+            fallback_dir = cand_dir
+        if not _move_dir_is_immediately_safe(cand_dir, entities):
+            continue
+        if cand_pen > 1e-6 or cand_clearance < 0.0:
+            continue
+        key = (
+            0 if route_align > 0.5 else 1,
+            pressure,
+            block,
+            -route_align,
+            -cand_clearance,
             nearest_forward,
         )
         if best_key is None or key < best_key:
@@ -1299,9 +1426,24 @@ def _wave9_best_move_dir(entities, preferred_dir: int, candidate_dirs=_WAVE9_HOL
 
     if best_dir is not None:
         return best_dir
+    if fallback_dir is not None and fallback_dir != escape_dir:
+        return fallback_dir
     if _wave9_idle_safe(entities):
         return 8
-    return preferred_dir
+    return escape_dir
+
+
+def _wave9_wall_follow_dir(entities, px: float, py: float, escape_dir: int) -> int:
+    if escape_dir in (6, 2):
+        preferred = 0 if py > 0.58 else 4
+        candidates = (preferred, 4 if preferred == 0 else 0, 1, 3, 7, 5)
+    else:
+        preferred = 6 if px > 0.50 else 2
+        candidates = (preferred, 2 if preferred == 6 else 6, 5, 7, 3, 1)
+    for cand_dir in candidates:
+        if _move_dir_is_immediately_safe(cand_dir, entities):
+            return _forbid_lava(cand_dir, px, py)
+    return 8 if _wave9_idle_safe(entities) else preferred
 
 
 def _wave9_override(entities, px: float, py: float, wave: int, locked_fire=None):
@@ -1309,19 +1451,17 @@ def _wave9_override(entities, px: float, py: float, wave: int, locked_fire=None)
         return None
     if _count_types(entities, frozenset({TYPE_GRUNT})) < 8:
         return None
+    if _wave9_any_edge_reached(px, py):
+        return None
 
-    if px > _APF_WAVE9_LEFT_EDGE:
-        fire_dir = _wave9_best_hole_dir(entities)
-        move_dir = _wave9_best_move_dir(entities, fire_dir)
-    else:
-        preferred_wall_dir = 0 if py > 0.58 else 4  # vertical wall oscillation
-        move_dir = _wave9_best_move_dir(entities, preferred_wall_dir, _WAVE9_WALL_DIRS)
-        fire_dir = 2  # E
+    escape_dir = _wave9_choose_escape_dir(entities, px, py)
+    move_dir = _wave9_committed_move_dir(entities, escape_dir)
+    if move_dir < 8:
+        move_dir = _forbid_lava(move_dir, px, py)
+    fire_dir = move_dir if move_dir < 8 else escape_dir
 
     if locked_fire is not None and locked_fire >= 0:
         fire_dir = max(0, min(8, locked_fire))
-    if move_dir < 8:
-        move_dir = _forbid_lava(move_dir, px, py)
     return move_dir, fire_dir
 
 

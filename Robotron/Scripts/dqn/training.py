@@ -19,9 +19,11 @@ import torch.nn.functional as F
 try:
     from .config import RL_CONFIG, metrics
     from .model import device
+    from .replay_buffer import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT
 except ImportError:
     from config import RL_CONFIG, metrics
     from model import device
+    from replay_buffer import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT
 
 
 def _beta_schedule(frame_count: int) -> float:
@@ -67,6 +69,10 @@ def _q_policy_weight_schedule(training_step: int) -> float:
         return start
     progress = min(1.0, (training_step - start_step) / max(1, decay_steps))
     return start + progress * (floor - start)
+
+
+def _expert_batch_scale(expert_count: int, batch_size: int) -> float:
+    return float(max(0, int(expert_count))) / float(max(1, int(batch_size)))
 
 
 def _state_array_to_device(arr: np.ndarray, use_amp: bool) -> torch.Tensor:
@@ -123,7 +129,11 @@ def train_step(agent, prefetched_batch=None) -> float | None:
     if batch is None:
         return None
 
-    states, actions, rewards, next_states, dones, horizons, is_expert, indices, weights = batch
+    if len(batch) >= 10:
+        states, actions, rewards, next_states, dones, horizons, is_expert, actor_kind, indices, weights = batch
+    else:
+        states, actions, rewards, next_states, dones, horizons, is_expert, indices, weights = batch
+        actor_kind = np.where(is_expert > 0, ACTOR_EXPERT, ACTOR_DQN).astype(np.uint8)
 
     cfg = RL_CONFIG
     use_amp = agent.use_amp and device.type == "cuda"
@@ -197,6 +207,9 @@ def train_step(agent, prefetched_batch=None) -> float | None:
     bc_loss_val = 0.0
     bc_w = _bc_weight_schedule(metrics.total_training_steps)
     sample_expert_frac = float(is_expert_t.float().mean().item()) if B > 0 else 0.0
+    actor_kind_np = np.asarray(actor_kind, dtype=np.uint8)
+    sample_dqn_frac = float(np.mean(actor_kind_np == ACTOR_DQN)) if B > 0 else 0.0
+    sample_epsilon_frac = float(np.mean(actor_kind_np == ACTOR_EPSILON)) if B > 0 else 0.0
     expert_idx = is_expert_t.nonzero(as_tuple=True)[0] if is_expert_t.any() else None
     if bc_w > 0.0 and expert_idx is not None and expert_idx.numel() > 0:
         with amp_ctx:
@@ -209,7 +222,7 @@ def train_step(agent, prefetched_batch=None) -> float | None:
             bc_loss = joint_bc + float(getattr(cfg, "branch_aux_bc_weight", 0.25)) * branch_bc
             # Scale BC by sampled expert fraction to avoid over-weighting when
             # expert transitions are sparse but present in most batches.
-            bc_scale = float(expert_idx.numel()) / float(B)
+            bc_scale = _expert_batch_scale(int(expert_idx.numel()), B)
             weighted_loss = weighted_loss + (bc_w * bc_scale) * bc_loss
             bc_loss_val = float(bc_loss.detach().item())
 
@@ -219,7 +232,7 @@ def train_step(agent, prefetched_batch=None) -> float | None:
         with amp_ctx:
             joint_q_e = (joint_log_p[expert_idx].exp() * support.view(1, 1, -1)).sum(dim=2)
             expert_actions = actions_t[expert_idx]
-            bc_scale = float(expert_idx.numel()) / float(B)
+            bc_scale = _expert_batch_scale(int(expert_idx.numel()), B)
             if q_policy_w > 0.0:
                 temp = max(1e-3, float(getattr(cfg, "expert_q_policy_temperature", 10.0)))
                 q_policy_loss = F.cross_entropy(joint_q_e / temp, expert_actions)
@@ -229,7 +242,7 @@ def train_step(agent, prefetched_batch=None) -> float | None:
                 margin = torch.full_like(joint_q_e, float(getattr(cfg, "expert_q_margin", 0.5)))
                 margin.scatter_(1, expert_actions.unsqueeze(1), 0.0)
                 margin_loss = (joint_q_e + margin).max(dim=1).values - expert_q
-                weighted_loss = weighted_loss + margin_w * margin_loss.mean()
+                weighted_loss = weighted_loss + (margin_w * bc_scale) * margin_loss.mean()
 
     # ── NaN / Inf guard ───────────────────────────────────────────────────
     if not torch.isfinite(weighted_loss):
@@ -284,6 +297,8 @@ def train_step(agent, prefetched_batch=None) -> float | None:
         metrics.last_grad_norm = gn
         metrics.last_bc_loss = bc_loss_val
         metrics.last_bc_weight = float(bc_w)
+        metrics.last_sample_dqn_frac = sample_dqn_frac
+        metrics.last_sample_epsilon_frac = sample_epsilon_frac
         metrics.last_sample_expert_frac = sample_expert_frac
         metrics.last_inference_sync_age = int(max(0, int(agent.training_steps) - int(getattr(agent, "last_inference_sync", 0))))
         metrics.last_priority_mean = float(np.mean(td_errors))

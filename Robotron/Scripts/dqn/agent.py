@@ -367,6 +367,7 @@ class RainbowAgent:
         else:
             action_idx = int(max(0, min(NUM_JOINT - 1, int(action))))
         is_expert = 1 if actor == "expert" else 0
+        actor_kind = self.memory.actor_kind_from_name(actor, is_expert)
         pri = float(priority_reward) if priority_reward is not None else 0.0
         # Ensure terminal transitions get a minimum priority floor
         if done:
@@ -374,7 +375,7 @@ class RainbowAgent:
             if boost > 0:
                 pri = max(abs(pri), boost) * (-1.0 if pri < 0 else 1.0)
         self.memory.add(state, action_idx, float(reward), next_state, bool(done), int(horizon), is_expert,
-                priority_hint=pri, interest=interest)
+                priority_hint=pri, interest=interest, actor_kind=actor_kind)
         # Return the index of the just-written transition for pre-death tracking
         try:
             return int(self.memory.tree.data_ptr - 1) % self.memory.capacity

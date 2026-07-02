@@ -624,6 +624,9 @@ class _DashboardState:
             last_loss = float(self.metrics.last_loss)
             last_grad_norm = float(self.metrics.last_grad_norm)
             last_bc_loss = float(self.metrics.last_bc_loss)
+            sample_dqn_frac = float(getattr(self.metrics, "last_sample_dqn_frac", 0.0))
+            sample_epsilon_frac = float(getattr(self.metrics, "last_sample_epsilon_frac", 0.0))
+            sample_expert_frac = float(getattr(self.metrics, "last_sample_expert_frac", 0.0))
             subj_positive_weight = float(getattr(self.metrics, "last_subj_positive_weight", 1.0))
             last_q_mean = float(self.metrics.last_q_mean)
             training_enabled = bool(self.metrics.training_enabled)
@@ -707,6 +710,9 @@ class _DashboardState:
             "loss": last_loss,
             "grad_norm": last_grad_norm,
             "bc_loss": last_bc_loss,
+            "sample_dqn_frac": sample_dqn_frac,
+            "sample_epsilon_frac": sample_epsilon_frac,
+            "sample_expert_frac": sample_expert_frac,
             "subj_positive_weight": subj_positive_weight,
             "q_mean": last_q_mean,
             "reward_total": reward_total,

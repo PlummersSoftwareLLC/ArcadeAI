@@ -16,8 +16,9 @@ Game-flow contract (Robotron-specific):
     paths.
   • Episodes terminate on ``frame.done``.  While ``player_alive`` is false (death
     animation / between lives) we send a neutral action and store no transitions.
-    • Reward = clipped game_score delta only; Lua subjective shaping and explicit
-      death penalty are ignored for the score-only experiment.
+    • Reward = clipped game_score delta plus tightly bounded non-harvestable
+      movement/progress shaping. Lua subjective shaping and explicit terminal
+      death reward remain independently configurable.
 """
 
 if __name__ == "__main__":
@@ -32,8 +33,10 @@ from typing import Optional
 
 try:
     from .config import (RL_CONFIG, SERVER_CONFIG, metrics, LATEST_MODEL_PATH,
-                         game_settings, slice_model_state, WIRE_PARAMS_COUNT)
+                         game_settings, slice_model_state, WIRE_PARAMS_COUNT,
+                         TOKEN_GROUP_RANGES)
     from .nstep_buffer import NStepReplayBuffer
+    from .replay_buffer import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT
     from .model import combine_action, split_joint_action, action_index_to_wire_dir
     from .metrics_display import (
         add_episode_to_dqn100k_window,
@@ -45,8 +48,10 @@ try:
     )
 except ImportError:
     from config import (RL_CONFIG, SERVER_CONFIG, metrics, LATEST_MODEL_PATH,
-                        game_settings, slice_model_state, WIRE_PARAMS_COUNT)
+                        game_settings, slice_model_state, WIRE_PARAMS_COUNT,
+                        TOKEN_GROUP_RANGES)
     from nstep_buffer import NStepReplayBuffer
+    from replay_buffer import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT
     from model import combine_action, split_joint_action, action_index_to_wire_dir
     from metrics_display import (
         add_episode_to_dqn100k_window,
@@ -151,54 +156,189 @@ def parse_frame_data(data: bytes) -> Optional[FrameData]:
     )
 
 
+def _base_model_state(state: np.ndarray) -> np.ndarray:
+    """Return the current-frame compact state from a possibly stacked state."""
+    arr = np.asarray(state, dtype=np.float32)
+    size = int(getattr(RL_CONFIG, "single_frame_state_size", arr.shape[0]))
+    return arr[:min(arr.shape[0], size)]
+
+
+def _object_rows(state: np.ndarray) -> np.ndarray:
+    base = _base_model_state(state)
+    cfg = RL_CONFIG
+    start = int(getattr(cfg, "global_features", 40))
+    count = int(getattr(cfg, "enemy_token_count", 112))
+    feats = int(getattr(cfg, "enemy_token_features", 10))
+    end = start + count * feats
+    if base.shape[0] < end:
+        rows = np.zeros((count, feats), dtype=np.float32)
+        available = max(0, base.shape[0] - start)
+        if available > 0:
+            rows.reshape(-1)[:available] = base[start:start + available]
+        return rows
+    return np.asarray(base[start:end], dtype=np.float32).reshape(count, feats)
+
+
+def _group_rows(state: np.ndarray, group: str) -> np.ndarray:
+    rows = _object_rows(state)
+    lo, hi = TOKEN_GROUP_RANGES.get(group, (0, 0))
+    return rows[int(lo):int(hi)]
+
+
+def _active_group_count(state: np.ndarray, group: str) -> int:
+    rows = _group_rows(state, group)
+    if rows.size == 0:
+        return 0
+    return int(np.count_nonzero(rows[:, 0] > 0.5))
+
+
+def _state_wave(state: np.ndarray) -> float:
+    base = _base_model_state(state)
+    if base.shape[0] > 4 and np.isfinite(base[4]):
+        return max(1.0, float(base[4]) * 40.0)
+    return 1.0
+
+
+def _wave_advanced(prev_state: np.ndarray | None, frame: FrameData) -> bool:
+    if prev_state is None:
+        return False
+    return float(frame.level_number) > (_state_wave(prev_state) + 0.5)
+
+
+def _movement_potential(state: np.ndarray | None, alive: bool = True) -> float:
+    """State potential used for dense, non-harvestable movement credit.
+
+    The potential is always <= 0 and becomes 0 on terminal/dead states. The
+    reward term is gamma*Phi(s') - Phi(s), so approaching humans, escaping close
+    danger, and getting out of dangerous corners get immediate credit without a
+    per-frame survival drip.
+    """
+    if state is None or not alive:
+        return 0.0
+
+    cfg = RL_CONFIG
+    phi = 0.0
+    rows = _object_rows(state)
+    present = rows[:, 0] > 0.5
+    if not np.any(present):
+        return 0.0
+    active = rows[present]
+    dist = np.clip(active[:, 3], 0.0, 1.0)
+    threat = np.clip(active[:, 6], 0.0, 1.0)
+    ttc = np.clip(active[:, 8], 0.0, 1.0) if active.shape[1] > 8 else np.ones_like(dist)
+    type_id = np.zeros(active.shape[0], dtype=np.int32)
+    if active.shape[1] > 9:
+        type_id = np.rint(np.clip(active[:, 9], 0.0, 1.0) * 8.0).astype(np.int32)
+
+    humans = type_id == 7
+    if np.any(humans):
+        nearest_human = float(np.nanmin(dist[humans]))
+        scale = max(0.0, float(getattr(cfg, "potential_human_scale", 0.0)))
+        sharp = max(0.1, float(getattr(cfg, "potential_human_sharpness", 2.0)))
+        phi -= scale * (nearest_human ** sharp)
+
+    dangerous = ~humans
+    danger_cue = 0.0
+    if np.any(dangerous):
+        closeness = 1.0 - dist[dangerous]
+        danger_raw = np.maximum(
+            closeness * (0.25 + 0.75 * threat[dangerous]),
+            closeness * (1.0 - ttc[dangerous]),
+        )
+        danger_cue = float(np.nanmax(danger_raw)) if danger_raw.size else 0.0
+        scale = max(0.0, float(getattr(cfg, "potential_danger_scale", 0.0)))
+        sharp = max(0.1, float(getattr(cfg, "potential_danger_sharpness", 2.0)))
+        phi -= scale * (max(0.0, min(1.0, danger_cue)) ** sharp)
+
+    base = _base_model_state(state)
+    if base.shape[0] > 6:
+        px = min(1.0, max(0.0, float(base[5]) if np.isfinite(base[5]) else 0.5))
+        py = min(1.0, max(0.0, float(base[6]) if np.isfinite(base[6]) else 0.5))
+        wall = min(px, 1.0 - px, py, 1.0 - py)
+        band = max(1e-6, float(getattr(cfg, "potential_corner_band", 0.16)))
+        corner = max(0.0, min(1.0, (band - wall) / band))
+        if corner > 0.0:
+            crowd = min(1.0, float(np.count_nonzero(dangerous)) / 32.0)
+            gate = max(danger_cue, crowd)
+            phi -= max(0.0, float(getattr(cfg, "potential_corner_scale", 0.0))) * (corner ** 2) * gate
+
+    return float(phi)
+
+
+def _stall_penalty(stall_frames: int) -> float:
+    grace = max(0, int(getattr(RL_CONFIG, "no_human_stall_grace_frames", 0)))
+    if stall_frames <= grace:
+        return 0.0
+    per_frame = max(0.0, float(getattr(RL_CONFIG, "no_human_stall_penalty_per_frame", 0.0)))
+    max_penalty = max(0.0, float(getattr(RL_CONFIG, "no_human_stall_max_penalty", 0.0)))
+    ramp = min(1.0, (stall_frames - grace) / max(1, grace))
+    return -min(max_penalty, per_frame * (1.0 + 3.0 * ramp))
+
+
 def _transition_interest_score(prev_state: np.ndarray, next_state: np.ndarray,
                                frame, obj_r: float, total_r: float) -> float:
     """Sparse rare/elite-event score for replay sampling, independent of TD error."""
     try:
-        cfg = RL_CONFIG
-        enemy_start = int(getattr(cfg, "global_features", 40))
-        enemy_count = int(getattr(cfg, "enemy_token_count", 96))
-        enemy_features = int(getattr(cfg, "enemy_token_features", 10))
-
         def enemy_cues(state):
-            rows = np.asarray(
-                state[enemy_start:enemy_start + enemy_count * enemy_features],
-                dtype=np.float32,
-            ).reshape(enemy_count, enemy_features)
+            rows = _object_rows(state)
             present = rows[:, 0] > 0.5
             if not np.any(present):
-                return 0.0, 0.0, 0.0, 0.0
+                return {
+                    "danger": 0.0, "blocker": 0.0, "crowd": 0.0, "target": 0.0,
+                    "projectile": 0.0, "humans": 0, "targets": 0, "corner": 0.0,
+                }
             active = rows[present]
             dist = np.clip(active[:, 3], 0.0, 1.0)
             threat = np.clip(active[:, 6], 0.0, 1.0)
-            ttc = np.clip(active[:, 8], 0.0, 1.0) if enemy_features > 8 else np.ones_like(dist)
+            ttc = np.clip(active[:, 8], 0.0, 1.0) if active.shape[1] > 8 else np.ones_like(dist)
             type_id = np.zeros(active.shape[0], dtype=np.int32)
-            if enemy_features > 9:
+            if active.shape[1] > 9:
                 type_id = np.rint(np.clip(active[:, 9], 0.0, 1.0) * 8.0).astype(np.int32)
             dangerous = type_id != 7
             targetable = np.isin(type_id, np.asarray([0, 2, 3, 4, 5, 6, 8], dtype=np.int32))
+            projectile = np.isin(type_id, np.asarray([6], dtype=np.int32))
             closeness = 1.0 - dist
             danger_cue = np.where(dangerous, np.maximum(closeness * threat, closeness * (1.0 - ttc)), 0.0)
             target_cue = np.where(targetable, closeness * (0.25 + 0.75 * threat), 0.0)
-            danger = float(np.nanmax(danger_cue))
-            target = float(np.nanmax(target_cue))
+            projectile_cue = np.where(projectile, np.maximum(closeness * threat, closeness * (1.0 - ttc)), 0.0)
+            danger = float(np.nanmax(danger_cue)) if danger_cue.size else 0.0
+            target = float(np.nanmax(target_cue)) if target_cue.size else 0.0
+            proj = float(np.nanmax(projectile_cue)) if projectile_cue.size else 0.0
             crowd = float(min(1.0, active.shape[0] / 32.0))
-            return danger, 0.0, crowd, target
+            base = _base_model_state(state)
+            corner = 0.0
+            if base.shape[0] > 6:
+                px = min(1.0, max(0.0, float(base[5]) if np.isfinite(base[5]) else 0.5))
+                py = min(1.0, max(0.0, float(base[6]) if np.isfinite(base[6]) else 0.5))
+                wall = min(px, 1.0 - px, py, 1.0 - py)
+                corner = max(0.0, min(1.0, (0.16 - wall) / 0.16))
+            return {
+                "danger": danger,
+                "blocker": 0.0,
+                "crowd": crowd,
+                "target": target,
+                "projectile": proj,
+                "humans": int(np.count_nonzero(type_id == 7)),
+                "targets": int(np.count_nonzero(targetable)),
+                "corner": corner,
+            }
 
-        prev_danger, prev_blocker, prev_crowd, prev_target = enemy_cues(prev_state)
-        next_danger, next_blocker, next_crowd, next_target = enemy_cues(next_state)
-        danger = max(prev_danger, next_danger)
-        blocker = max(prev_blocker, next_blocker)
-        crowd = max(prev_crowd, next_crowd)
-        target = max(prev_target, next_target)
+        prev = enemy_cues(prev_state)
+        nxt = enemy_cues(next_state)
+        danger = max(prev["danger"], nxt["danger"])
+        blocker = max(prev["blocker"], nxt["blocker"])
+        crowd = max(prev["crowd"], nxt["crowd"])
+        target = max(prev["target"], nxt["target"])
+        projectile = max(prev["projectile"], nxt["projectile"])
 
-        prev_wave = 0.0
-        if len(prev_state) > 4 and np.isfinite(prev_state[4]):
-            prev_wave = float(prev_state[4]) * 40.0
         wave = max(1.0, float(frame.level_number))
-        wave_advance = 1.0 if wave > prev_wave + 0.5 else 0.0
+        wave_advance = 1.0 if _wave_advanced(prev_state, frame) else 0.0
         deep_wave = max(0.0, min(1.0, (wave - 3.0) / 8.0))
+        wave9 = 1.0 if int(wave) % 10 == 9 else 0.0
         terminal = 1.0 if frame.done else 0.0
+        corner_death = terminal * max(prev["corner"], nxt["corner"]) * max(danger, projectile)
+        last_enemy_no_humans = 1.0 if min(prev["humans"], nxt["humans"]) == 0 and 0 < min(prev["targets"], nxt["targets"]) <= 3 else 0.0
+        last_human_rescue = 1.0 if prev["humans"] > nxt["humans"] and obj_r >= 1.0 else 0.0
 
         def ramp(value: float, start: float) -> float:
             return max(0.0, min(1.0, (float(value) - float(start)) / max(1e-6, 1.0 - float(start))))
@@ -213,13 +353,18 @@ def _transition_interest_score(prev_state: np.ndarray, next_state: np.ndarray,
 
         return max(
             score_burst,
-            0.95 * wave_advance,
-            0.90 * terminal,
+            0.80 * wave_advance,
+            0.75 * terminal,
             0.75 * danger_event,
             0.60 * blocker_event,
             0.70 * target_event,
             0.65 * crowd_event,
             0.55 * deep_tactical,
+            0.80 * last_enemy_no_humans,
+            1.00 * last_human_rescue,
+            0.85 * wave9 * max(danger_event, crowd_event, target_event, projectile),
+            0.75 * ramp(projectile, 0.35),
+            0.95 * corner_death,
             0.35 * positive_surprise,
         )
     except Exception:
@@ -245,8 +390,20 @@ def _subj_positive_weight_schedule(training_step: int) -> float:
     return start + progress * (floor - start)
 
 
-def _shape_transition_reward(frame, last_game_score: int) -> tuple[float, float, float, float, int]:
-    """Reward from actual score delta plus tightly clipped subjective shaping."""
+def _shape_transition_reward(
+    frame,
+    last_game_score: int,
+    prev_state: np.ndarray | None = None,
+    next_state: np.ndarray | None = None,
+    stall_frames: int = 0,
+) -> tuple[float, float, float, float, int]:
+    """Reward from score plus bounded non-harvestable shaping.
+
+    The second returned component is still named ``subj_r`` by the older metrics
+    path, but it now means all shaping: Lua subjective reward if enabled,
+    wave-clear/event bonuses, potential-difference movement shaping, and
+    no-human no-score stall penalties.
+    """
     try:
         score_delta = max(0, int(frame.game_score) - int(last_game_score))
     except Exception:
@@ -263,10 +420,24 @@ def _shape_transition_reward(frame, last_game_score: int) -> tuple[float, float,
     subj_raw = float(frame.subjreward) * float(RL_CONFIG.subj_reward_scale)
     if subj_raw > 0.0:
         subj_raw *= subj_weight
-    subj_r = _clip_abs(
-        subj_raw,
-        float(RL_CONFIG.shaping_reward_clip),
-    )
+    shaping_raw = subj_raw
+
+    # Do not pay "escape danger" potential on terminal/death frames.  Since
+    # Phi(s) <= 0, treating death as Phi(s') = 0 can accidentally reward dying
+    # from a dangerous state.
+    if prev_state is not None and next_state is not None and bool(frame.player_alive) and not bool(frame.done):
+        phi_prev = _movement_potential(prev_state, alive=True)
+        phi_next = _movement_potential(next_state, alive=True)
+        shaping_raw += float(RL_CONFIG.gamma) * phi_next - phi_prev
+
+    if _wave_advanced(prev_state, frame):
+        wave = max(1, int(frame.level_number))
+        shaping_raw += float(getattr(RL_CONFIG, "wave_clear_bonus", 0.0))
+        shaping_raw += float(getattr(RL_CONFIG, "wave_progress_bonus", 0.0)) * min(10, max(0, wave - 1))
+
+    shaping_raw += _stall_penalty(int(stall_frames))
+
+    subj_r = _clip_abs(shaping_raw, float(RL_CONFIG.shaping_reward_clip))
     death_r = -float(getattr(RL_CONFIG, "death_penalty", 0.0)) if bool(frame.done) else 0.0
     total_r = score_r + subj_r + death_r
     total_r = _clip_abs(total_r, float(RL_CONFIG.death_reward_clip if frame.done else RL_CONFIG.reward_clip))
@@ -383,11 +554,38 @@ class AsyncReplayBuffer:
                 int(score) >= int(getattr(RL_CONFIG, "elite_episode_score_threshold", 120_000))
                 or int(level) >= int(getattr(RL_CONFIG, "elite_episode_level_threshold", 8))
             )
-            if elite:
-                tail_len = max(1, int(getattr(RL_CONFIG, "elite_episode_tail_len", 768)))
+            learner_elite = False
+            try:
+                mem = self.agent.memory
+                with mem.lock:
+                    idxs = np.asarray(indices, dtype=np.int64)
+                    idxs = idxs[(idxs >= 0) & (idxs < mem.size)]
+                    kinds = mem.actor_kind[idxs].copy() if idxs.size > 0 else np.empty(0, dtype=np.uint8)
+                if idxs.size > 0:
+                    learner_frac = float(np.mean(kinds != ACTOR_EXPERT))
+                    min_learner = max(0.0, min(1.0, float(getattr(RL_CONFIG, "learner_elite_min_learner_fraction", 0.90))))
+                    learner_elite = (
+                        learner_frac >= min_learner
+                        and (
+                            int(score) >= int(getattr(RL_CONFIG, "learner_elite_score_threshold", 60_000))
+                            or int(level) >= int(getattr(RL_CONFIG, "learner_elite_level_threshold", 6))
+                        )
+                    )
+            except Exception:
+                learner_elite = False
+            if elite or learner_elite:
+                elite_tail = int(getattr(RL_CONFIG, "elite_episode_tail_len", 768)) if elite else 0
+                learner_tail = int(getattr(RL_CONFIG, "learner_elite_tail_len", 1536)) if learner_elite else 0
+                tail_len = max(1, elite_tail, learner_tail)
                 tail = list(indices)[-tail_len:]
-                boost = float(getattr(RL_CONFIG, "elite_episode_priority_boost", 3.0))
-                interest = float(getattr(RL_CONFIG, "elite_episode_interest_score", 1.0))
+                boost = max(
+                    float(getattr(RL_CONFIG, "elite_episode_priority_boost", 3.0)) if elite else 1.0,
+                    float(getattr(RL_CONFIG, "learner_elite_priority_boost", 4.0)) if learner_elite else 1.0,
+                )
+                interest = max(
+                    float(getattr(RL_CONFIG, "elite_episode_interest_score", 1.0)) if elite else 0.0,
+                    float(getattr(RL_CONFIG, "learner_elite_interest_score", 1.0)) if learner_elite else 0.0,
+                )
                 self.agent.memory.boost_priorities(tail, boost)
                 self.agent.memory.mark_interesting(tail, interest)
         except Exception as e:
@@ -572,6 +770,7 @@ class SocketServer:
                 "ep_subj_reward": 0.0, "ep_obj_reward": 0.0, "ep_frames": 0,
                 "ep_death_reward": 0.0,
                 "ep_dqn_frames": 0,
+                "no_human_no_score_frames": 0,
                 "eval_only": eval_only,
                 "was_done": False, "nstep": nstep,
                 "frame_history": deque(maxlen=max(1, int(getattr(RL_CONFIG, "frame_stack", 1)))),
@@ -719,8 +918,26 @@ class SocketServer:
                 # ── Process previous step ───────────────────────────────
                 if cs.get("last_state") is not None and cs.get("last_action") is not None:
                     mv_i, fr_i = cs["last_action"]
+                    try:
+                        score_delta_probe = max(0, int(frame.game_score) - int(cs.get("last_game_score", frame.game_score)))
+                    except Exception:
+                        score_delta_probe = 0
+                    if (
+                        frame.done
+                        or not frame.player_alive
+                        or score_delta_probe > 0
+                        or _active_group_count(model_state, "human") > 0
+                    ):
+                        cs["no_human_no_score_frames"] = 0
+                    else:
+                        cs["no_human_no_score_frames"] = int(cs.get("no_human_no_score_frames", 0)) + 1
                     total_r, score_r, subj_r, death_r, score_delta = _shape_transition_reward(
-                        frame, cs.get("last_game_score", frame.game_score))
+                        frame,
+                        cs.get("last_game_score", frame.game_score),
+                        prev_state=cs.get("last_state"),
+                        next_state=model_state,
+                        stall_frames=int(cs.get("no_human_no_score_frames", 0)),
+                    )
                     interest = _transition_interest_score(cs["last_state"], model_state, frame, score_r, total_r)
 
                     eval_only = bool(cs.get("eval_only", False))
@@ -803,6 +1020,7 @@ class SocketServer:
                     cs["ep_subj_reward"] = cs["ep_obj_reward"] = cs["ep_death_reward"] = 0.0
                     cs["ep_frames"] = 0
                     cs["ep_dqn_frames"] = 0
+                    cs["no_human_no_score_frames"] = 0
                     cs["fire_hold_dir"] = -1
                     cs["fire_hold_count"] = 0
                     cs["fire_pending_dir"] = -1
@@ -817,11 +1035,13 @@ class SocketServer:
                     cs["ep_subj_reward"] = cs["ep_obj_reward"] = cs["ep_death_reward"] = 0.0
                     cs["ep_frames"] = 0
                     cs["ep_dqn_frames"] = 0
+                    cs["no_human_no_score_frames"] = 0
 
                 # ── Not playable (death animation / between lives) ──────
                 if not frame.player_alive:
                     cs["last_state"] = cs["last_action"] = None
                     cs["prev_action_source"] = None
+                    cs["no_human_no_score_frames"] = 0
                     cs["fire_hold_dir"] = -1
                     cs["fire_hold_count"] = 0
                     cs["fire_pending_dir"] = -1

@@ -185,6 +185,30 @@ def test_nstep_actor_boundaries():
             f"out={out2}")
 
 
+def test_replay_actor_source_tracking():
+    print("\n[replay actor source tracking]")
+    from dqn.replay_buffer import (
+        ACTOR_DQN,
+        ACTOR_EPSILON,
+        ACTOR_EXPERT,
+        PrioritizedReplayBuffer,
+    )
+
+    rb = PrioritizedReplayBuffer(capacity=8, state_size=2, alpha=0.6)
+    s = np.zeros(2, dtype=np.float32)
+    ns = np.ones(2, dtype=np.float32)
+    rb.add(s, 0, 1.0, ns, False, actor_kind=ACTOR_DQN)
+    rb.add(s, 1, 1.0, ns, False, actor_kind=ACTOR_EPSILON)
+    rb.add(s, 2, 1.0, ns, False, expert=1, actor_kind=ACTOR_EXPERT)
+    stats = rb.get_partition_stats()
+    check("actor source counts dqn", stats["actor_dqn"] == 1, f"stats={stats}")
+    check("actor source counts epsilon", stats["actor_epsilon"] == 1, f"stats={stats}")
+    check("actor source counts expert", stats["actor_expert"] == 1, f"stats={stats}")
+    batch = rb.sample(3, beta=0.4)
+    check("sample includes actor_kind field", batch is not None and len(batch) == 10,
+          f"len={len(batch) if batch is not None else None}")
+
+
 def test_parse_roundtrip():
     print("\n[wire parse round-trip]")
     w = fake_wire(wave=7)
@@ -235,6 +259,20 @@ def test_fire_hold():
 
 def test_reward_and_hard_starts():
     print("\n[reward + hard starts]")
+
+    def compact_state(wave=1, row=None, group="destructible", px=0.5, py=0.5):
+        s = np.zeros(C.MODEL_STATE_SIZE, dtype=np.float32)
+        s[4] = max(0, min(40, int(wave))) / 40.0
+        s[5] = float(px)
+        s[6] = float(py)
+        if row is not None:
+            vals = list(row[:C.ENEMY_TOKEN_FEATURES])
+            vals += [0.0] * (C.ENEMY_TOKEN_FEATURES - len(vals))
+            lo, _hi = C.TOKEN_GROUP_RANGES[group]
+            start = C.ENEMY_TOKEN_OFFSET + lo * C.ENEMY_TOKEN_FEATURES
+            s[start:start + C.ENEMY_TOKEN_FEATURES] = np.asarray(vals, dtype=np.float32)
+        return s
+
     frame = SS.FrameData(
         state=fake_wire(), subjreward=100.0, objreward=0.0,
         done=False, player_alive=True, save_signal=False, start_pressed=False,
@@ -257,6 +295,41 @@ def test_reward_and_hard_starts():
     check("negative subjective shaping is ignored", np.isclose(dead_subj, 0.0), f"subj_r={dead_subj}")
     check("death has no explicit reward penalty", np.isclose(dead_r, 0.0), f"death_r={dead_r}")
     check("terminal no-score reward is zero", np.isclose(dead_total, 0.0), f"total={dead_total}")
+
+    wave_frame = SS.FrameData(
+        state=fake_wire(wave=5), subjreward=0.0, objreward=0.0,
+        done=False, player_alive=True, save_signal=False, start_pressed=False,
+        level_number=5, game_score=0, num_lasers=0)
+    _, _, wave_shape, _, _ = SS._shape_transition_reward(
+        wave_frame, 0, prev_state=compact_state(wave=4), next_state=compact_state(wave=5))
+    check("wave clear bonus survives shaping clip", wave_shape >= 2.0, f"shape={wave_shape}")
+
+    human_far = compact_state(row=[1.0, 0.70, 0.0, 0.70, 0.0, 0.0, 0.0, 0.0, 1.0, 0.875], group="human")
+    human_near = compact_state(row=[1.0, 0.20, 0.0, 0.20, 0.0, 0.0, 0.0, 0.0, 1.0, 0.875], group="human")
+    _, _, human_shape, _, _ = SS._shape_transition_reward(
+        frame2, 0, prev_state=human_far, next_state=human_near)
+    check("human approach potential rewards getting closer", human_shape > 0.0, f"shape={human_shape}")
+
+    danger_close = compact_state(row=[1.0, 0.04, 0.0, 0.04, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
+    danger_far = compact_state(row=[1.0, 0.50, 0.0, 0.50, 0.0, 0.0, 1.0, 0.0, 0.8, 0.0])
+    _, _, danger_shape, _, _ = SS._shape_transition_reward(
+        frame2, 0, prev_state=danger_close, next_state=danger_far)
+    check("danger potential rewards escaping close threats", danger_shape > 0.0, f"shape={danger_shape}")
+
+    terminal_danger = SS.FrameData(
+        state=fake_wire(), subjreward=0.0, objreward=0.0,
+        done=True, player_alive=False, save_signal=False, start_pressed=False,
+        level_number=1, game_score=0, num_lasers=0)
+    terminal_total, _, terminal_shape, _, _ = SS._shape_transition_reward(
+        terminal_danger, 0, prev_state=danger_close, next_state=danger_far)
+    check("terminal death does not earn escape potential",
+          terminal_total <= 1e-9 and terminal_shape <= 1e-9,
+          f"total={terminal_total} shape={terminal_shape}")
+
+    _, _, stall_shape, _, _ = SS._shape_transition_reward(
+        frame2, 0, prev_state=compact_state(), next_state=compact_state(),
+        stall_frames=C.RL_CONFIG.no_human_stall_grace_frames + 1)
+    check("no-human no-score stall penalty is negative", stall_shape < 0.0, f"shape={stall_shape}")
 
     old_start_adv = C.game_settings.start_advanced
     old_auto = C.game_settings.auto_curriculum
@@ -318,17 +391,31 @@ def test_score_level_1m_metrics():
     check("score-only update still updates Scr1M", np.isclose(m.score_1m_average, 40.0),
           f"avg={m.score_1m_average}")
 
+    m.eval_score_1m_window = 100
+    m.add_eval_episode_reward(1.0, 1000, 1, length=40)
+    m.add_eval_episode_reward(1.0, 3000, 1, length=40)
+    check("EScr1M averages eval episodes inside frame window",
+          np.isclose(m.eval_score_1m_average, 2000.0),
+          f"avg={m.eval_score_1m_average}")
+    m.add_eval_episode_reward(1.0, 9000, 1, length=30)
+    check("EScr1M evicts old eval episodes by frame span",
+          np.isclose(m.eval_score_1m_average, 6000.0) and m.eval_score_1m_frames == 70,
+          f"avg={m.eval_score_1m_average} frames={m.eval_score_1m_frames}")
+
 
 def test_transition_interest_policy():
     print("\n[transition interest]")
 
-    def model_state(wave: int, enemy_row: list[float] | None = None):
+    def model_state(wave: int, enemy_row: list[float] | None = None, group: str = "destructible"):
         s = np.zeros(C.MODEL_STATE_SIZE, dtype=np.float32)
         s[4] = max(0, min(40, int(wave))) / 40.0
+        s[5] = 0.5
+        s[6] = 0.5
         if enemy_row is not None:
             vals = list(enemy_row[:C.ENEMY_TOKEN_FEATURES])
             vals += [0.0] * (C.ENEMY_TOKEN_FEATURES - len(vals))
-            start = C.ENEMY_TOKEN_OFFSET
+            lo, _hi = C.TOKEN_GROUP_RANGES[group]
+            start = C.ENEMY_TOKEN_OFFSET + lo * C.ENEMY_TOKEN_FEATURES
             s[start:start + C.ENEMY_TOKEN_FEATURES] = np.asarray(vals, dtype=np.float32)
         return s
 
@@ -356,6 +443,21 @@ def test_transition_interest_policy():
     check("terminal transition is interesting", terminal >= threshold, f"score={terminal:.3f}")
     advanced = SS._transition_interest_score(model_state(5), model_state(6), frame(6), 0.0, 0.0)
     check("wave advance is interesting", advanced >= threshold, f"score={advanced:.3f}")
+    last_enemy = SS._transition_interest_score(
+        model_state(6, [1.0, 0.30, 0.0, 0.30, 0.0, 0.0, 0.8, 0.0, 0.5, 0.0]),
+        model_state(6, [1.0, 0.28, 0.0, 0.28, 0.0, 0.0, 0.8, 0.0, 0.5, 0.0]),
+        frame(6), 0.0, 0.0)
+    check("last-enemy no-human state is interesting", last_enemy >= threshold, f"score={last_enemy:.3f}")
+    rescue = SS._transition_interest_score(
+        model_state(4, [1.0, 0.10, 0.0, 0.10, 0.0, 0.0, 0.0, 0.0, 1.0, 0.875], group="human"),
+        model_state(4),
+        frame(4), 1.0, 1.0)
+    check("last-human rescue transition is interesting", rescue >= threshold, f"score={rescue:.3f}")
+    projectile_wave9 = SS._transition_interest_score(
+        model_state(9),
+        model_state(9, [1.0, 0.05, 0.0, 0.05, 0.0, 0.0, 1.0, 0.0, 0.0, 0.75]),
+        frame(9), 0.0, 0.0)
+    check("wave-9 projectile danger is interesting", projectile_wave9 >= threshold, f"score={projectile_wave9:.3f}")
 
 
 def test_legacy_interest_sanitizer():
@@ -410,8 +512,8 @@ def test_pre_death_reward_penalty():
         s0 = np.zeros(C.MODEL_STATE_SIZE, dtype=np.float32)
         default_buf.add(s0, 0, 0.0, s0, False, expert=0)
         default_changed = default_buf.apply_pre_death_penalty([0])
-        check("pre-death reward penalty disabled by default",
-              default_changed == 0 and np.isclose(default_buf.rewards[0], 0.0),
+        check("pre-death reward penalty active by default",
+              default_changed == 1 and default_buf.rewards[0] < 0.0,
               f"changed={default_changed} reward={default_buf.rewards[0]}")
 
         cfg.pre_death_reward_lookback = 4
@@ -461,7 +563,12 @@ def test_pre_death_reward_penalty():
 
 def test_expert_anchor_decay():
     print("\n[expert anchor decay]")
-    from dqn.training import _bc_weight_schedule, _margin_weight_schedule, _q_policy_weight_schedule
+    from dqn.training import (
+        _bc_weight_schedule,
+        _expert_batch_scale,
+        _margin_weight_schedule,
+        _q_policy_weight_schedule,
+    )
     cfg = C.RL_CONFIG
 
     # BC weight decays from start to its floor over the configured step window.
@@ -493,6 +600,10 @@ def test_expert_anchor_decay():
           f"start={m_start} mid={m_mid} end={m_end}")
     check("margin weight decays to zero floor", np.isclose(m_end, cfg.expert_q_margin_min_weight),
           f"m_end={m_end}")
+    check("expert imitation losses scale by sampled expert fraction",
+          np.isclose(_expert_batch_scale(1, 128), 1.0 / 128.0)
+          and np.isclose(_expert_batch_scale(0, 128), 0.0),
+          f"scale1={_expert_batch_scale(1, 128)} scale0={_expert_batch_scale(0, 128)}")
 
 
 def test_subjective_reward_disabled():
@@ -543,7 +654,11 @@ def test_epsilon_expert_floor():
         saved_lfc = m.learner_frame_count
         saved_override = m.manual_epsilon_override
         saved_pulse = m.manual_pulse_active
+        saved_settings_xp = C.game_settings.expert_pct
+        saved_settings_eps = C.game_settings.epsilon_pct
     try:
+        C.game_settings.expert_pct = -1
+        C.game_settings.epsilon_pct = -1
         with m.lock:
             m.manual_epsilon_override = False
             m.manual_pulse_active = False
@@ -559,7 +674,23 @@ def test_epsilon_expert_floor():
         eps_done = m.update_epsilon()
         check("epsilon floor releases after handoff",
               eps_done <= cfg.epsilon_expert_floor + 1e-9, f"eps={eps_done}")
+        C.game_settings.expert_pct = 0
+        with m.lock:
+            m.expert_ratio = cfg.epsilon_expert_floor_until_ratio + 0.2
+        eps_manual_zero = m.update_epsilon()
+        check("manual zero expert override releases epsilon floor",
+              eps_manual_zero < cfg.epsilon_expert_floor - 1e-9,
+              f"eps={eps_manual_zero} floor={cfg.epsilon_expert_floor}")
+        C.game_settings.expert_pct = int(min(100, round((cfg.epsilon_expert_floor_until_ratio + 0.20) * 100)))
+        with m.lock:
+            m.expert_ratio = 0.0
+        eps_manual_high = m.update_epsilon()
+        check("manual expert override can hold epsilon floor",
+              eps_manual_high >= cfg.epsilon_expert_floor - 1e-9,
+              f"eps={eps_manual_high} floor={cfg.epsilon_expert_floor}")
     finally:
+        C.game_settings.expert_pct = saved_settings_xp
+        C.game_settings.epsilon_pct = saved_settings_eps
         with m.lock:
             m.epsilon = saved_eps
             m.expert_ratio = saved_xr
@@ -687,6 +818,18 @@ def test_model_shapes(agent):
           f"in={trunk_linears[0].in_features} expected={expected_trunk_in} raw={expected_raw} attn={expected_attn}")
     check("object attention enabled", getattr(agent.online_net, "use_object_attn", False))
     check("action-context attention enabled", getattr(agent.online_net, "use_action_context", False))
+    geo = torch.zeros(1, C.MODEL_STATE_SIZE, device=dev)
+    row = torch.tensor([1.0, 0.40, 0.0, 0.40, 0.0, 0.0, 1.0, 0.0, 0.50, 0.0], device=dev)
+    geo[0, C.ENEMY_TOKEN_OFFSET:C.ENEMY_TOKEN_OFFSET + C.ENEMY_TOKEN_FEATURES] = row
+    tokens = agent.online_net._object_tokens(geo)
+    move_bias = agent.online_net.move_context_attn._geometry_attention_bias(tokens)
+    fire_bias = agent.online_net.fire_context_attn._geometry_attention_bias(tokens)
+    check("fire geometry bias favors aligned east lane",
+          fire_bias[0, 2, 0] > fire_bias[0, 6, 0],
+          f"east={fire_bias[0,2,0].item():.3f} west={fire_bias[0,6,0].item():.3f}")
+    check("move geometry bias favors moving away from east threat",
+          move_bias[0, 6, 0] > move_bias[0, 2, 0],
+          f"west={move_bias[0,6,0].item():.3f} east={move_bias[0,2,0].item():.3f}")
     check("flat trunk layers are 512 -> 384",
           trunk_linears[0].out_features == 512 and trunk_linears[1].out_features == 384,
           f"layers={[m.out_features for m in trunk_linears]}")
@@ -852,23 +995,37 @@ def test_expert():
         mv, fr = EX._get_strategic_expert_action(swarm, 0.5, 0.5, 6)
         check("expert fires into grunt density", fr in {1, 2, 3}, f"mv={mv} fr={fr}")
 
-        wave9_clear_left = [ent(-0.20 + 0.04 * (i % 4), 0.20 + 0.04 * (i // 4), EX.TYPE_GRUNT) for i in range(12)]
-        mv, fr = EX._get_strategic_expert_action(wave9_clear_left, 0.5, 0.5, 9)
-        check("expert wave-9 takes clear left hole", (mv, fr) == (6, 6), f"mv={mv} fr={fr}")
+        wave9_north_escape = []
+        for i in range(8):
+            wave9_north_escape.append(ent(-0.08 - 0.02 * (i % 3), -0.02 + 0.05 * (i // 3), EX.TYPE_GRUNT))
+            wave9_north_escape.append(ent(0.08 + 0.02 * (i % 3), -0.02 + 0.05 * (i // 3), EX.TYPE_GRUNT))
+            wave9_north_escape.append(ent(-0.10 + 0.07 * (i % 4), 0.10 + 0.03 * (i // 4), EX.TYPE_GRUNT))
+        mv, fr = EX._get_strategic_expert_action(wave9_north_escape, 0.5, 0.5, 9)
+        check("expert wave-9 chooses sparse north escape", (mv, fr) == (0, 0), f"mv={mv} fr={fr}")
 
-        wave9_blocked_left = [ent(-0.025, 0.0, EX.TYPE_GRUNT)] + [
-            ent(0.12 + 0.03 * (i % 4), 0.10 + 0.04 * (i // 4), EX.TYPE_GRUNT)
-            for i in range(11)
-        ]
-        mv, fr = EX._get_strategic_expert_action(wave9_blocked_left, 0.5, 0.5, 9)
-        check("expert wave-9 avoids blocked left lane", mv != 6 and fr != 6, f"mv={mv} fr={fr}")
+        wave9_west_escape = []
+        for i in range(8):
+            wave9_west_escape.append(ent(-0.04 + 0.03 * (i % 4), -0.10 - 0.04 * (i // 4), EX.TYPE_GRUNT))
+            wave9_west_escape.append(ent(0.09 + 0.03 * (i % 4), -0.04 + 0.04 * (i // 4), EX.TYPE_GRUNT))
+            wave9_west_escape.append(ent(-0.04 + 0.03 * (i % 4), 0.10 + 0.04 * (i // 4), EX.TYPE_GRUNT))
+        mv, fr = EX._get_strategic_expert_action(wave9_west_escape, 0.5, 0.5, 9)
+        check("expert wave-9 commits to sparse west escape", (mv, fr) == (6, 6), f"mv={mv} fr={fr}")
 
-        wave9_push_left = [ent(-0.16, 0.0, EX.TYPE_GRUNT)] + [
-            ent(0.14 + 0.03 * (i % 4), 0.11 + 0.04 * (i // 4), EX.TYPE_GRUNT)
-            for i in range(11)
-        ]
-        mv, fr = EX._get_strategic_expert_action(wave9_push_left, 0.5, 0.5, 9)
-        check("expert wave-9 presses pushable left lane", (mv, fr) == (6, 6), f"mv={mv} fr={fr}")
+        sidestep = EX._wave9_committed_move_dir([ent(-0.025, 0.02, EX.TYPE_GRUNT)], 6)
+        check("expert wave-9 sidesteps close route blocker",
+              sidestep != 6 and sidestep not in {1, 2, 3},
+              f"sidestep={sidestep}")
+
+        wave9_sidestep_escape = [ent(-0.025, 0.02, EX.TYPE_GRUNT)] + wave9_west_escape
+        mv, fr = EX._get_strategic_expert_action(wave9_sidestep_escape, 0.5, 0.5, 9)
+        check("expert wave-9 fires along sidestep during flee",
+              mv == fr and mv != 6,
+              f"mv={mv} fr={fr}")
+
+        override = EX._wave9_override(wave9_west_escape, 0.14, 0.60, 9)
+        check("expert wave-9 reverts to normal at wall",
+              override is None,
+              f"override={override}")
     except Exception as e:
         check("document expert policy checks", False, f"error: {e}")
 
@@ -985,6 +1142,7 @@ def main():
     test_action_coding()
     test_slice()
     test_nstep_actor_boundaries()
+    test_replay_actor_source_tracking()
     test_parse_roundtrip()
     test_fire_hold()
     test_reward_and_hard_starts()

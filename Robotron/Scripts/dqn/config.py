@@ -255,7 +255,7 @@ class RLConfigData:
     # Feed the complete compact state directly into the MLP. Object attention is
     # additive: its learned summary is concatenated beside these raw floats.
     flat_state_to_trunk: bool = True
-    trunk_layer_sizes: tuple[int, ...] = (512, 384)
+    trunk_layer_sizes: tuple[int, ...] = (1024, 768, 512)
     trunk_hidden: int = 384
     trunk_layers: int = 2
     use_layer_norm: bool = True
@@ -279,17 +279,34 @@ class RLConfigData:
     action_context_heads: int = 8
     joint_action_embed_dim: int = 32
     action_head_hidden: int = 192
+    # Parameter-free geometric prior for action-context attention. Direction
+    # queries still learn freely, but the attention logits start biased toward
+    # objects aligned with the candidate fire lane / movement affordance instead
+    # of having to rediscover that geometry from sparse score rewards alone.
+    action_context_geometry_bias: bool = True
+    action_context_geometry_bias_strength: float = 1.35
 
     # Main policy/value head.  Branch heads remain for auxiliary BC + metrics.
     use_joint_head: bool = True
     branch_aux_bc_weight: float = 0.25
 
-    # Distributional C51. Wider support is needed after score-delta rewards: a
-    # 150k game is roughly 150 score-reward units before shaping/death terms.
+    # Distributional C51.  The support MUST bracket the discounted n-step
+    # RETURNS that actually occur, not the raw game score.  With gamma=0.995 and
+    # score_reward_scale=0.001 the bootstrapped Q lands in roughly [-5, +20]
+    # (see the Q-Range telemetry column).  The old [-200, 500] support gave
+    # delta_z=(700/50)=14.0, so only ~2 of 51 atoms covered the operational
+    # range and inter-action value gaps (~0.1-2 units) were smaller than one
+    # atom — the categorical projection quantised the reward away and every
+    # joint action collapsed to the same Q (argmax ≈ random).  Tighten the
+    # support so delta_z≈1.2: now a single grunt (0.1) is ~8% of an atom and a
+    # 1-2 unit action advantage spans a full atom, so the critic can finally
+    # rank actions.  `support` is rebuilt from config on checkpoint load
+    # (agent._load_compatible skips the saved buffer), so this is warm-loadable
+    # with no layer-shape change.  Widen again only if Q genuinely exceeds ~40.
     use_distributional: bool = True
     num_atoms: int = 51
-    v_min: float = -200.0
-    v_max: float = 500.0
+    v_min: float = -10.0
+    v_max: float = 50.0
 
     use_dueling: bool = True
 
@@ -305,7 +322,7 @@ class RLConfigData:
     lr_cosine_period: int = 1_000_000
     lr_use_restarts: bool = True
     gamma: float = 0.995
-    n_step: int = 12
+    n_step: int = 16
     max_samples_per_frame: float = 20
 
     # Replay (PER with proportional priorities).  The grouped-object representation is
@@ -324,9 +341,9 @@ class RLConfigData:
     # stream. Reserve a small batch quota for broad "interesting" states:
     # scoring bursts, wave transitions, close danger, target-rich enemy rows,
     # human opportunities, and terminal/pre-death cues.
-    interesting_replay_fraction: float = 0.08
-    interesting_replay_min_score: float = 0.55
-    max_interesting_replay_fraction: float = 0.20
+    interesting_replay_fraction: float = 0.18
+    interesting_replay_min_score: float = 0.50
+    max_interesting_replay_fraction: float = 0.30
     interesting_replay_over_cap_min_score: float = 0.95
     legacy_interest_positive_reward: float = 0.75
     interesting_replay_bank_size: int = 1_000_000
@@ -366,16 +383,24 @@ class RLConfigData:
     # get meaningful early control so n-step returns and epsilon exploration are
     # not dominated by expert futures.
     expert_ratio_start: float = 0.60
-    # End at zero: any permanent expert injection anchors the behaviour-policy
-    # state distribution to expert-reachable trajectories, capping the agent at
-    # demonstrator skill.  Let the policy eventually drive entirely on its own.
-    expert_ratio_end: float = 0.0
+    # Keep a SMALL permanent expert floor instead of decaying to zero.  Decaying
+    # every imitation signal to exactly 0 is what turned a weak critic into a
+    # crater: the replay (10M) is far smaller than the number of frames the
+    # expert was active for (~29M), so all expert transitions get recycled out —
+    # once the ratio reaches 0 there is literally no expert experience left to
+    # learn from and nothing anchoring expert-level play.  A 5% floor keeps
+    # expert-quality states in the replay distribution (accurate Bellman targets
+    # there, plus a periodic relaunch into good states) while the policy still
+    # drives 95% of frames and is free to exceed the demonstrator.
+    expert_ratio_end: float = 0.05
     # Decay is keyed to TRAINING STEPS, not frames.  At 20k+ fps the steady-state
     # frame:step ratio is ~200:1, so a frame-based 2M schedule completed in ~10k
     # gradient steps (2-3 wall-clock minutes) — the policy never had time to learn
     # before the expert handed off.  Steps are FPS-independent and track learning.
+    # Stretched from 125k so the (now correctly-scaled) critic has time to learn
+    # to reproduce the expert before the crutch eases off to the floor.
     expert_ratio_decay_start_step: int = 0
-    expert_ratio_decay_steps: int = 125_000
+    expert_ratio_decay_steps: int = 300_000
     expert_ratio: float = 0.60
 
     # Expert BC — also step-based (same FPS-independence rationale as above).
@@ -384,23 +409,23 @@ class RLConfigData:
     # imitation anchors decay away so DQN can exceed the demonstrator.
     expert_bc_weight: float = 1.0
     expert_bc_decay_start_step: int = 0
-    expert_bc_decay_steps: int = 125_000
-    expert_bc_min_weight: float = 0.0
+    expert_bc_decay_steps: int = 300_000
+    expert_bc_min_weight: float = 0.05
     # Directly distill demonstrations into the deployed joint Q policy. Cross
     # entropy treats Q(s, a) / temperature as action logits, giving the acting
     # head a real expert-like launch instead of leaving imitation in side heads.
     expert_q_policy_weight: float = 0.35
     expert_q_policy_temperature: float = 10.0
     expert_q_policy_decay_start_step: int = 0
-    expert_q_policy_decay_steps: int = 125_000
-    expert_q_policy_min_weight: float = 0.0
+    expert_q_policy_decay_steps: int = 300_000
+    expert_q_policy_min_weight: float = 0.05
     # Q-margin also imitates directly into the acting joint head by constraining
     # Q(expert_action) >= Q(other) + margin on expert-visited states.  Left on
     # permanently it is a hard ceiling, so decay it on the same step schedule.
     expert_q_margin_weight: float = 0.05
     expert_q_margin: float = 0.50
     expert_q_margin_decay_start_step: int = 0
-    expert_q_margin_decay_steps: int = 125_000
+    expert_q_margin_decay_steps: int = 300_000
     expert_q_margin_min_weight: float = 0.0
 
     # ── reward ──────────────────────────────────────────────────────────
@@ -417,10 +442,26 @@ class RLConfigData:
     subj_positive_decay_start_step: int = 0
     subj_positive_decay_steps: int = 125_000
     subj_positive_min_weight: float = 0.0
-    shaping_reward_clip: float = 0.25
-    death_penalty: float = 0.0
+    shaping_reward_clip: float = 4.0
+    death_penalty: float = 2.0
     reward_clip: float = 30.0
     death_reward_clip: float = 40.0
+
+    # Non-harvestable shaping. These are either event based (wave clear,
+    # no-human no-score stall) or potential-based state differences
+    # gamma*Phi(s') - Phi(s). They densify movement credit without paying the
+    # policy just for occupying a state.
+    wave_clear_bonus: float = 1.0
+    wave_progress_bonus: float = 0.15
+    potential_human_scale: float = 0.45
+    potential_human_sharpness: float = 2.0
+    potential_danger_scale: float = 0.65
+    potential_danger_sharpness: float = 2.0
+    potential_corner_scale: float = 0.35
+    potential_corner_band: float = 0.16
+    no_human_stall_grace_frames: int = 90
+    no_human_stall_penalty_per_frame: float = 0.015
+    no_human_stall_max_penalty: float = 0.08
 
     # Deliberate hard-state starts when dashboard auto-curriculum is enabled.
     hard_start_min_level: int = 5
@@ -428,11 +469,21 @@ class RLConfigData:
 
     # Episode-level elite replay: preserve tails from rare/high-performing
     # episodes, not only individual interesting transitions.
-    elite_episode_score_threshold: int = 120_000
-    elite_episode_level_threshold: int = 8
-    elite_episode_tail_len: int = 768
+    elite_episode_score_threshold: int = 80_000
+    elite_episode_level_threshold: int = 6
+    elite_episode_tail_len: int = 256
     elite_episode_priority_boost: float = 3.0
     elite_episode_interest_score: float = 1.0
+    # Separate protection for self-discovered learner episodes.  The regular elite
+    # path catches very high absolute scores, but mostly-DQN episodes that are only
+    # "good for now" can otherwise be washed out by the 10M buffer before their
+    # Bellman targets shape the policy.
+    learner_elite_score_threshold: int = 60_000
+    learner_elite_level_threshold: int = 6
+    learner_elite_min_learner_fraction: float = 0.90
+    learner_elite_tail_len: int = 512
+    learner_elite_priority_boost: float = 4.0
+    learner_elite_interest_score: float = 1.0
 
     # ── fire cadence ────────────────────────────────────────────────────
     # Hold each fire direction stable for this many frames so the game
@@ -442,12 +493,12 @@ class RLConfigData:
 
     # ── death attribution ───────────────────────────────────────────────
     death_priority_boost: float = 5.0
-    pre_death_lookback: int = 120
-    pre_death_priority_boost: float = 3.0
-    pre_death_reward_lookback: int = 0
-    pre_death_base_penalty: float = 0.0
-    pre_death_danger_penalty: float = 0.0
-    pre_death_max_penalty: float = 0.0
+    pre_death_lookback: int = 150
+    pre_death_priority_boost: float = 4.0
+    pre_death_reward_lookback: int = 90
+    pre_death_base_penalty: float = 0.005
+    pre_death_danger_penalty: float = 0.20
+    pre_death_max_penalty: float = 0.35
     pre_death_min_danger: float = 0.15
     pre_death_penalize_expert: bool = False
 
@@ -614,6 +665,7 @@ game_settings.load()
 # ---------------------------------------------------------------------------
 SCORE_1M_WINDOW_FRAMES = 1_000_000
 LEVEL_1M_WINDOW_FRAMES = 1_000_000
+EVAL_SCORE_1M_WINDOW_FRAMES = 1_000_000
 
 
 def _new_metric_ring(size: int) -> np.ndarray:
@@ -683,6 +735,8 @@ class MetricsData:
     last_bc_loss: float = 0.0
     last_bc_weight: float = 0.0
     last_subj_positive_weight: float = 1.0
+    last_sample_dqn_frac: float = 0.0
+    last_sample_epsilon_frac: float = 0.0
     last_sample_expert_frac: float = 0.0
     last_inference_sync_age: int = 0
     last_priority_mean: float = 0.0
@@ -712,6 +766,12 @@ class MetricsData:
     eval_average_level: float = 0.0
     eval_average_length: float = 0.0
     eval_episode_count: int = 0
+    eval_score_1m_window: int = EVAL_SCORE_1M_WINDOW_FRAMES
+    eval_score_1m_entries: Deque[tuple[float, int]] = field(default_factory=deque)
+    eval_score_1m_frames: int = 0
+    eval_score_1m_sum: float = 0.0
+    eval_score_1m_average: float = 0.0
+    eval_score_1m_count: int = 0
     peak_level: int = 0
     peak_episode_reward: float = 0.0
     peak_game_score: int = 0
@@ -820,6 +880,21 @@ class MetricsData:
             if peak_level is not None and int(peak_level) > self.peak_level:
                 self.peak_level = int(peak_level)
 
+    def _push_eval_score_1m_locked(self, score: float, length: int):
+        window = max(1, int(self.eval_score_1m_window))
+        ep_frames = max(1, int(length))
+        self.eval_score_1m_entries.append((float(score), ep_frames))
+        self.eval_score_1m_frames += ep_frames
+        self.eval_score_1m_sum += float(score)
+        while len(self.eval_score_1m_entries) > 1 and self.eval_score_1m_frames > window:
+            old_score, old_frames = self.eval_score_1m_entries.popleft()
+            self.eval_score_1m_frames -= int(old_frames)
+            self.eval_score_1m_sum -= float(old_score)
+        self.eval_score_1m_count = len(self.eval_score_1m_entries)
+        self.eval_score_1m_average = (
+            self.eval_score_1m_sum / max(1, self.eval_score_1m_count)
+        )
+
     def get_fps(self) -> float:
         """Return current FPS, decaying to 0 if no frames arrive for >2s."""
         with self.lock:
@@ -845,6 +920,12 @@ class MetricsData:
         progress = min(1.0, learner_frame_count / max(1, RL_CONFIG.epsilon_decay_frames))
         return RL_CONFIG.epsilon_start + progress * (RL_CONFIG.epsilon_end - RL_CONFIG.epsilon_start)
 
+    def _effective_expert_ratio_locked(self) -> float:
+        xp = game_settings.expert_pct
+        if xp >= 0:
+            return xp / 100.0
+        return float(self.expert_ratio)
+
     def update_epsilon(self):
         with self.lock:
             if self.manual_epsilon_override:
@@ -854,7 +935,7 @@ class MetricsData:
             # minimum exploration floor so the learner keeps probing its own
             # action space instead of collapsing to greedy before handoff.
             floor_until = float(getattr(RL_CONFIG, "epsilon_expert_floor_until_ratio", 0.0))
-            if floor_until > 0.0 and float(self.expert_ratio) > floor_until:
+            if floor_until > 0.0 and self._effective_expert_ratio_locked() > floor_until:
                 base = max(base, float(getattr(RL_CONFIG, "epsilon_expert_floor", 0.0)))
             if self.manual_pulse_active:
                 self.manual_pulse_frames_remaining -= 1
@@ -870,10 +951,7 @@ class MetricsData:
 
     def get_expert_ratio(self):
         with self.lock:
-            xp = game_settings.expert_pct
-            if xp >= 0:
-                return xp / 100.0
-            return float(self.expert_ratio)
+            return self._effective_expert_ratio_locked()
 
     def update_expert_ratio(self):
         with self.lock:
@@ -940,6 +1018,7 @@ class MetricsData:
                 self.eval_average_score = (1.0 - a) * self.eval_average_score + a * float(score)
                 self.eval_average_level = (1.0 - a) * self.eval_average_level + a * float(level)
                 self.eval_average_length = (1.0 - a) * self.eval_average_length + a * float(length)
+            self._push_eval_score_1m_locked(float(score), int(length))
 
     def increment_total_controls(self):
         with self.lock:
@@ -1038,7 +1117,7 @@ class MetricsData:
     def restore_natural_epsilon(self, kb=None):
         with self.lock:
             self.manual_epsilon_override = False
-            self.epsilon = self._natural_epsilon_for_learner_frame(int(self.learner_frame_count))
+        self.update_epsilon()
 
 
 metrics = MetricsData()

@@ -15,6 +15,12 @@ except ImportError:
     from config import RL_CONFIG
 
 
+ACTOR_DQN = 0
+ACTOR_EPSILON = 1
+ACTOR_EXPERT = 2
+ACTOR_KIND_COUNT = 3
+
+
 class SumTree:
     """Binary sum-tree for efficient proportional sampling in O(log N)."""
 
@@ -134,16 +140,29 @@ class PrioritizedReplayBuffer:
         self.dones       = np.zeros(self.capacity, dtype=np.float32)
         self.horizons    = np.ones(self.capacity, dtype=np.int32)
         self.is_expert   = np.zeros(self.capacity, dtype=np.uint8)
+        self.actor_kind  = np.zeros(self.capacity, dtype=np.uint8)
         self.interesting = np.zeros(self.capacity, dtype=np.float32)
 
         self.tree = SumTree(self.capacity)
         self.size = 0
         self._n_expert = 0          # O(1) expert tracking
+        self._n_actor = np.zeros(ACTOR_KIND_COUNT, dtype=np.int64)
         self._n_interesting = 0
         bank_size = int(getattr(RL_CONFIG, "interesting_replay_bank_size", 1_000_000))
         self._interesting_bank = np.full(max(1, bank_size), -1, dtype=np.int64)
         self._interesting_bank_ptr = 0
         self._interesting_bank_count = 0
+
+    @staticmethod
+    def actor_kind_from_name(actor: str | None, expert: int = 0) -> int:
+        if expert:
+            return ACTOR_EXPERT
+        a = str(actor or "dqn").lower()
+        if a == "expert":
+            return ACTOR_EXPERT
+        if a == "epsilon":
+            return ACTOR_EPSILON
+        return ACTOR_DQN
 
     @staticmethod
     def _progress_bar(label: str, frac: float, width: int = 28):
@@ -158,8 +177,10 @@ class PrioritizedReplayBuffer:
 
     def add(self, state, action: int, reward: float, next_state, done: bool,
             horizon: int = 1, expert: int = 0, priority_hint: float = 0.0,
-            interest: float = 0.0):
+            interest: float = 0.0, actor_kind: int | None = None):
         with self.lock:
+            kind = int(actor_kind) if actor_kind is not None else self.actor_kind_from_name(None, expert)
+            kind = max(0, min(ACTOR_KIND_COUNT - 1, kind))
             priority = self.tree.max_priority
             cap_mult = float(getattr(RL_CONFIG, "per_new_priority_cap_multiplier", 0.0))
             mean_pri = 0.0
@@ -177,6 +198,9 @@ class PrioritizedReplayBuffer:
             # If buffer is full, undo the expert flag of the slot being recycled
             if self.tree.size >= self.capacity:
                 self._n_expert -= int(self.is_expert[self.tree.data_ptr])
+                old_kind = int(self.actor_kind[self.tree.data_ptr])
+                if 0 <= old_kind < ACTOR_KIND_COUNT:
+                    self._n_actor[old_kind] -= 1
                 self._n_interesting -= int(self.interesting[self.tree.data_ptr] > 0.0)
             idx = self.tree.add(priority)
             self.states[idx]      = np.asarray(state, dtype=np.float32)
@@ -186,6 +210,7 @@ class PrioritizedReplayBuffer:
             self.dones[idx]       = 1.0 if done else 0.0
             self.horizons[idx]    = max(1, int(horizon))
             self.is_expert[idx]   = int(expert)
+            self.actor_kind[idx]  = np.uint8(kind)
             min_interest = float(getattr(RL_CONFIG, "interesting_replay_min_score", 0.35))
             interest_val = max(0.0, min(1.0, float(interest)))
             if interest_val < min_interest:
@@ -198,6 +223,7 @@ class PrioritizedReplayBuffer:
                     interest_val = 0.0
             self.interesting[idx] = interest_val
             self._n_expert += int(expert)
+            self._n_actor[kind] += 1
             if interest_val > 0.0:
                 self._n_interesting += 1
                 self._interesting_bank[self._interesting_bank_ptr] = idx
@@ -245,7 +271,7 @@ class PrioritizedReplayBuffer:
 
     def sample(self, batch_size: int, beta: float = 0.4):
         """Sample a prioritised batch. Returns (states, actions, rewards,
-        next_states, dones, horizons, is_expert, indices, weights)."""
+        next_states, dones, horizons, is_expert, actor_kind, indices, weights)."""
         with self.lock:
             if self.size < batch_size:
                 return None
@@ -292,6 +318,7 @@ class PrioritizedReplayBuffer:
                 self.dones[indices],
                 self.horizons[indices],
                 self.is_expert[indices],
+                self.actor_kind[indices],
                 indices,
                 weights.astype(np.float32),
             )
@@ -428,8 +455,14 @@ class PrioritizedReplayBuffer:
                 "total_capacity": self.capacity,
                 "dqn": n_dqn,
                 "expert": n_exp,
+                "actor_dqn": int(self._n_actor[ACTOR_DQN]),
+                "actor_epsilon": int(self._n_actor[ACTOR_EPSILON]),
+                "actor_expert": int(self._n_actor[ACTOR_EXPERT]),
                 "frac_dqn": n_dqn / max(1, self.size),
                 "frac_expert": n_exp / max(1, self.size),
+                "frac_actor_dqn": int(self._n_actor[ACTOR_DQN]) / max(1, self.size),
+                "frac_actor_epsilon": int(self._n_actor[ACTOR_EPSILON]) / max(1, self.size),
+                "frac_actor_expert": int(self._n_actor[ACTOR_EXPERT]) / max(1, self.size),
                 "interesting": self._n_interesting,
                 "frac_interesting": self._n_interesting / max(1, self.size),
             }
@@ -460,6 +493,7 @@ class PrioritizedReplayBuffer:
                 "dones":       self.dones[:n].copy(),
                 "horizons":    self.horizons[:n].copy(),
                 "is_expert":   self.is_expert[:n].copy(),
+                "actor_kind":  self.actor_kind[:n].copy(),
                 "interesting": self.interesting[:n].copy(),
                 "priorities":  self.tree.tree[self.tree.capacity:self.tree.capacity + n].copy(),
             }
@@ -534,6 +568,9 @@ class PrioritizedReplayBuffer:
         interesting_path = os.path.join(dirpath, "interesting.npy")
         if os.path.isfile(interesting_path):
             arch["interesting"] = np.load(interesting_path)
+        actor_kind_path = os.path.join(dirpath, "actor_kind.npy")
+        if os.path.isfile(actor_kind_path):
+            arch["actor_kind"] = np.load(actor_kind_path)
 
         return self._restore_from_arrays(arch, data_ptr, max_priority, t0, dirpath, verbose)
 
@@ -593,11 +630,18 @@ class PrioritizedReplayBuffer:
             self.dones[:n]       = arch["dones"][offset:offset + n]
             self.horizons[:n]    = arch["horizons"][offset:offset + n]
             self.is_expert[:n]   = arch["is_expert"][offset:offset + n]
+            if "actor_kind" in arch:
+                self.actor_kind[:n] = np.clip(
+                    arch["actor_kind"][offset:offset + n], 0, ACTOR_KIND_COUNT - 1
+                ).astype(np.uint8, copy=False)
+            else:
+                self.actor_kind[:n] = np.where(self.is_expert[:n] > 0, ACTOR_EXPERT, ACTOR_DQN).astype(np.uint8)
             if "interesting" in arch:
                 self.interesting[:n] = arch["interesting"][offset:offset + n]
             else:
                 self.interesting[:n] = 0.0
             if n < self.capacity:
+                self.actor_kind[n:] = 0
                 self.interesting[n:] = 0.0
             if verbose:
                 self._progress_bar("  Replay load", 0.62)
@@ -622,6 +666,9 @@ class PrioritizedReplayBuffer:
 
             self.size = n
             self._n_expert = int(self.is_expert[:n].sum())
+            self._n_actor[:] = 0
+            counts = np.bincount(self.actor_kind[:n].astype(np.int64), minlength=ACTOR_KIND_COUNT)
+            self._n_actor[:ACTOR_KIND_COUNT] = counts[:ACTOR_KIND_COUNT]
             self._sanitize_interesting_after_load_locked(n, verbose)
             self._rebuild_interesting_bank_locked(n)
 
@@ -732,6 +779,7 @@ class PrioritizedReplayBuffer:
             self.tree = SumTree(self.capacity)
             self.size = 0
             self._n_expert = 0
+            self._n_actor.fill(0)
             self._n_interesting = 0
             self._interesting_bank.fill(-1)
             self._interesting_bank_ptr = 0
@@ -744,5 +792,6 @@ class PrioritizedReplayBuffer:
             self.dones.fill(0)
             self.horizons.fill(1)
             self.is_expert.fill(0)
+            self.actor_kind.fill(0)
             self.interesting.fill(0)
         print("  Replay buffer flushed.")

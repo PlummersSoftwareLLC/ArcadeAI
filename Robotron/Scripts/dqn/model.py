@@ -67,6 +67,11 @@ NUM_MOVE = RL_CONFIG.num_move_actions      # 9  (0..7 = direction, 8 = idle)
 NUM_FIRE = RL_CONFIG.num_fire_actions      # 9
 NUM_JOINT = RL_CONFIG.num_joint_actions    # 81
 IDLE_INDEX = 8                             # action index meaning "no input" on a stick
+_DIR8 = (
+    (0.0, -1.0), (0.70710678, -0.70710678), (1.0, 0.0), (0.70710678, 0.70710678),
+    (0.0, 1.0), (-0.70710678, 0.70710678), (-1.0, 0.0), (-0.70710678, -0.70710678),
+    (0.0, 0.0),
+)
 
 
 def combine_action(move: int, fire: int) -> int:
@@ -157,19 +162,115 @@ class ObjectSelfAttentionEncoder(nn.Module):
 class DirectionalObjectAttention(nn.Module):
     """Action-direction queries attending over encoded enemy rows."""
 
-    def __init__(self, object_dim: int, num_actions: int, num_heads: int):
+    def __init__(
+        self,
+        object_dim: int,
+        num_actions: int,
+        num_heads: int,
+        attention_kind: str = "move",
+        geometry_bias: bool = True,
+        geometry_bias_strength: float = 1.0,
+    ):
         super().__init__()
         self.num_actions = int(num_actions)
         self.object_dim = int(object_dim)
+        self.num_heads = int(num_heads)
+        self.attention_kind = str(attention_kind)
+        self.geometry_bias = bool(geometry_bias)
+        self.geometry_bias_strength = float(geometry_bias_strength)
         self.dir_embedding = nn.Embedding(self.num_actions, self.object_dim)
         self.query_norm = nn.LayerNorm(self.object_dim)
         self.attn = nn.MultiheadAttention(self.object_dim, num_heads, batch_first=True)
         self.out_norm = nn.LayerNorm(self.object_dim)
 
+    def _geometry_attention_bias(self, object_tokens: torch.Tensor) -> torch.Tensor | None:
+        """Return additive attention logits, shape ``(B, actions, objects)``.
+
+        The bias is parameter-free and only nudges attention toward objects that
+        are geometrically relevant to each action candidate. Learned attention is
+        still free to override it.
+        """
+        if (
+            not self.geometry_bias
+            or self.geometry_bias_strength <= 0.0
+            or object_tokens is None
+            or object_tokens.dim() != 3
+        ):
+            return None
+
+        B, N, F = object_tokens.shape
+        device = object_tokens.device
+        dtype = object_tokens.dtype
+        dirs = torch.as_tensor(_DIR8[:self.num_actions], device=device, dtype=dtype)
+        dir_x = dirs[:, 0].view(1, self.num_actions, 1)
+        dir_y = dirs[:, 1].view(1, self.num_actions, 1)
+        real_dir = ((dirs[:, 0].abs() + dirs[:, 1].abs()) > 1e-6).to(dtype).view(1, self.num_actions, 1)
+
+        present = (object_tokens[..., 0] > 0.5).to(dtype)
+        dx = object_tokens[..., 1].clamp(-1.0, 1.0)
+        dy = object_tokens[..., 2].clamp(-1.0, 1.0)
+        dist = object_tokens[..., 3].clamp(0.0, 1.0)
+        threat = object_tokens[..., 6].clamp(0.0, 1.0) if F > 6 else torch.zeros(B, N, device=device, dtype=dtype)
+        ttc = object_tokens[..., 8].clamp(0.0, 1.0) if F > 8 else torch.ones(B, N, device=device, dtype=dtype)
+        type_norm = object_tokens[..., 9].clamp(0.0, 1.0) if F > 9 else torch.zeros(B, N, device=device, dtype=dtype)
+        type_id = torch.round(type_norm * 8.0).to(torch.long)
+
+        norm = torch.hypot(dx, dy).clamp_min(1e-6)
+        ux = dx / norm
+        uy = dy / norm
+        forward = ux.unsqueeze(1) * dir_x + uy.unsqueeze(1) * dir_y
+        # Normalized cross-track distance to the candidate lane. 0 = on lane.
+        cross = (dx.unsqueeze(1) * dir_y - dy.unsqueeze(1) * dir_x).abs()
+        lane_gate = (1.0 - cross / 0.18).clamp(0.0, 1.0)
+        closeness = (1.0 - dist).unsqueeze(1)
+        threat_w = (0.25 + 0.75 * threat).unsqueeze(1)
+        ttc_w = (0.35 + 0.65 * (1.0 - ttc)).unsqueeze(1)
+        active = present.unsqueeze(1)
+
+        human = (type_id == 7).to(dtype).unsqueeze(1)
+        hulk = (type_id == 1).to(dtype).unsqueeze(1)
+        targetable = (
+            (type_id == 0)
+            | (type_id == 2)
+            | (type_id == 3)
+            | (type_id == 4)
+            | (type_id == 5)
+            | (type_id == 6)
+            | (type_id == 8)
+        ).to(dtype).unsqueeze(1)
+        dangerous = (1.0 - human).clamp(0.0, 1.0)
+
+        if self.attention_kind == "fire":
+            relevance = (
+                forward.clamp(0.0, 1.0)
+                * lane_gate
+                * closeness
+                * threat_w
+                * targetable
+            )
+            # Hulks are not destructible, but shots through/near them can still
+            # carry useful context when they are blocking a lane.
+            relevance = torch.maximum(relevance, 0.25 * forward.clamp(0.0, 1.0) * lane_gate * closeness * hulk)
+        else:
+            moving_away = (-forward).clamp(0.0, 1.0)
+            ahead = forward.clamp(0.0, 1.0)
+            axis = forward.abs().clamp(0.0, 1.0)
+            danger_relevance = (
+                (0.45 * moving_away + 0.35 * ahead + 0.20 * axis)
+                * closeness
+                * torch.maximum(threat_w, ttc_w)
+                * dangerous
+            )
+            human_relevance = ahead * lane_gate * closeness * human
+            relevance = torch.maximum(danger_relevance, 0.70 * human_relevance)
+
+        return self.geometry_bias_strength * relevance * active * real_dir
+
     def forward(
         self,
         object_repr: torch.Tensor,
         object_present: torch.Tensor,
+        object_tokens: torch.Tensor | None = None,
     ) -> torch.Tensor:
         B = object_repr.shape[0]
         action_ids = torch.arange(self.num_actions, device=object_repr.device)
@@ -182,7 +283,22 @@ class DirectionalObjectAttention(nn.Module):
             key_padding_mask = key_padding_mask.clone()
             key_padding_mask[all_empty, 0] = False
 
-        attn_out, _ = self.attn(q, object_repr, object_repr, key_padding_mask=key_padding_mask, need_weights=False)
+        bias = self._geometry_attention_bias(object_tokens)
+        if bias is not None and bias.shape == (B, self.num_actions, object_repr.shape[1]):
+            attn_mask = bias.to(device=object_repr.device, dtype=object_repr.dtype)
+        else:
+            attn_mask = torch.zeros(B, self.num_actions, object_repr.shape[1], device=object_repr.device, dtype=object_repr.dtype)
+        attn_mask = attn_mask.masked_fill(
+            key_padding_mask.unsqueeze(1),
+            torch.finfo(object_repr.dtype).min,
+        )
+        attn_mask = attn_mask.repeat_interleave(self.num_heads, dim=0)
+
+        attn_out, _ = self.attn(
+            q, object_repr, object_repr,
+            attn_mask=attn_mask,
+            need_weights=False,
+        )
         if all_empty.any():
             attn_out = attn_out.masked_fill(all_empty.view(B, 1, 1), 0.0)
         return self.out_norm(q + attn_out)
@@ -258,11 +374,17 @@ class RainbowNet(nn.Module):
                 object_dim=self.action_context_dim,
                 num_actions=self.num_move,
                 num_heads=heads,
+                attention_kind="move",
+                geometry_bias=bool(getattr(cfg, "action_context_geometry_bias", True)),
+                geometry_bias_strength=float(getattr(cfg, "action_context_geometry_bias_strength", 1.0)),
             )
             self.fire_context_attn = DirectionalObjectAttention(
                 object_dim=self.action_context_dim,
                 num_actions=self.num_fire,
                 num_heads=heads,
+                attention_kind="fire",
+                geometry_bias=bool(getattr(cfg, "action_context_geometry_bias", True)),
+                geometry_bias_strength=float(getattr(cfg, "action_context_geometry_bias_strength", 1.0)),
             )
 
         # ── Trunk ──────────────────────────────────────────────────────
@@ -412,8 +534,8 @@ class RainbowNet(nn.Module):
     def _action_contexts(self, state: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         object_tokens = self._object_tokens(state)
         object_repr, object_present = self.object_attn.encode_tokens(object_tokens)
-        move_ctx = self.move_context_attn(object_repr, object_present)
-        fire_ctx = self.fire_context_attn(object_repr, object_present)
+        move_ctx = self.move_context_attn(object_repr, object_present, object_tokens)
+        fire_ctx = self.fire_context_attn(object_repr, object_present, object_tokens)
         return move_ctx, fire_ctx
 
     def _score_branch_advantage(

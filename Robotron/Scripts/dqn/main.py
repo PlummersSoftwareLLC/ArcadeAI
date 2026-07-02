@@ -103,6 +103,9 @@ def print_buffer_stats(agent, kb):
         print(f"  Total:   {total:>12,} / {cap:>12,}")
         print(f"  Agent:   {stats.get('dqn', 0):>12,}   ({stats.get('frac_dqn', 0)*100:>5.1f}%)")
         print(f"  Expert:  {stats.get('expert', 0):>12,}   ({stats.get('frac_expert', 0)*100:>5.1f}%)")
+        print(f"  DQN src: {stats.get('actor_dqn', 0):>12,}   ({stats.get('frac_actor_dqn', 0)*100:>5.1f}%)")
+        print(f"  Eps src: {stats.get('actor_epsilon', 0):>12,}   ({stats.get('frac_actor_epsilon', 0)*100:>5.1f}%)")
+        print(f"  Exp src: {stats.get('actor_expert', 0):>12,}   ({stats.get('frac_actor_expert', 0)*100:>5.1f}%)")
         print(f"  Intrst:  {stats.get('interesting', 0):>12,}   ({stats.get('frac_interesting', 0)*100:>5.1f}%)")
         print("=" * 70 + "\n")
         if kb and IS_INTERACTIVE:

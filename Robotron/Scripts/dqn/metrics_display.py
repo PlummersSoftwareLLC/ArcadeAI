@@ -255,9 +255,9 @@ def display_metrics_header():
         f"{'Frame':>11} {'Steps':>10} {'FPS':>7} {'Epsi':>7} {'Xprt':>7} "
         f"{'Scr1M':>9} {'Lvl1M':>6} "
         f"{'Rwrd':>9} {'Score':>9} {'Shape':>9} {'Death':>9} {'DQN100K/F':>9} {'DQN1M/F':>9} {'DQN5M/F':>9} {'DQN10M/F':>9} "
-        f"{'EvalR':>8} {'EvalScr':>8} {'EvalLvl':>7} "
+        f"{'EvalR':>8} {'EScr1M':>8} {'EvalLvl':>7} "
         f"{'Loss':>10} {'AgrM%':>6} {'AgrF%':>6} "
-        f"{'EpLen':>8} {'BCLoss':>8} {'BCW':>6} {'SubjW':>6} {'ExpB%':>6} {'Sync':>5} "
+        f"{'EpLen':>8} {'BCLoss':>8} {'BCW':>6} {'SubjW':>6} {'DqnB%':>6} {'EpsB%':>6} {'ExpB%':>6} {'Sync':>5} "
         f"{'Clnt':>4} {'Web':>4} "
         f"{'AvgInf':>7} {'Steps/s':>8} {'Rpl/F':>7} {'GrNorm':>8} {'Q-Range':>14} {'Mem':>10} {'LR':>9} {'Drop':>7} {'Tms S/X/C/P':>17}"
     )
@@ -298,12 +298,14 @@ def display_metrics_row(agent, kb_handler):
         metrics.reward_sum_interval_death = metrics.reward_count_interval_death = 0
         if metrics.eval_count_interval > 0:
             eval_reward = metrics.eval_reward_sum_interval / max(1, metrics.eval_count_interval)
-            eval_score = metrics.eval_score_sum_interval / max(1, metrics.eval_count_interval)
             eval_level = metrics.eval_level_sum_interval / max(1, metrics.eval_count_interval)
         else:
             eval_reward = metrics.eval_average_reward
-            eval_score = metrics.eval_average_score
             eval_level = metrics.eval_average_level
+        if getattr(metrics, "eval_score_1m_count", 0) > 0:
+            eval_score = metrics.eval_score_1m_average
+        else:
+            eval_score = metrics.eval_average_score
         metrics.eval_reward_sum_interval = 0.0
         metrics.eval_score_sum_interval = 0.0
         metrics.eval_level_sum_interval = 0.0
@@ -426,7 +428,8 @@ def display_metrics_row(agent, kb_handler):
         f"{_fr(dqn1m*_prs)} {_fr(dqn5m*_prs)} {_frp(dqn_pf*_prs, 9)} "
         f"{_fr(eval_reward*_prs, 8)} {eval_score:>8,.0f} {eval_level:>7.1f} "
         f"{loss_avg:>10.6f} {agree_move_avg*100:>5.1f}% {agree_fire_avg*100:>5.1f}% "
-        f"{avg_ep_len:>8.1f} {metrics.last_bc_loss:>8.4f} {metrics.last_bc_weight:>6.3f} {subj_w:>6.3f} {metrics.last_sample_expert_frac*100:>5.1f}% {metrics.last_inference_sync_age:>5} "
+        f"{avg_ep_len:>8.1f} {metrics.last_bc_loss:>8.4f} {metrics.last_bc_weight:>6.3f} {subj_w:>6.3f} "
+        f"{metrics.last_sample_dqn_frac*100:>5.1f}% {metrics.last_sample_epsilon_frac*100:>5.1f}% {metrics.last_sample_expert_frac*100:>5.1f}% {metrics.last_inference_sync_age:>5} "
         f"{metrics.client_count:>4} {metrics.web_client_count:>4} "
         f"{avg_inf_ms:>7.2f} {steps_per_sec:>8.1f} "
         f"{replay_ratio:>7.2f} {metrics.last_grad_norm:>8.3f} {q_range:>14} {mem_k:>8}k {lr_str:>9} {metrics.replay_dropped_steps:>7,} {train_ms:>17}"
