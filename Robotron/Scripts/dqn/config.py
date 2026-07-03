@@ -443,7 +443,7 @@ class RLConfigData:
     subj_positive_decay_steps: int = 125_000
     subj_positive_min_weight: float = 0.0
     shaping_reward_clip: float = 4.0
-    death_penalty: float = 5.0
+    death_penalty: float = 2.0
     reward_clip: float = 30.0
     death_reward_clip: float = 40.0
 
