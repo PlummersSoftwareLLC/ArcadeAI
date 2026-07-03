@@ -449,14 +449,15 @@ class RainbowAgent:
     # ── Save / Load ─────────────────────────────────────────────────────
     @staticmethod
     def _load_compatible(model, ckpt_sd):
-        """Load state dict, silently skipping keys with shape mismatches."""
+        """Load state dict, skipping known non-loadable keys and shape mismatches."""
         model_sd = model.state_dict()
         compatible = {}
         skipped = []
+        expected_skips = []
         shape_mismatches = []
         for k, v in ckpt_sd.items():
             if k == "support":
-                skipped.append(f"{k}: keeping configured C51 support")
+                expected_skips.append(f"{k}: keeping configured C51 support")
                 continue
             if k in model_sd:
                 if model_sd[k].shape == v.shape:
@@ -465,6 +466,12 @@ class RainbowAgent:
                     msg = f"{k}: {tuple(v.shape)} → {tuple(model_sd[k].shape)}"
                     skipped.append(msg)
                     shape_mismatches.append(msg)
+        if expected_skips:
+            print(f"  Info: skipped {len(expected_skips)} expected checkpoint keys:")
+            for s in expected_skips[:5]:
+                print(f"    {s}")
+            if len(expected_skips) > 5:
+                print(f"    ... and {len(expected_skips) - 5} more")
         if skipped:
             print(f"  Skipped {len(skipped)} checkpoint keys:")
             for s in skipped[:5]:
@@ -591,8 +598,14 @@ class RainbowAgent:
             self.loaded_training_steps = self.training_steps
             self._sync_inference(force=True)
 
-            if m1 or u1 or m2 or u2:
+            # The C51 support tensor is intentionally rebuilt from config and is
+            # expected to appear as a missing key when loading with strict=False.
+            expected_missing = {"support"}
+            unexpected_missing = set(m1) - expected_missing
+            if unexpected_missing or u1 or m2 or u2:
                 print(f"Partial load (missing={len(m1)}, unexpected={len(u1)})")
+            elif m1:
+                print("Checkpoint load complete (expected C51 support override)")
 
             try:
                 with metrics.lock:

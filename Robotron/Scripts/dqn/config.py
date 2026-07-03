@@ -492,9 +492,14 @@ class RLConfigData:
     fire_hold_frames: int = 1
 
     # ── death attribution ───────────────────────────────────────────────
-    death_priority_boost: float = 5.0
+    # NOTE: pre-death upsampling is deliberately kept BELOW the positive
+    # counterweight (elite_episode_priority_boost=3.0, learner_elite=4.0) so a
+    # batch is never negative-target dominated.  Over-boosting pre-death frames
+    # while expert anchoring is weak drives distributional value collapse (the
+    # Q-Range slides toward v_min=-10).  See repo memory on the 0%-expert run.
+    death_priority_boost: float = 3.0
     pre_death_lookback: int = 150
-    pre_death_priority_boost: float = 4.0
+    pre_death_priority_boost: float = 2.0
     pre_death_reward_lookback: int = 90
     pre_death_base_penalty: float = 0.005
     pre_death_danger_penalty: float = 0.20
