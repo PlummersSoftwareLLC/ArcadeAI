@@ -909,9 +909,10 @@ class SocketServer:
 
                 local_accum += 1
                 if local_accum >= BATCH:
+                    frames_advanced = local_accum
                     metrics.update_frame_count(delta=local_accum)
                     local_accum = 0
-                    metrics.update_epsilon()
+                    metrics.update_epsilon(frames_advanced=frames_advanced)
                     metrics.update_expert_ratio()
                     self._calc_avg_game_state()
 

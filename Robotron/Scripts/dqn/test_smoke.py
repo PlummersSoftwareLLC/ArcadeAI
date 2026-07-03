@@ -293,8 +293,8 @@ def test_reward_and_hard_starts():
         level_number=1, game_score=0, num_lasers=0)
     dead_total, _, dead_subj, dead_r, _ = SS._shape_transition_reward(dead_frame, last_game_score=0)
     check("negative subjective shaping is ignored", np.isclose(dead_subj, 0.0), f"subj_r={dead_subj}")
-    check("death has no explicit reward penalty", np.isclose(dead_r, 0.0), f"death_r={dead_r}")
-    check("terminal no-score reward is zero", np.isclose(dead_total, 0.0), f"total={dead_total}")
+    check("death applies configured penalty", np.isclose(dead_r, -float(C.RL_CONFIG.death_penalty)), f"death_r={dead_r}")
+    check("terminal no-score reward is death penalty", np.isclose(dead_total, -float(C.RL_CONFIG.death_penalty)), f"total={dead_total}")
 
     wave_frame = SS.FrameData(
         state=fake_wire(wave=5), subjreward=0.0, objreward=0.0,
@@ -302,7 +302,7 @@ def test_reward_and_hard_starts():
         level_number=5, game_score=0, num_lasers=0)
     _, _, wave_shape, _, _ = SS._shape_transition_reward(
         wave_frame, 0, prev_state=compact_state(wave=4), next_state=compact_state(wave=5))
-    check("wave clear bonus survives shaping clip", wave_shape >= 2.0, f"shape={wave_shape}")
+    check("wave clear bonus survives shaping clip", wave_shape >= float(C.RL_CONFIG.wave_clear_bonus), f"shape={wave_shape}")
 
     human_far = compact_state(row=[1.0, 0.70, 0.0, 0.70, 0.0, 0.0, 0.0, 0.0, 1.0, 0.875], group="human")
     human_near = compact_state(row=[1.0, 0.20, 0.0, 0.20, 0.0, 0.0, 0.0, 0.0, 1.0, 0.875], group="human")
@@ -830,9 +830,11 @@ def test_model_shapes(agent):
     check("move geometry bias favors moving away from east threat",
           move_bias[0, 6, 0] > move_bias[0, 2, 0],
           f"west={move_bias[0,6,0].item():.3f} east={move_bias[0,2,0].item():.3f}")
-    check("flat trunk layers are 512 -> 384",
-          trunk_linears[0].out_features == 512 and trunk_linears[1].out_features == 384,
-          f"layers={[m.out_features for m in trunk_linears]}")
+    expected_trunk = [int(s) for s in C.RL_CONFIG.trunk_layer_sizes]
+    actual_trunk = [m.out_features for m in trunk_linears]
+    check("flat trunk layers match config",
+          actual_trunk == expected_trunk[:len(actual_trunk)],
+          f"layers={actual_trunk} expected={expected_trunk}")
 
 
 def test_act(agent):

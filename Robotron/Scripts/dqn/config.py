@@ -443,7 +443,7 @@ class RLConfigData:
     subj_positive_decay_steps: int = 125_000
     subj_positive_min_weight: float = 0.0
     shaping_reward_clip: float = 4.0
-    death_penalty: float = 2.0
+    death_penalty: float = 5.0
     reward_clip: float = 30.0
     death_reward_clip: float = 40.0
 
@@ -486,10 +486,10 @@ class RLConfigData:
     learner_elite_interest_score: float = 1.0
 
     # ── fire cadence ────────────────────────────────────────────────────
-    # Hold each fire direction stable for this many frames so the game
-    # registers reliable shots.  Applied Python-side; the *effective* (held)
-    # fire direction is what gets stored in replay and sent to Lua.
-    fire_hold_frames: int = 3
+    # Hold each fire direction stable for this many frames.  Set to 1 for the
+    # no-hold experiment: expert/DQN can choose a fresh fire direction every
+    # frame, and replay stores that per-frame choice.
+    fire_hold_frames: int = 1
 
     # ── death attribution ───────────────────────────────────────────────
     death_priority_boost: float = 5.0
@@ -926,7 +926,7 @@ class MetricsData:
             return xp / 100.0
         return float(self.expert_ratio)
 
-    def update_epsilon(self):
+    def update_epsilon(self, frames_advanced: int = 1):
         with self.lock:
             if self.manual_epsilon_override:
                 return self.epsilon
@@ -938,7 +938,7 @@ class MetricsData:
             if floor_until > 0.0 and self._effective_expert_ratio_locked() > floor_until:
                 base = max(base, float(getattr(RL_CONFIG, "epsilon_expert_floor", 0.0)))
             if self.manual_pulse_active:
-                self.manual_pulse_frames_remaining -= 1
+                self.manual_pulse_frames_remaining -= max(1, int(frames_advanced))
                 if self.manual_pulse_frames_remaining <= 0:
                     self.manual_pulse_active = False
                     self.manual_pulse_frames_remaining = 0

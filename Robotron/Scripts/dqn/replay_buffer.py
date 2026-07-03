@@ -218,8 +218,13 @@ class PrioritizedReplayBuffer:
             elif self.size > 0:
                 max_frac = max(0.0, min(1.0, float(getattr(RL_CONFIG, "max_interesting_replay_fraction", 1.0))))
                 max_keep = max(1, int(max_frac * max(1, self.size))) if max_frac > 0.0 else 0
-                over_cap_min = max(0.0, min(1.0, float(getattr(RL_CONFIG, "interesting_replay_over_cap_min_score", 0.95))))
-                if max_keep <= 0 or (self._n_interesting >= max_keep and interest_val < over_cap_min):
+                # Hard cap: once the interesting pool is full, admit nothing new.
+                # A once-rare "over-cap" escape hatch (admit any score >= 0.95)
+                # let a mastered agent's constant deep-wave score bursts flood the
+                # pool past 60%, destroying the rare-event upsampling the quota is
+                # for.  New rare events still get in continuously as flagged slots
+                # recycle out and the count drops back below the cap.
+                if max_keep <= 0 or self._n_interesting >= max_keep:
                     interest_val = 0.0
             self.interesting[idx] = interest_val
             self._n_expert += int(expert)
@@ -437,10 +442,28 @@ class PrioritizedReplayBuffer:
             if idxs.size <= 0:
                 return
             idxs = np.unique(idxs)
-            newly_marked = self.interesting[idxs] <= 0.0
-            self._n_interesting += int(newly_marked.sum())
-            self.interesting[idxs] = np.maximum(self.interesting[idxs], interest_val)
-            self._append_interesting_bank_locked(idxs)
+            already = self.interesting[idxs] > 0.0
+            # Upgrading the score of slots that are already interesting never
+            # grows the pool, so always allow those.
+            upgrade_idx = idxs[already]
+            new_idx = idxs[~already]
+            # New flags must respect the hard cap so elite/learner episode tails
+            # (marked in bulk at score 1.0) cannot push the interesting pool past
+            # max_interesting_replay_fraction — the same leak that add() guards.
+            if new_idx.size > 0:
+                max_frac = max(0.0, min(1.0, float(getattr(RL_CONFIG, "max_interesting_replay_fraction", 1.0))))
+                max_keep = max(1, int(max_frac * max(1, self.size))) if max_frac > 0.0 else 0
+                room = max(0, max_keep - self._n_interesting)
+                if new_idx.size > room:
+                    new_idx = new_idx[:room]
+            if upgrade_idx.size > 0:
+                self.interesting[upgrade_idx] = np.maximum(self.interesting[upgrade_idx], interest_val)
+            if new_idx.size > 0:
+                self.interesting[new_idx] = interest_val
+                self._n_interesting += int(new_idx.size)
+            touched = np.concatenate([upgrade_idx, new_idx]) if new_idx.size else upgrade_idx
+            if touched.size > 0:
+                self._append_interesting_bank_locked(touched)
 
     def __len__(self):
         return self.size
