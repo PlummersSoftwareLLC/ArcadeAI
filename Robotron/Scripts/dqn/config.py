@@ -463,7 +463,7 @@ class RLConfigData:
     no_human_stall_penalty_per_frame: float = 0.015
     no_human_stall_max_penalty: float = 0.08
 
-    # Deliberate hard-state starts when dashboard auto-curriculum is enabled.
+    # Legacy hard-start tuning retained for old checkpoints/config snapshots.
     hard_start_min_level: int = 5
     hard_start_wave_spread: int = 8
 
@@ -544,8 +544,7 @@ RL_CONFIG = RLConfigData()
 #  Game Settings (shared between dashboard, socket server, and LUA clients)
 # ---------------------------------------------------------------------------
 # Robotron waves progress 1, 2, 3, …  The operator can start the agent at an
-# arbitrary wave for curriculum training.  This list drives the auto-curriculum
-# stepping in the socket server.
+# arbitrary wave for curriculum training.
 ROBOTRON_SELECTABLE_LEVELS = list(range(1, 41))
 
 class GameSettings:
@@ -686,6 +685,21 @@ class MetricsData:
     memory_buffer_size: int = 0
     client_count: int = 0
     web_client_count: int = 0
+
+    preview_capture_enabled: bool = True
+    hud_enabled: bool = False
+    game_preview_seq: int = 0
+    game_preview_client_id: int = -1
+    game_preview_width: int = 0
+    game_preview_height: int = 0
+    game_preview_format: str = ""
+    game_preview_data: bytes = b""
+    game_preview_updated_ts: float = 0.0
+    game_preview_source_format: str = ""
+    game_preview_encoded_bytes: int = 0
+    game_preview_raw_bytes: int = 0
+    game_preview_compression_ratio: float = 1.0
+    game_preview_fps: float = 0.0
 
     epsilon: float = RL_CONFIG.epsilon_start
     expert_ratio: float = RL_CONFIG.expert_ratio_start

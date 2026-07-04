@@ -127,13 +127,20 @@ class FrameData:
     level_number: int
     game_score: int
     num_lasers: int
+    preview_width: int = 0
+    preview_height: int = 0
+    preview_format: int = 0
+    preview_pixels: Optional[bytes] = None
+    preview_encoded_format: int = 0
+    preview_encoded_bytes: int = 0
+    preview_raw_bytes: int = 0
 
 
 _HDR_FMT = ">HddBIBBBIBB"
 _HDR_SIZE = struct.calcsize(_HDR_FMT)
 
 
-def parse_frame_data(data: bytes) -> Optional[FrameData]:
+def parse_frame_data(data: bytes, parse_preview: bool = False) -> Optional[FrameData]:
     """Parse the Robotron binary wire protocol from Lua."""
     if not data or len(data) < _HDR_SIZE:
         return None
@@ -148,11 +155,129 @@ def parse_frame_data(data: bytes) -> Optional[FrameData]:
     state = np.frombuffer(data[_HDR_SIZE:base_len], dtype=">f4", count=n).astype(np.float32)
     if state.shape[0] != n:
         return None
+
+    preview_width = preview_height = preview_format = 0
+    preview_pixels = None
+    preview_encoded_format = preview_encoded_bytes = preview_raw_bytes = 0
+
+    if len(data) > base_len:
+        if len(data) < (base_len + 4):
+            return None
+        preview_len = struct.unpack(">I", data[base_len:base_len + 4])[0]
+        tail_start = base_len + 4
+        tail_end = tail_start + int(preview_len)
+        if tail_end != len(data):
+            return None
+        if (not parse_preview) and preview_len > 0:
+            preview_len = 0
+        elif preview_len > 0 and preview_len < 5:
+            return None
+        if preview_len >= 5:
+            preview_width, preview_height, preview_format = struct.unpack(
+                ">HHB", data[tail_start:tail_start + 5]
+            )
+            pixels = data[tail_start + 5:tail_end]
+            if preview_width <= 0 or preview_height <= 0 or len(pixels) <= 0:
+                return None
+            expected_px = preview_width * preview_height * 2
+            pf = int(preview_format)
+            preview_encoded_format = pf
+            preview_encoded_bytes = len(pixels)
+            preview_raw_bytes = expected_px
+            if pf == 1:
+                if len(pixels) != expected_px:
+                    return None
+                preview_pixels = bytes(pixels)
+            elif pf == 2:
+                out = bytearray(expected_px)
+                oi = si = 0
+                plen = len(pixels)
+                ok = True
+                while oi < expected_px and si < plen:
+                    flags = pixels[si]
+                    si += 1
+                    for bit in range(8):
+                        if oi >= expected_px:
+                            break
+                        if (flags >> bit) & 1:
+                            if (si + 1) >= plen:
+                                ok = False
+                                break
+                            b1, b2 = pixels[si], pixels[si + 1]
+                            si += 2
+                            mlen = ((b1 >> 4) & 0x0F) + 3
+                            dist = ((b1 & 0x0F) << 8) | b2
+                            if dist <= 0 or dist > oi:
+                                ok = False
+                                break
+                            src_idx = oi - dist
+                            for _ in range(mlen):
+                                if oi >= expected_px:
+                                    break
+                                out[oi] = out[src_idx]
+                                oi += 1
+                                src_idx += 1
+                        else:
+                            if si >= plen:
+                                ok = False
+                                break
+                            out[oi] = pixels[si]
+                            oi += 1
+                            si += 1
+                    if not ok:
+                        break
+                if (not ok) or (oi != expected_px):
+                    return None
+                preview_pixels = bytes(out)
+                preview_format = 1
+            elif pf == 3:
+                out = bytearray(expected_px)
+                oi = si = 0
+                plen = len(pixels)
+                ok = True
+                while si < plen and oi < expected_px:
+                    ctrl = pixels[si]
+                    si += 1
+                    words = (ctrl & 0x7F) + 1
+                    if (ctrl & 0x80) != 0:
+                        if (si + 1) >= plen:
+                            ok = False
+                            break
+                        b0, b1 = pixels[si], pixels[si + 1]
+                        si += 2
+                        need = words * 2
+                        if (oi + need) > expected_px:
+                            ok = False
+                            break
+                        for _ in range(words):
+                            out[oi] = b0
+                            out[oi + 1] = b1
+                            oi += 2
+                    else:
+                        need = words * 2
+                        if (si + need) > plen or (oi + need) > expected_px:
+                            ok = False
+                            break
+                        out[oi:oi + need] = pixels[si:si + need]
+                        oi += need
+                        si += need
+                if (not ok) or (oi != expected_px) or (si != plen):
+                    return None
+                preview_pixels = bytes(out)
+                preview_format = 1
+            else:
+                return None
+
     return FrameData(
         state=state, subjreward=float(subj), objreward=float(obj),
         done=bool(done), player_alive=bool(alive), save_signal=bool(save),
         start_pressed=bool(start), level_number=int(wave),
         game_score=int(score), num_lasers=int(lasers),
+        preview_width=int(preview_width), preview_height=int(preview_height),
+        preview_format=int(preview_format), preview_pixels=preview_pixels,
+        preview_encoded_format=int(preview_encoded_format),
+        preview_encoded_bytes=int(preview_encoded_bytes),
+        preview_raw_bytes=int(preview_raw_bytes),
     )
 
 
@@ -199,7 +324,17 @@ def _state_wave(state: np.ndarray) -> float:
     return 1.0
 
 
-def _wave_advanced(prev_state: np.ndarray | None, frame: FrameData) -> bool:
+def _wave_advanced(prev_state: np.ndarray | None, frame: FrameData, prev_level_number: int | None = None) -> bool:
+    """Return True only when the wave/level actually increments.
+
+    Prefer the prior frame's level_number from client state (uncapped, exact).
+    Fall back to decoded state wave for backward compatibility.
+    """
+    if prev_level_number is not None:
+        try:
+            return int(frame.level_number) > int(prev_level_number)
+        except Exception:
+            pass
     if prev_state is None:
         return False
     return float(frame.level_number) > (_state_wave(prev_state) + 0.5)
@@ -276,7 +411,8 @@ def _stall_penalty(stall_frames: int) -> float:
 
 
 def _transition_interest_score(prev_state: np.ndarray, next_state: np.ndarray,
-                               frame, obj_r: float, total_r: float) -> float:
+                               frame, obj_r: float, total_r: float,
+                               prev_level_number: int | None = None) -> float:
     """Sparse rare/elite-event score for replay sampling, independent of TD error."""
     try:
         def enemy_cues(state):
@@ -332,7 +468,7 @@ def _transition_interest_score(prev_state: np.ndarray, next_state: np.ndarray,
         projectile = max(prev["projectile"], nxt["projectile"])
 
         wave = max(1.0, float(frame.level_number))
-        wave_advance = 1.0 if _wave_advanced(prev_state, frame) else 0.0
+        wave_advance = 1.0 if _wave_advanced(prev_state, frame, prev_level_number=prev_level_number) else 0.0
         deep_wave = max(0.0, min(1.0, (wave - 3.0) / 8.0))
         wave9 = 1.0 if int(wave) % 10 == 9 else 0.0
         terminal = 1.0 if frame.done else 0.0
@@ -395,6 +531,7 @@ def _shape_transition_reward(
     last_game_score: int,
     prev_state: np.ndarray | None = None,
     next_state: np.ndarray | None = None,
+    prev_level_number: int | None = None,
     stall_frames: int = 0,
 ) -> tuple[float, float, float, float, int]:
     """Reward from score plus bounded non-harvestable shaping.
@@ -430,7 +567,7 @@ def _shape_transition_reward(
         phi_next = _movement_potential(next_state, alive=True)
         shaping_raw += float(RL_CONFIG.gamma) * phi_next - phi_prev
 
-    if _wave_advanced(prev_state, frame):
+    if _wave_advanced(prev_state, frame, prev_level_number=prev_level_number):
         wave = max(1, int(frame.level_number))
         shaping_raw += float(getattr(RL_CONFIG, "wave_clear_bonus", 0.0))
         shaping_raw += float(getattr(RL_CONFIG, "wave_progress_bonus", 0.0)) * min(10, max(0, wave - 1))
@@ -729,6 +866,8 @@ class SocketServer:
         self.clients = {}
         self.client_states = {}
         self.client_lock = threading.Lock()
+        self.preview_cid: Optional[int] = None
+        self.preview_disabled = False
 
     def _alloc_id(self):
         with self.client_lock:
@@ -762,9 +901,12 @@ class SocketServer:
         eval_only = self._is_eval_client(cid)
         with self.client_lock:
             self.client_states[cid] = {
-                "frames": 0, "last_time": time.time(), "fps": 0.0,
+                "frames": 0, "connected_since": time.time(), "last_time": time.time(),
+                "fps": 0.0, "fps_frames": 0,
                 "level_number": 0, "game_score": 0, "last_state": None, "last_action": None,
                 "last_game_score": 0,
+                "last_level_number": 0,
+                "preview_capable": False, "client_slot": int(cid),
                 "prev_action_source": None,
                 "total_reward": 0.0, "ep_dqn_reward": 0.0, "ep_dqn_score_reward": 0.0, "ep_expert_reward": 0.0,
                 "ep_subj_reward": 0.0, "ep_obj_reward": 0.0, "ep_frames": 0,
@@ -796,6 +938,168 @@ class SocketServer:
         return np.concatenate(list(reversed(frames[-depth:]))).astype(np.float32, copy=False)
 
     @staticmethod
+    def _parse_client_handshake(handshake_value: int) -> tuple[bool, int]:
+        raw = max(0, int(handshake_value or 0))
+        preview_capable = (raw & 0x01) != 0
+        client_slot = max(0, raw >> 1)
+        return preview_capable, client_slot
+
+    def _pick_default_preview_client_locked(self) -> Optional[int]:
+        candidates = []
+        for cid, cs in self.client_states.items():
+            if not bool(cs.get("preview_capable", False)):
+                continue
+            slot = int(cs.get("client_slot", cid))
+            candidates.append((slot, int(cid)))
+        if not candidates:
+            return None
+        candidates.sort()
+        return int(candidates[0][1])
+
+    def _ensure_preview_client_selected_locked(self) -> tuple[Optional[int], bool]:
+        if self.preview_disabled:
+            changed = self.preview_cid is not None
+            self.preview_cid = None
+            return None, changed
+        selected = self.preview_cid
+        if selected is not None:
+            cs = self.client_states.get(int(selected))
+            if isinstance(cs, dict) and bool(cs.get("preview_capable", False)):
+                return int(selected), False
+        fallback = self._pick_default_preview_client_locked()
+        changed = self.preview_cid != fallback
+        self.preview_cid = fallback
+        return fallback, changed
+
+    def _is_preview_client(self, cid: int) -> bool:
+        with self.client_lock:
+            preview_cid, changed = self._ensure_preview_client_selected_locked()
+        if changed:
+            self._clear_preview_cache()
+        return preview_cid is not None and int(cid) == int(preview_cid)
+
+    def _preview_enabled_for_client(self, cid: int) -> bool:
+        if not self._is_preview_client(cid):
+            return False
+        with self.client_lock:
+            cs = self.client_states.get(int(cid))
+            if not isinstance(cs, dict) or not bool(cs.get("preview_capable", False)):
+                return False
+        with self.metrics.lock:
+            if not bool(getattr(self.metrics, "preview_capture_enabled", True)):
+                return False
+            return int(getattr(self.metrics, "web_client_count", 0) or 0) > 0
+
+    def _hud_enabled_for_client(self, cid: int) -> bool:
+        if not self._is_preview_client(cid):
+            return False
+        with self.metrics.lock:
+            return bool(getattr(self.metrics, "hud_enabled", False))
+
+    def _clear_preview_cache(self):
+        with self.metrics.lock:
+            self.metrics.game_preview_client_id = -1
+            self.metrics.game_preview_seq = 0
+            self.metrics.game_preview_width = 0
+            self.metrics.game_preview_height = 0
+            self.metrics.game_preview_format = ""
+            self.metrics.game_preview_data = b""
+            self.metrics.game_preview_updated_ts = 0.0
+            self.metrics.game_preview_source_format = ""
+            self.metrics.game_preview_encoded_bytes = 0
+            self.metrics.game_preview_raw_bytes = 0
+            self.metrics.game_preview_compression_ratio = 1.0
+            self.metrics.game_preview_fps = 0.0
+
+    def _cache_client_preview(self, cid: int, frame: FrameData):
+        if not self._is_preview_client(cid):
+            return
+        pixels = frame.preview_pixels
+        width = int(frame.preview_width)
+        height = int(frame.preview_height)
+        if not pixels or width <= 0 or height <= 0:
+            return
+        if int(frame.preview_format) != 1:
+            return
+        expected_len = width * height * 2
+        if len(pixels) != expected_len:
+            return
+        enc_fmt = int(frame.preview_encoded_format)
+        enc_bytes = int(frame.preview_encoded_bytes)
+        raw_bytes = int(frame.preview_raw_bytes)
+        with self.metrics.lock:
+            prev_seq = int(getattr(self.metrics, "game_preview_seq", 0))
+            prev_ts = float(getattr(self.metrics, "game_preview_updated_ts", 0.0))
+            now_ts = time.time()
+            if prev_ts > 0.0:
+                dt = max(1e-6, now_ts - prev_ts)
+                self.metrics.game_preview_fps = 1.0 / dt
+            self.metrics.game_preview_client_id = int(cid)
+            self.metrics.game_preview_seq = prev_seq + 1
+            self.metrics.game_preview_width = width
+            self.metrics.game_preview_height = height
+            self.metrics.game_preview_format = "rgb565be"
+            self.metrics.game_preview_data = bytes(pixels)
+            self.metrics.game_preview_updated_ts = now_ts
+            self.metrics.game_preview_source_format = {1: "raw", 2: "lzss", 3: "rle"}.get(enc_fmt, "unknown")
+            self.metrics.game_preview_encoded_bytes = enc_bytes
+            self.metrics.game_preview_raw_bytes = raw_bytes if raw_bytes > 0 else expected_len
+            if enc_bytes > 0 and raw_bytes > 0:
+                self.metrics.game_preview_compression_ratio = float(raw_bytes) / float(enc_bytes)
+            else:
+                self.metrics.game_preview_compression_ratio = 1.0
+
+    def get_client_rows(self) -> list[dict]:
+        with self.client_lock:
+            selected, changed = self._ensure_preview_client_selected_locked()
+            now = time.time()
+            rows = []
+            for cid, cs in self.client_states.items():
+                frames = max(0, int(cs.get("frames", 0) or 0))
+                connected_since = float(cs.get("connected_since", now) or now)
+                rows.append({
+                    "client_id": int(cid),
+                    "client_slot": int(cs.get("client_slot", cid)),
+                    "session_seconds": float(frames) / 60.0,
+                    "connected_seconds": max(0.0, now - connected_since),
+                    "fps": float(cs.get("fps", 0.0) or 0.0),
+                    "level": max(0, int(cs.get("level_number", 0) or 0)),
+                    "score": max(0, int(cs.get("game_score", 0) or 0)),
+                    "selected_preview": (selected is not None and int(selected) == int(cid)),
+                    "preview_capable": bool(cs.get("preview_capable", False)),
+                })
+        if changed:
+            self._clear_preview_cache()
+        rows.sort(key=lambda r: (int(r.get("client_slot", r.get("client_id", 0))), int(r.get("client_id", 0))))
+        return rows
+
+    def get_selected_preview_client_id(self) -> Optional[int]:
+        with self.client_lock:
+            selected, changed = self._ensure_preview_client_selected_locked()
+        if changed:
+            self._clear_preview_cache()
+        return None if selected is None else int(selected)
+
+    def set_preview_client(self, cid: Optional[int]) -> tuple[bool, Optional[int]]:
+        with self.client_lock:
+            was_disabled = bool(self.preview_disabled)
+            old_selected = self.preview_cid
+            if cid is None:
+                selected = None
+                self.preview_disabled = True
+            else:
+                cs = self.client_states.get(int(cid))
+                if not isinstance(cs, dict) or not bool(cs.get("preview_capable", False)):
+                    return False, self.preview_cid
+                selected = int(cid)
+                self.preview_disabled = False
+            changed = old_selected != selected or was_disabled != self.preview_disabled
+            self.preview_cid = selected
+        if changed:
+            self._clear_preview_cache()
+        return True, selected
+
+    @staticmethod
     def _recv_exact(sock, n, timeout_s=0.5):
         """Read exactly *n* bytes; return None on timeout, b"" on EOF/socket error."""
         buf = bytearray()
@@ -821,18 +1125,24 @@ class SocketServer:
             buf += chunk
         return bytes(buf)
 
-    def _pack_action(self, move_cmd, fire_cmd, source_code, cid: int = 0):
+    def _pack_action(
+        self,
+        move_cmd,
+        fire_cmd,
+        source_code,
+        cid: int = 0,
+        preview_enabled: bool = False,
+        hud_enabled: bool = False,
+    ):
         _gs = game_settings.snapshot()
         start_adv = 1 if _gs["start_advanced"] or bool(_gs.get("auto_curriculum", False)) else 0
-        base_level = max(1, min(255, int(_gs["start_level_min"])))
-        if bool(_gs.get("auto_curriculum", False)):
-            base_level = max(base_level, int(getattr(RL_CONFIG, "hard_start_min_level", 5)))
-        start_level = base_level
-        if bool(_gs.get("auto_curriculum", False)):
-            spread = max(1, int(getattr(RL_CONFIG, "hard_start_wave_spread", 1)))
-            start_level = base_level + (int(cid) % spread)
+        start_level = max(1, min(255, int(_gs["start_level_min"])))
         start_level = max(1, min(255, int(start_level)))
         source_u8 = int(source_code) & 0x0F
+        if preview_enabled:
+            source_u8 |= 0x40
+        if hud_enabled:
+            source_u8 |= 0x80
         return struct.pack(">bbBBB", int(move_cmd), int(fire_cmd),
                            source_u8, start_adv, start_level)
 
@@ -844,10 +1154,20 @@ class SocketServer:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 262144)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 65536)
 
-            # Handshake — 2-byte value (preview capability / slot; unused here)
+            # Handshake — 2-byte value: bit 0 = preview-capable, upper bits = launch slot.
             ping = self._recv_exact(sock, 2, timeout_s=5.0)
             if not ping or len(ping) < 2:
                 raise ConnectionError("No handshake")
+            handshake_val = struct.unpack(">H", ping)[0]
+            preview_capable, client_slot = self._parse_client_handshake(handshake_val)
+            with self.client_lock:
+                cs0 = self.client_states.get(cid)
+                if isinstance(cs0, dict):
+                    cs0["preview_capable"] = bool(preview_capable)
+                    cs0["client_slot"] = int(client_slot)
+                _, changed = self._ensure_preview_client_selected_locked()
+            if changed:
+                self._clear_preview_cache()
 
             BATCH = 8
             last_payload_time = time.time()
@@ -880,10 +1200,20 @@ class SocketServer:
                 else:
                     break
 
-                frame = parse_frame_data(data)
+                preview_enabled = self._preview_enabled_for_client(cid)
+                hud_enabled = self._hud_enabled_for_client(cid)
+                should_parse_preview = bool(preview_enabled and self._is_preview_client(cid))
+
+                frame = parse_frame_data(data, parse_preview=should_parse_preview)
                 if not frame:
-                    sock.sendall(self._pack_action(-1, -1, _SRC_NONE, cid))
+                    sock.sendall(self._pack_action(
+                        -1, -1, _SRC_NONE, cid,
+                        preview_enabled=preview_enabled,
+                        hud_enabled=hud_enabled,
+                    ))
                     continue
+                if should_parse_preview and frame.preview_pixels:
+                    self._cache_client_preview(cid, frame)
 
                 # Single-frame compact input; stacked current-first with recent history.
                 single_state = slice_model_state(frame.state)
@@ -895,10 +1225,14 @@ class SocketServer:
                     cs["frames"] += 1
                     cs["level_number"] = frame.level_number
                     cs["game_score"] = frame.game_score
+                    cs["player_alive"] = bool(frame.player_alive)
+                    cs["num_lasers"] = int(frame.num_lasers)
                     now = time.time()
+                    cs["fps_frames"] = int(cs.get("fps_frames", 0)) + 1
                     el = now - cs["last_time"]
                     if el >= 1.0:
-                        cs["fps"] = 1.0 / el
+                        cs["fps"] = float(cs.get("fps_frames", 0)) / el
+                        cs["fps_frames"] = 0
                         cs["last_time"] = now
 
                 model_state = self._stack_model_state(cs, single_state)
@@ -937,9 +1271,17 @@ class SocketServer:
                         cs.get("last_game_score", frame.game_score),
                         prev_state=cs.get("last_state"),
                         next_state=model_state,
+                        prev_level_number=cs.get("last_level_number"),
                         stall_frames=int(cs.get("no_human_no_score_frames", 0)),
                     )
-                    interest = _transition_interest_score(cs["last_state"], model_state, frame, score_r, total_r)
+                    interest = _transition_interest_score(
+                        cs["last_state"],
+                        model_state,
+                        frame,
+                        score_r,
+                        total_r,
+                        prev_level_number=cs.get("last_level_number"),
+                    )
 
                     eval_only = bool(cs.get("eval_only", False))
                     if self.agent and not eval_only:
@@ -1012,7 +1354,13 @@ class SocketServer:
                                 pass
                     cs["was_done"] = True
                     try:
-                        sock.sendall(self._pack_action(-1, -1, _SRC_NONE, cid))
+                        _pv = self._preview_enabled_for_client(cid)
+                        _hd = self._hud_enabled_for_client(cid)
+                        sock.sendall(self._pack_action(
+                            -1, -1, _SRC_NONE, cid,
+                            preview_enabled=_pv,
+                            hud_enabled=_hd,
+                        ))
                     except Exception:
                         break
                     cs["last_state"] = cs["last_action"] = None
@@ -1052,7 +1400,13 @@ class SocketServer:
                     if (cs.get("nstep") is not None):
                         cs["nstep"].reset()
                     try:
-                        sock.sendall(self._pack_action(-1, -1, _SRC_NONE, cid))
+                        _pv = self._preview_enabled_for_client(cid)
+                        _hd = self._hud_enabled_for_client(cid)
+                        sock.sendall(self._pack_action(
+                            -1, -1, _SRC_NONE, cid,
+                            preview_enabled=_pv,
+                            hud_enabled=_hd,
+                        ))
                     except Exception:
                         break
                     continue
@@ -1104,6 +1458,7 @@ class SocketServer:
                 cs["last_state"] = model_state
                 cs["last_action"] = (int(mv_idx), int(effective_fire))
                 cs["last_game_score"] = int(frame.game_score)
+                cs["last_level_number"] = int(frame.level_number)
                 cs["prev_action_source"] = action_source
 
                 move_cmd = action_index_to_wire_dir(int(mv_idx))
@@ -1140,7 +1495,13 @@ class SocketServer:
                             f"{qinfo}", flush=True)
 
                 try:
-                    sock.sendall(self._pack_action(move_cmd, fire_cmd, src_code, cid))
+                    _pv = self._preview_enabled_for_client(cid)
+                    _hd = self._hud_enabled_for_client(cid)
+                    sock.sendall(self._pack_action(
+                        move_cmd, fire_cmd, src_code, cid,
+                        preview_enabled=_pv,
+                        hud_enabled=_hd,
+                    ))
                 except Exception:
                     break
 
@@ -1169,7 +1530,10 @@ class SocketServer:
             with self.client_lock:
                 self.client_states.pop(cid, None)
                 self.clients[cid] = None
+                _, preview_changed = self._ensure_preview_client_selected_locked()
                 self._sync_client_count_locked()
+            if preview_changed:
+                self._clear_preview_cache()
             if self.async_buffer is not None:
                 self.async_buffer.remove_client(cid)
             threading.Timer(1.0, self._cleanup).start()

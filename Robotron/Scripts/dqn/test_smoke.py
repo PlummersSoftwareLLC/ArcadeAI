@@ -337,12 +337,11 @@ def test_reward_and_hard_starts():
     try:
         C.game_settings.start_advanced = False
         C.game_settings.auto_curriculum = True
-        C.game_settings.start_level_min = 1
+        C.game_settings.start_level_min = 4
         server = SS.SocketServer("127.0.0.1", 19997, None, C.metrics)
         _, _, _, sadv, slvl = struct.unpack(">bbBBB", server._pack_action(-1, -1, 0, cid=3))
         check("auto curriculum enables advanced starts", sadv == 1, f"sadv={sadv}")
-        expected = C.RL_CONFIG.hard_start_min_level + (3 % C.RL_CONFIG.hard_start_wave_spread)
-        check("hard starts spread by client id", slvl == expected, f"slvl={slvl} expected={expected}")
+        check("auto curriculum uses selected level exactly", slvl == 4, f"slvl={slvl}")
         C.game_settings.start_advanced = True
         C.game_settings.auto_curriculum = False
         C.game_settings.start_level_min = 3

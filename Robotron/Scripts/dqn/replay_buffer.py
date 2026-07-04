@@ -152,6 +152,7 @@ class PrioritizedReplayBuffer:
         self._interesting_bank = np.full(max(1, bank_size), -1, dtype=np.int64)
         self._interesting_bank_ptr = 0
         self._interesting_bank_count = 0
+        self._mmap_dir = None
 
     @staticmethod
     def actor_kind_from_name(actor: str | None, expert: int = 0) -> int:
@@ -174,6 +175,71 @@ class PrioritizedReplayBuffer:
         if frac_clamped >= 1.0:
             sys.stdout.write("\n")
             sys.stdout.flush()
+
+    @staticmethod
+    def _mmap_chunk_rows(arr: np.ndarray, target_mb: int | None = None) -> int:
+        """Rows per mmap write chunk, bounded by target megabytes."""
+        if arr.ndim <= 0 or arr.shape[0] <= 0:
+            return 1
+        if target_mb is None:
+            target_mb = int(os.environ.get("ROBOTRON_REPLAY_MMAP_CHUNK_MB", "256"))
+        target_bytes = max(1, int(target_mb)) * 1024 * 1024
+        row_items = int(np.prod(arr.shape[1:])) if arr.ndim > 1 else 1
+        row_bytes = max(1, int(arr.dtype.itemsize) * max(1, row_items))
+        return max(1, min(int(arr.shape[0]), target_bytes // row_bytes))
+
+    @classmethod
+    def _save_npy_memmap(cls, path: str, source, verbose: bool,
+                         base_frac: float, span_frac: float):
+        """Write a standard .npy file through an on-disk memmap."""
+        src = np.asarray(source)
+        dst = np.lib.format.open_memmap(path, mode="w+", dtype=src.dtype, shape=src.shape)
+        if src.ndim == 0:
+            dst[...] = src
+            dst.flush()
+            del dst
+            return
+
+        total = int(src.shape[0])
+        if total <= 0:
+            dst.flush()
+            del dst
+            return
+
+        chunk_rows = cls._mmap_chunk_rows(src)
+        for start in range(0, total, chunk_rows):
+            end = min(total, start + chunk_rows)
+            dst[start:end] = src[start:end]
+            if verbose:
+                frac = base_frac + span_frac * (end / max(1, total))
+                cls._progress_bar("  Replay save", frac)
+        dst.flush()
+        del dst
+
+    def _storage_specs(self) -> dict[str, tuple[str, np.dtype, tuple[int, ...]]]:
+        cap = int(self.capacity)
+        state_size = int(self.state_size)
+        return {
+            "states": ("states", np.dtype(np.float32), (cap, state_size)),
+            "next_states": ("next_states", np.dtype(np.float32), (cap, state_size)),
+            "actions": ("actions", np.dtype(np.int64), (cap,)),
+            "rewards": ("rewards", np.dtype(np.float32), (cap,)),
+            "dones": ("dones", np.dtype(np.float32), (cap,)),
+            "horizons": ("horizons", np.dtype(np.int32), (cap,)),
+            "is_expert": ("is_expert", np.dtype(np.uint8), (cap,)),
+            "actor_kind": ("actor_kind", np.dtype(np.uint8), (cap,)),
+            "interesting": ("interesting", np.dtype(np.float32), (cap,)),
+        }
+
+    @staticmethod
+    def _is_memmap_array(arr) -> bool:
+        return isinstance(arr, np.memmap)
+
+    def _flush_live_mmaps_locked(self):
+        for attr, _, _ in self._storage_specs().values():
+            arr = getattr(self, attr, None)
+            if self._is_memmap_array(arr):
+                arr.flush()
 
     def add(self, state, action: int, reward: float, next_state, done: bool,
             horizon: int = 1, expert: int = 0, priority_hint: float = 0.0,
@@ -494,49 +560,89 @@ class PrioritizedReplayBuffer:
 
     def save(self, filepath: str, verbose: bool = True):
         """Save the full replay buffer as individual .npy files in a directory."""
-        with self.lock:
-            if self.size == 0:
+        abs_path = os.path.abspath(filepath)
+        if self._mmap_dir is not None and os.path.abspath(self._mmap_dir) == abs_path:
+            with self.lock:
+                t0 = time.time()
+                n = int(self.size)
                 if verbose:
-                    print("  Replay buffer is empty — nothing to save.")
-                return
+                    print(f"  Flushing mmap replay buffer ({n:,} transitions)...")
+                    self._progress_bar("  Replay flush", 0.10)
+                self._flush_live_mmaps_locked()
+                if verbose:
+                    self._progress_bar("  Replay flush", 0.55)
+                priorities_path = os.path.join(abs_path, "priorities.npy")
+                priorities = np.lib.format.open_memmap(
+                    priorities_path,
+                    mode="r+",
+                    dtype=np.float64,
+                    shape=(self.capacity,),
+                )
+                priorities[:n] = self.tree.tree[self.tree.capacity:self.tree.capacity + n]
+                if n < self.capacity:
+                    priorities[n:] = 0.0
+                priorities.flush()
+                del priorities
+                if verbose:
+                    self._progress_bar("  Replay flush", 0.82)
+                meta = np.array([self.tree.data_ptr, n, self.tree.max_priority])
+                meta_path = os.path.join(abs_path, "_meta.npy")
+                tmp_meta = meta_path + ".tmp.npy"
+                np.save(tmp_meta, meta)
+                os.replace(tmp_meta, meta_path)
+                if verbose:
+                    self._progress_bar("  Replay flush", 1.0)
+                    elapsed = time.time() - t0
+                    print(f"  Replay mmap flushed in {elapsed:.1f}s")
+            return
 
-            n = self.size
-            if verbose:
-                print(f"  Saving replay buffer ({n:,} transitions)...")
-            t0 = time.time()
-            if verbose:
-                self._progress_bar("  Replay save", 0.05)
-
-            # Snapshot arrays while holding the lock
-            arrays = {
-                "states":      self.states[:n].copy(),
-                "next_states": self.next_states[:n].copy(),
-                "actions":     self.actions[:n].copy(),
-                "rewards":     self.rewards[:n].copy(),
-                "dones":       self.dones[:n].copy(),
-                "horizons":    self.horizons[:n].copy(),
-                "is_expert":   self.is_expert[:n].copy(),
-                "actor_kind":  self.actor_kind[:n].copy(),
-                "interesting": self.interesting[:n].copy(),
-                "priorities":  self.tree.tree[self.tree.capacity:self.tree.capacity + n].copy(),
-            }
-            meta = np.array([self.tree.data_ptr, n, self.tree.max_priority])
-            if verbose:
-                self._progress_bar("  Replay save", 0.15)
-
-        # Write outside the lock to minimise contention
+        t0 = time.time()
         tmp_dir = filepath + ".tmp"
         if os.path.exists(tmp_dir):
             shutil.rmtree(tmp_dir, ignore_errors=True)
         os.makedirs(tmp_dir, exist_ok=True)
 
-        names = list(arrays.keys())
-        for i, name in enumerate(names):
-            np.save(os.path.join(tmp_dir, f"{name}.npy"), arrays[name])
+        total_bytes = 0
+        with self.lock:
+            if self.size == 0:
+                if verbose:
+                    print("  Replay buffer is empty — nothing to save.")
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+                return
+
+            n = self.size
             if verbose:
-                frac = 0.15 + 0.70 * ((i + 1) / len(names))
-                self._progress_bar("  Replay save", frac)
-        np.save(os.path.join(tmp_dir, "_meta.npy"), meta)
+                print(f"  Saving replay buffer ({n:,} transitions, mmap .npy)...")
+                self._progress_bar("  Replay save", 0.05)
+
+            arrays = {
+                "states":      self.states[:n],
+                "next_states": self.next_states[:n],
+                "actions":     self.actions[:n],
+                "rewards":     self.rewards[:n],
+                "dones":       self.dones[:n],
+                "horizons":    self.horizons[:n],
+                "is_expert":   self.is_expert[:n],
+                "actor_kind":  self.actor_kind[:n],
+                "interesting": self.interesting[:n],
+                "priorities":  self.tree.tree[self.tree.capacity:self.tree.capacity + n],
+            }
+            total_bytes = sum(a.nbytes for a in arrays.values())
+            names = list(arrays.keys())
+            for i, name in enumerate(names):
+                base = 0.05 + 0.90 * (i / len(names))
+                span = 0.90 / len(names)
+                self._save_npy_memmap(
+                    os.path.join(tmp_dir, f"{name}.npy"),
+                    arrays[name],
+                    verbose,
+                    base,
+                    span,
+                )
+            meta = np.array([self.tree.data_ptr, n, self.tree.max_priority])
+            np.save(os.path.join(tmp_dir, "_meta.npy"), meta)
+            if verbose:
+                self._progress_bar("  Replay save", 0.97)
 
         # Atomic rename
         if os.path.exists(filepath):
@@ -549,7 +655,6 @@ class PrioritizedReplayBuffer:
             self._progress_bar("  Replay save", 1.0)
 
         elapsed = time.time() - t0
-        total_bytes = sum(a.nbytes for a in arrays.values())
         mb = total_bytes / (1024 * 1024)
         if verbose:
             print(f"  Replay buffer saved: {mb:.0f} MB in {elapsed:.1f}s")
@@ -562,7 +667,7 @@ class PrioritizedReplayBuffer:
             return False
 
         if verbose:
-            print(f"  Loading replay buffer (directory format) from {dirpath}...")
+            print(f"  Loading replay buffer (directory mmap format) from {dirpath}...")
         t0 = time.time()
         if verbose:
             self._progress_bar("  Replay load", 0.05)
@@ -576,6 +681,9 @@ class PrioritizedReplayBuffer:
             print(f"  Failed to read replay meta: {e}")
             return False
 
+        if self._try_adopt_mmap_directory(dirpath, data_ptr, saved_n, max_priority, t0, verbose):
+            return True
+
         # Load arrays
         names = ["states", "next_states", "actions", "rewards", "dones", "horizons", "is_expert", "priorities"]
         arch = {}
@@ -584,18 +692,85 @@ class PrioritizedReplayBuffer:
             if not os.path.isfile(fpath):
                 print(f"  Missing array file: {name}.npy")
                 return False
-            arch[name] = np.load(fpath)
+            arch[name] = np.load(fpath, mmap_mode="r")
             if verbose:
                 frac = 0.05 + 0.30 * ((i + 1) / len(names))
                 self._progress_bar("  Replay load", frac)
         interesting_path = os.path.join(dirpath, "interesting.npy")
         if os.path.isfile(interesting_path):
-            arch["interesting"] = np.load(interesting_path)
+            arch["interesting"] = np.load(interesting_path, mmap_mode="r")
         actor_kind_path = os.path.join(dirpath, "actor_kind.npy")
         if os.path.isfile(actor_kind_path):
-            arch["actor_kind"] = np.load(actor_kind_path)
+            arch["actor_kind"] = np.load(actor_kind_path, mmap_mode="r")
 
-        return self._restore_from_arrays(arch, data_ptr, max_priority, t0, dirpath, verbose)
+        return self._restore_from_arrays(arch, data_ptr, max_priority, t0, dirpath, verbose, saved_n=saved_n)
+
+    def _try_adopt_mmap_directory(self, dirpath: str, data_ptr: int, saved_n: int,
+                                  max_priority: float, t0: float, verbose: bool) -> bool:
+        """Use existing full-size .npy files as the live replay storage."""
+        n = max(0, min(int(saved_n), self.capacity))
+        if n <= 0:
+            return False
+        specs = self._storage_specs()
+        mapped = {}
+        try:
+            for name, (_, dtype, expected_shape) in specs.items():
+                path = os.path.join(dirpath, f"{name}.npy")
+                if not os.path.isfile(path):
+                    return False
+                arr = np.load(path, mmap_mode="r+")
+                if arr.dtype != dtype or arr.shape != expected_shape:
+                    return False
+                mapped[name] = arr
+            priorities_path = os.path.join(dirpath, "priorities.npy")
+            if not os.path.isfile(priorities_path):
+                return False
+            priorities = np.load(priorities_path, mmap_mode="r")
+            if priorities.dtype != np.dtype(np.float64) or priorities.shape != (self.capacity,):
+                return False
+        except Exception as e:
+            if verbose:
+                print(f"  Replay mmap adoption skipped: {e}")
+            return False
+
+        if verbose:
+            self._progress_bar("  Replay load", 0.40)
+
+        with self.lock:
+            for name, (attr, _, _) in specs.items():
+                setattr(self, attr, mapped[name])
+
+            self.tree = SumTree(self.capacity)
+            self.tree.size = n
+            self.tree.data_ptr = data_ptr if 0 <= int(data_ptr) < self.capacity else n % self.capacity
+            self.tree.max_priority = max_priority
+            self.tree.tree[self.tree.capacity:self.tree.capacity + n] = np.asarray(priorities[:n], dtype=np.float64)
+            if n < self.capacity:
+                self.tree.tree[self.tree.capacity + n:] = 0.0
+
+            total_nodes = max(1, self.tree.capacity - 1)
+            update_every = max(1, total_nodes // 64)
+            for i in range(self.tree.capacity - 1, 0, -1):
+                self.tree.tree[i] = self.tree.tree[2 * i] + self.tree.tree[2 * i + 1]
+                if verbose and ((self.tree.capacity - i) % update_every == 0):
+                    rebuilt = self.tree.capacity - i
+                    frac = 0.40 + (0.50 * (rebuilt / total_nodes))
+                    self._progress_bar("  Replay load", frac)
+
+            self.size = n
+            self._n_expert = int(self.is_expert[:n].sum())
+            self._n_actor[:] = 0
+            counts = np.bincount(self.actor_kind[:n].astype(np.int64), minlength=ACTOR_KIND_COUNT)
+            self._n_actor[:ACTOR_KIND_COUNT] = counts[:ACTOR_KIND_COUNT]
+            self._sanitize_interesting_after_load_locked(n, verbose)
+            self._rebuild_interesting_bank_locked(n)
+            self._mmap_dir = os.path.abspath(dirpath)
+
+        elapsed = time.time() - t0
+        if verbose:
+            self._progress_bar("  Replay load", 1.0)
+            print(f"  Replay buffer mmap mapped: {n:,} transitions in {elapsed:.1f}s")
+        return True
 
     def _load_npz(self, filepath: str, verbose: bool = True) -> bool:
         """Load replay buffer from a legacy .npz file."""
@@ -621,9 +796,11 @@ class PrioritizedReplayBuffer:
         return self._restore_from_arrays(dict(arch), data_ptr, max_priority, t0, filepath, verbose)
 
     def _restore_from_arrays(self, arch: dict, data_ptr: int, max_priority: float,
-                              t0: float, source_path: str, verbose: bool) -> bool:
+                              t0: float, source_path: str, verbose: bool,
+                              saved_n: int | None = None) -> bool:
         """Common restore logic for both directory and npz formats."""
-        n = len(arch["states"])
+        stored_n = len(arch["states"])
+        n = stored_n if saved_n is None else max(0, min(int(saved_n), stored_n))
         if n == 0:
             print("  Replay buffer file is empty.")
             return False
@@ -669,12 +846,12 @@ class PrioritizedReplayBuffer:
             if verbose:
                 self._progress_bar("  Replay load", 0.62)
 
-            priorities = arch["priorities"][offset:offset + n]
+            priorities = np.asarray(arch["priorities"][offset:offset + n], dtype=np.float64)
             self.tree.size = n
             self.tree.data_ptr = data_ptr if offset == 0 else n % self.capacity
             self.tree.max_priority = max_priority
 
-            self.tree.tree[self.tree.capacity:self.tree.capacity + n] = priorities.astype(np.float64)
+            self.tree.tree[self.tree.capacity:self.tree.capacity + n] = priorities
             if n < self.capacity:
                 self.tree.tree[self.tree.capacity + n:] = 0.0
 

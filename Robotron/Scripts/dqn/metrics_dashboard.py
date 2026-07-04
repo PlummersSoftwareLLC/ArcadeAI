@@ -17,6 +17,7 @@ import mimetypes
 import os
 import shutil
 import signal
+import struct
 import subprocess
 import tempfile
 import threading
@@ -67,6 +68,9 @@ GPU_SAMPLE_INTERVAL_S = 1.0
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac"}
 FONT_EXTENSIONS = {".ttf", ".otf", ".woff", ".woff2"}
 VIDEO_EXTENSIONS = {".mov", ".mp4", ".webm", ".ogv"}
+PREVIEW_BINARY_MAGIC = b"RPV1"
+PREVIEW_BINARY_HEADER = ">4sIiHHBd"
+PREVIEW_BINARY_HEADER_SIZE = struct.calcsize(PREVIEW_BINARY_HEADER)
 
 _NVIDIA_SMI_QUERY_FIELDS = (
     "index",
@@ -635,11 +639,35 @@ class _DashboardState:
             inference_requests = int(self.metrics.total_inference_requests)
             inference_time = float(self.metrics.total_inference_time)
             last_agreement = float(self.metrics.last_agreement)
+            preview_capture_enabled = bool(getattr(self.metrics, "preview_capture_enabled", True))
+            game_preview_seq = int(getattr(self.metrics, "game_preview_seq", 0))
+            game_preview_client_id = int(getattr(self.metrics, "game_preview_client_id", -1))
+            game_preview_width = int(getattr(self.metrics, "game_preview_width", 0))
+            game_preview_height = int(getattr(self.metrics, "game_preview_height", 0))
+            game_preview_format = str(getattr(self.metrics, "game_preview_format", "") or "")
+            game_preview_fps = float(getattr(self.metrics, "game_preview_fps", 0.0))
+            game_preview_source_format = str(getattr(self.metrics, "game_preview_source_format", "") or "")
+            game_preview_encoded_bytes = int(getattr(self.metrics, "game_preview_encoded_bytes", 0))
+            game_preview_raw_bytes = int(getattr(self.metrics, "game_preview_raw_bytes", 0))
+            game_preview_compression_ratio = float(getattr(self.metrics, "game_preview_compression_ratio", 1.0))
 
             reward_total = _tail_mean(self.metrics.episode_rewards) * _prs
             reward_dqn = _tail_mean(self.metrics.dqn_rewards) * _prs
             reward_subj = _tail_mean(self.metrics.subj_rewards) * _prs
             reward_obj = _tail_mean(self.metrics.obj_rewards) * _prs
+
+        client_rows: list[dict[str, Any]] = []
+        preview_selected_client_id = -1
+        try:
+            srv = getattr(self.metrics, "global_server", None)
+            if srv is not None and hasattr(srv, "get_client_rows"):
+                client_rows = srv.get_client_rows()
+            if srv is not None and hasattr(srv, "get_selected_preview_client_id"):
+                selected = srv.get_selected_preview_client_id()
+                preview_selected_client_id = -1 if selected is None else int(selected)
+        except Exception:
+            client_rows = []
+            preview_selected_client_id = -1
 
         try:
             dqn100k_raw, dqn1m_raw, dqn5m_raw = get_dqn_window_averages()
@@ -696,6 +724,19 @@ class _DashboardState:
             "expert_ratio": expert_ratio,
             "client_count": client_count,
             "web_client_count": web_client_count,
+            "client_rows": client_rows,
+            "preview_selected_client_id": preview_selected_client_id,
+            "preview_capture_enabled": preview_capture_enabled,
+            "game_preview_seq": game_preview_seq,
+            "game_preview_client_id": game_preview_client_id,
+            "game_preview_width": game_preview_width,
+            "game_preview_height": game_preview_height,
+            "game_preview_format": game_preview_format,
+            "game_preview_fps": game_preview_fps,
+            "game_preview_source_format": game_preview_source_format,
+            "game_preview_encoded_bytes": game_preview_encoded_bytes,
+            "game_preview_raw_bytes": game_preview_raw_bytes,
+            "game_preview_compression_ratio": game_preview_compression_ratio,
             "average_level": average_level,
             "average_game_score": average_game_score,
             "memory_buffer_size": memory_buffer_size,
@@ -795,6 +836,36 @@ class _DashboardState:
         with self.lock:
             return self._cached_now_body
 
+    def game_preview_body(self, since_seq: int | None = None, wait_timeout_s: float = 0.0) -> bytes | None:
+        since = None if since_seq is None else int(max(0, since_seq))
+        deadline = time.time() + max(0.0, float(wait_timeout_s))
+        while True:
+            with self.metrics.lock:
+                seq = int(getattr(self.metrics, "game_preview_seq", 0))
+                client_id = int(getattr(self.metrics, "game_preview_client_id", -1))
+                width = int(getattr(self.metrics, "game_preview_width", 0))
+                height = int(getattr(self.metrics, "game_preview_height", 0))
+                fmt = str(getattr(self.metrics, "game_preview_format", "") or "")
+                ts = float(getattr(self.metrics, "game_preview_updated_ts", 0.0))
+                raw = bytes(getattr(self.metrics, "game_preview_data", b"") or b"")
+            changed = since is None or seq != since
+            valid = seq > 0 and client_id >= 0 and width > 0 and height > 0 and fmt == "rgb565be" and len(raw) == width * height * 2
+            if changed and valid:
+                header = struct.pack(
+                    PREVIEW_BINARY_HEADER,
+                    PREVIEW_BINARY_MAGIC,
+                    seq & 0xFFFFFFFF,
+                    int(client_id),
+                    int(width),
+                    int(height),
+                    1,
+                    float(ts),
+                )
+                return header + raw
+            if time.time() >= deadline:
+                return None
+            time.sleep(0.004)
+
 
 def _render_dashboard_html() -> str:
     return """<!doctype html>
@@ -883,6 +954,165 @@ def _render_dashboard_html() -> str:
       gap: 16px;
       position: relative;
       z-index: 2;
+    }
+    .preview-stage {
+      display: grid;
+      justify-items: center;
+      gap: 12px;
+    }
+    .preview-panel {
+      width: min(100%, 760px);
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 8px;
+    }
+    .preview-panel-head,
+    .client-panel-head {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-width: 0;
+    }
+    .preview-meta {
+      color: #9cb6d4;
+      font-family: "LED Dot-Matrix", "Dot Matrix", "DotGothic16", "Courier New", monospace;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .preview-wrap {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: min(100%, 584px);
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid rgba(80, 170, 255, 0.46);
+      border-radius: 6px;
+      background: #020617;
+      box-shadow: inset 0 0 18px rgba(0, 229, 255, 0.14), 0 0 16px rgba(0, 229, 255, 0.12);
+    }
+    .preview-canvas {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      background: #020617;
+      image-rendering: pixelated;
+    }
+    .preview-msg {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      color: #c8e8ff;
+      font-family: "LED Dot-Matrix", "Dot Matrix", "DotGothic16", "Courier New", monospace;
+      font-size: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      text-shadow: 0 0 10px rgba(100, 160, 255, 0.70);
+      background: rgba(2, 6, 23, 0.38);
+      pointer-events: none;
+    }
+    .client-table-panel {
+      width: min(100%, 720px);
+      padding: 12px;
+      border-radius: 8px;
+    }
+    .client-table-count {
+      color: #c8e8ff;
+      font-family: "LED Dot-Matrix", "Dot Matrix", "DotGothic16", "Courier New", monospace;
+      font-size: 14px;
+    }
+    .preview-stop-btn {
+      border: 1px solid rgba(255, 100, 100, 0.42);
+      border-radius: 5px;
+      background: rgba(60, 10, 18, 0.72);
+      color: #ffd4d4;
+      font: inherit;
+      font-size: 11px;
+      line-height: 1;
+      padding: 5px 8px;
+      cursor: pointer;
+    }
+    .preview-stop-btn:hover {
+      background: rgba(120, 20, 32, 0.82);
+    }
+    .client-table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid rgba(80, 170, 255, 0.22);
+      border-radius: 6px;
+      background: rgba(2, 6, 23, 0.62);
+    }
+    .client-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      color: #d8efff;
+    }
+    .client-table th,
+    .client-table td {
+      padding: 7px 10px;
+      white-space: nowrap;
+      border-top: 1px solid rgba(100, 180, 255, 0.13);
+    }
+    .client-table thead th {
+      border-top: 0;
+      color: #90dfff;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      text-align: left;
+    }
+    .client-table-sort-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      width: 100%;
+      border: 0;
+      padding: 0;
+      color: inherit;
+      background: transparent;
+      font: inherit;
+      text-transform: inherit;
+      letter-spacing: inherit;
+      cursor: pointer;
+    }
+    .client-table th.num .client-table-sort-btn {
+      justify-content: flex-end;
+    }
+    .client-table-sort-indicator {
+      min-width: 0.8em;
+      color: #00e5ff;
+      text-align: center;
+    }
+    .client-table th.num,
+    .client-table td.num {
+      text-align: right;
+    }
+    .client-table tbody tr.preview-capable {
+      cursor: pointer;
+    }
+    .client-table tbody tr:hover {
+      background: rgba(100, 180, 255, 0.08);
+    }
+    .client-table tbody tr.selected {
+      background: linear-gradient(90deg, rgba(0, 200, 255, 0.16), rgba(57, 255, 20, 0.08));
+      box-shadow: inset 3px 0 0 rgba(0, 200, 255, 0.72);
+    }
+    .client-table-empty {
+      padding: 18px 10px;
+      color: #8fa9c9;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     /* ══════════════════════════════════════════════════════════════
      * CARD & PANEL COMPONENTS — Metric cards, gauge cards, borders
@@ -1490,6 +1720,43 @@ def _render_dashboard_html() -> str:
   <video id="bgVideo" autoplay loop muted playsinline src="/api/html/Starfield.mov"></video>
   <div id="bgOverlay"></div>
   <main>
+    <section class="preview-stage">
+      <article class="card preview-panel" style="--card-border:rgba(80,170,255,0.72);--card-glow:rgba(60,150,255,0.30)">
+        <div class="preview-panel-head">
+          <div class="label">PLAY PREVIEW</div>
+          <div class="preview-meta" id="mPreviewMeta">--</div>
+        </div>
+        <div class="preview-wrap" id="gamePreviewWrap">
+          <canvas id="cGamePreview" class="preview-canvas" width="292" height="240"></canvas>
+          <div id="mGamePreviewMsg" class="preview-msg">No Clients</div>
+        </div>
+      </article>
+      <article class="card client-table-panel" style="--card-border:rgba(70,210,255,0.68);--card-glow:rgba(40,150,255,0.24)">
+        <div class="client-panel-head">
+          <div class="label">CONNECTED CLIENTS</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button id="btnPreviewStop" class="preview-stop-btn" type="button" title="Stop preview capture">None</button>
+            <div class="client-table-count" id="mClientTableCount">0</div>
+          </div>
+        </div>
+        <div class="client-table-wrap">
+          <table class="client-table" aria-label="Connected clients">
+            <thead id="tblClientsHead">
+              <tr>
+                <th aria-sort="ascending"><button type="button" class="client-table-sort-btn active" data-sort-key="client_id">Client<span class="client-table-sort-indicator">▲</span></button></th>
+                <th class="num" aria-sort="none"><button type="button" class="client-table-sort-btn" data-sort-key="session_seconds">Session<span class="client-table-sort-indicator"></span></button></th>
+                <th class="num" aria-sort="none"><button type="button" class="client-table-sort-btn" data-sort-key="score">Score<span class="client-table-sort-indicator"></span></button></th>
+                <th class="num" aria-sort="none"><button type="button" class="client-table-sort-btn" data-sort-key="level">Level<span class="client-table-sort-indicator"></span></button></th>
+                <th class="num" aria-sort="none"><button type="button" class="client-table-sort-btn" data-sort-key="fps">FPS<span class="client-table-sort-indicator"></span></button></th>
+              </tr>
+            </thead>
+            <tbody id="tblClientsBody">
+              <tr><td colspan="5" class="client-table-empty">No Clients</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
     <section class="cards">
       <article class="card gauge-card" style="--card-border:rgba(255,60,60,0.66);--card-glow:rgba(255,40,40,0.26)">
         <div class="gauge-head">
@@ -1612,13 +1879,17 @@ def _render_dashboard_html() -> str:
               <option value="1">1</option><option value="3">3</option><option value="5">5</option>
               <option value="7">7</option><option value="9">9</option><option value="11">11</option>
               <option value="13" selected>13</option><option value="15">15</option><option value="17">17</option>
-              <option value="20">20</option><option value="22">22</option><option value="24">24</option>
-              <option value="26">26</option><option value="28">28</option><option value="31">31</option>
-              <option value="33">33</option><option value="36">36</option><option value="40">40</option>
-              <option value="44">44</option><option value="47">47</option><option value="49">49</option>
-              <option value="52">52</option><option value="56">56</option><option value="60">60</option>
-              <option value="63">63</option><option value="65">65</option><option value="73">73</option>
-              <option value="81">81</option>
+              <option value="19">19</option><option value="21">21</option><option value="23">23</option>
+              <option value="25">25</option><option value="27">27</option><option value="29">29</option>
+              <option value="31">31</option><option value="33">33</option><option value="35">35</option>
+              <option value="37">37</option><option value="39">39</option><option value="41">41</option>
+              <option value="43">43</option><option value="45">45</option><option value="47">47</option>
+              <option value="49">49</option><option value="51">51</option><option value="53">53</option>
+              <option value="55">55</option><option value="57">57</option><option value="59">59</option>
+              <option value="61">61</option><option value="63">63</option><option value="65">65</option>
+              <option value="67">67</option><option value="69">69</option><option value="71">71</option>
+              <option value="73">73</option><option value="75">75</option><option value="77">77</option>
+              <option value="79">79</option><option value="99">99</option>
             </select>
           </label>
           <label style="gap:6px;">Advanced <span class="toggle-switch"><input type="checkbox" id="gsAdvanced" checked><span class="slider"></span></span></label>
@@ -1859,6 +2130,22 @@ def _render_dashboard_html() -> str:
       epRate: document.getElementById("mEpRate"),
       agreePanel: document.getElementById("mAgreePanel"),
     };
+    const gamePreviewCanvas = document.getElementById("cGamePreview");
+    const gamePreviewWrap = document.getElementById("gamePreviewWrap");
+    const gamePreviewMsg = document.getElementById("mGamePreviewMsg");
+    const gamePreviewMeta = document.getElementById("mPreviewMeta");
+    const clientTableHead = document.getElementById("tblClientsHead");
+    const clientTableBody = document.getElementById("tblClientsBody");
+    const clientTableCount = document.getElementById("mClientTableCount");
+    const previewStopBtn = document.getElementById("btnPreviewStop");
+    let _previewSeqLoaded = 0;
+    let _previewPumpRunning = false;
+    let _previewHasFrame = false;
+    let _previewPendingClientId = null;
+    let _previewDesiredClientId = null;
+    let _previewClientRequestInFlight = false;
+    let _clientSortKey = "client_id";
+    let _clientSortDir = "asc";
     /* Game-settings controls */
     const gsAdvancedEl = document.getElementById("gsAdvanced");
     const gsLevelEl = document.getElementById("gsLevel");
@@ -1906,12 +2193,24 @@ def _render_dashboard_html() -> str:
         _applyAutoCurriculum(gsAutoCurrEl.checked);
       });
     }
-    const _selectableLevels = [1,3,5,7,9,11,13,15,17,20,22,24,26,28,31,33,36,40,44,47,49,52,56,60,63,65,73,81];
+    const MAX_ROBOTRON_AUTO_START_LEVEL = 81;
+    const MAX_GAME_SETTINGS_LEVEL = 255;
+    function _setGameLevelValue(level) {
+      const lv = Math.max(1, Math.min(MAX_GAME_SETTINGS_LEVEL, Math.floor(Number(level) || 1)));
+      if (!Array.from(gsLevelEl.options).some(opt => parseInt(opt.value, 10) === lv)) {
+        const opt = document.createElement("option");
+        opt.value = String(lv);
+        opt.textContent = String(lv);
+        const before = Array.from(gsLevelEl.options).find(existing => parseInt(existing.value, 10) > lv);
+        gsLevelEl.insertBefore(opt, before || null);
+      }
+      gsLevelEl.value = String(lv);
+      return lv;
+    }
     function _computeAutoLevel(avgLevel) {
-      const target = Math.floor(avgLevel) - 2;
-      let best = _selectableLevels[0];
-      for (const lv of _selectableLevels) { if (lv <= target) best = lv; else break; }
-      return best;
+      const ratio = 0.5;
+      const avg = Number.isFinite(Number(avgLevel)) ? Number(avgLevel) : 1;
+      return Math.max(1, Math.min(MAX_ROBOTRON_AUTO_START_LEVEL, Math.floor(avg * ratio)));
     }
     function _applyAutoCurriculum(on) {
       gsAdvancedEl.disabled = on || !_gsAdmin;
@@ -1923,7 +2222,7 @@ def _render_dashboard_html() -> str:
         }
         if (_lastNow) {
           const lv = _computeAutoLevel(_lastNow.average_level || 1);
-          gsLevelEl.value = String(lv);
+          _setGameLevelValue(lv);
           _postGameSettings({ start_level_min: lv });
         }
       }
@@ -2203,6 +2502,313 @@ def _render_dashboard_html() -> str:
     function fmtFloat(v, d = 2) {
       if (v === null || v === undefined || Number.isNaN(v)) return "0";
       return Number(v).toFixed(d);
+    }
+
+    function fmtSession(seconds) {
+      const total = Math.max(0, Math.floor(Number(seconds) || 0));
+      const h = Math.floor(total / 3600);
+      const m = Math.floor((total % 3600) / 60);
+      const s = total % 60;
+      if (h > 0) return h + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+      return m + ":" + String(s).padStart(2, "0");
+    }
+
+    function setPreviewMessage(text) {
+      if (!gamePreviewMsg) return;
+      if (text) {
+        gamePreviewMsg.textContent = text;
+        gamePreviewMsg.style.display = "flex";
+      } else {
+        gamePreviewMsg.style.display = "none";
+      }
+    }
+
+    function clearPreviewCanvas() {
+      if (!gamePreviewCanvas) return;
+      const ctx = gamePreviewCanvas.getContext("2d");
+      if (!ctx) return;
+      ctx.fillStyle = "#020617";
+      ctx.fillRect(0, 0, gamePreviewCanvas.width, gamePreviewCanvas.height);
+    }
+
+    function normalizeClientRows(rows) {
+      if (!Array.isArray(rows)) return [];
+      return rows.map((row) => {
+        const clientId = Number(row && row.client_id);
+        if (!Number.isFinite(clientId) || clientId < 0) return null;
+        const slotRaw = Number(row && row.client_slot);
+        const sessionRaw = Number(row && row.session_seconds);
+        return {
+          client_id: Math.trunc(clientId),
+          client_slot: Number.isFinite(slotRaw) && slotRaw >= 0 ? Math.trunc(slotRaw) : Math.trunc(clientId),
+          session_seconds: Math.max(0, Number.isFinite(sessionRaw) ? sessionRaw : Number(row && row.duration_seconds) || 0),
+          score: Math.max(0, Math.trunc(Number(row && row.score) || 0)),
+          level: Math.max(0, Math.trunc(Number(row && row.level) || 0)),
+          fps: Math.max(0, Number(row && row.fps) || 0),
+          preview_capable: !!(row && row.preview_capable),
+          selected_preview: !!(row && row.selected_preview),
+        };
+      }).filter(Boolean);
+    }
+
+    function sortClientRows(rows) {
+      const key = String(_clientSortKey || "client_id");
+      const dir = _clientSortDir === "desc" ? -1 : 1;
+      return rows.slice().sort((a, b) => {
+        const av = Number(a && a[key]);
+        const bv = Number(b && b[key]);
+        if (Number.isFinite(av) && Number.isFinite(bv) && av !== bv) {
+          return (av - bv) * dir;
+        }
+        return (a.client_slot - b.client_slot) || (a.client_id - b.client_id);
+      });
+    }
+
+    function updateClientSortIndicators() {
+      if (!clientTableHead) return;
+      const buttons = clientTableHead.querySelectorAll("button[data-sort-key]");
+      for (const button of buttons) {
+        const active = String(button.dataset.sortKey || "") === _clientSortKey;
+        button.classList.toggle("active", active);
+        const indicator = button.querySelector(".client-table-sort-indicator");
+        if (indicator) indicator.textContent = active ? (_clientSortDir === "desc" ? "▼" : "▲") : "";
+        const th = button.closest("th");
+        if (th) th.setAttribute("aria-sort", active ? (_clientSortDir === "desc" ? "descending" : "ascending") : "none");
+      }
+    }
+
+    function effectiveSelectedPreviewId(rows, selectedId) {
+      if (_previewPendingClientId !== null) return Math.trunc(Number(_previewPendingClientId));
+      const snapshotId = Number(selectedId);
+      if (Number.isFinite(snapshotId)) return Math.trunc(snapshotId);
+      const flagged = rows.find((row) => row.selected_preview);
+      return flagged ? flagged.client_id : -1;
+    }
+
+    function normalizePreviewClientId(clientId) {
+      const targetId = Number(clientId);
+      if (!Number.isFinite(targetId)) return -1;
+      const normalizedId = Math.trunc(targetId);
+      return normalizedId >= 0 ? normalizedId : -1;
+    }
+
+    function renderClientTable(rows, selectedId) {
+      const normalized = normalizeClientRows(rows);
+      const sorted = sortClientRows(normalized);
+      const effectiveSelected = effectiveSelectedPreviewId(normalized, selectedId);
+      updateClientSortIndicators();
+      if (clientTableCount) clientTableCount.textContent = fmtInt(normalized.length);
+      if (!clientTableBody) return;
+      if (!normalized.length) {
+        clientTableBody.innerHTML = '<tr><td colspan="5" class="client-table-empty">No Clients</td></tr>';
+        return;
+      }
+      const frag = document.createDocumentFragment();
+      for (const row of sorted) {
+        const tr = document.createElement("tr");
+        tr.dataset.clientId = String(row.client_id);
+        tr.classList.toggle("selected", row.client_id === effectiveSelected);
+        tr.classList.toggle("preview-capable", row.preview_capable);
+        tr.title = row.preview_capable ? "Select preview client" : "Preview unavailable";
+        const activeMark = row.client_id === effectiveSelected ? "*" : "";
+        const cells = [
+          { value: `${fmtInt(row.client_id)}${activeMark}`, className: "" },
+          { value: fmtSession(row.session_seconds), className: "num" },
+          { value: fmtInt(row.score), className: "num" },
+          { value: fmtInt(row.level), className: "num" },
+          { value: fmtFloat(row.fps, 1), className: "num" },
+        ];
+        for (const cell of cells) {
+          const td = document.createElement("td");
+          td.textContent = cell.value;
+          td.className = cell.className;
+          tr.appendChild(td);
+        }
+        if (row.preview_capable) {
+          tr.addEventListener("click", () => {
+            requestPreviewClientSelection(row.client_id);
+          });
+        }
+        frag.appendChild(tr);
+      }
+      clientTableBody.replaceChildren(frag);
+    }
+
+    async function postPreviewClientSelection(clientId) {
+      const normalizedId = normalizePreviewClientId(clientId);
+      const res = await fetch("/api/preview_settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ client_id: normalizedId }),
+      });
+      if (!res.ok) throw new Error("bad preview response");
+      const payload = await res.json();
+      if (payload && Number.isFinite(Number(payload.client_id))) {
+        return normalizePreviewClientId(payload.client_id);
+      }
+      return normalizedId;
+    }
+
+    async function flushPreviewClientSelection() {
+      if (_previewClientRequestInFlight) return;
+      _previewClientRequestInFlight = true;
+      try {
+        while (_previewDesiredClientId !== null) {
+          const requestId = _previewDesiredClientId;
+          _previewDesiredClientId = null;
+          try {
+            const selectedId = await postPreviewClientSelection(requestId);
+            if (_previewDesiredClientId === null) {
+              _previewPendingClientId = selectedId;
+            }
+          } catch (err) {
+            if (_previewDesiredClientId === null) {
+              _previewPendingClientId = null;
+            }
+          }
+        }
+      } finally {
+        _previewClientRequestInFlight = false;
+      }
+    }
+
+    function requestPreviewClientSelection(clientId) {
+      const normalizedId = normalizePreviewClientId(clientId);
+      _previewSeqLoaded = 0;
+      _previewHasFrame = false;
+      _previewDesiredClientId = normalizedId;
+      _previewPendingClientId = normalizedId;
+      clearPreviewCanvas();
+      setPreviewMessage(normalizedId < 0 ? "Preview Stopped" : "Switching");
+      flushPreviewClientSelection();
+    }
+
+    function syncPreviewPending(now) {
+      const selectedId = Number(now && now.preview_selected_client_id);
+      if (_previewPendingClientId !== null && Number.isFinite(selectedId) && Math.trunc(selectedId) === Math.trunc(_previewPendingClientId)) {
+        if (_previewDesiredClientId === null || Math.trunc(Number(_previewDesiredClientId)) === Math.trunc(_previewPendingClientId)) {
+          _previewPendingClientId = null;
+        }
+      }
+      if (_previewPendingClientId !== null && Math.trunc(Number(_previewPendingClientId)) < 0 && Number.isFinite(selectedId) && selectedId < 0) {
+        if (_previewDesiredClientId === null || Math.trunc(Number(_previewDesiredClientId)) < 0) {
+          _previewPendingClientId = null;
+        }
+      }
+    }
+
+    function updatePreviewMeta(now) {
+      if (!gamePreviewMeta) return;
+      const rows = Array.isArray(now && now.client_rows) ? now.client_rows : [];
+      const cid = Number(now && now.game_preview_client_id);
+      const selected = Number(now && now.preview_selected_client_id);
+      const w = Number(now && now.game_preview_width) || 0;
+      const h = Number(now && now.game_preview_height) || 0;
+      const fps = Number(now && now.game_preview_fps) || 0;
+      const enc = Number(now && now.game_preview_encoded_bytes) || 0;
+      const raw = Number(now && now.game_preview_raw_bytes) || 0;
+      const srcFmt = String((now && now.game_preview_source_format) || "");
+      if (Number.isFinite(selected) && selected < 0) {
+        gamePreviewMeta.textContent = "stopped";
+        if (!_previewHasFrame || _previewPendingClientId !== null) setPreviewMessage("Preview Stopped");
+      } else if (Number.isFinite(cid) && cid >= 0 && w > 0 && h > 0) {
+        const kb = enc > 0 ? Math.round(enc / 1024) : Math.round(raw / 1024);
+        gamePreviewMeta.textContent = `c${cid} ${w}x${h} ${fmtFloat(fps, 0)}fps ${srcFmt || "raw"} ${kb}k`;
+        if (_previewHasFrame) setPreviewMessage("");
+      } else {
+        gamePreviewMeta.textContent = "waiting";
+        if (!rows.length) setPreviewMessage("No Clients");
+        else if (!_previewHasFrame && _previewPendingClientId === null) setPreviewMessage("Waiting");
+      }
+    }
+
+    function decodePreviewFrame(buffer) {
+      if (!gamePreviewCanvas || !(buffer instanceof ArrayBuffer) || buffer.byteLength < 25) return false;
+      const view = new DataView(buffer);
+      if (
+        view.getUint8(0) !== 0x52 ||
+        view.getUint8(1) !== 0x50 ||
+        view.getUint8(2) !== 0x56 ||
+        view.getUint8(3) !== 0x31
+      ) return false;
+      const seq = view.getUint32(4, false);
+      const width = view.getUint16(12, false);
+      const height = view.getUint16(14, false);
+      const fmt = view.getUint8(16);
+      const pixelOffset = 25;
+      const pixelBytes = width * height * 2;
+      if (fmt !== 1 || width <= 0 || height <= 0 || buffer.byteLength !== pixelOffset + pixelBytes) return false;
+      const src = new Uint8Array(buffer, pixelOffset, pixelBytes);
+      if (gamePreviewCanvas.width !== width || gamePreviewCanvas.height !== height) {
+        gamePreviewCanvas.width = width;
+        gamePreviewCanvas.height = height;
+        if (gamePreviewWrap) gamePreviewWrap.style.width = (width * 2) + "px";
+      }
+      const ctx = gamePreviewCanvas.getContext("2d");
+      if (!ctx) return false;
+      const img = ctx.createImageData(width, height);
+      const dst = img.data;
+      let si = 0;
+      for (let i = 0, di = 0; i < width * height; i += 1, di += 4) {
+        const v = (src[si] << 8) | src[si + 1];
+        si += 2;
+        const r = (v >> 11) & 0x1F;
+        const g = (v >> 5) & 0x3F;
+        const b = v & 0x1F;
+        dst[di] = (r << 3) | (r >> 2);
+        dst[di + 1] = (g << 2) | (g >> 4);
+        dst[di + 2] = (b << 3) | (b >> 2);
+        dst[di + 3] = 255;
+      }
+      ctx.putImageData(img, 0, 0);
+      _previewSeqLoaded = seq;
+      _previewHasFrame = true;
+      setPreviewMessage("");
+      return true;
+    }
+
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    async function previewPumpLoop() {
+      if (_previewPumpRunning) return;
+      _previewPumpRunning = true;
+      while (true) {
+        try {
+          const res = await fetch(`/api/game_preview?cid=${encodeURIComponent(CLIENT_ID)}&since=${encodeURIComponent(_previewSeqLoaded)}&wait=1&timeout=1.0&t=${Date.now()}`, { cache: "no-store" });
+          if (res.status === 204) {
+            await sleep(16);
+            continue;
+          }
+          if (!res.ok) throw new Error("bad preview response");
+          const buffer = await res.arrayBuffer();
+          decodePreviewFrame(buffer);
+        } catch (_) {
+          await sleep(250);
+        }
+      }
+    }
+
+    if (previewStopBtn) {
+      previewStopBtn.addEventListener("click", () => requestPreviewClientSelection(-1));
+    }
+    if (clientTableHead) {
+      clientTableHead.addEventListener("click", (ev) => {
+        const button = ev.target && ev.target.closest ? ev.target.closest("button[data-sort-key]") : null;
+        if (!button) return;
+        const nextKey = String(button.dataset.sortKey || "client_id");
+        if (_clientSortKey === nextKey) {
+          _clientSortDir = _clientSortDir === "desc" ? "asc" : "desc";
+        } else {
+          _clientSortKey = nextKey;
+          _clientSortDir = "asc";
+        }
+        updateClientSortIndicators();
+        if (_lastNow) {
+          renderClientTable(_lastNow.client_rows || [], _lastNow.preview_selected_client_id);
+        }
+      });
     }
 
     function fmtMiB(v) {
@@ -4020,6 +4626,9 @@ def _render_dashboard_html() -> str:
       _lastNow = now;
       cards.clients.textContent = fmtInt(now.client_count);
       cards.web.textContent = fmtInt(now.web_client_count);
+      syncPreviewPending(now);
+      renderClientTable(now.client_rows || [], now.preview_selected_client_id);
+      updatePreviewMeta(now);
       cards.level.textContent = fmtFloat(now.average_level, 2);
       cards.avgGameScore.textContent = fmtInt(now.average_game_score);
       cards.avgGameLevel.textContent = fmtFloat(now.average_level, 1);
@@ -4104,13 +4713,13 @@ def _render_dashboard_html() -> str:
           _applyAutoCurriculum(gs.auto_curriculum);
         }
         if (gsAdvancedEl.checked !== gs.start_advanced) gsAdvancedEl.checked = gs.start_advanced;
-        if (parseInt(gsLevelEl.value, 10) !== gs.start_level_min) gsLevelEl.value = String(gs.start_level_min);
+        if (parseInt(gsLevelEl.value, 10) !== gs.start_level_min) _setGameLevelValue(gs.start_level_min);
       }
       // ── Auto-curriculum: continuously recompute level each tick ──
       if (gsAutoCurrEl.checked && now.average_level != null) {
         const lv = _computeAutoLevel(now.average_level);
         if (parseInt(gsLevelEl.value, 10) !== lv) {
-          gsLevelEl.value = String(lv);
+          _setGameLevelValue(lv);
           _postGameSettings({ start_level_min: lv });
         }
       }
@@ -4246,6 +4855,7 @@ def _render_dashboard_html() -> str:
     loadAudioPlaylist().catch(() => {});
 
     fetchHistory().then(() => fetchNow()).catch(() => {});
+    previewPumpLoop().catch(() => {});
     setInterval(fetchNow, DASH_REFRESH_MS);
     setInterval(heartbeat, 1000);
     window.addEventListener("resize", () => {
@@ -4361,7 +4971,7 @@ def _make_handler(state: _DashboardState):
             path = parsed.path
             query = parse_qs(parsed.query)
             client_id = (query.get("cid") or [None])[0]
-            if path in ("/api/ping", "/api/now", "/api/history"):
+            if path in ("/api/ping", "/api/now", "/api/history", "/api/game_preview"):
                 state.touch_web_client(client_id)
             if path == "/":
                 self._send(page, "text/html; charset=utf-8")
@@ -4376,6 +4986,27 @@ def _make_handler(state: _DashboardState):
             if path == "/api/history":
                 body = json.dumps(state.payload()).encode("utf-8")
                 self._send(body, "application/json")
+                return
+            if path == "/api/game_preview":
+                since_seq = None
+                wait_timeout_s = 0.0
+                try:
+                    if "since" in query:
+                        since_seq = int((query.get("since") or [0])[0])
+                except Exception:
+                    since_seq = None
+                try:
+                    wait_raw = (query.get("wait") or ["0"])[0]
+                    if str(wait_raw).strip().lower() in {"1", "true", "yes", "on"}:
+                        t_raw = (query.get("timeout") or ["1.0"])[0]
+                        wait_timeout_s = max(0.0, min(5.0, float(t_raw)))
+                except Exception:
+                    wait_timeout_s = 0.0
+                body = state.game_preview_body(since_seq=since_seq, wait_timeout_s=wait_timeout_s)
+                if body is None:
+                    self._send(b"", "application/octet-stream", status=204)
+                else:
+                    self._send(body, "application/octet-stream")
                 return
             if path == "/api/audio_playlist":
                 tracks = _list_audio_files()
@@ -4437,6 +5068,37 @@ def _make_handler(state: _DashboardState):
                         game_settings.auto_curriculum = bool(data["auto_curriculum"])
                     game_settings.save()
                     body = json.dumps(game_settings.snapshot()).encode("utf-8")
+                    self._send(body, "application/json")
+                except Exception:
+                    self._send(b'{"error":"bad request"}', "application/json", status=400)
+                return
+            if path == "/api/preview_settings":
+                try:
+                    length = int(self.headers.get("Content-Length", 0))
+                    raw = self.rfile.read(length) if length > 0 else b"{}"
+                    data = json.loads(raw)
+                    updates = {}
+                    if "enabled" in data:
+                        enabled = bool(data["enabled"])
+                        with state.metrics.lock:
+                            state.metrics.preview_capture_enabled = enabled
+                        updates["enabled"] = enabled
+                    if "client_id" in data:
+                        preview_client_id = data.get("client_id")
+                        if preview_client_id in ("", None):
+                            target_cid = None
+                        else:
+                            target_cid = int(preview_client_id)
+                            if target_cid < 0:
+                                target_cid = None
+                        srv = getattr(state.metrics, "global_server", None)
+                        if srv is None or not hasattr(srv, "set_preview_client"):
+                            raise RuntimeError("preview routing server unavailable")
+                        ok, selected_cid = srv.set_preview_client(target_cid)
+                        if not ok:
+                            raise ValueError("invalid preview client")
+                        updates["client_id"] = -1 if selected_cid is None else int(selected_cid)
+                    body = json.dumps({"ok": True, **updates}).encode("utf-8")
                     self._send(body, "application/json")
                 except Exception:
                     self._send(b'{"error":"bad request"}', "application/json", status=400)

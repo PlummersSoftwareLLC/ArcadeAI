@@ -46,19 +46,27 @@ local startlevtbl = {
     35, 39, 43, 46, 48, 51, 55, 59, 62, 64, 72, 80
 }
 
---- Find the startlevtbl index whose level is closest to (but not exceeding)
---- the desired 1-based level.  Returns 0-based index.
-local function level_to_select_index(desired_level_1based)
-    local target = math.max(0, desired_level_1based - 1)  -- convert to 0-based
-    local best_idx = 0
-    for idx = 0, #startlevtbl do
-        if startlevtbl[idx] <= target then
-            best_idx = idx
-        else
-            break
-        end
+local START_LEVEL_MAX = 81
+local STARTLEVTBL_ROM_ADDR = 0x91FE
+local CUSTOM_START_INDEX = #startlevtbl
+local CUSTOM_START_ROM_ADDR = STARTLEVTBL_ROM_ADDR + CUSTOM_START_INDEX
+local CUSTOM_START_DEFAULT_LEVEL0 = startlevtbl[CUSTOM_START_INDEX]
+
+local function clamp_start_level_1based(level)
+    return math.max(1, math.min(START_LEVEL_MAX, math.floor(level or 1)))
+end
+
+local function apply_start_level_table_override(memory)
+    if START_ADVANCED or START_LEVEL_MIN <= 1 then
+        startlevtbl[CUSTOM_START_INDEX] = CUSTOM_START_DEFAULT_LEVEL0
+        memory:write_direct_u8(CUSTOM_START_ROM_ADDR, CUSTOM_START_DEFAULT_LEVEL0)
+        return 0
     end
-    return best_idx
+
+    local level0 = clamp_start_level_1based(START_LEVEL_MIN) - 1
+    startlevtbl[CUSTOM_START_INDEX] = level0
+    memory:write_direct_u8(CUSTOM_START_ROM_ADDR, level0)
+    return CUSTOM_START_INDEX
 end
 local last_display_update = 0 -- Timestamp of last display update
 local last_connection_attempt_time = 0 -- Timestamp of last connection attempt
@@ -751,8 +759,8 @@ local function determine_final_actions()
                 local max_idx = mem:read_u8(0x0127)
                 mem:write_u8(0x0200, max_idx)  -- scroll cursor to max
             elseif START_LEVEL_MIN > 1 then
-                -- Select a specific level by poking the matching startlevtbl index
-                local desired_idx = level_to_select_index(START_LEVEL_MIN)
+                -- Select the custom start-table entry patched to the exact desired level.
+                local desired_idx = apply_start_level_table_override(mem)
                 mem:write_u8(0x0200, desired_idx)
                 mem:write_u8(0x0127, math.max(desired_idx, mem:read_u8(0x0127)))
             end
@@ -805,12 +813,15 @@ local function apply_overrides(memory)
     memory:write_direct_u8(0xA591, 0xEA) -- NOP Copy Prot
     memory:write_direct_u8(0xA592, 0xEA) -- NOP Copy Prot
 
-    -- NOP out the start level check
+    -- Optional ROM-level patch was used during earlier start-level experiments.
     -- memory:write_direct_u8(0x90CD, 0xEA) -- NOP
     -- memory:write_direct_u8(0x90CE, 0xEA) -- NOP
 
-    if (memory:read_u8(0x0126) < START_LEVEL_MIN) then
-        memory:write_direct_u8(0x0126, START_LEVEL_MIN) -- NOP out the "Level Select" check
+    apply_start_level_table_override(memory)
+
+    local start_level = clamp_start_level_1based(START_LEVEL_MIN)
+    if (memory:read_u8(0x0126) < start_level) then
+        memory:write_direct_u8(0x0126, start_level) -- Unlock at least the requested starting level.
     end
 end
 

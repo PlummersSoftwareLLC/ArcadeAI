@@ -1407,12 +1407,31 @@ def _render_dashboard_html() -> str:
         _applyAutoCurriculum(gsAutoCurrEl.checked);
       });
     }
-    const _selectableLevels = [1,3,5,7,9,11,13,15,17,20,22,24,26,28,31,33,36,40,44,47,49,52,56,60,63,65,73,81];
+    function _setLevelControlValue(level) {
+      const value = String(level);
+      let option = Array.from(gsLevelEl.options).find(opt => opt.value === value);
+      let autoOption = gsLevelEl.querySelector('option[data-auto-level="1"]');
+      if (!option) {
+        if (!autoOption) {
+          autoOption = document.createElement("option");
+          autoOption.dataset.autoLevel = "1";
+          gsLevelEl.appendChild(autoOption);
+        }
+        autoOption.value = value;
+        autoOption.textContent = value;
+      } else if (autoOption && autoOption.value !== value) {
+        autoOption.remove();
+      }
+      gsLevelEl.value = value;
+    }
+    function _getLevelControlValue() {
+      const level = parseInt(gsLevelEl.value, 10);
+      return Number.isFinite(level) ? level : null;
+    }
     function _computeAutoLevel(avgLevel) {
-      const target = Math.floor(avgLevel) - 2;
-      let best = _selectableLevels[0];
-      for (const lv of _selectableLevels) { if (lv <= target) best = lv; else break; }
-      return best;
+      const ratio = 0.5;
+      const avg = Number.isFinite(avgLevel) ? avgLevel : 1;
+      return Math.max(1, Math.min(81, Math.floor(avg * ratio)));
     }
     function _applyAutoCurriculum(on) {
       gsAdvancedEl.disabled = on || !_gsAdmin;
@@ -1424,7 +1443,7 @@ def _render_dashboard_html() -> str:
         }
         if (_lastNow) {
           const lv = _computeAutoLevel(_lastNow.average_level || 1);
-          gsLevelEl.value = String(lv);
+          _setLevelControlValue(lv);
           _postGameSettings({ start_level_min: lv });
         }
       }
@@ -3426,13 +3445,13 @@ def _render_dashboard_html() -> str:
           _applyAutoCurriculum(gs.auto_curriculum);
         }
         if (gsAdvancedEl.checked !== gs.start_advanced) gsAdvancedEl.checked = gs.start_advanced;
-        if (parseInt(gsLevelEl.value, 10) !== gs.start_level_min) gsLevelEl.value = String(gs.start_level_min);
+        if (_getLevelControlValue() !== gs.start_level_min) _setLevelControlValue(gs.start_level_min);
       }
       // ── Auto-curriculum: continuously recompute level each tick ──
       if (gsAutoCurrEl.checked && now.average_level != null) {
         const lv = _computeAutoLevel(now.average_level);
-        if (parseInt(gsLevelEl.value, 10) !== lv) {
-          gsLevelEl.value = String(lv);
+        if (_getLevelControlValue() !== lv) {
+          _setLevelControlValue(lv);
           _postGameSettings({ start_level_min: lv });
         }
       }

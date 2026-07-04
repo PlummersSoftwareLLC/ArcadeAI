@@ -440,13 +440,12 @@ PREVIEW_FORMAT_RGB565_LZSS = 2
 PREVIEW_FORMAT_RGB565_RLE = 3
 -- Enable preview support; server controls streaming per-client via action source flags.
 PREVIEW_CAPTURE_ENABLED = true
-PREVIEW_FPS = math.max(1, math.floor(env_number("ROBOTRON_PREVIEW_FPS", 30) or 30))
+PREVIEW_FPS = math.max(1, math.floor(env_number("ROBOTRON_PREVIEW_FPS", 60) or 60))
 PREVIEW_MIN_INTERVAL_S = (1.0 / PREVIEW_FPS)
--- Capture near dashboard size at the source; sending full-resolution snapshots
--- through Lua was the dominant cost for the preview client.
-PREVIEW_MAX_WIDTH = math.max(64, math.floor(env_number("ROBOTRON_PREVIEW_MAX_WIDTH", 320) or 320))
-PREVIEW_MAX_HEIGHT = math.max(64, math.floor(env_number("ROBOTRON_PREVIEW_MAX_HEIGHT", 240) or 240))
-PREVIEW_TRY_RLE = env_flag("ROBOTRON_PREVIEW_RLE", false)
+-- A max width/height <= 0 means native snapshot resolution.
+PREVIEW_MAX_WIDTH = math.floor(env_number("ROBOTRON_PREVIEW_MAX_WIDTH", 0) or 0)
+PREVIEW_MAX_HEIGHT = math.floor(env_number("ROBOTRON_PREVIEW_MAX_HEIGHT", 0) or 0)
+PREVIEW_TRY_RLE = env_flag("ROBOTRON_PREVIEW_RLE", true)
 PREVIEW_RLE_MIN_SAVINGS_BYTES = math.max(64, math.floor(env_number("ROBOTRON_PREVIEW_RLE_MIN_SAVINGS", 256) or 256))
 PREVIEW_MAX_BYTES = 2000000
 SOCKET_MAX_PAYLOAD_BYTES = 4194304
@@ -2497,7 +2496,13 @@ local function capture_game_preview()
         if vw ~= preview_source_w or vh ~= preview_source_h or preview_target_w <= 0 or preview_target_h <= 0 then
             preview_source_w = vw
             preview_source_h = vh
-            local scale = math.min(1.0, PREVIEW_MAX_WIDTH / vw, PREVIEW_MAX_HEIGHT / vh)
+            local scale = 1.0
+            if PREVIEW_MAX_WIDTH and PREVIEW_MAX_WIDTH > 0 then
+                scale = math.min(scale, PREVIEW_MAX_WIDTH / vw)
+            end
+            if PREVIEW_MAX_HEIGHT and PREVIEW_MAX_HEIGHT > 0 then
+                scale = math.min(scale, PREVIEW_MAX_HEIGHT / vh)
+            end
             preview_target_w = math.max(1, math.floor(vw * scale + 0.5))
             preview_target_h = math.max(1, math.floor(vh * scale + 0.5))
         end
@@ -2777,7 +2782,7 @@ local function open_socket()
             -- Required 2-byte handshake:
             --   bit0     = preview-capable flag
             --   bits1-15 = launcher slot (stable audio/video identity)
-            local preview_capable = (PREVIEW_CLIENT_FLAG ~= 0) and 1 or 0
+            local preview_capable = PREVIEW_CAPTURE_ENABLED and 1 or 0
             local handshake_u16 = math.max(0, math.min(65535, (CLIENT_SLOT * 2) + preview_capable))
             sock:write(string.pack(">H", handshake_u16))
             current_socket = sock
@@ -3711,9 +3716,13 @@ global_callback_ref = register_frame_callback(frame_callback)
 -- a HUD independent of preview streaming.  The server still decides per-frame
 -- which client should capture/stream preview data via the action source byte.
 if PREVIEW_CLIENT_FLAG == 1 then
+    local preview_size_desc = "native"
+    if PREVIEW_MAX_WIDTH > 0 or PREVIEW_MAX_HEIGHT > 0 then
+        preview_size_desc = tostring(PREVIEW_MAX_WIDTH) .. "x" .. tostring(PREVIEW_MAX_HEIGHT)
+    end
     print(string.format(
-        "[HUD] Preview capture configured: %dfps max=%dx%d rle=%s",
-        PREVIEW_FPS, PREVIEW_MAX_WIDTH, PREVIEW_MAX_HEIGHT, tostring(PREVIEW_TRY_RLE)
+        "[HUD] Preview capture configured: %dfps max=%s rle=%s",
+        PREVIEW_FPS, preview_size_desc, tostring(PREVIEW_TRY_RLE)
     ))
 end
 if register_frame_done_callback(frame_done_callback) ~= nil or emu.register_frame_done ~= nil then
