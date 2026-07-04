@@ -10,9 +10,9 @@ import numpy as np
 import threading
 
 try:
-    from .config import RL_CONFIG
+    from .config import RL_CONFIG, decode_token_types, TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT
 except ImportError:
-    from config import RL_CONFIG
+    from config import RL_CONFIG, decode_token_types, TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT
 
 
 ACTOR_DQN = 0
@@ -459,8 +459,8 @@ class PrioritizedReplayBuffer:
                 threat = np.clip(rows[:, :, 6], 0.0, 1.0)
                 ttc = np.clip(rows[:, :, 8], 0.0, 1.0) if enemy_features > 8 else np.ones_like(dist)
                 dangerous = np.ones_like(present, dtype=bool)
-                if enemy_features > 9:
-                    type_id = np.rint(np.clip(rows[:, :, 9], 0.0, 1.0) * 8.0).astype(np.int32)
+                if enemy_features >= TYPE_ONEHOT_OFFSET + TYPE_CLASS_COUNT:
+                    type_id = decode_token_types(rows)
                     dangerous = type_id != 7
                 cue = np.maximum((1.0 - dist) * threat, (1.0 - dist) * (1.0 - ttc))
                 cue = np.where(present & dangerous, cue, 0.0)

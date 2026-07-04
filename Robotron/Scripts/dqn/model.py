@@ -31,9 +31,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 try:
-    from .config import RL_CONFIG
+    from .config import RL_CONFIG, TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT
 except ImportError:
-    from config import RL_CONFIG
+    from config import RL_CONFIG, TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT
 
 
 # ── Device selection ────────────────────────────────────────────────────────
@@ -212,8 +212,12 @@ class DirectionalObjectAttention(nn.Module):
         dist = object_tokens[..., 3].clamp(0.0, 1.0)
         threat = object_tokens[..., 6].clamp(0.0, 1.0) if F > 6 else torch.zeros(B, N, device=device, dtype=dtype)
         ttc = object_tokens[..., 8].clamp(0.0, 1.0) if F > 8 else torch.ones(B, N, device=device, dtype=dtype)
-        type_norm = object_tokens[..., 9].clamp(0.0, 1.0) if F > 9 else torch.zeros(B, N, device=device, dtype=dtype)
-        type_id = torch.round(type_norm * 8.0).to(torch.long)
+        # Categorical type is a one-hot at cols TYPE_ONEHOT_OFFSET.. (config).
+        if F >= TYPE_ONEHOT_OFFSET + TYPE_CLASS_COUNT:
+            type_oh = object_tokens[..., TYPE_ONEHOT_OFFSET:TYPE_ONEHOT_OFFSET + TYPE_CLASS_COUNT]
+            type_id = type_oh.argmax(dim=-1).to(torch.long)
+        else:
+            type_id = torch.zeros(B, N, device=device, dtype=torch.long)
 
         norm = torch.hypot(dx, dy).clamp_min(1e-6)
         ux = dx / norm

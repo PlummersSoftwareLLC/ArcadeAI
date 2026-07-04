@@ -34,7 +34,8 @@ from typing import Optional
 try:
     from .config import (RL_CONFIG, SERVER_CONFIG, metrics, LATEST_MODEL_PATH,
                          game_settings, slice_model_state, WIRE_PARAMS_COUNT,
-                         TOKEN_GROUP_RANGES)
+                         TOKEN_GROUP_RANGES, decode_token_types,
+                         TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT)
     from .nstep_buffer import NStepReplayBuffer
     from .replay_buffer import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT
     from .model import combine_action, split_joint_action, action_index_to_wire_dir
@@ -49,7 +50,8 @@ try:
 except ImportError:
     from config import (RL_CONFIG, SERVER_CONFIG, metrics, LATEST_MODEL_PATH,
                         game_settings, slice_model_state, WIRE_PARAMS_COUNT,
-                        TOKEN_GROUP_RANGES)
+                        TOKEN_GROUP_RANGES, decode_token_types,
+                        TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT)
     from nstep_buffer import NStepReplayBuffer
     from replay_buffer import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT
     from model import combine_action, split_joint_action, action_index_to_wire_dir
@@ -362,8 +364,8 @@ def _movement_potential(state: np.ndarray | None, alive: bool = True) -> float:
     threat = np.clip(active[:, 6], 0.0, 1.0)
     ttc = np.clip(active[:, 8], 0.0, 1.0) if active.shape[1] > 8 else np.ones_like(dist)
     type_id = np.zeros(active.shape[0], dtype=np.int32)
-    if active.shape[1] > 9:
-        type_id = np.rint(np.clip(active[:, 9], 0.0, 1.0) * 8.0).astype(np.int32)
+    if active.shape[1] >= TYPE_ONEHOT_OFFSET + TYPE_CLASS_COUNT:
+        type_id = decode_token_types(active)
 
     humans = type_id == 7
     if np.any(humans):
@@ -428,8 +430,8 @@ def _transition_interest_score(prev_state: np.ndarray, next_state: np.ndarray,
             threat = np.clip(active[:, 6], 0.0, 1.0)
             ttc = np.clip(active[:, 8], 0.0, 1.0) if active.shape[1] > 8 else np.ones_like(dist)
             type_id = np.zeros(active.shape[0], dtype=np.int32)
-            if active.shape[1] > 9:
-                type_id = np.rint(np.clip(active[:, 9], 0.0, 1.0) * 8.0).astype(np.int32)
+            if active.shape[1] >= TYPE_ONEHOT_OFFSET + TYPE_CLASS_COUNT:
+                type_id = decode_token_types(active)
             dangerous = type_id != 7
             targetable = np.isin(type_id, np.asarray([0, 2, 3, 4, 5, 6, 8], dtype=np.int32))
             projectile = np.isin(type_id, np.asarray([6], dtype=np.int32))
@@ -1548,7 +1550,11 @@ class SocketServer:
     def _calc_avg_game_state(self):
         try:
             with self.client_lock:
-                lvls = [s.get("level_number", 0) for s in self.client_states.values() if s.get("level_number", 0) >= 0]
+                lvls = [
+                    s.get("level_number", 0)
+                    for s in self.client_states.values()
+                    if s.get("level_number", 0) >= 0 and s.get("game_score", 0) > 0
+                ]
                 scores = [s.get("game_score", 0) for s in self.client_states.values()]
                 avg_level = sum(lvls) / len(lvls) if lvls else 0.0
                 avg_score = sum(scores) / len(scores) if scores else 0.0

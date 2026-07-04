@@ -32,7 +32,8 @@ except Exception:                                   # pragma: no cover - non-Win
 
 try:
     from .config import (RL_CONFIG, MODEL_DIR, LATEST_MODEL_PATH,
-                         metrics as config_metrics, RESET_METRICS, IS_INTERACTIVE)
+                         metrics as config_metrics, RESET_METRICS, IS_INTERACTIVE,
+                         decode_token_types, TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT)
     from .model import (device, _cuda_device, RainbowNet,
                         NUM_MOVE, NUM_FIRE, NUM_JOINT,
                         combine_action, split_joint_action)
@@ -40,7 +41,8 @@ try:
     from .replay_buffer import PrioritizedReplayBuffer
 except ImportError:
     from config import (RL_CONFIG, MODEL_DIR, LATEST_MODEL_PATH,
-                        metrics as config_metrics, RESET_METRICS, IS_INTERACTIVE)
+                        metrics as config_metrics, RESET_METRICS, IS_INTERACTIVE,
+                        decode_token_types, TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT)
     from model import (device, _cuda_device, RainbowNet,
                        NUM_MOVE, NUM_FIRE, NUM_JOINT,
                        combine_action, split_joint_action)
@@ -49,7 +51,7 @@ except ImportError:
 
 metrics = config_metrics
 
-ENGINE_VERSION = 16  # Additive object/action attention on full compact state
+ENGINE_VERSION = 17  # Object rows: isotropic dx/dy + rescaled velocity/approach + one-hot type
 
 
 class RainbowAgent:
@@ -233,8 +235,8 @@ class RainbowAgent:
 
             e = enemies[active]
             type_id = np.zeros(e.shape[0], dtype=np.int32)
-            if feats > 9:
-                type_id = np.rint(np.clip(e[:, 9], 0.0, 1.0) * 8.0).astype(np.int32)
+            if feats >= TYPE_ONEHOT_OFFSET + TYPE_CLASS_COUNT:
+                type_id = decode_token_types(e)
             move_mask = type_id != 7  # ignore humans as danger.
             fire_mask = np.isin(type_id, np.asarray([0, 2, 3, 4, 5, 6, 8], dtype=np.int32))
 

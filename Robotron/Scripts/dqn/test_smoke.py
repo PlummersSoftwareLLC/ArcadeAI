@@ -95,6 +95,18 @@ def add_pool_slot(w: np.ndarray, pool_name: str, slot_idx: int, values: list[flo
     raise ValueError(pool_name)
 
 
+def model_row_from_wire(wire_row: list[float]) -> np.ndarray:
+    """Convert a 10-wide wire-style object row into the 18-wide model token row.
+
+    Mirrors the real ``slice_model_state`` path so tests that inject object rows
+    into a model state use the same one-hot type + rescaled kinematics layout.
+    """
+    r = C._state_bag_row(np.asarray(wire_row, dtype=np.float32), C.WIRE_POOL_SLOT_FEATURES)
+    if r is None:
+        return np.zeros(C.ENEMY_TOKEN_FEATURES, dtype=np.float32)
+    return r
+
+
 # ── Unit tests ──────────────────────────────────────────────────────────────
 def test_action_coding():
     print("\n[action coding]")
@@ -111,17 +123,50 @@ def test_action_coding():
     check("wire_dir -1 -> 8", M.wire_dir_to_action_index(-1) == 8)
 
 
+def _expected_model_row(wire_row: list[float]) -> np.ndarray:
+    """Independently reproduce config._state_bag_row for a 10-wide wire row."""
+    dx = C._clip11(wire_row[1] * C._WIRE_DX_TO_ISO)
+    dy = C._clip11(wire_row[2] * C._WIRE_DY_TO_ISO)
+    dist = C._clip01(wire_row[3])
+    vx = C._clip11(wire_row[4] * C._WIRE_VX_TO_VEL)
+    vy = C._clip11(wire_row[5] * C._WIRE_VY_TO_VEL)
+    threat = C._clip01(wire_row[6])
+    ttc = C._clip01(wire_row[8])
+    approach = 0.0
+    if dist > 1e-6:
+        approach = C._clip11(-(((vx * dx) + (vy * dy)) / dist))
+    type_id = int(round(wire_row[9] * (C.TYPE_CLASS_COUNT - 1)))
+    type_id = min(C.TYPE_CLASS_COUNT - 1, max(0, type_id))
+    row = np.zeros(C.ENEMY_TOKEN_FEATURES, dtype=np.float32)
+    row[:9] = [1.0, dx, dy, dist, vx, vy, threat, approach, ttc]
+    row[C.TYPE_ONEHOT_OFFSET + type_id] = 1.0
+    return row
+
+
 def test_slice():
     print("\n[state slice]")
     w = np.zeros(C.WIRE_PARAMS_COUNT, dtype=np.float32)
     w[:C.GLOBAL_FEATURES] = np.arange(C.GLOBAL_FEATURES, dtype=np.float32)
-    add_pool_slot(w, "destructible", 3, [1.0, 0.25, -0.50, 0.20, 0.05, -0.10, 0.80, 0.40, 0.30, 0.25])
-    add_pool_slot(w, "destructible", 0, [1.0, -0.10, 0.10, 0.08, 0.0, 0.0, 0.90, 0.50, 0.20, 0.75])
-    add_pool_slot(w, "hulk", 0, [1.0, 0.50, 0.0, 0.12, 0.0, 0.0, 0.7, 0.0, 1.0, 0.125])
-    add_pool_slot(w, "obstacle", 0, [1.0, -0.75, -0.75, 0.10, 0.0, 0.0, 0.6, 0.0, 1.0, 1.0])
-    add_pool_slot(w, "human", 0, [1.0, 0.75, 0.75, 0.10, 0.0, 0.0, 0.0, 0.0, 1.0, 0.875])
+    # Realistic core kinematics for the rescaled slots (P3/P4).
+    w[7] = 0.02      # player vel_x (wire, playfield-span normalized)
+    w[8] = -0.03     # player vel_y
+    w[11] = 0.5      # nearest enemy dx (wire, X-range normalized)
+    w[12] = -0.4     # nearest enemy dy (wire, Y-range normalized)
+    near_wire = [1.0, -0.10, 0.10, 0.08, 0.0, 0.0, 0.90, 0.50, 0.20, 0.75]
+    far_wire = [1.0, 0.25, -0.50, 0.20, 0.05, -0.10, 0.80, 0.40, 0.30, 0.25]
+    hulk_wire = [1.0, 0.50, 0.0, 0.12, 0.0, 0.0, 0.7, 0.0, 1.0, 0.125]
+    obstacle_wire = [1.0, -0.75, -0.75, 0.10, 0.0, 0.0, 0.6, 0.0, 1.0, 1.0]
+    human_wire = [1.0, 0.75, 0.75, 0.10, 0.0, 0.0, 0.0, 0.0, 1.0, 0.875]
+    add_pool_slot(w, "destructible", 3, far_wire)
+    add_pool_slot(w, "destructible", 0, near_wire)
+    add_pool_slot(w, "hulk", 0, hulk_wire)
+    add_pool_slot(w, "obstacle", 0, obstacle_wire)
+    add_pool_slot(w, "human", 0, human_wire)
     ms = C.slice_model_state(w)
     check("slice length == SINGLE_FRAME_STATE_SIZE", ms.shape[0] == C.SINGLE_FRAME_STATE_SIZE)
+    check("model token row width includes one-hot type",
+          C.ENEMY_TOKEN_FEATURES == C.TYPE_ONEHOT_OFFSET + C.TYPE_CLASS_COUNT)
+    check("wire pool row stays 10-wide", C.WIRE_POOL_SLOT_FEATURES == 10)
     check("MODEL_STATE_SIZE includes frame stack",
           C.MODEL_STATE_SIZE == C.SINGLE_FRAME_STATE_SIZE * C.RL_CONFIG.frame_stack)
     cs = {}
@@ -141,19 +186,40 @@ def test_slice():
     check("core[17] preserved", ms[17] == w[17])
     check("elist[18] preserved", ms[18] == w[18])
     check("elist[39] preserved", ms[39] == w[39])
+    # P4: player velocity recovered + rescaled to the velocity scale.
+    check("core player vel_x rescaled (P4)",
+          np.isclose(ms[7], C._clip11(0.02 * C._WIRE_VX_TO_VEL)), f"ms7={ms[7]}")
+    check("core player vel_y rescaled (P4)",
+          np.isclose(ms[8], C._clip11(-0.03 * C._WIRE_VY_TO_VEL)), f"ms8={ms[8]}")
+    # P3: core nearest-enemy dx/dy made isotropic (diagonal-normalized).
+    check("core nearest_enemy_dx isotropic (P3)",
+          np.isclose(ms[11], C._clip11(0.5 * C._WIRE_DX_TO_ISO)), f"ms11={ms[11]}")
+    check("core nearest_enemy_dy isotropic (P3)",
+          np.isclose(ms[12], C._clip11(-0.4 * C._WIRE_DY_TO_ISO)), f"ms12={ms[12]}")
     check("enemy block starts after globals", C.ENEMY_TOKEN_OFFSET == C.GLOBAL_FEATURES)
     check("enemy block size", ms.shape[0] - C.ENEMY_TOKEN_OFFSET == C.ENEMY_FEATURES)
     enemies = ms[C.ENEMY_TOKEN_OFFSET:C.ENEMY_TOKEN_END].reshape(C.ENEMY_TOKEN_COUNT, C.ENEMY_TOKEN_FEATURES)
-    near = np.asarray([1.0, -0.10, 0.10, 0.08, 0.0, 0.0, 0.90, 0.50, 0.20, 0.75], dtype=np.float32)
-    far = np.asarray([1.0, 0.25, -0.50, 0.20, 0.05, -0.10, 0.80, 0.40, 0.30, 0.25], dtype=np.float32)
+    near = _expected_model_row(near_wire)
+    far = _expected_model_row(far_wire)
     check("destructible rows distance-sort nearest first", np.allclose(enemies[0], near), f"row0={enemies[0]}")
     check("destructible group keeps farther row second", np.allclose(enemies[1], far), f"row1={enemies[1]}")
+    # P1: velocity is amplified far beyond the wire's playfield-span scale.
+    check("velocity rescaled up from wire (P1)",
+          enemies[1, 4] > 5.0 * abs(far_wire[4]) and abs(enemies[1, 4]) <= 1.0, f"vx={enemies[1,4]}")
+    # P5: type is a categorical one-hot, not an ordinal scalar.
     hulk_start = C.TOKEN_GROUP_RANGES["hulk"][0]
     obstacle_start = C.TOKEN_GROUP_RANGES["obstacle"][0]
     human_start = C.TOKEN_GROUP_RANGES["human"][0]
-    check("hulk group starts after destructibles", enemies[hulk_start, 9] == 0.125, f"row={enemies[hulk_start]}")
-    check("obstacle group included in model state", enemies[obstacle_start, 9] == 1.0, f"row={enemies[obstacle_start]}")
-    check("human group included in model state", enemies[human_start, 9] == 0.875, f"row={enemies[human_start]}")
+    check("hulk type one-hot decodes to 1", int(C.decode_token_types(enemies[hulk_start])) == 1,
+          f"row={enemies[hulk_start]}")
+    check("obstacle type one-hot decodes to 8", int(C.decode_token_types(enemies[obstacle_start])) == 8,
+          f"row={enemies[obstacle_start]}")
+    check("human type one-hot decodes to 7", int(C.decode_token_types(enemies[human_start])) == 7,
+          f"row={enemies[human_start]}")
+    check("destructible near type one-hot decodes to 6", int(C.decode_token_types(enemies[0])) == 6,
+          f"row={enemies[0]}")
+    check("one-hot type block sums to 1 for active rows",
+          np.isclose(enemies[human_start, C.TYPE_ONEHOT_OFFSET:].sum(), 1.0))
     check("all four groups contribute active rows",
           int(np.count_nonzero(enemies[:, 0] > 0.5)) == 5)
 
@@ -266,11 +332,9 @@ def test_reward_and_hard_starts():
         s[5] = float(px)
         s[6] = float(py)
         if row is not None:
-            vals = list(row[:C.ENEMY_TOKEN_FEATURES])
-            vals += [0.0] * (C.ENEMY_TOKEN_FEATURES - len(vals))
             lo, _hi = C.TOKEN_GROUP_RANGES[group]
             start = C.ENEMY_TOKEN_OFFSET + lo * C.ENEMY_TOKEN_FEATURES
-            s[start:start + C.ENEMY_TOKEN_FEATURES] = np.asarray(vals, dtype=np.float32)
+            s[start:start + C.ENEMY_TOKEN_FEATURES] = model_row_from_wire(row)
         return s
 
     frame = SS.FrameData(
@@ -368,8 +432,14 @@ def test_score_level_1m_metrics():
     check("Lvl1M averages initial window", np.isclose(m.level_1m_average, 2.0),
           f"avg={m.level_1m_average}")
 
+    m.note_game_score(0, 123456)
+    check("zero-score sample updates Scr1M", np.isclose(m.score_1m_average, 50.0 / 3.0),
+          f"avg={m.score_1m_average}")
+    check("zero-score sample leaves Lvl1M unchanged", np.isclose(m.level_1m_average, 2.0),
+          f"avg={m.level_1m_average}")
+
     m.note_game_score(40, 4)
-    check("Scr1M evicts oldest sample", np.isclose(m.score_1m_average, 30.0),
+    check("Scr1M evicts oldest sample", np.isclose(m.score_1m_average, 70.0 / 3.0),
           f"avg={m.score_1m_average}")
     check("Lvl1M evicts oldest sample", np.isclose(m.level_1m_average, 3.0),
           f"avg={m.level_1m_average}")
@@ -379,7 +449,7 @@ def test_score_level_1m_metrics():
           f"live={m.average_game_score}")
     check("live average level remains separate", np.isclose(m.average_level, 99.0),
           f"live={m.average_level}")
-    check("live averages do not overwrite Scr1M", np.isclose(m.score_1m_average, 30.0),
+    check("live averages do not overwrite Scr1M", np.isclose(m.score_1m_average, 70.0 / 3.0),
           f"avg={m.score_1m_average}")
     check("live averages do not overwrite Lvl1M", np.isclose(m.level_1m_average, 3.0),
           f"avg={m.level_1m_average}")
@@ -387,7 +457,7 @@ def test_score_level_1m_metrics():
     m.note_game_score(50)
     check("score-only update leaves Lvl1M unchanged", np.isclose(m.level_1m_average, 3.0),
           f"avg={m.level_1m_average}")
-    check("score-only update still updates Scr1M", np.isclose(m.score_1m_average, 40.0),
+    check("score-only update still updates Scr1M", np.isclose(m.score_1m_average, 30.0),
           f"avg={m.score_1m_average}")
 
     m.eval_score_1m_window = 100
@@ -411,11 +481,9 @@ def test_transition_interest_policy():
         s[5] = 0.5
         s[6] = 0.5
         if enemy_row is not None:
-            vals = list(enemy_row[:C.ENEMY_TOKEN_FEATURES])
-            vals += [0.0] * (C.ENEMY_TOKEN_FEATURES - len(vals))
             lo, _hi = C.TOKEN_GROUP_RANGES[group]
             start = C.ENEMY_TOKEN_OFFSET + lo * C.ENEMY_TOKEN_FEATURES
-            s[start:start + C.ENEMY_TOKEN_FEATURES] = np.asarray(vals, dtype=np.float32)
+            s[start:start + C.ENEMY_TOKEN_FEATURES] = model_row_from_wire(enemy_row)
         return s
 
     def frame(wave: int, done=False):
@@ -527,9 +595,9 @@ def test_pre_death_reward_penalty():
         for i, danger in enumerate([0.0, 0.0, 0.25, 0.75, 1.0]):
             s = np.zeros(C.MODEL_STATE_SIZE, dtype=np.float32)
             start = C.ENEMY_TOKEN_OFFSET
-            s[start:start + C.ENEMY_TOKEN_FEATURES] = np.asarray([
+            s[start:start + C.ENEMY_TOKEN_FEATURES] = model_row_from_wire([
                 1.0, 0.0, 0.0, 0.20, 0.0, 0.0, float(danger), 0.0, 1.00, 0.0
-            ], dtype=np.float32)
+            ])
             buf.add(s, 0, 0.0, s, False, expert=0)
             idxs.append(i)
         changed = buf.apply_pre_death_penalty(idxs)
@@ -542,9 +610,9 @@ def test_pre_death_reward_penalty():
         expert_buf = PrioritizedReplayBuffer(capacity=4, state_size=C.MODEL_STATE_SIZE)
         s = np.zeros(C.MODEL_STATE_SIZE, dtype=np.float32)
         start = C.ENEMY_TOKEN_OFFSET
-        s[start:start + C.ENEMY_TOKEN_FEATURES] = np.asarray([
+        s[start:start + C.ENEMY_TOKEN_FEATURES] = model_row_from_wire([
             1.0, 0.0, 0.0, 0.20, 0.0, 0.0, 1.0, 0.0, 1.00, 0.0
-        ], dtype=np.float32)
+        ])
         expert_buf.add(s, 0, 0.0, s, False, expert=1)
         skipped = expert_buf.apply_pre_death_penalty([0])
         check("pre-death penalty skips expert by default", skipped == 0 and np.isclose(expert_buf.rewards[0], 0.0),
@@ -808,7 +876,7 @@ def test_model_shapes(agent):
     expected_trunk_in = expected_raw + expected_attn
     check("raw trunk uses full compact state", tuple(raw.shape) == (4, expected_raw),
           f"shape={tuple(raw.shape)} expected={(4, expected_raw)}")
-    check("enemy tokens shape (4,112,10)",
+    check("enemy tokens shape (4,112,18)",
           tuple(enemies.shape) == (4, C.ENEMY_TOKEN_COUNT, C.ENEMY_TOKEN_FEATURES),
           f"shape={tuple(enemies.shape)}")
     trunk_linears = [m for m in agent.online_net.trunk if isinstance(m, torch.nn.Linear)]
@@ -818,7 +886,9 @@ def test_model_shapes(agent):
     check("object attention enabled", getattr(agent.online_net, "use_object_attn", False))
     check("action-context attention enabled", getattr(agent.online_net, "use_action_context", False))
     geo = torch.zeros(1, C.MODEL_STATE_SIZE, device=dev)
-    row = torch.tensor([1.0, 0.40, 0.0, 0.40, 0.0, 0.0, 1.0, 0.0, 0.50, 0.0], device=dev)
+    row = torch.tensor(
+        model_row_from_wire([1.0, 0.40, 0.0, 0.40, 0.0, 0.0, 1.0, 0.0, 0.50, 0.0]),
+        device=dev)
     geo[0, C.ENEMY_TOKEN_OFFSET:C.ENEMY_TOKEN_OFFSET + C.ENEMY_TOKEN_FEATURES] = row
     tokens = agent.online_net._object_tokens(geo)
     move_bias = agent.online_net.move_context_attn._geometry_attention_bias(tokens)

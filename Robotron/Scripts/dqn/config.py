@@ -89,11 +89,29 @@ ENEMY_TOKEN_COUNT = (
     + OBSTACLE_TOKEN_COUNT
     + HUMAN_TOKEN_COUNT
 )
-ENEMY_TOKEN_FEATURES = 10
+
+# ── Object row geometry: wire row vs. model token row ──────────────────────
+# The Lua wire emits a fixed 10-wide row per object slot:
+#   [present, dx, dy, dist, vx, vy, threat, approach, ttc, type_norm]
+# The DQN model token row is DERIVED from that wire row in ``_state_bag_row``
+# and is WIDER: the ordinal ``type_norm`` scalar is expanded into a
+# ``TYPE_CLASS_COUNT`` one-hot (object types are categorical, not ordinal), and
+# dx/dy/vx/vy/approach are re-normalized to isotropic, high-resolution scales
+# (see the physical constants below). The WIRE format is unchanged, so the
+# v3/PPO path and the raw-wire expert remain unaffected.
+WIRE_POOL_SLOT_FEATURES = 10             # what Lua packs per object slot (fixed)
+
+# Unified object type ids (must match main.lua UNIFIED_TYPE_ID): grunt=0, hulk=1,
+# brain=2, tank=3, spawner=4, enforcer=5, projectile=6, human=7, electrode=8.
+TYPE_CLASS_COUNT = 9
+TYPE_ONEHOT_OFFSET = 9                    # one-hot occupies model-row cols 9..17
+
+# Model token row = 9 geometric/kinematic features + one-hot type.
+ENEMY_TOKEN_FEATURES = TYPE_ONEHOT_OFFSET + TYPE_CLASS_COUNT                   # 18
 ENEMY_FEATURES = ENEMY_TOKEN_COUNT * ENEMY_TOKEN_FEATURES
 ENEMY_TOKEN_OFFSET = GLOBAL_FEATURES
 ENEMY_TOKEN_END = ENEMY_TOKEN_OFFSET + ENEMY_FEATURES
-SINGLE_FRAME_STATE_SIZE = ENEMY_TOKEN_END                                     # 1160
+SINGLE_FRAME_STATE_SIZE = ENEMY_TOKEN_END                                     # 2056
 _frame_stack_env = os.getenv("DQN_FRAME_STACK", os.getenv("ROBOTRON_DQN_FRAME_STACK", "1"))
 try:
     FRAME_STACK_COUNT = max(1, int(_frame_stack_env))
@@ -101,12 +119,32 @@ except Exception:
     FRAME_STACK_COUNT = 1
 MODEL_STATE_SIZE = SINGLE_FRAME_STATE_SIZE * FRAME_STACK_COUNT
 
-# Pool layout mirrors main.lua tactical pool emission.
+# ── Physical playfield + normalization constants ───────────────────────────
+# These MUST match main.lua's GAME_XMIN/XMAX/YMIN/YMAX and POS_* constants.
+# Positions are unsigned 8.8 fixed-point (256 raw units == 1 screen pixel).
+POS_X_RANGE = (143 - 7) * 256            # 34816  (playfield width, raw units)
+POS_Y_RANGE = (234 - 24) * 256           # 53760  (playfield height, raw units)
+POS_MAX_DIAG = math.sqrt(POS_X_RANGE * POS_X_RANGE + POS_Y_RANGE * POS_Y_RANGE)  # ~64049
+# Velocity normalization: raw units/frame that map to 1.0. 16 px/frame covers the
+# full range of real enemy/projectile motion (Lua treats >32 px/frame as slot
+# reuse and zeroes it). The wire divides per-frame deltas by the whole playfield
+# span, crushing real speeds to ~2-6% of range; we recover and rescale here.
+VELOCITY_NORM_SCALE = 16.0 * 256         # 4096
+# Wire->model rescale factors. The wire normalizes X by width and Y by height
+# (anisotropic); the model uses an isotropic diagonal for position so that
+# direction and distance agree (sqrt(dx^2+dy^2) == dist), and a realistic
+# per-frame scale for velocity so closing speed fills the usable range.
+_WIRE_DX_TO_ISO = POS_X_RANGE / POS_MAX_DIAG          # ~0.5438
+_WIRE_DY_TO_ISO = POS_Y_RANGE / POS_MAX_DIAG          # ~0.8397
+_WIRE_VX_TO_VEL = POS_X_RANGE / VELOCITY_NORM_SCALE   # ~8.5
+_WIRE_VY_TO_VEL = POS_Y_RANGE / VELOCITY_NORM_SCALE   # ~13.125
+
+# Pool layout mirrors main.lua tactical pool emission (WIRE width, 10-wide rows).
 TACTICAL_POOL_DEFS = (
-    ("destructible", DESTRUCTIBLE_TOKEN_COUNT, ENEMY_TOKEN_FEATURES),
-    ("hulk", HULK_TOKEN_COUNT, ENEMY_TOKEN_FEATURES),
-    ("obstacle", OBSTACLE_TOKEN_COUNT, ENEMY_TOKEN_FEATURES),
-    ("human", HUMAN_TOKEN_COUNT, ENEMY_TOKEN_FEATURES),
+    ("destructible", DESTRUCTIBLE_TOKEN_COUNT, WIRE_POOL_SLOT_FEATURES),
+    ("hulk", HULK_TOKEN_COUNT, WIRE_POOL_SLOT_FEATURES),
+    ("obstacle", OBSTACLE_TOKEN_COUNT, WIRE_POOL_SLOT_FEATURES),
+    ("human", HUMAN_TOKEN_COUNT, WIRE_POOL_SLOT_FEATURES),
 )
 
 TOKEN_GROUP_RANGES = {
@@ -144,29 +182,82 @@ def _clip11(v: float) -> float:
 
 
 def _state_bag_row(slot: np.ndarray, feat_per_slot: int) -> np.ndarray | None:
+    """Convert one 10-wide Lua wire row into an 18-wide model token row.
+
+    Applies the signal-fidelity fixes (all DQN-side; the WIRE is unchanged so
+    v3/PPO and the raw-wire expert are unaffected):
+      * dx/dy re-normalized to the isotropic diagonal so direction and distance
+        agree with ``dist`` (``sqrt(dx^2+dy^2) == dist``) — P3.
+      * vx/vy recovered from the wire's playfield-span normalization and
+        rescaled by a realistic per-frame velocity scale (isotropic) — P1.
+      * approach recomputed as the normalized radial closing speed
+        ``-(v . unit_dir_to_player)`` in consistent units — P2.
+      * the ordinal ``type_norm`` scalar expanded into a categorical one-hot — P5.
+
+    Output row layout (``ENEMY_TOKEN_FEATURES`` wide)::
+
+        [present, dx, dy, dist, vx, vy, threat, approach, ttc, type_onehot(9)]
+    """
     if not np.isfinite(slot).all() or slot[0] <= 0.5:
         return None
-    return np.asarray([
-        1.0,
-        _clip11(slot[1] if feat_per_slot > 1 else 0.0),
-        _clip11(slot[2] if feat_per_slot > 2 else 0.0),
-        _clip01(slot[3] if feat_per_slot > 3 else 1.0),
-        _clip11(slot[4] if feat_per_slot > 4 else 0.0),
-        _clip11(slot[5] if feat_per_slot > 5 else 0.0),
-        _clip01(slot[6] if feat_per_slot > 6 else 0.0),
-        _clip11(slot[7] if feat_per_slot > 7 else 0.0),
-        _clip01(slot[8] if feat_per_slot > 8 else 1.0),
-        _clip01(slot[9] if feat_per_slot > 9 else 0.0),
-    ], dtype=np.float32)
+    dx_w = _clip11(slot[1]) if feat_per_slot > 1 else 0.0
+    dy_w = _clip11(slot[2]) if feat_per_slot > 2 else 0.0
+    dist = _clip01(slot[3] if feat_per_slot > 3 else 1.0)
+    vx_w = _clip11(slot[4]) if feat_per_slot > 4 else 0.0
+    vy_w = _clip11(slot[5]) if feat_per_slot > 5 else 0.0
+    threat = _clip01(slot[6] if feat_per_slot > 6 else 0.0)
+    ttc = _clip01(slot[8] if feat_per_slot > 8 else 1.0)
+    type_norm = _clip01(slot[9] if feat_per_slot > 9 else 0.0)
+
+    # P3: isotropic position (consistent with dist and the 8-way action grid).
+    dx = _clip11(dx_w * _WIRE_DX_TO_ISO)
+    dy = _clip11(dy_w * _WIRE_DY_TO_ISO)
+    # P1: high-resolution isotropic velocity.
+    vx = _clip11(vx_w * _WIRE_VX_TO_VEL)
+    vy = _clip11(vy_w * _WIRE_VY_TO_VEL)
+    # P2: approach = normalized radial closing speed. dir = (dx, dy)/dist is a
+    # true unit vector now that dx/dy are isotropic, so -(v . dir) is the closing
+    # component; positive means the object is moving toward the player.
+    approach = 0.0
+    if dist > 1e-6:
+        approach = _clip11(-(((vx * dx) + (vy * dy)) / dist))
+
+    # P5: categorical one-hot type (drops the false ordinal type ramp).
+    type_id = int(round(type_norm * (TYPE_CLASS_COUNT - 1)))
+    type_id = min(TYPE_CLASS_COUNT - 1, max(0, type_id))
+
+    row = np.zeros(ENEMY_TOKEN_FEATURES, dtype=np.float32)
+    row[0] = 1.0
+    row[1] = dx
+    row[2] = dy
+    row[3] = dist
+    row[4] = vx
+    row[5] = vy
+    row[6] = threat
+    row[7] = approach
+    row[8] = ttc
+    row[TYPE_ONEHOT_OFFSET + type_id] = 1.0
+    return row
+
+
+def decode_token_types(rows: np.ndarray) -> np.ndarray:
+    """Return integer type ids from the one-hot block of model token rows.
+
+    ``rows`` has shape ``(..., ENEMY_TOKEN_FEATURES)``; returns ``(...)`` int32
+    ids. Empty/padding rows (all-zero one-hot) decode to 0 and are expected to be
+    masked out by the caller via the ``present`` flag at column 0.
+    """
+    oh = np.asarray(rows)[..., TYPE_ONEHOT_OFFSET:TYPE_ONEHOT_OFFSET + TYPE_CLASS_COUNT]
+    return np.argmax(oh, axis=-1).astype(np.int32)
 
 
 def _extract_enemy_tokens(arr: np.ndarray) -> np.ndarray:
     """Return the 112-row grouped object state bag from Lua tactical pools.
 
-    Row layout:
-    ``[present, dx, dy, dist, vx, vy, threat, approach, ttc, type_norm]``.
-    Groups are laid out as destructible, hulk, obstacle, human. Active rows are
-    distance-sorted within each group and overflow is ignored.
+    Each 10-wide Lua wire row is expanded/rescaled into an 18-wide model token
+    row by ``_state_bag_row``. Groups are laid out as destructible, hulk,
+    obstacle, human. Active rows are distance-sorted within each group and
+    overflow is ignored.
     """
     out = np.zeros((ENEMY_TOKEN_COUNT, ENEMY_TOKEN_FEATURES), dtype=np.float32)
     pools = arr[TACTICAL_POOL_OFFSET:]
@@ -205,10 +296,28 @@ def slice_model_state(wire) -> np.ndarray:
 
     ``wire`` may be any sequence of length >= TACTICAL_POOL_OFFSET.  Returns a
     contiguous float32 array of length ``SINGLE_FRAME_STATE_SIZE`` laid out as
-    ``[core(18), elist(22), grouped_objects(112×10)]``.
+    ``[core(18), elist(22), grouped_objects(112 x 18)]``.
+
+    The core scalars are rescaled DQN-side to match the object-row fixes:
+      * player velocity (cols 7,8) is recovered from the wire's playfield-span
+        normalization and rescaled by the realistic per-frame velocity scale so
+        it is subtractable from object closing velocity — P4/P6.
+      * nearest enemy/spawner dx/dy (cols 11,12,15,16) are made isotropic so the
+        core direction features agree with the object rows and with distance — P3.
+    The WIRE itself is never mutated (a copy is taken), so the raw-wire expert
+    and v3/PPO paths are unaffected.
     """
     arr = np.asarray(wire, dtype=np.float32)
-    global_state = arr[0:GLOBAL_FEATURES]
+    global_state = np.array(arr[0:GLOBAL_FEATURES], dtype=np.float32, copy=True)
+    if global_state.shape[0] >= 18:
+        # P4/P6: player velocity to realistic isotropic per-frame scale.
+        global_state[7] = _clip11(global_state[7] * _WIRE_VX_TO_VEL)
+        global_state[8] = _clip11(global_state[8] * _WIRE_VY_TO_VEL)
+        # P3: nearest enemy dx/dy and nearest spawner dx/dy to isotropic scale.
+        global_state[11] = _clip11(global_state[11] * _WIRE_DX_TO_ISO)
+        global_state[12] = _clip11(global_state[12] * _WIRE_DY_TO_ISO)
+        global_state[15] = _clip11(global_state[15] * _WIRE_DX_TO_ISO)
+        global_state[16] = _clip11(global_state[16] * _WIRE_DY_TO_ISO)
     enemies = _extract_enemy_tokens(arr)
     return np.concatenate([global_state, enemies]).astype(np.float32, copy=False)
 
@@ -888,7 +997,7 @@ class MetricsData:
             if score > self.peak_game_score:
                 self.peak_game_score = int(score)
             self._push_score_1m_locked(float(score))
-            if level is not None:
+            if level is not None and int(score) > 0:
                 self._push_level_1m_locked(float(level))
 
     def note_game_state_averages(self, average_level: float, average_game_score: float, peak_level: int | None = None):
