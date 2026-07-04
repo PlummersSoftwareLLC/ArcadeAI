@@ -440,7 +440,11 @@ PREVIEW_FORMAT_RGB565_LZSS = 2
 PREVIEW_FORMAT_RGB565_RLE = 3
 -- Enable preview support; server controls streaming per-client via action source flags.
 PREVIEW_CAPTURE_ENABLED = true
-PREVIEW_FPS = math.max(1, math.floor(env_number("ROBOTRON_PREVIEW_FPS", 60) or 60))
+PREVIEW_FPS_MAX = 30
+PREVIEW_FPS = math.max(
+    1,
+    math.min(PREVIEW_FPS_MAX, math.floor(env_number("ROBOTRON_PREVIEW_FPS", PREVIEW_FPS_MAX) or PREVIEW_FPS_MAX))
+)
 PREVIEW_MIN_INTERVAL_S = (1.0 / PREVIEW_FPS)
 -- A max width/height <= 0 means native snapshot resolution.
 PREVIEW_MAX_WIDTH = math.floor(env_number("ROBOTRON_PREVIEW_MAX_WIDTH", 0) or 0)
@@ -2334,6 +2338,13 @@ function clear_pending_preview()
     pending_preview_fmt = PREVIEW_FORMAT_RGB565
 end
 
+function set_preview_stream_enabled(enabled)
+    preview_stream_enabled = PREVIEW_CAPTURE_ENABLED and enabled
+    if not preview_stream_enabled then
+        clear_pending_preview()
+    end
+end
+
 local function lzss_compress_bytes(data)
     local n = #data
     if n <= 0 then
@@ -2767,7 +2778,7 @@ local function close_socket()
         current_socket = nil
     end
     ACTION_RX_BUFFER = ""
-    preview_stream_enabled = false
+    set_preview_stream_enabled(false)
     PREVIEW_HUD_ENABLED = false
 end
 
@@ -3277,11 +3288,7 @@ local function process_frame_via_socket(frame_payload, frame_idx)
 
     local move_dir, fire_dir, source = unpack(read_result)
     local source_u8 = (source or 0) & 0xFF
-    if PREVIEW_CAPTURE_ENABLED then
-        preview_stream_enabled = (source_u8 & 0x40) ~= 0
-    else
-        preview_stream_enabled = false
-    end
+    set_preview_stream_enabled((source_u8 & 0x40) ~= 0)
     -- Source byte bits:
     --   low nibble = action source
     --   0x40 = preview enabled
