@@ -2022,32 +2022,30 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
             obj.vy16 = vy16
             obj.dx = clamp11((obj.rel_dx16 or 0.0) / POS_X_RANGE)
             obj.dy = clamp11((obj.rel_dy16 or 0.0) / POS_Y_RANGE)
-            if compute_full_tactical_features then
-                local dist_world = obj.dist_world or 0.0
-                if dist_world > 1.0 then
-                    obj.dir_x = clamp11((obj.rel_dx16 or 0.0) / dist_world)
-                    obj.dir_y = clamp11((obj.rel_dy16 or 0.0) / dist_world)
-                else
-                    obj.dir_x = 0.0
-                    obj.dir_y = 0.0
-                end
-                local radial = -((obj.vx * obj.dir_x) + (obj.vy * obj.dir_y))
-                obj.approach = clamp11(radial * 2.0)
-                obj.threat = _object_threat_score(obj)
-                local ttc_norm, closest_pass_norm = _predictive_motion_features(
-                    obj.rel_dx16 or 0.0,
-                    obj.rel_dy16 or 0.0,
-                    obj.vx16 or 0.0,
-                    obj.vy16 or 0.0
-                )
-                obj.ttc_norm = ttc_norm
-                obj.closest_pass_norm = closest_pass_norm
+            -- Per-object motion/threat features are CHEAP (a sqrt or two per
+            -- object) and are consumed by the DQN state-bag pools, so they are
+            -- always computed.  SKIP_UNUSED_TACTICAL_FEATURES only gates the
+            -- expensive lane-affordance and 9x9 grid blocks below, which the
+            -- DQN slice discards.
+            local dist_world = obj.dist_world or 0.0
+            if dist_world > 1.0 then
+                obj.dir_x = clamp11((obj.rel_dx16 or 0.0) / dist_world)
+                obj.dir_y = clamp11((obj.rel_dy16 or 0.0) / dist_world)
             else
-                obj.approach = 0.0
-                obj.threat = 0.0
-                obj.ttc_norm = 1.0
-                obj.closest_pass_norm = 1.0
+                obj.dir_x = 0.0
+                obj.dir_y = 0.0
             end
+            local radial = -((obj.vx * obj.dir_x) + (obj.vy * obj.dir_y))
+            obj.approach = clamp11(radial * 2.0)
+            obj.threat = _object_threat_score(obj)
+            local ttc_norm, closest_pass_norm = _predictive_motion_features(
+                obj.rel_dx16 or 0.0,
+                obj.rel_dy16 or 0.0,
+                obj.vx16 or 0.0,
+                obj.vy16 or 0.0
+            )
+            obj.ttc_norm = ttc_norm
+            obj.closest_pass_norm = closest_pass_norm
 
             counts[obj.category] = counts[obj.category] + 1
             current_sample_x[obj.ptr] = obj.rel_dx16 or 0.0
@@ -3182,9 +3180,16 @@ local function serialize_frame(player_alive, score, replay_level, num_lasers, wa
         wave_u8
     )
 
+    -- Pack floats in chunks (one string.pack call per 64 values) instead of
+    -- one call per value; ~10x fewer Lua/C transitions on the hot path.
     local state_payload_parts = {}
-    for i = 1, num_values do
-        state_payload_parts[#state_payload_parts + 1] = string.pack(">f", state_values[i])
+    local chunk = 64
+    local i = 1
+    while i <= num_values do
+        local n = math.min(chunk, num_values - i + 1)
+        state_payload_parts[#state_payload_parts + 1] =
+            string.pack(">" .. string.rep("f", n), unpack(state_values, i, i + n - 1))
+        i = i + n
     end
     local state_payload = table.concat(state_payload_parts)
 

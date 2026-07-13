@@ -154,6 +154,31 @@ class PrioritizedReplayBuffer:
         self._interesting_bank_count = 0
         self._mmap_dir = None
 
+        # ── hall-of-fame partition (permanent retention, 2026-07) ────────
+        # COPIES of the best episodes ever seen — never evicted by time,
+        # replaced only by better episodes (min-heap by game score).  This is
+        # the only store that survives ring turnover, so it is the only thing
+        # that can keep peak-play Bellman targets grounded after the sliding
+        # window has forgotten the peak.  Deliberately NOT cleared by clear().
+        self._hof_enabled = bool(getattr(RL_CONFIG, "hof_enabled", False))
+        self.hof_ep_count = 0
+        self.hof_total = 0
+        if self._hof_enabled:
+            self._hof_max_eps = max(1, int(getattr(RL_CONFIG, "hof_max_episodes", 192)))
+            self._hof_stride = max(64, int(getattr(RL_CONFIG, "hof_episode_stride", 1536)))
+            hof_slots = self._hof_max_eps * self._hof_stride
+            self.hof_states      = np.zeros((hof_slots, self.state_size), dtype=np.float32)
+            self.hof_next_states = np.zeros((hof_slots, self.state_size), dtype=np.float32)
+            self.hof_actions     = np.zeros(hof_slots, dtype=np.int64)
+            self.hof_rewards     = np.zeros(hof_slots, dtype=np.float32)
+            self.hof_dones       = np.zeros(hof_slots, dtype=np.float32)
+            self.hof_horizons    = np.ones(hof_slots, dtype=np.int32)
+            self.hof_is_expert   = np.zeros(hof_slots, dtype=np.uint8)
+            self.hof_actor_kind  = np.zeros(hof_slots, dtype=np.uint8)
+            self.hof_ep_score    = np.full(self._hof_max_eps, -np.inf, dtype=np.float64)
+            self.hof_ep_len      = np.zeros(self._hof_max_eps, dtype=np.int32)
+            self._hof_flat       = np.empty(0, dtype=np.int64)
+
     @staticmethod
     def actor_kind_from_name(actor: str | None, expert: int = 0) -> int:
         if expert:
@@ -302,6 +327,33 @@ class PrioritizedReplayBuffer:
                 self._interesting_bank_count = min(self._interesting_bank_count + 1, len(self._interesting_bank))
             self.size = self.tree.size
 
+    def clear(self):
+        """Wipe all transitions in place (collapse-watchdog recovery).
+
+        Resets the priority tree and bookkeeping so the buffer refills from
+        scratch. The storage arrays need no scrubbing: with tree.size back to
+        zero every slot is overwritten by add() before sampling can reach it,
+        and the recycle-decrement path is guarded by tree.size >= capacity.
+        After a clear, train_step()'s min_replay_to_train gate holds training
+        until enough fresh experience accumulates.
+
+        The hall-of-fame partition is deliberately NOT cleared: it holds the
+        best play ever seen and must survive collapse-recovery wipes — that
+        permanence is its entire reason to exist.
+        """
+        with self.lock:
+            self.tree.tree[:] = 0.0
+            self.tree.data_ptr = 0
+            self.tree.size = 0
+            self.tree.max_priority = 1.0
+            self.size = 0
+            self._n_expert = 0
+            self._n_actor[:] = 0
+            self._n_interesting = 0
+            self._interesting_bank[:] = -1
+            self._interesting_bank_ptr = 0
+            self._interesting_bank_count = 0
+
     def _sample_interesting_indices(self, count: int) -> np.ndarray:
         if count <= 0 or self._n_interesting <= 0 or self._interesting_bank_count <= 0:
             return np.empty(0, dtype=np.int64)
@@ -340,6 +392,94 @@ class PrioritizedReplayBuffer:
         newest = (self.tree.data_ptr - 1) % self.capacity
         return (newest - offsets) % self.capacity
 
+    def hof_admit(self, indices, game_score: int) -> bool:
+        """Copy an episode into the hall of fame if it ranks all-time.
+
+        Admission is ABSOLUTE (static floor + replace-the-minimum once full),
+        never the rolling elite gate — a decline must not be able to certify
+        its own play.  Rows are copied, not referenced, so ring eviction
+        cannot touch them.  When the episode exceeds the stride, the TAIL is
+        kept (the frontier/deepest play).  Returns True when admitted.
+        """
+        if not self._hof_enabled:
+            return False
+        score = float(game_score)
+        if score < float(getattr(RL_CONFIG, "hof_min_game_score", 50_000)):
+            return False
+        with self.lock:
+            idxs = np.asarray(list(indices), dtype=np.int64)
+            idxs = idxs[(idxs >= 0) & (idxs < self.size)]
+            if idxs.size < 32:
+                return False
+            if idxs.size > self._hof_stride:
+                idxs = idxs[-self._hof_stride:]
+            if self.hof_ep_count < self._hof_max_eps:
+                ep = self.hof_ep_count
+                self.hof_ep_count += 1
+            else:
+                ep = int(np.argmin(self.hof_ep_score))
+                if score <= float(self.hof_ep_score[ep]):
+                    return False
+                self.hof_total -= int(self.hof_ep_len[ep])
+            base = ep * self._hof_stride
+            n = int(idxs.size)
+            self.hof_states[base:base + n]      = self.states[idxs]
+            self.hof_next_states[base:base + n] = self.next_states[idxs]
+            self.hof_actions[base:base + n]     = self.actions[idxs]
+            self.hof_rewards[base:base + n]     = self.rewards[idxs]
+            self.hof_dones[base:base + n]       = self.dones[idxs]
+            self.hof_horizons[base:base + n]    = self.horizons[idxs]
+            self.hof_is_expert[base:base + n]   = self.is_expert[idxs]
+            self.hof_actor_kind[base:base + n]  = self.actor_kind[idxs]
+            self.hof_ep_score[ep] = score
+            self.hof_ep_len[ep] = n
+            self.hof_total += n
+            self._hof_rebuild_flat_locked()
+            return True
+
+    def hof_admission_bar(self):
+        """Current hall-of-fame admission bar (dashboard HOF column).
+
+        The score a new episode must beat to enter: the static floor while
+        the bank is filling, then the worst enshrined score once full — the
+        ratchet the operator watches climb.  Returns None when disabled.
+        """
+        if not self._hof_enabled:
+            return None
+        with self.lock:
+            floor = float(getattr(RL_CONFIG, "hof_min_game_score", 0))
+            if self.hof_ep_count >= self._hof_max_eps:
+                return max(floor, float(self.hof_ep_score[:self.hof_ep_count].min()))
+            return floor
+
+    def _hof_stats_locked(self):
+        """Hall-of-fame summary for the buffer stats report (call under lock)."""
+        if not self._hof_enabled:
+            return None
+        n = self.hof_ep_count
+        quota_active = self.hof_total >= int(getattr(RL_CONFIG, "hof_min_transitions", 4096))
+        stats = {
+            "episodes": n,
+            "max_episodes": self._hof_max_eps,
+            "transitions": self.hof_total,
+            "quota_active": quota_active,
+            "fraction": float(getattr(RL_CONFIG, "hof_replay_fraction", 0.0)) if quota_active else 0.0,
+            "admission_floor": float(getattr(RL_CONFIG, "hof_min_game_score", 0)),
+        }
+        if n > 0:
+            scores = self.hof_ep_score[:n]
+            stats.update(best=float(scores.max()), worst=float(scores.min()),
+                         median=float(np.median(scores)))
+            # Once full, the WORST admitted score is the live admission bar.
+            if n >= self._hof_max_eps:
+                stats["admission_floor"] = max(stats["admission_floor"], float(scores.min()))
+        return stats
+
+    def _hof_rebuild_flat_locked(self):
+        parts = [np.arange(ep * self._hof_stride, ep * self._hof_stride + int(self.hof_ep_len[ep]), dtype=np.int64)
+                 for ep in range(self.hof_ep_count) if self.hof_ep_len[ep] > 0]
+        self._hof_flat = np.concatenate(parts) if parts else np.empty(0, dtype=np.int64)
+
     def sample(self, batch_size: int, beta: float = 0.4):
         """Sample a prioritised batch. Returns (states, actions, rewards,
         next_states, dones, horizons, is_expert, actor_kind, indices, weights)."""
@@ -351,17 +491,25 @@ class PrioritizedReplayBuffer:
             if total <= 0:
                 return None
 
+            # Hall-of-fame quota first: a guaranteed slice of permanent
+            # peak-play data in every batch (the anti-forgetting anchor).
+            hof_count = 0
+            if self._hof_enabled and self.hof_total >= int(getattr(RL_CONFIG, "hof_min_transitions", 4096)):
+                hof_frac = max(0.0, min(0.25, float(getattr(RL_CONFIG, "hof_replay_fraction", 0.0))))
+                hof_count = min(batch_size // 4, int(round(batch_size * hof_frac)))
+
             frac = max(0.0, min(0.75, float(getattr(RL_CONFIG, "interesting_replay_fraction", 0.0))))
             recent_frac = max(0.0, min(0.75, float(getattr(RL_CONFIG, "recent_replay_fraction", 0.0))))
             if frac + recent_frac > 0.90:
                 scale = 0.90 / (frac + recent_frac)
                 frac *= scale
                 recent_frac *= scale
-            interesting_count = min(batch_size - 1, int(round(batch_size * frac))) if frac > 0.0 else 0
+            ring_budget = batch_size - hof_count
+            interesting_count = min(ring_budget - 1, int(round(batch_size * frac))) if frac > 0.0 else 0
             interesting_indices = self._sample_interesting_indices(interesting_count)
-            recent_count = min(batch_size - int(interesting_indices.size) - 1, int(round(batch_size * recent_frac))) if recent_frac > 0.0 else 0
+            recent_count = min(ring_budget - int(interesting_indices.size) - 1, int(round(batch_size * recent_frac))) if recent_frac > 0.0 else 0
             recent_indices = self._sample_recent_indices(recent_count)
-            per_count = batch_size - int(interesting_indices.size) - int(recent_indices.size)
+            per_count = ring_budget - int(interesting_indices.size) - int(recent_indices.size)
 
             # Stratified sampling — one uniform draw per segment (vectorised)
             segment = total / max(1, per_count)
@@ -373,13 +521,37 @@ class PrioritizedReplayBuffer:
                 np.clip(per_indices, 0, self.size - 1, out=per_indices)
             indices = np.concatenate([per_indices, interesting_indices, recent_indices])
 
-            # Gather priorities in one vectorised read
-            priorities = np.maximum(1e-10, self.tree.tree[indices + self.tree.capacity])
+            # Importance-sampling weights (2026-07 fix): the PER formula
+            # applies ONLY to the tree-drawn slice.  The recent/interesting
+            # quotas are uniform/score-drawn, not priority-drawn — assigning
+            # them PER weights computed from tree priorities they were never
+            # drawn by tilted over half of each batch's effective gradient
+            # toward the newest minutes of the policy's own play (the
+            # positive-feedback engine of every collapse).  Quota and HOF
+            # samples get weight 1.0.
+            weights = np.ones(int(indices.size) + hof_count, dtype=np.float64)
+            if per_indices.size:
+                pri = np.maximum(1e-10, self.tree.tree[per_indices + self.tree.capacity])
+                w = (self.size * (pri / total)) ** (-beta)
+                weights[:per_indices.size] = w / max(1e-12, float(w.max()))
 
-            # Importance-sampling weights
-            probs = priorities / total
-            weights = (self.size * probs) ** (-beta)
-            weights /= weights.max()
+            if hof_count > 0:
+                hof_slots = self._hof_flat[np.random.randint(0, self._hof_flat.size, hof_count)]
+                # Sentinel indices >= capacity mark HOF rows; update_priorities
+                # filters them out (they have no sum-tree leaves).
+                all_indices = np.concatenate([indices, self.capacity + hof_slots])
+                return (
+                    np.concatenate([self.states[indices],      self.hof_states[hof_slots]]),
+                    np.concatenate([self.actions[indices],     self.hof_actions[hof_slots]]),
+                    np.concatenate([self.rewards[indices],     self.hof_rewards[hof_slots]]),
+                    np.concatenate([self.next_states[indices], self.hof_next_states[hof_slots]]),
+                    np.concatenate([self.dones[indices],       self.hof_dones[hof_slots]]),
+                    np.concatenate([self.horizons[indices],    self.hof_horizons[hof_slots]]),
+                    np.concatenate([self.is_expert[indices],   self.hof_is_expert[hof_slots]]),
+                    np.concatenate([self.actor_kind[indices],  self.hof_actor_kind[hof_slots]]),
+                    all_indices,
+                    weights.astype(np.float32),
+                )
 
             return (
                 self.states[indices],
@@ -397,8 +569,18 @@ class PrioritizedReplayBuffer:
     def update_priorities(self, indices, td_errors):
         """Update priorities based on TD errors (fully vectorised)."""
         with self.lock:
-            new_p = (np.abs(td_errors.astype(np.float64)) + 1e-6) ** self.alpha
-            self.tree.batch_update(np.asarray(indices, dtype=np.int64), new_p)
+            idx = np.asarray(indices, dtype=np.int64)
+            td = np.abs(np.asarray(td_errors).astype(np.float64))
+            # HOF rows carry sentinel indices >= capacity and have no
+            # sum-tree leaves — writing them would corrupt ring priorities.
+            mask = idx < self.capacity
+            if not mask.all():
+                idx = idx[mask]
+                td = td[mask]
+            if idx.size == 0:
+                return
+            new_p = (td + 1e-6) ** self.alpha
+            self.tree.batch_update(idx, new_p)
 
     def boost_priorities(self, indices, factor: float):
         """Multiply existing priorities of the given indices by *factor*.
@@ -554,13 +736,79 @@ class PrioritizedReplayBuffer:
                 "frac_actor_expert": int(self._n_actor[ACTOR_EXPERT]) / max(1, self.size),
                 "interesting": self._n_interesting,
                 "frac_interesting": self._n_interesting / max(1, self.size),
+                "hof": self._hof_stats_locked(),
             }
 
     # ── Persistence ─────────────────────────────────────────────────────
 
+    def _save_hof(self, dirpath: str, verbose: bool = True):
+        """Persist the hall of fame to its own directory.
+
+        Deliberately a SIBLING of the replay directory (…_replay_hof), not
+        inside it: collapse-recovery reverts delete the replay dir, and the
+        hall of fame must survive reverts — that is its entire purpose.
+        """
+        if not self._hof_enabled or self.hof_ep_count == 0:
+            return
+        with self.lock:
+            os.makedirs(dirpath, exist_ok=True)
+            used = self.hof_ep_count * self._hof_stride
+            np.save(os.path.join(dirpath, "hof_states.npy"), self.hof_states[:used])
+            np.save(os.path.join(dirpath, "hof_next_states.npy"), self.hof_next_states[:used])
+            np.save(os.path.join(dirpath, "hof_actions.npy"), self.hof_actions[:used])
+            np.save(os.path.join(dirpath, "hof_rewards.npy"), self.hof_rewards[:used])
+            np.save(os.path.join(dirpath, "hof_dones.npy"), self.hof_dones[:used])
+            np.save(os.path.join(dirpath, "hof_horizons.npy"), self.hof_horizons[:used])
+            np.save(os.path.join(dirpath, "hof_is_expert.npy"), self.hof_is_expert[:used])
+            np.save(os.path.join(dirpath, "hof_actor_kind.npy"), self.hof_actor_kind[:used])
+            np.savez(os.path.join(dirpath, "hof_meta.npz"),
+                     ep_score=self.hof_ep_score[:self.hof_ep_count],
+                     ep_len=self.hof_ep_len[:self.hof_ep_count],
+                     stride=np.int64(self._hof_stride),
+                     state_size=np.int64(self.state_size))
+            if verbose:
+                print(f"  HOF saved: {self.hof_ep_count} episodes / {self.hof_total:,} transitions")
+
+    def _load_hof(self, dirpath: str, verbose: bool = True) -> bool:
+        if not self._hof_enabled or not os.path.isdir(dirpath):
+            return False
+        meta_path = os.path.join(dirpath, "hof_meta.npz")
+        if not os.path.isfile(meta_path):
+            return False
+        meta = np.load(meta_path)
+        if int(meta["stride"]) != self._hof_stride or int(meta["state_size"]) != self.state_size:
+            print("  HOF load skipped: stride/state_size mismatch with config")
+            return False
+        with self.lock:
+            ep_score = np.asarray(meta["ep_score"], dtype=np.float64)
+            ep_len = np.asarray(meta["ep_len"], dtype=np.int32)
+            n_eps = min(int(ep_score.shape[0]), self._hof_max_eps)
+            used = n_eps * self._hof_stride
+            self.hof_states[:used] = np.load(os.path.join(dirpath, "hof_states.npy"))[:used]
+            self.hof_next_states[:used] = np.load(os.path.join(dirpath, "hof_next_states.npy"))[:used]
+            self.hof_actions[:used] = np.load(os.path.join(dirpath, "hof_actions.npy"))[:used]
+            self.hof_rewards[:used] = np.load(os.path.join(dirpath, "hof_rewards.npy"))[:used]
+            self.hof_dones[:used] = np.load(os.path.join(dirpath, "hof_dones.npy"))[:used]
+            self.hof_horizons[:used] = np.load(os.path.join(dirpath, "hof_horizons.npy"))[:used]
+            self.hof_is_expert[:used] = np.load(os.path.join(dirpath, "hof_is_expert.npy"))[:used]
+            self.hof_actor_kind[:used] = np.load(os.path.join(dirpath, "hof_actor_kind.npy"))[:used]
+            self.hof_ep_score[:n_eps] = ep_score[:n_eps]
+            self.hof_ep_len[:n_eps] = ep_len[:n_eps]
+            self.hof_ep_count = n_eps
+            self.hof_total = int(self.hof_ep_len[:n_eps].sum())
+            self._hof_rebuild_flat_locked()
+        if verbose:
+            print(f"  HOF loaded: {self.hof_ep_count} episodes / {self.hof_total:,} transitions "
+                  f"(best {self.hof_ep_score[:self.hof_ep_count].max():,.0f})")
+        return True
+
     def save(self, filepath: str, verbose: bool = True):
         """Save the full replay buffer as individual .npy files in a directory."""
         abs_path = os.path.abspath(filepath)
+        try:
+            self._save_hof(abs_path + "_hof", verbose)
+        except Exception as e:
+            print(f"  [WARN] HOF save failed: {e}")
         if self._mmap_dir is not None and os.path.abspath(self._mmap_dir) == abs_path:
             with self.lock:
                 t0 = time.time()
@@ -956,6 +1204,12 @@ class PrioritizedReplayBuffer:
 
     def load(self, filepath: str, verbose: bool = True) -> bool:
         """Load replay buffer: tries directory format first, then falls back to legacy .npz."""
+        # Hall of fame loads independently of (and before) the main ring:
+        # after a collapse-recovery wipe the ring is gone but the HOF is not.
+        try:
+            self._load_hof(os.path.abspath(filepath) + "_hof", verbose)
+        except Exception as e:
+            print(f"  [WARN] HOF load failed: {e}")
         # Try directory format (new fast path)
         if os.path.isdir(filepath):
             return self._load_directory(filepath, verbose)

@@ -223,6 +223,36 @@ def test_slice():
     check("all four groups contribute active rows",
           int(np.count_nonzero(enemies[:, 0] > 0.5)) == 5)
 
+    # Vectorized extractor parity vs the per-row reference implementation.
+    rng = np.random.default_rng(42)
+    ok_parity = True
+    for _ in range(50):
+        wv = np.zeros(C.WIRE_PARAMS_COUNT, dtype=np.float32)
+        for name, max_slots, feats in C.TACTICAL_POOL_DEFS:
+            for si in rng.choice(max_slots, size=rng.integers(0, max_slots // 2 + 1), replace=False):
+                row = [1.0] + list(rng.uniform(-1.2, 1.2, 2)) + [float(rng.uniform(0, 1.2))] \
+                    + list(rng.uniform(-0.3, 0.3, 2)) + [float(rng.uniform(0, 1.2)),
+                    float(rng.uniform(-1.2, 1.2)), float(rng.uniform(0, 1.2)),
+                    float(rng.choice([0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0]))]
+                add_pool_slot(wv, name, int(si), row)
+        vec = C._extract_enemy_tokens(wv).reshape(C.ENEMY_TOKEN_COUNT, C.ENEMY_TOKEN_FEATURES)
+        # Reference: per-row transform + stable per-group distance sort.
+        ref = np.zeros_like(vec)
+        pools = wv[C.TACTICAL_POOL_OFFSET:]
+        po, oo = 0, 0
+        for name, max_slots, feats in C.TACTICAL_POOL_DEFS:
+            raw = pools[po + 1:po + 1 + max_slots * feats].reshape(max_slots, feats)
+            rows = [r for r in (C._state_bag_row(raw[i], feats) for i in range(max_slots)) if r is not None]
+            rows.sort(key=lambda r: float(r[3]))
+            for i, r in enumerate(rows):
+                ref[oo + i] = r
+            po += 1 + max_slots * feats
+            oo += max_slots
+        if not np.allclose(vec, ref, atol=1e-6):
+            ok_parity = False
+            break
+    check("vectorized extractor matches per-row reference (50 random wires)", ok_parity)
+
 
 def test_nstep_actor_boundaries():
     print("\n[n-step actor boundaries]")
@@ -867,20 +897,25 @@ def test_model_shapes(agent):
     check("bc_fire logits shape (4,9)", tuple(bc_fire.shape) == (4, M.NUM_FIRE))
     raw = agent.online_net._raw_trunk_state(st)
     enemies = agent.online_net._object_tokens(st)
-    expected_raw = C.RL_CONFIG.single_frame_state_size * C.RL_CONFIG.frame_stack
+    expected_raw = C.FLAT_TRUNK_FRAME_FEATURES * C.RL_CONFIG.frame_stack
     expected_attn = 0
     if getattr(agent.online_net, "use_attn", False):
         expected_attn += int(getattr(C.RL_CONFIG, "attn_dim", 0))
     if getattr(agent.online_net, "use_object_attn", False):
-        expected_attn += int(getattr(C.RL_CONFIG, "object_attn_dim", 0))
+        expected_attn += int(agent.online_net.object_attn.out_dim)
     expected_trunk_in = expected_raw + expected_attn
-    check("raw trunk uses full compact state", tuple(raw.shape) == (4, expected_raw),
+    check("raw trunk uses globals + nearest-K rows", tuple(raw.shape) == (4, expected_raw),
           f"shape={tuple(raw.shape)} expected={(4, expected_raw)}")
+    check("flat trunk width matches config", C.RL_CONFIG.flat_trunk_frame_features == C.FLAT_TRUNK_FRAME_FEATURES)
+    if bool(getattr(C.RL_CONFIG, "object_attn_group_pooling", False)):
+        check("object digest is per-group + max pooled",
+              agent.online_net.object_attn.out_dim == 5 * C.RL_CONFIG.object_attn_dim,
+              f"out_dim={agent.online_net.object_attn.out_dim}")
     check("enemy tokens shape (4,112,18)",
           tuple(enemies.shape) == (4, C.ENEMY_TOKEN_COUNT, C.ENEMY_TOKEN_FEATURES),
           f"shape={tuple(enemies.shape)}")
     trunk_linears = [m for m in agent.online_net.trunk if isinstance(m, torch.nn.Linear)]
-    check("trunk first layer consumes compact state plus additive attention",
+    check("trunk first layer consumes flat-K state plus additive attention",
           trunk_linears[0].in_features == expected_trunk_in,
           f"in={trunk_linears[0].in_features} expected={expected_trunk_in} raw={expected_raw} attn={expected_attn}")
     check("object attention enabled", getattr(agent.online_net, "use_object_attn", False))

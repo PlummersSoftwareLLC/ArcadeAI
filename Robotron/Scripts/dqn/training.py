@@ -171,15 +171,18 @@ def train_step(agent, prefetched_batch=None) -> float | None:
 
     with amp_ctx:
         # Current joint action distribution (log-probabilities)
-        joint_log_p = agent.online_net.joint_dist(states_t, log=True)    # (B, 81, N)
+        _joint_dist_online = agent.compiled_online_joint_dist or agent.online_net.joint_dist
+        _q_joint_online = agent.compiled_online_q_joint or agent.online_net.q_values_joint
+        _joint_dist_target = agent.compiled_target_joint_dist or agent.target_net.joint_dist
+        joint_log_p = _joint_dist_online(states_t, log=True)            # (B, 81, N)
         joint_log_p_a = joint_log_p[arange, actions_t]                   # (B, N)
 
         # Target distribution (Double-DQN: online selects, target evaluates)
         with torch.no_grad():
-            joint_q_next = agent.online_net.q_values_joint(next_states_t)
+            joint_q_next = _q_joint_online(next_states_t)
             joint_best = joint_q_next.argmax(dim=1)          # (B,)
 
-            joint_tp = agent.target_net.joint_dist(next_states_t, log=False)  # (B, 81, N)
+            joint_tp = _joint_dist_target(next_states_t, log=False)  # (B, 81, N)
             joint_tp_a = joint_tp[arange, joint_best]        # (B, N)
 
             # Shared projected Bellman support (same reward/discount for both branches)
@@ -199,6 +202,18 @@ def train_step(agent, prefetched_batch=None) -> float | None:
             m_joint.view(-1).index_add_(0, (u + offset).view(-1), (joint_tp_a * (b - l.float()) * neq_mask.float()).view(-1))
             # When l == u the two weights above are both 0 → assign full mass directly.
             m_joint.view(-1).index_add_(0, (l + offset).view(-1), (joint_tp_a * eq_mask.float()).view(-1))
+
+            # Target smoothing: mix a sliver of uniform-over-atoms mass into
+            # the projected target so the minimum achievable cross-entropy is
+            # bounded away from zero (~0.095 at eps=0.01).  Without it the
+            # C51 head sharpens to near-delta distributions, TD loss grinds
+            # to ~0.004, gradients vanish, and the policy drifts uncorrected
+            # — the gradient-starvation sag that rolled EScr1M 415K→210K on
+            # 2026-07-19.  A critic that can never be exactly right can
+            # never fully fall asleep.
+            smooth_eps = float(getattr(cfg, "c51_target_smoothing", 0.0))
+            if smooth_eps > 0.0:
+                m_joint = m_joint * (1.0 - smooth_eps) + smooth_eps / num_atoms
 
         ce_loss = -(m_joint * joint_log_p_a).sum(dim=1)    # (B,)
         weighted_loss = (weights_t * ce_loss).mean()

@@ -6,18 +6,20 @@
 """Robotron AI DQN entry point — joint Rainbow-lite engine."""
 
 import os, sys, time, threading, traceback
+import json
+import math
 import socket
 
 try:
     from .agent import RainbowAgent, KeyboardHandler, print_with_terminal_restore
-    from .config import (RL_CONFIG, MODEL_DIR, LATEST_MODEL_PATH, IS_INTERACTIVE,
-                         metrics, SERVER_CONFIG, game_settings)
+    from .config import (RL_CONFIG, MODEL_DIR, LATEST_MODEL_PATH, BEST_MODEL_PATH,
+                         IS_INTERACTIVE, metrics, SERVER_CONFIG, game_settings)
     from .metrics_display import display_metrics_header, display_metrics_row, clear_screen
     from .socket_server import SocketServer
 except ImportError:
     from agent import RainbowAgent, KeyboardHandler, print_with_terminal_restore
-    from config import (RL_CONFIG, MODEL_DIR, LATEST_MODEL_PATH, IS_INTERACTIVE,
-                        metrics, SERVER_CONFIG, game_settings)
+    from config import (RL_CONFIG, MODEL_DIR, LATEST_MODEL_PATH, BEST_MODEL_PATH,
+                        IS_INTERACTIVE, metrics, SERVER_CONFIG, game_settings)
     from metrics_display import display_metrics_header, display_metrics_row, clear_screen
     from socket_server import SocketServer
 
@@ -107,6 +109,17 @@ def print_buffer_stats(agent, kb):
         print(f"  Eps src: {stats.get('actor_epsilon', 0):>12,}   ({stats.get('frac_actor_epsilon', 0)*100:>5.1f}%)")
         print(f"  Exp src: {stats.get('actor_expert', 0):>12,}   ({stats.get('frac_actor_expert', 0)*100:>5.1f}%)")
         print(f"  Intrst:  {stats.get('interesting', 0):>12,}   ({stats.get('frac_interesting', 0)*100:>5.1f}%)")
+        hof = stats.get("hof")
+        if hof:
+            print("-" * 70)
+            print("  HALL OF FAME (permanent, survives wipes/reverts)")
+            quota = f"{hof['fraction']*100:.0f}% of batch" if hof["quota_active"] else "inactive (seeding)"
+            print(f"  Episodes: {hof['episodes']:>4} / {hof['max_episodes']:<4}  "
+                  f"Transitions: {hof['transitions']:>9,}   Quota: {quota}")
+            if hof.get("episodes", 0) > 0:
+                print(f"  Scores:   best {hof['best']:>9,.0f}   median {hof['median']:>9,.0f}   "
+                      f"worst {hof['worst']:>9,.0f}")
+            print(f"  Admission bar: {hof['admission_floor']:>9,.0f}  (episodes below this can never enter)")
         print("=" * 70 + "\n")
         if kb and IS_INTERACTIVE:
             kb.set_raw_mode()
@@ -146,6 +159,85 @@ def stats_reporter(agent, kb):
 
 
 # ── Keyboard handler thread ────────────────────────────────────────────────
+def _collapse_signals(agent, best_escr1m: float = 0.0) -> str | None:
+    """Return a reason string when a collapse signature is present, else None.
+
+    Signature A (terminal): near-zero TD loss AND expected Q pinned at the
+    C51 support ceiling — the silent zero-loss fixed point the 2026-07-12
+    week-long run died in.
+
+    Signature B (sag): TD loss below the healthy band while the eval score
+    sits far below the recorded best, Q nowhere near the ceiling — the
+    gradient-starvation decline that rolled EScr1M 415K→210K (loss 0.004,
+    Q upper 10-21).  Gated on a ~full eval window so a refilling window
+    after a restart cannot false-fire, and on best_escr1m > 0 so a fresh
+    record file disables it rather than comparing against zero.
+    """
+    try:
+        loss = float(getattr(metrics, "last_loss", 0.0))
+
+        # A: terminal fixed point
+        if loss < float(getattr(RL_CONFIG, "collapse_loss_threshold", 0.02)):
+            _, q_max = agent.get_q_value_range()
+            if not math.isnan(q_max) and q_max > float(getattr(RL_CONFIG, "collapse_q_upper_frac", 0.90)) * float(RL_CONFIG.v_max):
+                return f"terminal: loss {loss:.4f} with Q pinned at support ceiling"
+
+        # B/B2: score-based signatures need the eval window
+        if best_escr1m > 0.0:
+            with metrics.lock:
+                escr1m = float(metrics.eval_score_1m_average)
+                window_full = int(metrics.eval_score_1m_frames) >= int(0.9 * int(metrics.eval_score_1m_window))
+            if window_full:
+                # B: gradient-starvation sag (low loss corroborates)
+                if loss < float(getattr(RL_CONFIG, "collapse_sag_loss_threshold", 0.12)):
+                    frac = float(getattr(RL_CONFIG, "collapse_sag_escr1m_frac", 0.75))
+                    if escr1m < frac * best_escr1m:
+                        return (f"sag: loss {loss:.4f} with EScr1M {escr1m:,.0f} "
+                                f"< {frac:.0%} of best {best_escr1m:,.0f}")
+                # B2: deep score collapse regardless of loss — the wave-1 run
+                # regressed 305K->65K at HEALTHY loss 0.39-0.41, unreachable
+                # by B's loss conjunct.  best.pt is the only true external
+                # memory of peak play; a sustained sub-50% eval score is
+                # actionable no matter what the loss says.
+                frac2 = float(getattr(RL_CONFIG, "collapse_score_only_frac", 0.50))
+                if frac2 > 0.0 and escr1m < frac2 * best_escr1m:
+                    return (f"score-collapse: EScr1M {escr1m:,.0f} < {frac2:.0%} "
+                            f"of best {best_escr1m:,.0f} (loss {loss:.4f})")
+
+        return None
+    except Exception:
+        return None
+
+
+def _restore_best_checkpoint(agent) -> bool:
+    """Pause training, reload the best-EScr1M checkpoint, wipe the replay
+    buffer, resume.  The buffer wipe is essential: restoring good weights
+    into 10M transitions of degenerate play just re-teaches the collapse.
+    After the wipe, train_step()'s min_replay_to_train gate holds training
+    until fresh experience (generated by the restored policy) accumulates.
+    """
+    if not os.path.exists(BEST_MODEL_PATH):
+        print("[COLLAPSE WATCHDOG] no best checkpoint on disk — cannot restore")
+        return False
+    agent.training_enabled = False
+    time.sleep(3.0)  # drain any in-flight train step
+    ok = False
+    try:
+        ok = agent.load(BEST_MODEL_PATH, show_status=False)
+        if ok:
+            agent.memory.clear()
+            print("[COLLAPSE WATCHDOG] best checkpoint restored, replay buffer wiped — "
+                  "training resumes automatically once the buffer refills")
+        else:
+            print("[COLLAPSE WATCHDOG] best checkpoint failed to load — leaving weights as-is")
+    except Exception as e:
+        print(f"[COLLAPSE WATCHDOG] restore failed: {e}")
+        ok = False
+    finally:
+        agent.training_enabled = True
+    return ok
+
+
 def keyboard_handler(agent, kb):
     print("Starting keyboard handler thread...")
     while True:
@@ -385,11 +477,88 @@ def main():
     threading.Thread(target=stats_reporter, args=(agent, kb), daemon=True).start()
 
     last_save = time.time()
+    # Peak protection: best-ever EScr1M persists across restarts via a sidecar
+    # json, so a fresh process can't overwrite robotron_dqn_best.pt with worse
+    # weights just because its in-memory best started at zero.  Keyed on the
+    # EVAL score deliberately: eval clients play greedy, injection-free games
+    # pinned to wave-1 starts, so the series is immune to curriculum/start-
+    # level changes — Scr1M re-baselines whenever the training mix changes and
+    # would ratchet on scoreboard inflation instead of policy quality.
+    best_meta_path = BEST_MODEL_PATH + ".json"
+    best_escr1m = 0.0
+    try:
+        if os.path.exists(best_meta_path):
+            with open(best_meta_path) as f:
+                # No fallback to the legacy "best_scr1m" field: it is a
+                # different (training-mix) series in different effective units.
+                best_escr1m = float(json.load(f).get("best_escr1m", 0.0))
+            if best_escr1m > 0.0:
+                print(f"Best checkpoint on record: EScr1M {best_escr1m:,.0f} ({BEST_MODEL_PATH})")
+    except Exception:
+        best_escr1m = 0.0
+    # Collapse watchdog state (see _collapse_signals/_restore_best_checkpoint).
+    wd_enabled = bool(getattr(RL_CONFIG, "collapse_watchdog_enabled", True))
+    wd_interval = max(10.0, float(getattr(RL_CONFIG, "collapse_check_interval_s", 60.0)))
+    wd_need = max(1, int(getattr(RL_CONFIG, "collapse_sustain_checks", 10)))
+    wd_cooldown = float(getattr(RL_CONFIG, "collapse_cooldown_s", 21_600.0))
+    wd_max = max(1, int(getattr(RL_CONFIG, "collapse_max_restores", 2)))
+    wd_next_check = time.time() + wd_interval
+    wd_hits = 0
+    wd_restores = 0
+    wd_cooldown_until = 0.0
+    wd_last_steps = -1
     try:
         while srv_thread.is_alive() and not server.shutdown_event.is_set():
+            if wd_enabled and time.time() >= wd_next_check:
+                wd_next_check = time.time() + wd_interval
+                steps_now = int(getattr(metrics, "total_training_steps", 0))
+                trainer_active = steps_now != wd_last_steps
+                wd_last_steps = steps_now
+                if time.time() < wd_cooldown_until or not trainer_active:
+                    # Cooling down, or trainer idle (e.g. buffer refilling
+                    # after a restore) — a stale last_loss must not count.
+                    wd_hits = 0
+                elif (wd_reason := _collapse_signals(agent, best_escr1m)) is not None:
+                    wd_hits += 1
+                    print(f"[COLLAPSE WATCHDOG] signature {wd_hits}/{wd_need} — {wd_reason}")
+                    if wd_hits >= wd_need:
+                        wd_hits = 0
+                        wd_restores += 1
+                        print("=" * 70)
+                        print(f"[COLLAPSE WATCHDOG] value collapse confirmed — restoring best "
+                              f"checkpoint (restore {wd_restores}/{wd_max})")
+                        print("=" * 70)
+                        _restore_best_checkpoint(agent)
+                        wd_cooldown_until = time.time() + wd_cooldown
+                        if wd_restores >= wd_max:
+                            agent.training_enabled = False
+                            wd_enabled = False
+                            print("[COLLAPSE WATCHDOG] max restores reached — TRAINING HALTED; "
+                                  "serving the frozen best policy. Investigate before re-enabling.")
+                else:
+                    wd_hits = 0
             if time.time() - last_save >= 300:
                 agent.save(LATEST_MODEL_PATH, show_status=False)
                 last_save = time.time()
+                # Save best-by-EScr1M separately. Gate on a ~full eval window
+                # (eviction keeps eval_score_1m_frames just UNDER the window,
+                # so require 90% — a strict >= would never fire) and a 2%
+                # improvement (so a slow climb doesn't churn a 54MB save every
+                # cycle).
+                try:
+                    with metrics.lock:
+                        escr1m = float(metrics.eval_score_1m_average)
+                        window_full = int(metrics.eval_score_1m_frames) >= int(0.9 * int(metrics.eval_score_1m_window))
+                    if window_full and escr1m > best_escr1m * 1.02:
+                        agent.save(BEST_MODEL_PATH, show_status=False)
+                        best_escr1m = escr1m
+                        with open(best_meta_path, "w") as f:
+                            json.dump({"best_escr1m": best_escr1m,
+                                       "frame_count": int(metrics.frame_count),
+                                       "training_steps": int(metrics.total_training_steps)}, f)
+                        print(f"New peak EScr1M {escr1m:,.0f} — best checkpoint saved")
+                except Exception as e:
+                    print(f"  [WARN] Best-checkpoint save failed: {e}")
             time.sleep(1)
     except KeyboardInterrupt:
         print("\nKeyboard interrupt, shutting down...")

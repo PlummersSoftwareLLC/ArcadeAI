@@ -31,9 +31,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 try:
-    from .config import RL_CONFIG, TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT
+    from .config import (RL_CONFIG, TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT,
+                         OBJECT_GROUP_RANGES, FLAT_TRUNK_INDICES)
 except ImportError:
-    from config import RL_CONFIG, TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT
+    from config import (RL_CONFIG, TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT,
+                        OBJECT_GROUP_RANGES, FLAT_TRUNK_INDICES)
 
 
 # ── Device selection ────────────────────────────────────────────────────────
@@ -129,34 +131,63 @@ class LaneSelfAttentionEncoder(nn.Module):
 
 
 class ObjectSelfAttentionEncoder(nn.Module):
-    """Self-attention over grouped object rows with a presence mask."""
+    """Self-attention over grouped object rows with a presence mask.
 
-    def __init__(self, token_features: int, embed_dim: int, num_heads: int):
+    The pooled digest is per-group masked mean-pools (destructible / hulk /
+    obstacle / human) concatenated with a global masked max-pool, so rare but
+    decisive rows (the last human, one closing projectile) are not averaged
+    away by 64 destructible slots. ``group_ranges=None`` falls back to a single
+    global mean-pool (legacy behavior).
+    """
+
+    def __init__(self, token_features: int, embed_dim: int, num_heads: int,
+                 group_ranges: tuple[tuple[int, int], ...] | None = None):
         super().__init__()
         self.embed = nn.Linear(token_features, embed_dim)
         self.norm = nn.LayerNorm(embed_dim)
         self.attn = nn.MultiheadAttention(embed_dim, num_heads, batch_first=True)
         self.attn_norm = nn.LayerNorm(embed_dim)
-        self.out_dim = embed_dim
+        self.group_ranges = tuple((int(lo), int(hi)) for lo, hi in group_ranges) if group_ranges else None
+        self.out_dim = embed_dim * (len(self.group_ranges) + 1) if self.group_ranges else embed_dim
 
     def encode_tokens(self, tokens: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         present = tokens[..., 0] > 0.5
         key_padding_mask = ~present
-        all_empty = key_padding_mask.all(dim=1)
-        if all_empty.any():
-            key_padding_mask = key_padding_mask.clone()
-            key_padding_mask[all_empty, 0] = False
+        # For fully-empty rows, force slot 0 visible so attention has >=1 valid
+        # key. Branch-free (no `if all_empty.any()`) so this traces cleanly and
+        # does not force torch.compile to re-specialise on batch contents.
+        all_empty = key_padding_mask.all(dim=1, keepdim=True)  # (B, 1)
+        unmask_first = torch.zeros_like(key_padding_mask)
+        unmask_first[:, 0] = True
+        key_padding_mask = key_padding_mask & ~(all_empty & unmask_first)
         x = self.norm(self.embed(tokens))
         attn_out, _ = self.attn(x, x, x, key_padding_mask=key_padding_mask)
         enriched = self.attn_norm(x + attn_out)
         return enriched, present
 
+    def pool(self, enriched: torch.Tensor, present: torch.Tensor) -> torch.Tensor:
+        """Pool already-encoded tokens into the trunk digest."""
+        weights = present.float().unsqueeze(-1)
+        if not self.group_ranges:
+            pooled = (enriched * weights).sum(dim=1)
+            denom = weights.sum(dim=1).clamp_min(1.0)
+            return pooled / denom
+
+        parts = []
+        for lo, hi in self.group_ranges:
+            w = weights[:, lo:hi]
+            pooled = (enriched[:, lo:hi] * w).sum(dim=1) / w.sum(dim=1).clamp_min(1.0)
+            parts.append(pooled)
+        # Global masked max-pool: strongest single activation per channel.
+        masked = enriched.masked_fill(~present.unsqueeze(-1), float("-inf"))
+        gmax = masked.max(dim=1).values
+        gmax = torch.where(torch.isfinite(gmax), gmax, torch.zeros_like(gmax))
+        parts.append(gmax)
+        return torch.cat(parts, dim=1)
+
     def forward(self, tokens: torch.Tensor) -> torch.Tensor:
         enriched, present = self.encode_tokens(tokens)
-        weights = present.float().unsqueeze(-1)
-        pooled = (enriched * weights).sum(dim=1)
-        denom = weights.sum(dim=1).clamp_min(1.0)
-        return pooled / denom
+        return self.pool(enriched, present)
 
 
 class DirectionalObjectAttention(nn.Module):
@@ -178,26 +209,27 @@ class DirectionalObjectAttention(nn.Module):
         self.attention_kind = str(attention_kind)
         self.geometry_bias = bool(geometry_bias)
         self.geometry_bias_strength = float(geometry_bias_strength)
+        # Static per-instance switch: whether the geometry bias contributes at
+        # all. Resolving this once here (rather than per-forward) keeps it a
+        # compile-time constant for torch.compile, so the tensor path below has
+        # no Python-level, data-dependent branches for dynamo to re-specialise.
+        self.geometry_bias_enabled = self.geometry_bias and self.geometry_bias_strength > 0.0
         self.dir_embedding = nn.Embedding(self.num_actions, self.object_dim)
         self.query_norm = nn.LayerNorm(self.object_dim)
         self.attn = nn.MultiheadAttention(self.object_dim, num_heads, batch_first=True)
         self.out_norm = nn.LayerNorm(self.object_dim)
 
-    def _geometry_attention_bias(self, object_tokens: torch.Tensor) -> torch.Tensor | None:
+    def _geometry_attention_bias(self, object_tokens: torch.Tensor) -> torch.Tensor:
         """Return additive attention logits, shape ``(B, actions, objects)``.
 
         The bias is parameter-free and only nudges attention toward objects that
         are geometrically relevant to each action candidate. Learned attention is
         still free to override it.
-        """
-        if (
-            not self.geometry_bias
-            or self.geometry_bias_strength <= 0.0
-            or object_tokens is None
-            or object_tokens.dim() != 3
-        ):
-            return None
 
+        Callers must gate on ``self.geometry_bias_enabled`` and pass a rank-3
+        ``object_tokens`` tensor. Keeping this function branch-free (no ``None``
+        or ``.dim()`` guards) is what lets it trace cleanly under torch.compile.
+        """
         B, N, F = object_tokens.shape
         device = object_tokens.device
         dtype = object_tokens.dtype
@@ -281,15 +313,22 @@ class DirectionalObjectAttention(nn.Module):
         q = self.dir_embedding(action_ids).unsqueeze(0).expand(B, -1, -1)
         q = self.query_norm(q)
 
-        key_padding_mask = ~object_present.bool()
-        all_empty = key_padding_mask.all(dim=1)
-        if all_empty.any():
-            key_padding_mask = key_padding_mask.clone()
-            key_padding_mask[all_empty, 0] = False
+        key_padding_mask = ~object_present.bool()          # (B, N)
+        all_empty = key_padding_mask.all(dim=1, keepdim=True)  # (B, 1)
+        # For fully-empty rows, force slot 0 visible so attention has >=1 valid
+        # key (all-masked rows produce NaN). Done with a branch-free masked AND
+        # rather than `if all_empty.any(): mask[all_empty, 0] = False`, which is
+        # a data-dependent Python branch that makes torch.compile re-specialise.
+        unmask_first = torch.zeros_like(key_padding_mask)
+        unmask_first[:, 0] = True
+        key_padding_mask = key_padding_mask & ~(all_empty & unmask_first)
 
-        bias = self._geometry_attention_bias(object_tokens)
-        if bias is not None and bias.shape == (B, self.num_actions, object_repr.shape[1]):
-            attn_mask = bias.to(device=object_repr.device, dtype=object_repr.dtype)
+        # Geometry bias is gated by a static, compile-time-constant flag; the
+        # tensor path stays branch-free. Its shape is (B, num_actions, N) by
+        # construction (N == object_repr.shape[1]), so no runtime shape check.
+        if self.geometry_bias_enabled:
+            attn_mask = self._geometry_attention_bias(object_tokens).to(
+                device=object_repr.device, dtype=object_repr.dtype)
         else:
             attn_mask = torch.zeros(B, self.num_actions, object_repr.shape[1], device=object_repr.device, dtype=object_repr.dtype)
         attn_mask = attn_mask.masked_fill(
@@ -303,8 +342,9 @@ class DirectionalObjectAttention(nn.Module):
             attn_mask=attn_mask,
             need_weights=False,
         )
-        if all_empty.any():
-            attn_out = attn_out.masked_fill(all_empty.view(B, 1, 1), 0.0)
+        # Zero the output for fully-empty rows. Unconditional masked_fill (a
+        # no-op when no row is empty) — again avoiding a data-dependent branch.
+        attn_out = attn_out.masked_fill(all_empty.view(B, 1, 1), 0.0)
         return self.out_norm(q + attn_out)
 
 
@@ -361,15 +401,19 @@ class RainbowNet(nn.Module):
         self.use_object_attn = cfg.use_object_attention
         object_attn_out_dim = 0
         if self.use_object_attn:
+            group_ranges = OBJECT_GROUP_RANGES if bool(getattr(cfg, "object_attn_group_pooling", False)) else None
             self.object_attn = ObjectSelfAttentionEncoder(
                 token_features=self.object_token_features,
                 embed_dim=cfg.object_attn_dim,
                 num_heads=cfg.object_attn_heads,
+                group_ranges=group_ranges,
             )
-            object_attn_out_dim = cfg.object_attn_dim
+            object_attn_out_dim = self.object_attn.out_dim
 
         self.use_action_context = bool(getattr(cfg, "use_action_context_attention", False)) and self.use_object_attn
-        self.action_context_dim = object_attn_out_dim if self.use_action_context else 0
+        # Action-context attention operates on the enriched TOKENS (embed_dim
+        # wide), not on the pooled digest, so its dim is the raw embed dim.
+        self.action_context_dim = int(cfg.object_attn_dim) if self.use_action_context else 0
         self.joint_move_ids = torch.arange(NUM_JOINT, dtype=torch.long) // NUM_FIRE
         self.joint_fire_ids = torch.arange(NUM_JOINT, dtype=torch.long) % NUM_FIRE
         if self.use_action_context:
@@ -392,8 +436,17 @@ class RainbowNet(nn.Module):
             )
 
         # ── Trunk ──────────────────────────────────────────────────────
+        # Flat trunk sees globals + the nearest-K rows per group (slot-stable
+        # under distance sorting); the long tail reaches the trunk only through
+        # the object-attention digest.
         self.flat_state_to_trunk = bool(getattr(cfg, "flat_state_to_trunk", False))
-        self.raw_trunk_frame_features = self.single_frame_state_size if self.flat_state_to_trunk else self.global_features
+        if self.flat_state_to_trunk:
+            flat_idx = torch.as_tensor(FLAT_TRUNK_INDICES, dtype=torch.long)
+            self.register_buffer("flat_trunk_idx", flat_idx, persistent=False)
+            self.raw_trunk_frame_features = int(flat_idx.numel())
+        else:
+            self.flat_trunk_idx = None
+            self.raw_trunk_frame_features = self.global_features
         self.raw_trunk_state_size = self.raw_trunk_frame_features * self.frame_stack
         trunk_in = self.raw_trunk_state_size + attn_out_dim + object_attn_out_dim
         configured_layers = tuple(int(v) for v in getattr(cfg, "trunk_layer_sizes", ()) if int(v) > 0)
@@ -506,6 +559,11 @@ class RainbowNet(nn.Module):
         return state.reshape(B, self.frame_stack, self.single_frame_state_size)
 
     def _raw_trunk_state(self, state: torch.Tensor) -> torch.Tensor:
+        if self.flat_state_to_trunk and self.flat_trunk_idx is not None:
+            if self.frame_stack <= 1:
+                return state.index_select(1, self.flat_trunk_idx)
+            frames = self._stacked_frames(state).index_select(2, self.flat_trunk_idx)
+            return frames.reshape(state.shape[0], self.raw_trunk_state_size)
         if self.frame_stack <= 1:
             return state[:, :self.raw_trunk_frame_features]
         return self._stacked_frames(state)[:, :, :self.raw_trunk_frame_features].reshape(
@@ -535,12 +593,62 @@ class RainbowNet(nn.Module):
         trunk_in = torch.cat(parts, dim=1) if len(parts) > 1 else parts[0]
         return self.trunk(trunk_in)
 
+    def _encode_state(self, state: torch.Tensor):
+        """Single-pass shared encoding: object tokens are encoded ONCE and
+        reused for both the trunk digest and the action-context attention.
+
+        Returns ``(h, move_ctx, fire_ctx)``; the contexts are ``None`` when
+        action-context attention is disabled.
+        """
+        parts = [self._raw_trunk_state(state)]
+        if self.use_attn:
+            parts.append(self.lane_attn(self._lane_tokens(state)))
+        enriched = present = tokens = None
+        if self.use_object_attn:
+            tokens = self._object_tokens(state)
+            enriched, present = self.object_attn.encode_tokens(tokens)
+            parts.append(self.object_attn.pool(enriched, present))
+        trunk_in = torch.cat(parts, dim=1) if len(parts) > 1 else parts[0]
+        h = self.trunk(trunk_in)
+        move_ctx = fire_ctx = None
+        if self.use_action_context and enriched is not None:
+            move_ctx = self.move_context_attn(enriched, present, tokens)
+            fire_ctx = self.fire_context_attn(enriched, present, tokens)
+        return h, move_ctx, fire_ctx
+
     def _action_contexts(self, state: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         object_tokens = self._object_tokens(state)
         object_repr, object_present = self.object_attn.encode_tokens(object_tokens)
         move_ctx = self.move_context_attn(object_repr, object_present, object_tokens)
         fire_ctx = self.fire_context_attn(object_repr, object_present, object_tokens)
         return move_ctx, fire_ctx
+
+    def _factored_scorer(self, scorer: nn.Sequential, h: torch.Tensor,
+                         ctx: torch.Tensor, emb: torch.Tensor) -> torch.Tensor:
+        """Exact-equivalent evaluation of ``scorer(cat([h_exp, ctx, emb], -1))``.
+
+        The first Linear's weight columns are ordered ``[h | ctx | emb]``, so
+        ``Linear(cat(a, b, c)) == Linear_a(a) + Linear_b(b) + Linear_c(c)``.
+        The state part (widest chunk) is computed ONCE per state instead of
+        once per (state, action) — the 81-way joint head was spending ~60% of
+        its first-layer FLOPs re-multiplying identical rows. Same parameters,
+        same math, same state_dict; only the computation order changes.
+
+        Shapes: ``h (B, Dh)``, ``ctx (B, A, Dc)``, ``emb (A, De)`` →
+        ``(B, A, num_atoms)``.
+        """
+        lin0 = scorer[0]
+        dh = h.shape[-1]
+        dc = ctx.shape[-1]
+        w = lin0.weight
+        x = (
+            F.linear(h, w[:, :dh], lin0.bias).unsqueeze(1)
+            + F.linear(ctx, w[:, dh:dh + dc])
+            + F.linear(emb, w[:, dh + dc:]).unsqueeze(0)
+        )
+        for m in list(scorer)[1:]:
+            x = m(x)
+        return x
 
     def _score_branch_advantage(
         self,
@@ -552,10 +660,9 @@ class RainbowNet(nn.Module):
     ) -> torch.Tensor:
         B = h.shape[0]
         action_ids = torch.arange(action_count, device=h.device)
-        emb = action_embedding(action_ids).unsqueeze(0).expand(B, -1, -1)
-        h_exp = h.unsqueeze(1).expand(-1, action_count, -1)
-        x = torch.cat([h_exp, action_ctx, emb], dim=-1)
-        return scorer(x).view(B, action_count, self.num_atoms)
+        emb = action_embedding(action_ids)                     # (A, De)
+        x = self._factored_scorer(scorer, h, action_ctx, emb)
+        return x.view(B, action_count, self.num_atoms)
 
     def _score_joint_advantage(self, h: torch.Tensor, move_ctx: torch.Tensor, fire_ctx: torch.Tensor) -> torch.Tensor:
         B = h.shape[0]
@@ -563,10 +670,9 @@ class RainbowNet(nn.Module):
         fire_ids = self.joint_fire_ids.to(device=h.device)
         joint_ctx = torch.cat([move_ctx[:, move_ids], fire_ctx[:, fire_ids]], dim=-1)
         action_ids = torch.arange(NUM_JOINT, device=h.device)
-        emb = self.joint_action_embedding(action_ids).unsqueeze(0).expand(B, -1, -1)
-        h_exp = h.unsqueeze(1).expand(-1, NUM_JOINT, -1)
-        x = torch.cat([h_exp, joint_ctx, emb], dim=-1)
-        return self.joint_adv_scorer(x).view(B, NUM_JOINT, self.num_atoms)
+        emb = self.joint_action_embedding(action_ids)          # (81, De)
+        x = self._factored_scorer(self.joint_adv_scorer, h, joint_ctx, emb)
+        return x.view(B, NUM_JOINT, self.num_atoms)
 
     def bc_logits(self, state: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         h = self._trunk_features(state)
@@ -584,13 +690,12 @@ class RainbowNet(nn.Module):
         """
         B = state.shape[0]
 
-        h = self._trunk_features(state)
+        h, move_ctx, fire_ctx = self._encode_state(state)
 
         if self.use_dueling:
             val = F.relu(self.val_fc(h))
             val = self.val_out(val).view(B, 1, self.num_atoms)
             if self.use_action_context:
-                move_ctx, fire_ctx = self._action_contexts(state)
                 madv = self._score_branch_advantage(
                     h, move_ctx, self.move_action_embedding, self.move_adv_scorer, self.num_move)
                 fadv = self._score_branch_advantage(
@@ -620,12 +725,11 @@ class RainbowNet(nn.Module):
     def joint_dist(self, state: torch.Tensor, log: bool = False) -> torch.Tensor:
         """Return joint move×fire action distributions, shape ``(B, 81, atoms)``."""
         B = state.shape[0]
-        h = self._trunk_features(state)
+        h, move_ctx, fire_ctx = self._encode_state(state)
         if self.use_dueling:
             val = F.relu(self.joint_val_fc(h))
             val = self.joint_val_out(val).view(B, 1, self.num_atoms)
             if self.use_action_context:
-                move_ctx, fire_ctx = self._action_contexts(state)
                 adv = self._score_joint_advantage(h, move_ctx, fire_ctx)
             else:
                 adv = F.relu(self.joint_adv_fc(h))

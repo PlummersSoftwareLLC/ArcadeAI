@@ -51,7 +51,7 @@ except ImportError:
 
 metrics = config_metrics
 
-ENGINE_VERSION = 17  # Object rows: isotropic dx/dy + rescaled velocity/approach + one-hot type
+ENGINE_VERSION = 18  # Nearest-K flat trunk + per-group/max pooled object digest
 
 
 class RainbowAgent:
@@ -112,6 +112,12 @@ class RainbowAgent:
             f"separate_infer={self.use_separate_inference}{_stream_info}"
         )
 
+        # ── torch.compile placeholders (configured after AMP setup below) ──
+        self.compiled_online_joint_dist = None
+        self.compiled_online_q_joint = None
+        self.compiled_target_joint_dist = None
+        self.compiled_infer_q_joint = None
+
         # Optimizer
         self.optimizer = optim.Adam(self.online_net.parameters(), lr=cfg.lr, eps=1.5e-4)
 
@@ -128,6 +134,13 @@ class RainbowAgent:
             self.grad_scaler = torch.amp.GradScaler("cuda", enabled=self.use_amp)
         except Exception:
             self.grad_scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
+
+        # torch.compile: MUST complete before the background train thread or
+        # socket server exist — all dynamo tracing has to happen serially on
+        # this thread (executing a compiled fn while another thread traces
+        # raises "using FX to symbolically trace a dynamo-optimized function").
+        if bool(getattr(cfg, "use_torch_compile", False)):
+            self._setup_torch_compile()
 
         # Background training thread
         self._train_queue = queue.Queue(maxsize=8)
@@ -154,6 +167,85 @@ class RainbowAgent:
             pg["lr"] = lr
 
     # ── Inference ───────────────────────────────────────────────────────
+    def _setup_torch_compile(self):
+        """Compile AND fully warm every hot forward/backward graph, serially.
+
+        Two production failure modes this guards against (both observed):
+          1. Cross-thread trace race: executing a dynamo-compiled callable on
+             one thread while another thread is mid-trace raises "Detected
+             that you are using FX to symbolically trace a dynamo-optimized
+             function". So ALL tracing happens here, before the train thread
+             and socket server exist.
+          2. Recompile-limit fallback: the four entry points share code
+             objects (attention internals), and train/eval x device x dtype x
+             shape variants exceed dynamo's default cache of 8 — after which
+             it silently reverts to eager. Raise the caches first.
+        Any failure falls back to eager permanently.
+        """
+        try:
+            t0 = time.time()
+            try:
+                import torch._dynamo as _dynamo
+                for k, v in (("recompile_limit", 64),
+                             ("cache_size_limit", 64),
+                             ("accumulated_recompile_limit", 1024),
+                             ("accumulated_cache_size_limit", 1024)):
+                    if hasattr(_dynamo.config, k):
+                        setattr(_dynamo.config, k, v)
+            except Exception:
+                pass
+
+            print("torch.compile: compiling + warming all graphs (one-time)...")
+            self.compiled_online_joint_dist = torch.compile(self.online_net.joint_dist, dynamic=False)
+            self.compiled_online_q_joint = torch.compile(self.online_net.q_values_joint, dynamic=False)
+            self.compiled_target_joint_dist = torch.compile(self.target_net.joint_dist, dynamic=False)
+            infer_src = self.infer_net if self.use_separate_inference else self.online_net
+            self.compiled_infer_q_joint = torch.compile(infer_src.q_values_joint, dynamic=True)
+
+            bsz = int(RL_CONFIG.batch_size)
+            amp_on = bool(self.use_amp) and self.device.type == "cuda"
+
+            # Warm BOTH data-dependent branch variants (encode_tokens forks on
+            # all-objects-empty), otherwise the first real batch re-traces at
+            # runtime and can race a concurrent thread.
+            def _variants(b, dev):
+                empty = torch.zeros(b, self.state_size, device=dev)
+                popd = torch.rand(b, self.state_size, device=dev)
+                return (popd, empty)
+
+            # Training graphs: warm the exact prod variants — online train-mode
+            # log=True under autocast (+ backward), online/target eval-path
+            # no_grad calls.
+            self.online_net.train()
+            self.target_net.eval()
+            for train_states in _variants(bsz, self.device):
+                with torch.autocast("cuda", dtype=torch.float16, enabled=amp_on):
+                    logp = self.compiled_online_joint_dist(train_states, log=True)
+                    warm_loss = logp.float().mean()
+                warm_loss.backward()          # warm the compiled backward graph
+                self.online_net.zero_grad(set_to_none=True)
+                with torch.no_grad(), torch.autocast("cuda", dtype=torch.float16, enabled=amp_on):
+                    self.compiled_online_q_joint(train_states)
+                    self.compiled_target_joint_dist(train_states, log=False)
+            print(f"torch.compile: training graphs warm ({time.time() - t0:.0f}s)")
+
+            # Inference graph: dynamic shapes, eval mode, no autocast.
+            with torch.no_grad():
+                for b in (1, 8, 32):
+                    for d in _variants(b, self.inference_device):
+                        self.compiled_infer_q_joint(d)
+            if self.device.type == "cuda":
+                torch.cuda.synchronize(self.device)
+            if self.inference_device.type == "cuda":
+                torch.cuda.synchronize(self.inference_device)
+            print(f"torch.compile: all graphs warm in {time.time() - t0:.0f}s")
+        except Exception as e:
+            print(f"torch.compile unavailable ({type(e).__name__}: {e}) — running eager")
+            self.compiled_online_joint_dist = None
+            self.compiled_online_q_joint = None
+            self.compiled_target_joint_dist = None
+            self.compiled_infer_q_joint = None
+
     def _sync_inference(self, force=False):
         if not self.use_separate_inference:
             return
@@ -195,15 +287,32 @@ class RainbowAgent:
         """Return joint expected Q-values from the inference net."""
         net = self.infer_net if self.use_separate_inference else self.online_net
         net.eval()
+        fn = self.compiled_infer_q_joint or net.q_values_joint
         with torch.no_grad():
-            if self._inference_stream is not None:
-                self._inference_stream.wait_event(self._sync_event)
-                with torch.cuda.stream(self._inference_stream):
+            try:
+                if self._inference_stream is not None:
+                    self._inference_stream.wait_event(self._sync_event)
+                    with torch.cuda.stream(self._inference_stream):
+                        return fn(states_t)
+                elif self.use_separate_inference:
+                    with self._sync_lock:
+                        return fn(states_t)
+                return fn(states_t)
+            except Exception as e:
+                if self.compiled_infer_q_joint is not None:
+                    # Transient (e.g. a rare re-trace racing another thread's
+                    # trace): serve this call eagerly, keep compiled for the
+                    # next one. Only disable permanently if it keeps failing.
+                    self._compiled_infer_failures = getattr(self, "_compiled_infer_failures", 0) + 1
+                    if self._compiled_infer_failures >= 20:
+                        print(f"[WARN] compiled inference failed {self._compiled_infer_failures}x "
+                              f"({type(e).__name__}: {e}) — disabling, eager from now on")
+                        self.compiled_infer_q_joint = None
+                    elif self._compiled_infer_failures <= 3:
+                        print(f"[WARN] compiled inference transient failure "
+                              f"({type(e).__name__}: {e}) — serving eagerly")
                     return net.q_values_joint(states_t)
-            elif self.use_separate_inference:
-                with self._sync_lock:
-                    return net.q_values_joint(states_t)
-            return net.q_values_joint(states_t)
+                raise
 
     @staticmethod
     def _sample_from_scores(scores: np.ndarray, temperature: float) -> int:
@@ -416,6 +525,11 @@ class RainbowAgent:
                 pending_batch = None
                 print(f"Training error: {e}")
                 traceback.print_exc()
+                if self.compiled_online_joint_dist is not None:
+                    print("[WARN] disabling torch.compile for training after error — falling back to eager")
+                    self.compiled_online_joint_dist = None
+                    self.compiled_online_q_joint = None
+                    self.compiled_target_joint_dist = None
                 time.sleep(0.1)
 
     def _prefetch_batch(self):

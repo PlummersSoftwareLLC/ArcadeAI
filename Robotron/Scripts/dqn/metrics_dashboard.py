@@ -543,8 +543,9 @@ class _DashboardState:
                 use_lane = bool(getattr(cfg, 'use_lane_attention', False)) and getattr(cfg, 'lane_count', 0) > 0
                 ad = cfg.attn_dim if use_lane else 0
                 od = cfg.object_attn_dim if getattr(cfg, 'use_object_attention', False) else 0
+                od_out = od * 5 if (od and bool(getattr(cfg, 'object_attn_group_pooling', False))) else od
                 stack = int(getattr(cfg, 'frame_stack', 1))
-                raw_frame = int(getattr(cfg, 'single_frame_state_size', 0)) if bool(getattr(cfg, 'flat_state_to_trunk', False)) else int(getattr(cfg, 'global_features', getattr(cfg, 'core_features', 18) + getattr(cfg, 'elist_features', 22)))
+                raw_frame = int(getattr(cfg, 'flat_trunk_frame_features', getattr(cfg, 'single_frame_state_size', 0))) if bool(getattr(cfg, 'flat_state_to_trunk', False)) else int(getattr(cfg, 'global_features', getattr(cfg, 'core_features', 18) + getattr(cfg, 'elist_features', 22)))
                 raw_state = raw_frame * stack
                 trunk_layer_sizes = tuple(int(v) for v in getattr(cfg, 'trunk_layer_sizes', ()) if int(v) > 0)
                 if not trunk_layer_sizes:
@@ -562,7 +563,7 @@ class _DashboardState:
                   attn_p += ((cfg.object_token_features * od + od) + 2 * od
                          + 4 * (od * od + od) + 2 * od)
                 trunk_p = 0
-                in_dim = raw_state + ad + od
+                in_dim = raw_state + ad + od_out
                 for out_dim in trunk_layer_sizes:
                     trunk_p += in_dim * out_dim + out_dim
                     if bool(getattr(cfg, 'use_layer_norm', False)):
@@ -575,11 +576,14 @@ class _DashboardState:
         except Exception:
             param_count = 0
         stack = int(getattr(cfg, 'frame_stack', 1))
-        raw_frame = int(getattr(cfg, 'single_frame_state_size', 0)) if bool(getattr(cfg, 'flat_state_to_trunk', False)) else int(getattr(cfg, 'global_features', getattr(cfg, 'core_features', 18) + getattr(cfg, 'elist_features', 22)))
+        raw_frame = int(getattr(cfg, 'flat_trunk_frame_features', getattr(cfg, 'single_frame_state_size', 0))) if bool(getattr(cfg, 'flat_state_to_trunk', False)) else int(getattr(cfg, 'global_features', getattr(cfg, 'core_features', 18) + getattr(cfg, 'elist_features', 22)))
         raw_state = raw_frame * stack
         use_lane = bool(getattr(cfg, 'use_lane_attention', False)) and getattr(cfg, 'lane_count', 0) > 0
         trunk_in = raw_state + (cfg.attn_dim if use_lane else 0)
-        trunk_in += (cfg.object_attn_dim if getattr(cfg, 'use_object_attention', False) else 0)
+        od_disp = cfg.object_attn_dim if getattr(cfg, 'use_object_attention', False) else 0
+        if od_disp and bool(getattr(cfg, 'object_attn_group_pooling', False)):
+            od_disp *= 5
+        trunk_in += od_disp
         trunk_layer_sizes = tuple(int(v) for v in getattr(cfg, 'trunk_layer_sizes', ()) if int(v) > 0)
         if not trunk_layer_sizes:
             trunk_layer_sizes = tuple([int(cfg.trunk_hidden)] * int(cfg.trunk_layers))

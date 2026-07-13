@@ -47,20 +47,30 @@ instead of being forced onto a false grunt->electrode ordering.
 18 core + 22 ELIST + (112 objects * 18 features) = 2056 floats
 ```
 
-With the default 1-frame stack, replay/inference state is also 2056 floats. The
-network trunk consumes all 2056 compact-state floats directly. Object attention
-is additive: the current-frame object bag also produces a 128-float learned
-summary, and that summary is concatenated beside the raw compact state. Default
-first trunk width is:
+With the default 1-frame stack, replay/inference state is 2056 floats. The
+network trunk does NOT consume all of them directly: distance sorting makes
+slot contents churn (an object overtaking another swaps their slots), so only
+the slot-stable nearest rows get dedicated first-layer weights. The flat trunk
+input is the 40 globals plus the nearest-K rows per group (8 destructible +
+4 hulk + 4 obstacle + 4 human = 20 rows × 18 = 360):
 
 ```text
-(2056 compact-state floats * 1 frame) + 128 object-attention embedding = 2184 floats
+flat trunk slice = 40 globals + 360 nearest-K floats = 400 floats
+```
+
+The remaining 92 rows reach the trunk only through the permutation-invariant
+object-attention digest: per-group masked mean-pools (4 × 128) plus a global
+masked max-pool (128), so rare rows (last human, closing projectile) are not
+averaged away by 64 destructible slots. Default first trunk width is:
+
+```text
+400 flat floats + (4 + 1) * 128 object-attention digest = 1040 floats
 ```
 
 If `DQN_FRAME_STACK=2` or `ROBOTRON_DQN_FRAME_STACK=2` is set, replay/inference
-state becomes 4112 floats and the first trunk width becomes `4112 + 128 = 4240`.
-The object-attention summary is still computed from the current frame's object
-rows; stacked prior frames remain available through the raw compact-state input.
+state becomes 4112 floats, the flat slice becomes 800, and the first trunk
+width becomes `800 + 640 = 1440`. The object-attention digest is still computed
+from the current frame's object rows.
 
 ## DQN Model Layout
 

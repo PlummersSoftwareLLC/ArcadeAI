@@ -35,7 +35,8 @@ try:
     from .config import (RL_CONFIG, SERVER_CONFIG, metrics, LATEST_MODEL_PATH,
                          game_settings, slice_model_state, WIRE_PARAMS_COUNT,
                          TOKEN_GROUP_RANGES, decode_token_types,
-                         TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT)
+                         TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT,
+                         STRATIFIED_TRAINING_STARTS, STRATIFIED_START_LEVELS)
     from .nstep_buffer import NStepReplayBuffer
     from .replay_buffer import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT
     from .model import combine_action, split_joint_action, action_index_to_wire_dir
@@ -51,7 +52,8 @@ except ImportError:
     from config import (RL_CONFIG, SERVER_CONFIG, metrics, LATEST_MODEL_PATH,
                         game_settings, slice_model_state, WIRE_PARAMS_COUNT,
                         TOKEN_GROUP_RANGES, decode_token_types,
-                        TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT)
+                        TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT,
+                        STRATIFIED_TRAINING_STARTS, STRATIFIED_START_LEVELS)
     from nstep_buffer import NStepReplayBuffer
     from replay_buffer import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT
     from model import combine_action, split_joint_action, action_index_to_wire_dir
@@ -593,6 +595,14 @@ class AsyncReplayBuffer:
         self._lookback = int(getattr(RL_CONFIG, "pre_death_lookback", 120))
         self._client_indices = {}          # client_id -> deque(maxlen=lookback)
         self._episode_indices = {}         # client_id -> replay indices for current episode
+        # Rolling per-episode stats for the adaptive elite gate (consumer
+        # thread only — no locking needed).
+        _ew = max(10, int(getattr(RL_CONFIG, "elite_adaptive_window", 200)))
+        self._recent_ep_scores = deque(maxlen=_ew)
+        self._recent_ep_levels = deque(maxlen=_ew)
+        # High-water marks per percentile for the elite-threshold ratchet
+        # (consumer thread only).
+        self._elite_thr_hwm = {}
         # Drop accounting (queue overflow on non-critical frames only)
         self.dropped_steps = 0
         self._drop_lock = threading.Lock()
@@ -684,15 +694,56 @@ class AsyncReplayBuffer:
             print(f"  Pre-death boost error: {e}")
         indices.clear()
 
+    def _elite_thresholds(self, percentile: float, score_floor: int, level_floor: int) -> tuple[float, float]:
+        """Effective elite thresholds: static floors raised to a rolling
+        percentile of recent episodes, so 'elite' stays selective as the agent
+        improves (a fixed level threshold below the average level matches half
+        of all play and the boost degenerates into noise)."""
+        if len(self._recent_ep_scores) < int(getattr(RL_CONFIG, "elite_adaptive_min_episodes", 20)):
+            return float(score_floor), float(level_floor)
+        pct = max(0.0, min(100.0, float(percentile)))
+        score_thr = max(float(score_floor), float(np.percentile(np.asarray(self._recent_ep_scores, dtype=np.float64), pct)))
+        level_thr = max(float(level_floor), float(np.percentile(np.asarray(self._recent_ep_levels, dtype=np.float64), pct)))
+        # Ratchet (2026-07): the rolling percentile re-anchors to ~35s of
+        # current play, so during a decline it would certify the top decile
+        # of MEDIOCRE play as elite.  Track the within-run high-water mark
+        # and never let the usable threshold fall more than the slack below
+        # it — "elite" keeps meaning good vs the best this run has shown.
+        if bool(getattr(RL_CONFIG, "elite_threshold_ratchet", True)):
+            hwm_s, hwm_l = self._elite_thr_hwm.get(pct, (score_thr, level_thr))
+            hwm_s = max(hwm_s, score_thr)
+            hwm_l = max(hwm_l, level_thr)
+            self._elite_thr_hwm[pct] = (hwm_s, hwm_l)
+            score_thr = max(score_thr, float(getattr(RL_CONFIG, "elite_ratchet_score_slack", 0.85)) * hwm_s)
+            level_thr = max(level_thr, hwm_l - float(getattr(RL_CONFIG, "elite_ratchet_level_slack", 1.0)))
+        return score_thr, level_thr
+
     def _do_elite_episode_boost(self, client_id, score: int, level: int, total_reward: float, ep_len: int):
         indices = self._episode_indices.get(client_id)
+        # Every finished episode feeds the adaptive gate, boosted or not —
+        # thresholds must track typical play, not just elite play.
+        self._recent_ep_scores.append(int(score))
+        self._recent_ep_levels.append(int(level))
         if not indices:
             return
+        # Hall-of-fame admission is INDEPENDENT of the elite gate: absolute
+        # criteria only (static floor + all-time top-N inside hof_admit), so
+        # a declining run can never certify its own play into permanence.
+        # Copies must happen here, before the ring recycles these indices.
+        if bool(getattr(RL_CONFIG, "hof_enabled", False)):
+            try:
+                # Silent by design: admissions surface via the HOF dashboard
+                # column (bank bar) and the b-key buffer report.
+                self.agent.memory.hof_admit(list(indices), int(score))
+            except Exception as e:
+                print(f"  HOF admission error: {e}")
         try:
-            elite = (
-                int(score) >= int(getattr(RL_CONFIG, "elite_episode_score_threshold", 120_000))
-                or int(level) >= int(getattr(RL_CONFIG, "elite_episode_level_threshold", 8))
+            e_score_thr, e_level_thr = self._elite_thresholds(
+                float(getattr(RL_CONFIG, "elite_adaptive_percentile", 90.0)),
+                int(getattr(RL_CONFIG, "elite_episode_score_threshold", 120_000)),
+                int(getattr(RL_CONFIG, "elite_episode_level_threshold", 8)),
             )
+            elite = int(score) >= e_score_thr or int(level) >= e_level_thr
             learner_elite = False
             try:
                 mem = self.agent.memory
@@ -703,12 +754,14 @@ class AsyncReplayBuffer:
                 if idxs.size > 0:
                     learner_frac = float(np.mean(kinds != ACTOR_EXPERT))
                     min_learner = max(0.0, min(1.0, float(getattr(RL_CONFIG, "learner_elite_min_learner_fraction", 0.90))))
+                    l_score_thr, l_level_thr = self._elite_thresholds(
+                        float(getattr(RL_CONFIG, "learner_elite_adaptive_percentile", 80.0)),
+                        int(getattr(RL_CONFIG, "learner_elite_score_threshold", 60_000)),
+                        int(getattr(RL_CONFIG, "learner_elite_level_threshold", 6)),
+                    )
                     learner_elite = (
                         learner_frac >= min_learner
-                        and (
-                            int(score) >= int(getattr(RL_CONFIG, "learner_elite_score_threshold", 60_000))
-                            or int(level) >= int(getattr(RL_CONFIG, "learner_elite_level_threshold", 6))
-                        )
+                        and (int(score) >= l_score_thr or int(level) >= l_level_thr)
                     )
             except Exception:
                 learner_elite = False
@@ -755,7 +808,7 @@ class AsyncReplayBuffer:
 
 
 class _InferenceRequest:
-    __slots__ = ("state", "epsilon", "locked_fire", "event", "action")
+    __slots__ = ("state", "epsilon", "locked_fire", "event", "action", "cancelled")
 
     def __init__(self, state, epsilon: float, locked_fire=None):
         self.state = state
@@ -763,6 +816,7 @@ class _InferenceRequest:
         self.locked_fire = locked_fire
         self.event = threading.Event()
         self.action = None
+        self.cancelled = False
 
 
 class AsyncInferenceBatcher:
@@ -787,6 +841,17 @@ class AsyncInferenceBatcher:
         except queue.Full:
             return self.agent.act(state, epsilon, locked_fire=locked_fire)
         if not req.event.wait(timeout=self.request_timeout_s):
+            # Cancel BEFORE falling back to a solo act(): an abandoned request
+            # left live in the queue still gets batched and inferred — every
+            # timed-out frame was costing TWO inferences.  Under load, 32
+            # handlers timing out at once turned into 32 solo CUDA calls plus
+            # the batcher's ghost work, which kept latency above the timeout
+            # forever: a self-sustaining stampede (measured: AvgInf pinned at
+            # ~104ms for an entire boot on 2026-07-13).  Cancelling the
+            # request breaks the amplification; the longer timeout (config:
+            # inference_request_timeout_ms) keeps handlers in the batched
+            # path through transient stalls instead of defecting.
+            req.cancelled = True
             return self.agent.act(state, epsilon, locked_fire=locked_fire)
         return req.action if req.action is not None else (0, 0, False)
 
@@ -807,6 +872,12 @@ class AsyncInferenceBatcher:
                     batch.append(self.queue.get(timeout=remaining))
                 except queue.Empty:
                     break
+
+            # Drop requests whose handler already gave up and solo-inferred —
+            # running them here would be pure duplicate GPU work.
+            batch = [r for r in batch if not r.cancelled]
+            if not batch:
+                continue
 
             try:
                 states = [r.state for r in batch]
@@ -852,7 +923,7 @@ class SocketServer:
                 agent,
                 max_batch_size=int(getattr(RL_CONFIG, "inference_batch_max_size", 32)),
                 max_wait_ms=float(getattr(RL_CONFIG, "inference_batch_wait_ms", 1.0)),
-                request_timeout_ms=float(getattr(RL_CONFIG, "inference_request_timeout_ms", 50.0)),
+                request_timeout_ms=float(getattr(RL_CONFIG, "inference_request_timeout_ms", 250.0)),
             )
             print(
                 "Async inference batching enabled: "
@@ -1136,10 +1207,28 @@ class SocketServer:
         preview_enabled: bool = False,
         hud_enabled: bool = False,
     ):
-        _gs = game_settings.snapshot()
-        start_adv = 1 if _gs["start_advanced"] or bool(_gs.get("auto_curriculum", False)) else 0
-        start_level = max(1, min(255, int(_gs["start_level_min"])))
-        start_level = max(1, min(255, int(start_level)))
+        if self._is_eval_client(cid):
+            # Eval clients always start a fresh game at wave 1: EScr1M measures
+            # true full-game performance, not curriculum-boosted play.
+            start_adv = 0
+            start_level = 1
+        else:
+            _gs = game_settings.snapshot()
+            if _gs["start_advanced"] or bool(_gs.get("auto_curriculum", False)):
+                # Operator-driven curriculum wins.
+                start_adv = 1
+                start_level = max(1, min(255, int(_gs["start_level_min"])))
+            elif STRATIFIED_TRAINING_STARTS:
+                # Stratified per-client start waves (2026-07): guarantee
+                # deep-wave experience in the buffer regardless of policy
+                # quality, breaking the wave-1 curriculum lock-in where deep
+                # data existed only while the policy could reach it.
+                levels = STRATIFIED_START_LEVELS
+                start_level = max(1, min(255, int(levels[cid % len(levels)])))
+                start_adv = 1 if start_level > 1 else 0
+            else:
+                start_adv = 0
+                start_level = 1
         source_u8 = int(source_code) & 0x0F
         if preview_enabled:
             source_u8 |= 0x40

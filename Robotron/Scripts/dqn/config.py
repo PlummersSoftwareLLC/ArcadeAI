@@ -48,6 +48,10 @@ _env_model_dir = (os.getenv("ROBOTRON_DQN_MODEL_DIR") or "").strip()
 MODEL_DIR = os.path.abspath(os.path.expanduser(_env_model_dir)) if _env_model_dir \
     else os.path.join(_ROBOTRON_DIR, "models_dqn")
 LATEST_MODEL_PATH = os.path.join(MODEL_DIR, "robotron_dqn_latest.pt")
+# Best-ever weights by rolling 1M-frame score, saved separately so a training
+# collapse is a restore instead of a loss (the 120K-era weights were gone by
+# the time the 2026-07-05 LR-restart collapse was diagnosed — never again).
+BEST_MODEL_PATH = os.path.join(MODEL_DIR, "robotron_dqn_best.pt")
 SETTINGS_PATH = os.path.join(MODEL_DIR, "game_settings.json")
 
 # ---------------------------------------------------------------------------
@@ -160,6 +164,39 @@ TOKEN_GROUP_RANGES = {
     ),
 }
 
+# Group ranges in pool-emission order (destructible, hulk, obstacle, human).
+OBJECT_GROUP_RANGES = tuple(TOKEN_GROUP_RANGES[name] for name, _, _ in TACTICAL_POOL_DEFS)
+
+# ── Flat-trunk exposure: nearest-K rows per group ───────────────────────────
+# The raw MLP trunk should NOT see all 112 slot-sorted rows: distance sorting
+# makes slot contents churn (object A overtaking B swaps their slots), so
+# slot-specific first-layer weights must relearn the same feature per slot.
+# Only the nearest few rows per group are slot-stable enough to deserve
+# dedicated weights; the long tail reaches the trunk through the
+# permutation-invariant object-attention digest instead.
+FLAT_ROWS_PER_GROUP = {
+    "destructible": 8,
+    "hulk": 4,
+    "obstacle": 4,
+    "human": 4,
+}
+
+
+def _build_flat_trunk_indices() -> np.ndarray:
+    """Model-state indices the flat trunk consumes: globals + nearest-K rows."""
+    idx = list(range(GLOBAL_FEATURES))
+    for name, _, _ in TACTICAL_POOL_DEFS:
+        lo, hi = TOKEN_GROUP_RANGES[name]
+        k = min(int(FLAT_ROWS_PER_GROUP.get(name, 0)), hi - lo)
+        for row in range(lo, lo + k):
+            base = ENEMY_TOKEN_OFFSET + row * ENEMY_TOKEN_FEATURES
+            idx.extend(range(base, base + ENEMY_TOKEN_FEATURES))
+    return np.asarray(idx, dtype=np.int64)
+
+
+FLAT_TRUNK_INDICES = _build_flat_trunk_indices()
+FLAT_TRUNK_FRAME_FEATURES = int(FLAT_TRUNK_INDICES.shape[0])   # 40 + 20*18 = 400
+
 
 def _clip01(v: float) -> float:
     try:
@@ -251,44 +288,81 @@ def decode_token_types(rows: np.ndarray) -> np.ndarray:
     return np.argmax(oh, axis=-1).astype(np.int32)
 
 
+def _build_pool_row_indices() -> np.ndarray:
+    """Wire indices of every pool slot row, shape (112, 10), for one-shot gather."""
+    idx = np.zeros((ENEMY_TOKEN_COUNT, WIRE_POOL_SLOT_FEATURES), dtype=np.int64)
+    row = 0
+    off = TACTICAL_POOL_OFFSET
+    for _name, max_slots, feats in TACTICAL_POOL_DEFS:
+        base = off + 1
+        for s in range(max_slots):
+            start = base + s * feats
+            idx[row] = np.arange(start, start + feats, dtype=np.int64)
+            row += 1
+        off += 1 + max_slots * feats
+    return idx
+
+
+_POOL_ROW_INDICES = _build_pool_row_indices()
+_POOL_ROW_MAX_INDEX = int(_POOL_ROW_INDICES.max())
+_POOL_GROUP_IDS = np.repeat(
+    np.arange(len(TACTICAL_POOL_DEFS), dtype=np.int64),
+    [max_slots for _n, max_slots, _f in TACTICAL_POOL_DEFS],
+)
+
+
 def _extract_enemy_tokens(arr: np.ndarray) -> np.ndarray:
     """Return the 112-row grouped object state bag from Lua tactical pools.
 
-    Each 10-wide Lua wire row is expanded/rescaled into an 18-wide model token
-    row by ``_state_bag_row``. Groups are laid out as destructible, hulk,
-    obstacle, human. Active rows are distance-sorted within each group and
-    overflow is ignored.
+    Fully vectorized single pass: gather all 112 wire slot rows at once, apply
+    the same transforms as ``_state_bag_row`` (which remains the single-row
+    reference implementation used by tests), zero inactive rows, then one
+    stable lexsort (group id, distance) packs each group's active rows
+    nearest-first with padding rows after them.
     """
-    out = np.zeros((ENEMY_TOKEN_COUNT, ENEMY_TOKEN_FEATURES), dtype=np.float32)
-    pools = arr[TACTICAL_POOL_OFFSET:]
-    pool_offset = 0
-    out_offset = 0
+    if arr.shape[0] <= _POOL_ROW_MAX_INDEX:
+        return np.zeros(ENEMY_TOKEN_COUNT * ENEMY_TOKEN_FEATURES, dtype=np.float32)
 
-    for pool_name, max_slots, feat_per_slot in TACTICAL_POOL_DEFS:
-        slot_start = pool_offset + 1
-        slot_end = slot_start + max_slots * feat_per_slot
-        if slot_end > len(pools):
-            out_offset += max_slots
-            pool_offset += 1 + max_slots * feat_per_slot
-            continue
+    raw = arr[_POOL_ROW_INDICES]                                   # (112, 10)
+    with np.errstate(invalid="ignore"):
+        active = (raw[:, 0] > 0.5) & np.isfinite(raw).all(axis=1)
 
-        rows = []
-        raw = pools[slot_start:slot_end].reshape(max_slots, feat_per_slot)
-        for slot_idx in range(max_slots):
-            row = _state_bag_row(raw[slot_idx], feat_per_slot)
-            if row is not None:
-                rows.append(row)
-        rows.sort(key=lambda row: float(row[3]))
-        for i, row in enumerate(rows[:max_slots]):
-            dst = out_offset + i
-            if dst >= ENEMY_TOKEN_COUNT:
-                break
-            out[dst] = row
+        dx = np.clip(np.clip(raw[:, 1], -1.0, 1.0) * _WIRE_DX_TO_ISO, -1.0, 1.0)
+        dy = np.clip(np.clip(raw[:, 2], -1.0, 1.0) * _WIRE_DY_TO_ISO, -1.0, 1.0)
+        dist = np.clip(raw[:, 3], 0.0, 1.0)
+        vx = np.clip(np.clip(raw[:, 4], -1.0, 1.0) * _WIRE_VX_TO_VEL, -1.0, 1.0)
+        vy = np.clip(np.clip(raw[:, 5], -1.0, 1.0) * _WIRE_VY_TO_VEL, -1.0, 1.0)
+        threat = np.clip(raw[:, 6], 0.0, 1.0)
+        ttc = np.clip(raw[:, 8], 0.0, 1.0)
+        type_norm = np.clip(raw[:, 9], 0.0, 1.0)
+        approach = np.where(
+            dist > 1e-6,
+            np.clip(-((vx * dx) + (vy * dy)) / np.maximum(dist, 1e-9), -1.0, 1.0),
+            0.0,
+        )
+        type_id = np.clip(
+            np.rint(np.nan_to_num(type_norm) * (TYPE_CLASS_COUNT - 1)).astype(np.int64),
+            0, TYPE_CLASS_COUNT - 1,
+        )
 
-        out_offset += max_slots
-        pool_offset += 1 + max_slots * feat_per_slot
+    rows = np.zeros((ENEMY_TOKEN_COUNT, ENEMY_TOKEN_FEATURES), dtype=np.float32)
+    rows[:, 0] = 1.0
+    rows[:, 1] = dx
+    rows[:, 2] = dy
+    rows[:, 3] = dist
+    rows[:, 4] = vx
+    rows[:, 5] = vy
+    rows[:, 6] = threat
+    rows[:, 7] = approach
+    rows[:, 8] = ttc
+    rows[np.arange(ENEMY_TOKEN_COUNT), TYPE_ONEHOT_OFFSET + type_id] = 1.0
+    rows[~active] = 0.0
 
-    return out.reshape(-1)
+    # Stable sort: group blocks stay in place, active rows pack nearest-first,
+    # zeroed padding rows sink to the end of their group.
+    sort_key = np.where(active, np.nan_to_num(dist, nan=2.0), 2.0)
+    order = np.argsort(sort_key + _POOL_GROUP_IDS * 4.0, kind="stable")
+    return rows[order].reshape(-1)
 
 
 def slice_model_state(wire) -> np.ndarray:
@@ -361,9 +435,13 @@ class RLConfigData:
     object_token_features: int = ENEMY_TOKEN_FEATURES
 
     # ── network architecture ────────────────────────────────────────────
-    # Feed the complete compact state directly into the MLP. Object attention is
-    # additive: its learned summary is concatenated beside these raw floats.
+    # Flat trunk input = globals(40) + nearest-K object rows per group
+    # (8 destructible + 4 hulk + 4 obstacle + 4 human = 20 rows × 18 = 360).
+    # Near rows are slot-stable under distance sorting, so dedicated first-layer
+    # weights are justified there; the remaining 92 rows reach the trunk only
+    # through the permutation-invariant object-attention digest below.
     flat_state_to_trunk: bool = True
+    flat_trunk_frame_features: int = FLAT_TRUNK_FRAME_FEATURES
     trunk_layer_sizes: tuple[int, ...] = (1024, 768, 512)
     trunk_hidden: int = 384
     trunk_layers: int = 2
@@ -377,9 +455,13 @@ class RLConfigData:
 
     # Self-attention over the 112 grouped object rows. This does not replace the
     # flat state input; it adds a relational digest to the first trunk layer.
+    # The digest is per-group masked mean-pools (destructible/hulk/obstacle/
+    # human, 4 × dim) plus a global masked max-pool (1 × dim) so rare rows
+    # (last human, closing projectile) are not averaged away by 64 grunt slots.
     use_object_attention: bool = True
     object_attn_heads: int = 8
     object_attn_dim: int = 128
+    object_attn_group_pooling: bool = True
 
     # Action-conditioned attention for the DQN advantage heads. Direction queries
     # attend over enemy rows so each move/fire/joint action is scored with
@@ -416,6 +498,12 @@ class RLConfigData:
     num_atoms: int = 51
     v_min: float = -10.0
     v_max: float = 50.0
+    # C51 target smoothing: this fraction of uniform-over-atoms mass is mixed
+    # into every projected Bellman target, bounding the minimum achievable
+    # cross-entropy away from zero (~0.095 at 0.01).  Prevents the critic's
+    # distributions collapsing to deltas and the TD gradient starving to
+    # nothing (the 415K→210K sag of 2026-07-19).  0 disables.
+    c51_target_smoothing: float = 0.01
 
     use_dueling: bool = True
 
@@ -429,10 +517,18 @@ class RLConfigData:
     lr_min: float = 5e-5
     lr_warmup_steps: int = 5_000
     lr_cosine_period: int = 1_000_000
-    lr_use_restarts: bool = True
+    # Warm restarts OFF: the restart at step 1,005,000 doubled the LR on a
+    # converged policy and collapsed a 120K-score run to 30K — the 10M sliding
+    # replay buffer forgot the peak-era trajectories long before the new cosine
+    # re-annealed, leaving nothing to recover from. Cosine-to-floor, then flat.
+    lr_use_restarts: bool = False
     gamma: float = 0.995
     n_step: int = 16
-    max_samples_per_frame: float = 20
+    # Replay-pressure cap: steps/s <= max_samples_per_frame * FPS / batch_size.
+    # This is the binding constraint on steps/s, NOT GPU speed — the v18 model
+    # is ~30% cheaper per step, so convert that headroom into more gradient
+    # steps per unit of experience (20 -> 32 ≈ FPS/32 steps/s).
+    max_samples_per_frame: float = 32
 
     # Replay (PER with proportional priorities).  The grouped-object representation is
     # wider than the old compact lane slice: state/next_state alone cost about
@@ -462,8 +558,56 @@ class RLConfigData:
     recent_replay_fraction: float = 0.35
     recent_replay_window: int = 1_000_000
 
+    # ── hall-of-fame replay (permanent retention) ───────────────────────
+    # The structural cure for the recurring peak->collapse cycle (2026-07
+    # forensics): every other preservation device lives inside the 10M ring
+    # (~42-minute eviction horizon), priority boosts are erased at first
+    # sample, and PER beta pins to 1.0 early — so once peak-era data ages
+    # out, NOTHING can generate a gradient pointing back toward peak play.
+    # The hall of fame COPIES the best episodes ever seen (absolute ratchet
+    # admission, min-heap replacement, never time-evicted) into a separate
+    # store and guarantees them a small slice of every batch, keeping peak
+    # states' Bellman targets grounded forever.  Survives buffer clear() and
+    # collapse-recovery wipes by design; persists in its own directory.
+    hof_enabled: bool = True
+    hof_max_episodes: int = 192
+    hof_episode_stride: int = 1536         # transitions kept per episode (tail)
+    hof_min_game_score: int = 50_000       # absolute admission floor
+    hof_replay_fraction: float = 0.10      # guaranteed batch quota once seeded
+    hof_min_transitions: int = 4_096       # quota activates only past this
+
     # Target network (periodic hard sync)
     target_update_period: int = 1_000
+
+    # ── collapse watchdog ───────────────────────────────────────────────
+    # Terminal-collapse signature measured 2026-07-12 after the unattended
+    # week: loss pinned ~0.0015 with Q-range pegged at the C51 support
+    # ceiling ([-10, 49.4] vs v_max=50) — perfect self-consistency, zero
+    # grounding (healthy: loss 0.15-0.25, Q upper 10-15).  The C51 edge clamp
+    # makes runaway optimism a stable ZERO-LOSS fixed point, so divergence is
+    # silent; both signals together are unambiguous.  When sustained, restore
+    # the best-EScr1M checkpoint and wipe the poisoned replay buffer.
+    collapse_watchdog_enabled: bool = True
+    collapse_loss_threshold: float = 0.02      # ~10x below healthy loss
+    collapse_q_upper_frac: float = 0.90        # of v_max
+    # Sag signature (added after the 415K→210K gradient-starvation decline):
+    # loss below the healthy band while the eval score sits far below the
+    # recorded best, with Q NOWHERE near the ceiling — the variant the
+    # terminal signature deliberately does not catch.  The loss threshold
+    # sits above the c51_target_smoothing floor (~0.095) so the detector
+    # stays armed after smoothing raises the loss floor.
+    collapse_sag_loss_threshold: float = 0.12
+    collapse_sag_escr1m_frac: float = 0.75     # of best_escr1m on record
+    # Signature B2 (score-only): the wave-1 fresh run regressed 305K -> 65K at
+    # HEALTHY loss 0.39-0.41 — unreachable by B1's loss conjunct.  A deep,
+    # sustained score collapse is actionable regardless of what loss reads:
+    # best.pt is the only true external memory of peak play, and this is its
+    # trigger.  Same sustain/cooldown/max-restore guards as A and B1.
+    collapse_score_only_frac: float = 0.50     # of best_escr1m, no loss conjunct
+    collapse_check_interval_s: float = 60.0
+    collapse_sustain_checks: int = 10          # consecutive minutes required
+    collapse_cooldown_s: float = 21_600.0      # 6h between restores
+    collapse_max_restores: int = 2             # then halt training, serve frozen best
     target_tau: float = 1.0
 
     # Gradient
@@ -497,11 +641,19 @@ class RLConfigData:
     # crater: the replay (10M) is far smaller than the number of frames the
     # expert was active for (~29M), so all expert transitions get recycled out —
     # once the ratio reaches 0 there is literally no expert experience left to
-    # learn from and nothing anchoring expert-level play.  A 5% floor keeps
-    # expert-quality states in the replay distribution (accurate Bellman targets
-    # there, plus a periodic relaunch into good states) while the policy still
-    # drives 95% of frames and is free to exceed the demonstrator.
-    expert_ratio_end: float = 0.05
+    # learn from and nothing anchoring expert-level play.
+    #
+    # Floor lowered 5% → 1% (2026-07): three A/B trials at high skill levels
+    # settled the value.  0% produced the buffer-drain sag every time it was
+    # tried (EScr1M -16% at 383M frames, 415K→210K at 402M, and again on the
+    # post-restore refill at 405M — decline tracks buffer expert content
+    # falling below ~1%).  1% produced the 415K all-time record.  5% pays the
+    # deep-wave takeover tax (~6 bot-controlled frames per episode, and the
+    # scripted bot is suicidal at wave 15+) without adding measurable anchor
+    # value over 1%.  A config-level floor also survives restarts, unlike the
+    # keyboard override, which reset to the old 5% floor on every boot and
+    # repeatedly landed the run on unvalidated settings.
+    expert_ratio_end: float = 0.01
     # Decay is keyed to TRAINING STEPS, not frames.  At 20k+ fps the steady-state
     # frame:step ratio is ~200:1, so a frame-based 2M schedule completed in ~10k
     # gradient steps (2-3 wall-clock minutes) — the policy never had time to learn
@@ -552,7 +704,7 @@ class RLConfigData:
     subj_positive_decay_steps: int = 125_000
     subj_positive_min_weight: float = 0.0
     shaping_reward_clip: float = 4.0
-    death_penalty: float = 2.0
+    death_penalty: float = 10.0
     reward_clip: float = 30.0
     death_reward_clip: float = 40.0
 
@@ -593,6 +745,27 @@ class RLConfigData:
     learner_elite_tail_len: int = 512
     learner_elite_priority_boost: float = 4.0
     learner_elite_interest_score: float = 1.0
+    # Adaptive elite gate: the static thresholds above are FLOORS.  Once the
+    # agent's typical play passes them (average level crossed 6 at ~200M
+    # frames), a fixed threshold matches half of all episodes and the elite
+    # boost stops being selective.  The effective threshold is
+    # max(static, rolling percentile of recent episode scores/levels), so
+    # "elite" always means "top ~10% of recent play" no matter how good the
+    # agent gets.  Window is in episodes; adaptive gating engages only after
+    # min_episodes have been observed.
+    elite_adaptive_window: int = 200
+    elite_adaptive_min_episodes: int = 20
+    elite_adaptive_percentile: float = 90.0
+    learner_elite_adaptive_percentile: float = 80.0
+    # Ratchet the adaptive thresholds (2026-07): the rolling percentile
+    # re-anchors to ~35s of current play, so during a decline it certifies
+    # the top decile of MEDIOCRE play as elite.  With the ratchet, thresholds
+    # never fall more than the slack below their within-run high-water mark —
+    # "elite" keeps meaning "good vs the best this run has shown", not "good
+    # vs the last 35 seconds".
+    elite_threshold_ratchet: bool = True
+    elite_ratchet_score_slack: float = 0.85   # usable floor = 0.85 * hwm score
+    elite_ratchet_level_slack: float = 1.0    # usable floor = hwm level - 1
 
     # ── fire cadence ────────────────────────────────────────────────────
     # Hold each fire direction stable for this many frames.  Set to 1 for the
@@ -610,14 +783,36 @@ class RLConfigData:
     pre_death_lookback: int = 150
     pre_death_priority_boost: float = 2.0
     pre_death_reward_lookback: int = 90
-    pre_death_base_penalty: float = 0.005
-    pre_death_danger_penalty: float = 0.20
+    # Pre-death reward repaint DISABLED (2026-07 forensics): this in-place
+    # rewrite of the last ~90 stored returns before EVERY death was verified
+    # to be the primary directional eraser of peak play — danger-scaled it
+    # taxes deep-wave deaths ~40:1 vs shallow (~-8..-12.5 units per deep death
+    # against +6..9 units of TOTAL episode score income), it double-counts the
+    # -10 death penalty that n_step=16 already propagates at >=92.8% strength,
+    # and it is applied AFTER episode metrics are recorded, so no dashboard
+    # ever showed it.  The effective (trained-on) reward landscape had a local
+    # optimum at passive survival that the visible landscape did not — the
+    # recurring 300-415K -> 60-75K collapse landed there every time.  Both
+    # zeros make apply_pre_death_penalty a no-op via its guard.
+    pre_death_base_penalty: float = 0.0
+    pre_death_danger_penalty: float = 0.0
     pre_death_max_penalty: float = 0.35
     pre_death_min_danger: float = 0.15
     pre_death_penalize_expert: bool = False
 
     # ── inference ───────────────────────────────────────────────────────
     use_separate_inference_model: bool = True
+    # torch.compile (inductor): the forward pass is DISPATCH-bound, not
+    # FLOP-bound — hundreds of small kernels per call for a 3.6M-param net.
+    # Measured: inference batch~29 7.4 -> 1.4 ms (dynamic shapes); train
+    # fwd+bwd batch=1024 35 -> 27 ms fp32 / 18 ms AMP.  Real speedup — but on
+    # the free-threaded 3.14t build dynamo has produced four distinct failure
+    # modes here (cross-thread FX race, 1024-recompile storm, SpeculationLog
+    # divergence, boot-time compile storms tanking FPS to ~200), because any
+    # runtime guard failure recompiles on one thread while another invokes a
+    # dynamo-optimized callable.  Default OFF for unattended stability; opt
+    # back in with DQN_TORCH_COMPILE=1 (revisit after a PyTorch upgrade).
+    use_torch_compile: bool = os.getenv("DQN_TORCH_COMPILE", "0").strip().lower() not in ("0", "false", "no", "off")
     inference_on_cpu: bool = False         # agent falls back to CPU if no CUDA
     train_cuda_device_index: int = 0
     inference_cuda_device_index: int = 1
@@ -625,6 +820,13 @@ class RLConfigData:
     inference_batching_enabled: bool = True
     inference_batch_max_size: int = 128
     inference_batch_wait_ms: float = 1.0
+    # How long a handler waits for the batcher before solo-inferring.  Was a
+    # hardcoded 50ms — short enough that one boot-time stall tipped all 32
+    # handlers into permanent solo fallback (each timed-out request was ALSO
+    # still batched: double inference, self-sustaining ~104ms stampede,
+    # 2026-07-13).  Waiting out a transient stall in the batched path is
+    # nearly always cheaper than defecting to a solo-call convoy.
+    inference_request_timeout_ms: float = 250.0
     inference_request_timeout_ms: float = 50.0
 
     # ── background training ─────────────────────────────────────────────
@@ -655,6 +857,18 @@ RL_CONFIG = RLConfigData()
 # Robotron waves progress 1, 2, 3, …  The operator can start the agent at an
 # arbitrary wave for curriculum training.
 ROBOTRON_SELECTABLE_LEVELS = list(range(1, 41))
+
+# Stratified training starts (2026-07): with uniform wave-1 starts, deep-wave
+# data exists in the buffer ONLY while the policy is good enough to reach it —
+# any dip evicts the data that maintained depth within one buffer turnover,
+# with a regeneration floor of zero (the curriculum lock-in that made the
+# wave-1 run's peak strictly less stable than the start-11 run's).  Stratified
+# per-client start waves guarantee deep-wave experience regardless of policy
+# quality.  Applies to TRAINING clients only when the operator has not set
+# start_advanced/auto_curriculum in game settings (operator settings win);
+# eval clients remain hard-pinned to wave 1 so EScr1M stays comparable.
+STRATIFIED_TRAINING_STARTS = True
+STRATIFIED_START_LEVELS = (1, 5, 9, 13)
 
 class GameSettings:
     """Thread-safe container for operator-adjustable game settings."""
@@ -895,11 +1109,15 @@ class MetricsData:
     eval_average_length: float = 0.0
     eval_episode_count: int = 0
     eval_score_1m_window: int = EVAL_SCORE_1M_WINDOW_FRAMES
-    eval_score_1m_entries: Deque[tuple[float, int]] = field(default_factory=deque)
+    # Entries are (score, level, ep_frames); score and level share one window
+    # so EScr1M and ELvl1M always describe the same set of eval episodes.
+    eval_score_1m_entries: Deque[tuple[float, float, int]] = field(default_factory=deque)
     eval_score_1m_frames: int = 0
     eval_score_1m_sum: float = 0.0
     eval_score_1m_average: float = 0.0
     eval_score_1m_count: int = 0
+    eval_level_1m_sum: float = 0.0
+    eval_level_1m_average: float = 0.0
     peak_level: int = 0
     peak_episode_reward: float = 0.0
     peak_game_score: int = 0
@@ -1008,19 +1226,24 @@ class MetricsData:
             if peak_level is not None and int(peak_level) > self.peak_level:
                 self.peak_level = int(peak_level)
 
-    def _push_eval_score_1m_locked(self, score: float, length: int):
+    def _push_eval_score_1m_locked(self, score: float, level: float, length: int):
         window = max(1, int(self.eval_score_1m_window))
         ep_frames = max(1, int(length))
-        self.eval_score_1m_entries.append((float(score), ep_frames))
+        self.eval_score_1m_entries.append((float(score), float(level), ep_frames))
         self.eval_score_1m_frames += ep_frames
         self.eval_score_1m_sum += float(score)
+        self.eval_level_1m_sum += float(level)
         while len(self.eval_score_1m_entries) > 1 and self.eval_score_1m_frames > window:
-            old_score, old_frames = self.eval_score_1m_entries.popleft()
+            old_score, old_level, old_frames = self.eval_score_1m_entries.popleft()
             self.eval_score_1m_frames -= int(old_frames)
             self.eval_score_1m_sum -= float(old_score)
+            self.eval_level_1m_sum -= float(old_level)
         self.eval_score_1m_count = len(self.eval_score_1m_entries)
         self.eval_score_1m_average = (
             self.eval_score_1m_sum / max(1, self.eval_score_1m_count)
+        )
+        self.eval_level_1m_average = (
+            self.eval_level_1m_sum / max(1, self.eval_score_1m_count)
         )
 
     def get_fps(self) -> float:
@@ -1146,7 +1369,7 @@ class MetricsData:
                 self.eval_average_score = (1.0 - a) * self.eval_average_score + a * float(score)
                 self.eval_average_level = (1.0 - a) * self.eval_average_level + a * float(level)
                 self.eval_average_length = (1.0 - a) * self.eval_average_length + a * float(length)
-            self._push_eval_score_1m_locked(float(score), int(length))
+            self._push_eval_score_1m_locked(float(score), float(level), int(length))
 
     def increment_total_controls(self):
         with self.lock:
