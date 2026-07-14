@@ -539,7 +539,12 @@ class RLConfigData:
     priority_beta_frames: int = 10_000_000
     priority_eps: float = 1e-6
     per_new_priority_cap_multiplier: float = 3.0
-    min_replay_to_train: int = 10_000
+    # Raised 10K -> 500K (2026-07-14 shock forensics): after a buffer wipe,
+    # 10K refilled in seconds and training resumed against a tiny window —
+    # each transition resampled 25-100x, which demolished the freshly-restored
+    # mature checkpoint within ~7,500 steps.  500K (~2 min at fleet FPS) makes
+    # post-wipe resumption train on a real distribution.
+    min_replay_to_train: int = 500_000
 
     # Elite/rare-event replay. PER keeps surprising transitions hot, but once a
     # valuable event becomes predictable its TD error can fall out of the sample
@@ -573,8 +578,64 @@ class RLConfigData:
     hof_max_episodes: int = 192
     hof_episode_stride: int = 1536         # transitions kept per episode (tail)
     hof_min_game_score: int = 50_000       # absolute admission floor
+    # Garbage-score rejection (2026-07: a fresh bank filled with reset/crash
+    # junk — best "99,379,937" — and ratcheted itself shut).  Two checks that
+    # need no history: a physics cap (even perfect play earns a bounded score
+    # per wave reached) and a relative cap vs the best legitimately admitted
+    # (seeded by the floor, so garbage arriving FIRST is still rejected).
+    # Physics cap is deliberately generous: a strong player's score/wave
+    # (RQ = score / waves completed) can rarely reach ~50K, so cap there and
+    # let the relative cap catch anything the physics bound is too loose for.
+    # Physics cap is on WAVES COMPLETED (level - start_level + 1), not
+    # absolute level (2026-07-14: start-11 made absolute-level caps >=550K —
+    # dead — and 119K-322K transient-RAM BCD junk ratcheted the bank shut).
+    hof_max_score_per_level: int = 50_000  # physics: score <= this * waves completed
+    hof_relative_cap: float = 10.0         # score <= this * max(floor, best admitted)
+    # Junk must also beat live play: score <= this * P90 of recent real game
+    # scores (computed before the candidate joins the window, so junk cannot
+    # vouch for itself).  Costs: a genuine >5x-P90 breakthrough waits until
+    # the window catches up — the safe failure direction.
+    hof_recent_score_multiplier: float = 5.0
     hof_replay_fraction: float = 0.10      # guaranteed batch quota once seeded
     hof_min_transitions: int = 4_096       # quota activates only past this
+    # BOOTSTRAP-FREE MC ANCHOR (2026-07-14).  The verified cause of the
+    # recurring peak->collapse is that the C51 value surface has NO external
+    # positive grounding: Tz = r + gamma^h * Q_target(s') is ~92% bootstrap
+    # (gamma^16=0.923, sparse tiny per-step score) and the ONLY ground-truth
+    # terminal in Robotron is a death at v_min=-10.  So every positive belief
+    # is held up by other beliefs, and once the high-return data drains from
+    # the ring the whole surface slides DOWN at healthy loss (Q-max 34->~12,
+    # EpLen rises, EScr1M 72k->48k) into the passive-survival basin.  Replay
+    # quotas cannot fix this: HOF rows were ALSO bootstrapped through the same
+    # deflating net, so peak-play states got pessimistic targets too.
+    #
+    # With this on, HOF rows regress to their episode's REALIZED discounted
+    # return (stored at admission, computed backward from the terminal), which
+    # is a measured fact independent of the network.  It cannot deflate, it
+    # carries no scripted-bot competence ceiling, and it gives the critic the
+    # positive ground truth the architecture never had.  This is the standard
+    # self-imitation construction.  Set False to fall back to pure bootstrap.
+    hof_mc_return_targets: bool = True
+
+    # Live-mmap replay backing (Tempest parity, 2026-07): storage arrays are
+    # on-disk sparse memmaps from process start, so saves are ~0.1s flushes
+    # and restarts adopt in place — no multi-GB first save after a fresh
+    # start or wipe.  Disable to fall back to RAM arrays + copy saves.
+    replay_live_mmap: bool = True
+    # Live RING storage location.  On a spinning disk, mmap-backed storage at
+    # ~115 MB/s of dirty pages (7000 fps x 16 KB/transition) outruns writeback;
+    # the kernel throttles the transition-storing thread and the async replay
+    # queue overflows (dropped frames).  tmpfs keeps the ring in RAM (~164 GB —
+    # the SAME cost the old RAM-array buffer paid) with fast save/restart and
+    # zero disk throttle.  Survives process restart; lost on machine reboot
+    # (fine: revertdb/collapse wipe the ring anyway; the hall of fame and
+    # best.pt are the durable anchors and stay on the model disk).  Set "" to
+    # keep the ring beside the model on disk.
+    replay_tmpfs_dir: str = "/dev/shm"
+    # msync on save: only protects against POWER loss (process restarts read
+    # the page cache identically without it).  On the spinning disk it costs
+    # seconds per save while holding the buffer lock — keep off.
+    replay_flush_msync: bool = False
 
     # Target network (periodic hard sync)
     target_update_period: int = 1_000
@@ -683,11 +744,30 @@ class RLConfigData:
     # Q-margin also imitates directly into the acting joint head by constraining
     # Q(expert_action) >= Q(other) + margin on expert-visited states.  Left on
     # permanently it is a hard ceiling, so decay it on the same step schedule.
+    #
+    # PERMANENT ARGMAX-ANCHOR FLOOR (2026-07-14, min_weight 0.0 -> 0.02):
+    # verified root cause of the recurring peak->collapse is expert-anchor
+    # WITHDRAWAL, not negative-target oversampling.  As every imitation signal
+    # decays to exactly 0 (this floor was 0.0) and the expert ratio sits at its
+    # 1% floor, the only thing feeding the UPPER C51 atoms (high realized
+    # returns) drains from the 10M ring within one turnover.  The C51 target is
+    # ~92% bootstrap (gamma^16=0.923, tiny per-step score), so with no external
+    # positive grounding (every terminal is a death at v_min=-10; there is no
+    # positive terminal) the Bellman fixed point slides DOWNWARD at healthy loss
+    # -> Q-max contracts 34->~20 -> greedy argmax relaxes into the passive-
+    # survival basin (EpLen rises, EScr1M falls, loss stays ~1.9).  A tiny
+    # permanent margin-loss floor keeps Q(expert_action) >= Q(other)+0.50 pressure
+    # alive on expert-visited states forever, anchoring the deployed joint head's
+    # argmax to expert-level play.  Chosen over raising expert_ratio_end (0.01 is
+    # the A/B-validated all-time-record setting; >1% pays the deep-wave bot-
+    # takeover tax) because this is a LOSS on already-collected states — no live
+    # suicidal-bot frames enter the ring.  Verified via multi-agent adversarial
+    # workflow; see repo memory [[robotron-peak-collapse-root-cause]].
     expert_q_margin_weight: float = 0.05
     expert_q_margin: float = 0.50
     expert_q_margin_decay_start_step: int = 0
     expert_q_margin_decay_steps: int = 300_000
-    expert_q_margin_min_weight: float = 0.0
+    expert_q_margin_min_weight: float = 0.02
 
     # ── reward ──────────────────────────────────────────────────────────
     # Score reward is based on actual game_score delta, not Lua objreward. A
@@ -712,7 +792,13 @@ class RLConfigData:
     # no-human no-score stall) or potential-based state differences
     # gamma*Phi(s') - Phi(s). They densify movement credit without paying the
     # policy just for occupying a state.
-    wave_clear_bonus: float = 1.0
+    #
+    # Positive training terminal: clearing a wave is treated as a replay/n-step
+    # terminal (the live game continues), giving the critic a bootstrap-free
+    # positive boundary condition instead of anchoring only on death. The clear
+    # bonus is added outside the generic shaping clip so +5 means +5.
+    wave_clear_training_terminal: bool = True
+    wave_clear_bonus: float = 5.0
     wave_progress_bonus: float = 0.15
     potential_human_scale: float = 0.45
     potential_human_sharpness: float = 2.0
@@ -774,14 +860,25 @@ class RLConfigData:
     fire_hold_frames: int = 1
 
     # ── death attribution ───────────────────────────────────────────────
-    # NOTE: pre-death upsampling is deliberately kept BELOW the positive
-    # counterweight (elite_episode_priority_boost=3.0, learner_elite=4.0) so a
-    # batch is never negative-target dominated.  Over-boosting pre-death frames
-    # while expert anchoring is weak drives distributional value collapse (the
-    # Q-Range slides toward v_min=-10).  See repo memory on the 0%-expert run.
-    death_priority_boost: float = 3.0
+    # NEGATIVE-TARGET OVERSAMPLING NEUTRALIZED (2026-07-14 forensics on
+    # logfile.txt): the "kept below the positive counterweight" balance argument
+    # below is ASYMMETRICALLY BROKEN.  The positive counterweight (elite/learner
+    # boosts) only exists while the agent PRODUCES elite episodes; the death
+    # boosts fire on EVERY death.  So the instant the greedy policy starts
+    # slipping, elite production stops, the counterweight vanishes, but the death
+    # boosts keep oversampling the -10-tainted last-16 transitions of every life
+    # (n_step=16 propagates the death penalty at >=92.3% strength).  Batches tip
+    # negative-target-dominated -> C51 mass migrates to v_min -> Q-Range min pins
+    # at -10.0 -> pessimistic degenerate play -> shorter lives -> MORE boosted
+    # death frames: the runaway seen twice in logfile.txt (EScr1M 65k -> 11k,
+    # loss flat-healthy ~1.9 the whole way down, Q pinned at -10).  Disabling the
+    # pre-death reward REPAINT (below) removed the reward-rewrite eraser but left
+    # these PRIORITY boosts live, so the same collapse recurred.  death boost
+    # 3.0->1.0 (natural TD priority, no artificial negative floor); pre-death
+    # boost 2.0->1.0 (1.0 = no-op via _do_boost's `boost <= 1.0` guard).
+    death_priority_boost: float = 1.0
     pre_death_lookback: int = 150
-    pre_death_priority_boost: float = 2.0
+    pre_death_priority_boost: float = 1.0
     pre_death_reward_lookback: int = 90
     # Pre-death reward repaint DISABLED (2026-07 forensics): this in-place
     # rewrite of the last ~90 stored returns before EVERY death was verified
@@ -816,7 +913,11 @@ class RLConfigData:
     inference_on_cpu: bool = False         # agent falls back to CPU if no CUDA
     train_cuda_device_index: int = 0
     inference_cuda_device_index: int = 1
-    inference_sync_steps: int = 5
+    # Weight-sync cadence (online -> infer net).  5 was needless: at 20-25
+    # steps/s that is a cross-GPU sync 4-5x per SECOND, and each sync opens a
+    # window where inference orders behind the training queue.  50 syncs every
+    # ~2-2.5s — behaviorally identical staleness, 10x fewer stall windows.
+    inference_sync_steps: int = 50
     inference_batching_enabled: bool = True
     inference_batch_max_size: int = 128
     inference_batch_wait_ms: float = 1.0
@@ -867,7 +968,13 @@ ROBOTRON_SELECTABLE_LEVELS = list(range(1, 41))
 # quality.  Applies to TRAINING clients only when the operator has not set
 # start_advanced/auto_curriculum in game settings (operator settings win);
 # eval clients remain hard-pinned to wave 1 so EScr1M stays comparable.
-STRATIFIED_TRAINING_STARTS = True
+# Disabled 2026-07-13: stratified deep starts starved a FRESH agent of the
+# easy-wave scoring curriculum (it learned to dodge, not score) and biased the
+# HOF toward deep-start-inflated game scores.  Restoring the mature 415K agent,
+# which was trained at a fixed deep start (start-11 via game settings, operator
+# override), so stratification is off.  Revisit only for from-scratch runs with
+# a shallow-heavy schedule.
+STRATIFIED_TRAINING_STARTS = False
 STRATIFIED_START_LEVELS = (1, 5, 9, 13)
 
 class GameSettings:

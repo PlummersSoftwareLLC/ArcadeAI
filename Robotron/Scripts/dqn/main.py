@@ -413,6 +413,20 @@ def main():
     dev = getattr(agent.device, "type", "unknown")
     print(f"Device: {dev.upper()}")
 
+    # DQN_EVAL_ONLY=1: serve the loaded checkpoint with training DISABLED.
+    # Diagnostic mode (2026-07-14): measures a checkpoint's raw play quality
+    # with zero gradient updates, cleanly separating "the checkpoint is not
+    # what we think" from "current training degrades it on contact".  The
+    # collapse watchdog stays quiet (its trainer-idle guard sees no steps)
+    # and the best-checkpoint ratchet only fires on genuine new records.
+    if os.getenv("DQN_EVAL_ONLY", "").strip().lower() in ("1", "true", "yes", "on"):
+        agent.training_enabled = False
+        metrics.training_enabled = False
+        print("=" * 70)
+        print("EVAL-ONLY MODE: training disabled (DQN_EVAL_ONLY=1) — serving the")
+        print("loaded checkpoint untouched. Unset the env var and restart to train.")
+        print("=" * 70)
+
     dashboard = None
     dashboard_status = "disabled"
 

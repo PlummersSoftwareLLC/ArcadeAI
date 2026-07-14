@@ -14,8 +14,10 @@ Game-flow contract (Robotron-specific):
   • The model consumes the compact slice of the wire (18 core + 22 ELIST values
     + 112 grouped object rows); the full wire is still used by the expert/debug
     paths.
-  • Episodes terminate on ``frame.done``.  While ``player_alive`` is false (death
-    animation / between lives) we send a neutral action and store no transitions.
+  • Life episodes terminate on ``frame.done``.  Wave clears are training-only
+    pseudo-terminals for replay/n-step targets; the live game keeps going.
+    While ``player_alive`` is false (death animation / between lives) we send
+    a neutral action and store no transitions.
     • Reward = clipped game_score delta plus tightly bounded non-harvestable
       movement/progress shaping. Lua subjective shaping and explicit terminal
       death reward remain independently configurable.
@@ -537,6 +539,7 @@ def _shape_transition_reward(
     next_state: np.ndarray | None = None,
     prev_level_number: int | None = None,
     stall_frames: int = 0,
+    wave_cleared: bool | None = None,
 ) -> tuple[float, float, float, float, int]:
     """Reward from score plus bounded non-harvestable shaping.
 
@@ -562,6 +565,7 @@ def _shape_transition_reward(
     if subj_raw > 0.0:
         subj_raw *= subj_weight
     shaping_raw = subj_raw
+    clear_r = 0.0
 
     # Do not pay "escape danger" potential on terminal/death frames.  Since
     # Phi(s) <= 0, treating death as Phi(s') = 0 can accidentally reward dying
@@ -571,14 +575,16 @@ def _shape_transition_reward(
         phi_next = _movement_potential(next_state, alive=True)
         shaping_raw += float(RL_CONFIG.gamma) * phi_next - phi_prev
 
-    if _wave_advanced(prev_state, frame, prev_level_number=prev_level_number):
+    if wave_cleared is None:
+        wave_cleared = _wave_advanced(prev_state, frame, prev_level_number=prev_level_number)
+    if wave_cleared:
         wave = max(1, int(frame.level_number))
-        shaping_raw += float(getattr(RL_CONFIG, "wave_clear_bonus", 0.0))
+        clear_r = float(getattr(RL_CONFIG, "wave_clear_bonus", 0.0))
         shaping_raw += float(getattr(RL_CONFIG, "wave_progress_bonus", 0.0)) * min(10, max(0, wave - 1))
 
     shaping_raw += _stall_penalty(int(stall_frames))
 
-    subj_r = _clip_abs(shaping_raw, float(RL_CONFIG.shaping_reward_clip))
+    subj_r = _clip_abs(shaping_raw, float(RL_CONFIG.shaping_reward_clip)) + clear_r
     death_r = -float(getattr(RL_CONFIG, "death_penalty", 0.0)) if bool(frame.done) else 0.0
     total_r = score_r + subj_r + death_r
     total_r = _clip_abs(total_r, float(RL_CONFIG.death_reward_clip if frame.done else RL_CONFIG.reward_clip))
@@ -610,10 +616,13 @@ class AsyncReplayBuffer:
         self._thread = threading.Thread(target=self._consume, daemon=True)
         self._thread.start()
 
-    def _record_drop(self, n=1):
+    def _record_drop(self, n=1, terminal=False):
         with self._drop_lock:
             self.dropped_steps += n
             total = self.dropped_steps
+            if terminal:
+                self.dropped_terminals = getattr(self, "dropped_terminals", 0) + n
+            term_total = getattr(self, "dropped_terminals", 0)
             now = time.time()
             warn = (now - self._last_drop_warn) >= 10.0
             if warn:
@@ -623,12 +632,22 @@ class AsyncReplayBuffer:
         except Exception:
             pass
         if warn:
-            print(f"[WARN] Replay queue saturated — dropped {total:,} non-terminal "
-                  f"transitions so far (consumer can't keep up)")
+            extra = f" ({term_total:,} of them TERMINAL)" if term_total else ""
+            print(f"[WARN] Replay queue saturated — dropped {total:,} transitions"
+                  f"{extra} so far (consumer can't keep up)")
 
     def step_async(self, *args, client_id=None, **kwargs):
         is_terminal = bool(args[4]) if len(args) > 4 else False
         item = ("step", client_id, args, kwargs)
+        if is_terminal:
+            # Terminal transitions (death or training-only wave clear) close
+            # the n-step window — do NOT silently drop them. Block briefly to
+            # ride out a consumer stall instead of losing the episode boundary.
+            try:
+                self.queue.put(item, timeout=0.5)
+            except queue.Full:
+                self._record_drop(terminal=True)
+            return
         try:
             self.queue.put_nowait(item)
         except queue.Full:
@@ -640,9 +659,9 @@ class AsyncReplayBuffer:
         except queue.Full:
             self._record_drop()
 
-    def boost_elite_episode(self, client_id, score: int, level: int, total_reward: float, ep_len: int):
+    def boost_elite_episode(self, client_id, score: int, level: int, total_reward: float, ep_len: int, start_level: int = 1):
         try:
-            self.queue.put_nowait(("elite", client_id, (int(score), int(level), float(total_reward), int(ep_len)), None))
+            self.queue.put_nowait(("elite", client_id, (int(score), int(level), float(total_reward), int(ep_len), int(start_level)), None))
         except queue.Full:
             self._record_drop()
 
@@ -672,7 +691,7 @@ class AsyncReplayBuffer:
                     elif cmd == "boost":
                         self._do_boost(cid)
                     elif cmd == "elite":
-                        self._do_elite_episode_boost(cid, *(a or (0, 0, 0.0, 0)))
+                        self._do_elite_episode_boost(cid, *(a or (0, 0, 0.0, 0, 1)))
                 except Exception as e:
                     print(f"AsyncReplayBuffer error: {e}")
 
@@ -718,8 +737,17 @@ class AsyncReplayBuffer:
             level_thr = max(level_thr, hwm_l - float(getattr(RL_CONFIG, "elite_ratchet_level_slack", 1.0)))
         return score_thr, level_thr
 
-    def _do_elite_episode_boost(self, client_id, score: int, level: int, total_reward: float, ep_len: int):
+    def _do_elite_episode_boost(self, client_id, score: int, level: int, total_reward: float, ep_len: int, start_level: int = 1):
         indices = self._episode_indices.get(client_id)
+        # Recent-score sanity cap, computed BEFORE appending this episode so
+        # a junk score cannot vouch for itself.  Percentile (not max) because
+        # the window itself may contain junk-score episodes.
+        recent_cap = 0.0
+        if len(self._recent_ep_scores) >= int(getattr(RL_CONFIG, "elite_adaptive_min_episodes", 20)):
+            mult = float(getattr(RL_CONFIG, "hof_recent_score_multiplier", 5.0))
+            if mult > 0:
+                p90 = float(np.percentile(np.asarray(self._recent_ep_scores, dtype=np.float64), 90.0))
+                recent_cap = mult * max(1.0, p90)
         # Every finished episode feeds the adaptive gate, boosted or not —
         # thresholds must track typical play, not just elite play.
         self._recent_ep_scores.append(int(score))
@@ -734,7 +762,8 @@ class AsyncReplayBuffer:
             try:
                 # Silent by design: admissions surface via the HOF dashboard
                 # column (bank bar) and the b-key buffer report.
-                self.agent.memory.hof_admit(list(indices), int(score))
+                self.agent.memory.hof_admit(list(indices), int(score), level=int(level),
+                                            start_level=int(start_level), recent_cap=recent_cap)
             except Exception as e:
                 print(f"  HOF admission error: {e}")
         try:
@@ -799,7 +828,7 @@ class AsyncReplayBuffer:
                 elif cmd == "boost":
                     self._do_boost(cid)
                 elif cmd == "elite":
-                    self._do_elite_episode_boost(cid, *(a or (0, 0, 0.0, 0)))
+                    self._do_elite_episode_boost(cid, *(a or (0, 0, 0.0, 0, 1)))
             except queue.Empty:
                 break
             except Exception:
@@ -828,6 +857,7 @@ class AsyncInferenceBatcher:
         self.max_wait_s = max(0.0, float(max_wait_ms) / 1000.0)
         self.request_timeout_s = max(0.001, float(request_timeout_ms) / 1000.0)
         self.queue = queue.Queue(maxsize=20000)
+        self._last_slow_log = 0.0
         self.running = True
         self._thread = threading.Thread(target=self._consume, daemon=True, name="InferBatchWorker")
         self._thread.start()
@@ -883,7 +913,20 @@ class AsyncInferenceBatcher:
                 states = [r.state for r in batch]
                 epsilons = [r.epsilon for r in batch]
                 locked_fires = [r.locked_fire for r in batch]
+                t_infer0 = time.perf_counter()
                 actions = self.agent.act_batch(states, epsilons, locked_fires=locked_fires)
+                infer_ms = (time.perf_counter() - t_infer0) * 1000.0
+                # Stall forensics (2026-07-14: recurring multi-minute episodes
+                # of AvgInf pinned ~120ms, then self-recovery).  When a cycle
+                # is slow, print WHERE the time went — rate-limited so a bad
+                # episode logs a trickle, not a flood.
+                if infer_ms > 40.0 and time.perf_counter() - self._last_slow_log > 2.0:
+                    self._last_slow_log = time.perf_counter()
+                    prof = getattr(self.agent, "_last_actbatch_prof", None)
+                    g_n, g_ms, ev = prof if prof else (0, 0.0, True)
+                    print(f"[INFSTALL] cycle={infer_ms:.1f}ms batch={len(batch)} "
+                          f"greedy={g_n} gpu={g_ms:.1f}ms event_fired={ev} "
+                          f"qdepth={self.queue.qsize()}")
             except Exception as e:
                 print(f"AsyncInferenceBatcher error: {e}")
                 actions = []
@@ -1198,6 +1241,29 @@ class SocketServer:
             buf += chunk
         return bytes(buf)
 
+    def _client_start(self, cid: int) -> tuple:
+        """(start_adv, start_level) for a client — the ONE source of truth.
+
+        Used by both _pack_action (what the client is told to do) and HOF
+        admission (how many waves an episode actually completed), so the two
+        can never diverge.  Eval clients are always wave-1 natural.
+        """
+        if self._is_eval_client(cid):
+            # Eval clients always start a fresh game at wave 1: EScr1M measures
+            # true full-game performance, not curriculum-boosted play.
+            return 0, 1
+        _gs = game_settings.snapshot()
+        if _gs["start_advanced"] or bool(_gs.get("auto_curriculum", False)):
+            # Operator-driven curriculum wins.
+            return 1, max(1, min(255, int(_gs["start_level_min"])))
+        if STRATIFIED_TRAINING_STARTS:
+            # Stratified per-client start waves: guarantee deep-wave
+            # experience regardless of policy quality.
+            levels = STRATIFIED_START_LEVELS
+            lv = max(1, min(255, int(levels[cid % len(levels)])))
+            return (1 if lv > 1 else 0), lv
+        return 0, 1
+
     def _pack_action(
         self,
         move_cmd,
@@ -1207,28 +1273,7 @@ class SocketServer:
         preview_enabled: bool = False,
         hud_enabled: bool = False,
     ):
-        if self._is_eval_client(cid):
-            # Eval clients always start a fresh game at wave 1: EScr1M measures
-            # true full-game performance, not curriculum-boosted play.
-            start_adv = 0
-            start_level = 1
-        else:
-            _gs = game_settings.snapshot()
-            if _gs["start_advanced"] or bool(_gs.get("auto_curriculum", False)):
-                # Operator-driven curriculum wins.
-                start_adv = 1
-                start_level = max(1, min(255, int(_gs["start_level_min"])))
-            elif STRATIFIED_TRAINING_STARTS:
-                # Stratified per-client start waves (2026-07): guarantee
-                # deep-wave experience in the buffer regardless of policy
-                # quality, breaking the wave-1 curriculum lock-in where deep
-                # data existed only while the policy could reach it.
-                levels = STRATIFIED_START_LEVELS
-                start_level = max(1, min(255, int(levels[cid % len(levels)])))
-                start_adv = 1 if start_level > 1 else 0
-            else:
-                start_adv = 0
-                start_level = 1
+        start_adv, start_level = self._client_start(cid)
         source_u8 = int(source_code) & 0x0F
         if preview_enabled:
             source_u8 |= 0x40
@@ -1342,8 +1387,14 @@ class SocketServer:
                     self._calc_avg_game_state()
 
                 # ── Process previous step ───────────────────────────────
+                wave_cleared = False
                 if cs.get("last_state") is not None and cs.get("last_action") is not None:
                     mv_i, fr_i = cs["last_action"]
+                    wave_cleared = _wave_advanced(
+                        cs.get("last_state"),
+                        frame,
+                        prev_level_number=cs.get("last_level_number"),
+                    )
                     try:
                         score_delta_probe = max(0, int(frame.game_score) - int(cs.get("last_game_score", frame.game_score)))
                     except Exception:
@@ -1351,6 +1402,7 @@ class SocketServer:
                     if (
                         frame.done
                         or not frame.player_alive
+                        or wave_cleared
                         or score_delta_probe > 0
                         or _active_group_count(model_state, "human") > 0
                     ):
@@ -1364,6 +1416,7 @@ class SocketServer:
                         next_state=model_state,
                         prev_level_number=cs.get("last_level_number"),
                         stall_frames=int(cs.get("no_human_no_score_frames", 0)),
+                        wave_cleared=wave_cleared,
                     )
                     interest = _transition_interest_score(
                         cs["last_state"],
@@ -1377,11 +1430,15 @@ class SocketServer:
                     eval_only = bool(cs.get("eval_only", False))
                     if self.agent and not eval_only:
                         tag = cs.get("prev_action_source", "dqn")
+                        training_done = bool(frame.done) or (
+                            bool(wave_cleared)
+                            and bool(getattr(RL_CONFIG, "wave_clear_training_terminal", True))
+                        )
                         nstep = cs.get("nstep")
                         if nstep is not None:
                             joint = combine_action(mv_i, fr_i)
                             matured = nstep.add(cs["last_state"], joint, total_r,
-                                                model_state, bool(frame.done),
+                                                model_state, bool(training_done),
                                                 actor=tag, priority_reward=total_r,
                                                 interest=interest)
                             for s0, a, Rn, pR, sn, dn, h, act, intr in matured:
@@ -1393,7 +1450,7 @@ class SocketServer:
                         else:
                             self.async_buffer.step_async(
                                 cs["last_state"], (mv_i, fr_i), total_r,
-                                model_state, bool(frame.done), client_id=cid,
+                                model_state, bool(training_done), client_id=cid,
                                 actor=tag, horizon=1, priority_reward=total_r,
                                 interest=interest)
 
@@ -1431,7 +1488,8 @@ class SocketServer:
                             if self.async_buffer is not None:
                                 self.async_buffer.boost_elite_episode(
                                     cid, frame.game_score, frame.level_number,
-                                    cs["total_reward"], ep_len)
+                                    cs["total_reward"], ep_len,
+                                    start_level=self._client_start(cid)[1])
                             try:
                                 ep_dqn = cs.get("ep_dqn_score_reward", cs["ep_dqn_reward"])
                                 ep_dqn_frames = cs.get("ep_dqn_frames", 0)
@@ -1501,6 +1559,13 @@ class SocketServer:
                     except Exception:
                         break
                     continue
+
+                if wave_cleared:
+                    cs["no_human_no_score_frames"] = 0
+                    hist = cs.get("frame_history")
+                    if hist is not None:
+                        hist.clear()
+                    model_state = self._stack_model_state(cs, single_state)
 
                 # ── Choose action ───────────────────────────────────────
                 metrics.increment_total_controls()

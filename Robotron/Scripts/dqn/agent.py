@@ -127,6 +127,25 @@ class RainbowAgent:
             state_size=state_size,
             alpha=cfg.priority_alpha,
         )
+        # Ring lives in tmpfs (if configured + present) so a spinning disk's
+        # writeback can't throttle the transition-storing thread; the hall of
+        # fame stays on the model disk (durable across reboot/revert).
+        _model_replay = LATEST_MODEL_PATH.rsplit(".", 1)[0] + "_replay"
+        self.memory._hof_dir = _model_replay + "_hof"
+        _tmpfs = str(getattr(cfg, "replay_tmpfs_dir", "") or "").strip()
+        if _tmpfs and os.path.isdir(_tmpfs):
+            self._ring_dir = os.path.join(_tmpfs, os.path.basename(_model_replay))
+        else:
+            self._ring_dir = _model_replay
+        # Live-mmap backing from birth (Tempest-style): if no saved ring
+        # exists yet, back the storage arrays with sparse memmaps now so every
+        # save is a fast flush and restarts adopt in place.  With a saved ring
+        # present this is a no-op and load() adopts it as before.
+        if bool(getattr(cfg, "replay_live_mmap", True)):
+            try:
+                self.memory.ensure_live_mmap(self._ring_dir)
+            except Exception as e:
+                print(f"  [WARN] replay live-mmap init failed: {e}")
 
         # AMP (CUDA only)
         self.use_amp = cfg.enable_amp and (self.device.type == "cuda")
@@ -267,7 +286,23 @@ class RainbowAgent:
             self.infer_net.eval()
             self.last_inference_sync = self.training_steps
             if self._sync_event is not None:
-                self._sync_event.record()
+                # Record on the INFERENCE device's stream, after the weight
+                # copies have landed.  The old bare record() ran on this
+                # (training) thread's current device, which placed the event
+                # on GPU0's default stream — BEHIND the entire queued training
+                # workload.  Every inference batch then waited for ~100ms+ of
+                # training kernels before its ~3ms forward (2026-07-14:
+                # AvgInf 102ms, batcher spin-waiting at 74% CPU, GPU1 18%
+                # idle).  The training thread absorbs its own queue drain
+                # here instead — a cost it pays at its next sync point anyway.
+                if self.device.type == "cuda":
+                    torch.cuda.synchronize(self.device)
+                if self.inference_device.type == "cuda":
+                    torch.cuda.synchronize(self.inference_device)
+                    with torch.cuda.device(self.inference_device):
+                        self._sync_event.record()
+                else:
+                    self._sync_event.record()
 
     def _infer_q_branched(self, states_t: torch.Tensor):
         """Return (move_q, fire_q) expected Q-values from the inference net."""
@@ -455,10 +490,21 @@ class RainbowAgent:
                 greedy_states.append(states[i])
 
         if greedy_idx:
+            t_gpu0 = time.perf_counter()
+            # Stall forensics: did the sync event we are about to wait on
+            # already fire?  If a slow batch shows event_fired=False the
+            # inference stream was parked behind the training queue again.
+            try:
+                ev_fired = bool(self._sync_event.query()) if self._sync_event is not None else True
+            except Exception:
+                ev_fired = True
             batch_np = np.asarray(greedy_states, dtype=np.float32)
             st = torch.from_numpy(batch_np).to(self.inference_device)
             joint_q = self._infer_q_joint(st)
             joint_best = joint_q.argmax(dim=1).detach().cpu().tolist()
+            self._last_actbatch_prof = (len(greedy_idx),
+                                        (time.perf_counter() - t_gpu0) * 1000.0,
+                                        ev_fired)
             joint_q_np = joint_q.detach().cpu().numpy().reshape(len(greedy_idx), NUM_MOVE, NUM_FIRE)
             for row, (pos, ji) in enumerate(zip(greedy_idx, joint_best)):
                 locked_fire = locked_fires[pos] if pos < len(locked_fires) else None
@@ -661,7 +707,9 @@ class RainbowAgent:
         if save_replay is None:
             save_replay = is_forced_save or bool(getattr(RL_CONFIG, "save_replay_on_autosave", False))
         if save_replay and bool(getattr(RL_CONFIG, "save_replay_buffer", True)):
-            buf_path = filepath.rsplit(".", 1)[0] + "_replay"
+            # The ring is a singleton at self._ring_dir (tmpfs when enabled),
+            # independent of which checkpoint's weights are being saved.
+            buf_path = getattr(self, "_ring_dir", None) or (filepath.rsplit(".", 1)[0] + "_replay")
             try:
                 self.memory.save(buf_path, verbose=bool(show_status))
             except Exception as e:
@@ -748,7 +796,7 @@ class RainbowAgent:
             if arch_changed:
                 print("  Replay buffer skipped — checkpoint state shape differs from current frame stack.")
             else:
-                buf_path = filepath.rsplit(".", 1)[0] + "_replay"
+                buf_path = getattr(self, "_ring_dir", None) or (filepath.rsplit(".", 1)[0] + "_replay")
                 try:
                     if not self.memory.load(buf_path, verbose=bool(show_status)):
                         print("  No replay buffer found — starting with empty buffer.")

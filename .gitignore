@@ -91,3 +91,9 @@ Tempest/models_dqn/
 *.npz
 robotron_dqn_*.pt
 robotron_dqn_*.pt.bak
+Robotron/checkpoint_archive/robotron_dqn_mature_f401M_s2541775_415k.pt.json
+Robotron/collapsed_run_archive/collapsed_best_escr1m72k.pt
+Robotron/collapsed_run_archive/collapsed_best_escr1m72k.pt.json
+Robotron/collapsed_run_archive/collapsed_f76M_s373k_latest.pt
+Robotron/collapsed_run_archive/posterm_run_best.pt
+Robotron/collapsed_run_archive/posterm_run_latest.pt

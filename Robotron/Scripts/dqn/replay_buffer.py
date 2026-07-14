@@ -21,6 +21,46 @@ ACTOR_EXPERT = 2
 ACTOR_KIND_COUNT = 3
 
 
+def mc_returns_from_nstep(rewards, dones, horizons, gamma: float) -> np.ndarray:
+    """Realized discounted return G_t for every transition of ONE episode.
+
+    The rows must be that episode's transitions in chronological order, one per
+    frame, as stored by the replay ring: rewards[j] is already the n-step
+    accumulated reward covering frames [t_j, t_j+h_j) and horizons[j] is h_j.
+    The exact same decomposition the Bellman target uses therefore telescopes:
+
+        G_j = r_j^(h) + gamma^h * G_{j+h}
+
+    anchored at the terminal (G = r there, no bootstrap).  Because frames map
+    1:1 to list positions, the transition h steps later sits at position j+h.
+    Walking BACKWARD from the end makes this exact in one O(n) pass.
+
+    A row whose n-step window runs past the stored data (j+h >= n) is treated
+    as terminal: the n-step buffer flushes at episode end, so its stored reward
+    already contains every remaining reward.  This also makes the function
+    correct on a TAIL slice (hof_admit keeps the last `stride` rows) — G only
+    ever looks forward, and the tail ends at the real terminal.
+
+    Returns float32; unlike a bootstrapped target this is a measured fact and
+    does not move when the network does.
+    """
+    n = int(np.asarray(rewards).shape[0])
+    if n <= 0:
+        return np.empty(0, dtype=np.float32)
+    r = np.asarray(rewards, dtype=np.float64)
+    d = np.asarray(dones, dtype=np.float64)
+    h = np.asarray(horizons, dtype=np.int64)
+    g = np.zeros(n, dtype=np.float64)
+    for j in range(n - 1, -1, -1):
+        hj = max(1, int(h[j]))
+        nxt = j + hj
+        if d[j] > 0.5 or nxt >= n:
+            g[j] = r[j]
+        else:
+            g[j] = r[j] + (gamma ** hj) * g[nxt]
+    return g.astype(np.float32)
+
+
 class SumTree:
     """Binary sum-tree for efficient proportional sampling in O(log N)."""
 
@@ -161,6 +201,10 @@ class PrioritizedReplayBuffer:
         # that can keep peak-play Bellman targets grounded after the sliding
         # window has forgotten the peak.  Deliberately NOT cleared by clear().
         self._hof_enabled = bool(getattr(RL_CONFIG, "hof_enabled", False))
+        # Durable HOF directory, set explicitly by the agent so it stays on
+        # the model disk even when the ring lives in tmpfs.  None → derive
+        # from the ring path at save/load time (legacy behavior).
+        self._hof_dir = None
         self.hof_ep_count = 0
         self.hof_total = 0
         if self._hof_enabled:
@@ -177,7 +221,12 @@ class PrioritizedReplayBuffer:
             self.hof_actor_kind  = np.zeros(hof_slots, dtype=np.uint8)
             self.hof_ep_score    = np.full(self._hof_max_eps, -np.inf, dtype=np.float64)
             self.hof_ep_len      = np.zeros(self._hof_max_eps, dtype=np.int32)
+            self.hof_ep_level    = np.zeros(self._hof_max_eps, dtype=np.int32)
             self._hof_flat       = np.empty(0, dtype=np.int64)
+            # Realized discounted return per HOF transition — the bootstrap-free
+            # target (see config.hof_mc_return_targets).  NaN = not computed;
+            # training falls back to the Bellman target for those rows.
+            self.hof_mc_return   = np.full(hof_slots, np.nan, dtype=np.float32)
 
     @staticmethod
     def actor_kind_from_name(actor: str | None, expert: int = 0) -> int:
@@ -392,7 +441,8 @@ class PrioritizedReplayBuffer:
         newest = (self.tree.data_ptr - 1) % self.capacity
         return (newest - offsets) % self.capacity
 
-    def hof_admit(self, indices, game_score: int) -> bool:
+    def hof_admit(self, indices, game_score: int, level: int = 0,
+                  start_level: int = 1, recent_cap: float = 0.0) -> bool:
         """Copy an episode into the hall of fame if it ranks all-time.
 
         Admission is ABSOLUTE (static floor + replace-the-minimum once full),
@@ -400,11 +450,40 @@ class PrioritizedReplayBuffer:
         its own play.  Rows are copied, not referenced, so ring eviction
         cannot touch them.  When the episode exceeds the stride, the TAIL is
         kept (the frontier/deepest play).  Returns True when admitted.
+
+        Garbage rejection: game-score bytes read during resets/crashes can be
+        valid-BCD junk (observed: "99,379,937" once; later 119K-322K when the
+        start-11 curriculum silently killed the absolute-level cap).  Checks:
+          1. floor — minimum credible game score;
+          2. physics cap on WAVES COMPLETED (level - start_level + 1), not
+             absolute level — deep starts must not inflate the budget; a
+             death "below" the start wave is a reset/crash read, rejected
+             (this also closes the old level==0 bypass);
+          3. relative cap vs best admitted (seeded by the floor);
+          4. optional recent_cap — a multiple of the P90 of recent REAL game
+             scores supplied by the caller; junk must beat live play too.
         """
         if not self._hof_enabled:
             return False
         score = float(game_score)
-        if score < float(getattr(RL_CONFIG, "hof_min_game_score", 50_000)):
+        floor = float(getattr(RL_CONFIG, "hof_min_game_score", 50_000))
+        if score < floor:
+            return False
+        per_level = float(getattr(RL_CONFIG, "hof_max_score_per_level", 50_000))
+        if per_level > 0:
+            sl = max(1, int(start_level))
+            lv = int(level)
+            if lv < sl:
+                return False  # died below its start wave: reset/crash junk
+            waves_completed = lv - sl + 1
+            if score > per_level * float(waves_completed):
+                return False
+        rel = float(getattr(RL_CONFIG, "hof_relative_cap", 10.0))
+        if rel > 0:
+            best = float(self.hof_ep_score[:self.hof_ep_count].max()) if self.hof_ep_count > 0 else 0.0
+            if score > rel * max(floor, best):
+                return False
+        if recent_cap and recent_cap > 0 and score > float(recent_cap):
             return False
         with self.lock:
             idxs = np.asarray(list(indices), dtype=np.int64)
@@ -433,9 +512,46 @@ class PrioritizedReplayBuffer:
             self.hof_actor_kind[base:base + n]  = self.actor_kind[idxs]
             self.hof_ep_score[ep] = score
             self.hof_ep_len[ep] = n
+            self.hof_ep_level[ep] = int(level)
             self.hof_total += n
+            # Bootstrap-free target: freeze this episode's realized returns at
+            # admission, while the rows are still a contiguous ordered episode.
+            # This is the ONLY moment the ordering is known — the flat sampler
+            # shuffles them afterwards.
+            self.hof_mc_return[base:base + n] = mc_returns_from_nstep(
+                self.hof_rewards[base:base + n],
+                self.hof_dones[base:base + n],
+                self.hof_horizons[base:base + n],
+                float(getattr(RL_CONFIG, "gamma", 0.99)),
+            )
             self._hof_rebuild_flat_locked()
             return True
+
+    def _hof_recompute_mc_locked(self) -> int:
+        """Recompute realized returns for every enshrined episode (call under lock).
+
+        Used to migrate banks persisted before hof_mc_return existed: the rows
+        needed (rewards/dones/horizons) were always stored, so a legacy bank can
+        be upgraded in place with no loss — no need to wait for fresh episodes.
+        Returns the number of episodes recomputed.
+        """
+        if not self._hof_enabled:
+            return 0
+        gamma = float(getattr(RL_CONFIG, "gamma", 0.99))
+        done = 0
+        for ep in range(self.hof_ep_count):
+            n = int(self.hof_ep_len[ep])
+            if n <= 0:
+                continue
+            base = ep * self._hof_stride
+            self.hof_mc_return[base:base + n] = mc_returns_from_nstep(
+                self.hof_rewards[base:base + n],
+                self.hof_dones[base:base + n],
+                self.hof_horizons[base:base + n],
+                gamma,
+            )
+            done += 1
+        return done
 
     def hof_admission_bar(self):
         """Current hall-of-fame admission bar (dashboard HOF column).
@@ -451,6 +567,26 @@ class PrioritizedReplayBuffer:
             if self.hof_ep_count >= self._hof_max_eps:
                 return max(floor, float(self.hof_ep_score[:self.hof_ep_count].min()))
             return floor
+
+    def hof_score_range(self):
+        """(worst, best) admitted game scores, or None if empty/disabled.
+
+        The dashboard HOF column shows this as "worst-best": the left number
+        is the admission bar (once full, what a new episode must beat), the
+        right is the all-time best in the bank.
+        """
+        if not self._hof_enabled:
+            return None
+        with self.lock:
+            if self.hof_ep_count == 0:
+                return None
+            scores = self.hof_ep_score[:self.hof_ep_count]
+            worst, best = float(scores.min()), float(scores.max())
+            # Empty/degenerate guard: an un-admitted or partially-initialised
+            # bank must render "-" (via None), never "0K-0K".
+            if not np.isfinite(best) or best <= 0.0:
+                return None
+            return worst, best
 
     def _hof_stats_locked(self):
         """Hall-of-fame summary for the buffer stats report (call under lock)."""
@@ -761,9 +897,11 @@ class PrioritizedReplayBuffer:
             np.save(os.path.join(dirpath, "hof_horizons.npy"), self.hof_horizons[:used])
             np.save(os.path.join(dirpath, "hof_is_expert.npy"), self.hof_is_expert[:used])
             np.save(os.path.join(dirpath, "hof_actor_kind.npy"), self.hof_actor_kind[:used])
+            np.save(os.path.join(dirpath, "hof_mc_return.npy"), self.hof_mc_return[:used])
             np.savez(os.path.join(dirpath, "hof_meta.npz"),
                      ep_score=self.hof_ep_score[:self.hof_ep_count],
                      ep_len=self.hof_ep_len[:self.hof_ep_count],
+                     ep_level=self.hof_ep_level[:self.hof_ep_count],
                      stride=np.int64(self._hof_stride),
                      state_size=np.int64(self.state_size))
             if verbose:
@@ -782,31 +920,71 @@ class PrioritizedReplayBuffer:
         with self.lock:
             ep_score = np.asarray(meta["ep_score"], dtype=np.float64)
             ep_len = np.asarray(meta["ep_len"], dtype=np.int32)
-            n_eps = min(int(ep_score.shape[0]), self._hof_max_eps)
-            used = n_eps * self._hof_stride
-            self.hof_states[:used] = np.load(os.path.join(dirpath, "hof_states.npy"))[:used]
-            self.hof_next_states[:used] = np.load(os.path.join(dirpath, "hof_next_states.npy"))[:used]
-            self.hof_actions[:used] = np.load(os.path.join(dirpath, "hof_actions.npy"))[:used]
-            self.hof_rewards[:used] = np.load(os.path.join(dirpath, "hof_rewards.npy"))[:used]
-            self.hof_dones[:used] = np.load(os.path.join(dirpath, "hof_dones.npy"))[:used]
-            self.hof_horizons[:used] = np.load(os.path.join(dirpath, "hof_horizons.npy"))[:used]
-            self.hof_is_expert[:used] = np.load(os.path.join(dirpath, "hof_is_expert.npy"))[:used]
-            self.hof_actor_kind[:used] = np.load(os.path.join(dirpath, "hof_actor_kind.npy"))[:used]
-            self.hof_ep_score[:n_eps] = ep_score[:n_eps]
-            self.hof_ep_len[:n_eps] = ep_len[:n_eps]
-            self.hof_ep_count = n_eps
-            self.hof_total = int(self.hof_ep_len[:n_eps].sum())
+            n_src = min(int(ep_score.shape[0]), self._hof_max_eps)
+            ep_level = (np.asarray(meta["ep_level"], dtype=np.int32)
+                        if "ep_level" in meta else np.zeros(n_src, dtype=np.int32))
+
+            # Purge garbage on load (self-heal banks polluted before the
+            # admission checks existed): floor violations, physics-cap
+            # violations where the level is known, and anything more than
+            # hof_relative_cap x the bank MEDIAN (robust anchor — the median
+            # survives a few giant junk entries; the max does not).
+            floor = float(getattr(RL_CONFIG, "hof_min_game_score", 50_000))
+            per_level = float(getattr(RL_CONFIG, "hof_max_score_per_level", 25_000))
+            rel = float(getattr(RL_CONFIG, "hof_relative_cap", 10.0))
+            src_scores = ep_score[:n_src]
+            keep = src_scores >= floor
+            if rel > 0 and n_src > 0:
+                keep &= src_scores <= rel * max(floor, float(np.median(src_scores)))
+            if per_level > 0:
+                lv = ep_level[:n_src]
+                keep &= (lv <= 0) | (src_scores <= per_level * np.maximum(1, lv))
+            kept = np.flatnonzero(keep)
+            dropped = n_src - int(kept.size)
+
+            arrays = {}
+            for name in ("states", "next_states", "actions", "rewards", "dones",
+                         "horizons", "is_expert", "actor_kind"):
+                arrays[name] = np.load(os.path.join(dirpath, f"hof_{name}.npy"), mmap_mode="r")
+
+            self.hof_total = 0
+            for dst, src in enumerate(kept):
+                s0, s1 = int(src) * self._hof_stride, int(src) * self._hof_stride + int(ep_len[src])
+                d0 = dst * self._hof_stride
+                n = s1 - s0
+                self.hof_states[d0:d0 + n] = arrays["states"][s0:s1]
+                self.hof_next_states[d0:d0 + n] = arrays["next_states"][s0:s1]
+                self.hof_actions[d0:d0 + n] = arrays["actions"][s0:s1]
+                self.hof_rewards[d0:d0 + n] = arrays["rewards"][s0:s1]
+                self.hof_dones[d0:d0 + n] = arrays["dones"][s0:s1]
+                self.hof_horizons[d0:d0 + n] = arrays["horizons"][s0:s1]
+                self.hof_is_expert[d0:d0 + n] = arrays["is_expert"][s0:s1]
+                self.hof_actor_kind[d0:d0 + n] = arrays["actor_kind"][s0:s1]
+                self.hof_ep_score[dst] = ep_score[src]
+                self.hof_ep_len[dst] = ep_len[src]
+                self.hof_ep_level[dst] = ep_level[src]
+                self.hof_total += n
+            self.hof_ep_count = int(kept.size)
+            # Realized returns are RECOMPUTED rather than loaded: the inputs
+            # (rewards/dones/horizons) were always persisted, so this upgrades
+            # a bank saved before hof_mc_return existed with no loss, and keeps
+            # the anchor correct if gamma ever changes.  ~0.1s for a full bank.
+            self._hof_recompute_mc_locked()
             self._hof_rebuild_flat_locked()
         if verbose:
-            print(f"  HOF loaded: {self.hof_ep_count} episodes / {self.hof_total:,} transitions "
-                  f"(best {self.hof_ep_score[:self.hof_ep_count].max():,.0f})")
+            purged = f" (purged {dropped} garbage-score episodes)" if dropped else ""
+            if self.hof_ep_count > 0:
+                print(f"  HOF loaded: {self.hof_ep_count} episodes / {self.hof_total:,} transitions "
+                      f"(best {self.hof_ep_score[:self.hof_ep_count].max():,.0f}){purged}")
+            else:
+                print(f"  HOF loaded: empty{purged}")
         return True
 
     def save(self, filepath: str, verbose: bool = True):
         """Save the full replay buffer as individual .npy files in a directory."""
         abs_path = os.path.abspath(filepath)
         try:
-            self._save_hof(abs_path + "_hof", verbose)
+            self._save_hof(self._hof_dir or (abs_path + "_hof"), verbose)
         except Exception as e:
             print(f"  [WARN] HOF save failed: {e}")
         if self._mmap_dir is not None and os.path.abspath(self._mmap_dir) == abs_path:
@@ -816,7 +994,15 @@ class PrioritizedReplayBuffer:
                 if verbose:
                     print(f"  Flushing mmap replay buffer ({n:,} transitions)...")
                     self._progress_bar("  Replay flush", 0.10)
-                self._flush_live_mmaps_locked()
+                # msync is only needed to survive POWER loss: a process
+                # restart reads identical data through the page cache, and
+                # the kernel writes dirty pages back lazily regardless.  On
+                # a busy spinning disk each file's sync barrier costs
+                # seconds while the buffer lock is held, so default off —
+                # losing seconds of replay data to a power cut is free.
+                do_msync = bool(getattr(RL_CONFIG, "replay_flush_msync", False))
+                if do_msync:
+                    self._flush_live_mmaps_locked()
                 if verbose:
                     self._progress_bar("  Replay flush", 0.55)
                 priorities_path = os.path.join(abs_path, "priorities.npy")
@@ -829,7 +1015,8 @@ class PrioritizedReplayBuffer:
                 priorities[:n] = self.tree.tree[self.tree.capacity:self.tree.capacity + n]
                 if n < self.capacity:
                     priorities[n:] = 0.0
-                priorities.flush()
+                if do_msync:
+                    priorities.flush()
                 del priorities
                 if verbose:
                     self._progress_bar("  Replay flush", 0.82)
@@ -929,6 +1116,14 @@ class PrioritizedReplayBuffer:
             print(f"  Failed to read replay meta: {e}")
             return False
 
+        if saved_n <= 0:
+            # Fresh live-mmap backing (created by ensure_live_mmap) or an
+            # empty save: nothing to restore, and the full-size sparse arrays
+            # must not be walked by the copy path below.
+            if verbose:
+                print("  Replay directory holds no transitions — starting empty.")
+            return False
+
         if self._try_adopt_mmap_directory(dirpath, data_ptr, saved_n, max_priority, t0, verbose):
             return True
 
@@ -952,6 +1147,98 @@ class PrioritizedReplayBuffer:
             arch["actor_kind"] = np.load(actor_kind_path, mmap_mode="r")
 
         return self._restore_from_arrays(arch, data_ptr, max_priority, t0, dirpath, verbose, saved_n=saved_n)
+
+    def ensure_live_mmap(self, dirpath: str, verbose: bool = True) -> bool:
+        """Give an EMPTY buffer live mmap backing from birth (Tempest-style).
+
+        The storage arrays become full-size on-disk .npy memmaps immediately,
+        so every save is a ~0.1s flush and every restart adopts in place —
+        no multi-GB first save after a fresh start or a collapse-recovery
+        wipe.  Creation is instant: open_memmap produces sparse files on
+        ext4/xfs, and disk usage grows only as the ring actually fills.
+
+        If the directory already holds saved transitions, this does nothing —
+        the normal load() path adopts it and restores counters properly.
+        """
+        if self._mmap_dir is not None or self.size > 0:
+            return False
+        abs_path = os.path.abspath(dirpath)
+        meta_path = os.path.join(abs_path, "_meta.npy")
+        if os.path.isfile(meta_path):
+            try:
+                if int(np.load(meta_path)[1]) > 0:
+                    return False  # real data present: defer to load()/adoption
+            except Exception:
+                return False      # unreadable meta: leave the directory alone
+        try:
+            os.makedirs(abs_path, exist_ok=True)
+            with self.lock:
+                for name, (attr, dtype, shape) in self._storage_specs().items():
+                    path = os.path.join(abs_path, f"{name}.npy")
+                    arr = None
+                    if os.path.isfile(path):
+                        candidate = np.load(path, mmap_mode="r+")
+                        if candidate.dtype == dtype and candidate.shape == shape:
+                            arr = candidate
+                    if arr is None:
+                        arr = np.lib.format.open_memmap(path, mode="w+", dtype=dtype, shape=shape)
+                    setattr(self, attr, arr)
+                pri_path = os.path.join(abs_path, "priorities.npy")
+                if not os.path.isfile(pri_path):
+                    pri = np.lib.format.open_memmap(pri_path, mode="w+", dtype=np.float64, shape=(self.capacity,))
+                    del pri
+                tmp_meta = meta_path + ".tmp.npy"
+                np.save(tmp_meta, np.array([0, 0, 1.0]))
+                os.replace(tmp_meta, meta_path)
+                self._mmap_dir = abs_path
+            if verbose:
+                print(f"  Replay buffer live-mmap backing at {abs_path} (saves are flushes)")
+            return True
+        except Exception as e:
+            print(f"  [WARN] live-mmap backing unavailable ({e}) — using RAM arrays")
+            return False
+
+    def _promote_to_live_mmap(self, dirpath: str, verbose: bool = True) -> bool:
+        """Rewrite RAM storage as full-size on-disk mmaps after a load that
+        couldn't adopt (legacy truncated dir, .npz, or copy-restore).
+
+        Without this, a buffer migrated from the old truncated save format
+        stays in RAM and every save takes the multi-GB copy path forever —
+        adoption requires full-CAPACITY arrays, which the old format never
+        wrote.  Promotion is a one-time ~n-row write (the rest stays sparse),
+        after which saves are ~1s priority/meta flushes and RAM is freed.
+        """
+        if self._mmap_dir is not None:
+            return True
+        abs_path = os.path.abspath(dirpath)
+        try:
+            os.makedirs(abs_path, exist_ok=True)
+            with self.lock:
+                n = int(self.size)
+                for name, (attr, dtype, shape) in self._storage_specs().items():
+                    path = os.path.join(abs_path, f"{name}.npy")
+                    mm = np.lib.format.open_memmap(path, mode="w+", dtype=dtype, shape=shape)
+                    cur = getattr(self, attr)
+                    if n > 0:
+                        mm[:n] = cur[:n]
+                    setattr(self, attr, mm)   # old RAM array drops → frees RAM
+                pri = np.lib.format.open_memmap(
+                    os.path.join(abs_path, "priorities.npy"),
+                    mode="w+", dtype=np.float64, shape=(self.capacity,))
+                if n > 0:
+                    pri[:n] = self.tree.tree[self.tree.capacity:self.tree.capacity + n]
+                del pri
+                meta = np.array([self.tree.data_ptr, n, self.tree.max_priority])
+                tmp_meta = os.path.join(abs_path, "_meta.npy.tmp.npy")
+                np.save(tmp_meta, meta)
+                os.replace(tmp_meta, os.path.join(abs_path, "_meta.npy"))
+                self._mmap_dir = abs_path
+            if verbose:
+                print(f"  Replay buffer promoted to live-mmap ({abs_path}) — future saves are flushes")
+            return True
+        except Exception as e:
+            print(f"  [WARN] live-mmap promotion failed ({e}) — saves remain full-copy")
+            return False
 
     def _try_adopt_mmap_directory(self, dirpath: str, data_ptr: int, saved_n: int,
                                   max_priority: float, t0: float, verbose: bool) -> bool:
@@ -1207,25 +1494,31 @@ class PrioritizedReplayBuffer:
         # Hall of fame loads independently of (and before) the main ring:
         # after a collapse-recovery wipe the ring is gone but the HOF is not.
         try:
-            self._load_hof(os.path.abspath(filepath) + "_hof", verbose)
+            self._load_hof(self._hof_dir or (os.path.abspath(filepath) + "_hof"), verbose)
         except Exception as e:
             print(f"  [WARN] HOF load failed: {e}")
         # Try directory format (new fast path)
+        ok = False
+        promote_dir = filepath if not filepath.endswith(".npz") else filepath[:-4]
         if os.path.isdir(filepath):
-            return self._load_directory(filepath, verbose)
-        # Try .npz at the given path
-        if os.path.isfile(filepath):
-            return self._load_npz(filepath, verbose)
-        # Try deriving the directory path from a .npz path or vice versa
-        if filepath.endswith(".npz"):
+            ok = self._load_directory(filepath, verbose)
+        elif os.path.isfile(filepath):
+            ok = self._load_npz(filepath, verbose)
+        elif filepath.endswith(".npz"):
             dir_path = filepath[:-4]
             if os.path.isdir(dir_path):
-                return self._load_directory(dir_path, verbose)
+                ok = self._load_directory(dir_path, verbose)
         else:
             npz_path = filepath + ".npz"
             if os.path.isfile(npz_path):
-                return self._load_npz(npz_path, verbose)
-        return False
+                ok = self._load_npz(npz_path, verbose)
+
+        # If the load succeeded but adoption didn't leave us mmap-backed
+        # (legacy truncated dir / npz / copy-restore), promote so subsequent
+        # saves are flushes rather than multi-GB copies.
+        if ok and self._mmap_dir is None and bool(getattr(RL_CONFIG, "replay_live_mmap", True)):
+            self._promote_to_live_mmap(promote_dir, verbose)
+        return ok
 
     def flush(self):
         """Clear the entire replay buffer."""

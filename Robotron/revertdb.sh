@@ -24,6 +24,9 @@ BEST_META="$MODEL_DIR/robotron_dqn_best.pt.json"
 LATEST="$MODEL_DIR/robotron_dqn_latest.pt"
 PRE_REVERT="$MODEL_DIR/robotron_dqn_latest.pt.pre_revert"
 REPLAY_DIR="$MODEL_DIR/robotron_dqn_latest_replay"
+# The live ring may be in tmpfs (config replay_tmpfs_dir, default /dev/shm);
+# wipe that too so a revert actually clears the buffer the trainer will adopt.
+TMPFS_RING="${DQN_REPLAY_TMPFS:-/dev/shm}/robotron_dqn_latest_replay"
 SERVER_PORT="${DQN_SERVER_PORT:-9998}"
 
 ASSUME_YES=0
@@ -87,11 +90,15 @@ cp -f "$BEST" "$LATEST.tmp"
 mv -f "$LATEST.tmp" "$LATEST"
 echo "Restored $(basename "$BEST") -> $(basename "$LATEST")"
 
-# ── 4. Clear the replay buffer ──────────────────────────────────────────────
-if [[ -d "$REPLAY_DIR" ]]; then
-    rm -rf "$REPLAY_DIR"
-    echo "Deleted replay buffer directory."
-fi
+# ── 4. Clear the replay buffer (on-disk AND tmpfs ring) ─────────────────────
+for d in "$REPLAY_DIR" "$TMPFS_RING"; do
+    if [[ -d "$d" ]]; then
+        rm -rf "$d"
+        echo "Deleted replay ring: $d"
+    fi
+done
+# The hall of fame ("${REPLAY_DIR}_hof") is intentionally NOT deleted — it is
+# the permanent peak-play anchor and must survive reverts.
 
 echo
 echo "Done. Relaunch the trainer to resume from the record policy with a"
