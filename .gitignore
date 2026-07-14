@@ -11,7 +11,7 @@ venv/
 *.pyc
 audio/*.mp3
 log.txt
-
+*.npy
 # Robotron build outputs
 Robotron/Code/Williams/.build/
 Robotron/roms/robotron/
@@ -76,3 +76,18 @@ Robotron/models_dqn/robotron_dqn_latest_replay/next_states.npy
 Robotron/models_dqn/robotron_dqn_latest_replay/priorities.npy
 Robotron/models_dqn/robotron_dqn_latest_replay/rewards.npy
 Robotron/models_dqn/robotron_dqn_latest_replay/states.npy
+
+# ── RL model + replay artifacts (never commit; multi-GB, machine-local) ──
+# DQN model dirs (Robotron + Tempest + legacy Scripts-relative)
+models_dqn/
+Robotron/models_dqn/
+Tempest/models_dqn/
+# Replay buffer + hall-of-fame directories (any location)
+*_replay/
+*_replay_hof/
+*_replay.tmp/
+# Serialized array/checkpoint formats
+*.npy
+*.npz
+robotron_dqn_*.pt
+robotron_dqn_*.pt.bak
