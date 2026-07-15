@@ -564,10 +564,20 @@ class RatchetController:
 
     def _enter_train(self):
         self._train_end_step = int(self.agent.training_steps) + self.window
+        fresh = bool(getattr(RL_CONFIG, "ratchet_fresh_optimizer", False))
+        if fresh:
+            # Kill the stale-Adam-moments shock: zero optimizer state and ramp
+            # the LR over the first steps of every candidate window.
+            try:
+                self.agent.ratchet_begin_window(
+                    int(getattr(RL_CONFIG, "ratchet_window_warmup_steps", 200)))
+            except Exception as e:
+                self._log(f"[RATCHET] WARN: fresh-optimizer setup failed: {e}")
         self.agent.training_enabled = True
         self.phase = "train"
         self._log(f"[RATCHET] epoch {self.epoch} TRAIN: {self.window:,} steps "
-                  f"(through step {self._train_end_step:,})")
+                  f"(through step {self._train_end_step:,})"
+                  + (" — fresh optimizer + warmup" if fresh else ""))
 
     def _abort_eval(self, reason: str):
         """Eval could not produce a usable sample (dead fleet, wedged clients).

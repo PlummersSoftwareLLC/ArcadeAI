@@ -664,6 +664,23 @@ class RLConfigData:
     # (~5-10 min); the ring is never wiped on reject and, under the behavior
     # lock, only ever accumulates incumbent-quality data.
     ratchet_min_ring_transitions: int = 1_000_000
+    # Fresh-optimizer protocol (2026-07-15, next single-variable probe).  The
+    # 1M-ring run refuted data density as the primary killer: epoch-1 trained
+    # at equilibrium-healthy Rpl/F 3-8 and was still demolished (205K -> 88K,
+    # EpLen RISING while score fell — the passive-survival attractor forming
+    # within one window).  Remaining mechanical suspect: the checkpoint's Adam
+    # second moments are in equilibrium with a mature 10M ring's gradients;
+    # on resume every row is fresh (PER max priority, larger TD errors) and
+    # Adam divides the larger gradients by the stale too-small v-hat ->
+    # oversized parameter steps until v-hat re-adapts.  beta2=0.999 puts that
+    # adaptation at ~1,000-2,000 steps — exactly the window size that does the
+    # damage, independent of ring size.  With this on, every candidate window
+    # starts with ZEROED optimizer state and a linear LR warmup over the first
+    # ratchet_window_warmup_steps, so early steps cannot be mis-scaled.  If
+    # candidates are STILL demolished under this protocol, the objective's
+    # local landscape is the confirmed cause (nothing mechanical remains).
+    ratchet_fresh_optimizer: bool = True
+    ratchet_window_warmup_steps: int = 200
 
     # Gradient
     grad_clip_norm: float = 5.0

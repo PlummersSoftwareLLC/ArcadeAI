@@ -164,8 +164,29 @@ class RainbowAgent:
 
     def _update_lr(self):
         lr = self.get_lr()
+        # Ratchet fresh-optimizer protocol: linear LR warmup at the start of a
+        # candidate window (Adam with zeroed state takes ~sign(g)*lr steps on
+        # its first iterations — unramped, that is itself a shock).
+        ws = int(getattr(self, "ratchet_warmup_start_step", -1))
+        wn = int(getattr(self, "ratchet_warmup_steps", 0))
+        if ws >= 0 and wn > 0:
+            done = self.training_steps - ws
+            if done < wn:
+                lr *= max(0.05, (done + 1) / float(wn))
         for pg in self.optimizer.param_groups:
             pg["lr"] = lr
+
+    def ratchet_begin_window(self, warmup_steps: int = 0):
+        """Fresh-optimizer window start: zero Adam moments + arm LR warmup.
+
+        The snapshot/restore round-trip is unaffected — on reject the
+        incumbent's optimizer state is restored and the next window zeroes it
+        again; on accept the freshly-adapted moments ride along with the new
+        incumbent snapshot."""
+        with self._sync_lock:
+            self.optimizer.state.clear()
+        self.ratchet_warmup_start_step = int(self.training_steps)
+        self.ratchet_warmup_steps = int(max(0, warmup_steps))
 
     # ── Inference ───────────────────────────────────────────────────────
     def _setup_torch_compile(self):
