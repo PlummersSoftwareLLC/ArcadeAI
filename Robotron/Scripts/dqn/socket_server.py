@@ -1425,6 +1425,20 @@ class SocketServer:
                         prev_level_number=cs.get("last_level_number"),
                     )
 
+                    # Terminal-outcome accounting (FtlPct) — deliberately
+                    # OUTSIDE the store/frozen gate: it describes play, not
+                    # training, and must keep updating through measurements.
+                    try:
+                        _clr = _wave_advanced(cs.get("last_state"), frame,
+                                              prev_level_number=cs.get("last_level_number"))
+                        if bool(frame.done) or (
+                            _clr and bool(getattr(RL_CONFIG, "wave_clear_training_terminal", False))
+                        ):
+                            # death wins if both land on one frame
+                            metrics.note_training_terminal(bool(frame.done))
+                    except Exception:
+                        pass
+
                     eval_only = bool(cs.get("eval_only", False))
                     # Ratchet freeze: measurement games must not enter the ring.
                     # Eval phases dominate wall-clock (~5:1 vs train), so storing
@@ -1444,9 +1458,6 @@ class SocketServer:
                                            prev_level_number=cs.get("last_level_number"))
                             and bool(getattr(RL_CONFIG, "wave_clear_training_terminal", False))
                         )
-                        if training_done:
-                            # death wins if both fire on the same frame
-                            metrics.note_training_terminal(bool(frame.done))
                         nstep = cs.get("nstep")
                         if nstep is not None:
                             joint = combine_action(mv_i, fr_i)
