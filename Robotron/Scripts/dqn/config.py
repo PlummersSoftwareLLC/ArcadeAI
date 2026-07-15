@@ -681,6 +681,23 @@ class RLConfigData:
     # local landscape is the confirmed cause (nothing mechanical remains).
     ratchet_fresh_optimizer: bool = True
     ratchet_window_warmup_steps: int = 200
+    # Per-GAME measurement (2026-07-15).  frame.done fires per LIFE
+    # (main.lua: previous_alive==1 and alive==0), so cohort samples were
+    # running-scores-at-life-end: ~60-70% of true final-game scores, n
+    # inflated ~20x with correlated samples (SE overconfident), and pre-freeze
+    # stratified games leaked their post-freeze lives into every measurement.
+    # The ratchet now samples FINAL GAME SCORES: a game boundary is detected
+    # when game_score RESETS (it is non-decreasing within a Robotron game),
+    # cohort membership is stamped per game start, and one sample = one
+    # game's final total.  Guards: a client whose score hasn't advanced for
+    # this long while frozen has wedged (attract mode / stuck reconnect) —
+    # its cohort game is voided so the epoch can complete; greedy play scores
+    # every few seconds, so 120s of silence is unambiguous.
+    ratchet_stuck_void_s: float = 120.0
+    # Junk-score refusal for game finals (transient-RAM BCD reads during
+    # resets have produced absurd values before): finals above this are
+    # discarded as garbage, the game voided.
+    ratchet_max_credible_final: float = 2_000_000.0
 
     # Gradient
     grad_clip_norm: float = 5.0

@@ -987,6 +987,8 @@ class SocketServer:
                 "ep_dqn_frames": 0,
                 "no_human_no_score_frames": 0,
                 "eval_only": eval_only, "ep_t0": time.time(),
+                "game_t0": time.time(), "cohort_voided": False,
+                "prev_score_seen": 0, "last_score_advance": time.time(),
                 "was_done": False, "nstep": nstep,
                 "frame_history": deque(maxlen=max(1, int(getattr(RL_CONFIG, "frame_stack", 1)))),
                 "fire_hold_dir": -1, "fire_hold_count": 0, "fire_pending_dir": -1,
@@ -995,7 +997,7 @@ class SocketServer:
             # A client (re)connecting mid-measurement starts a fresh game; count
             # it into the cohort so its completion doesn't arrive uncounted.
             try:
-                metrics.ratchet_note_eval_start(float(self.client_states[cid]["ep_t0"]))
+                metrics.ratchet_note_eval_start(float(self.client_states[cid]["game_t0"]))
             except Exception:
                 pass
 
@@ -1353,6 +1355,39 @@ class SocketServer:
                     metrics.update_expert_ratio()
                     self._calc_avg_game_state()
 
+                # ── Ratchet per-game accounting ─────────────────────────
+                # A Robotron game's score is non-decreasing; a reset marks the
+                # boundary.  One cohort sample = one game's FINAL score.  A
+                # client whose score stops advancing while frozen has wedged
+                # (attract mode / stuck reconnect): void its cohort game so
+                # the measurement can complete without it.
+                try:
+                    _sc = int(frame.game_score)
+                    _prev_sc = int(cs.get("prev_score_seen", 0))
+                    _ts = time.time()
+                    if _sc > _prev_sc:
+                        cs["last_score_advance"] = _ts
+                    if _sc < _prev_sc and _prev_sc >= 5_000 and _sc <= _prev_sc // 2:
+                        # game over: _prev_sc was the final score
+                        if not cs.get("cohort_voided", False):
+                            _cap = float(getattr(RL_CONFIG, "ratchet_max_credible_final", 2e6))
+                            if _prev_sc <= _cap:
+                                metrics.ratchet_note_eval_episode(float(_prev_sc), cs.get("game_t0", 0.0))
+                            else:   # transient-RAM junk read — void, don't record
+                                metrics.ratchet_note_eval_abandoned(cs.get("game_t0", 0.0))
+                        cs["game_t0"] = _ts
+                        cs["cohort_voided"] = False
+                        cs["last_score_advance"] = _ts
+                        metrics.ratchet_note_eval_start(cs["game_t0"])
+                    elif (metrics.ratchet_frozen and not cs.get("cohort_voided", False)
+                          and _ts - cs.get("last_score_advance", _ts) >
+                              float(getattr(RL_CONFIG, "ratchet_stuck_void_s", 120.0))):
+                        metrics.ratchet_note_eval_abandoned(cs.get("game_t0", 0.0))
+                        cs["cohort_voided"] = True
+                    cs["prev_score_seen"] = _sc
+                except Exception:
+                    pass
+
                 # ── Process previous step ───────────────────────────────
                 if cs.get("last_state") is not None and cs.get("last_action") is not None:
                     mv_i, fr_i = cs["last_action"]
@@ -1436,10 +1471,6 @@ class SocketServer:
                         self.async_buffer.boost_pre_death(cid)
                     if not cs.get("was_done", False):
                         ep_len = cs.get("ep_frames", 0)
-                        # Policy ratchet: during a frozen measurement phase the
-                        # whole fleet plays greedy, so EVERY completed game is a
-                        # sample.  No-op (one lock + compare) outside eval phases.
-                        metrics.ratchet_note_eval_episode(frame.game_score, cs.get("ep_t0", 0.0))
                         if eval_only:
                             metrics.add_eval_episode_reward(
                                 cs["total_reward"], frame.game_score, frame.level_number, length=ep_len)
@@ -1500,7 +1531,6 @@ class SocketServer:
                     # New game starts here — stamp it so ratchet measurements can
                     # exclude games already in flight when the fleet was frozen.
                     cs["ep_t0"] = time.time()
-                    metrics.ratchet_note_eval_start(cs["ep_t0"])
                     cs["total_reward"] = cs["ep_dqn_reward"] = cs["ep_dqn_score_reward"] = cs["ep_expert_reward"] = 0.0
                     cs["ep_subj_reward"] = cs["ep_obj_reward"] = cs["ep_death_reward"] = 0.0
                     cs["ep_frames"] = 0
@@ -1661,8 +1691,8 @@ class SocketServer:
             # game was in the measurement cohort, un-count it so the epoch
             # doesn't wait for a score that can never arrive.
             try:
-                if _dead_cs is not None and not _dead_cs.get("was_done", False):
-                    metrics.ratchet_note_eval_abandoned(float(_dead_cs.get("ep_t0", 0.0)))
+                if _dead_cs is not None and not _dead_cs.get("cohort_voided", False):
+                    metrics.ratchet_note_eval_abandoned(float(_dead_cs.get("game_t0", 0.0)))
             except Exception:
                 pass
             threading.Timer(1.0, self._cleanup).start()
