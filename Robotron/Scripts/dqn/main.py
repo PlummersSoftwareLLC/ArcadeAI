@@ -446,6 +446,15 @@ class RatchetController:
 
     def __init__(self, agent):
         self.agent = agent
+        # Incumbent-as-behavior: the fleet plays the measured incumbent at all
+        # times; candidates exist only inside the online net during training
+        # and only ever act during their own frozen measurement.  Kills the
+        # replay-data spiral (see agent._sync_inference) and pegs training
+        # data quality to the best-known policy.
+        agent.behavior_locked = True
+        if not getattr(agent, "use_separate_inference", False):
+            print("[RATCHET] WARN: no separate inference net — behavior lock "
+                  "inactive; candidate play will enter the ring during training")
         cfg = RL_CONFIG
         self.base_window = max(1, int(getattr(cfg, "ratchet_train_steps", 2_000)))
         self.min_window = max(1, int(getattr(cfg, "ratchet_min_train_steps", 250)))
@@ -799,6 +808,7 @@ def main():
               f"cohort {ratchet.cohort_s:.0f}s (all cohort games counted) | "
               f"margin {ratchet.margin:+.1%} + {ratchet.accept_z:.1f}·SE(diff)")
         print("  Epoch 0 measures the loaded checkpoint (eval-only protocol) as the incumbent.")
+        print("  Behavior policy = INCUMBENT at all times; candidates act only while measured.")
         print("  Watchdog, legacy best-save, and latest.pt autosave suspended while active.")
         print("=" * 70)
 

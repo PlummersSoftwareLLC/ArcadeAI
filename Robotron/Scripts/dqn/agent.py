@@ -68,6 +68,7 @@ class RainbowAgent:
         self.last_inference_sync = 0
         self._sync_lock = threading.Lock()
         self.training_enabled = True
+        self.behavior_locked = False   # ratchet: pin the fleet to the incumbent
         self.running = True
 
         # Networks
@@ -248,6 +249,19 @@ class RainbowAgent:
 
     def _sync_inference(self, force=False):
         if not self.use_separate_inference:
+            return
+        # Behavior lock (ratchet, 2026-07-15): when set, the fleet keeps acting
+        # on the weights already in the inference net (the measured INCUMBENT)
+        # while the online net trains candidate windows.  Without this, every
+        # train phase leaks candidate play into the replay ring; as rejected
+        # candidates degrade, the DATA degrades, and the next candidate trains
+        # on worse data — weights roll back, the ring never does.  Measured
+        # overnight 07-15: candidate quality fell 80K -> ~12K across ~100
+        # rejected epochs at IDENTICAL restored weights, purely through this
+        # data spiral.  With the lock, ring data is pegged to incumbent-quality
+        # play forever and every retry is a near-iid draw.  force=True (used by
+        # the ratchet's own freeze/restore transitions) still syncs.
+        if not force and getattr(self, "behavior_locked", False):
             return
         if not force and (self.training_steps - self.last_inference_sync < RL_CONFIG.inference_sync_steps):
             return
