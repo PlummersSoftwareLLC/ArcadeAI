@@ -1444,6 +1444,9 @@ class SocketServer:
                                            prev_level_number=cs.get("last_level_number"))
                             and bool(getattr(RL_CONFIG, "wave_clear_training_terminal", False))
                         )
+                        if training_done:
+                            # death wins if both fire on the same frame
+                            metrics.note_training_terminal(bool(frame.done))
                         nstep = cs.get("nstep")
                         if nstep is not None:
                             joint = combine_action(mv_i, fr_i)

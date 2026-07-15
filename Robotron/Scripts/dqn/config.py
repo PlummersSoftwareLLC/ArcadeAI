@@ -1276,6 +1276,9 @@ class MetricsData:
     # overwrite mid-measurement and persist to disk; a dedicated flag cannot
     # be touched by any operator surface.
     ratchet_frozen: bool = False
+    # Rolling training-terminal outcomes: 1 = death, 0 = wave-clear terminal.
+    # Feeds the FtlPct display column (share of episodes ending fatally).
+    ftl_terminals: Deque[int] = field(default_factory=lambda: deque(maxlen=400))
     peak_episode_reward: float = 0.0
     peak_game_score: int = 0
     replay_dropped_steps: int = 0
@@ -1508,6 +1511,11 @@ class MetricsData:
                 self.episode_length_count_interval += 1
             if float(total) > self.peak_episode_reward:
                 self.peak_episode_reward = float(total)
+
+    def note_training_terminal(self, is_death: bool):
+        """One n-step training episode closed: death (True) or wave clear."""
+        with self.lock:
+            self.ftl_terminals.append(1 if is_death else 0)
 
     def ratchet_note_eval_start(self, ep_started_at: float):
         """A new game began; count it into the measurement cohort if the

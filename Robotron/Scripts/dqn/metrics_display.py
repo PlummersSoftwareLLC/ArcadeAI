@@ -257,7 +257,7 @@ def display_metrics_header():
         f"{'Rwrd':>9} {'Score':>9} {'Shape':>9} {'Death':>9} {'DQN100K/F':>9} {'DQN1M/F':>9} {'DQN5M/F':>9} {'DQN10M/F':>9} "
         f"{'EvalR':>8} {'EScr1M':>8} {'ELvl1M':>7} "
         f"{'Loss':>10} {'AgrM%':>6} {'AgrF%':>6} "
-        f"{'EpLen':>8} {'BCLoss':>8} {'BCW':>6} {'SubjW':>6} {'DqnB%':>6} {'EpsB%':>6} {'ExpB%':>6} {'Sync':>5} "
+        f"{'EpLen':>8} {'FtlPct':>7} {'SubjW':>6} {'DqnB%':>6} {'EpsB%':>6} "
         f"{'Clnt':>4} {'Web':>4} "
         f"{'AvgInf':>7} {'Steps/s':>8} {'Rpl/F':>7} {'GrNorm':>8} {'Q-Range':>14} {'Mem':>10} {'HOF':>6} {'LR':>9} {'Drop':>7} {'Tms S/X/C/P':>17}"
     )
@@ -426,6 +426,16 @@ def display_metrics_row(agent, kb_handler):
     eps_pct = f"{eps_val:.0f}%{eps_mark}".rjust(7)
     xprt_pct = f"{xprt_val:.0f}%{xprt_mark}".rjust(7)
     subj_w = float(getattr(metrics, "last_subj_positive_weight", 1.0))
+    # FtlPct: share of TRAINING episodes ending in death (negative terminal)
+    # vs wave clears (positive terminal).  The health gauge for the two-sided
+    # reward: lower = more episodes now end at the positive boundary.
+    ftl_pct_str = "-"
+    try:
+        _t = metrics.ftl_terminals
+        if len(_t) > 0:
+            ftl_pct_str = f"{100.0 * sum(_t) / len(_t):.1f}%"
+    except Exception:
+        pass
     replay_ratio = (steps_per_sec * float(RL_CONFIG.batch_size)) / max(1e-6, float(metrics.fps))
     train_ms = (
         f"{metrics.last_train_sample_ms:.0f}/"
@@ -441,8 +451,8 @@ def display_metrics_row(agent, kb_handler):
         f"{_fr(dqn1m*_prs)} {_fr(dqn5m*_prs)} {_frp(dqn_pf*_prs, 9)} "
         f"{_fr(eval_reward*_prs, 8)} {eval_score:>8,.0f} {eval_level:>7.1f} "
         f"{loss_avg:>10.6f} {agree_move_avg*100:>5.1f}% {agree_fire_avg*100:>5.1f}% "
-        f"{avg_ep_len:>8.1f} {metrics.last_bc_loss:>8.4f} {metrics.last_bc_weight:>6.3f} {subj_w:>6.3f} "
-        f"{metrics.last_sample_dqn_frac*100:>5.1f}% {metrics.last_sample_epsilon_frac*100:>5.1f}% {metrics.last_sample_expert_frac*100:>5.1f}% {metrics.last_inference_sync_age:>5} "
+        f"{avg_ep_len:>8.1f} {ftl_pct_str:>7} {subj_w:>6.3f} "
+        f"{metrics.last_sample_dqn_frac*100:>5.1f}% {metrics.last_sample_epsilon_frac*100:>5.1f}% "
         f"{metrics.client_count:>4} {metrics.web_client_count:>4} "
         f"{avg_inf_ms:>7.2f} {steps_per_sec:>8.1f} "
         f"{replay_ratio:>7.2f} {metrics.last_grad_norm:>8.3f} {q_range:>14} {mem_k:>8}k {hof_bar_str:>6} {lr_str:>9} {metrics.replay_dropped_steps:>7,} {train_ms:>17}"
