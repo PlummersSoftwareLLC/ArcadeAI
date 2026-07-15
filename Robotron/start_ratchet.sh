@@ -26,8 +26,22 @@ pgrep -f 'run_dqn[.]py' >/dev/null && { echo "ABORT: trainer still running"; exi
 cp -f "$ARCH" models_dqn/robotron_dqn_latest.pt
 cp -f "$ARCH" models_dqn/robotron_dqn_best.pt
 rm -f models_dqn/robotron_dqn_best.pt.json \
-      models_dqn/robotron_dqn_latest.pt.bak models_dqn/robotron_dqn_best.pt.bak \
-      models_dqn/robotron_dqn_ratchet_incumbent.pt
+      models_dqn/robotron_dqn_latest.pt.bak models_dqn/robotron_dqn_best.pt.bak
+# The incumbent is a CLIMBED artifact (hours of gated compute) — never delete
+# it silently.  Archive it and require --fresh to discard.
+if [ -f models_dqn/robotron_dqn_ratchet_incumbent.pt ]; then
+  ts=$(date +%Y%m%d_%H%M%S)
+  mkdir -p incumbent_archive
+  cp -f models_dqn/robotron_dqn_ratchet_incumbent.pt "incumbent_archive/incumbent_$ts.pt"
+  echo "archived existing incumbent -> incumbent_archive/incumbent_$ts.pt"
+  if [ "${1:-}" = "--fresh" ] || [ "${2:-}" = "--fresh" ]; then
+    rm -f models_dqn/robotron_dqn_ratchet_incumbent.pt
+    echo "--fresh: incumbent discarded, restarting from the archive checkpoint"
+  else
+    echo "NOTE: incumbent KEPT — boot will resume from it, not the archive."
+    echo "      pass --fresh to start over from the 415K checkpoint."
+  fi
+fi
 rm -rf models_dqn/robotron_dqn_latest_replay models_dqn/robotron_dqn_latest_replay.tmp \
        models_dqn/robotron_dqn_latest_replay_hof /dev/shm/robotron_dqn_latest_replay
 cat > models_dqn/game_settings.json <<'JSON'
