@@ -1427,6 +1427,16 @@ class MetricsData:
                     and self.ratchet_eval_collect_t0 <= ep_started_at <= self.ratchet_eval_cohort_close_ts):
                 self.ratchet_eval_cohort_started += 1
 
+    def ratchet_note_eval_abandoned(self, ep_started_at: float):
+        """A client died with an unfinished game.  If that game was counted
+        into the measurement cohort, remove it — otherwise the decide
+        condition (all cohort games finished) can never be satisfied and the
+        epoch wedges until the 20-minute timeout on every client death."""
+        with self.lock:
+            if (self.ratchet_eval_epoch >= 0 and self.ratchet_eval_cohort_close_ts > 0.0
+                    and self.ratchet_eval_collect_t0 <= ep_started_at <= self.ratchet_eval_cohort_close_ts):
+                self.ratchet_eval_cohort_started = max(0, self.ratchet_eval_cohort_started - 1)
+
     def ratchet_note_eval_episode(self, score: float, ep_started_at: float = 0.0):
         """Record one completed game's score into the ratchet measurement.
 

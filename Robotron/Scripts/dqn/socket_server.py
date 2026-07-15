@@ -992,6 +992,12 @@ class SocketServer:
                 "fire_hold_dir": -1, "fire_hold_count": 0, "fire_pending_dir": -1,
             }
             self._sync_client_count_locked()
+            # A client (re)connecting mid-measurement starts a fresh game; count
+            # it into the cohort so its completion doesn't arrive uncounted.
+            try:
+                metrics.ratchet_note_eval_start(float(self.client_states[cid]["ep_t0"]))
+            except Exception:
+                pass
 
     @staticmethod
     def _stack_model_state(cs: dict, current_state: np.ndarray) -> np.ndarray:
@@ -1643,7 +1649,7 @@ class SocketServer:
             except Exception:
                 pass
             with self.client_lock:
-                self.client_states.pop(cid, None)
+                _dead_cs = self.client_states.pop(cid, None)
                 self.clients[cid] = None
                 _, preview_changed = self._ensure_preview_client_selected_locked()
                 self._sync_client_count_locked()
@@ -1651,6 +1657,14 @@ class SocketServer:
                 self._clear_preview_cache()
             if self.async_buffer is not None:
                 self.async_buffer.remove_client(cid)
+            # Ratchet cohort accounting: if this client died mid-game and that
+            # game was in the measurement cohort, un-count it so the epoch
+            # doesn't wait for a score that can never arrive.
+            try:
+                if _dead_cs is not None and not _dead_cs.get("was_done", False):
+                    metrics.ratchet_note_eval_abandoned(float(_dead_cs.get("ep_t0", 0.0)))
+            except Exception:
+                pass
             threading.Timer(1.0, self._cleanup).start()
 
     def _cleanup(self):
