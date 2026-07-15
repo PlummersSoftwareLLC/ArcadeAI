@@ -1212,6 +1212,12 @@ class SocketServer:
             # true full-game performance, not curriculum-boosted play.
             start_adv = 0
             start_level = 1
+        elif getattr(metrics, "ratchet_frozen", False):
+            # Ratchet measurement: the whole fleet plays the eval protocol —
+            # wave-1 fresh games — so the number is the same yardstick as the
+            # DQN_EVAL_ONLY control, not a mixture over stratified starts.
+            start_adv = 0
+            start_level = 1
         else:
             _gs = game_settings.snapshot()
             if _gs["start_advanced"] or bool(_gs.get("auto_curriculum", False)):
@@ -1375,7 +1381,12 @@ class SocketServer:
                     )
 
                     eval_only = bool(cs.get("eval_only", False))
-                    if self.agent and not eval_only:
+                    # Ratchet freeze: measurement games must not enter the ring.
+                    # Eval phases dominate wall-clock (~5:1 vs train), so storing
+                    # their zero-expert greedy frames would flood the 10M ring
+                    # with frozen-policy data — the exact expert-anchor-drain
+                    # mechanism behind the historical collapses.
+                    if self.agent and not eval_only and not metrics.ratchet_frozen:
                         tag = cs.get("prev_action_source", "dqn")
                         nstep = cs.get("nstep")
                         if nstep is not None:
@@ -1415,7 +1426,7 @@ class SocketServer:
                 # ── Terminal ────────────────────────────────────────────
                 if frame.done:
                     eval_only = bool(cs.get("eval_only", False))
-                    if self.async_buffer is not None and not eval_only:
+                    if self.async_buffer is not None and not eval_only and not metrics.ratchet_frozen:
                         self.async_buffer.boost_pre_death(cid)
                     if not cs.get("was_done", False):
                         ep_len = cs.get("ep_frames", 0)
@@ -1432,7 +1443,12 @@ class SocketServer:
                                 cs.get("ep_subj_reward", 0.0), cs.get("ep_obj_reward", 0.0),
                                 cs.get("ep_death_reward", 0.0),
                                 length=ep_len)
-                            if self.async_buffer is not None:
+                            # Frozen-measurement games are excluded: they would
+                            # poison the elite high-water mark (all-greedy play
+                            # rates "elite" against noisy play) and admit
+                            # measurement games to the HOF; their scores are
+                            # already captured via ratchet_note_eval_episode.
+                            if self.async_buffer is not None and not metrics.ratchet_frozen:
                                 self.async_buffer.boost_elite_episode(
                                     cid, frame.game_score, frame.level_number,
                                     cs["total_reward"], ep_len)
@@ -1478,6 +1494,7 @@ class SocketServer:
                     # New game starts here — stamp it so ratchet measurements can
                     # exclude games already in flight when the fleet was frozen.
                     cs["ep_t0"] = time.time()
+                    metrics.ratchet_note_eval_start(cs["ep_t0"])
                     cs["total_reward"] = cs["ep_dqn_reward"] = cs["ep_dqn_score_reward"] = cs["ep_expert_reward"] = 0.0
                     cs["ep_subj_reward"] = cs["ep_obj_reward"] = cs["ep_death_reward"] = 0.0
                     cs["ep_frames"] = 0

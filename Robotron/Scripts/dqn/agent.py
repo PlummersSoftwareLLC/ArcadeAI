@@ -658,7 +658,31 @@ class RainbowAgent:
                 "optimizer": self._optimizer_state_to_cpu(self.optimizer.state_dict()),
                 "scaler": (self.grad_scaler.state_dict() if self.grad_scaler is not None else None),
                 "training_steps": int(self.training_steps),
+                # Schedule clocks (review fix): expert/epsilon/BC schedules key
+                # off metrics counters, not agent.training_steps — a rollback
+                # that skips them would retrain every retry under a slightly
+                # different objective mixture.
+                "metrics_clocks": self._snapshot_metrics_clocks(),
             }
+
+    @staticmethod
+    def _snapshot_metrics_clocks() -> dict:
+        with metrics.lock:
+            return {
+                "total_training_steps": int(getattr(metrics, "total_training_steps", 0)),
+                "learner_frame_count": int(getattr(metrics, "learner_frame_count", 0)),
+                "expert_ratio": float(getattr(metrics, "expert_ratio", 0.0)),
+                "epsilon": float(getattr(metrics, "epsilon", 0.0)),
+            }
+
+    @staticmethod
+    def _restore_metrics_clocks(clocks: dict):
+        with metrics.lock:
+            for k, v in clocks.items():
+                try:
+                    setattr(metrics, k, type(getattr(metrics, k))(v))
+                except Exception:
+                    pass
 
     def restore_training_state(self, snap: dict):
         with self._sync_lock:
@@ -674,6 +698,9 @@ class RainbowAgent:
                 except Exception:
                     pass
             self.training_steps = int(snap["training_steps"])
+        clocks = snap.get("metrics_clocks")
+        if clocks:
+            self._restore_metrics_clocks(clocks)
         # Push the restored weights to the inference net immediately — the
         # fleet must act on the incumbent, not the rejected candidate.
         self._sync_inference(force=True)

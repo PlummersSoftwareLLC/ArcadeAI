@@ -418,28 +418,28 @@ class RatchetController:
     every training configuration tried (including the exact code that produced
     it) drives it to ~39-75K within ~13k steps.  So stop trusting the gradient
     and gate it: the incumbent policy is only ever replaced by a candidate that
-    MEASURED better under an identical frozen all-greedy protocol.  The served
-    policy cannot get worse by construction; destructive training becomes a low
-    accept rate instead of a collapse.
+    MEASURED better under an identical frozen all-greedy wave-1 protocol.  The
+    served policy cannot get worse by construction; destructive training
+    becomes a low accept rate instead of a collapse.
 
-    Epochs:
-      0     measure the loaded checkpoint itself (same protocol as the
-            DQN_EVAL_ONLY control) -> incumbent score
-      n>=1  train `window` gradient steps -> freeze -> force the whole fleet
-            greedy (epsilon_pct=0 / expert_pct=0 overrides) -> discard games
-            finishing inside the warmup (mid-game policy-switch mixtures) ->
-            collect K completed-game scores -> mean vs incumbent:
-              accept: candidate becomes incumbent (snapshot + disk), window
-                      grows back toward base
-              reject: EXACT rollback (weights/target/optimizer/scaler), RNGs
-                      reseeded so the retry explores a different trajectory,
-                      window halves (trust-region style)
+    Measurement protocol (all enforced by metrics.ratchet_frozen, a dedicated
+    flag no operator surface can touch): gradient quiesced, whole fleet greedy
+    (epsilon 0, expert 0), wave-1 starts, replay writes/boosts/HOF admission
+    suspended.  The sample is a START-side cohort: every game beginning within
+    ratchet_eval_cohort_s of the freeze is in, and the phase waits for ALL of
+    them — no completion-time censoring of long (high-scoring) games.
 
-    Interplay: while active, the collapse watchdog and the legacy rolling-
-    window best-save are suspended (the caller gates them) — the ratchet's
-    incumbent is the measured best-known policy, which subsumes both.  The
-    keyboard 't' toggle still works: it pauses gradient steps, and the ratchet
-    simply waits (train phase progresses on training_steps, not wall time).
+    Acceptance is a difference-of-means test: candidate mean must exceed the
+    incumbent mean by the margin plus z combined standard errors
+    (sqrt(se_c^2 + se_i^2)) — both measurements are noisy, not just the
+    candidate's.  On reject: EXACT rollback (weights/target/optimizer/scaler/
+    schedule clocks), RNG reseed, window halves.  On accept: candidate becomes
+    incumbent (RAM snapshot + disk), window grows back toward base.
+
+    Suspended while active (the measured incumbent subsumes them): collapse
+    watchdog, legacy rolling-window best-save, periodic latest.pt autosave.
+    On restart, boot prefers the on-disk incumbent over latest.pt so a crash
+    can never resurrect an unvetted candidate.
     """
 
     INCUMBENT_PATH = os.path.join(MODEL_DIR, "robotron_dqn_ratchet_incumbent.pt")
@@ -450,126 +450,192 @@ class RatchetController:
         self.base_window = max(1, int(getattr(cfg, "ratchet_train_steps", 2_000)))
         self.min_window = max(1, int(getattr(cfg, "ratchet_min_train_steps", 250)))
         self.window = self.base_window
-        self.eval_episodes = max(5, int(getattr(cfg, "ratchet_eval_episodes", 30)))
-        self.warmup_s = max(0.0, float(getattr(cfg, "ratchet_eval_warmup_s", 75.0)))
-        self.timeout_s = max(60.0, float(getattr(cfg, "ratchet_eval_timeout_s", 900.0)))
+        self.eval_episodes = max(5, int(getattr(cfg, "ratchet_eval_episodes", 40)))
+        self.cohort_s = max(30.0, float(getattr(cfg, "ratchet_eval_cohort_s", 240.0)))
+        self.timeout_s = max(120.0, float(getattr(cfg, "ratchet_eval_timeout_s", 1_200.0)))
+        self.max_extends = max(0, int(getattr(cfg, "ratchet_eval_max_extends", 3)))
         self.margin = float(getattr(cfg, "ratchet_accept_margin", 0.01))
+        self.accept_z = float(getattr(cfg, "ratchet_accept_z", 1.0))
         self.reseed = bool(getattr(cfg, "ratchet_reseed_on_reject", True))
 
         self.phase = "boot"          # boot -> eval -> train -> eval -> ...
         self.epoch = 0
         self.incumbent = None        # in-RAM training-state snapshot
         self.incumbent_score = None
+        self.incumbent_scores = []   # the incumbent's own measurement sample
         self.accepts = 0
         self.rejects = 0
         self.consecutive_rejects = 0
         self._eval_t0 = 0.0
-        self._collecting = False
         self._train_end_step = 0
-        self._saved_eps_pct = None
-        self._saved_xpr_pct = None
+        self._extends = 0
+
+    # ── helpers ──────────────────────────────────────────────────────────
+    @staticmethod
+    def _log(msg: str):
+        try:
+            print(msg)
+        except Exception:
+            pass                     # non-blocking stdout can raise; never let
+                                     # logging corrupt state-machine flow
+
+    def _quiesce(self, max_wait_s: float = 3.0):
+        """Wait for the TrainWorker to finish any in-flight step.
+
+        training_enabled is only checked at step START; a step already past
+        the check keeps mutating weights/optimizer.  Snapshotting, restoring,
+        or force-syncing concurrently would copy torn tensors.  Poll the step
+        counter until it is stable, bounded (same 3s precedent as
+        _restore_best_checkpoint's drain).
+        """
+        deadline = time.time() + max_wait_s
+        last = int(self.agent.training_steps)
+        stable_since = time.time()
+        while time.time() < deadline:
+            time.sleep(0.1)
+            now_steps = int(self.agent.training_steps)
+            if now_steps != last:
+                last = now_steps
+                stable_since = time.time()
+            elif time.time() - stable_since >= 0.3:
+                return
+        self._log("[RATCHET] WARN: trainer did not quiesce within "
+                  f"{max_wait_s:.1f}s — proceeding")
 
     # ── phase transitions ────────────────────────────────────────────────
     def _enter_eval(self):
         self.agent.training_enabled = False
+        self._quiesce()
         # The last <sync-interval steps of the window aren't in the infer net
         # yet — push them so the fleet plays exactly the candidate.
         self.agent._sync_inference(force=True)
-        # Force the ENTIRE fleet greedy so a measurement takes minutes, not an
-        # hour: ~30 greedy clients complete 30 games ~10x faster than the 3
-        # dedicated eval clients alone.  Uses the operator override plumbing
-        # (game_settings wins over schedules); prior values restored on exit.
-        self._saved_eps_pct = game_settings.epsilon_pct
-        self._saved_xpr_pct = game_settings.expert_pct
-        game_settings.epsilon_pct = 0
-        game_settings.expert_pct = 0
+        now = time.time()
         with metrics.lock:
             metrics.ratchet_eval_scores = []
-            metrics.ratchet_eval_epoch = -1        # warmup: not collecting yet
-            # Only games STARTED after this instant count — the exact filter
-            # against mixed-policy games in flight at the freeze.
-            metrics.ratchet_eval_collect_t0 = time.time()
-        self._collecting = False
-        self._eval_t0 = time.time()
+            metrics.ratchet_eval_epoch = self.epoch
+            metrics.ratchet_eval_collect_t0 = now
+            metrics.ratchet_eval_cohort_close_ts = now + self.cohort_s
+            metrics.ratchet_eval_cohort_started = 0
+            # THE protocol switch: greedy epsilon/expert, wave-1 starts,
+            # replay/boost/HOF gating — all consulted directly off this flag,
+            # no operator state touched (dashboard POSTs cannot contaminate
+            # the measurement or persist ratchet state to disk).
+            metrics.ratchet_frozen = True
+        self._eval_t0 = now
+        self._extends = 0
         self.phase = "eval"
         what = "incumbent (loaded checkpoint)" if self.epoch == 0 else f"candidate (epoch {self.epoch})"
-        print(f"[RATCHET] epoch {self.epoch} EVAL: measuring {what} — "
-              f"fleet greedy, {self.warmup_s:.0f}s warmup, need {self.eval_episodes} games")
+        self._log(f"[RATCHET] epoch {self.epoch} EVAL: measuring {what} — fleet greedy wave-1, "
+                  f"cohort window {self.cohort_s:.0f}s, waiting for all cohort games")
 
     def _exit_eval_to_train(self):
-        game_settings.epsilon_pct = self._saved_eps_pct if self._saved_eps_pct is not None else -1
-        game_settings.expert_pct = self._saved_xpr_pct if self._saved_xpr_pct is not None else -1
         with metrics.lock:
+            metrics.ratchet_frozen = False
             metrics.ratchet_eval_epoch = -1
+            metrics.ratchet_eval_collect_t0 = 0.0
+            metrics.ratchet_eval_cohort_close_ts = 0.0
         self._train_end_step = int(self.agent.training_steps) + self.window
         self.agent.training_enabled = True
         self.phase = "train"
-        print(f"[RATCHET] epoch {self.epoch} TRAIN: {self.window:,} steps "
-              f"(through step {self._train_end_step:,})")
+        self._log(f"[RATCHET] epoch {self.epoch} TRAIN: {self.window:,} steps "
+                  f"(through step {self._train_end_step:,})")
+
+    def _abort_eval(self, reason: str):
+        """Eval could not produce a usable sample (dead fleet, wedged clients).
+        Fail SAFE: restore the incumbent if one exists, count nothing, move on."""
+        self._log(f"[RATCHET] epoch {self.epoch} ABORTED: {reason}")
+        if self.incumbent is not None and self.epoch > 0:
+            self.agent.restore_training_state(self.incumbent)
+        self.epoch += 1
+        self._exit_eval_to_train()
 
     # ── decisions ────────────────────────────────────────────────────────
     def _decide(self, scores):
-        import numpy as _np
-        mean = float(_np.mean(scores))
-        med = float(_np.median(scores))
+        # Belt-and-braces: if training was externally re-enabled this tick
+        # (keyboard 't'), an optimizer step could still be in flight — the
+        # snapshot/restore below must never copy torn tensors.
+        self.agent.training_enabled = False
+        self._quiesce(max_wait_s=1.5)
+        mean = float(np.mean(scores))
+        med = float(np.median(scores))
         n = len(scores)
-        # Robotron scores are heavy-tailed; the mean of K games is noisy
-        # (SD ~140K -> SE ~22K at K=40).  The candidate must clear the margin
-        # bar by accept_z standard errors of its own mean, or the ratchet
-        # would advance on measurement luck and inflate the bar without
-        # improving the weights.
-        sd = float(_np.std(scores, ddof=1)) if n > 1 else 0.0
-        se = sd / math.sqrt(max(1, n))
-        z = float(getattr(RL_CONFIG, "ratchet_accept_z", 1.0))
+        sd = float(np.std(scores, ddof=1)) if n > 1 else 0.0
+        se_c = sd / math.sqrt(max(1, n))
+
         if self.epoch == 0:
+            # State first, logging last — a print() exception must never
+            # cause a re-decide with doubled side effects.
             self.incumbent = self.agent.snapshot_training_state()
             self.incumbent_score = mean
+            self.incumbent_scores = list(scores)
+            self.epoch += 1
+            self._exit_eval_to_train()
             try:
                 self.agent.save(self.INCUMBENT_PATH, is_forced_save=False,
                                 show_status=False, save_replay=False)
             except Exception as e:
-                print(f"[RATCHET] WARN: incumbent save failed: {e}")
-            print(f"[RATCHET] epoch 0 BASELINE: incumbent = {mean:,.0f} "
-                  f"(median {med:,.0f}, ±SE {se:,.0f}, n={n}) — the bar every candidate must beat")
+                self._log(f"[RATCHET] WARN: incumbent save failed: {e}")
+            self._log(f"[RATCHET] epoch 0 BASELINE: incumbent = {mean:,.0f} "
+                      f"(median {med:,.0f}, ±SE {se_c:,.0f}, n={n}) — the bar every "
+                      f"candidate must beat")
+            return
+
+        # Difference-of-means gate: BOTH measurements are noisy.  Requiring
+        # the candidate to clear the margin by z combined standard errors
+        # keeps the ratchet from advancing on sampling luck (winner's curse:
+        # bar inflates, weights don't).
+        inc_n = max(1, len(self.incumbent_scores))
+        inc_sd = float(np.std(self.incumbent_scores, ddof=1)) if inc_n > 1 else 0.0
+        se_i = inc_sd / math.sqrt(inc_n)
+        need = self.incumbent_score * self.margin + self.accept_z * math.sqrt(se_c ** 2 + se_i ** 2)
+        delta = mean - self.incumbent_score
+
+        if delta >= need:
+            epoch_done = self.epoch
+            prev = self.incumbent_score
+            self.accepts += 1
+            self.consecutive_rejects = 0
+            self.incumbent = self.agent.snapshot_training_state()
+            self.incumbent_score = mean
+            self.incumbent_scores = list(scores)
+            self.window = min(self.base_window, self.window * 2)
+            self.epoch += 1
+            self._exit_eval_to_train()
+            try:
+                self.agent.save(self.INCUMBENT_PATH, is_forced_save=False,
+                                show_status=False, save_replay=False)
+            except Exception as e:
+                self._log(f"[RATCHET] WARN: incumbent save failed: {e}")
+            self._log(f"[RATCHET] epoch {epoch_done} ACCEPT ✓ {mean:,.0f} "
+                      f"(median {med:,.0f}, n={n}) beats {prev:,.0f} by {delta:,.0f} "
+                      f"(needed {need:,.0f}) — incumbent advanced "
+                      f"({self.accepts} accepts / {self.rejects} rejects)")
         else:
-            bar = self.incumbent_score * (1.0 + self.margin) + z * se
-            if mean >= bar:
-                self.accepts += 1
-                self.consecutive_rejects = 0
-                self.incumbent = self.agent.snapshot_training_state()
-                prev = self.incumbent_score
-                self.incumbent_score = mean
-                self.window = min(self.base_window, self.window * 2)
-                try:
-                    self.agent.save(self.INCUMBENT_PATH, is_forced_save=False,
-                                    show_status=False, save_replay=False)
-                except Exception as e:
-                    print(f"[RATCHET] WARN: incumbent save failed: {e}")
-                print(f"[RATCHET] epoch {self.epoch} ACCEPT ✓ {mean:,.0f} "
-                      f"(median {med:,.0f}, n={n}) beats {prev:,.0f} — "
-                      f"incumbent advanced ({self.accepts} accepts / {self.rejects} rejects)")
-            else:
-                self.rejects += 1
-                self.consecutive_rejects += 1
-                self.agent.restore_training_state(self.incumbent)
-                if self.reseed:
-                    seed = (int(time.time() * 1000) ^ (self.epoch * 2_654_435_761)) & 0x7FFFFFFF
-                    random.seed(seed)
-                    np.random.seed(seed & 0xFFFFFFFF)
-                    torch.manual_seed(seed)
-                self.window = max(self.min_window, self.window // 2)
-                print(f"[RATCHET] epoch {self.epoch} REJECT ✗ {mean:,.0f} "
-                      f"(median {med:,.0f}, n={n}) < bar {bar:,.0f} — incumbent restored, "
+            epoch_done = self.epoch
+            self.rejects += 1
+            self.consecutive_rejects += 1
+            self.agent.restore_training_state(self.incumbent)
+            if self.reseed:
+                seed = (int(time.time() * 1000) ^ (self.epoch * 2_654_435_761)) & 0x7FFFFFFF
+                random.seed(seed)
+                np.random.seed(seed & 0xFFFFFFFF)
+                torch.manual_seed(seed)
+            self.window = max(self.min_window, self.window // 2)
+            self.epoch += 1
+            self._exit_eval_to_train()
+            self._log(f"[RATCHET] epoch {epoch_done} REJECT ✗ {mean:,.0f} "
+                      f"(median {med:,.0f}, n={n}) vs incumbent {self.incumbent_score:,.0f} "
+                      f"(Δ{delta:+,.0f}, needed +{need:,.0f}) — incumbent restored, "
                       f"window→{self.window:,}, reseeded "
                       f"({self.consecutive_rejects} consecutive)")
-        self.epoch += 1
-        self._exit_eval_to_train()
 
     # ── per-second tick from the supervision loop ────────────────────────
     def tick(self):
         if self.phase == "boot":
-            # Wait for clients + flowing frames before measuring anything.
-            if int(getattr(metrics, "client_count", 0)) > 0 and int(metrics.frame_count) > 10_000:
+            # Fresh frames only: frame_count is restored from the checkpoint,
+            # so gate on frames played THIS process, plus live clients.
+            fresh = int(metrics.frame_count) - int(getattr(metrics, "loaded_frame_count", 0))
+            if int(getattr(metrics, "client_count", 0)) > 0 and fresh > 10_000:
                 self._enter_eval()
             return
 
@@ -579,42 +645,70 @@ class RatchetController:
             return
 
         if self.phase == "eval":
-            elapsed = time.time() - self._eval_t0
-            if not self._collecting:
-                if elapsed >= self.warmup_s:
-                    with metrics.lock:
-                        metrics.ratchet_eval_scores = []
-                        metrics.ratchet_eval_epoch = self.epoch
-                    self._collecting = True
-                return
+            # Re-assert the freeze every tick: the keyboard 't' toggle writes
+            # agent.training_enabled directly and would otherwise restart the
+            # gradient mid-measurement.
+            if self.agent.training_enabled:
+                self.agent.training_enabled = False
+                self._log("[RATCHET] NOTE: training re-enabled externally during a "
+                          "measurement — frozen again (use 't' outside eval phases)")
+            now = time.time()
             with metrics.lock:
                 scores = list(metrics.ratchet_eval_scores)
-            if len(scores) >= self.eval_episodes:
+                started = int(metrics.ratchet_eval_cohort_started)
+                close_ts = float(metrics.ratchet_eval_cohort_close_ts)
+            cohort_closed = now > close_ts
+
+            if cohort_closed and started >= 5 and len(scores) >= started:
+                # Whole cohort finished — the unbiased sample.
                 self._decide(scores)
-            elif elapsed > self.timeout_s:
-                if len(scores) >= max(5, self.eval_episodes // 3):
-                    print(f"[RATCHET] eval timeout with {len(scores)} games — deciding on partial sample")
+                return
+            if now - self._eval_t0 > self.timeout_s:
+                if len(scores) >= max(5, min(started, self.eval_episodes) // 3):
+                    self._log(f"[RATCHET] eval timeout: deciding on {len(scores)}/{started} "
+                              f"cohort games (stragglers censored)")
                     self._decide(scores)
-                else:
-                    print(f"[RATCHET] eval timeout with only {len(scores)} games — "
-                          f"extending (check clients are connected and playing)")
+                elif self._extends < self.max_extends:
+                    self._extends += 1
                     self._eval_t0 = time.time()
+                    self._log(f"[RATCHET] eval timeout with {len(scores)}/{started} games — "
+                              f"extending ({self._extends}/{self.max_extends}); check the fleet")
+                else:
+                    self._abort_eval(f"no usable sample after {self.max_extends} extensions "
+                                     f"({len(scores)}/{started} games)")
 
 
 def main():
     os.makedirs(MODEL_DIR, exist_ok=True)
 
+    # Ratchet mode must be known BEFORE the agent exists: the freeze has to be
+    # in place before any checkpoint loads or the TrainWorker could squeeze
+    # gradient steps into the epoch-0 "untouched checkpoint" baseline.
+    ratchet_on = bool(getattr(RL_CONFIG, "ratchet_enabled", False)) or \
+        os.getenv("DQN_RATCHET", "").strip().lower() in ("1", "true", "yes", "on")
+
     agent = RainbowAgent(state_size=RL_CONFIG.state_size)
+    if ratchet_on:
+        agent.training_enabled = False
     dev = getattr(agent.device, "type", "unknown")
     print(f"Device: {dev.upper()}")
 
     dashboard = None
     dashboard_status = "disabled"
 
-    if os.path.exists(LATEST_MODEL_PATH):
-        loaded = agent.load(LATEST_MODEL_PATH)
+    # Boot preference (review fix): latest.pt is autosaved with CANDIDATE
+    # weights mid-window; resuming from it would re-baseline the ratchet on an
+    # unvetted policy.  The on-disk incumbent is the last MEASURED winner —
+    # prefer it whenever the ratchet is active.
+    boot_path = LATEST_MODEL_PATH
+    if ratchet_on and os.path.exists(RatchetController.INCUMBENT_PATH):
+        boot_path = RatchetController.INCUMBENT_PATH
+        print(f"RATCHET: booting from measured incumbent ({boot_path})")
+
+    if os.path.exists(boot_path):
+        loaded = agent.load(boot_path)
         if loaded:
-            print(f"Loaded model from: {LATEST_MODEL_PATH}\n")
+            print(f"Loaded model from: {boot_path}\n")
         else:
             print("Model load failed/incompatible, starting fresh\n")
             game_settings.reset()
@@ -696,18 +790,16 @@ def main():
     # incumbent and rolled back unless they win.  Subsumes the watchdog and
     # the rolling-window best-save, so both are suspended while it runs.
     ratchet = None
-    ratchet_on = bool(getattr(RL_CONFIG, "ratchet_enabled", False)) or \
-        os.getenv("DQN_RATCHET", "").strip().lower() in ("1", "true", "yes", "on")
     if ratchet_on:
         ratchet = RatchetController(agent)
         agent.training_enabled = False   # nothing trains until epoch 0 measures the incumbent
         print("=" * 70)
         print("POLICY RATCHET ACTIVE: train → freeze → measure → keep-or-rollback.")
         print(f"  window {ratchet.base_window:,} steps (floor {ratchet.min_window:,}) | "
-              f"{ratchet.eval_episodes} games/measurement | accept margin "
-              f"{ratchet.margin:+.1%} | warmup {ratchet.warmup_s:.0f}s")
+              f"cohort {ratchet.cohort_s:.0f}s (all cohort games counted) | "
+              f"margin {ratchet.margin:+.1%} + {ratchet.accept_z:.1f}·SE(diff)")
         print("  Epoch 0 measures the loaded checkpoint (eval-only protocol) as the incumbent.")
-        print("  Collapse watchdog + legacy best-save suspended while active.")
+        print("  Watchdog, legacy best-save, and latest.pt autosave suspended while active.")
         print("=" * 70)
 
     # Collapse watchdog state (see _collapse_signals/_restore_best_checkpoint).
@@ -721,14 +813,25 @@ def main():
     wd_restores = 0
     wd_cooldown_until = 0.0
     wd_last_steps = -1
+    ratchet_tick_errors = 0
     try:
         while srv_thread.is_alive() and not server.shutdown_event.is_set():
             if ratchet is not None:
                 try:
                     ratchet.tick()
+                    ratchet_tick_errors = 0
                 except Exception as e:
-                    print(f"[RATCHET] ERROR in tick: {e}")
+                    ratchet_tick_errors += 1
+                    print(f"[RATCHET] ERROR in tick ({ratchet_tick_errors}): {e}")
                     traceback.print_exc()
+                    if ratchet_tick_errors >= 30:
+                        print("[RATCHET] HALTED after repeated tick errors — freezing "
+                              "training, serving current weights. Investigate.")
+                        agent.training_enabled = False
+                        with metrics.lock:
+                            metrics.ratchet_frozen = False
+                            metrics.ratchet_eval_epoch = -1
+                        ratchet = None
             if wd_enabled and time.time() >= wd_next_check:
                 wd_next_check = time.time() + wd_interval
                 steps_now = int(getattr(metrics, "total_training_steps", 0))
@@ -758,7 +861,8 @@ def main():
                 else:
                     wd_hits = 0
             if time.time() - last_save >= 300:
-                agent.save(LATEST_MODEL_PATH, show_status=False)
+                if ratchet is None:
+                    agent.save(LATEST_MODEL_PATH, show_status=False)
                 last_save = time.time()
                 # Save best-by-EScr1M separately. Gate on a ~full eval window
                 # (eviction keeps eval_score_1m_frames just UNDER the window,
@@ -786,12 +890,21 @@ def main():
     except KeyboardInterrupt:
         print("\nKeyboard interrupt, shutting down...")
     finally:
+        if ratchet is not None:
+            # Monotonicity across restarts: the final latest.pt must hold the
+            # last MEASURED winner, never a mid-window candidate.
+            with metrics.lock:
+                metrics.ratchet_frozen = False
+                metrics.ratchet_eval_epoch = -1
+            agent.training_enabled = False
+            if ratchet.incumbent is not None:
+                try:
+                    ratchet._quiesce()
+                    agent.restore_training_state(ratchet.incumbent)
+                    print("[RATCHET] shutdown: incumbent restored for final save")
+                except Exception as e:
+                    print(f"[RATCHET] WARN: incumbent restore on shutdown failed: {e}")
         agent.save(LATEST_MODEL_PATH, save_replay=True)
-        # A shutdown mid-measurement must not persist the ratchet's temporary
-        # all-greedy overrides as if the operator had chosen them.
-        if ratchet is not None and ratchet.phase == "eval":
-            game_settings.epsilon_pct = ratchet._saved_eps_pct if ratchet._saved_eps_pct is not None else -1
-            game_settings.expert_pct = ratchet._saved_xpr_pct if ratchet._saved_xpr_pct is not None else -1
         game_settings.save()
         print("Final model & settings saved")
         if IS_INTERACTIVE and kb:

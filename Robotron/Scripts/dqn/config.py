@@ -630,16 +630,16 @@ class RLConfigData:
     ratchet_enabled: bool = False
     ratchet_train_steps: int = 2_000        # candidate window (gradient steps)
     ratchet_min_train_steps: int = 250      # adaptive-shrink floor
-    ratchet_eval_episodes: int = 40         # completed games per measurement
-    ratchet_eval_warmup_s: float = 10.0     # grace before collection opens; the
-                                            # REAL mixture filter is start-time
-                                            # tagging (only games STARTED after
-                                            # the freeze count — a good game
-                                            # runs 2.5-3.5 min, far past any
-                                            # warmup)
-    ratchet_eval_timeout_s: float = 1_200.0 # decide with >=1/3 of quota after
-                                            # this (start-tagged games take
-                                            # ~3 min before the first arrives)
+    ratchet_eval_episodes: int = 40         # target cohort size (games)
+    # Cohort sampling (review fix): "first K completions" censors the LONGEST
+    # games — which are the highest-scoring — biasing the mean down, and MORE
+    # for better candidates.  Instead the cohort is fixed at the START side:
+    # every game that BEGINS within this window after the freeze is in, and
+    # the measurement waits for ALL of them to finish.  No completion-time
+    # selection; identical design every epoch.
+    ratchet_eval_cohort_s: float = 240.0
+    ratchet_eval_timeout_s: float = 1_200.0 # fallback: decide on what finished
+    ratchet_eval_max_extends: int = 3       # then abort the epoch (fleet dead?)
     ratchet_accept_margin: float = 0.01     # candidate must beat incumbent by 1%
     # Noise-aware gate: Robotron game scores are heavy-tailed (SD ~140K on a
     # ~230K mean), so at K=30 the SE of the mean is ~26K — a bare 1% margin
@@ -1176,7 +1176,16 @@ class MetricsData:
     # mixed-policy games from the sample.
     ratchet_eval_epoch: int = -1
     ratchet_eval_collect_t0: float = 0.0
+    ratchet_eval_cohort_close_ts: float = 0.0   # games starting after this are NOT in the cohort
+    ratchet_eval_cohort_started: int = 0        # games started inside the cohort window
     ratchet_eval_scores: list = field(default_factory=list)
+    # THE freeze flag (review fix): consulted directly by get_effective_epsilon,
+    # _effective_expert_ratio_locked, the replay-store/boost gates, and the
+    # start-wave packer.  The ratchet used to impersonate operator settings
+    # (game_settings.epsilon_pct/expert_pct), which the web dashboard could
+    # overwrite mid-measurement and persist to disk; a dedicated flag cannot
+    # be touched by any operator surface.
+    ratchet_frozen: bool = False
     peak_episode_reward: float = 0.0
     peak_game_score: int = 0
     replay_dropped_steps: int = 0
@@ -1319,6 +1328,8 @@ class MetricsData:
 
     def get_effective_epsilon(self) -> float:
         with self.lock:
+            if self.ratchet_frozen:
+                return 0.0          # measurement protocol: pure greedy
             ep = game_settings.epsilon_pct
             if ep >= 0:
                 return ep / 100.0
@@ -1330,6 +1341,8 @@ class MetricsData:
         return RL_CONFIG.epsilon_start + progress * (RL_CONFIG.epsilon_end - RL_CONFIG.epsilon_start)
 
     def _effective_expert_ratio_locked(self) -> float:
+        if self.ratchet_frozen:
+            return 0.0              # measurement protocol: no bot frames
         xp = game_settings.expert_pct
         if xp >= 0:
             return xp / 100.0
@@ -1406,16 +1419,27 @@ class MetricsData:
             if float(total) > self.peak_episode_reward:
                 self.peak_episode_reward = float(total)
 
+    def ratchet_note_eval_start(self, ep_started_at: float):
+        """A new game began; count it into the measurement cohort if the
+        freeze is on and the cohort window is still open."""
+        with self.lock:
+            if (self.ratchet_frozen and self.ratchet_eval_cohort_close_ts > 0.0
+                    and self.ratchet_eval_collect_t0 <= ep_started_at <= self.ratchet_eval_cohort_close_ts):
+                self.ratchet_eval_cohort_started += 1
+
     def ratchet_note_eval_episode(self, score: float, ep_started_at: float = 0.0):
         """Record one completed game's score into the ratchet measurement.
 
-        Called at every game end (all clients).  Gated on the epoch tag so it
-        costs one comparison when the ratchet is idle, and on the game's START
-        time so mixed-policy games (in flight when the fleet was frozen) can
-        never contaminate the sample.
+        Cohort membership is decided by START time only: the game must have
+        begun after the freeze (no mixed-policy games) and before the cohort
+        window closed (no completion-time selection — waiting for the whole
+        cohort keeps long high-scoring games in the sample).
         """
         with self.lock:
-            if self.ratchet_eval_epoch >= 0 and ep_started_at >= self.ratchet_eval_collect_t0:
+            if (self.ratchet_eval_epoch >= 0
+                    and ep_started_at >= self.ratchet_eval_collect_t0
+                    and (self.ratchet_eval_cohort_close_ts <= 0.0
+                         or ep_started_at <= self.ratchet_eval_cohort_close_ts)):
                 self.ratchet_eval_scores.append(float(score))
 
     def add_eval_episode_reward(self, total, score, level, length=0):
