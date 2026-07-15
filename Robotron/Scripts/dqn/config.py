@@ -714,6 +714,12 @@ class RLConfigData:
     # value over 1%.  A config-level floor also survives restarts, unlike the
     # keyboard override, which reset to the old 5% floor on every boot and
     # repeatedly landed the run on unvalidated settings.
+    #
+    # (2026-07-14: a "correction" was briefly written here claiming this block
+    # was false and that the record was set at 0.05.  THAT correction was itself
+    # wrong — it dated the 415K run from commit timestamps and ignored the
+    # checkpoint's engine_version=18, which pins it to d500c68, where this is
+    # 0.01.  The 1% claim above stands.  Verified and restored.)
     expert_ratio_end: float = 0.01
     # Decay is keyed to TRAINING STEPS, not frames.  At 20k+ fps the steady-state
     # frame:step ratio is ~200:1, so a frame-based 2M schedule completed in ~10k
@@ -784,6 +790,20 @@ class RLConfigData:
     subj_positive_decay_steps: int = 125_000
     subj_positive_min_weight: float = 0.0
     shaping_reward_clip: float = 4.0
+    # 10.0 is the value the 415K agent was ACTUALLY trained under.  Established
+    # by the checkpoint's own metadata: it is engine_version 18, and v18 does not
+    # exist before d500c68 (2026-07-13), which has death_penalty=10.0.  c98c73a
+    # (2026-07-04) is engine v17 and cannot have produced it.
+    #
+    # A 2026-07-14 attempt "restored" this to 2.0 on the theory that the 415K era
+    # ran 2.0 (inferred from commit DATES while ignoring engine_version).  That
+    # was wrong, and the experiment refuted it: death_penalty=2.0 gave EScr1M 52K
+    # (peak 74K) over 66k steps.  Do not re-derive the 415K-era config from commit
+    # dates — pin it with engine_version from the checkpoint metadata.
+    #
+    # NOTE the corollary: the same agent scored 540K-714K games AT death=10.0, so
+    # "passive survival is the optimum of death=10" is refuted too.  The observed
+    # EpLen-rises/score-falls signature is real but is NOT explained by this term.
     death_penalty: float = 10.0
     reward_clip: float = 30.0
     death_reward_clip: float = 40.0
@@ -798,6 +818,24 @@ class RLConfigData:
     # positive boundary condition instead of anchoring only on death. The clear
     # bonus is added outside the generic shaping clip so +5 means +5.
     wave_clear_training_terminal: bool = True
+    # 5.0 holds clear:death = 0.5 against death_penalty=10.0 (the value the 415K
+    # agent actually trained under).  A 2026-07-14 edit briefly set this to 1.0 to
+    # preserve that ratio against a mistaken death_penalty=2.0 "restoration"; both
+    # are reverted together.  Ratio 0.5 is the invariant to hold.
+    #
+    # Magnitude matters because a wave's score income is ~5-20k pts = +5..+20
+    # reward (score_reward_scale=0.001):
+    #   clear=+1.0 (1,000 pts) -> bonus is small vs score income => play for
+    #                             POINTS.  This is the objective under which the
+    #                             agent banked 540-714K games and reached wave 13.
+    #   clear=+5.0 (5,000 pts) -> bonus rivals a whole wave's scoring => rush
+    #                             waves, skip humans.  A wave-rusher, not a scorer.
+    # The TERMINAL stays on: it is the structural win (external positive grounding
+    # for a critic whose only ground truth was death at v_min).  That is
+    # independent of magnitude — +1.0 anchors just as externally as +5.0, it just
+    # doesn't distort the score/clear tradeoff.  Kept outside the shaping clip so
+    # +1 means +1 (the 415K era added it INSIDE the ±4 clip, where it competed
+    # with other shaping — this is the same magnitude, cleaner delivery).
     wave_clear_bonus: float = 5.0
     wave_progress_bonus: float = 0.15
     potential_human_scale: float = 0.45
