@@ -632,6 +632,52 @@ class RainbowAgent:
             sys.stdout.write("\n")
             sys.stdout.flush()
 
+    # ── policy-ratchet snapshot/restore (2026-07-15) ─────────────────────
+    # In-RAM deep copies of EVERYTHING training mutates, so a rejected
+    # candidate window can be rolled back exactly — weights, target net,
+    # Adam moments, and AMP scaler.  CPU-side (~160MB) so VRAM is untouched.
+    # Restore is only legal while the TrainWorker is idle
+    # (training_enabled=False): the ratchet controller guarantees that by
+    # construction (restores happen inside the frozen eval phase).
+
+    @staticmethod
+    def _optimizer_state_to_cpu(sd: dict) -> dict:
+        out = {"state": {}, "param_groups": [dict(g) for g in sd.get("param_groups", [])]}
+        for k, st in sd.get("state", {}).items():
+            out["state"][k] = {
+                n: (v.detach().clone().cpu() if torch.is_tensor(v) else v)
+                for n, v in st.items()
+            }
+        return out
+
+    def snapshot_training_state(self) -> dict:
+        with self._sync_lock:
+            return {
+                "online": {k: v.detach().clone().cpu() for k, v in self.online_net.state_dict().items()},
+                "target": {k: v.detach().clone().cpu() for k, v in self.target_net.state_dict().items()},
+                "optimizer": self._optimizer_state_to_cpu(self.optimizer.state_dict()),
+                "scaler": (self.grad_scaler.state_dict() if self.grad_scaler is not None else None),
+                "training_steps": int(self.training_steps),
+            }
+
+    def restore_training_state(self, snap: dict):
+        with self._sync_lock:
+            # load_state_dict copies into the existing device tensors, and
+            # Optimizer.load_state_dict casts saved state to each param's
+            # device/dtype — CPU-held snapshots restore cleanly onto CUDA.
+            self.online_net.load_state_dict(snap["online"])
+            self.target_net.load_state_dict(snap["target"])
+            self.optimizer.load_state_dict(snap["optimizer"])
+            if snap.get("scaler") is not None and self.grad_scaler is not None:
+                try:
+                    self.grad_scaler.load_state_dict(snap["scaler"])
+                except Exception:
+                    pass
+            self.training_steps = int(snap["training_steps"])
+        # Push the restored weights to the inference net immediately — the
+        # fleet must act on the incumbent, not the rejected candidate.
+        self._sync_inference(force=True)
+
     def save(self, filepath, is_forced_save=False, show_status=True, save_replay=None):
         try:
             with metrics.lock:

@@ -986,7 +986,7 @@ class SocketServer:
                 "ep_death_reward": 0.0,
                 "ep_dqn_frames": 0,
                 "no_human_no_score_frames": 0,
-                "eval_only": eval_only,
+                "eval_only": eval_only, "ep_t0": time.time(),
                 "was_done": False, "nstep": nstep,
                 "frame_history": deque(maxlen=max(1, int(getattr(RL_CONFIG, "frame_stack", 1)))),
                 "fire_hold_dir": -1, "fire_hold_count": 0, "fire_pending_dir": -1,
@@ -1419,6 +1419,10 @@ class SocketServer:
                         self.async_buffer.boost_pre_death(cid)
                     if not cs.get("was_done", False):
                         ep_len = cs.get("ep_frames", 0)
+                        # Policy ratchet: during a frozen measurement phase the
+                        # whole fleet plays greedy, so EVERY completed game is a
+                        # sample.  No-op (one lock + compare) outside eval phases.
+                        metrics.ratchet_note_eval_episode(frame.game_score, cs.get("ep_t0", 0.0))
                         if eval_only:
                             metrics.add_eval_episode_reward(
                                 cs["total_reward"], frame.game_score, frame.level_number, length=ep_len)
@@ -1471,6 +1475,9 @@ class SocketServer:
 
                 if cs.get("was_done"):
                     cs["was_done"] = False
+                    # New game starts here — stamp it so ratchet measurements can
+                    # exclude games already in flight when the fleet was frozen.
+                    cs["ep_t0"] = time.time()
                     cs["total_reward"] = cs["ep_dqn_reward"] = cs["ep_dqn_score_reward"] = cs["ep_expert_reward"] = 0.0
                     cs["ep_subj_reward"] = cs["ep_obj_reward"] = cs["ep_death_reward"] = 0.0
                     cs["ep_frames"] = 0

@@ -610,6 +610,47 @@ class RLConfigData:
     collapse_max_restores: int = 2             # then halt training, serve frozen best
     target_tau: float = 1.0
 
+    # ── policy ratchet (2026-07-15) ─────────────────────────────────────
+    # Monotonic policy improvement for a learner whose gradient reliably
+    # DEGRADES a good policy (measured six ways on 2026-07-14: the untouched
+    # 415K checkpoint evals at 215-270K; ANY training config tried — including
+    # this exact code — drives it to ~39-75K within ~13k steps).  Instead of
+    # trusting the gradient, gate it: train a candidate window, FREEZE, measure
+    # mean game score under an all-greedy protocol, and keep the weights only
+    # if they beat the incumbent by the margin; otherwise restore the incumbent
+    # (weights+target+optimizer+scaler) and try a different window (reseeded,
+    # adaptively shrunk).  By construction the served policy cannot get worse;
+    # "training destroys the agent" becomes a low accept rate instead of a
+    # collapse.  Epoch 0 measures the loaded checkpoint itself — the same
+    # protocol as the DQN_EVAL_ONLY control — so the first incumbent score is
+    # trustworthy.  Enable with DQN_RATCHET=1 (or this flag).  While active,
+    # the collapse watchdog and the legacy rolling-window best-save are
+    # suspended: the ratchet subsumes both (its incumbent IS the best-known
+    # policy, measured, not inferred from a rolling window).
+    ratchet_enabled: bool = False
+    ratchet_train_steps: int = 2_000        # candidate window (gradient steps)
+    ratchet_min_train_steps: int = 250      # adaptive-shrink floor
+    ratchet_eval_episodes: int = 40         # completed games per measurement
+    ratchet_eval_warmup_s: float = 10.0     # grace before collection opens; the
+                                            # REAL mixture filter is start-time
+                                            # tagging (only games STARTED after
+                                            # the freeze count — a good game
+                                            # runs 2.5-3.5 min, far past any
+                                            # warmup)
+    ratchet_eval_timeout_s: float = 1_200.0 # decide with >=1/3 of quota after
+                                            # this (start-tagged games take
+                                            # ~3 min before the first arrives)
+    ratchet_accept_margin: float = 0.01     # candidate must beat incumbent by 1%
+    # Noise-aware gate: Robotron game scores are heavy-tailed (SD ~140K on a
+    # ~230K mean), so at K=30 the SE of the mean is ~26K — a bare 1% margin
+    # (~2.3K) would accept measurement luck ~40% of the time and the ratchet
+    # would advance on noise (winner's curse: the bar inflates, the weights
+    # don't improve).  The candidate must clear the margin bar by this many
+    # standard errors of ITS OWN sample mean.  1.0 ≈ 84% one-sided confidence;
+    # 0 disables (bare margin).
+    ratchet_accept_z: float = 1.0
+    ratchet_reseed_on_reject: bool = True   # new RNG stream per retry
+
     # Gradient
     grad_clip_norm: float = 5.0
 
@@ -1125,6 +1166,17 @@ class MetricsData:
     eval_level_1m_sum: float = 0.0
     eval_level_1m_average: float = 0.0
     peak_level: int = 0
+    # Policy-ratchet measurement accumulator.  epoch == -1 means "not
+    # collecting" (zero overhead outside a ratchet eval phase); when >= 0,
+    # every completed game's score — eval AND training clients, since the
+    # ratchet forces the whole fleet greedy during measurement — is appended,
+    # PROVIDED the game STARTED after collect_t0.  A 215-270K game runs
+    # 2.5-3.5 minutes, so games in flight at the freeze finish long after any
+    # reasonable warmup — start-time tagging is the only exact way to exclude
+    # mixed-policy games from the sample.
+    ratchet_eval_epoch: int = -1
+    ratchet_eval_collect_t0: float = 0.0
+    ratchet_eval_scores: list = field(default_factory=list)
     peak_episode_reward: float = 0.0
     peak_game_score: int = 0
     replay_dropped_steps: int = 0
@@ -1353,6 +1405,18 @@ class MetricsData:
                 self.episode_length_count_interval += 1
             if float(total) > self.peak_episode_reward:
                 self.peak_episode_reward = float(total)
+
+    def ratchet_note_eval_episode(self, score: float, ep_started_at: float = 0.0):
+        """Record one completed game's score into the ratchet measurement.
+
+        Called at every game end (all clients).  Gated on the epoch tag so it
+        costs one comparison when the ratchet is idle, and on the game's START
+        time so mixed-policy games (in flight when the fleet was frozen) can
+        never contaminate the sample.
+        """
+        with self.lock:
+            if self.ratchet_eval_epoch >= 0 and ep_started_at >= self.ratchet_eval_collect_t0:
+                self.ratchet_eval_scores.append(float(score))
 
     def add_eval_episode_reward(self, total, score, level, length=0):
         with self.lock:
