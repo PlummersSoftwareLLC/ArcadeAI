@@ -831,7 +831,19 @@ class RLConfigData:
     # no-human no-score stall) or potential-based state differences
     # gamma*Phi(s') - Phi(s). They densify movement credit without paying the
     # policy just for occupying a state.
-    wave_clear_bonus: float = 1.0
+    # 1.0 -> 2.5 + positive TRAINING TERMINAL (2026-07-15, ported from expert2
+    # as the first reward-surgery candidate generator under the ratchet).  The
+    # value surface's only external grounding is death at v_min=-10; a wave
+    # clear now closes the n-step episode for replay purposes (the live game
+    # continues), so Tz = r at the clear — bootstrap-free POSITIVE ground
+    # truth.  2.5 = 2,500 points-equivalent: meaningful, but smaller than one
+    # max-chain rescue (5,000) so it cannot out-bid rescuing humans (a rush
+    # incentive would fight the game's biggest income source).  Delivered
+    # OUTSIDE the shaping clip.  The ratchet's gate metric is final GAME SCORE
+    # — invariant to reward changes — so candidates trained under this reward
+    # are directly comparable to the incumbent's existing bar.
+    wave_clear_training_terminal: bool = True
+    wave_clear_bonus: float = 2.5
     wave_progress_bonus: float = 0.15
     potential_human_scale: float = 0.45
     potential_human_sharpness: float = 2.0

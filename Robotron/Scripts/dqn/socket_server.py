@@ -571,14 +571,18 @@ def _shape_transition_reward(
         phi_next = _movement_potential(next_state, alive=True)
         shaping_raw += float(RL_CONFIG.gamma) * phi_next - phi_prev
 
+    clear_r = 0.0
     if _wave_advanced(prev_state, frame, prev_level_number=prev_level_number):
         wave = max(1, int(frame.level_number))
-        shaping_raw += float(getattr(RL_CONFIG, "wave_clear_bonus", 0.0))
+        # Wave-clear bonus OUTSIDE the shaping clip so +2.5 means +2.5 — this
+        # is the positive grounding term (see wave_clear_training_terminal),
+        # not garden-variety shaping to be blended and clamped.
+        clear_r = float(getattr(RL_CONFIG, "wave_clear_bonus", 0.0))
         shaping_raw += float(getattr(RL_CONFIG, "wave_progress_bonus", 0.0)) * min(10, max(0, wave - 1))
 
     shaping_raw += _stall_penalty(int(stall_frames))
 
-    subj_r = _clip_abs(shaping_raw, float(RL_CONFIG.shaping_reward_clip))
+    subj_r = _clip_abs(shaping_raw, float(RL_CONFIG.shaping_reward_clip)) + clear_r
     death_r = -float(getattr(RL_CONFIG, "death_penalty", 0.0)) if bool(frame.done) else 0.0
     total_r = score_r + subj_r + death_r
     total_r = _clip_abs(total_r, float(RL_CONFIG.death_reward_clip if frame.done else RL_CONFIG.reward_clip))
@@ -1429,11 +1433,22 @@ class SocketServer:
                     # mechanism behind the historical collapses.
                     if self.agent and not eval_only and not metrics.ratchet_frozen:
                         tag = cs.get("prev_action_source", "dqn")
+                        # Positive training terminal (ported from expert2):
+                        # clearing a wave closes the n-step episode for REPLAY
+                        # purposes, so Tz = r there — a bootstrap-free POSITIVE
+                        # boundary for a value function whose only other ground
+                        # truth is death at v_min.  The live game continues;
+                        # HOF/episode bookkeeping still key off frame.done.
+                        training_done = bool(frame.done) or (
+                            _wave_advanced(cs.get("last_state"), frame,
+                                           prev_level_number=cs.get("last_level_number"))
+                            and bool(getattr(RL_CONFIG, "wave_clear_training_terminal", False))
+                        )
                         nstep = cs.get("nstep")
                         if nstep is not None:
                             joint = combine_action(mv_i, fr_i)
                             matured = nstep.add(cs["last_state"], joint, total_r,
-                                                model_state, bool(frame.done),
+                                                model_state, bool(training_done),
                                                 actor=tag, priority_reward=total_r,
                                                 interest=interest)
                             for s0, a, Rn, pR, sn, dn, h, act, intr in matured:
@@ -1445,7 +1460,7 @@ class SocketServer:
                         else:
                             self.async_buffer.step_async(
                                 cs["last_state"], (mv_i, fr_i), total_r,
-                                model_state, bool(frame.done), client_id=cid,
+                                model_state, bool(training_done), client_id=cid,
                                 actor=tag, horizon=1, priority_reward=total_r,
                                 interest=interest)
 
