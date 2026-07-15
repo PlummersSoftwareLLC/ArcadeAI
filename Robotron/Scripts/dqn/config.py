@@ -637,9 +637,17 @@ class RLConfigData:
     # every game that BEGINS within this window after the freeze is in, and
     # the measurement waits for ALL of them to finish.  No completion-time
     # selection; identical design every epoch.
-    ratchet_eval_cohort_s: float = 240.0
-    ratchet_eval_timeout_s: float = 1_200.0 # fallback: decide on what finished
+    # 240 -> 600 (2026-07-15): in FINAL-GAME units a 450K-class game runs 4-8
+    # minutes, so a 240s start-window yielded n=17 games and SE ~69K — the
+    # accept gate degenerated to "beat the incumbent by ~100K".  600s yields
+    # n≈40-50.  Heavy-tailed finals (SD ~285K) make n the whole ballgame.
+    ratchet_eval_cohort_s: float = 600.0
+    ratchet_eval_timeout_s: float = 2_100.0 # window + longest-game tail
     ratchet_eval_max_extends: int = 3       # then abort the epoch (fleet dead?)
+    # Incumbent measurements (epoch 0 and bar re-measures) use a longer window:
+    # the incumbent's SE enters EVERY future gate via sqrt(se_c^2+se_i^2), so
+    # precision here is amortized across all epochs.
+    ratchet_incumbent_cohort_mult: float = 2.0
     ratchet_accept_margin: float = 0.01     # candidate must beat incumbent by 1%
     # Noise-aware gate: Robotron game scores are heavy-tailed (SD ~140K on a
     # ~230K mean), so at K=30 the SE of the mean is ~26K — a bare 1% margin
@@ -648,7 +656,14 @@ class RLConfigData:
     # don't improve).  The candidate must clear the margin bar by this many
     # standard errors of ITS OWN sample mean.  1.0 ≈ 84% one-sided confidence;
     # 0 disables (bare margin).
-    ratchet_accept_z: float = 1.0
+    # 1.0 -> 0.5 (2026-07-15): with the reject-streak re-measure in place, a
+    # noise-accept is SELF-CORRECTING — the inflated bar gets reset within
+    # ~ratchet_remeasure_after_rejects epochs, and the falsely-accepted policy
+    # is statistically ≈ the incumbent (bounded harm).  The optimal operating
+    # point therefore shifts toward accepting more and letting the re-measure
+    # audit: monotonicity in expectation, far higher climb rate on heavy-tailed
+    # scores where a strict gate starves on sampling noise.
+    ratchet_accept_z: float = 0.5
     ratchet_reseed_on_reject: bool = True   # new RNG stream per retry
     # Data floor (2026-07-15, measured): epoch-1 trained 2,000 steps x 1,024
     # batch = 2.05M gradient samples against a ring that held 33K->180K

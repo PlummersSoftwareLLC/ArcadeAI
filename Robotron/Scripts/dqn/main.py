@@ -527,11 +527,15 @@ class RatchetController:
         # yet — push them so the fleet plays exactly the candidate.
         self.agent._sync_inference(force=True)
         now = time.time()
+        # Incumbent measurements get a longer start-window: their SE enters
+        # every future gate, so extra precision here pays forever.
+        _mult = float(getattr(RL_CONFIG, "ratchet_incumbent_cohort_mult", 1.0))             if (self.epoch == 0 or self._measuring_incumbent) else 1.0
+        _window_s = self.cohort_s * max(1.0, _mult)
         with metrics.lock:
             metrics.ratchet_eval_scores = []
             metrics.ratchet_eval_epoch = self.epoch
             metrics.ratchet_eval_collect_t0 = now
-            metrics.ratchet_eval_cohort_close_ts = now + self.cohort_s
+            metrics.ratchet_eval_cohort_close_ts = now + _window_s
             metrics.ratchet_eval_cohort_started = 0
             # THE protocol switch: greedy epsilon/expert, wave-1 starts,
             # replay/boost/HOF gating — all consulted directly off this flag,
