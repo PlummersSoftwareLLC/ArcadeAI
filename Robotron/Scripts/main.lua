@@ -3527,16 +3527,10 @@ function frame_callback()
         frame.wave_number
     )
     if not ok_patch then
-        -- Always visible (not trace-gated): patch failures must be diagnosable
-        -- from instance logs.
-        print("[CURRICULUM] start-wave patch ERROR: " .. tostring(patched_wave_or_err))
+        trace_log(frame_counter, "curriculum_patch_error", tostring(patched_wave_or_err), true)
     elseif patched_wave_or_err then
         frame.wave_number = patched_wave_or_err
-        -- Always visible: ground truth that this client actually starts its
-        -- games at the advanced wave (2026-07-14: Lvl1M sitting BELOW the
-        -- configured start level was undiagnosable because this only existed
-        -- as a gated trace line).
-        print("[CURRICULUM] applied start wave " .. tostring(patched_wave_or_err))
+        trace_log(frame_counter, "curriculum_patch", "applied start wave " .. tostring(patched_wave_or_err))
     end
 
     local player_alive = frame.player_alive

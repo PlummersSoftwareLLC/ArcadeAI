@@ -203,54 +203,6 @@ def train_step(agent, prefetched_batch=None) -> float | None:
             # When l == u the two weights above are both 0 → assign full mass directly.
             m_joint.view(-1).index_add_(0, (l + offset).view(-1), (joint_tp_a * eq_mask.float()).view(-1))
 
-            # ── Bootstrap-free MC anchor on hall-of-fame rows ───────────────
-            # Everything above is Tz = r + gamma^h * Q_target(s'), i.e. ~92%
-            # bootstrap.  Robotron has no positive terminal, so that recursion's
-            # only ground truth is a death at v_min: the positive value surface
-            # is held up purely by other predictions, and when the high-return
-            # data drains from the ring it deflates monotonically at healthy
-            # loss (verified twice: Q-max 34->~12, EScr1M 72k->48k, EpLen up).
-            # HOF replay alone could not stop it BECAUSE those rows were
-            # bootstrapped through the same collapsing net.
-            #
-            # For HOF rows we know something the recursion does not: what the
-            # episode ACTUALLY returned.  Regress them onto that measured value
-            # instead (a delta at G projected onto the support).  It cannot
-            # deflate with the network and carries no demonstrator ceiling.
-            if bool(getattr(cfg, "hof_mc_return_targets", False)):
-                mem = agent.memory
-                cap = int(getattr(mem, "capacity", 0))
-                hof_mc = getattr(mem, "hof_mc_return", None)
-                idx_np = np.asarray(indices)
-                # HOF rows carry sentinel indices >= capacity encoding their
-                # flat slot (replay_buffer.sample), so no signature change.
-                hof_rows = idx_np >= cap
-                if hof_mc is not None and cap > 0 and bool(hof_rows.any()):
-                    g_np = np.zeros(B, dtype=np.float32)
-                    ok_np = np.zeros(B, dtype=bool)
-                    slots = (idx_np[hof_rows] - cap).astype(np.int64)
-                    valid_slot = (slots >= 0) & (slots < hof_mc.shape[0])
-                    g_slot = np.full(slots.shape[0], np.nan, dtype=np.float32)
-                    g_slot[valid_slot] = hof_mc[slots[valid_slot]]
-                    finite = np.isfinite(g_slot)
-                    g_np[hof_rows] = np.nan_to_num(g_slot, nan=0.0)
-                    ok_np[hof_rows] = finite          # NaN -> keep Bellman target
-                    if bool(ok_np.any()):
-                        g_t = torch.from_numpy(g_np).to(device=device, dtype=torch.float32)
-                        ok_t = torch.from_numpy(ok_np).to(device=device)
-                        b_mc = (g_t.clamp(v_min, v_max) - v_min) / delta_z   # (B,)
-                        l_mc = b_mc.floor().long().clamp(0, num_atoms - 1)
-                        u_mc = b_mc.ceil().long().clamp(0, num_atoms - 1)
-                        eq_mc = (l_mc == u_mc)
-                        # Two-point projection of a delta at G; when the atom is
-                        # hit exactly, all mass lands on it.
-                        w_l = torch.where(eq_mc, torch.ones_like(b_mc), u_mc.float() - b_mc)
-                        w_u = torch.where(eq_mc, torch.zeros_like(b_mc), b_mc - l_mc.float())
-                        m_mc = torch.zeros(B, num_atoms, device=device, dtype=torch.float32)
-                        m_mc.scatter_add_(1, l_mc.unsqueeze(1), w_l.unsqueeze(1))
-                        m_mc.scatter_add_(1, u_mc.unsqueeze(1), w_u.unsqueeze(1))
-                        m_joint = torch.where(ok_t.unsqueeze(1), m_mc, m_joint)
-
             # Target smoothing: mix a sliver of uniform-over-atoms mass into
             # the projected target so the minimum achievable cross-entropy is
             # bounded away from zero (~0.095 at eps=0.01).  Without it the
