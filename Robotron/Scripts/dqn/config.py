@@ -698,6 +698,21 @@ class RLConfigData:
     # resets have produced absurd values before): finals above this are
     # discarded as garbage, the game voided.
     ratchet_max_credible_final: float = 2_000_000.0
+    # Throughput + bar hygiene (2026-07-15):
+    # After this many consecutive rejects, re-measure the INCUMBENT itself and
+    # reset the bar to the fresh measurement.  An accept that was partly
+    # sampling luck inflates the bar above the incumbent's true play (winner's
+    # curse) and every honest candidate then loses to a ghost — observed as a
+    # wall of rejects clustered 15-25% below a freshly-raised bar.  Weights
+    # never change on a re-measure; only the number candidates must beat.
+    ratchet_remeasure_after_rejects: int = 6
+    # Train the NEXT candidate (from the incumbent) on the training GPU while
+    # the fleet is busy measuring the CURRENT one — eval wall-time dominates
+    # an epoch ~5:1 and the GPU idles through it.  On reject, the pre-trained
+    # candidate enters measurement immediately; epochs collapse to eval-time.
+    # The behavior lock keeps the fleet on the measured candidate throughout
+    # (periodic syncs are suppressed; only transition force-syncs move nets).
+    ratchet_pipeline: bool = True
 
     # Gradient
     grad_clip_norm: float = 5.0

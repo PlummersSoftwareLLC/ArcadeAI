@@ -719,7 +719,7 @@ class RainbowAgent:
                 except Exception:
                     pass
 
-    def restore_training_state(self, snap: dict):
+    def restore_training_state(self, snap: dict, sync_inference: bool = True):
         with self._sync_lock:
             # load_state_dict copies into the existing device tensors, and
             # Optimizer.load_state_dict casts saved state to each param's
@@ -738,7 +738,11 @@ class RainbowAgent:
             self._restore_metrics_clocks(clocks)
         # Push the restored weights to the inference net immediately — the
         # fleet must act on the incumbent, not the rejected candidate.
-        self._sync_inference(force=True)
+        # (sync_inference=False is the ratchet pipeline's path: it restores
+        # the incumbent into the ONLINE net to train the next candidate while
+        # the fleet keeps measuring the CURRENT candidate on the infer net.)
+        if sync_inference:
+            self._sync_inference(force=True)
 
     def save(self, filepath, is_forced_save=False, show_status=True, save_replay=None):
         try:

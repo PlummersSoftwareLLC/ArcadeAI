@@ -478,6 +478,14 @@ class RatchetController:
         self._eval_t0 = 0.0
         self._train_end_step = 0
         self._extends = 0
+        # Pipeline + bar hygiene (2026-07-15)
+        self.pipeline = bool(getattr(cfg, "ratchet_pipeline", True))
+        self.remeasure_after = max(0, int(getattr(cfg, "ratchet_remeasure_after_rejects", 6)))
+        self._pending_candidate = None   # snapshot of the candidate under measurement
+        self._next_candidate = None      # pre-trained next candidate (pipeline)
+        self._pipe_active = False
+        self._pipe_end_step = 0
+        self._measuring_incumbent = False
 
     # ── helpers ──────────────────────────────────────────────────────────
     @staticmethod
@@ -533,9 +541,33 @@ class RatchetController:
         self._eval_t0 = now
         self._extends = 0
         self.phase = "eval"
-        what = "incumbent (loaded checkpoint)" if self.epoch == 0 else f"candidate (epoch {self.epoch})"
+        # The accept path must take exactly the weights being MEASURED — the
+        # pipeline moves the online net during the measurement, so bank them.
+        self._pending_candidate = self.agent.snapshot_training_state()
+        # Pipeline: the GPU idles through the ~5-7 min measurement otherwise.
+        # Restore the incumbent into the ONLINE net (infer net untouched — it
+        # serves the frozen candidate) and train the NEXT candidate now.
+        self._pipe_active = False
+        if self.pipeline and self.incumbent is not None:
+            try:
+                self.agent.restore_training_state(self.incumbent, sync_inference=False)
+                if bool(getattr(RL_CONFIG, "ratchet_fresh_optimizer", False)):
+                    self.agent.ratchet_begin_window(
+                        int(getattr(RL_CONFIG, "ratchet_window_warmup_steps", 200)))
+                self._pipe_end_step = int(self.agent.training_steps) + self.window
+                self.agent.training_enabled = True
+                self._pipe_active = True
+            except Exception as e:
+                self._log(f"[RATCHET] WARN: pipeline setup failed: {e}")
+        if self._measuring_incumbent:
+            what = "INCUMBENT (bar re-measure)"
+        elif self.epoch == 0:
+            what = "incumbent (loaded checkpoint)"
+        else:
+            what = f"candidate (epoch {self.epoch})"
+        pipe = " | pipelining next candidate" if self._pipe_active else ""
         self._log(f"[RATCHET] epoch {self.epoch} EVAL: measuring {what} — fleet greedy wave-1, "
-                  f"cohort window {self.cohort_s:.0f}s, waiting for all cohort games")
+                  f"cohort window {self.cohort_s:.0f}s, waiting for all cohort games{pipe}")
 
     def _exit_eval_to_train(self):
         with metrics.lock:
@@ -590,11 +622,22 @@ class RatchetController:
 
     # ── decisions ────────────────────────────────────────────────────────
     def _decide(self, scores):
-        # Belt-and-braces: if training was externally re-enabled this tick
-        # (keyboard 't'), an optimizer step could still be in flight — the
-        # snapshot/restore below must never copy torn tensors.
+        # Freeze any in-flight pipeline window (and the keyboard-'t' case)
+        # before touching snapshots — no torn tensors.
         self.agent.training_enabled = False
         self._quiesce(max_wait_s=1.5)
+        if self._pipe_active:
+            # Incomplete window: discard (costs ~seconds of GPU; keeps every
+            # measured candidate a full-window candidate).  Put the incumbent
+            # back in the online net so no later path trains on top of a
+            # half-window (fleet-facing net untouched until transitions).
+            self._pipe_active = False
+            self._next_candidate = None
+            if self.incumbent is not None:
+                try:
+                    self.agent.restore_training_state(self.incumbent, sync_inference=False)
+                except Exception as e:
+                    self._log(f"[RATCHET] WARN: pipeline-discard restore failed: {e}")
         mean = float(np.mean(scores))
         med = float(np.median(scores))
         n = len(scores)
@@ -619,6 +662,21 @@ class RatchetController:
                       f"candidate must beat")
             return
 
+        if self._measuring_incumbent:
+            # Bar-hygiene pass: the incumbent's WEIGHTS are untouched; only the
+            # number candidates must beat is refreshed (kills winner's-curse
+            # inflation from a lucky past accept).
+            self._measuring_incumbent = False
+            old = self.incumbent_score
+            self.incumbent_score = mean
+            self.incumbent_scores = list(scores)
+            self.consecutive_rejects = 0
+            self.epoch += 1
+            self._advance_after_decision(restore_first=False)
+            self._log(f"[RATCHET] incumbent RE-MEASURED: {mean:,.0f} "
+                      f"(median {med:,.0f}, n={n}; bar was {old:,.0f}) — bar reset to reality")
+            return
+
         # Difference-of-means gate: BOTH measurements are noisy.  Requiring
         # the candidate to clear the margin by z combined standard errors
         # keeps the ratchet from advancing on sampling luck (winner's curse:
@@ -634,10 +692,14 @@ class RatchetController:
             prev = self.incumbent_score
             self.accepts += 1
             self.consecutive_rejects = 0
-            self.incumbent = self.agent.snapshot_training_state()
+            # The measured weights were banked at eval entry — the online net
+            # may hold a half-trained pipelined successor by now.
+            self.incumbent = self._pending_candidate or self.agent.snapshot_training_state()
             self.incumbent_score = mean
             self.incumbent_scores = list(scores)
             self.window = min(self.base_window, self.window * 2)
+            self._next_candidate = None      # was perturbed from the OLD incumbent
+            self.agent.restore_training_state(self.incumbent)
             self.epoch += 1
             self._exit_eval_to_train()
             try:
@@ -653,7 +715,6 @@ class RatchetController:
             epoch_done = self.epoch
             self.rejects += 1
             self.consecutive_rejects += 1
-            self.agent.restore_training_state(self.incumbent)
             if self.reseed:
                 seed = (int(time.time() * 1000) ^ (self.epoch * 2_654_435_761)) & 0x7FFFFFFF
                 random.seed(seed)
@@ -661,12 +722,51 @@ class RatchetController:
                 torch.manual_seed(seed)
             self.window = max(self.min_window, self.window // 2)
             self.epoch += 1
+            if self.remeasure_after and self.consecutive_rejects >= self.remeasure_after:
+                # Wall of rejects: the bar may be a lucky ghost.  Measure the
+                # incumbent itself next; weights untouched, bar refreshed.
+                self._next_candidate = None
+                self._measuring_incumbent = True
+                self._advance_after_decision(restore_first=True)
+                self._log(f"[RATCHET] epoch {epoch_done} REJECT ✗ {mean:,.0f} "
+                          f"(Δ{delta:+,.0f}, needed +{need:,.0f}) — {self.consecutive_rejects} "
+                          f"consecutive → RE-MEASURING the incumbent to reset the bar")
+            elif self._next_candidate is not None:
+                # Pipelined successor goes straight to measurement — no train
+                # phase, the epoch collapses to eval wall-time.
+                nxt = self._next_candidate
+                self._next_candidate = None
+                self.agent.restore_training_state(nxt, sync_inference=False)
+                self._enter_eval()
+                self._log(f"[RATCHET] epoch {epoch_done} REJECT ✗ {mean:,.0f} "
+                          f"(median {med:,.0f}, n={n}) vs incumbent {self.incumbent_score:,.0f} "
+                          f"(Δ{delta:+,.0f}, needed +{need:,.0f}) — pipelined candidate "
+                          f"entering measurement immediately (window {self.window:,}, "
+                          f"{self.consecutive_rejects} consecutive)")
+            else:
+                self.agent.restore_training_state(self.incumbent)
+                self._exit_eval_to_train()
+                self._log(f"[RATCHET] epoch {epoch_done} REJECT ✗ {mean:,.0f} "
+                          f"(median {med:,.0f}, n={n}) vs incumbent {self.incumbent_score:,.0f} "
+                          f"(Δ{delta:+,.0f}, needed +{need:,.0f}) — incumbent restored, "
+                          f"window→{self.window:,}, reseeded "
+                          f"({self.consecutive_rejects} consecutive)")
+
+    def _advance_after_decision(self, restore_first: bool):
+        """Route to the next measurement or train phase after a bar re-measure
+        trigger or completion.  restore_first puts the incumbent back in the
+        online net (and the fleet) before the next eval begins."""
+        if restore_first:
+            self.agent.restore_training_state(self.incumbent)
+        if self._next_candidate is not None and not self._measuring_incumbent:
+            nxt = self._next_candidate
+            self._next_candidate = None
+            self.agent.restore_training_state(nxt, sync_inference=False)
+            self._enter_eval()
+        elif self._measuring_incumbent:
+            self._enter_eval()
+        else:
             self._exit_eval_to_train()
-            self._log(f"[RATCHET] epoch {epoch_done} REJECT ✗ {mean:,.0f} "
-                      f"(median {med:,.0f}, n={n}) vs incumbent {self.incumbent_score:,.0f} "
-                      f"(Δ{delta:+,.0f}, needed +{need:,.0f}) — incumbent restored, "
-                      f"window→{self.window:,}, reseeded "
-                      f"({self.consecutive_rejects} consecutive)")
 
     # ── per-second tick from the supervision loop ────────────────────────
     def tick(self):
@@ -698,10 +798,17 @@ class RatchetController:
             return
 
         if self.phase == "eval":
-            # Re-assert the freeze every tick: the keyboard 't' toggle writes
-            # agent.training_enabled directly and would otherwise restart the
-            # gradient mid-measurement.
-            if self.agent.training_enabled:
+            if self._pipe_active:
+                # The pipelined window trains DURING the measurement; freeze
+                # and bank it the moment it completes its step budget.
+                if int(self.agent.training_steps) >= self._pipe_end_step:
+                    self.agent.training_enabled = False
+                    self._quiesce(max_wait_s=1.5)
+                    self._next_candidate = self.agent.snapshot_training_state()
+                    self._pipe_active = False
+                    self._log("[RATCHET] pipeline: next candidate trained and banked")
+            elif self.agent.training_enabled:
+                # 't'-key guard (only meaningful when no pipeline window runs)
                 self.agent.training_enabled = False
                 self._log("[RATCHET] NOTE: training re-enabled externally during a "
                           "measurement — frozen again (use 't' outside eval phases)")
