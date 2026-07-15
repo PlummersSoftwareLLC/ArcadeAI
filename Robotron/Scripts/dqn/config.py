@@ -650,6 +650,20 @@ class RLConfigData:
     # 0 disables (bare margin).
     ratchet_accept_z: float = 1.0
     ratchet_reseed_on_reject: bool = True   # new RNG stream per retry
+    # Data floor (2026-07-15, measured): epoch-1 trained 2,000 steps x 1,024
+    # batch = 2.05M gradient samples against a ring that held 33K->180K
+    # transitions — every row hammered ~20x (worse early, worse under PER),
+    # covering ~2 hours of wave-1..12 play vs the 401M frames the checkpoint
+    # encodes.  The net re-carves itself to fit the sliver and bulldozes the
+    # rest through the shared trunk: candidate measured 70K (median 29K) vs
+    # incumbent 211K, Q-max crushed to ~0-4 within one window.  The original
+    # 415K run NEVER trained against a thin ring (continuous training beside
+    # a full 10M buffer, replay ratio ~3-6) — every demolition this week was
+    # a resume-onto-thin-ring.  So: no candidate window may train until the
+    # ring holds this many transitions of incumbent play.  One-time cost
+    # (~5-10 min); the ring is never wiped on reject and, under the behavior
+    # lock, only ever accumulates incumbent-quality data.
+    ratchet_min_ring_transitions: int = 1_000_000
 
     # Gradient
     grad_clip_norm: float = 5.0

@@ -543,6 +543,26 @@ class RatchetController:
             metrics.ratchet_eval_epoch = -1
             metrics.ratchet_eval_collect_t0 = 0.0
             metrics.ratchet_eval_cohort_close_ts = 0.0
+        # Data floor: a candidate window must never train against a thin ring
+        # (measured: 2M samples vs a 33K-180K ring bulldozed the checkpoint to
+        # 70K in one window).  Sit in a fill phase — fleet playing the
+        # incumbent, writes flowing — until the floor is met.  The ring only
+        # ever grows, so this costs minutes once and is free thereafter.
+        floor = int(getattr(RL_CONFIG, "ratchet_min_ring_transitions", 0))
+        try:
+            ring = len(self.agent.memory)
+        except Exception:
+            ring = floor            # no real buffer (tests) — skip the gate
+        if ring < floor:
+            self.agent.training_enabled = False
+            self.phase = "fill"
+            self._fill_last_log = time.time()
+            self._log(f"[RATCHET] epoch {self.epoch} FILL: ring {ring:,}/{floor:,} "
+                      f"incumbent transitions before the next window")
+            return
+        self._enter_train()
+
+    def _enter_train(self):
         self._train_end_step = int(self.agent.training_steps) + self.window
         self.agent.training_enabled = True
         self.phase = "train"
@@ -646,6 +666,20 @@ class RatchetController:
             fresh = int(metrics.frame_count) - int(getattr(metrics, "loaded_frame_count", 0))
             if int(getattr(metrics, "client_count", 0)) > 0 and fresh > 10_000:
                 self._enter_eval()
+            return
+
+        if self.phase == "fill":
+            floor = int(getattr(RL_CONFIG, "ratchet_min_ring_transitions", 0))
+            try:
+                ring = len(self.agent.memory)
+            except Exception:
+                ring = floor
+            if ring >= floor:
+                self._enter_train()
+            elif time.time() - getattr(self, "_fill_last_log", 0.0) >= 60.0:
+                self._fill_last_log = time.time()
+                self._log(f"[RATCHET] FILL: {ring:,}/{floor:,} transitions "
+                          f"({100.0*ring/max(1,floor):.0f}%)")
             return
 
         if self.phase == "train":
@@ -809,6 +843,8 @@ def main():
               f"margin {ratchet.margin:+.1%} + {ratchet.accept_z:.1f}·SE(diff)")
         print("  Epoch 0 measures the loaded checkpoint (eval-only protocol) as the incumbent.")
         print("  Behavior policy = INCUMBENT at all times; candidates act only while measured.")
+        print(f"  Data floor: no window trains until the ring holds "
+              f"{int(getattr(RL_CONFIG, 'ratchet_min_ring_transitions', 0)):,} incumbent transitions.")
         print("  Watchdog, legacy best-save, and latest.pt autosave suspended while active.")
         print("=" * 70)
 
