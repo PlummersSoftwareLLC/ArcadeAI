@@ -100,6 +100,8 @@ usage() {
     echo "  --socket-port      Set socket port (default: 9998)"
     echo "  --fg               Run one MAME instance in foreground"
     echo "  --throttle-client0 Throttle client 0 to real-time speed (default: unthrottled)"
+    echo "  --eval             Force this launch's client(s) to be EVAL clients (greedy, wave-1, no replay writes)"
+    echo "  --noeval           Force this launch's client(s) to be NON-EVAL (normal training clients)"
     echo "  --supervise        Stay running after launch and respawn any client slot that dies"
     echo "                     (checks every ${ROBOTRON_SUPERVISE_INTERVAL:-30}s; a slot crashing"
     echo "                     ${ROBOTRON_RESPAWN_GUARD_MAX:-5}x in ${ROBOTRON_RESPAWN_GUARD_WINDOW:-600}s is quarantined; run under tmux/nohup for long sessions;"
@@ -275,9 +277,9 @@ launch_client() {
 
     log_file="$LOG_DIR/mame_instance_${slot}.log"
     if [[ "$attached" -eq 1 ]]; then
-        ROBOTRON_SOCKET_ADDRESS="$client_socket" ROBOTRON_PREVIEW_CLIENT="$preview_flag" ROBOTRON_CLIENT_SLOT="$slot" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $throttle_flag $sound_flag $video_flag -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT" &
+        ROBOTRON_SOCKET_ADDRESS="$client_socket" ROBOTRON_PREVIEW_CLIENT="$preview_flag" ROBOTRON_CLIENT_SLOT="$slot" ROBOTRON_EVAL_MODE="$EVAL_MODE" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $throttle_flag $sound_flag $video_flag -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT" &
     else
-        ROBOTRON_SOCKET_ADDRESS="$client_socket" ROBOTRON_PREVIEW_CLIENT="$preview_flag" ROBOTRON_CLIENT_SLOT="$slot" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $throttle_flag $sound_flag $video_flag -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT" >> "$log_file" 2>&1 &
+        ROBOTRON_SOCKET_ADDRESS="$client_socket" ROBOTRON_PREVIEW_CLIENT="$preview_flag" ROBOTRON_CLIENT_SLOT="$slot" ROBOTRON_EVAL_MODE="$EVAL_MODE" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $throttle_flag $sound_flag $video_flag -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT" >> "$log_file" 2>&1 &
     fi
     LAST_LAUNCH_PID=$!
     LAST_LAUNCH_SOCKET="$client_socket"
@@ -343,6 +345,9 @@ NO_VIDEO=0
 NO_AUDIO=0
 THROTTLE_CLIENT0=0
 SUPERVISE=0
+# Eval override passed to the client(s) launched by this invocation:
+# 0=auto (server decides), 1=force eval, 2=force non-eval.  --eval / --noeval.
+EVAL_MODE="${ROBOTRON_EVAL_MODE:-0}"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -404,6 +409,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --throttle-client0)
             THROTTLE_CLIENT0=1
+            shift
+            ;;
+        --eval)
+            EVAL_MODE=1
+            shift
+            ;;
+        --noeval)
+            EVAL_MODE=2
             shift
             ;;
         --supervise)

@@ -945,6 +945,9 @@ class SocketServer:
 
         self.clients = {}
         self.client_states = {}
+        # Per-cid eval override from the handshake (--eval / --noeval).
+        # True=force eval, False=force non-eval, absent=auto (cid%stride rule).
+        self._eval_override = {}
         self.client_lock = threading.Lock()
         self.preview_cid: Optional[int] = None
         self.preview_disabled = False
@@ -966,8 +969,12 @@ class SocketServer:
                 pass
         return count
 
-    @staticmethod
-    def _is_eval_client(cid: int) -> bool:
+    def _is_eval_client(self, cid: int) -> bool:
+        # Per-client override wins (set from the handshake --eval/--noeval flag);
+        # otherwise the default cid%stride==offset rule.
+        ov = self._eval_override.get(int(cid))
+        if ov is not None:
+            return bool(ov)
         stride = int(getattr(RL_CONFIG, "eval_client_stride", 0))
         if stride <= 0:
             return False
@@ -1027,11 +1034,17 @@ class SocketServer:
         return np.concatenate(list(reversed(frames[-depth:]))).astype(np.float32, copy=False)
 
     @staticmethod
-    def _parse_client_handshake(handshake_value: int) -> tuple[bool, int]:
+    def _parse_client_handshake(handshake_value: int) -> tuple[bool, int, int]:
+        # 16-bit handshake:
+        #   bit 0      = preview-capable
+        #   bits 1-13  = launcher slot (<=8191)
+        #   bits 14-15 = eval mode (0=auto, 1=force-eval, 2=force-noeval)
+        # Old clients send 0 in the eval bits -> auto -> unchanged behavior.
         raw = max(0, int(handshake_value or 0))
         preview_capable = (raw & 0x01) != 0
-        client_slot = max(0, raw >> 1)
-        return preview_capable, client_slot
+        client_slot = max(0, (raw >> 1) & 0x1FFF)
+        eval_mode = (raw >> 14) & 0x03
+        return preview_capable, client_slot, eval_mode
 
     def _pick_default_preview_client_locked(self) -> Optional[int]:
         candidates = []
@@ -1272,13 +1285,23 @@ class SocketServer:
             if not ping or len(ping) < 2:
                 raise ConnectionError("No handshake")
             handshake_val = struct.unpack(">H", ping)[0]
-            preview_capable, client_slot = self._parse_client_handshake(handshake_val)
+            preview_capable, client_slot, eval_mode = self._parse_client_handshake(handshake_val)
             with self.client_lock:
                 cs0 = self.client_states.get(cid)
                 if isinstance(cs0, dict):
                     cs0["preview_capable"] = bool(preview_capable)
                     cs0["client_slot"] = int(client_slot)
+                    # Client-requested eval override (--eval / --noeval).
+                    if eval_mode == 1:
+                        self._eval_override[cid] = True
+                        cs0["eval_only"] = True
+                    elif eval_mode == 2:
+                        self._eval_override[cid] = False
+                        cs0["eval_only"] = False
                 _, changed = self._ensure_preview_client_selected_locked()
+            if eval_mode in (1, 2):
+                print(f"Client {cid} (slot {client_slot}) forced "
+                      f"{'EVAL' if eval_mode == 1 else 'NON-EVAL'} by handshake")
             if changed:
                 self._clear_preview_cache()
 
@@ -1733,6 +1756,7 @@ class SocketServer:
                 pass
             with self.client_lock:
                 _dead_cs = self.client_states.pop(cid, None)
+                self._eval_override.pop(cid, None)
                 self.clients[cid] = None
                 _, preview_changed = self._ensure_preview_client_selected_locked()
                 self._sync_client_count_locked()

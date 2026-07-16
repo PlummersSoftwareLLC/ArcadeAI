@@ -18,6 +18,8 @@
 RAW_SOCKET_ADDRESS = os.getenv("ROBOTRON_SOCKET_ADDRESS") or "m2macpro:9998"
 PREVIEW_CLIENT_FLAG = (os.getenv("ROBOTRON_PREVIEW_CLIENT") == "1") and 1 or 0
 CLIENT_SLOT = math.max(0, math.floor(tonumber(os.getenv("ROBOTRON_CLIENT_SLOT") or "0") or 0))
+-- Eval override: 0 = auto (server decides by cid), 1 = force eval, 2 = force non-eval.
+EVAL_MODE = math.max(0, math.min(2, math.floor(tonumber(os.getenv("ROBOTRON_EVAL_MODE") or "0") or 0)))
 SOCKET_ADDRESS = RAW_SOCKET_ADDRESS
 if string.sub(SOCKET_ADDRESS, 1, 7) ~= "socket." then
     SOCKET_ADDRESS = "socket." .. SOCKET_ADDRESS
@@ -2789,10 +2791,13 @@ local function open_socket()
         local result = sock:open(SOCKET_ADDRESS)
         if result == nil then
             -- Required 2-byte handshake:
-            --   bit0     = preview-capable flag
-            --   bits1-15 = launcher slot (stable audio/video identity)
+            --   bit0      = preview-capable flag
+            --   bits1-13  = launcher slot (stable audio/video identity, <=8191)
+            --   bits14-15 = eval mode (0=auto, 1=force-eval, 2=force-noeval)
             local preview_capable = PREVIEW_CAPTURE_ENABLED and 1 or 0
-            local handshake_u16 = math.max(0, math.min(65535, (CLIENT_SLOT * 2) + preview_capable))
+            local slot13 = math.min(8191, CLIENT_SLOT)
+            local handshake_u16 = math.max(0, math.min(65535,
+                (EVAL_MODE * 16384) + (slot13 * 2) + preview_capable))
             sock:write(string.pack(">H", handshake_u16))
             current_socket = sock
         else
