@@ -735,7 +735,7 @@ class RLConfigData:
     # ── exploration ─────────────────────────────────────────────────────
     epsilon_start: float = 1.0
     epsilon_end: float = 0.05
-    epsilon_decay_frames: int = 2_500_000
+    epsilon_decay_frames: int = 1_250_000   # 2.5M -> 1.25M (doubled fade, 2026-07-16)
     # Most epsilon steps were affordance-guided (a second mini-expert), so only
     # this fraction broke out of the heuristic manifold.  Raised so exploration
     # can actually discover better-than-expert behaviour.
@@ -779,8 +779,18 @@ class RLConfigData:
     # before the expert handed off.  Steps are FPS-independent and track learning.
     # Stretched from 125k so the (now correctly-scaled) critic has time to learn
     # to reproduce the expert before the crutch eases off to the floor.
+    #
+    # 300k -> 150k (2026-07-16, operator choice): DOUBLED the handoff rate for
+    # the first from-scratch run under the FIXED reward (wave clears are no
+    # longer false deaths).  Hypothesis: with a correct objective the critic
+    # learns the early waves faster, so it can absorb the crutch sooner.  RISK
+    # (documented above): too-fast handoff previously starved the critic and
+    # sagged the buffer once expert hit its 1% floor — watch for EScr1M rolling
+    # over ~150k steps in.  All the imitation-loss schedules below are halved in
+    # lockstep so the whole crutch fades together (they are meant to move on the
+    # same step schedule).
     expert_ratio_decay_start_step: int = 0
-    expert_ratio_decay_steps: int = 300_000
+    expert_ratio_decay_steps: int = 150_000
     expert_ratio: float = 0.60
 
     # Expert BC — also step-based (same FPS-independence rationale as above).
@@ -789,7 +799,7 @@ class RLConfigData:
     # imitation anchors decay away so DQN can exceed the demonstrator.
     expert_bc_weight: float = 1.0
     expert_bc_decay_start_step: int = 0
-    expert_bc_decay_steps: int = 300_000
+    expert_bc_decay_steps: int = 150_000
     expert_bc_min_weight: float = 0.05
     # Directly distill demonstrations into the deployed joint Q policy. Cross
     # entropy treats Q(s, a) / temperature as action logits, giving the acting
@@ -797,7 +807,7 @@ class RLConfigData:
     expert_q_policy_weight: float = 0.35
     expert_q_policy_temperature: float = 10.0
     expert_q_policy_decay_start_step: int = 0
-    expert_q_policy_decay_steps: int = 300_000
+    expert_q_policy_decay_steps: int = 150_000
     expert_q_policy_min_weight: float = 0.05
     # Q-margin also imitates directly into the acting joint head by constraining
     # Q(expert_action) >= Q(other) + margin on expert-visited states.  Left on
@@ -805,7 +815,7 @@ class RLConfigData:
     expert_q_margin_weight: float = 0.05
     expert_q_margin: float = 0.50
     expert_q_margin_decay_start_step: int = 0
-    expert_q_margin_decay_steps: int = 300_000
+    expert_q_margin_decay_steps: int = 150_000
     expert_q_margin_min_weight: float = 0.0
 
     # ── reward ──────────────────────────────────────────────────────────
