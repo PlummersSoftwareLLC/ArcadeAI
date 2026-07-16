@@ -977,6 +977,22 @@ class RLConfigData:
     save_replay_buffer: bool = True       # master switch
     save_replay_on_autosave: bool = False # if True, periodic autosaves persist replay too
 
+    # Live-mmap replay backing (Tempest parity): the storage arrays are on-disk
+    # sparse memmaps from process start, so a "save" is a ~0.1s flush and a
+    # restart adopts the ring in place — no multi-GB copy on exit, no multi-GB
+    # read on start.  Disable to fall back to RAM arrays + copy saves.
+    replay_live_mmap: bool = True
+    # Where the live ring lives.  On a spinning disk, mmap writeback throttles
+    # the transition-storing thread and drops frames, so back the ring with
+    # tmpfs (RAM) — the hall of fame stays on the model disk (durable across
+    # reboot/revert).  Empty string => keep the ring on the model disk.
+    replay_tmpfs_dir: str = "/dev/shm"
+    # msync on flush is only needed to survive POWER loss (a process restart
+    # reads identical data through the page cache; the kernel writes dirty
+    # pages back lazily).  Each file's sync barrier costs seconds under the
+    # buffer lock on a busy disk, so default off.
+    replay_flush_msync: bool = False
+
     enable_amp: bool = True
 
     # Autonomous eval-only clients: no expert, fixed low epsilon, no replay writes.

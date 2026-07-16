@@ -153,6 +153,9 @@ class PrioritizedReplayBuffer:
         self._interesting_bank_ptr = 0
         self._interesting_bank_count = 0
         self._mmap_dir = None
+        # HOF persists on the model DISK even when the ring lives in tmpfs.
+        # None -> derive from the ring path at save/load time (legacy behavior).
+        self._hof_dir = None
 
         # ── hall-of-fame partition (permanent retention, 2026-07) ────────
         # COPIES of the best episodes ever seen — never evicted by time,
@@ -828,7 +831,7 @@ class PrioritizedReplayBuffer:
         """Save the full replay buffer as individual .npy files in a directory."""
         abs_path = os.path.abspath(filepath)
         try:
-            self._save_hof(abs_path + "_hof", verbose)
+            self._save_hof(self._hof_dir or (abs_path + "_hof"), verbose)
         except Exception as e:
             print(f"  [WARN] HOF save failed: {e}")
         if self._mmap_dir is not None and os.path.abspath(self._mmap_dir) == abs_path:
@@ -838,7 +841,10 @@ class PrioritizedReplayBuffer:
                 if verbose:
                     print(f"  Flushing mmap replay buffer ({n:,} transitions)...")
                     self._progress_bar("  Replay flush", 0.10)
-                self._flush_live_mmaps_locked()
+                # msync only for power-loss durability (see replay_flush_msync).
+                do_msync = bool(getattr(RL_CONFIG, "replay_flush_msync", False))
+                if do_msync:
+                    self._flush_live_mmaps_locked()
                 if verbose:
                     self._progress_bar("  Replay flush", 0.55)
                 priorities_path = os.path.join(abs_path, "priorities.npy")
@@ -851,7 +857,8 @@ class PrioritizedReplayBuffer:
                 priorities[:n] = self.tree.tree[self.tree.capacity:self.tree.capacity + n]
                 if n < self.capacity:
                     priorities[n:] = 0.0
-                priorities.flush()
+                if do_msync:
+                    priorities.flush()
                 del priorities
                 if verbose:
                     self._progress_bar("  Replay flush", 0.82)
@@ -974,6 +981,98 @@ class PrioritizedReplayBuffer:
             arch["actor_kind"] = np.load(actor_kind_path, mmap_mode="r")
 
         return self._restore_from_arrays(arch, data_ptr, max_priority, t0, dirpath, verbose, saved_n=saved_n)
+
+    def ensure_live_mmap(self, dirpath: str, verbose: bool = True) -> bool:
+        """Give an EMPTY buffer live mmap backing from birth (Tempest-style).
+
+        The storage arrays become full-size on-disk .npy memmaps immediately,
+        so every save is a ~0.1s flush and every restart adopts in place —
+        no multi-GB first save after a fresh start or a collapse-recovery
+        wipe.  Creation is instant: open_memmap produces sparse files on
+        ext4/xfs, and disk usage grows only as the ring actually fills.
+
+        If the directory already holds saved transitions, this does nothing —
+        the normal load() path adopts it and restores counters properly.
+        """
+        if self._mmap_dir is not None or self.size > 0:
+            return False
+        abs_path = os.path.abspath(dirpath)
+        meta_path = os.path.join(abs_path, "_meta.npy")
+        if os.path.isfile(meta_path):
+            try:
+                if int(np.load(meta_path)[1]) > 0:
+                    return False  # real data present: defer to load()/adoption
+            except Exception:
+                return False      # unreadable meta: leave the directory alone
+        try:
+            os.makedirs(abs_path, exist_ok=True)
+            with self.lock:
+                for name, (attr, dtype, shape) in self._storage_specs().items():
+                    path = os.path.join(abs_path, f"{name}.npy")
+                    arr = None
+                    if os.path.isfile(path):
+                        candidate = np.load(path, mmap_mode="r+")
+                        if candidate.dtype == dtype and candidate.shape == shape:
+                            arr = candidate
+                    if arr is None:
+                        arr = np.lib.format.open_memmap(path, mode="w+", dtype=dtype, shape=shape)
+                    setattr(self, attr, arr)
+                pri_path = os.path.join(abs_path, "priorities.npy")
+                if not os.path.isfile(pri_path):
+                    pri = np.lib.format.open_memmap(pri_path, mode="w+", dtype=np.float64, shape=(self.capacity,))
+                    del pri
+                tmp_meta = meta_path + ".tmp.npy"
+                np.save(tmp_meta, np.array([0, 0, 1.0]))
+                os.replace(tmp_meta, meta_path)
+                self._mmap_dir = abs_path
+            if verbose:
+                print(f"  Replay buffer live-mmap backing at {abs_path} (saves are flushes)")
+            return True
+        except Exception as e:
+            print(f"  [WARN] live-mmap backing unavailable ({e}) — using RAM arrays")
+            return False
+
+    def _promote_to_live_mmap(self, dirpath: str, verbose: bool = True) -> bool:
+        """Rewrite RAM storage as full-size on-disk mmaps after a load that
+        couldn't adopt (legacy truncated dir, .npz, or copy-restore).
+
+        Without this, a buffer migrated from the old truncated save format
+        stays in RAM and every save takes the multi-GB copy path forever —
+        adoption requires full-CAPACITY arrays, which the old format never
+        wrote.  Promotion is a one-time ~n-row write (the rest stays sparse),
+        after which saves are ~1s priority/meta flushes and RAM is freed.
+        """
+        if self._mmap_dir is not None:
+            return True
+        abs_path = os.path.abspath(dirpath)
+        try:
+            os.makedirs(abs_path, exist_ok=True)
+            with self.lock:
+                n = int(self.size)
+                for name, (attr, dtype, shape) in self._storage_specs().items():
+                    path = os.path.join(abs_path, f"{name}.npy")
+                    mm = np.lib.format.open_memmap(path, mode="w+", dtype=dtype, shape=shape)
+                    cur = getattr(self, attr)
+                    if n > 0:
+                        mm[:n] = cur[:n]
+                    setattr(self, attr, mm)   # old RAM array drops -> frees RAM
+                pri = np.lib.format.open_memmap(
+                    os.path.join(abs_path, "priorities.npy"),
+                    mode="w+", dtype=np.float64, shape=(self.capacity,))
+                if n > 0:
+                    pri[:n] = self.tree.tree[self.tree.capacity:self.tree.capacity + n]
+                del pri
+                meta = np.array([self.tree.data_ptr, n, self.tree.max_priority])
+                tmp_meta = os.path.join(abs_path, "_meta.npy.tmp.npy")
+                np.save(tmp_meta, meta)
+                os.replace(tmp_meta, os.path.join(abs_path, "_meta.npy"))
+                self._mmap_dir = abs_path
+            if verbose:
+                print(f"  Replay buffer promoted to live-mmap ({abs_path}) — future saves are flushes")
+            return True
+        except Exception as e:
+            print(f"  [WARN] live-mmap promotion failed ({e}) — saves remain full-copy")
+            return False
 
     def _try_adopt_mmap_directory(self, dirpath: str, data_ptr: int, saved_n: int,
                                   max_priority: float, t0: float, verbose: bool) -> bool:
@@ -1229,25 +1328,31 @@ class PrioritizedReplayBuffer:
         # Hall of fame loads independently of (and before) the main ring:
         # after a collapse-recovery wipe the ring is gone but the HOF is not.
         try:
-            self._load_hof(os.path.abspath(filepath) + "_hof", verbose)
+            self._load_hof(self._hof_dir or (os.path.abspath(filepath) + "_hof"), verbose)
         except Exception as e:
             print(f"  [WARN] HOF load failed: {e}")
         # Try directory format (new fast path)
+        ok = False
+        promote_dir = filepath if not filepath.endswith(".npz") else filepath[:-4]
         if os.path.isdir(filepath):
-            return self._load_directory(filepath, verbose)
-        # Try .npz at the given path
-        if os.path.isfile(filepath):
-            return self._load_npz(filepath, verbose)
-        # Try deriving the directory path from a .npz path or vice versa
-        if filepath.endswith(".npz"):
+            ok = self._load_directory(filepath, verbose)
+        elif os.path.isfile(filepath):
+            ok = self._load_npz(filepath, verbose)
+        elif filepath.endswith(".npz"):
             dir_path = filepath[:-4]
             if os.path.isdir(dir_path):
-                return self._load_directory(dir_path, verbose)
+                ok = self._load_directory(dir_path, verbose)
         else:
             npz_path = filepath + ".npz"
             if os.path.isfile(npz_path):
-                return self._load_npz(npz_path, verbose)
-        return False
+                ok = self._load_npz(npz_path, verbose)
+
+        # If the load succeeded but adoption didn't leave us mmap-backed
+        # (legacy truncated dir / npz / copy-restore), promote so subsequent
+        # saves are flushes rather than multi-GB copies.
+        if ok and self._mmap_dir is None and bool(getattr(RL_CONFIG, "replay_live_mmap", True)):
+            self._promote_to_live_mmap(promote_dir, verbose)
+        return ok
 
     def flush(self):
         """Clear the entire replay buffer."""

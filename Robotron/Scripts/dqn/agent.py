@@ -128,6 +128,25 @@ class RainbowAgent:
             state_size=state_size,
             alpha=cfg.priority_alpha,
         )
+        # Ring lives in tmpfs (if configured + present) so a spinning disk's
+        # writeback can't throttle the transition-storing thread; the hall of
+        # fame stays on the model disk (durable across reboot/revert).
+        _model_replay = LATEST_MODEL_PATH.rsplit(".", 1)[0] + "_replay"
+        self.memory._hof_dir = _model_replay + "_hof"
+        _tmpfs = str(getattr(cfg, "replay_tmpfs_dir", "") or "").strip()
+        if _tmpfs and os.path.isdir(_tmpfs):
+            self._ring_dir = os.path.join(_tmpfs, os.path.basename(_model_replay))
+        else:
+            self._ring_dir = _model_replay
+        # Live-mmap backing from birth (Tempest-style): if no saved ring
+        # exists yet, back the storage arrays with sparse memmaps now so every
+        # save is a fast flush and restarts adopt in place.  With a saved ring
+        # present this is a no-op and load() adopts it as before.
+        if bool(getattr(cfg, "replay_live_mmap", True)):
+            try:
+                self.memory.ensure_live_mmap(self._ring_dir)
+            except Exception as e:
+                print(f"  [WARN] replay live-mmap init failed: {e}")
 
         # AMP (CUDA only)
         self.use_amp = cfg.enable_amp and (self.device.type == "cuda")
@@ -798,7 +817,9 @@ class RainbowAgent:
         if save_replay is None:
             save_replay = is_forced_save or bool(getattr(RL_CONFIG, "save_replay_on_autosave", False))
         if save_replay and bool(getattr(RL_CONFIG, "save_replay_buffer", True)):
-            buf_path = filepath.rsplit(".", 1)[0] + "_replay"
+            # Prefer the live ring dir (tmpfs when enabled); fall back to the
+            # model-adjacent path for legacy/no-mmap runs.
+            buf_path = getattr(self, "_ring_dir", None) or (filepath.rsplit(".", 1)[0] + "_replay")
             try:
                 self.memory.save(buf_path, verbose=bool(show_status))
             except Exception as e:
@@ -885,7 +906,7 @@ class RainbowAgent:
             if arch_changed:
                 print("  Replay buffer skipped — checkpoint state shape differs from current frame stack.")
             else:
-                buf_path = filepath.rsplit(".", 1)[0] + "_replay"
+                buf_path = getattr(self, "_ring_dir", None) or (filepath.rsplit(".", 1)[0] + "_replay")
                 try:
                     if not self.memory.load(buf_path, verbose=bool(show_status)):
                         print("  No replay buffer found — starting with empty buffer.")
