@@ -7,6 +7,7 @@
 
 import os, sys, time, threading, traceback
 import json
+import shutil
 import math
 import random
 import socket
@@ -857,6 +858,24 @@ def main():
     dev = getattr(agent.device, "type", "unknown")
     print(f"Device: {dev.upper()}")
 
+    # CPU guard (2026-07-16): launching with the system python instead of the
+    # project venv silently yields a CPU-ONLY torch build — inference goes
+    # ~6ms -> ~500-850ms, the fleet drops to ~7 fps, both GPUs sit at 0%, and
+    # nothing in the dashboard says why.  A 100x slowdown must never be a
+    # silent default.  Override with DQN_ALLOW_CPU=1 for genuine CPU runs.
+    if dev != "cuda" and not _env_enabled("DQN_ALLOW_CPU", False):
+        import torch as _t
+        print("=" * 70)
+        print("REFUSING TO START ON CPU — this is almost certainly the wrong python.")
+        print(f"  torch: {_t.__version__}   cuda available: {_t.cuda.is_available()}")
+        print(f"  running: {sys.executable}")
+        print("  Expected the project venv, e.g.:")
+        print("    /home/dave/source/repos/ai/venv/bin/python3 -Xgil=0 Scripts/run_dqn.py")
+        print("  (CPU inference is ~100x slower: ~7 fps vs ~4000, GPUs idle.)")
+        print("  Set DQN_ALLOW_CPU=1 if you really mean it.")
+        print("=" * 70)
+        sys.exit(2)
+
     dashboard = None
     dashboard_status = "disabled"
 
@@ -1051,6 +1070,21 @@ def main():
                                            "frame_count": int(metrics.frame_count),
                                            "training_steps": int(metrics.total_training_steps)}, f)
                             print(f"New peak EScr1M {escr1m:,.0f} — best checkpoint saved")
+                            # Permanent, timestamped copy: best.pt is a moving
+                            # target (it is overwritten by the next peak), so a
+                            # later regression cannot be undone from it.  This
+                            # archive is the actual "never lose the best agent"
+                            # guarantee — the project's original goal.
+                            try:
+                                _arch_dir = os.path.normpath(os.path.join(
+                                    os.path.dirname(BEST_MODEL_PATH), "..", "incumbent_archive"))
+                                os.makedirs(_arch_dir, exist_ok=True)
+                                _stamp = time.strftime("%Y%m%d_%H%M%S")
+                                _dst = os.path.join(_arch_dir, f"peak_{_stamp}_escr1m{int(escr1m)}.pt")
+                                shutil.copy2(BEST_MODEL_PATH, _dst)
+                                print(f"  archived -> {_dst}")
+                            except Exception as _e:
+                                print(f"  [WARN] peak archive failed: {_e}")
                 except Exception as e:
                     print(f"  [WARN] Best-checkpoint save failed: {e}")
             time.sleep(1)

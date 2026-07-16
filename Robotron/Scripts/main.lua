@@ -3390,7 +3390,22 @@ end
 function compute_frame_rewards(frame)
     local player_alive = frame.player_alive
     local player_x16 = frame.player_x16
-    local done = (previous_player_alive == 1 and player_alive == 0)
+    -- FALSE-DEATH FIX (2026-07-16).  read_player_alive() reports 0 whenever
+    -- STATUS_PLAYER_INACTIVE (0x01) is set, and Robotron asserts that bit
+    -- during the between-wave teleport.  So a WAVE CLEAR looked identical to a
+    -- death: probe capture across 12 clients showed w1/a1/d0 -> w2/a0/d1 on
+    -- ~84% of clears.  Downstream that charged death_penalty (-10) for
+    -- CLEARING a wave, closed the n-step episode there, and made Tz = r land
+    -- on the v_min support floor as bootstrap-free "ground truth" that
+    -- finishing a wave is catastrophic (n_step=16 propagated it back over the
+    -- final 16 frames at >=92% strength).  Net effect: clearing a wave scored
+    -- roughly -7 while farming it scored positive, so the optimal policy under
+    -- the stated reward was "never kill the last enemy" — precisely the
+    -- passive-survival attractor chased all week (EpLen up, score down).
+    -- The wave counter disambiguates: on a real death the wave is unchanged;
+    -- on a clear it increments.
+    local wave_advanced = (frame.wave_number or 0) > (previous_wave_number or 0)
+    local done = (previous_player_alive == 1 and player_alive == 0) and not wave_advanced
     local score_delta = frame.score - previous_score
     if score_delta < 0 then
         score_delta = 0

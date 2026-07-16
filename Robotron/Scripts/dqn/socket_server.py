@@ -81,6 +81,9 @@ except Exception as e:                      # pragma: no cover - expert optional
 
 _MAX_FRAME_PAYLOAD_BYTES = 4 * 1024 * 1024
 
+# Wave-transition probe (diagnostic; off unless DQN_WAVE_PROBE=1)
+_WAVE_PROBE = os.getenv("DQN_WAVE_PROBE", "").strip().lower() in ("1", "true", "yes", "on")
+
 # Action source codes (low nibble of the source byte)
 _SRC_NONE = 0
 _SRC_DQN = 1
@@ -992,6 +995,7 @@ class SocketServer:
                 "no_human_no_score_frames": 0,
                 "eval_only": eval_only, "ep_t0": time.time(),
                 "game_t0": time.time(), "cohort_voided": False,
+                "wx_ring": deque(maxlen=10), "wx_dumped": 0,
                 "prev_score_seen": 0, "last_score_advance": time.time(),
                 "was_done": False, "nstep": nstep,
                 "frame_history": deque(maxlen=max(1, int(getattr(RL_CONFIG, "frame_stack", 1)))),
@@ -1358,6 +1362,26 @@ class SocketServer:
                     metrics.update_epsilon(frames_advanced=frames_advanced)
                     metrics.update_expert_ratio()
                     self._calc_avg_game_state()
+
+                # ── DIAGNOSTIC: wave-transition frame ordering (DQN_WAVE_PROBE=1) ──
+                # Tests whether Robotron's wave transition asserts
+                # STATUS_PLAYER_INACTIVE (main.lua read_player_alive), which
+                # would make done=(prev_alive==1 and alive==0) fire on a WAVE
+                # CLEAR — charging -death_penalty for clearing and hiding the
+                # level increment from _wave_advanced behind the alive-gate.
+                if _WAVE_PROBE:
+                    try:
+                        _r = cs["wx_ring"]
+                        _r.append((int(frame.level_number), 1 if frame.player_alive else 0,
+                                   1 if frame.done else 0, int(frame.game_score)))
+                        if (len(_r) >= 2 and _r[-1][0] > _r[-2][0]
+                                and cs["wx_dumped"] < 6):
+                            cs["wx_dumped"] += 1
+                            _fmt = " -> ".join(
+                                f"w{lv}/a{al}/d{dn}" for lv, al, dn, _sc in _r)
+                            print(f"[WAVEPROBE cid={cid} #{cs['wx_dumped']}] {_fmt}")
+                    except Exception:
+                        pass
 
                 # ── Ratchet per-game accounting ─────────────────────────
                 # A Robotron game's score is non-decreasing; a reset marks the
