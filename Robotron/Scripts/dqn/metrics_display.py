@@ -259,7 +259,7 @@ def display_metrics_header():
         f"{'Loss':>10} {'AgrM%':>6} {'AgrF%':>6} "
         f"{'EpLen':>8} {'FtlPct':>7} {'SubjW':>6} {'DqnB%':>6} {'EpsB%':>6} "
         f"{'Clnt':>4} {'Web':>4} "
-        f"{'AvgInf':>7} {'Steps/s':>8} {'Rpl/F':>7} {'GrNorm':>8} {'Q-Range':>14} {'Mem':>10} {'HOF':>6} {'LR':>9} {'Drop':>7} {'Tms S/X/C/P':>17}"
+        f"{'AvgInf':>7} {'Steps/s':>8} {'Rpl/F':>7} {'GrNorm':>8} {'Q-Range':>14} {'Mem':>10} {'HOF':>13} {'LR':>9} {'Drop':>7} {'Tms S/X/C/P':>17}"
     )
     _print_line(hdr, is_header=True)
     try:
@@ -386,9 +386,10 @@ def display_metrics_row(agent, kb_handler):
     hof_bar_str = "-"
     if agent:
         try:
-            _bar = agent.memory.hof_admission_bar()
-            if _bar is not None:
-                hof_bar_str = f"{_bar / 1000:,.0f}k"
+            _rng = agent.memory.hof_score_range()
+            if _rng is not None:
+                _bar, _best = _rng
+                hof_bar_str = f"{_bar / 1000:.0f}K-{_best / 1000:.0f}K"
         except Exception:
             hof_bar_str = "err"
 
@@ -455,6 +456,6 @@ def display_metrics_row(agent, kb_handler):
         f"{metrics.last_sample_dqn_frac*100:>5.1f}% {metrics.last_sample_epsilon_frac*100:>5.1f}% "
         f"{metrics.client_count:>4} {metrics.web_client_count:>4} "
         f"{avg_inf_ms:>7.2f} {steps_per_sec:>8.1f} "
-        f"{replay_ratio:>7.2f} {metrics.last_grad_norm:>8.3f} {q_range:>14} {mem_k:>8}k {hof_bar_str:>6} {lr_str:>9} {metrics.replay_dropped_steps:>7,} {train_ms:>17}"
+        f"{replay_ratio:>7.2f} {metrics.last_grad_norm:>8.3f} {q_range:>14} {mem_k:>8}k {hof_bar_str:>13} {lr_str:>9} {metrics.replay_dropped_steps:>7,} {train_ms:>17}"
     )
     _print_line(row)

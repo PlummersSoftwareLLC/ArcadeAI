@@ -452,6 +452,28 @@ class PrioritizedReplayBuffer:
                 return max(floor, float(self.hof_ep_score[:self.hof_ep_count].min()))
             return floor
 
+    def hof_score_range(self):
+        """(bar, best) for the dashboard HOF column.
+
+        bar  = admission bar: the static floor while filling, else the worst
+               enshrined score once full (what a new episode must beat).
+        best = highest score currently in the bank.
+        Returns None when disabled or empty (renders as "-").
+        """
+        if not self._hof_enabled:
+            return None
+        with self.lock:
+            n = self.hof_ep_count
+            if n <= 0:
+                return None
+            scores = self.hof_ep_score[:n]
+            best = float(scores.max())
+            floor = float(getattr(RL_CONFIG, "hof_min_game_score", 0))
+            bar = max(floor, float(scores.min())) if n >= self._hof_max_eps else floor
+            if not np.isfinite(best):
+                return None
+            return bar, best
+
     def _hof_stats_locked(self):
         """Hall-of-fame summary for the buffer stats report (call under lock)."""
         if not self._hof_enabled:
