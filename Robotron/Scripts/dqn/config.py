@@ -964,7 +964,6 @@ class RLConfigData:
     # 2026-07-13).  Waiting out a transient stall in the batched path is
     # nearly always cheaper than defecting to a solo-call convoy.
     inference_request_timeout_ms: float = 250.0
-    inference_request_timeout_ms: float = 50.0
 
     # ── background training ─────────────────────────────────────────────
     training_steps_per_cycle: int = 16
