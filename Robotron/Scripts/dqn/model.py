@@ -130,6 +130,42 @@ class LaneSelfAttentionEncoder(nn.Module):
         return enriched.mean(dim=1)                     # (B, D)
 
 
+class GridConvEncoder(nn.Module):
+    """Conv encoder for the 9×9×6 egocentric tactical grid.
+
+    The grid is the only input that sees every object on the field (the token
+    pools cap at 64/16/16/16 and drop overflow — exactly the wave-11+ swarm
+    regime), and its robot/projectile channels carry an explicit 4-frame
+    future projection.  Two 3×3 convs (receptive field 5×5 ≈ ±40px of local
+    threat context per cell) then a full flatten→linear digest: no pooling,
+    because "which exact cell is the gap" is the signal — dodge decisions die
+    on coarsened position.
+    """
+
+    def __init__(self, channels: int, height: int, width: int,
+                 conv1_ch: int, conv2_ch: int, embed_dim: int):
+        super().__init__()
+        self.channels = int(channels)
+        self.height = int(height)
+        self.width = int(width)
+        self.conv = nn.Sequential(
+            nn.Conv2d(channels, conv1_ch, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(conv1_ch, conv2_ch, kernel_size=3, padding=1),
+            nn.ReLU(),
+        )
+        self.proj = nn.Linear(conv2_ch * height * width, embed_dim)
+        self.norm = nn.LayerNorm(embed_dim)
+        self.out_dim = int(embed_dim)
+
+    def forward(self, grid_flat: torch.Tensor) -> torch.Tensor:
+        """grid_flat: (B, C*H*W) channel-major (Lua emission order) → (B, D)."""
+        B = grid_flat.shape[0]
+        g = grid_flat.reshape(B, self.channels, self.height, self.width)
+        h = self.conv(g).reshape(B, -1)
+        return self.norm(self.proj(h))
+
+
 class ObjectSelfAttentionEncoder(nn.Module):
     """Self-attention over grouped object rows with a presence mask.
 
@@ -386,6 +422,11 @@ class RainbowNet(nn.Module):
         self.single_frame_state_size = int(getattr(cfg, "single_frame_state_size", state_size))
         self.frame_stack = max(1, int(getattr(cfg, "frame_stack", 1)))
 
+        # Phase-1 appended-block offsets (lanes/grid live AFTER the tokens so
+        # every pre-existing offset — and FLAT_TRUNK_INDICES — is unchanged).
+        self.model_lane_offset = int(getattr(cfg, "model_lane_offset", self.global_features))
+        self.model_grid_offset = int(getattr(cfg, "model_grid_offset", 0))
+
         # ── Lane self-attention encoder ────────────────────────────────
         self.use_attn = bool(getattr(cfg, "use_lane_attention", False)) and self.lane_count > 0 and self.lane_features > 0
         attn_out_dim = 0
@@ -396,6 +437,20 @@ class RainbowNet(nn.Module):
                 num_heads=cfg.attn_heads,
             )
             attn_out_dim = cfg.attn_dim
+
+        # ── Tactical grid conv encoder ─────────────────────────────────
+        self.use_grid = bool(getattr(cfg, "use_tactical_grid", False)) and self.model_grid_offset > 0
+        grid_out_dim = 0
+        if self.use_grid:
+            self.grid_encoder = GridConvEncoder(
+                channels=int(getattr(cfg, "grid_channels", 6)),
+                height=int(getattr(cfg, "grid_height", 9)),
+                width=int(getattr(cfg, "grid_width", 9)),
+                conv1_ch=int(getattr(cfg, "grid_conv1_channels", 24)),
+                conv2_ch=int(getattr(cfg, "grid_conv2_channels", 48)),
+                embed_dim=int(getattr(cfg, "grid_embed_dim", 128)),
+            )
+            grid_out_dim = self.grid_encoder.out_dim
 
         # ── Object self-attention encoder ──────────────────────────────
         self.use_object_attn = cfg.use_object_attention
@@ -448,7 +503,10 @@ class RainbowNet(nn.Module):
             self.flat_trunk_idx = None
             self.raw_trunk_frame_features = self.global_features
         self.raw_trunk_state_size = self.raw_trunk_frame_features * self.frame_stack
-        trunk_in = self.raw_trunk_state_size + attn_out_dim + object_attn_out_dim
+        # Column order of trunk layer-0 is [raw | object digest | lanes | grid]:
+        # the pre-Phase-1 checkpoint's columns ([raw | object] = 1040) form a
+        # contiguous prefix, so migration = copy old weight + zero-pad the rest.
+        trunk_in = self.raw_trunk_state_size + object_attn_out_dim + attn_out_dim + grid_out_dim
         configured_layers = tuple(int(v) for v in getattr(cfg, "trunk_layer_sizes", ()) if int(v) > 0)
         trunk_layer_sizes = configured_layers or tuple([int(cfg.trunk_hidden)] * int(cfg.trunk_layers))
         layers = []
@@ -570,12 +628,19 @@ class RainbowNet(nn.Module):
             state.shape[0], self.raw_trunk_state_size)
 
     def _lane_tokens(self, state: torch.Tensor) -> torch.Tensor:
-        """Legacy lane helper, used only if lane attention is re-enabled."""
+        """Lane rows from the Phase-1 appended block (ACTION-ordered rows)."""
         state = self._current_frame(state)
         B = state.shape[0]
-        start = self.global_features
+        start = self.model_lane_offset
         end = start + self.lane_count * self.lane_features
         return state[:, start:end].reshape(B, self.lane_count, self.lane_features)
+
+    def _grid_digest(self, state: torch.Tensor) -> torch.Tensor:
+        """Tactical-grid digest from the Phase-1 appended block."""
+        state = self._current_frame(state)
+        start = self.model_grid_offset
+        end = start + self.grid_encoder.channels * self.grid_encoder.height * self.grid_encoder.width
+        return self.grid_encoder(state[:, start:end])
 
     def _object_tokens(self, state: torch.Tensor) -> torch.Tensor:
         state = self._current_frame(state)
@@ -585,11 +650,15 @@ class RainbowNet(nn.Module):
         return state[:, start:end].reshape(B, self.object_token_count, self.object_token_features)
 
     def _trunk_features(self, state: torch.Tensor) -> torch.Tensor:
+        # Part order MUST stay [raw, object, lane, grid] — it defines trunk
+        # layer-0's column layout, which the checkpoint migration relies on.
         parts = [self._raw_trunk_state(state)]
-        if self.use_attn:
-            parts.append(self.lane_attn(self._lane_tokens(state)))
         if self.use_object_attn:
             parts.append(self.object_attn(self._object_tokens(state)))
+        if self.use_attn:
+            parts.append(self.lane_attn(self._lane_tokens(state)))
+        if self.use_grid:
+            parts.append(self._grid_digest(state))
         trunk_in = torch.cat(parts, dim=1) if len(parts) > 1 else parts[0]
         return self.trunk(trunk_in)
 
@@ -600,14 +669,17 @@ class RainbowNet(nn.Module):
         Returns ``(h, move_ctx, fire_ctx)``; the contexts are ``None`` when
         action-context attention is disabled.
         """
+        # Same [raw, object, lane, grid] part order as _trunk_features.
         parts = [self._raw_trunk_state(state)]
-        if self.use_attn:
-            parts.append(self.lane_attn(self._lane_tokens(state)))
         enriched = present = tokens = None
         if self.use_object_attn:
             tokens = self._object_tokens(state)
             enriched, present = self.object_attn.encode_tokens(tokens)
             parts.append(self.object_attn.pool(enriched, present))
+        if self.use_attn:
+            parts.append(self.lane_attn(self._lane_tokens(state)))
+        if self.use_grid:
+            parts.append(self._grid_digest(state))
         trunk_in = torch.cat(parts, dim=1) if len(parts) > 1 else parts[0]
         h = self.trunk(trunk_in)
         move_ctx = fire_ctx = None

@@ -62,7 +62,8 @@ SETTINGS_PATH = os.path.join(MODEL_DIR, "game_settings.json")
 WIRE_PARAMS_COUNT = 1890
 
 # Model slice: 18 core game features + 22 ELIST/level-state features +
-# 112 grouped object rows × 10 features.
+# 112 grouped object rows (expanded to 18-wide) + 8×30 action-ordered lane
+# raycasts + 9×9×6 tactical grid (see MODEL_LANE_OFFSET/MODEL_GRID_OFFSET).
 CORE_FEATURES = 18                       # wire[0:18]
 ELIST_FEATURES = 22                      # wire[18:40]
 GLOBAL_FEATURES = CORE_FEATURES + ELIST_FEATURES
@@ -76,6 +77,7 @@ TACTICAL_LANE_END = TACTICAL_LANE_OFFSET + LANE_COUNT * LANE_FEATURES   # 280
 #   N, NE, E, SE, S, SW, W, NW
 # Reorder lanes so model lane row N lines up with move/fire action N.
 ACTION_LANE_WIRE_INDICES = (2, 1, 0, 7, 6, 5, 4, 3)
+_ACTION_LANE_ORDER = np.asarray(ACTION_LANE_WIRE_INDICES, dtype=np.int64)
 TACTICAL_GRID_FEATURES = 9 * 9 * 6
 TACTICAL_GRID_OFFSET = TACTICAL_LANE_END
 TACTICAL_GRID_END = TACTICAL_GRID_OFFSET + TACTICAL_GRID_FEATURES        # 766
@@ -115,7 +117,26 @@ ENEMY_TOKEN_FEATURES = TYPE_ONEHOT_OFFSET + TYPE_CLASS_COUNT                   #
 ENEMY_FEATURES = ENEMY_TOKEN_COUNT * ENEMY_TOKEN_FEATURES
 ENEMY_TOKEN_OFFSET = GLOBAL_FEATURES
 ENEMY_TOKEN_END = ENEMY_TOKEN_OFFSET + ENEMY_FEATURES
-SINGLE_FRAME_STATE_SIZE = ENEMY_TOKEN_END                                     # 2056
+
+# ── Phase-1 tactical inputs (2026-07-17) ────────────────────────────────────
+# The wire has always carried 8×30 lane raycasts and a 9×9×6 egocentric grid
+# that the DQN slice silently discarded — the model was partially blind exactly
+# where it dies (wave 11+ swarms exceed the 64/16 object-token caps; the grid
+# sees every overflow object, plus 4-frame future-projection channels).  Both
+# blocks are now APPENDED to the model state (offsets below), so all existing
+# token/global offsets — and FLAT_TRUNK_INDICES — are unchanged.
+#   lanes: stored in ACTION order (N,NE,E,SE,S,SW,W,NW — reordered from wire
+#          geometric order at slice time via ACTION_LANE_WIRE_INDICES) so lane
+#          row i aligns with move/fire action i.
+#   grid:  raw Lua emission order, channel-major (6, 9, 9): ch 0=robot-now,
+#          1=robot-future(+4f), 2=projectile-now, 3=projectile-future,
+#          4=electrode, 5=human; values max-accumulated in [0,1]; ±72px span.
+MODEL_LANE_OFFSET = ENEMY_TOKEN_END                                           # 2056
+MODEL_LANE_FEATURES = LANE_COUNT * LANE_FEATURES                              # 240
+MODEL_LANE_END = MODEL_LANE_OFFSET + MODEL_LANE_FEATURES                      # 2296
+MODEL_GRID_OFFSET = MODEL_LANE_END                                            # 2296
+MODEL_GRID_END = MODEL_GRID_OFFSET + TACTICAL_GRID_FEATURES                   # 2782
+SINGLE_FRAME_STATE_SIZE = MODEL_GRID_END                                      # 2782
 _frame_stack_env = os.getenv("DQN_FRAME_STACK", os.getenv("ROBOTRON_DQN_FRAME_STACK", "1"))
 try:
     FRAME_STACK_COUNT = max(1, int(_frame_stack_env))
@@ -393,7 +414,14 @@ def slice_model_state(wire) -> np.ndarray:
         global_state[15] = _clip11(global_state[15] * _WIRE_DX_TO_ISO)
         global_state[16] = _clip11(global_state[16] * _WIRE_DY_TO_ISO)
     enemies = _extract_enemy_tokens(arr)
-    return np.concatenate([global_state, enemies]).astype(np.float32, copy=False)
+    # Phase-1 tactical blocks (see MODEL_LANE_OFFSET comment): lanes reordered
+    # from wire geometric order to ACTION order so row i matches action i; the
+    # grid is passed through raw (channel-major 6×9×9, already normalized 0..1).
+    lanes = np.array(
+        arr[TACTICAL_LANE_OFFSET:TACTICAL_LANE_END], dtype=np.float32, copy=True
+    ).reshape(LANE_COUNT, LANE_FEATURES)[_ACTION_LANE_ORDER].reshape(-1)
+    grid = arr[TACTICAL_GRID_OFFSET:TACTICAL_GRID_END]
+    return np.concatenate([global_state, enemies, lanes, grid]).astype(np.float32, copy=False)
 
 
 # ---------------------------------------------------------------------------
@@ -426,13 +454,16 @@ class RLConfigData:
     core_features: int = CORE_FEATURES
     elist_features: int = ELIST_FEATURES
     global_features: int = GLOBAL_FEATURES
-    lane_count: int = 0
-    lane_features: int = 0
+    lane_count: int = LANE_COUNT
+    lane_features: int = LANE_FEATURES
     extra_features: int = 0
     enemy_token_count: int = ENEMY_TOKEN_COUNT
     enemy_token_features: int = ENEMY_TOKEN_FEATURES
     object_token_count: int = ENEMY_TOKEN_COUNT      # compatibility alias
     object_token_features: int = ENEMY_TOKEN_FEATURES
+    # Phase-1 appended tactical blocks (lanes are ACTION-ordered in storage).
+    model_lane_offset: int = MODEL_LANE_OFFSET
+    model_grid_offset: int = MODEL_GRID_OFFSET
 
     # ── network architecture ────────────────────────────────────────────
     # Flat trunk input = globals(40) + nearest-K object rows per group
@@ -442,31 +473,62 @@ class RLConfigData:
     # through the permutation-invariant object-attention digest below.
     flat_state_to_trunk: bool = True
     flat_trunk_frame_features: int = FLAT_TRUNK_FRAME_FEATURES
-    trunk_layer_sizes: tuple[int, ...] = (1024, 768, 512)
-    trunk_hidden: int = 384
+    # WIDTH+25% replication arm (Dave, 2026-07-18): the 210K recipe verbatim
+    # (attention ON, same schedules) with the trunk 25% wider than the record
+    # holder's (1024,768,512).  Prior width datapoints from scratch:
+    #   (768,512,384) no-attn:  ~94K plateau @ 241K steps  (shrink+ablation arm)
+    #   (1024,768,512) 4.45M:   ~94K@131K, 113K@282K, 205K@543K (the record)
+    #   (1536,1024,768) 9M:     ~92K @ 792K steps          (too big from random)
+    # This probes the middle: does +25% width from scratch track the record
+    # lineage and then exceed its ~205K ceiling?
+    trunk_layer_sizes: tuple[int, ...] = (1280, 960, 640)
+    trunk_hidden: int = 256
     trunk_layers: int = 2
     use_layer_norm: bool = True
     dropout: float = 0.0
 
-    # Lane inputs are intentionally removed for the object-list experiment.
-    use_lane_attention: bool = False
+    # Phase-1 (2026-07-17): lane raycasts re-enabled.  The 8×30 action-ordered
+    # lane block is encoded by LaneSelfAttentionEncoder into a 128-d digest that
+    # enters trunk layer-0 through zero-initialized columns (function-preserving
+    # vs. the 204,914 checkpoint — see the checkpoint migration).
+    use_lane_attention: bool = True
     attn_heads: int = 8
     attn_dim: int = 128
+
+    # Phase-1: the 9×9×6 egocentric tactical grid (robot/projectile now+future,
+    # electrode, human channels) through a small conv encoder.  This is the
+    # model's only input that sees EVERY object — including the swarm overflow
+    # dropped by the 64/16 token caps at wave 11+ — and the only one with
+    # explicit 4-frame future projection.  Digest enters trunk layer-0 through
+    # zero-initialized columns like the lanes.
+    use_tactical_grid: bool = True
+    grid_channels: int = 6
+    grid_height: int = 9
+    grid_width: int = 9
+    grid_conv1_channels: int = 24
+    grid_conv2_channels: int = 48
+    grid_embed_dim: int = 128
 
     # Self-attention over the 112 grouped object rows. This does not replace the
     # flat state input; it adds a relational digest to the first trunk layer.
     # The digest is per-group masked mean-pools (destructible/hulk/obstacle/
     # human, 4 × dim) plus a global masked max-pool (1 × dim) so rare rows
     # (last human, closing projectile) are not averaged away by 64 grunt slots.
+    # ABLATION VERDICT (2026-07-18): attention OFF lost decisively — the
+    # no-attention arm plateaued ~91-96K by step 241K where the attention
+    # lineage was ~105-113K and climbing (~20% deficit at matched steps),
+    # despite 2.7x the steps/s.  Training intensity did NOT compensate for
+    # the relational representation; attention earned its ~88% of step
+    # compute and is back ON.
     use_object_attention: bool = True
     object_attn_heads: int = 8
-    object_attn_dim: int = 128
+    object_attn_dim: int = 128   # 256 reverted with the Phase-2 closure (see trunk comment)
     object_attn_group_pooling: bool = True
 
     # Action-conditioned attention for the DQN advantage heads. Direction queries
     # attend over enemy rows so each move/fire/joint action is scored with
     # object evidence relevant to that candidate action.
-    use_action_context_attention: bool = True
+    use_action_context_attention: bool = True    # restored with the ablation verdict
     action_context_heads: int = 8
     joint_action_embed_dim: int = 32
     action_head_hidden: int = 192
@@ -505,6 +567,15 @@ class RLConfigData:
     # nothing (the 415K→210K sag of 2026-07-19).  0 disables.
     c51_target_smoothing: float = 0.01
 
+    # EMA smoothing for the live Q diagnostics (Q-Range + OvEst overestimation
+    # gauge).  Applied once per training step, so alpha=0.002 → time constant
+    # ~500 steps (~20s at 25 steps/s): kills per-batch order-statistic jitter
+    # while still tracking genuine multi-window drift.  The OvEst signal is the
+    # online-vs-target value gap at the bootstrap action — a smoothed, growing
+    # positive value is the overestimation-drift tripwire that precedes the
+    # peak-collapse (loss falls while EScr1M falls).
+    q_stat_ema_alpha: float = 0.002
+
     use_dueling: bool = True
 
     # ── training ────────────────────────────────────────────────────────
@@ -512,11 +583,16 @@ class RLConfigData:
     # larger batch raises samples/sec (and Rpl/F) at near-zero extra wall-time.
     # Keep sampling/transfers inline: pinned-memory or background CUDA host work
     # re-enables the GIL in the free-threaded Torch build and tanks MAME FPS.
-    batch_size: int = 1024
+    batch_size: int = 512
     lr: float = 1e-4
     lr_min: float = 5e-5
     lr_warmup_steps: int = 5_000
     lr_cosine_period: int = 1_000_000
+    # Tempest port (2026-07-18, approved): periodic warm restarts instead of a
+    # single decay-to-floor — the schedule re-injects plasticity every period
+    # ("to escape plateaus") rather than letting the run go stale once the
+    # first cosine bottoms out.  get_lr() already implements the modulo path.
+    lr_use_restarts: bool = True
     # Warm restarts OFF: the restart at step 1,005,000 doubled the LR on a
     # converged policy and collapsed a 120K-score run to 30K — the 10M sliding
     # replay buffer forgot the peak-era trajectories long before the new cosine
@@ -533,13 +609,30 @@ class RLConfigData:
     # Replay (PER with proportional priorities).  The grouped-object representation is
     # wider than the old compact lane slice: state/next_state alone cost about
     # 80 GB at 10M transitions with the default 1-frame stack.
-    memory_size: int = 10_000_000
+    # Tempest port (2026-07-18, approved): a deeper ring slows the training
+    # distribution's churn — the model's own bad afternoon can't flood its
+    # curriculum (Tempest runs 25M).  25M was requested; at fp32 that is 556 GB
+    # and even at fp16 278 GB — both beyond the 231 GB /dev/shm.  States are
+    # now stored fp16 (features are normalized [-1,1]; ~3 decimal digits is
+    # plenty).  History: 18M on the default 231 GB tmpfs proved too tight (a
+    # stale 44 GB save .tmp shared the space; ring SIGBUS-killed the trainer
+    # at fill time, 2026-07-18).  Files are fallocated at boot now, so a
+    # shortfall fails LOUDLY at launch instead of silently at fill.
+    # 25M REQUIRES the /dev/shm remount to 320 GB (25M x 2782 x 2B x 2 =
+    # 278 GB + ~1 GB aux -> ~42 GB slack).  If the remount is ever lost
+    # (fstab entry removed), boot fails immediately with ENOSPC — that is
+    # the guard working; remount and relaunch.
+    memory_size: int = 25_000_000
     priority_alpha: float = 0.7
     priority_beta_start: float = 0.4
     priority_beta_frames: int = 10_000_000
     priority_eps: float = 1e-6
     per_new_priority_cap_multiplier: float = 3.0
-    min_replay_to_train: int = 10_000
+    # 10K -> 500K (2026-07-17): training on a ~90-second buffer after a ring
+    # wipe (thousands of updates on correlated data with fresh Adam) deformed
+    # the restored 204,914 policy to ~138K.  500K frames ≈ 100 s of fleet play
+    # — a trivial wait that guarantees minimum diversity before updates begin.
+    min_replay_to_train: int = 500_000
 
     # Elite/rare-event replay. PER keeps surprising transitions hot, but once a
     # valuable event becomes predictable its TD error can fall out of the sample
@@ -573,6 +666,15 @@ class RLConfigData:
     hof_max_episodes: int = 192
     hof_episode_stride: int = 1536         # transitions kept per episode (tail)
     hof_min_game_score: int = 50_000       # absolute admission floor
+    # Ingest sanity ceiling: a game crash randomizes memory and can surface an
+    # absurd game_score (observed: 25,000,000) that pollutes peak-score, the
+    # rolling score/level metrics, the replay buffer, and the HOF.  Frames whose
+    # score exceeds this are dropped at the wire-decode boundary (parse_frame_data)
+    # before any consumer sees them.  A legit per-game score for this pipeline
+    # tops out in the low hundreds of thousands (best HOF episode ~420K); 2M is
+    # ~5x that headroom, yet a uint32 crash value is ~1000x larger, so this
+    # catches essentially every random-memory crash with zero false positives.
+    max_plausible_game_score: int = 2_000_000
     hof_replay_fraction: float = 0.10      # guaranteed batch quota once seeded
     hof_min_transitions: int = 4_096       # quota activates only past this
 
@@ -603,7 +705,12 @@ class RLConfigData:
     # sustained score collapse is actionable regardless of what loss reads:
     # best.pt is the only true external memory of peak play, and this is its
     # trigger.  Same sustain/cooldown/max-restore guards as A and B1.
-    collapse_score_only_frac: float = 0.50     # of best_escr1m, no loss conjunct
+    # 0.50 -> 0.70 (2026-07-18): the maintain-and-improve directive.  With the
+    # 204,914 record as floor this arms the auto-restore at ~143K instead of
+    # ~102K.  The healthy band around the 205K plateau never dipped below
+    # ~185K, and refilling windows are excluded by the window-full gate, so
+    # 0.70 cannot false-fire; it just stops tolerating deep regression.
+    collapse_score_only_frac: float = 0.70     # of best_escr1m, no loss conjunct
     collapse_check_interval_s: float = 60.0
     collapse_sustain_checks: int = 10          # consecutive minutes required
     collapse_cooldown_s: float = 21_600.0      # 6h between restores
@@ -772,7 +879,13 @@ class RLConfigData:
     # value over 1%.  A config-level floor also survives restarts, unlike the
     # keyboard override, which reset to the old 5% floor on every boot and
     # repeatedly landed the run on unvalidated settings.
-    expert_ratio_end: float = 0.01
+    expert_ratio_end: float = 0.05   # 0.01 -> 0.05: permanent 5% expert floor.
+    # The one stable run this project produced held 5% expert; every 1% run
+    # oscillates (EScr1M swinging 82K<->218K around a ~110K mean with stable
+    # wave-10 training depth) — the signature of an under-stabilized policy that
+    # drifts in/out of good basins, not a capacity or reward ceiling.  Baked in
+    # here (not game_settings.expert_pct, which resets to -1 every boot) so the
+    # floor actually survives the overnight restart this time.
     # Decay is keyed to TRAINING STEPS, not frames.  At 20k+ fps the steady-state
     # frame:step ratio is ~200:1, so a frame-based 2M schedule completed in ~10k
     # gradient steps (2-3 wall-clock minutes) — the policy never had time to learn
@@ -801,6 +914,11 @@ class RLConfigData:
     expert_bc_decay_start_step: int = 0
     expert_bc_decay_steps: int = 150_000
     expert_bc_min_weight: float = 0.05
+    # Floor on the EFFECTIVE batch-level BC coefficient (bc_w x expert-frac).
+    # bc_w alone flooring at 0.05 still let the batch-level share sink to
+    # ~0.25% once expert play faded to 5%; this guarantees >=1% whenever
+    # expert rows are present in the batch (see training.py).
+    expert_bc_effective_floor: float = 0.01
     # Directly distill demonstrations into the deployed joint Q policy. Cross
     # entropy treats Q(s, a) / temperature as action logits, giving the acting
     # head a real expert-like launch instead of leaving imitation in side heads.
@@ -1236,6 +1354,15 @@ class MetricsData:
     last_grad_norm: float = 0.0
     last_loss: float = 0.0
     last_q_mean: float = 0.0
+    # Smoothed Q diagnostics (EMA, updated per training step).  q_pred_*_ema are
+    # the smoothed expected-Q extrema over the training batch (the readable
+    # Q-Range).  q_overest_ema is the mean online-vs-target value gap at the
+    # bootstrap action, E[max_a Q_online(s') - Q_target(s',argmax)] — the
+    # overestimation-drift tripwire.  _q_ema_init seeds the EMA on first sample.
+    q_pred_min_ema: float = 0.0
+    q_pred_max_ema: float = 0.0
+    q_overest_ema: float = 0.0
+    q_ema_init: bool = False
     last_bc_loss: float = 0.0
     last_bc_weight: float = 0.0
     last_subj_positive_weight: float = 1.0

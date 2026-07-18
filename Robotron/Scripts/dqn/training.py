@@ -218,6 +218,18 @@ def train_step(agent, prefetched_batch=None) -> float | None:
         ce_loss = -(m_joint * joint_log_p_a).sum(dim=1)    # (B,)
         weighted_loss = (weights_t * ce_loss).mean()
 
+    # ── Q diagnostics (fp32, no-grad) ───────────────────────────────────
+    # Expected-Q extrema over the batch for the readable Q-Range, plus the
+    # online-vs-target value gap at the bootstrap action (the overestimation
+    # tripwire).  Cheap reductions over tensors already forward-passed above.
+    with torch.no_grad():
+        _q_cur = (joint_log_p.detach().float().exp() * support.view(1, 1, -1)).sum(dim=2)  # (B,81)
+        _q_pred_min = float(_q_cur.min().item())
+        _q_pred_max = float(_q_cur.max().item())
+        _q_online_best = joint_q_next.float().max(dim=1).values                             # (B,)
+        _q_target_best = (joint_tp_a.float() * support.view(1, -1)).sum(dim=1)              # (B,)
+        _q_overest = float((_q_online_best - _q_target_best).mean().item())
+
     # ── Optional BC loss on expert transitions (joint + auxiliary branches) ──
     bc_loss_val = 0.0
     bc_w = _bc_weight_schedule(metrics.total_training_steps)
@@ -238,7 +250,14 @@ def train_step(agent, prefetched_batch=None) -> float | None:
             # Scale BC by sampled expert fraction to avoid over-weighting when
             # expert transitions are sparse but present in most batches.
             bc_scale = _expert_batch_scale(int(expert_idx.numel()), B)
-            weighted_loss = weighted_loss + (bc_w * bc_scale) * bc_loss
+            # Permanent BC anchor floor (Dave, 2026-07-18): bc_scale is the
+            # sampled expert FRACTION, so at steady state (5% expert play) the
+            # effective batch-level coefficient sank to ~0.05*0.05 = 0.25%.
+            # Floor the PRODUCT at 1%: whenever expert rows are present, the
+            # gradient always carries at least a 1% whisper of "act like the
+            # expert" — execution-drift insurance that cannot fade.
+            effective_bc = max(float(getattr(cfg, "expert_bc_effective_floor", 0.01)), bc_w * bc_scale)
+            weighted_loss = weighted_loss + effective_bc * bc_loss
             bc_loss_val = float(bc_loss.detach().item())
 
     q_policy_w = _q_policy_weight_schedule(metrics.total_training_steps)
@@ -317,6 +336,18 @@ def train_step(agent, prefetched_batch=None) -> float | None:
         metrics.last_sample_expert_frac = sample_expert_frac
         metrics.last_inference_sync_age = int(max(0, int(agent.training_steps) - int(getattr(agent, "last_inference_sync", 0))))
         metrics.last_priority_mean = float(np.mean(td_errors))
+
+        # Smoothed Q diagnostics: seed on first sample, then EMA.
+        _qa = float(getattr(cfg, "q_stat_ema_alpha", 0.002))
+        if not metrics.q_ema_init:
+            metrics.q_pred_min_ema = _q_pred_min
+            metrics.q_pred_max_ema = _q_pred_max
+            metrics.q_overest_ema = _q_overest
+            metrics.q_ema_init = True
+        else:
+            metrics.q_pred_min_ema += _qa * (_q_pred_min - metrics.q_pred_min_ema)
+            metrics.q_pred_max_ema += _qa * (_q_pred_max - metrics.q_pred_max_ema)
+            metrics.q_overest_ema += _qa * (_q_overest - metrics.q_overest_ema)
         metrics.last_train_sample_ms = float(sample_ms)
         metrics.last_train_transfer_ms = float(transfer_ms)
         metrics.last_train_compute_ms = float(compute_ms)

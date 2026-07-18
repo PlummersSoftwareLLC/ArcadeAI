@@ -51,7 +51,18 @@ except ImportError:
 
 metrics = config_metrics
 
-ENGINE_VERSION = 18  # Nearest-K flat trunk + per-group/max pooled object digest
+ENGINE_VERSION = 23  # WIDTH+25% arm (2026-07-18): the 210K recipe with trunk
+# (1280,960,640), attention restored (v22 ablation verdict: no-attention lost
+# ~20% at matched steps), fp16 replay ring at 18M, LR warm restarts.
+# (was v22:) attention ablation.  (was v21:) capacity-shrink (768,512,384),
+# ~2.6M params, same 2782-wide state.  Version history: v18 = 2056 state;
+# v19 = +lanes/grid (4.45M, the 204,914-record architecture); v20 = 9M
+# experiment, closed (92K@792K steps — bigger-from-random learns worse).
+# The bump refuses v19/v20 checkpoints: a raw cross-load would half-load
+# (attention tensors match, trunk/heads shape-skip to random) into a silent
+# frankenstein.  To return to the record-holder: dims back to (1024,768,512)
+# + object_attn_dim 128, ENGINE_VERSION back to 19, then restore
+# checkpoint_archive/best_v19_escr1m204914_migrated.pt (+ its sidecar).
 
 
 class RainbowAgent:
@@ -170,7 +181,12 @@ class RainbowAgent:
     # ── LR schedule ─────────────────────────────────────────────────────
     def get_lr(self) -> float:
         cfg = RL_CONFIG
-        step = self.training_steps
+        # lr_anchor_step re-bases the warmup+cosine WITHOUT touching
+        # training_steps (which the expert/BC schedules key on).  A distilled
+        # Phase-2 checkpoint sets anchor = its own step so the new net's RL
+        # phase starts at the top of a fresh schedule instead of inheriting a
+        # nearly-annealed cosine (the plasticity half of the 205K-plateau fix).
+        step = self.training_steps - int(getattr(self, "lr_anchor_step", 0))
         if step < cfg.lr_warmup_steps:
             return cfg.lr * (step + 1) / max(1, cfg.lr_warmup_steps)
         decay_horizon = max(1, cfg.lr_cosine_period)
@@ -785,6 +801,7 @@ class RainbowAgent:
             "expert_ratio": er,
             "epsilon": ep,
             "engine_version": ENGINE_VERSION,
+            "lr_anchor_step": int(getattr(self, "lr_anchor_step", 0)),
             "state_size": self.state_size,
             "single_frame_state_size": int(getattr(RL_CONFIG, "single_frame_state_size", self.state_size)),
             "frame_stack": int(getattr(RL_CONFIG, "frame_stack", 1)),
@@ -853,9 +870,11 @@ class RainbowAgent:
                     arch_changed = True
 
             opt_sd = ckpt.get("optimizer_state_dict")
+            opt_loaded = False
             if opt_sd and not arch_changed:
                 try:
                     self.optimizer.load_state_dict(opt_sd)
+                    opt_loaded = True
                 except Exception as e:
                     print(f"Optimizer state skipped: {e}")
             elif opt_sd:
@@ -870,6 +889,16 @@ class RainbowAgent:
 
             self.training_steps = ckpt.get("training_steps", 0)
             self.loaded_training_steps = self.training_steps
+            self.lr_anchor_step = int(ckpt.get("lr_anchor_step", 0))
+            if not opt_loaded:
+                # Cold-optimizer shock guard: reuse the ratchet's warmup ramp.
+                # Fresh Adam at full mid-run LR after the v19 migration deformed
+                # the 204,914 policy to ~138K within ~15K steps (2026-07-17);
+                # ramping LR from 5% over 8K steps (~5 min) absorbs the cold
+                # phase while the moment estimates converge.
+                self.ratchet_warmup_start_step = int(self.training_steps)
+                self.ratchet_warmup_steps = 8_000
+                print("  Optimizer state absent/stale — armed 8,000-step LR warmup")
             self._sync_inference(force=True)
 
             # The C51 support tensor is intentionally rebuilt from config and is

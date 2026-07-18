@@ -146,6 +146,12 @@ class FrameData:
 _HDR_FMT = ">HddBIBBBIBB"
 _HDR_SIZE = struct.calcsize(_HDR_FMT)
 
+# Ingest sanity: reject crash/garbage frames at the wire boundary (see
+# RL_CONFIG.max_plausible_game_score).  Read once at import like the other
+# hot-path constants; a warn throttle keeps a crash burst from flooding stdout.
+_MAX_PLAUSIBLE_GAME_SCORE = int(getattr(RL_CONFIG, "max_plausible_game_score", 2_000_000))
+_last_implausible_warn_t = 0.0
+
 
 def parse_frame_data(data: bytes, parse_preview: bool = False) -> Optional[FrameData]:
     """Parse the Robotron binary wire protocol from Lua."""
@@ -156,6 +162,20 @@ def parse_frame_data(data: bytes, parse_preview: bool = False) -> Optional[Frame
          start, replay, lasers, wave) = struct.unpack(_HDR_FMT, data[:_HDR_SIZE])
     except struct.error:
         return None
+
+    # Drop crash/garbage frames before any downstream consumer (metrics,
+    # reward, replay buffer, HOF) can see them.  A game crash randomizes
+    # memory and surfaces an absurd game_score; a legit per-game score never
+    # approaches the ceiling, so this only ever fires on memory garbage.
+    if score > _MAX_PLAUSIBLE_GAME_SCORE:
+        global _last_implausible_warn_t
+        _now = time.time()
+        if _now - _last_implausible_warn_t > 5.0:
+            _last_implausible_warn_t = _now
+            print(f"[INGEST] dropped implausible frame: score={score} wave={wave} "
+                  f"(> max_plausible_game_score={_MAX_PLAUSIBLE_GAME_SCORE}); likely game crash")
+        return None
+
     base_len = _HDR_SIZE + n * 4
     if len(data) < base_len:
         return None

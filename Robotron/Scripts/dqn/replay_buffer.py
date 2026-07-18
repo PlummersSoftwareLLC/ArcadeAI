@@ -133,8 +133,12 @@ class PrioritizedReplayBuffer:
         self.lock = threading.Lock()
 
         # Storage arrays
-        self.states      = np.zeros((self.capacity, self.state_size), dtype=np.float32)
-        self.next_states = np.zeros((self.capacity, self.state_size), dtype=np.float32)
+        # fp16 ring states (2026-07-18): halves state memory so the ring can
+        # deepen to 18M within /dev/shm.  Features are normalized [-1,1] where
+        # fp16 keeps ~3 decimal digits — ample.  sample() upcasts gathered
+        # batches to fp32 before they reach torch; the HOF stays fp32.
+        self.states      = np.zeros((self.capacity, self.state_size), dtype=np.float16)
+        self.next_states = np.zeros((self.capacity, self.state_size), dtype=np.float16)
         self.actions     = np.zeros(self.capacity, dtype=np.int64)
         self.rewards     = np.zeros(self.capacity, dtype=np.float32)
         self.dones       = np.zeros(self.capacity, dtype=np.float32)
@@ -248,8 +252,8 @@ class PrioritizedReplayBuffer:
         cap = int(self.capacity)
         state_size = int(self.state_size)
         return {
-            "states": ("states", np.dtype(np.float32), (cap, state_size)),
-            "next_states": ("next_states", np.dtype(np.float32), (cap, state_size)),
+            "states": ("states", np.dtype(np.float16), (cap, state_size)),
+            "next_states": ("next_states", np.dtype(np.float16), (cap, state_size)),
             "actions": ("actions", np.dtype(np.int64), (cap,)),
             "rewards": ("rewards", np.dtype(np.float32), (cap,)),
             "dones": ("dones", np.dtype(np.float32), (cap,)),
@@ -566,10 +570,12 @@ class PrioritizedReplayBuffer:
                 # filters them out (they have no sum-tree leaves).
                 all_indices = np.concatenate([indices, self.capacity + hof_slots])
                 return (
-                    np.concatenate([self.states[indices],      self.hof_states[hof_slots]]),
+                    # fp16 ring + fp32 HOF: concat promotes to fp32 (free);
+                    # astype guards the invariant if HOF dtype ever changes.
+                    np.concatenate([self.states[indices],      self.hof_states[hof_slots]]).astype(np.float32, copy=False),
                     np.concatenate([self.actions[indices],     self.hof_actions[hof_slots]]),
                     np.concatenate([self.rewards[indices],     self.hof_rewards[hof_slots]]),
-                    np.concatenate([self.next_states[indices], self.hof_next_states[hof_slots]]),
+                    np.concatenate([self.next_states[indices], self.hof_next_states[hof_slots]]).astype(np.float32, copy=False),
                     np.concatenate([self.dones[indices],       self.hof_dones[hof_slots]]),
                     np.concatenate([self.horizons[indices],    self.hof_horizons[hof_slots]]),
                     np.concatenate([self.is_expert[indices],   self.hof_is_expert[hof_slots]]),
@@ -579,10 +585,10 @@ class PrioritizedReplayBuffer:
                 )
 
             return (
-                self.states[indices],
+                self.states[indices].astype(np.float32),
                 self.actions[indices],
                 self.rewards[indices],
-                self.next_states[indices],
+                self.next_states[indices].astype(np.float32),
                 self.dones[indices],
                 self.horizons[indices],
                 self.is_expert[indices],
@@ -1006,6 +1012,15 @@ class PrioritizedReplayBuffer:
                 return False      # unreadable meta: leave the directory alone
         try:
             os.makedirs(abs_path, exist_ok=True)
+            # Stale atomic-save leftovers (<dir>.tmp) are incomplete by
+            # definition and can silently eat tens of GB of tmpfs headroom —
+            # a 44 GB stray .tmp caused the 2026-07-18 SIGBUS silent-exit
+            # (ring page-fault with /dev/shm at 100%).  Reclaim them.
+            tmp_dir = abs_path + ".tmp"
+            if os.path.isdir(tmp_dir):
+                import shutil as _sh
+                _sh.rmtree(tmp_dir, ignore_errors=True)
+                print(f"  Removed stale replay tmp dir: {tmp_dir}")
             with self.lock:
                 for name, (attr, dtype, shape) in self._storage_specs().items():
                     path = os.path.join(abs_path, f"{name}.npy")
@@ -1016,6 +1031,15 @@ class PrioritizedReplayBuffer:
                             arr = candidate
                     if arr is None:
                         arr = np.lib.format.open_memmap(path, mode="w+", dtype=dtype, shape=shape)
+                        # Reserve the FULL file now (tmpfs honors fallocate).
+                        # Sparse files defer allocation to page-fault time, so
+                        # an over-committed tmpfs kills the trainer with a
+                        # silent SIGBUS hours in — at the worst possible
+                        # moment, when the ring finally fills.  Reserving at
+                        # boot converts that into an immediate, loud error.
+                        with open(path, "r+b") as fh:
+                            nbytes = int(np.prod(shape)) * dtype.itemsize + 4096
+                            os.posix_fallocate(fh.fileno(), 0, nbytes)
                     setattr(self, attr, arr)
                 pri_path = os.path.join(abs_path, "priorities.npy")
                 if not os.path.isfile(pri_path):
