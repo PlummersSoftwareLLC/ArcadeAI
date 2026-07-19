@@ -725,6 +725,9 @@ class RLConfigData:
     # (human-rescue chains, mystery bonuses) are ~tens of K; crash values are
     # random uint32s that leap by millions from the previous frame.
     max_plausible_score_jump: int = 250_000
+    # A genuine NEW game's raw score shortly after start (any larger sudden
+    # drop that isn't a power-of-10 wrap is classified as a crash frame).
+    score_new_game_max: int = 100_000
     hof_replay_fraction: float = 0.10      # guaranteed batch quota once seeded
     hof_min_transitions: int = 4_096       # quota activates only past this
 

@@ -1400,29 +1400,77 @@ class SocketServer:
                 if should_parse_preview and frame.preview_pixels:
                     self._cache_client_preview(cid, frame)
 
-                # ── Crash guard #2: score-jump continuity check ─────────────
-                # The stateless absolute ceiling can't track immortal-grade
-                # play (it killed wave-63 games at 2M, then wave-256+ marathon
-                # games when the wave byte wrapped).  Continuity can: a real
-                # score grows by small per-frame increments; random-memory
-                # crash values leap by millions.  Needs per-client history, so
-                # it lives here rather than in parse_frame_data.  Score DROPS
-                # are fine (game reset); only implausible upward jumps drop.
-                _drop_jump = False
+                # ── Marathon accounting: unwrap score + wave, reject crashes ─
+                # Levels routinely pass 255 (byte counter wraps ~mod 256) and
+                # the BCD score register wraps at a power of 10.  Every frame
+                # is classified from per-client RAW trackers (updated only on
+                # ACCEPTED frames, so a crash frame can never corrupt the
+                # baseline):
+                #   continue  raw score >= prev, jump within MAX_SCORE_JUMP
+                #   WRAP      prev near a 10^k top, raw lands near zero,
+                #             player alive, no recent start press
+                #             -> score_offset += 10^k
+                #   NEW GAME  small raw score (fresh game) -> offsets reset
+                #   CRASH     everything else (up-jumps AND unexplained
+                #             mid-air drops) -> frame dropped, no-op action
+                # frame.game_score / frame.level_number are REWRITTEN to true
+                # unwrapped values here, so every consumer — reward deltas
+                # (continuous across wraps), wave-clear terminals (255->256
+                # reads as an advance, not a regression), game boundaries,
+                # HOF admission, peaks, eval scoring, the dashboard — sees
+                # accurate marathon totals.
+                _verdict = "accept"
+                _wrap_note = None
                 with self.client_lock:
                     _cs0 = self.client_states.get(cid)
-                    if _cs0 is not None and int(_cs0.get("frames", 0)) > 0:
-                        _prev_sc = int(_cs0.get("last_game_score", 0))
-                        if int(frame.game_score) > _prev_sc + _MAX_SCORE_JUMP:
-                            _drop_jump = True
-                if _drop_jump:
+                    if _cs0 is not None:
+                        _raw_sc = int(frame.game_score)
+                        _raw_wv = int(frame.level_number)
+                        if frame.start_pressed:
+                            _cs0["last_start_frame"] = int(_cs0.get("frames", 0))
+                        _recent_start = (int(_cs0.get("frames", 0))
+                                         - int(_cs0.get("last_start_frame", -10**9))) < 300
+                        _prev_sc = _cs0.get("raw_score_prev")
+                        _prev_wv = _cs0.get("raw_wave_prev")
+                        _new_game_max = int(getattr(RL_CONFIG, "score_new_game_max", 100_000))
+                        if _prev_sc is None:
+                            pass  # first frame of the connection: accept as-is
+                        elif _raw_sc > _prev_sc + _MAX_SCORE_JUMP:
+                            _verdict = "crash-jump"
+                        elif _raw_sc < _prev_sc:
+                            _mod = 10 ** len(str(max(1, _prev_sc)))
+                            if (_prev_sc >= 0.9 * _mod and _raw_sc <= 0.1 * _mod
+                                    and frame.player_alive and not _recent_start):
+                                _cs0["score_offset"] = int(_cs0.get("score_offset", 0)) + _mod
+                                _wrap_note = (f"[UNWRAP] cid={cid} score rolled "
+                                              f"{_prev_sc:,} -> {_raw_sc:,} (+{_mod:,}); "
+                                              f"true {_cs0['score_offset'] + _raw_sc:,}")
+                            elif _raw_sc <= _new_game_max:
+                                _cs0["score_offset"] = 0
+                                _cs0["wave_offset"] = 0
+                            else:
+                                _verdict = "crash-drop"
+                        if _verdict == "accept":
+                            if (_prev_wv is not None and _raw_wv < _prev_wv - 200
+                                    and frame.player_alive and not _recent_start):
+                                _cs0["wave_offset"] = int(_cs0.get("wave_offset", 0)) + 256
+                                _wrap_note = (_wrap_note or f"[UNWRAP] cid={cid}") + (
+                                    f"  [wave {_prev_wv} -> {_raw_wv}; "
+                                    f"true wave {_cs0['wave_offset'] + _raw_wv}]")
+                            _cs0["raw_score_prev"] = _raw_sc
+                            _cs0["raw_wave_prev"] = _raw_wv
+                            frame.game_score = int(_cs0.get("score_offset", 0)) + _raw_sc
+                            frame.level_number = int(_cs0.get("wave_offset", 0)) + _raw_wv
+                if _wrap_note:
+                    print(_wrap_note)
+                if _verdict != "accept":
                     global _last_implausible_warn_t
                     _nowj = time.time()
                     if _nowj - _last_implausible_warn_t > 5.0:
                         _last_implausible_warn_t = _nowj
-                        print(f"[INGEST] dropped score-jump frame: cid={cid} "
-                              f"score={frame.game_score} (prev {_prev_sc}, "
-                              f"jump > {_MAX_SCORE_JUMP}); likely game crash")
+                        print(f"[INGEST] dropped {_verdict} frame: cid={cid} "
+                              f"raw_score={frame.game_score} (baseline unchanged); "
+                              f"likely game crash")
                     sock.sendall(self._pack_action(
                         -1, -1, _SRC_NONE, cid,
                         preview_enabled=preview_enabled,
