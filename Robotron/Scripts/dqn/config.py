@@ -709,8 +709,22 @@ class RLConfigData:
     # level-aware: base + per_level x wave.  Wave 63 -> 3.6M allowed; the
     # observed crash values (4.8M @ wave 72, 25M, 92M) all still reject
     # because random uint32 garbage dwarfs any per-level allowance.
-    max_plausible_game_score: int = 5_000_000
+    # 2026-07-19 (third iteration, final shape): absolute ceilings are the
+    # WRONG GUARD at immortal-grade play — the flat 2M cap killed wave-63
+    # games, the level-aware 5M+35K/wave cap killed wave-256+ marathon games
+    # when the single-byte wave counter WRAPPED to 1 (8M score @ "wave 1").
+    # The property crashes cannot fake is CONTINUITY: real scores grow by
+    # small per-frame increments; random-memory garbage jumps by millions.
+    # The real guard is now the per-client score-jump detector below; the
+    # absolute ceiling remains only as a stateless backstop for a client's
+    # very first frame (no history yet) at a level no legit game will reach
+    # for months (100M ~= wave 3000).
+    max_plausible_game_score: int = 100_000_000
     max_plausible_score_per_level: int = 35_000
+    # Max believable single-frame score increase.  Largest legit bursts
+    # (human-rescue chains, mystery bonuses) are ~tens of K; crash values are
+    # random uint32s that leap by millions from the previous frame.
+    max_plausible_score_jump: int = 250_000
     hof_replay_fraction: float = 0.10      # guaranteed batch quota once seeded
     hof_min_transitions: int = 4_096       # quota activates only past this
 

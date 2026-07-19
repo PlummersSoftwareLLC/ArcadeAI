@@ -151,6 +151,7 @@ _HDR_SIZE = struct.calcsize(_HDR_FMT)
 # hot-path constants; a warn throttle keeps a crash burst from flooding stdout.
 _MAX_PLAUSIBLE_GAME_SCORE = int(getattr(RL_CONFIG, "max_plausible_game_score", 2_000_000))
 _MAX_PLAUSIBLE_PER_LEVEL = int(getattr(RL_CONFIG, "max_plausible_score_per_level", 25_000))
+_MAX_SCORE_JUMP = int(getattr(RL_CONFIG, "max_plausible_score_jump", 250_000))
 _last_implausible_warn_t = 0.0
 
 
@@ -1398,6 +1399,36 @@ class SocketServer:
                     continue
                 if should_parse_preview and frame.preview_pixels:
                     self._cache_client_preview(cid, frame)
+
+                # ── Crash guard #2: score-jump continuity check ─────────────
+                # The stateless absolute ceiling can't track immortal-grade
+                # play (it killed wave-63 games at 2M, then wave-256+ marathon
+                # games when the wave byte wrapped).  Continuity can: a real
+                # score grows by small per-frame increments; random-memory
+                # crash values leap by millions.  Needs per-client history, so
+                # it lives here rather than in parse_frame_data.  Score DROPS
+                # are fine (game reset); only implausible upward jumps drop.
+                _drop_jump = False
+                with self.client_lock:
+                    _cs0 = self.client_states.get(cid)
+                    if _cs0 is not None and int(_cs0.get("frames", 0)) > 0:
+                        _prev_sc = int(_cs0.get("last_game_score", 0))
+                        if int(frame.game_score) > _prev_sc + _MAX_SCORE_JUMP:
+                            _drop_jump = True
+                if _drop_jump:
+                    global _last_implausible_warn_t
+                    _nowj = time.time()
+                    if _nowj - _last_implausible_warn_t > 5.0:
+                        _last_implausible_warn_t = _nowj
+                        print(f"[INGEST] dropped score-jump frame: cid={cid} "
+                              f"score={frame.game_score} (prev {_prev_sc}, "
+                              f"jump > {_MAX_SCORE_JUMP}); likely game crash")
+                    sock.sendall(self._pack_action(
+                        -1, -1, _SRC_NONE, cid,
+                        preview_enabled=preview_enabled,
+                        hud_enabled=hud_enabled,
+                    ))
+                    continue
 
                 # Single-frame compact input; stacked current-first with recent history.
                 single_state = slice_model_state(frame.state)

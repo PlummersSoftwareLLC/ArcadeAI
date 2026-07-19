@@ -1751,11 +1751,12 @@ def _render_dashboard_html() -> str:
                 <th class="num" aria-sort="none"><button type="button" class="client-table-sort-btn" data-sort-key="session_seconds">Session<span class="client-table-sort-indicator"></span></button></th>
                 <th class="num" aria-sort="none"><button type="button" class="client-table-sort-btn" data-sort-key="score">Score<span class="client-table-sort-indicator"></span></button></th>
                 <th class="num" aria-sort="none"><button type="button" class="client-table-sort-btn" data-sort-key="level">Level<span class="client-table-sort-indicator"></span></button></th>
+                <th class="num" aria-sort="none" title="Robotron Efficiency: score / level"><button type="button" class="client-table-sort-btn" data-sort-key="efficiency">Eff<span class="client-table-sort-indicator"></span></button></th>
                 <th class="num" aria-sort="none"><button type="button" class="client-table-sort-btn" data-sort-key="fps">FPS<span class="client-table-sort-indicator"></span></button></th>
               </tr>
             </thead>
             <tbody id="tblClientsBody">
-              <tr><td colspan="5" class="client-table-empty">No Clients</td></tr>
+              <tr><td colspan="6" class="client-table-empty">No Clients</td></tr>
             </tbody>
           </table>
         </div>
@@ -2542,15 +2543,20 @@ def _render_dashboard_html() -> str:
         if (!Number.isFinite(clientId) || clientId < 0) return null;
         const slotRaw = Number(row && row.client_slot);
         const sessionRaw = Number(row && row.session_seconds);
+        const scoreVal = Math.max(0, Math.trunc(Number(row && row.score) || 0));
+        const levelVal = Math.max(0, Math.trunc(Number(row && row.level) || 0));
         return {
           client_id: Math.trunc(clientId),
           client_slot: Number.isFinite(slotRaw) && slotRaw >= 0 ? Math.trunc(slotRaw) : Math.trunc(clientId),
           session_seconds: Math.max(0, Number.isFinite(sessionRaw) ? sessionRaw : Number(row && row.duration_seconds) || 0),
-          score: Math.max(0, Math.trunc(Number(row && row.score) || 0)),
-          level: Math.max(0, Math.trunc(Number(row && row.level) || 0)),
+          score: scoreVal,
+          level: levelVal,
+          // Robotron Efficiency: score per level reached this game.
+          efficiency: levelVal > 0 ? scoreVal / levelVal : 0,
           fps: Math.max(0, Number(row && row.fps) || 0),
           preview_capable: !!(row && row.preview_capable),
           selected_preview: !!(row && row.selected_preview),
+          eval: !!(row && row.eval),
         };
       }).filter(Boolean);
     }
@@ -2604,7 +2610,7 @@ def _render_dashboard_html() -> str:
       if (clientTableCount) clientTableCount.textContent = fmtInt(normalized.length);
       if (!clientTableBody) return;
       if (!normalized.length) {
-        clientTableBody.innerHTML = '<tr><td colspan="5" class="client-table-empty">No Clients</td></tr>';
+        clientTableBody.innerHTML = '<tr><td colspan="6" class="client-table-empty">No Clients</td></tr>';
         return;
       }
       const frag = document.createDocumentFragment();
@@ -2620,6 +2626,7 @@ def _render_dashboard_html() -> str:
           { value: fmtSession(row.session_seconds), className: "num" },
           { value: fmtInt(row.score), className: "num" },
           { value: fmtInt(row.level), className: "num" },
+          { value: fmtInt(row.efficiency), className: "num" },
           { value: fmtFloat(row.fps, 1), className: "num" },
         ];
         for (const cell of cells) {
