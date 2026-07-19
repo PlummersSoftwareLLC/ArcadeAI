@@ -1421,6 +1421,7 @@ class SocketServer:
                 # accurate marathon totals.
                 _verdict = "accept"
                 _wrap_note = None
+                _prev_for_log = None
                 with self.client_lock:
                     _cs0 = self.client_states.get(cid)
                     if _cs0 is not None:
@@ -1432,6 +1433,7 @@ class SocketServer:
                                          - int(_cs0.get("last_start_frame", -10**9))) < 300
                         _prev_sc = _cs0.get("raw_score_prev")
                         _prev_wv = _cs0.get("raw_wave_prev")
+                        _prev_for_log = _prev_sc
                         _new_game_max = int(getattr(RL_CONFIG, "score_new_game_max", 100_000))
                         if _prev_sc is None:
                             pass  # first frame of the connection: accept as-is
@@ -1468,9 +1470,9 @@ class SocketServer:
                     _nowj = time.time()
                     if _nowj - _last_implausible_warn_t > 5.0:
                         _last_implausible_warn_t = _nowj
-                        print(f"[INGEST] dropped {_verdict} frame: cid={cid} "
-                              f"raw_score={frame.game_score} (baseline unchanged); "
-                              f"likely game crash")
+                        print(f"[INGEST] {_verdict}: cid={cid} raw={frame.game_score:,} "
+                              f"vs baseline {(_prev_for_log or 0):,} — one frame rejected, "
+                              f"baseline kept (torn BCD read or crash frame)")
                     sock.sendall(self._pack_action(
                         -1, -1, _SRC_NONE, cid,
                         preview_enabled=preview_enabled,
