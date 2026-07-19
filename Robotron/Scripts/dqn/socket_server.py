@@ -150,6 +150,7 @@ _HDR_SIZE = struct.calcsize(_HDR_FMT)
 # RL_CONFIG.max_plausible_game_score).  Read once at import like the other
 # hot-path constants; a warn throttle keeps a crash burst from flooding stdout.
 _MAX_PLAUSIBLE_GAME_SCORE = int(getattr(RL_CONFIG, "max_plausible_game_score", 2_000_000))
+_MAX_PLAUSIBLE_PER_LEVEL = int(getattr(RL_CONFIG, "max_plausible_score_per_level", 25_000))
 _last_implausible_warn_t = 0.0
 
 
@@ -167,13 +168,14 @@ def parse_frame_data(data: bytes, parse_preview: bool = False) -> Optional[Frame
     # reward, replay buffer, HOF) can see them.  A game crash randomizes
     # memory and surfaces an absurd game_score; a legit per-game score never
     # approaches the ceiling, so this only ever fires on memory garbage.
-    if score > _MAX_PLAUSIBLE_GAME_SCORE:
+    _limit = _MAX_PLAUSIBLE_GAME_SCORE + _MAX_PLAUSIBLE_PER_LEVEL * int(wave)
+    if score > _limit:
         global _last_implausible_warn_t
         _now = time.time()
         if _now - _last_implausible_warn_t > 5.0:
             _last_implausible_warn_t = _now
             print(f"[INGEST] dropped implausible frame: score={score} wave={wave} "
-                  f"(> max_plausible_game_score={_MAX_PLAUSIBLE_GAME_SCORE}); likely game crash")
+                  f"(> {_limit} = base {_MAX_PLAUSIBLE_GAME_SCORE} + {_MAX_PLAUSIBLE_PER_LEVEL}/level); likely game crash")
         return None
 
     base_len = _HDR_SIZE + n * 4
@@ -1507,12 +1509,20 @@ class SocketServer:
                         pass
 
                     eval_only = bool(cs.get("eval_only", False))
-                    # Ratchet freeze: measurement games must not enter the ring.
-                    # Eval phases dominate wall-clock (~5:1 vs train), so storing
-                    # their zero-expert greedy frames would flood the 10M ring
-                    # with frozen-policy data — the exact expert-anchor-drain
-                    # mechanism behind the historical collapses.
-                    if self.agent and not eval_only and not metrics.ratchet_frozen:
+                    # Eval frames now TRAIN (Dave, 2026-07-19).  The old
+                    # blanket exclusion was a ratchet-era guard: measurement
+                    # phases dominated wall-clock ~5:1 and would have flooded
+                    # the ring with frozen-policy frames.  With the ratchet
+                    # retired, permanent eval clients are a small minority of
+                    # the fleet — and their games are the system's BEST data,
+                    # twice over: banked free lives take them to wave 20-23+
+                    # (deeper than any injection-carrying training client can
+                    # reach), and every game is a full wave-1->N traversal
+                    # that also refreshes the early-wave anchor.  Training on
+                    # them cannot corrupt EScr1M: eval behavior stays pure
+                    # greedy regardless of where its frames go.  Only the
+                    # ratchet-frozen measurement case remains excluded.
+                    if self.agent and not metrics.ratchet_frozen:
                         tag = cs.get("prev_action_source", "dqn")
                         # Positive training terminal (ported from expert2):
                         # clearing a wave closes the n-step episode for REPLAY
@@ -1563,7 +1573,7 @@ class SocketServer:
                 # ── Terminal ────────────────────────────────────────────
                 if frame.done:
                     eval_only = bool(cs.get("eval_only", False))
-                    if self.async_buffer is not None and not eval_only and not metrics.ratchet_frozen:
+                    if self.async_buffer is not None and not metrics.ratchet_frozen:
                         self.async_buffer.boost_pre_death(cid)
                     if not cs.get("was_done", False):
                         ep_len = cs.get("ep_frames", 0)

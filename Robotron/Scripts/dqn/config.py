@@ -473,15 +473,18 @@ class RLConfigData:
     # through the permutation-invariant object-attention digest below.
     flat_state_to_trunk: bool = True
     flat_trunk_frame_features: int = FLAT_TRUNK_FRAME_FEATURES
-    # WIDTH+25% replication arm (Dave, 2026-07-18): the 210K recipe verbatim
-    # (attention ON, same schedules) with the trunk 25% wider than the record
-    # holder's (1024,768,512).  Prior width datapoints from scratch:
-    #   (768,512,384) no-attn:  ~94K plateau @ 241K steps  (shrink+ablation arm)
-    #   (1024,768,512) 4.45M:   ~94K@131K, 113K@282K, 205K@543K (the record)
-    #   (1536,1024,768) 9M:     ~92K @ 792K steps          (too big from random)
-    # This probes the middle: does +25% width from scratch track the record
-    # lineage and then exceed its ~205K ceiling?
-    trunk_layer_sizes: tuple[int, ...] = (1280, 960, 640)
+    # WIDTH LADDER, rung 2 (Dave, 2026-07-19): (1280,960,640) -> (1600,1200,800),
+    # from frame 0, everything else identical — single-knob width test judged
+    # against the v23 curve at matched steps (v23: ~95K@114K, 272K@300K,
+    # 478K@470K, peak 796,526@~720K).  Prior rungs from scratch:
+    #   (768,512,384)+no-attn: ~95K plateau (ablation-confounded)
+    #   (1024,768,512) 4.45M:  205K (old recipe, restarts)
+    #   (1280,960,640) 5.9M:   796K (current recipe) — the incumbent, banked
+    #   (1536,1024,768)+attn256 9M: 92K — but under the WEAK recipe (no deep
+    #     ring, no warm restarts, attention doubled too); this rung, at a
+    #     similar param count with attention unchanged, retests that verdict
+    #     under the modern recipe.
+    trunk_layer_sizes: tuple[int, ...] = (1600, 1200, 800)
     trunk_hidden: int = 256
     trunk_layers: int = 2
     use_layer_norm: bool = True
@@ -584,10 +587,18 @@ class RLConfigData:
     # Keep sampling/transfers inline: pinned-memory or background CUDA host work
     # re-enables the GIL in the free-threaded Torch build and tanks MAME FPS.
     batch_size: int = 512
-    lr: float = 1e-4
-    lr_min: float = 5e-5
+    # ── HOLD MODE (Dave, 2026-07-19), à la Tempest ─────────────────────
+    # The wide v24 net reached EScr1M 1,191,881 (wave 40) and collapsed at
+    # LR ~5.6e-5; the watchdog's restore was re-eaten within ~75K steps at
+    # the same rate.  We can REACH 1.2M; the open problem is STAYING there.
+    # These values hold a restored peak with gentle pressure: a narrow
+    # 3.5e-5 -> 2.5e-5 band over Tempest's 3M period (restarts stay on but
+    # land days apart).  CLIMB-MODE values, for any future from-scratch or
+    # aggressive run:  lr 1e-4, lr_min 5e-5, lr_cosine_period 1_000_000.
+    lr: float = 3.5e-5
+    lr_min: float = 2.5e-5
     lr_warmup_steps: int = 5_000
-    lr_cosine_period: int = 1_000_000
+    lr_cosine_period: int = 3_000_000   # hold mode: Tempest's period (was 1M)
     # Tempest port (2026-07-18, approved): periodic warm restarts instead of a
     # single decay-to-floor — the schedule re-injects plasticity every period
     # ("to escape plateaus") rather than letting the run go stale once the
@@ -674,7 +685,15 @@ class RLConfigData:
     # tops out in the low hundreds of thousands (best HOF episode ~420K); 2M is
     # ~5x that headroom, yet a uint32 crash value is ~1000x larger, so this
     # catches essentially every random-memory crash with zero false positives.
-    max_plausible_game_score: int = 2_000_000
+    # 2026-07-19: the flat 2M cap started rejecting REAL games (wave-63 runs
+    # legitimately exceed 2M — the fleet now averages ~32K points/wave at
+    # depth).  Worse than a metrics gap: rejected frames get no-op actions, so
+    # the guard was killing the best games at the cap.  The ceiling is now
+    # level-aware: base + per_level x wave.  Wave 63 -> 3.6M allowed; the
+    # observed crash values (4.8M @ wave 72, 25M, 92M) all still reject
+    # because random uint32 garbage dwarfs any per-level allowance.
+    max_plausible_game_score: int = 5_000_000
+    max_plausible_score_per_level: int = 35_000
     hof_replay_fraction: float = 0.10      # guaranteed batch quota once seeded
     hof_min_transitions: int = 4_096       # quota activates only past this
 

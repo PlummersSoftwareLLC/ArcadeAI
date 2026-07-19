@@ -3726,6 +3726,11 @@ if not apply_rrchris_patch() then
 end
 
 print("Robotron socket target: " .. SOCKET_ADDRESS)
+if EVAL_MODE > 0 then
+    print("Robotron eval override: " .. (EVAL_MODE == 1 and "EVAL (greedy, wave-1)" or "NON-EVAL (training)"))
+else
+    print("Robotron eval override: none (server decides)")
+end
 if SKIP_UNUSED_TACTICAL_FEATURES then
     print("Robotron tactical lanes/grid: skipped for fast V3 observations")
 end

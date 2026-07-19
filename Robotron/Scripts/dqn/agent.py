@@ -51,9 +51,11 @@ except ImportError:
 
 metrics = config_metrics
 
-ENGINE_VERSION = 23  # WIDTH+25% arm (2026-07-18): the 210K recipe with trunk
-# (1280,960,640), attention restored (v22 ablation verdict: no-attention lost
-# ~20% at matched steps), fp16 replay ring at 18M, LR warm restarts.
+ENGINE_VERSION = 24  # WIDTH ladder rung 2 (2026-07-19): trunk (1600,1200,800)
+# from frame 0, single-knob vs the v23 curve.  v23 = (1280,960,640), the
+# 796,526 record-holder — its artifacts are engine-23 and refuse to load here
+# (restore recipe: dims + ENGINE_VERSION back, then the archived best).
+# (was v23:) +25% width, fp16 deep ring, warm restarts — record 796K.
 # (was v22:) attention ablation.  (was v21:) capacity-shrink (768,512,384),
 # ~2.6M params, same 2782-wide state.  Version history: v18 = 2056 state;
 # v19 = +lanes/grid (4.45M, the 204,914-record architecture); v20 = 9M
