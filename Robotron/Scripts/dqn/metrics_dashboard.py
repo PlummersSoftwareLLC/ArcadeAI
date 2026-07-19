@@ -2616,7 +2616,7 @@ def _render_dashboard_html() -> str:
         tr.title = row.preview_capable ? "Select preview client" : "Preview unavailable";
         const activeMark = row.client_id === effectiveSelected ? "*" : "";
         const cells = [
-          { value: `${fmtInt(row.client_id)}${activeMark}`, className: "" },
+          { value: `${fmtInt(row.client_id)}${row.eval ? " E" : ""}${activeMark}`, className: "" },
           { value: fmtSession(row.session_seconds), className: "num" },
           { value: fmtInt(row.score), className: "num" },
           { value: fmtInt(row.level), className: "num" },

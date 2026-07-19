@@ -51,7 +51,11 @@ except ImportError:
 
 metrics = config_metrics
 
-ENGINE_VERSION = 24  # WIDTH ladder rung 2 (2026-07-19): trunk (1600,1200,800)
+ENGINE_VERSION = 24  # Restored to the record lineage (2026-07-19): the staged
+# rung-3 bump (engine 25, 11M dims) never launched and would have orphaned the
+# live 1.68M lineage's checkpoints on any restart.  Rung 3, when deliberately
+# staged, should use engine 26 (25 is burned by this staging episode).
+# v24 = WIDTH ladder rung 2: trunk (1600,1200,800)
 # from frame 0, single-knob vs the v23 curve.  v23 = (1280,960,640), the
 # 796,526 record-holder — its artifacts are engine-23 and refuse to load here
 # (restore recipe: dims + ENGINE_VERSION back, then the archived best).
@@ -181,23 +185,39 @@ class RainbowAgent:
         self._train_thread.start()
 
     # ── LR schedule ─────────────────────────────────────────────────────
+    def shift_to_hold_gear(self, reason: str = ""):
+        """One-way LR downshift: the automated form of the intervention that
+        turned the 1.19M collapse into the 1.68M climb.  Re-anchors so the
+        hold cosine starts at its top; persists via save()."""
+        if getattr(self, "lr_gear", "climb") == "hold":
+            return
+        self.lr_gear = "hold"
+        self.lr_anchor_step = int(self.training_steps)
+        print(f"[LR GEARBOX] downshift CLIMB -> HOLD at step {self.training_steps:,}"
+              f"{' — ' + reason if reason else ''} (gentle pressure: "
+              f"{RL_CONFIG.lr_hold:.1e} -> {RL_CONFIG.lr_hold_min:.1e})")
+
     def get_lr(self) -> float:
         cfg = RL_CONFIG
+        # Gear-aware schedule (see the LR GEARBOX block in config.py).
+        if getattr(self, "lr_gear", "climb") == "hold":
+            lr_hi = float(getattr(cfg, "lr_hold", 3.5e-5))
+            lr_lo = float(getattr(cfg, "lr_hold_min", 2.5e-5))
+            period = int(getattr(cfg, "lr_hold_cosine_period", 3_000_000))
+        else:
+            lr_hi, lr_lo, period = cfg.lr, cfg.lr_min, cfg.lr_cosine_period
         # lr_anchor_step re-bases the warmup+cosine WITHOUT touching
-        # training_steps (which the expert/BC schedules key on).  A distilled
-        # Phase-2 checkpoint sets anchor = its own step so the new net's RL
-        # phase starts at the top of a fresh schedule instead of inheriting a
-        # nearly-annealed cosine (the plasticity half of the 205K-plateau fix).
+        # training_steps (which the expert/BC schedules key on).
         step = self.training_steps - int(getattr(self, "lr_anchor_step", 0))
         if step < cfg.lr_warmup_steps:
-            return cfg.lr * (step + 1) / max(1, cfg.lr_warmup_steps)
-        decay_horizon = max(1, cfg.lr_cosine_period)
+            return lr_hi * (step + 1) / max(1, cfg.lr_warmup_steps)
+        decay_horizon = max(1, period)
         if bool(getattr(cfg, "lr_use_restarts", False)):
             t = (step - cfg.lr_warmup_steps) % decay_horizon
         else:
             t = min(step - cfg.lr_warmup_steps, decay_horizon)
         cosine = 0.5 * (1.0 + math.cos(math.pi * t / decay_horizon))
-        return cfg.lr_min + (cfg.lr - cfg.lr_min) * cosine
+        return lr_lo + (lr_hi - lr_lo) * cosine
 
     def _update_lr(self):
         lr = self.get_lr()
@@ -804,6 +824,7 @@ class RainbowAgent:
             "epsilon": ep,
             "engine_version": ENGINE_VERSION,
             "lr_anchor_step": int(getattr(self, "lr_anchor_step", 0)),
+            "lr_gear": str(getattr(self, "lr_gear", "climb")),
             "state_size": self.state_size,
             "single_frame_state_size": int(getattr(RL_CONFIG, "single_frame_state_size", self.state_size)),
             "frame_stack": int(getattr(RL_CONFIG, "frame_stack", 1)),
@@ -892,6 +913,13 @@ class RainbowAgent:
             self.training_steps = ckpt.get("training_steps", 0)
             self.loaded_training_steps = self.training_steps
             self.lr_anchor_step = int(ckpt.get("lr_anchor_step", 0))
+            # Gear persistence.  Checkpoints from before the gearbox existed
+            # load conservatively as HOLD: any pre-gearbox checkpoint worth
+            # loading is an advanced policy, and hot LR is what kills those
+            # (fresh runs have no checkpoint, so they still start in CLIMB).
+            self.lr_gear = str(ckpt.get("lr_gear", "hold"))
+            if self.lr_gear == "hold":
+                print("  LR gear: HOLD (gentle frontier pressure)")
             if not opt_loaded:
                 # Cold-optimizer shock guard: reuse the ratchet's warmup ramp.
                 # Fresh Adam at full mid-run LR after the v19 migration deformed

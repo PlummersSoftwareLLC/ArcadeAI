@@ -991,6 +991,20 @@ class SocketServer:
                 pass
         return count
 
+    def _auto_curriculum_level(self) -> int:
+        """Frontier-biased random start level (Dave's design, 2026-07-19).
+
+        N = max(floor, ceil(ELvl1M)) + spread; start = 1 + int(N * sqrt(u)):
+        density rises linearly toward (and past) the eval frontier, thin at
+        the bottom (eval clients guarantee wave-1 play).  Drawn per packet,
+        but Robotron latches the start level only at game start, so each new
+        game samples the distribution exactly once.
+        """
+        _elvl = float(getattr(metrics, "eval_level_1m_average", 0.0) or 0.0)
+        _n = max(int(getattr(RL_CONFIG, "stratified_auto_floor", 5)),
+                 int(_elvl + 0.999)) + int(getattr(RL_CONFIG, "stratified_auto_spread", 8))
+        return max(1, min(255, 1 + int(_n * (random.random() ** 0.5))))
+
     def _is_eval_client(self, cid: int) -> bool:
         # Per-client override wins (set from the handshake --eval/--noeval flag);
         # otherwise the default cid%stride==offset rule.
@@ -1191,6 +1205,7 @@ class SocketServer:
                     "score": max(0, int(cs.get("game_score", 0) or 0)),
                     "selected_preview": (selected is not None and int(selected) == int(cid)),
                     "preview_capable": bool(cs.get("preview_capable", False)),
+                    "eval": bool(cs.get("eval_only", False)),
                 })
         if changed:
             self._clear_preview_cache()
@@ -1271,10 +1286,21 @@ class SocketServer:
             start_level = 1
         else:
             _gs = game_settings.snapshot()
-            if _gs["start_advanced"] or bool(_gs.get("auto_curriculum", False)):
-                # Operator-driven curriculum wins.
+            if bool(_gs.get("auto_curriculum", False)):
+                # UI "Automatic" toggle: frontier-biased auto-curriculum draw,
+                # applied LIVE (game_settings needs no restart).  Wins over the
+                # manual level — "Automatic" means automatic; untick to return
+                # to the dialed start_level_min.
+                start_level = self._auto_curriculum_level()
+                start_adv = 1 if start_level > 1 else 0
+            elif _gs["start_advanced"]:
+                # Operator-driven manual curriculum.
                 start_adv = 1
                 start_level = max(1, min(255, int(_gs["start_level_min"])))
+            elif STRATIFIED_TRAINING_STARTS and bool(getattr(RL_CONFIG, "stratified_auto", False)):
+                # Config-default auto-curriculum (same draw as the UI toggle).
+                start_level = self._auto_curriculum_level()
+                start_adv = 1 if start_level > 1 else 0
             elif STRATIFIED_TRAINING_STARTS:
                 # Stratified per-client start waves (2026-07): guarantee
                 # deep-wave experience in the buffer regardless of policy

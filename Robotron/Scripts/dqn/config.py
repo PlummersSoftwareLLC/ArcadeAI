@@ -484,6 +484,11 @@ class RLConfigData:
     #     ring, no warm restarts, attention doubled too); this rung, at a
     #     similar param count with attention unchanged, retests that verdict
     #     under the modern recipe.
+    # v24 record-lineage dims RESTORED (2026-07-19): the on-disk rung-3
+    # staging (2000,1500,1000 + engine 25) was a restart landmine — it would
+    # have refused the live 1.68M lineage's checkpoints and silently started
+    # an 11M net from scratch.  Rung 3 remains a queued experiment; stage it
+    # deliberately when its night comes: dims (2000,1500,1000), engine 26+.
     trunk_layer_sizes: tuple[int, ...] = (1600, 1200, 800)
     trunk_hidden: int = 256
     trunk_layers: int = 2
@@ -587,18 +592,30 @@ class RLConfigData:
     # Keep sampling/transfers inline: pinned-memory or background CUDA host work
     # re-enables the GIL in the free-threaded Torch build and tanks MAME FPS.
     batch_size: int = 512
-    # ── HOLD MODE (Dave, 2026-07-19), à la Tempest ─────────────────────
-    # The wide v24 net reached EScr1M 1,191,881 (wave 40) and collapsed at
-    # LR ~5.6e-5; the watchdog's restore was re-eaten within ~75K steps at
-    # the same rate.  We can REACH 1.2M; the open problem is STAYING there.
-    # These values hold a restored peak with gentle pressure: a narrow
-    # 3.5e-5 -> 2.5e-5 band over Tempest's 3M period (restarts stay on but
-    # land days apart).  CLIMB-MODE values, for any future from-scratch or
-    # aggressive run:  lr 1e-4, lr_min 5e-5, lr_cosine_period 1_000_000.
-    lr: float = 3.5e-5
-    lr_min: float = 2.5e-5
+    # ── LR GEARBOX (2026-07-19): the reproduction protocol, automated ───
+    # The 1.68M lineage's recipe, verified end to end:
+    #   1. From frame 0, CLIMB gear (hot LR) drives the curriculum ramp —
+    #      the v24 net went 0 -> 1.19M (wave 40) in one night.
+    #   2. At the frontier, climb pressure DESTROYS policies: two collapses
+    #      at ~5.6e-5, and a plain restore re-collapsed within ~75K steps.
+    #   3. The winning manual intervention: restore best + downshift to the
+    #      HOLD gear.  Gentle pressure not only held — it climbed smoothly
+    #      950K -> 1.68M+ (wave 55), zero drawdowns.  Collapse is a
+    #      gradient-pressure disease; the cure is the downshift.
+    # Automation: when the collapse watchdog restores best (the moment the
+    # manual intervention happened), the agent shifts to HOLD permanently
+    # (persisted in checkpoints).  Fresh runs start in CLIMB; checkpoints
+    # saved before the gearbox existed load conservatively as HOLD.
+    # lr/lr_min/lr_cosine_period are the CLIMB-gear values; the hold_*
+    # fields are the HOLD gear.
+    auto_lr_gearbox: bool = True
+    lr: float = 1e-4
+    lr_min: float = 5e-5
+    lr_hold: float = 3.5e-5
+    lr_hold_min: float = 2.5e-5
+    lr_hold_cosine_period: int = 3_000_000
     lr_warmup_steps: int = 5_000
-    lr_cosine_period: int = 3_000_000   # hold mode: Tempest's period (was 1M)
+    lr_cosine_period: int = 1_000_000   # climb mode (hold mode: 3M)
     # Tempest port (2026-07-18, approved): periodic warm restarts instead of a
     # single decay-to-floor — the schedule re-injects plasticity every period
     # ("to escape plateaus") rather than letting the run go stale once the
@@ -1005,6 +1022,19 @@ class RLConfigData:
     # Legacy hard-start tuning retained for old checkpoints/config snapshots.
     hard_start_min_level: int = 5
     hard_start_wave_spread: int = 8
+    # ── Auto-curriculum stratified starts (Dave's design, 2026-07-19) ───
+    # Replaces the fixed STRATIFIED_START_LEVELS tuple with a draw that
+    # tracks the policy's own frontier: N = max(floor, ceil(ELvl1M)) + spread,
+    # start = 1 + int(N * sqrt(u)) — density increases linearly toward the
+    # frontier (eval clients already guarantee wave-1 play, so shallow starts
+    # need only thin coverage), and the +spread reaches BEYOND the frontier,
+    # where lock-in breaks.  Self-scaling (no more stale tuples at wave 40)
+    # and collapse-remedial (ELvl drops -> curriculum retreats -> rebuild).
+    # Eval clients stay pinned to wave 1; operator override still wins.
+    # OFF for tonight's rung-3 run: single-knob width test first.
+    stratified_auto: bool = False
+    stratified_auto_floor: int = 5
+    stratified_auto_spread: int = 8
 
     # Episode-level elite replay: preserve tails from rare/high-performing
     # episodes, not only individual interesting transitions.
@@ -1141,9 +1171,13 @@ class RLConfigData:
 
     enable_amp: bool = True
 
-    # Autonomous eval-only clients: no expert, fixed low epsilon, no replay writes.
-    # With 50 clients this makes client ids 9/19/29/39/49 eval by default.
-    eval_client_stride: int = 10
+    # Autonomous eval clients: no expert, fixed low epsilon, hard-pinned to
+    # wave-1 starts (EScr1M's yardstick).  Since 2026-07-19 their frames DO
+    # train — eval games are the deepest data in the system.  Selection rule:
+    # cid % stride == (offset % stride); stride 5 + offset 9 (wraps to 4)
+    # -> cids 4/9/14/19/24/29... = ~1 in 5 clients.  Note a fleet smaller
+    # than the stride can end up with zero eval clients (EScr1M stays empty).
+    eval_client_stride: int = 5
     eval_client_offset: int = 9
     eval_epsilon: float = 0.01
 

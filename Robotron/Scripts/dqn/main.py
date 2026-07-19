@@ -233,6 +233,12 @@ def _restore_best_checkpoint(agent) -> bool:
             agent.memory.clear()
             print("[COLLAPSE WATCHDOG] best checkpoint restored, replay buffer wiped — "
                   "training resumes automatically once the buffer refills")
+            # The automated 2026-07-19 intervention: a frontier collapse means
+            # climb-gear pressure exceeded the policy's stability envelope —
+            # a plain restore re-collapses (~75K steps, observed twice), but
+            # restore + downshift climbed 950K -> 1.68M+.  Shift permanently.
+            if bool(getattr(RL_CONFIG, "auto_lr_gearbox", False)):
+                agent.shift_to_hold_gear(reason="collapse watchdog restore")
         else:
             print("[COLLAPSE WATCHDOG] best checkpoint failed to load — leaving weights as-is")
     except Exception as e:
