@@ -1470,6 +1470,24 @@ class MetricsData:
     eval_score_1m_window: int = EVAL_SCORE_1M_WINDOW_FRAMES
     # Entries are (score, level, ep_frames); score and level share one window
     # so EScr1M and ELvl1M always describe the same set of eval episodes.
+    # ── Instantaneous eval gauges (2026-07-20) ─────────────────────────
+    # EScr1M has severe completion lag at marathon scale (30+ min games land
+    # in the window whole, long after the fact).  These three update in real
+    # time from eval clients only:
+    #   eval score-RATE  points/frame, ~2-min rolling window (accrues every
+    #                    frame — no completion needed)
+    #   eval NOW-level   mean in-flight true wave across live eval clients
+    #                    (pure state; zero lag by construction)
+    #   frames/clear     rolling mean frames between eval wave-clears
+    #                    (event-driven, fires every few seconds fleet-wide)
+    eval_rate_bucket_frames: int = 0
+    eval_rate_bucket_score: float = 0.0
+    eval_rate_entries: Deque[tuple[int, float]] = field(default_factory=lambda: deque(maxlen=120))
+    eval_rate_sum_frames: int = 0
+    eval_rate_sum_score: float = 0.0
+    eval_now_level: float = 0.0
+    eval_wave_clear_frames: Deque[int] = field(default_factory=lambda: deque(maxlen=100))
+
     eval_score_1m_entries: Deque[tuple[float, float, int]] = field(default_factory=deque)
     eval_score_1m_frames: int = 0
     eval_score_1m_sum: float = 0.0
@@ -1599,6 +1617,39 @@ class MetricsData:
             self._push_score_1m_locked(float(score))
             if level is not None and int(score) > 0:
                 self._push_level_1m_locked(float(level))
+
+    def note_eval_rate(self, score_delta: float):
+        """Per-frame eval scoring accumulation (1000-frame buckets, ~2-min window)."""
+        with self.lock:
+            self.eval_rate_bucket_frames += 1
+            self.eval_rate_bucket_score += float(max(0.0, score_delta))
+            if self.eval_rate_bucket_frames >= 1000:
+                if len(self.eval_rate_entries) == self.eval_rate_entries.maxlen:
+                    _of, _os = self.eval_rate_entries[0]
+                    self.eval_rate_sum_frames -= _of
+                    self.eval_rate_sum_score -= _os
+                self.eval_rate_entries.append(
+                    (self.eval_rate_bucket_frames, self.eval_rate_bucket_score))
+                self.eval_rate_sum_frames += self.eval_rate_bucket_frames
+                self.eval_rate_sum_score += self.eval_rate_bucket_score
+                self.eval_rate_bucket_frames = 0
+                self.eval_rate_bucket_score = 0.0
+
+    def note_eval_wave_clear(self, frames_taken: int):
+        """Frames an eval client took to clear its latest wave."""
+        with self.lock:
+            if 0 < frames_taken < 36_000:   # sanity: < 10 min/wave
+                self.eval_wave_clear_frames.append(int(frames_taken))
+
+    def get_eval_instant(self) -> tuple[float, float, float]:
+        """(points/frame, mean in-flight wave, seconds/wave-clear) — lag-free."""
+        with self.lock:
+            rate = self.eval_rate_sum_score / max(1, self.eval_rate_sum_frames)
+            spw = 0.0
+            if self.eval_wave_clear_frames:
+                spw = (sum(self.eval_wave_clear_frames)
+                       / len(self.eval_wave_clear_frames)) / 60.0
+            return float(rate), float(self.eval_now_level), float(spw)
 
     def note_game_state_averages(self, average_level: float, average_game_score: float, peak_level: int | None = None):
         """Thread-safe live game-state aggregate update."""

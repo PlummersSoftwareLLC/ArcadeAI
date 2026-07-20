@@ -1637,11 +1637,24 @@ class SocketServer:
                         # boundary for a value function whose only other ground
                         # truth is death at v_min.  The live game continues;
                         # HOF/episode bookkeeping still key off frame.done.
+                        _wave_adv = _wave_advanced(
+                            cs.get("last_state"), frame,
+                            prev_level_number=cs.get("last_level_number"))
                         training_done = bool(frame.done) or (
-                            _wave_advanced(cs.get("last_state"), frame,
-                                           prev_level_number=cs.get("last_level_number"))
+                            _wave_adv
                             and bool(getattr(RL_CONFIG, "wave_clear_training_terminal", False))
                         )
+                        # Instantaneous eval gauges: per-frame score rate and
+                        # per-clear pace (see MetricsData, 2026-07-20).
+                        if cs.get("eval_only"):
+                            metrics.note_eval_rate(
+                                max(0, int(frame.game_score)
+                                    - int(cs.get("last_game_score", frame.game_score))))
+                            if _wave_adv:
+                                _lcf = int(cs.get("last_clear_frame", -1))
+                                if _lcf >= 0:
+                                    metrics.note_eval_wave_clear(int(cs["frames"]) - _lcf)
+                                cs["last_clear_frame"] = int(cs["frames"])
                         nstep = cs.get("nstep")
                         if nstep is not None:
                             joint = combine_action(mv_i, fr_i)
@@ -1927,10 +1940,20 @@ class SocketServer:
                     if s.get("level_number", 0) >= 0 and s.get("game_score", 0) > 0
                 ]
                 scores = [s.get("game_score", 0) for s in self.client_states.values()]
+                # Instantaneous eval depth: mean in-flight TRUE wave of live
+                # eval clients — zero completion lag by construction.
+                eval_lvls = [
+                    s.get("level_number", 0)
+                    for s in self.client_states.values()
+                    if s.get("eval_only") and s.get("game_score", 0) > 0
+                ]
                 avg_level = sum(lvls) / len(lvls) if lvls else 0.0
                 avg_score = sum(scores) / len(scores) if scores else 0.0
                 peak_level = max(lvls) if lvls else None
             metrics.note_game_state_averages(avg_level, avg_score, peak_level)
+            with metrics.lock:
+                metrics.eval_now_level = (
+                    sum(eval_lvls) / len(eval_lvls) if eval_lvls else 0.0)
         except Exception:
             pass
 

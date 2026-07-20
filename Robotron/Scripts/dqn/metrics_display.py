@@ -255,7 +255,7 @@ def display_metrics_header():
         f"{'Frame':>11} {'Steps':>10} {'FPS':>7} {'Epsi':>7} {'Xprt':>7} "
         f"{'Scr1M':>9} {'Lvl1M':>6} "
         f"{'Rwrd':>9} {'Score':>9} {'Shape':>9} {'Death':>9} {'DQN100K/F':>9} {'DQN1M/F':>9} {'DQN5M/F':>9} {'DQN10M/F':>9} "
-        f"{'EvalR':>8} {'EScr1M':>8} {'ELvl1M':>7} "
+        f"{'EvalR':>8} {'EScr1M':>8} {'ELvl1M':>7} {'EScrF':>6} {'ELvNow':>7} {'S/Wave':>7} "
         f"{'Loss':>10} {'AgrM%':>6} {'AgrF%':>6} "
         f"{'EpLen':>8} {'FtlPct':>7} {'SubjW':>6} {'DqnB%':>6} {'EpsB%':>6} "
         f"{'Clnt':>4} {'Web':>4} "
@@ -308,6 +308,11 @@ def display_metrics_row(agent, kb_handler):
         else:
             eval_score = metrics.eval_average_score
             eval_level = metrics.eval_average_level
+        # Instantaneous eval gauges (lag-free; see MetricsData 2026-07-20).
+        try:
+            _einst_rate, _einst_lvl, _einst_spw = metrics.get_eval_instant()
+        except Exception:
+            _einst_rate = _einst_lvl = _einst_spw = 0.0
         metrics.eval_reward_sum_interval = 0.0
         metrics.eval_score_sum_interval = 0.0
         metrics.eval_level_sum_interval = 0.0
@@ -455,6 +460,7 @@ def display_metrics_row(agent, kb_handler):
         f"{_fr(mean_reward*_prs)} {_fr(mean_obj*_prs)} {_fr(mean_subj*_prs)} {_fr(mean_death*_prs)} {_fr(dqn100k*_prs)} "
         f"{_fr(dqn1m*_prs)} {_fr(dqn5m*_prs)} {_frp(dqn_pf*_prs, 9)} "
         f"{_fr(eval_reward*_prs, 8)} {eval_score:>8,.0f} {eval_level:>7.3f} "
+        f"{_einst_rate:>6.1f} {_einst_lvl:>7.1f} {_einst_spw:>7.1f} "
         f"{loss_avg:>10.6f} {agree_move_avg*100:>5.1f}% {agree_fire_avg*100:>5.1f}% "
         f"{avg_ep_len:>8.1f} {ftl_pct_str:>7} {subj_w:>6.3f} "
         f"{metrics.last_sample_dqn_frac*100:>5.1f}% {metrics.last_sample_epsilon_frac*100:>5.1f}% "
