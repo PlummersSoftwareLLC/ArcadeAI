@@ -773,12 +773,14 @@ class RLConfigData:
     # sustained score collapse is actionable regardless of what loss reads:
     # best.pt is the only true external memory of peak play, and this is its
     # trigger.  Same sustain/cooldown/max-restore guards as A and B1.
-    # 0.50 -> 0.70 (2026-07-18): the maintain-and-improve directive.  With the
-    # 204,914 record as floor this arms the auto-restore at ~143K instead of
-    # ~102K.  The healthy band around the 205K plateau never dipped below
-    # ~185K, and refilling windows are excluded by the window-full gate, so
-    # 0.70 cannot false-fire; it just stops tolerating deep regression.
-    collapse_score_only_frac: float = 0.70     # of best_escr1m, no loss conjunct
+    # 0.70 -> 0.60 (2026-07-20): the floor compares live readings against the
+    # PEAK-BANKED record, which overstates the true sustained level by 10-20%
+    # (winner's curse — records are sequential maxima of a noisy window).  At
+    # 0.70 the effective floor was ~85% of TRUE level: the 10.9M-era restore
+    # measured ~4.5M under HOF poison, sat below the 7.65M floor for hours,
+    # and burned both restores into a night-long halt.  0.60 of the record
+    # ~= 0.70 of the true level — the originally intended protection.
+    collapse_score_only_frac: float = 0.60     # of best_escr1m, no loss conjunct
     collapse_check_interval_s: float = 60.0
     collapse_sustain_checks: int = 10          # consecutive minutes required
     collapse_cooldown_s: float = 21_600.0      # 6h between restores
