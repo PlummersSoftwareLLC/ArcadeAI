@@ -747,10 +747,13 @@ class RLConfigData:
     score_torn_read_tolerance: int = 100_000
     # Lives estimation for the client-table column (server-side derivation —
     # the Lua doesn't read a lives byte).  lives = start + true_score//interval
-    # - deaths_this_game.  Both values are MACHINE DIP SETTINGS: verify against
-    # the on-screen reserve icons and adjust if the cabinet differs.
+    # - deaths_this_game.  Calibrated empirically 2026-07-20: at 25K the
+    # estimate went net-negative ~wave 60 (clamped to 0) while the game showed
+    # ~7 icons at 3.09M/wave 98; a 20K interval reconciles the column, the
+    # on-screen icons, AND the FtlPct-derived death rate (~1.5/wave) in one
+    # number — this machine awards every 20,000.
     lives_start: int = 3
-    lives_replay_interval: int = 25_000
+    lives_replay_interval: int = 20_000
     hof_replay_fraction: float = 0.10      # guaranteed batch quota once seeded
     hof_min_transitions: int = 4_096       # quota activates only past this
 

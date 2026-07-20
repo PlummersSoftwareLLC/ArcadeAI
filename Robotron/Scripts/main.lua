@@ -2222,7 +2222,7 @@ HUD_SCREEN_X_SCALE = 2         -- Robotron pixels are doubled horizontally on sc
 -- are derived locally from three RAM reads — no protocol involvement.
 -- Constants mirror the machine DIPs (and config.py lives_start/interval).
 HUD_LIVES_START = 3
-HUD_REPLAY_INTERVAL = 25000
+HUD_REPLAY_INTERVAL = 20000
 hud_stats_mem = nil
 hud_stats_deaths = 0
 hud_stats_wraps = 0
