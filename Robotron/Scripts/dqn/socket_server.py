@@ -968,6 +968,12 @@ class SocketServer:
 
         self.clients = {}
         self.client_states = {}
+        # Unwrap continuity across reconnects, keyed by cid: a socket blip
+        # must not zero score_offset/wave_offset while the game keeps
+        # running (client 24 came back mid-marathon reading wave 36 instead
+        # of 292 — Eff 258K).  Written on disconnect, consumed by the first
+        # frame of the next connection when the raw score says same-game.
+        self._unwrap_stash = {}
         # Per-cid eval override from the handshake (--eval / --noeval).
         # True=force eval, False=force non-eval, absent=auto (cid%stride rule).
         self._eval_override = {}
@@ -1442,7 +1448,35 @@ class SocketServer:
                         _prev_for_log = _prev_sc
                         _new_game_max = int(getattr(RL_CONFIG, "score_new_game_max", 100_000))
                         if _prev_sc is None:
-                            pass  # first frame of the connection: accept as-is
+                            # First frame of the connection.  If this cid
+                            # disconnected mid-game and the game kept running
+                            # (raw score at or above where we last saw it —
+                            # BCD score is monotonic within a game), inherit
+                            # the unwrap offsets instead of zeroing them, and
+                            # catch a wrap that happened during the gap.
+                            _stash = self._unwrap_stash.pop(cid, None)
+                            if _stash is not None:
+                                _s_sc = _stash.get("raw_score_prev")
+                                _s_wv = _stash.get("raw_wave_prev")
+                                _mod = int(getattr(RL_CONFIG, "score_wrap_modulus", 100_000_000))
+                                _same_game = (_s_sc is not None and _raw_sc >= _s_sc
+                                              and _raw_sc > _new_game_max)
+                                _gap_wrap = (_s_sc is not None and _s_sc >= 0.9 * _mod
+                                             and _raw_sc <= 0.1 * _mod)
+                                if _same_game or _gap_wrap:
+                                    _cs0["score_offset"] = int(_stash.get("score_offset", 0))
+                                    _cs0["wave_offset"] = int(_stash.get("wave_offset", 0))
+                                    _cs0["deaths_this_game"] = int(_stash.get("deaths_this_game", 0))
+                                    if _gap_wrap:
+                                        _cs0["score_offset"] += _mod
+                                    if _s_wv is not None and _raw_wv < _s_wv - 200:
+                                        _cs0["wave_offset"] += 256
+                                    _wrap_note = (
+                                        f"[UNWRAP] cid={cid} reconnect mid-game: inherited "
+                                        f"score_offset {_cs0['score_offset']:,}, "
+                                        f"wave_offset {_cs0['wave_offset']} "
+                                        f"(raw {_raw_sc:,} wv {_raw_wv}; "
+                                        f"stashed {_s_sc:,} wv {_s_wv})")
                         elif _raw_sc > _prev_sc + _MAX_SCORE_JUMP:
                             _verdict = "crash-jump"
                         elif _raw_sc < _prev_sc:
@@ -1939,6 +1973,11 @@ class SocketServer:
                 pass
             with self.client_lock:
                 _dead_cs = self.client_states.pop(cid, None)
+                if _dead_cs is not None and _dead_cs.get("raw_score_prev") is not None:
+                    self._unwrap_stash[cid] = {
+                        k: _dead_cs.get(k)
+                        for k in ("raw_score_prev", "raw_wave_prev",
+                                  "score_offset", "wave_offset", "deaths_this_game")}
                 self._eval_override.pop(cid, None)
                 self.clients[cid] = None
                 _, preview_changed = self._ensure_preview_client_selected_locked()
