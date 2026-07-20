@@ -670,9 +670,11 @@ class AsyncReplayBuffer:
         except queue.Full:
             self._record_drop()
 
-    def boost_elite_episode(self, client_id, score: int, level: int, total_reward: float, ep_len: int):
+    def boost_elite_episode(self, client_id, score: int, level: int, total_reward: float, ep_len: int,
+                            ep_score: int = 0):
         try:
-            self.queue.put_nowait(("elite", client_id, (int(score), int(level), float(total_reward), int(ep_len)), None))
+            self.queue.put_nowait(("elite", client_id,
+                                   (int(score), int(level), float(total_reward), int(ep_len), int(ep_score)), None))
         except queue.Full:
             self._record_drop()
 
@@ -748,7 +750,8 @@ class AsyncReplayBuffer:
             level_thr = max(level_thr, hwm_l - float(getattr(RL_CONFIG, "elite_ratchet_level_slack", 1.0)))
         return score_thr, level_thr
 
-    def _do_elite_episode_boost(self, client_id, score: int, level: int, total_reward: float, ep_len: int):
+    def _do_elite_episode_boost(self, client_id, score: int, level: int, total_reward: float, ep_len: int,
+                                ep_score: int = 0):
         indices = self._episode_indices.get(client_id)
         # Every finished episode feeds the adaptive gate, boosted or not —
         # thresholds must track typical play, not just elite play.
@@ -767,6 +770,12 @@ class AsyncReplayBuffer:
                 self.agent.memory.hof_admit(list(indices), int(score))
             except Exception as e:
                 print(f"  HOF admission error: {e}")
+        # EpHOF: same indices, keyed by the score earned WITHIN this life.
+        if bool(getattr(RL_CONFIG, "ephof_enabled", False)) and int(ep_score) > 0:
+            try:
+                self.agent.memory.ephof_admit(list(indices), int(ep_score))
+            except Exception as e:
+                print(f"  EpHOF admission error: {e}")
         try:
             e_score_thr, e_level_thr = self._elite_thresholds(
                 float(getattr(RL_CONFIG, "elite_adaptive_percentile", 90.0)),
@@ -1548,6 +1557,10 @@ class SocketServer:
                         # a poisoned first RScr bucket (the 67 pts/frame boot
                         # spike that crushed the Score Rate chart's scale).
                         cs["last_game_score"] = int(frame.game_score)
+                        # Same reconnect hazard for the EpHOF per-life
+                        # baseline: without this stamp the first life of a
+                        # reconnect would claim the whole game score.
+                        cs["ep_start_score"] = int(frame.game_score)
                     cs["level_number"] = frame.level_number
                     cs["game_score"] = frame.game_score
                     cs["player_alive"] = bool(frame.player_alive)
@@ -1781,7 +1794,9 @@ class SocketServer:
                             if self.async_buffer is not None and not metrics.ratchet_frozen:
                                 self.async_buffer.boost_elite_episode(
                                     cid, frame.game_score, frame.level_number,
-                                    cs["total_reward"], ep_len)
+                                    cs["total_reward"], ep_len,
+                                    ep_score=max(0, int(frame.game_score)
+                                                 - int(cs.get("ep_start_score", 0))))
                             try:
                                 ep_dqn = cs.get("ep_dqn_score_reward", cs["ep_dqn_reward"])
                                 ep_dqn_frames = cs.get("ep_dqn_frames", 0)
@@ -1824,6 +1839,9 @@ class SocketServer:
                     # New game starts here — stamp it so ratchet measurements can
                     # exclude games already in flight when the fleet was frozen.
                     cs["ep_t0"] = time.time()
+                    # Per-life score baseline for EpHOF admission: this life's
+                    # score = terminal game_score minus this stamp.
+                    cs["ep_start_score"] = int(frame.game_score)
                     cs["total_reward"] = cs["ep_dqn_reward"] = cs["ep_dqn_score_reward"] = cs["ep_expert_reward"] = 0.0
                     cs["ep_subj_reward"] = cs["ep_obj_reward"] = cs["ep_death_reward"] = 0.0
                     cs["ep_frames"] = 0

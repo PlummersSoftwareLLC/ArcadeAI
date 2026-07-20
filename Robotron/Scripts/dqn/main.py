@@ -125,6 +125,17 @@ def print_buffer_stats(agent, kb):
                 print(f"  Scores:   best {hof['best']:>9,.0f}   median {hof['median']:>9,.0f}   "
                       f"worst {hof['worst']:>9,.0f}")
             print(f"  Admission bar: {hof['admission_floor']:>9,.0f}  (episodes below this can never enter)")
+        ephof = stats.get("ephof")
+        if ephof:
+            print("-" * 70)
+            print("  EpHOF — PER-LIFE HALL OF FAME (best single-life scores)")
+            quota = f"{ephof['fraction']*100:.0f}% of batch" if ephof["quota_active"] else "inactive (seeding)"
+            print(f"  Episodes: {ephof['episodes']:>4} / {ephof['max_episodes']:<4}  "
+                  f"Transitions: {ephof['transitions']:>9,}   Quota: {quota}")
+            if ephof.get("episodes", 0) > 0:
+                print(f"  Life scores: best {ephof['best']:>9,.0f}   median {ephof['median']:>9,.0f}   "
+                      f"worst {ephof['worst']:>9,.0f}")
+            print(f"  Admission bar: {ephof['admission_floor']:>9,.0f}  (per-life score a new life must beat)")
         print("=" * 70 + "\n")
         if kb and IS_INTERACTIVE:
             kb.set_raw_mode()

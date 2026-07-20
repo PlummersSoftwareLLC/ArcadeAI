@@ -186,6 +186,34 @@ class PrioritizedReplayBuffer:
             self.hof_ep_len      = np.zeros(self._hof_max_eps, dtype=np.int32)
             self._hof_flat       = np.empty(0, dtype=np.int64)
 
+        # ── EpHOF: episode (per-life) hall of fame (2026-07) ─────────────
+        # Same permanence contract as the game HOF, but admission is keyed
+        # by score earned within a single life.  Best lives cluster at the
+        # deepest waves — the state distribution the ring is thinnest on.
+        self._ephof_dir = None
+        self._ephof_enabled = bool(getattr(RL_CONFIG, "ephof_enabled", False))
+        self.ephof_ep_count = 0
+        self.ephof_total = 0
+        if self._ephof_enabled:
+            self._ephof_max_eps = max(1, int(getattr(RL_CONFIG, "ephof_max_episodes", 192)))
+            self._ephof_stride = max(64, int(getattr(RL_CONFIG, "ephof_episode_stride", 2048)))
+            ephof_slots = self._ephof_max_eps * self._ephof_stride
+            self.ephof_states      = np.zeros((ephof_slots, self.state_size), dtype=np.float32)
+            self.ephof_next_states = np.zeros((ephof_slots, self.state_size), dtype=np.float32)
+            self.ephof_actions     = np.zeros(ephof_slots, dtype=np.int64)
+            self.ephof_rewards     = np.zeros(ephof_slots, dtype=np.float32)
+            self.ephof_dones       = np.zeros(ephof_slots, dtype=np.float32)
+            self.ephof_horizons    = np.ones(ephof_slots, dtype=np.int32)
+            self.ephof_is_expert   = np.zeros(ephof_slots, dtype=np.uint8)
+            self.ephof_actor_kind  = np.zeros(ephof_slots, dtype=np.uint8)
+            self.ephof_ep_score    = np.full(self._ephof_max_eps, -np.inf, dtype=np.float64)
+            self.ephof_ep_len      = np.zeros(self._ephof_max_eps, dtype=np.int32)
+            self._ephof_flat       = np.empty(0, dtype=np.int64)
+        # EpHOF sentinel indices start past the game-HOF sentinel span so the
+        # two banks can never alias in update_priorities' >= capacity filter.
+        self._ephof_base = self.capacity + (
+            self._hof_max_eps * self._hof_stride if self._hof_enabled else 0)
+
     @staticmethod
     def actor_kind_from_name(actor: str | None, expert: int = 0) -> int:
         if expert:
@@ -509,6 +537,74 @@ class PrioritizedReplayBuffer:
                  for ep in range(self.hof_ep_count) if self.hof_ep_len[ep] > 0]
         self._hof_flat = np.concatenate(parts) if parts else np.empty(0, dtype=np.int64)
 
+    def ephof_admit(self, indices, episode_score: int) -> bool:
+        """Copy an episode into the per-life hall of fame if its SINGLE-LIFE
+        score ranks all-time.  Same absolute-admission contract as hof_admit
+        (static floor + replace-the-minimum once full); whole life kept,
+        tail-capped at the stride.  Returns True when admitted."""
+        if not self._ephof_enabled:
+            return False
+        score = float(episode_score)
+        if score < float(getattr(RL_CONFIG, "ephof_min_episode_score", 25_000)):
+            return False
+        with self.lock:
+            idxs = np.asarray(list(indices), dtype=np.int64)
+            idxs = idxs[(idxs >= 0) & (idxs < self.size)]
+            if idxs.size < 32:
+                return False
+            if idxs.size > self._ephof_stride:
+                idxs = idxs[-self._ephof_stride:]
+            if self.ephof_ep_count < self._ephof_max_eps:
+                ep = self.ephof_ep_count
+                self.ephof_ep_count += 1
+            else:
+                ep = int(np.argmin(self.ephof_ep_score))
+                if score <= float(self.ephof_ep_score[ep]):
+                    return False
+                self.ephof_total -= int(self.ephof_ep_len[ep])
+            base = ep * self._ephof_stride
+            n = int(idxs.size)
+            self.ephof_states[base:base + n]      = self.states[idxs]
+            self.ephof_next_states[base:base + n] = self.next_states[idxs]
+            self.ephof_actions[base:base + n]     = self.actions[idxs]
+            self.ephof_rewards[base:base + n]     = self.rewards[idxs]
+            self.ephof_dones[base:base + n]       = self.dones[idxs]
+            self.ephof_horizons[base:base + n]    = self.horizons[idxs]
+            self.ephof_is_expert[base:base + n]   = self.is_expert[idxs]
+            self.ephof_actor_kind[base:base + n]  = self.actor_kind[idxs]
+            self.ephof_ep_score[ep] = score
+            self.ephof_ep_len[ep] = n
+            self.ephof_total += n
+            self._ephof_rebuild_flat_locked()
+            return True
+
+    def _ephof_rebuild_flat_locked(self):
+        parts = [np.arange(ep * self._ephof_stride, ep * self._ephof_stride + int(self.ephof_ep_len[ep]), dtype=np.int64)
+                 for ep in range(self.ephof_ep_count) if self.ephof_ep_len[ep] > 0]
+        self._ephof_flat = np.concatenate(parts) if parts else np.empty(0, dtype=np.int64)
+
+    def _ephof_stats_locked(self):
+        """EpHOF summary for the buffer stats report (call under lock)."""
+        if not self._ephof_enabled:
+            return None
+        n = self.ephof_ep_count
+        quota_active = self.ephof_total >= int(getattr(RL_CONFIG, "ephof_min_transitions", 4096))
+        stats = {
+            "episodes": n,
+            "max_episodes": self._ephof_max_eps,
+            "transitions": self.ephof_total,
+            "quota_active": quota_active,
+            "fraction": float(getattr(RL_CONFIG, "ephof_replay_fraction", 0.0)) if quota_active else 0.0,
+            "admission_floor": float(getattr(RL_CONFIG, "ephof_min_episode_score", 0)),
+        }
+        if n > 0:
+            scores = self.ephof_ep_score[:n]
+            stats.update(best=float(scores.max()), worst=float(scores.min()),
+                         median=float(np.median(scores)))
+            if n >= self._ephof_max_eps:
+                stats["admission_floor"] = max(stats["admission_floor"], float(scores.min()))
+        return stats
+
     def sample(self, batch_size: int, beta: float = 0.4):
         """Sample a prioritised batch. Returns (states, actions, rewards,
         next_states, dones, horizons, is_expert, actor_kind, indices, weights)."""
@@ -526,6 +622,13 @@ class PrioritizedReplayBuffer:
             if self._hof_enabled and self.hof_total >= int(getattr(RL_CONFIG, "hof_min_transitions", 4096)):
                 hof_frac = max(0.0, min(0.25, float(getattr(RL_CONFIG, "hof_replay_fraction", 0.0))))
                 hof_count = min(batch_size // 4, int(round(batch_size * hof_frac)))
+            ephof_count = 0
+            if self._ephof_enabled and self.ephof_total >= int(getattr(RL_CONFIG, "ephof_min_transitions", 4096)):
+                ephof_frac = max(0.0, min(0.30, float(getattr(RL_CONFIG, "ephof_replay_fraction", 0.0))))
+                ephof_count = min(batch_size // 4, int(round(batch_size * ephof_frac)))
+            # Combined banks may never crowd the ring below half the batch.
+            if hof_count + ephof_count > batch_size // 2:
+                ephof_count = max(0, batch_size // 2 - hof_count)
 
             frac = max(0.0, min(0.75, float(getattr(RL_CONFIG, "interesting_replay_fraction", 0.0))))
             recent_frac = max(0.0, min(0.75, float(getattr(RL_CONFIG, "recent_replay_fraction", 0.0))))
@@ -533,7 +636,7 @@ class PrioritizedReplayBuffer:
                 scale = 0.90 / (frac + recent_frac)
                 frac *= scale
                 recent_frac *= scale
-            ring_budget = batch_size - hof_count
+            ring_budget = batch_size - hof_count - ephof_count
             interesting_count = min(ring_budget - 1, int(round(batch_size * frac))) if frac > 0.0 else 0
             interesting_indices = self._sample_interesting_indices(interesting_count)
             recent_count = min(ring_budget - int(interesting_indices.size) - 1, int(round(batch_size * recent_frac))) if recent_frac > 0.0 else 0
@@ -558,28 +661,44 @@ class PrioritizedReplayBuffer:
             # toward the newest minutes of the policy's own play (the
             # positive-feedback engine of every collapse).  Quota and HOF
             # samples get weight 1.0.
-            weights = np.ones(int(indices.size) + hof_count, dtype=np.float64)
+            weights = np.ones(int(indices.size) + hof_count + ephof_count, dtype=np.float64)
             if per_indices.size:
                 pri = np.maximum(1e-10, self.tree.tree[per_indices + self.tree.capacity])
                 w = (self.size * (pri / total)) ** (-beta)
                 weights[:per_indices.size] = w / max(1e-12, float(w.max()))
 
+            # Bank rows (HOF / EpHOF) ride sentinel indices >= capacity;
+            # update_priorities filters them out (no sum-tree leaves).  EpHOF
+            # sentinels start at _ephof_base, past the game-HOF span, so the
+            # two banks cannot alias.
+            banks = []
             if hof_count > 0:
-                hof_slots = self._hof_flat[np.random.randint(0, self._hof_flat.size, hof_count)]
-                # Sentinel indices >= capacity mark HOF rows; update_priorities
-                # filters them out (they have no sum-tree leaves).
-                all_indices = np.concatenate([indices, self.capacity + hof_slots])
+                banks.append(("hof", self.capacity,
+                              self._hof_flat[np.random.randint(0, self._hof_flat.size, hof_count)]))
+            if ephof_count > 0:
+                banks.append(("ephof", self._ephof_base,
+                              self._ephof_flat[np.random.randint(0, self._ephof_flat.size, ephof_count)]))
+            if banks:
+                all_indices = np.concatenate(
+                    [indices] + [base + slots for _, base, slots in banks])
+
+                def _cat(field, cast=None):
+                    # fp16 ring + fp32 banks: concat promotes to fp32 (free);
+                    # astype guards the invariant if bank dtype ever changes.
+                    parts = [getattr(self, field)[indices]] + [
+                        getattr(self, f"{prefix}_{field}")[slots] for prefix, _, slots in banks]
+                    out = np.concatenate(parts)
+                    return out.astype(cast, copy=False) if cast is not None else out
+
                 return (
-                    # fp16 ring + fp32 HOF: concat promotes to fp32 (free);
-                    # astype guards the invariant if HOF dtype ever changes.
-                    np.concatenate([self.states[indices],      self.hof_states[hof_slots]]).astype(np.float32, copy=False),
-                    np.concatenate([self.actions[indices],     self.hof_actions[hof_slots]]),
-                    np.concatenate([self.rewards[indices],     self.hof_rewards[hof_slots]]),
-                    np.concatenate([self.next_states[indices], self.hof_next_states[hof_slots]]).astype(np.float32, copy=False),
-                    np.concatenate([self.dones[indices],       self.hof_dones[hof_slots]]),
-                    np.concatenate([self.horizons[indices],    self.hof_horizons[hof_slots]]),
-                    np.concatenate([self.is_expert[indices],   self.hof_is_expert[hof_slots]]),
-                    np.concatenate([self.actor_kind[indices],  self.hof_actor_kind[hof_slots]]),
+                    _cat("states", np.float32),
+                    _cat("actions"),
+                    _cat("rewards"),
+                    _cat("next_states", np.float32),
+                    _cat("dones"),
+                    _cat("horizons"),
+                    _cat("is_expert"),
+                    _cat("actor_kind"),
                     all_indices,
                     weights.astype(np.float32),
                 )
@@ -768,6 +887,7 @@ class PrioritizedReplayBuffer:
                 "interesting": self._n_interesting,
                 "frac_interesting": self._n_interesting / max(1, self.size),
                 "hof": self._hof_stats_locked(),
+                "ephof": self._ephof_stats_locked(),
             }
 
     # ── Persistence ─────────────────────────────────────────────────────
@@ -833,6 +953,63 @@ class PrioritizedReplayBuffer:
                   f"(best {self.hof_ep_score[:self.hof_ep_count].max():,.0f})")
         return True
 
+    def _save_ephof(self, dirpath: str, verbose: bool = True):
+        """Persist the EpHOF to its own sibling directory (same survive-the-
+        revert contract as the game HOF)."""
+        if not self._ephof_enabled or self.ephof_ep_count == 0:
+            return
+        with self.lock:
+            os.makedirs(dirpath, exist_ok=True)
+            used = self.ephof_ep_count * self._ephof_stride
+            np.save(os.path.join(dirpath, "ephof_states.npy"), self.ephof_states[:used])
+            np.save(os.path.join(dirpath, "ephof_next_states.npy"), self.ephof_next_states[:used])
+            np.save(os.path.join(dirpath, "ephof_actions.npy"), self.ephof_actions[:used])
+            np.save(os.path.join(dirpath, "ephof_rewards.npy"), self.ephof_rewards[:used])
+            np.save(os.path.join(dirpath, "ephof_dones.npy"), self.ephof_dones[:used])
+            np.save(os.path.join(dirpath, "ephof_horizons.npy"), self.ephof_horizons[:used])
+            np.save(os.path.join(dirpath, "ephof_is_expert.npy"), self.ephof_is_expert[:used])
+            np.save(os.path.join(dirpath, "ephof_actor_kind.npy"), self.ephof_actor_kind[:used])
+            np.savez(os.path.join(dirpath, "ephof_meta.npz"),
+                     ep_score=self.ephof_ep_score[:self.ephof_ep_count],
+                     ep_len=self.ephof_ep_len[:self.ephof_ep_count],
+                     stride=np.int64(self._ephof_stride),
+                     state_size=np.int64(self.state_size))
+            if verbose:
+                print(f"  EpHOF saved: {self.ephof_ep_count} episodes / {self.ephof_total:,} transitions")
+
+    def _load_ephof(self, dirpath: str, verbose: bool = True) -> bool:
+        if not self._ephof_enabled or not os.path.isdir(dirpath):
+            return False
+        meta_path = os.path.join(dirpath, "ephof_meta.npz")
+        if not os.path.isfile(meta_path):
+            return False
+        meta = np.load(meta_path)
+        if int(meta["stride"]) != self._ephof_stride or int(meta["state_size"]) != self.state_size:
+            print("  EpHOF load skipped: stride/state_size mismatch with config")
+            return False
+        with self.lock:
+            ep_score = np.asarray(meta["ep_score"], dtype=np.float64)
+            ep_len = np.asarray(meta["ep_len"], dtype=np.int32)
+            n_eps = min(int(ep_score.shape[0]), self._ephof_max_eps)
+            used = n_eps * self._ephof_stride
+            self.ephof_states[:used] = np.load(os.path.join(dirpath, "ephof_states.npy"))[:used]
+            self.ephof_next_states[:used] = np.load(os.path.join(dirpath, "ephof_next_states.npy"))[:used]
+            self.ephof_actions[:used] = np.load(os.path.join(dirpath, "ephof_actions.npy"))[:used]
+            self.ephof_rewards[:used] = np.load(os.path.join(dirpath, "ephof_rewards.npy"))[:used]
+            self.ephof_dones[:used] = np.load(os.path.join(dirpath, "ephof_dones.npy"))[:used]
+            self.ephof_horizons[:used] = np.load(os.path.join(dirpath, "ephof_horizons.npy"))[:used]
+            self.ephof_is_expert[:used] = np.load(os.path.join(dirpath, "ephof_is_expert.npy"))[:used]
+            self.ephof_actor_kind[:used] = np.load(os.path.join(dirpath, "ephof_actor_kind.npy"))[:used]
+            self.ephof_ep_score[:n_eps] = ep_score[:n_eps]
+            self.ephof_ep_len[:n_eps] = ep_len[:n_eps]
+            self.ephof_ep_count = n_eps
+            self.ephof_total = int(self.ephof_ep_len[:n_eps].sum())
+            self._ephof_rebuild_flat_locked()
+        if verbose:
+            print(f"  EpHOF loaded: {self.ephof_ep_count} episodes / {self.ephof_total:,} transitions "
+                  f"(best life {self.ephof_ep_score[:self.ephof_ep_count].max():,.0f})")
+        return True
+
     def save(self, filepath: str, verbose: bool = True):
         """Save the full replay buffer as individual .npy files in a directory."""
         abs_path = os.path.abspath(filepath)
@@ -840,6 +1017,10 @@ class PrioritizedReplayBuffer:
             self._save_hof(self._hof_dir or (abs_path + "_hof"), verbose)
         except Exception as e:
             print(f"  [WARN] HOF save failed: {e}")
+        try:
+            self._save_ephof(self._ephof_dir or (abs_path + "_ephof"), verbose)
+        except Exception as e:
+            print(f"  [WARN] EpHOF save failed: {e}")
         if self._mmap_dir is not None and os.path.abspath(self._mmap_dir) == abs_path:
             with self.lock:
                 t0 = time.time()
@@ -1355,6 +1536,10 @@ class PrioritizedReplayBuffer:
             self._load_hof(self._hof_dir or (os.path.abspath(filepath) + "_hof"), verbose)
         except Exception as e:
             print(f"  [WARN] HOF load failed: {e}")
+        try:
+            self._load_ephof(self._ephof_dir or (os.path.abspath(filepath) + "_ephof"), verbose)
+        except Exception as e:
+            print(f"  [WARN] EpHOF load failed: {e}")
         # Try directory format (new fast path)
         ok = False
         promote_dir = filepath if not filepath.endswith(".npz") else filepath[:-4]

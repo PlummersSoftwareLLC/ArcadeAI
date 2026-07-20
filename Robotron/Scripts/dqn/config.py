@@ -756,6 +756,19 @@ class RLConfigData:
     lives_replay_interval: int = 20_000
     hof_replay_fraction: float = 0.10      # guaranteed batch quota once seeded
     hof_min_transitions: int = 4_096       # quota activates only past this
+    # ── EpHOF: episode (per-life) hall of fame ──────────────────────────
+    # Admission keyed by SCORE EARNED WITHIN A SINGLE LIFE, not game total.
+    # The game HOF selects marathon construction; EpHOF selects the densest
+    # frontier skill the fleet produces — sustained deep-wave lives — and
+    # those cluster exactly where the buffer's state distribution is
+    # thinnest.  Whole episode kept (tail-capped at the stride).  Training
+    # mix target: 75% PER ring / 10% HOF / 15% EpHOF.
+    ephof_enabled: bool = True
+    ephof_max_episodes: int = 192
+    ephof_episode_stride: int = 2048       # cap; longer lives keep the tail
+    ephof_min_episode_score: int = 25_000  # absolute per-life admission floor
+    ephof_replay_fraction: float = 0.15    # guaranteed batch quota once seeded
+    ephof_min_transitions: int = 4_096     # quota activates only past this
 
     # Target network (periodic hard sync)
     target_update_period: int = 1_000

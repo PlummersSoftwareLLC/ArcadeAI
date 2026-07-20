@@ -150,6 +150,7 @@ class RainbowAgent:
         # fame stays on the model disk (durable across reboot/revert).
         _model_replay = LATEST_MODEL_PATH.rsplit(".", 1)[0] + "_replay"
         self.memory._hof_dir = _model_replay + "_hof"
+        self.memory._ephof_dir = _model_replay + "_ephof"
         _tmpfs = str(getattr(cfg, "replay_tmpfs_dir", "") or "").strip()
         if _tmpfs and os.path.isdir(_tmpfs):
             self._ring_dir = os.path.join(_tmpfs, os.path.basename(_model_replay))
