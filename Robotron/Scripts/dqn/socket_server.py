@@ -1481,9 +1481,12 @@ class SocketServer:
                                 _gap_wrap = (_s_sc is not None and _s_sc >= 0.9 * _mod
                                              and _raw_sc <= 0.1 * _mod)
                                 if _same_game or _gap_wrap:
-                                    _cs0["score_offset"] = int(_stash.get("score_offset", 0))
-                                    _cs0["wave_offset"] = int(_stash.get("wave_offset", 0))
-                                    _cs0["deaths_this_game"] = int(_stash.get("deaths_this_game", 0))
+                                    # `or 0`: the stash stores whatever the dead
+                                    # state held, which is None for keys the
+                                    # unwrap machinery never touched.
+                                    _cs0["score_offset"] = int(_stash.get("score_offset") or 0)
+                                    _cs0["wave_offset"] = int(_stash.get("wave_offset") or 0)
+                                    _cs0["deaths_this_game"] = int(_stash.get("deaths_this_game") or 0)
                                     if _gap_wrap:
                                         _cs0["score_offset"] += _mod
                                     if _s_wv is not None and _raw_wv < _s_wv - 200:
