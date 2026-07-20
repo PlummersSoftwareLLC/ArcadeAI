@@ -2416,7 +2416,7 @@ def _render_dashboard_html() -> str:
           {
             key: "rscr1m",
             color: "#22d3ee",
-            axis: { side: "left", min: 0, group_keys: ["rscr_now", "rscr1m", "rscr5m"], max_floor: 10, tick_decimals: 1 },
+            axis: { side: "left", group_keys: ["rscr_now", "rscr1m", "rscr5m"], tick_decimals: 1 },
             smooth_alpha: 0.35,
           },
           { key: "rscr5m", color: "#f59e0b", axis_ref: "rscr1m", smooth_alpha: 0.55 },
