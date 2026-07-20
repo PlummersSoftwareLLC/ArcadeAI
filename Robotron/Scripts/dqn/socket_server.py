@@ -1460,6 +1460,13 @@ class SocketServer:
                                 _cs0["score_offset"] = 0
                                 _cs0["wave_offset"] = 0
                                 _cs0["deaths_this_game"] = 0
+                            elif (_prev_sc - _raw_sc) <= int(getattr(
+                                    RL_CONFIG, "score_torn_read_tolerance", 100_000)):
+                                # Torn BCD read: keep the frame, coerce the
+                                # score to the baseline (raw tracker keeps the
+                                # baseline too — the next clean read resumes).
+                                frame.game_score = _prev_sc
+                                _raw_sc = _prev_sc
                             else:
                                 _verdict = "crash-drop"
                         if _verdict == "accept":

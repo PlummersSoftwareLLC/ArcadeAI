@@ -737,6 +737,14 @@ class RLConfigData:
     # phantom 10M jackets.  Per-life EScr1M was immune: offsets cancel in
     # deltas.)
     score_wrap_modulus: int = 100_000_000
+    # Small downward score dips are BCD carry-propagation TEARS (the read
+    # lands between the low-byte write and the carry into the next byte:
+    # ...175+25 reads as ...100 for one frame).  Observed -50 to -9,000.
+    # Within this tolerance the frame is ACCEPTED with the score coerced to
+    # the baseline — the state/action data is fine, only the score byte was
+    # mid-write — instead of dropped with a no-op (which cost a control
+    # frame per tear).  Larger unexplained dips remain crash-drops.
+    score_torn_read_tolerance: int = 100_000
     # Lives estimation for the client-table column (server-side derivation —
     # the Lua doesn't read a lives byte).  lives = start + true_score//interval
     # - deaths_this_game.  Both values are MACHINE DIP SETTINGS: verify against
