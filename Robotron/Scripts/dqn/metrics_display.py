@@ -253,8 +253,8 @@ def display_metrics_header():
     row_counter = 0
     hdr = (
         f"{'Frame':>11} {'Steps':>10} {'FPS':>7} {'Epsi':>7} {'Xprt':>7} "
-        f"{'Scr1M':>9} {'RScr1M':>7} {'Lvl1M':>6} "
-        f"{'Rwrd':>9} {'Score':>9} {'Shape':>9} {'Death':>9} {'DQN100K/F':>9} {'DQN1M/F':>9} {'DQN5M/F':>9} {'DQN10M/F':>9} "
+        f"{'Scr1M':>9} {'RScr1M':>7} {'RScr5M':>7} {'Lvl1M':>6} "
+        f"{'Rwrd':>9} {'Score':>9} {'Shape':>9} {'DQN1M/F':>9} {'DQN5M/F':>9} {'DQN10M/F':>9} "
         f"{'EvalR':>8} {'EScr1M':>8} {'ELvl1M':>7} {'EScrF':>6} {'ELvNow':>7} {'S/Wave':>7} "
         f"{'Loss':>10} {'AgrM%':>6} {'AgrF%':>6} "
         f"{'EpLen':>8} {'FtlPct':>7} {'SubjW':>6} {'DqnB%':>6} {'EpsB%':>6} "
@@ -314,12 +314,13 @@ def display_metrics_row(agent, kb_handler):
         # lock) self-deadlocks the process on the first stats row.
         try:
             _rscr1m = metrics.rscr_sum_score / max(1, metrics.rscr_sum_frames)
+            _rscr5m = metrics.rscr5_sum_score / max(1, metrics.rscr5_sum_frames)
             _einst_rate = metrics.eval_rate_sum_score / max(1, metrics.eval_rate_sum_frames)
             _einst_lvl = float(metrics.eval_now_level)
             _wcf = metrics.eval_wave_clear_frames
             _einst_spw = (sum(_wcf) / len(_wcf) / 60.0) if _wcf else 0.0
         except Exception:
-            _rscr1m = _einst_rate = _einst_lvl = _einst_spw = 0.0
+            _rscr1m = _rscr5m = _einst_rate = _einst_lvl = _einst_spw = 0.0
         metrics.eval_reward_sum_interval = 0.0
         metrics.eval_score_sum_interval = 0.0
         metrics.eval_level_sum_interval = 0.0
@@ -463,8 +464,8 @@ def display_metrics_row(agent, kb_handler):
 
     row = (
         f"{metrics.frame_count:>11,} {metrics.total_training_steps:>10,} {metrics.fps:>7.1f} {eps_pct} {xprt_pct} "
-        f"{average_game_score:>9,.0f} {_rscr1m:>7.1f} {display_level:>6.1f} "
-        f"{_fr(mean_reward*_prs)} {_fr(mean_obj*_prs)} {_fr(mean_subj*_prs)} {_fr(mean_death*_prs)} {_fr(dqn100k*_prs)} "
+        f"{average_game_score:>9,.0f} {_rscr1m:>7.1f} {_rscr5m:>7.1f} {display_level:>6.1f} "
+        f"{_fr(mean_reward*_prs)} {_fr(mean_obj*_prs)} {_fr(mean_subj*_prs)} "
         f"{_fr(dqn1m*_prs)} {_fr(dqn5m*_prs)} {_frp(dqn_pf*_prs, 9)} "
         f"{_fr(eval_reward*_prs, 8)} {eval_score:>8,.0f} {eval_level:>7.3f} "
         f"{_einst_rate:>6.1f} {_einst_lvl:>7.1f} {_einst_spw:>7.1f} "

@@ -638,6 +638,10 @@ class _DashboardState:
             subj_positive_weight = float(getattr(self.metrics, "last_subj_positive_weight", 1.0))
             last_q_mean = float(self.metrics.last_q_mean)
             training_enabled = bool(self.metrics.training_enabled)
+            rscr1m = float(getattr(self.metrics, "rscr_sum_score", 0.0)) / max(
+                1, int(getattr(self.metrics, "rscr_sum_frames", 0)))
+            rscr5m = float(getattr(self.metrics, "rscr5_sum_score", 0.0)) / max(
+                1, int(getattr(self.metrics, "rscr5_sum_frames", 0)))
             override_expert = bool(self.metrics.override_expert)
             override_epsilon = bool(self.metrics.override_epsilon)
             inference_requests = int(self.metrics.total_inference_requests)
@@ -754,6 +758,8 @@ class _DashboardState:
             "train_step_ms": float(getattr(self.metrics, "last_train_step_ms", 0.0)),
             "loss": last_loss,
             "grad_norm": last_grad_norm,
+            "rscr1m": rscr1m,
+            "rscr5m": rscr5m,
             "bc_loss": last_bc_loss,
             "sample_dqn_frac": sample_dqn_frac,
             "sample_epsilon_frac": sample_epsilon_frac,
@@ -1936,6 +1942,15 @@ def _render_dashboard_html() -> str:
         <canvas id="cLearning"></canvas>
       </article>
 
+      <article class="panel">
+        <h2>Score Rate (pts/frame)</h2>
+        <div class="legend">
+          <span><span class="sw" style="background:#22d3ee;"></span>RScr1M</span>
+          <span><span class="sw" style="background:#f59e0b;"></span>RScr5M</span>
+        </div>
+        <canvas id="cScoreRate"></canvas>
+      </article>
+
       <article class="panel" style="position:relative;">
         <div style="display:flex;align-items:baseline;justify-content:space-between;">
           <h2 style="margin:0;">Performance</h2>
@@ -2386,6 +2401,18 @@ def _render_dashboard_html() -> str:
             axis: { side: "right", min: 0, group_keys: ["bc_loss"], max_floor: 1.5, tick_decimals: 1 },
             smooth_alpha: 0.55,
           }
+        ]
+      },
+      scoreRate: {
+        canvas: document.getElementById("cScoreRate"),
+        series: [
+          {
+            key: "rscr1m",
+            color: "#22d3ee",
+            axis: { side: "left", min: 0, group_keys: ["rscr1m", "rscr5m"], max_floor: 10, tick_decimals: 1 },
+            smooth_alpha: 0.35,
+          },
+          { key: "rscr5m", color: "#f59e0b", axis_ref: "rscr1m", smooth_alpha: 0.55 }
         ]
       },
       gpu0: {
