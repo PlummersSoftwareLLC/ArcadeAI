@@ -2215,7 +2215,72 @@ HUD_PLAYER_BOX_W = 4           -- matches expert collision box width in pixels
 HUD_PLAYER_BOX_H = 12          -- matches expert collision box height in pixels
 HUD_SCREEN_X_SCALE = 2         -- Robotron pixels are doubled horizontally on screen
 
+-- ── HUD gameplay stats (2026-07-20) ─────────────────────────────────────
+-- LIVES / EFFICIENCY / true WAVE on the bottom line.  The 1982 ROM shows
+-- reserve lives only as icons (capped), so marathon reserves are invisible;
+-- home ports added a numeric line for exactly this reason.  All three stats
+-- are derived locally from three RAM reads — no protocol involvement.
+-- Constants mirror the machine DIPs (and config.py lives_start/interval).
+HUD_LIVES_START = 3
+HUD_REPLAY_INTERVAL = 25000
+hud_stats_mem = nil
+hud_stats_deaths = 0
+hud_stats_wraps = 0
+hud_stats_prev_score = nil
+hud_stats_prev_wave = nil
+hud_stats_prev_alive = nil
+
+local function hud_track_stats()
+    if not hud_stats_mem then
+        local ok, m = pcall(function()
+            return manager.machine.devices[":maincpu"].spaces["program"]
+        end)
+        if ok and m then hud_stats_mem = m else return end
+    end
+    local ok, score, wave, alive = pcall(function()
+        return read_player_score(hud_stats_mem),
+               read_wave_number(hud_stats_mem),
+               read_player_alive(hud_stats_mem)
+    end)
+    if not ok then return end
+    score = math.max(0, math.floor(tonumber(score) or 0))
+    wave = math.floor(tonumber(wave) or 0)
+    if hud_stats_prev_score ~= nil then
+        if score < hud_stats_prev_score and score < HUD_REPLAY_INTERVAL then
+            -- New game: counters reset.  (Small dips at high score are BCD
+            -- carry tears — ignored below by keeping prev at the max.)
+            hud_stats_deaths = 0
+            hud_stats_wraps = 0
+        elseif (hud_stats_prev_wave or 0) - wave > 200 and (alive or 0) ~= 0 then
+            hud_stats_wraps = hud_stats_wraps + 1   -- wave byte lapped 255
+        end
+        -- Death: alive 1 -> 0 that is NOT the between-wave teleport blink
+        -- (same guard as the training done signal).
+        if (hud_stats_prev_alive or 0) ~= 0 and (alive or 0) == 0
+                and wave <= (hud_stats_prev_wave or wave) then
+            hud_stats_deaths = hud_stats_deaths + 1
+        end
+    end
+    hud_stats_prev_score = math.max(score, (score < HUD_REPLAY_INTERVAL) and score
+                                    or (hud_stats_prev_score or score))
+    hud_stats_prev_wave = wave
+    hud_stats_prev_alive = alive
+end
+
+local function hud_stats_line()
+    local score = hud_stats_prev_score or 0
+    local true_wave = hud_stats_wraps * 256 + (hud_stats_prev_wave or 0)
+    local lives = math.max(0, HUD_LIVES_START
+                           + math.floor(score / HUD_REPLAY_INTERVAL)
+                           - hud_stats_deaths)
+    local eff = math.floor(score / math.max(1, true_wave))
+    return string.format("LIVES:%d  EFF:%d  WAVE:%d", lives, eff, true_wave)
+end
+
 function draw_debug_hud()
+    -- Stats accumulate every frame regardless of HUD visibility, so the
+    -- numbers are correct the moment the overlay is toggled on.
+    pcall(hud_track_stats)
     -- Toggle HUD on/off with the 'H' key (edge-triggered).
     local ok_input, inp = pcall(function() return manager.machine.input end)
     if ok_input and inp then
@@ -2276,6 +2341,12 @@ function draw_debug_hud()
             mame_screen:draw_text(100, 0, "HUD ACTIVE", 0xFF00FF00, 0xC0000000)
         end)
     end
+
+    -- Gameplay stats on the bottom line (LIVES / EFF / true WAVE).
+    pcall(function()
+        local h = tonumber(mame_screen.height) or 240
+        mame_screen:draw_text(2, h - 9, hud_stats_line(), 0xFF00FFFF, 0xC0000000)
+    end)
 
     -- Helper: draw the tight non-zero bitmap bounds used by collision art.
     local function draw_hitbox(x_px, y_px, off_x_px, off_y_px, w_px, h_px, color)
