@@ -642,6 +642,11 @@ class _DashboardState:
                 1, int(getattr(self.metrics, "rscr_sum_frames", 0)))
             rscr5m = float(getattr(self.metrics, "rscr5_sum_score", 0.0)) / max(
                 1, int(getattr(self.metrics, "rscr5_sum_frames", 0)))
+            # Instantaneous: newest ~100K frames plus the in-progress bucket.
+            rscr_now = (float(getattr(self.metrics, "rscr0_sum_score", 0.0))
+                        + float(getattr(self.metrics, "rscr_bucket_score", 0.0))) / max(
+                1, int(getattr(self.metrics, "rscr0_sum_frames", 0))
+                   + int(getattr(self.metrics, "rscr_bucket_frames", 0)))
             override_expert = bool(self.metrics.override_expert)
             override_epsilon = bool(self.metrics.override_epsilon)
             inference_requests = int(self.metrics.total_inference_requests)
@@ -760,6 +765,7 @@ class _DashboardState:
             "grad_norm": last_grad_norm,
             "rscr1m": rscr1m,
             "rscr5m": rscr5m,
+            "rscr_now": rscr_now,
             "bc_loss": last_bc_loss,
             "sample_dqn_frac": sample_dqn_frac,
             "sample_epsilon_frac": sample_epsilon_frac,
@@ -1945,6 +1951,7 @@ def _render_dashboard_html() -> str:
       <article class="panel">
         <h2>Score Rate (pts/frame)</h2>
         <div class="legend">
+          <span><span class="sw" style="background:#22c55e;"></span>RScr Now</span>
           <span><span class="sw" style="background:#22d3ee;"></span>RScr1M</span>
           <span><span class="sw" style="background:#f59e0b;"></span>RScr5M</span>
         </div>
@@ -2409,10 +2416,11 @@ def _render_dashboard_html() -> str:
           {
             key: "rscr1m",
             color: "#22d3ee",
-            axis: { side: "left", min: 0, group_keys: ["rscr1m", "rscr5m"], max_floor: 10, tick_decimals: 1 },
+            axis: { side: "left", min: 0, group_keys: ["rscr_now", "rscr1m", "rscr5m"], max_floor: 10, tick_decimals: 1 },
             smooth_alpha: 0.35,
           },
-          { key: "rscr5m", color: "#f59e0b", axis_ref: "rscr1m", smooth_alpha: 0.55 }
+          { key: "rscr5m", color: "#f59e0b", axis_ref: "rscr1m", smooth_alpha: 0.55 },
+          { key: "rscr_now", color: "#22c55e", axis_ref: "rscr1m", smooth_alpha: 0.15 }
         ]
       },
       gpu0: {

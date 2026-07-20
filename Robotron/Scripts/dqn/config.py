@@ -1527,6 +1527,10 @@ class MetricsData:
     rscr_sum_score: float = 0.0
     rscr5_sum_frames: int = 0
     rscr5_sum_score: float = 0.0
+    # "Instantaneous": the newest 100 buckets (~100K frames, ~25s of fleet
+    # time); readers should also fold in the in-progress bucket.
+    rscr0_sum_frames: int = 0
+    rscr0_sum_score: float = 0.0
 
     eval_score_1m_entries: Deque[tuple[float, float, int]] = field(default_factory=deque)
     eval_score_1m_frames: int = 0
@@ -1680,6 +1684,12 @@ class MetricsData:
                         _of, _os = self.rscr_entries[-1001]
                         self.rscr_sum_frames -= _of
                         self.rscr_sum_score -= _os
+                    self.rscr0_sum_frames += self.rscr_bucket_frames
+                    self.rscr0_sum_score += self.rscr_bucket_score
+                    if len(self.rscr_entries) > 100:
+                        _of, _os = self.rscr_entries[-101]
+                        self.rscr0_sum_frames -= _of
+                        self.rscr0_sum_score -= _os
                     self.rscr_bucket_frames = 0
                     self.rscr_bucket_score = 0.0
 
