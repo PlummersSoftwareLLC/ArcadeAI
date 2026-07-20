@@ -1505,6 +1505,15 @@ class SocketServer:
                         break
                     cs = self.client_states[cid]
                     cs["frames"] += 1
+                    if cs["frames"] == 1:
+                        # First frame of a connection: clients (re)connect
+                        # MID-GAME carrying real scores.  Baseline the score
+                        # tracker to the current value, or the initialized 0
+                        # makes the first delta equal the ENTIRE game score —
+                        # a giant spurious reward transition per reconnect and
+                        # a poisoned first RScr bucket (the 67 pts/frame boot
+                        # spike that crushed the Score Rate chart's scale).
+                        cs["last_game_score"] = int(frame.game_score)
                     cs["level_number"] = frame.level_number
                     cs["game_score"] = frame.game_score
                     cs["player_alive"] = bool(frame.player_alive)
