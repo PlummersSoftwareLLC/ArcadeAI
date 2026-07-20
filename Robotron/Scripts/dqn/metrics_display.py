@@ -309,8 +309,14 @@ def display_metrics_row(agent, kb_handler):
             eval_score = metrics.eval_average_score
             eval_level = metrics.eval_average_level
         # Instantaneous eval gauges (lag-free; see MetricsData 2026-07-20).
+        # We are INSIDE `with metrics.lock:` here — read the fields directly.
+        # Calling get_eval_instant() (which acquires the same non-reentrant
+        # lock) self-deadlocks the process on the first stats row.
         try:
-            _einst_rate, _einst_lvl, _einst_spw = metrics.get_eval_instant()
+            _einst_rate = metrics.eval_rate_sum_score / max(1, metrics.eval_rate_sum_frames)
+            _einst_lvl = float(metrics.eval_now_level)
+            _wcf = metrics.eval_wave_clear_frames
+            _einst_spw = (sum(_wcf) / len(_wcf) / 60.0) if _wcf else 0.0
         except Exception:
             _einst_rate = _einst_lvl = _einst_spw = 0.0
         metrics.eval_reward_sum_interval = 0.0
