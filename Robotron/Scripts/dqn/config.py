@@ -1515,6 +1515,14 @@ class MetricsData:
     eval_rate_sum_score: float = 0.0
     eval_now_level: float = 0.0
     eval_wave_clear_frames: Deque[int] = field(default_factory=lambda: deque(maxlen=100))
+    # RScr1M (2026-07-20): mean GAME POINTS earned per frame across ALL
+    # clients over the last 1M frames (1000 buckets x 1000 frames).  Points,
+    # not reward — raw score deltas from the unwrapped true score.
+    rscr_bucket_frames: int = 0
+    rscr_bucket_score: float = 0.0
+    rscr_entries: Deque[tuple[int, float]] = field(default_factory=lambda: deque(maxlen=1000))
+    rscr_sum_frames: int = 0
+    rscr_sum_score: float = 0.0
 
     eval_score_1m_entries: Deque[tuple[float, float, int]] = field(default_factory=deque)
     eval_score_1m_frames: int = 0
@@ -1637,14 +1645,33 @@ class MetricsData:
         self.level_1m_pos = (pos + 1) % window
         self.level_1m_average = self.level_1m_sum / max(1, self.level_1m_count)
 
-    def note_game_score(self, score: int, level: int | float | None = None):
-        """Thread-safe peak score plus rolling 1M-frame score/level metrics."""
+    def note_game_score(self, score: int, level: int | float | None = None,
+                        score_delta: float | None = None):
+        """Thread-safe peak score plus rolling 1M-frame score/level metrics.
+
+        score_delta: game POINTS earned this frame (RScr1M accumulator —
+        rides this call's lock acquisition; one lock per frame, not two).
+        """
         with self.lock:
             if score > self.peak_game_score:
                 self.peak_game_score = int(score)
             self._push_score_1m_locked(float(score))
             if level is not None and int(score) > 0:
                 self._push_level_1m_locked(float(level))
+            if score_delta is not None:
+                self.rscr_bucket_frames += 1
+                self.rscr_bucket_score += float(max(0.0, score_delta))
+                if self.rscr_bucket_frames >= 1000:
+                    if len(self.rscr_entries) == self.rscr_entries.maxlen:
+                        _of, _os = self.rscr_entries[0]
+                        self.rscr_sum_frames -= _of
+                        self.rscr_sum_score -= _os
+                    self.rscr_entries.append(
+                        (self.rscr_bucket_frames, self.rscr_bucket_score))
+                    self.rscr_sum_frames += self.rscr_bucket_frames
+                    self.rscr_sum_score += self.rscr_bucket_score
+                    self.rscr_bucket_frames = 0
+                    self.rscr_bucket_score = 0.0
 
     def note_eval_rate(self, score_delta: float):
         """Per-frame eval scoring accumulation (1000-frame buckets, ~2-min window)."""

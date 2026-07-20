@@ -1521,7 +1521,10 @@ class SocketServer:
 
                 # Peak score and rolling score/level telemetry are shared
                 # metrics state; guard with metrics.lock for dashboard reads.
-                metrics.note_game_score(frame.game_score, frame.level_number)
+                metrics.note_game_score(
+                    frame.game_score, frame.level_number,
+                    score_delta=max(0, int(frame.game_score)
+                                    - int(cs.get("last_game_score", frame.game_score))))
 
                 local_accum += 1
                 if local_accum >= BATCH:
