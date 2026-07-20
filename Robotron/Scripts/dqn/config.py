@@ -726,8 +726,23 @@ class RLConfigData:
     # random uint32s that leap by millions from the previous frame.
     max_plausible_score_jump: int = 250_000
     # A genuine NEW game's raw score shortly after start (any larger sudden
-    # drop that isn't a power-of-10 wrap is classified as a crash frame).
+    # drop that isn't a register wrap is classified as a crash frame).
     score_new_game_max: int = 100_000
+    # The score register's actual modulus: main.lua reads 4 BCD bytes =
+    # 8 digits, so the ONLY legitimate score wrap is at 100M.  (The first
+    # implementation INFERRED the modulus as "the power of 10 above the
+    # previous score" — which misread every game-over with a leading-9 score
+    # as a wrap: a marathon dying at raw 9.3M stamped a phantom +10M offset
+    # onto its successor, and the HOF filled with ordinary games wearing
+    # phantom 10M jackets.  Per-life EScr1M was immune: offsets cancel in
+    # deltas.)
+    score_wrap_modulus: int = 100_000_000
+    # Lives estimation for the client-table column (server-side derivation —
+    # the Lua doesn't read a lives byte).  lives = start + true_score//interval
+    # - deaths_this_game.  Both values are MACHINE DIP SETTINGS: verify against
+    # the on-screen reserve icons and adjust if the cabinet differs.
+    lives_start: int = 3
+    lives_replay_interval: int = 25_000
     hof_replay_fraction: float = 0.10      # guaranteed batch quota once seeded
     hof_min_transitions: int = 4_096       # quota activates only past this
 

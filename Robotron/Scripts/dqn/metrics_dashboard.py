@@ -1752,11 +1752,12 @@ def _render_dashboard_html() -> str:
                 <th class="num" aria-sort="none"><button type="button" class="client-table-sort-btn" data-sort-key="score">Score<span class="client-table-sort-indicator"></span></button></th>
                 <th class="num" aria-sort="none"><button type="button" class="client-table-sort-btn" data-sort-key="level">Level<span class="client-table-sort-indicator"></span></button></th>
                 <th class="num" aria-sort="none" title="Robotron Efficiency: score / level"><button type="button" class="client-table-sort-btn" data-sort-key="efficiency">Eff<span class="client-table-sort-indicator"></span></button></th>
+                <th class="num" aria-sort="none" title="Estimated remaining lives: start + earned - deaths (DIP-dependent)"><button type="button" class="client-table-sort-btn" data-sort-key="lives">Lives<span class="client-table-sort-indicator"></span></button></th>
                 <th class="num" aria-sort="none"><button type="button" class="client-table-sort-btn" data-sort-key="fps">FPS<span class="client-table-sort-indicator"></span></button></th>
               </tr>
             </thead>
             <tbody id="tblClientsBody">
-              <tr><td colspan="6" class="client-table-empty">No Clients</td></tr>
+              <tr><td colspan="7" class="client-table-empty">No Clients</td></tr>
             </tbody>
           </table>
         </div>
@@ -2557,6 +2558,7 @@ def _render_dashboard_html() -> str:
           preview_capable: !!(row && row.preview_capable),
           selected_preview: !!(row && row.selected_preview),
           eval: !!(row && row.eval),
+          lives: Math.max(0, Math.trunc(Number(row && row.lives) || 0)),
         };
       }).filter(Boolean);
     }
@@ -2610,7 +2612,7 @@ def _render_dashboard_html() -> str:
       if (clientTableCount) clientTableCount.textContent = fmtInt(normalized.length);
       if (!clientTableBody) return;
       if (!normalized.length) {
-        clientTableBody.innerHTML = '<tr><td colspan="6" class="client-table-empty">No Clients</td></tr>';
+        clientTableBody.innerHTML = '<tr><td colspan="7" class="client-table-empty">No Clients</td></tr>';
         return;
       }
       const frag = document.createDocumentFragment();
@@ -2627,6 +2629,7 @@ def _render_dashboard_html() -> str:
           { value: fmtInt(row.score), className: "num" },
           { value: fmtInt(row.level), className: "num" },
           { value: fmtInt(row.efficiency), className: "num" },
+          { value: fmtInt(row.lives), className: "num" },
           { value: fmtFloat(row.fps, 1), className: "num" },
         ];
         for (const cell of cells) {

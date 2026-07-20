@@ -1207,6 +1207,12 @@ class SocketServer:
                     "selected_preview": (selected is not None and int(selected) == int(cid)),
                     "preview_capable": bool(cs.get("preview_capable", False)),
                     "eval": bool(cs.get("eval_only", False)),
+                    # Server-side estimate: start + earned - deaths (DIP knobs
+                    # lives_start / lives_replay_interval; see config).
+                    "lives": max(0, int(getattr(RL_CONFIG, "lives_start", 3))
+                                 + int(cs.get("game_score", 0))
+                                 // max(1, int(getattr(RL_CONFIG, "lives_replay_interval", 25_000)))
+                                 - int(cs.get("deaths_this_game", 0))),
                 })
         if changed:
             self._clear_preview_cache()
@@ -1440,7 +1446,10 @@ class SocketServer:
                         elif _raw_sc > _prev_sc + _MAX_SCORE_JUMP:
                             _verdict = "crash-jump"
                         elif _raw_sc < _prev_sc:
-                            _mod = 10 ** len(str(max(1, _prev_sc)))
+                            # Fixed register modulus (8-digit BCD): the only
+                            # real wrap is at 100M.  Never infer — leading-9
+                            # game-overs masquerade as wraps otherwise.
+                            _mod = int(getattr(RL_CONFIG, "score_wrap_modulus", 100_000_000))
                             if (_prev_sc >= 0.9 * _mod and _raw_sc <= 0.1 * _mod
                                     and frame.player_alive and not _recent_start):
                                 _cs0["score_offset"] = int(_cs0.get("score_offset", 0)) + _mod
@@ -1450,6 +1459,7 @@ class SocketServer:
                             elif _raw_sc <= _new_game_max:
                                 _cs0["score_offset"] = 0
                                 _cs0["wave_offset"] = 0
+                                _cs0["deaths_this_game"] = 0
                             else:
                                 _verdict = "crash-drop"
                         if _verdict == "accept":
@@ -1612,6 +1622,10 @@ class SocketServer:
                         ):
                             # death wins if both land on one frame
                             metrics.note_training_terminal(bool(frame.done))
+                            if bool(frame.done):
+                                # Lives estimation: one death per done terminal
+                                # (same edge FtlPct trusts).
+                                cs["deaths_this_game"] = int(cs.get("deaths_this_game", 0)) + 1
                     except Exception:
                         pass
 
