@@ -4785,6 +4785,7 @@ def _render_dashboard_html() -> str:
       drawChart(charts.throughput.canvas, throughputHistory, charts.throughput.series, 60 * 60);
       drawChart(charts.rewards.canvas, chartHistory60m, charts.rewards.series, 60 * 60);
       drawChart(charts.learning.canvas, chartHistory1m, charts.learning.series, 60, true);
+      drawChart(charts.scoreRate.canvas, chartHistory60m, charts.scoreRate.series, 60 * 60);
       drawChart(charts.agreement.canvas, chartHistory60m, charts.agreement.series, 60 * 60);
       drawChart(charts.gpu0.canvas, chartHistory60m, charts.gpu0.series, 60 * 60);
       drawChart(charts.gpu1.canvas, chartHistory60m, charts.gpu1.series, 60 * 60);
