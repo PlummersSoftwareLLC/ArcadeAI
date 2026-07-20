@@ -192,7 +192,16 @@ def _collapse_signals(agent, best_escr1m: float = 0.0) -> str | None:
             with metrics.lock:
                 escr1m = float(metrics.eval_score_1m_average)
                 window_full = int(metrics.eval_score_1m_frames) >= int(0.9 * int(metrics.eval_score_1m_window))
-            if window_full:
+            # Rise guard: a collapsing policy's eval score falls or stalls; a
+            # score that is climbing check-over-check is a refilling window
+            # lagging behind live play (marathon games land their totals
+            # 30-60+ min after boot).  2026-07-20: a fresh boot climbed
+            # 28K -> 3.1M monotonically while racking up 9/10 score-collapse
+            # strikes — window_full alone cannot see the difference.
+            prev_escr1m = getattr(_collapse_signals, "_prev_escr1m", None)
+            _collapse_signals._prev_escr1m = escr1m
+            rising = prev_escr1m is not None and escr1m > prev_escr1m * 1.001
+            if window_full and not rising:
                 # B: gradient-starvation sag (low loss corroborates)
                 if loss < float(getattr(RL_CONFIG, "collapse_sag_loss_threshold", 0.12)):
                     frac = float(getattr(RL_CONFIG, "collapse_sag_escr1m_frac", 0.75))

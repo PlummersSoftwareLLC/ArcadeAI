@@ -768,7 +768,12 @@ class RLConfigData:
     # makes runaway optimism a stable ZERO-LOSS fixed point, so divergence is
     # silent; both signals together are unambiguous.  When sustained, restore
     # the best-EScr1M checkpoint and wipe the poisoned replay buffer.
-    collapse_watchdog_enabled: bool = True
+    # Disabled 2026-07-20: at marathon score levels the eval window fills
+    # with frames long before its average converges (high-scoring games run
+    # 30-60+ min), so a fresh boot spends its first hour below any fraction
+    # of best and the score signatures strike a run that is visibly climbing.
+    # A rise guard now suppresses that case; re-enable when desired.
+    collapse_watchdog_enabled: bool = False
     collapse_loss_threshold: float = 0.02      # ~10x below healthy loss
     collapse_q_upper_frac: float = 0.90        # of v_max
     # Sag signature (added after the 415K→210K gradient-starvation decline):
