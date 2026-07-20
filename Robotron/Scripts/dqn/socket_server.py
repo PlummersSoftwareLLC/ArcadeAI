@@ -1443,6 +1443,7 @@ class SocketServer:
                 _verdict = "accept"
                 _wrap_note = None
                 _prev_for_log = None
+                _is_new_game = False
                 with self.client_lock:
                     _cs0 = self.client_states.get(cid)
                     if _cs0 is not None:
@@ -1464,6 +1465,13 @@ class SocketServer:
                             # the unwrap offsets instead of zeroing them, and
                             # catch a wrap that happened during the gap.
                             _stash = self._unwrap_stash.pop(cid, None)
+                            # TTL: a blip lasts seconds.  A stale stash (cid
+                            # reuse, hours-old crash) must not vouch for a
+                            # game it never saw — observed a 20-min-old stash
+                            # matching by score coincidence.
+                            if _stash is not None and (
+                                    time.time() - float(_stash.get("t", 0.0))) > 120.0:
+                                _stash = None
                             if _stash is not None:
                                 _s_sc = _stash.get("raw_score_prev")
                                 _s_wv = _stash.get("raw_wave_prev")
@@ -1503,6 +1511,7 @@ class SocketServer:
                                 _cs0["score_offset"] = 0
                                 _cs0["wave_offset"] = 0
                                 _cs0["deaths_this_game"] = 0
+                                _is_new_game = True
                             elif (_prev_sc - _raw_sc) <= int(getattr(
                                     RL_CONFIG, "score_torn_read_tolerance", 100_000)):
                                 # Torn BCD read: keep the frame, coerce the
@@ -1513,12 +1522,38 @@ class SocketServer:
                             else:
                                 _verdict = "crash-drop"
                         if _verdict == "accept":
+                            # Same-game gate, NOT player_alive: the wave byte
+                            # increments during the inter-wave transition
+                            # screen, where player_alive often reads 0 — the
+                            # alive gate made wrap detection a coin flip per
+                            # client (2026-07-20: half the 255-cohort missed
+                            # their +256).  Score continuity already proves
+                            # the game is the same one; a real new game takes
+                            # the score branch above and clears the offsets.
                             if (_prev_wv is not None and _raw_wv < _prev_wv - 200
-                                    and frame.player_alive and not _recent_start):
+                                    and not _is_new_game and not _recent_start):
                                 _cs0["wave_offset"] = int(_cs0.get("wave_offset", 0)) + 256
                                 _wrap_note = (_wrap_note or f"[UNWRAP] cid={cid}") + (
                                     f"  [wave {_prev_wv} -> {_raw_wv}; "
                                     f"true wave {_cs0['wave_offset'] + _raw_wv}]")
+                            # Missed-wrap self-heal: if a wrap frame ever
+                            # slips past the gates, the offset runs 256 short
+                            # and score-per-wave turns impossible (no wave
+                            # legitimately yields anywhere near 3x the
+                            # per-level plausibility cap).  Restore the
+                            # missing +256 (repeatable for multi-cycle
+                            # marathons); also repairs games mislabeled
+                            # before this fix on the first frame after boot.
+                            _true_sc = int(_cs0.get("score_offset", 0)) + _raw_sc
+                            _max_eff = 3 * int(getattr(
+                                RL_CONFIG, "max_plausible_score_per_level", 35_000))
+                            while (_true_sc > 500_000
+                                   and _true_sc > _max_eff * (
+                                       int(_cs0.get("wave_offset", 0)) + max(1, _raw_wv))):
+                                _cs0["wave_offset"] = int(_cs0.get("wave_offset", 0)) + 256
+                                _wrap_note = (_wrap_note or f"[UNWRAP] cid={cid}") + (
+                                    f"  [missed-wrap heal: true wave "
+                                    f"{_cs0['wave_offset'] + _raw_wv}]")
                             _cs0["raw_score_prev"] = _raw_sc
                             _cs0["raw_wave_prev"] = _raw_wv
                             frame.game_score = int(_cs0.get("score_offset", 0)) + _raw_sc
@@ -1996,6 +2031,7 @@ class SocketServer:
                         k: _dead_cs.get(k)
                         for k in ("raw_score_prev", "raw_wave_prev",
                                   "score_offset", "wave_offset", "deaths_this_game")}
+                    self._unwrap_stash[cid]["t"] = time.time()
                 self._eval_override.pop(cid, None)
                 self.clients[cid] = None
                 _, preview_changed = self._ensure_preview_client_selected_locked()
