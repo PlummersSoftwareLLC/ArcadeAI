@@ -1629,6 +1629,22 @@ class SocketServer:
                             cs["game_uid"] = self._game_uid_seq
                     cs["level_number"] = frame.level_number
                     cs["game_score"] = frame.game_score
+                    # Stalled-client reaper (score-frozen hang): frames keep
+                    # arriving but the score never moves — MAME stuck on the
+                    # SELF TEST screen at boot, or a mid-game freeze with the
+                    # Lua loop still alive.  Timer re-arms on ANY score
+                    # change (a new game changes the score by definition).
+                    # The frames-stopped hang is reaped separately by the
+                    # CLIENT_IDLE_TIMEOUT_S check in the recv loop.
+                    _stall_s = float(getattr(RL_CONFIG, "client_stall_timeout_s", 120.0))
+                    if _stall_s > 0:
+                        if int(frame.game_score) != int(cs.get("stall_score", -1)):
+                            cs["stall_score"] = int(frame.game_score)
+                            cs["stall_t0"] = time.time()
+                        elif time.time() - float(cs.get("stall_t0", 0.0)) > _stall_s:
+                            raise ConnectionError(
+                                f"score stalled at {int(frame.game_score):,} for "
+                                f"{_stall_s:.0f}s — client hung; disconnecting")
                     cs["player_alive"] = bool(frame.player_alive)
                     cs["num_lasers"] = int(frame.num_lasers)
                     now = time.time()

@@ -787,6 +787,15 @@ class RLConfigData:
     # epsilon_end floor), leaving no stochastic recovery pathway.  Ratchet
     # measurement (pure greedy) is exempt.
     epsilon_hard_floor: float = 0.02
+    # Stalled-client reaper: a client whose GAME SCORE has not moved for
+    # this long is hung (MAME stuck on SELF TEST, or a mid-game freeze
+    # with the Lua loop still sending frames).  Any live Robotron game
+    # scores within seconds; auto-start clears attract mode well inside a
+    # minute.  The client is disconnected through the normal cleanup path
+    # (reconnect stash written, slot freed) so a recovered client resumes
+    # cleanly.  0 disables.  The frames-stopped-entirely hang is separate
+    # and already reaped by CLIENT_IDLE_TIMEOUT_S.
+    client_stall_timeout_s: float = 120.0
 
     # Target network (periodic hard sync)
     target_update_period: int = 1_000
