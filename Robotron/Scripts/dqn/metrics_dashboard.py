@@ -609,15 +609,15 @@ class _DashboardState:
         _prs = float(RL_CONFIG.point_reward_scale)  # display-only multiplier
 
         fps = self.metrics.get_fps()
+        # Single source of truth for effective epsilon (includes the
+        # epsilon_hard_floor) — and called OUTSIDE the lock below: it takes
+        # the same non-reentrant metrics.lock.  The old re-derivation here
+        # displayed 0% while actors actually ran at the floor.
+        epsilon_effective = self.metrics.get_effective_epsilon()
 
         with self.metrics.lock:
             frame_count = int(self.metrics.frame_count)
             epsilon_raw = float(self.metrics.epsilon)
-            _eps_ov = game_settings.epsilon_pct
-            if _eps_ov >= 0:
-                epsilon_effective = _eps_ov / 100.0
-            else:
-                epsilon_effective = 0.0 if bool(self.metrics.override_epsilon) else epsilon_raw
             _xprt_ov = game_settings.expert_pct
             expert_ratio = (_xprt_ov / 100.0) if _xprt_ov >= 0 else float(self.metrics.expert_ratio)
             client_count = int(self.metrics.client_count)

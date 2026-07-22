@@ -309,6 +309,27 @@ def train_step(agent, prefetched_batch=None) -> float | None:
     agent.memory.update_priorities(indices, td_errors)
     priority_ms = (time.perf_counter() - priority_t0) * 1000.0
 
+    # Per-slice TD diagnostics (2026-07-22 bank-poisoning tripwire): bank
+    # rows ride sentinel indices >= capacity (game HOF first, EpHOF from
+    # _ephof_base).  A bank slice whose TD falls while the ring slice's
+    # rises means the net is memorizing frozen demonstrations while live
+    # play diverges — the exact signature aggregate loss concealed.
+    try:
+        _cap = int(agent.memory.capacity)
+        _eb = int(getattr(agent.memory, "_ephof_base", _cap))
+        _idx = np.asarray(indices)
+        _a = 0.01
+        for _name, _mask in (("ring", _idx < _cap),
+                             ("hof", (_idx >= _cap) & (_idx < _eb)),
+                             ("ephof", _idx >= _eb)):
+            if _mask.any():
+                _v = float(td_errors[_mask].mean())
+                _prev = getattr(metrics, f"slice_td_{_name}", None)
+                setattr(metrics, f"slice_td_{_name}",
+                        _v if _prev is None else _prev + _a * (_v - _prev))
+    except Exception:
+        pass
+
     # ── Target network update ───────────────────────────────────────────
     agent.training_steps += 1
     if agent.training_steps % cfg.target_update_period == 0:

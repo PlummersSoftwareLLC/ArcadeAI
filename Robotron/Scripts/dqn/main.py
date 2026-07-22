@@ -114,28 +114,46 @@ def print_buffer_stats(agent, kb):
         print(f"  Eps src: {stats.get('actor_epsilon', 0):>12,}   ({stats.get('frac_actor_epsilon', 0)*100:>5.1f}%)")
         print(f"  Exp src: {stats.get('actor_expert', 0):>12,}   ({stats.get('frac_actor_expert', 0)*100:>5.1f}%)")
         print(f"  Intrst:  {stats.get('interesting', 0):>12,}   ({stats.get('frac_interesting', 0)*100:>5.1f}%)")
+        def _bank_health_lines(b):
+            if b.get("episodes", 0) > 0:
+                print(f"  Diversity: {b.get('distinct_games', 0):>3} distinct games   "
+                      f"waves {b.get('level_min', 0)}-{b.get('level_median', 0)}-{b.get('level_max', 0)} "
+                      f"(min-med-max)")
+            scale = b.get("quota_scale", 1.0)
+            starve = b.get("starve_adds", 0)
+            health = "healthy" if scale >= 1.0 else f"STALE (quota x{scale:.2f})"
+            print(f"  Admission health: {health}   last normal admission {starve:,} ring adds ago")
         hof = stats.get("hof")
         if hof:
             print("-" * 70)
             print("  HALL OF FAME (permanent, survives wipes/reverts)")
-            quota = f"{hof['fraction']*100:.0f}% of batch" if hof["quota_active"] else "inactive (seeding)"
+            quota = f"{hof['fraction']*100:.1f}% of batch" if hof["quota_active"] else "inactive (seeding)"
             print(f"  Episodes: {hof['episodes']:>4} / {hof['max_episodes']:<4}  "
                   f"Transitions: {hof['transitions']:>9,}   Quota: {quota}")
             if hof.get("episodes", 0) > 0:
                 print(f"  Scores:   best {hof['best']:>9,.0f}   median {hof['median']:>9,.0f}   "
                       f"worst {hof['worst']:>9,.0f}")
             print(f"  Admission bar: {hof['admission_floor']:>9,.0f}  (episodes below this can never enter)")
+            _bank_health_lines(hof)
         ephof = stats.get("ephof")
         if ephof:
             print("-" * 70)
             print("  EpHOF — PER-LIFE HALL OF FAME (best single-life scores)")
-            quota = f"{ephof['fraction']*100:.0f}% of batch" if ephof["quota_active"] else "inactive (seeding)"
+            quota = f"{ephof['fraction']*100:.1f}% of batch" if ephof["quota_active"] else "inactive (seeding)"
             print(f"  Episodes: {ephof['episodes']:>4} / {ephof['max_episodes']:<4}  "
                   f"Transitions: {ephof['transitions']:>9,}   Quota: {quota}")
             if ephof.get("episodes", 0) > 0:
                 print(f"  Life scores: best {ephof['best']:>9,.0f}   median {ephof['median']:>9,.0f}   "
                       f"worst {ephof['worst']:>9,.0f}")
             print(f"  Admission bar: {ephof['admission_floor']:>9,.0f}  (per-life score a new life must beat)")
+            _bank_health_lines(ephof)
+        _tds = [(n, getattr(metrics, f"slice_td_{k}", None)) for n, k in
+                (("ring", "ring"), ("HOF", "hof"), ("EpHOF", "ephof"))]
+        _tds = [(n, v) for n, v in _tds if v is not None]
+        if _tds:
+            print("-" * 70)
+            print("  Per-slice TD |err| (EMA): " + "   ".join(f"{n} {v:.3f}" for n, v in _tds)
+                  + "   (bank << ring = memorizing frozen demos)")
         print("=" * 70 + "\n")
         if kb and IS_INTERACTIVE:
             kb.set_raw_mode()
@@ -1024,6 +1042,12 @@ def main():
     wd_hits = 0
     wd_restores = 0
     wd_cooldown_until = 0.0
+    # Bleed sentinel state (print-only; see the sentinel block below).
+    bs_next_check = 0.0
+    bs_hwm = 0.0
+    bs_strikes = 0
+    bs_next_warn = 0.0
+    bs_next_starve_warn = 0.0
     wd_last_steps = -1
     ratchet_tick_errors = 0
     try:
@@ -1072,6 +1096,53 @@ def main():
                                   "serving the frozen best policy. Investigate before re-enabling.")
                 else:
                     wd_hits = 0
+            # ── Bleed sentinel (2026-07-22 post-mortem) ─────────────────
+            # Detection as MEASUREMENT, never restart-reflex: the overnight
+            # collapse proved a checkpoint restore cannot fix bank
+            # poisoning (banks survive restores by design), so this prints
+            # loud warnings and touches nothing.  Two signatures: the
+            # lag-free RScr5M sustained far below its own run high-water
+            # (the slow bleed EScr1M lag concealed), and bank admission
+            # starvation (the poisoning precursor).
+            if time.time() >= bs_next_check:
+                bs_next_check = time.time() + 60.0
+                try:
+                    with metrics.lock:
+                        _f = int(getattr(metrics, "rscr5_sum_frames", 0))
+                        _r5 = (float(getattr(metrics, "rscr5_sum_score", 0.0)) / _f) if _f > 0 else 0.0
+                    if _f >= 1_000_000:      # ignore a refilling window
+                        bs_hwm = max(bs_hwm, _r5)
+                        if bs_hwm >= 5.0 and _r5 < 0.6 * bs_hwm:
+                            bs_strikes += 1
+                        else:
+                            bs_strikes = 0
+                        if bs_strikes >= 5 and time.time() >= bs_next_warn:
+                            bs_next_warn = time.time() + 1800.0
+                            print(f"[BLEED SENTINEL] live RScr5M {_r5:.1f} below 60% of this "
+                                  f"run's high-water {bs_hwm:.1f} for 5+ min — slow-bleed "
+                                  f"signature; check bank health (b) and per-slice TD")
+                    _mem = getattr(agent, "memory", None)
+                    if _mem is not None and time.time() >= bs_next_starve_warn:
+                        _lim = int(getattr(RL_CONFIG, "bank_starvation_adds", 25_000_000))
+                        for _bank in ("hof", "ephof"):
+                            if not getattr(_mem, f"_{_bank}_enabled", False):
+                                continue
+                            # A bank still FILLING cannot be starved: relief
+                            # does not apply below capacity and its quota is
+                            # gated by min_transitions — warning would claim
+                            # remedies that are not in effect.
+                            if (int(getattr(_mem, f"{_bank}_ep_count", 0))
+                                    < int(getattr(_mem, f"_{_bank}_max_eps", 1))):
+                                continue
+                            _st = (int(getattr(_mem, "_adds_total", 0))
+                                   - int(getattr(_mem, f"_{_bank}_last_normal_admit_add", 0)))
+                            if _st > _lim:
+                                bs_next_starve_warn = time.time() + 1800.0
+                                print(f"[BLEED SENTINEL] {_bank.upper()} bar has outrun live play "
+                                      f"(no normal admission in {_st:,} ring adds) — relief "
+                                      f"admissions and quota decay active")
+                except Exception:
+                    pass
             if time.time() - last_save >= 300:
                 if ratchet is None:
                     agent.save(LATEST_MODEL_PATH, show_status=False)

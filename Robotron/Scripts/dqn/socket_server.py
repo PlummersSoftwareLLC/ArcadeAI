@@ -671,10 +671,11 @@ class AsyncReplayBuffer:
             self._record_drop()
 
     def boost_elite_episode(self, client_id, score: int, level: int, total_reward: float, ep_len: int,
-                            ep_score: int = 0):
+                            ep_score: int = 0, game_uid: int = 0):
         try:
             self.queue.put_nowait(("elite", client_id,
-                                   (int(score), int(level), float(total_reward), int(ep_len), int(ep_score)), None))
+                                   (int(score), int(level), float(total_reward), int(ep_len),
+                                    int(ep_score), int(game_uid)), None))
         except queue.Full:
             self._record_drop()
 
@@ -699,7 +700,13 @@ class AsyncReplayBuffer:
                                 self._client_indices[cid] = deque(maxlen=self._lookback)
                             self._client_indices[cid].append(idx)
                             if cid not in self._episode_indices:
-                                self._episode_indices[cid] = []
+                                # Bounded: bank admission reads these slots at
+                                # episode END — for a marathon life the OLDEST
+                                # slots may have been recycled by ring turnover
+                                # (foreign transitions).  64K newest frames is
+                                # far fresher than one ring turnover and still
+                                # whole-episode for any realistic life.
+                                self._episode_indices[cid] = deque(maxlen=65_536)
                             self._episode_indices[cid].append(idx)
                     elif cmd == "boost":
                         self._do_boost(cid)
@@ -751,7 +758,7 @@ class AsyncReplayBuffer:
         return score_thr, level_thr
 
     def _do_elite_episode_boost(self, client_id, score: int, level: int, total_reward: float, ep_len: int,
-                                ep_score: int = 0):
+                                ep_score: int = 0, game_uid: int = 0):
         indices = self._episode_indices.get(client_id)
         # Every finished episode feeds the adaptive gate, boosted or not —
         # thresholds must track typical play, not just elite play.
@@ -767,13 +774,15 @@ class AsyncReplayBuffer:
             try:
                 # Silent by design: admissions surface via the HOF dashboard
                 # column (bank bar) and the b-key buffer report.
-                self.agent.memory.hof_admit(list(indices), int(score))
+                self.agent.memory.hof_admit(list(indices), int(score),
+                                            game_uid=int(game_uid), level=int(level))
             except Exception as e:
                 print(f"  HOF admission error: {e}")
         # EpHOF: same indices, keyed by the score earned WITHIN this life.
         if bool(getattr(RL_CONFIG, "ephof_enabled", False)) and int(ep_score) > 0:
             try:
-                self.agent.memory.ephof_admit(list(indices), int(ep_score))
+                self.agent.memory.ephof_admit(list(indices), int(ep_score),
+                                              game_uid=int(game_uid), level=int(level))
             except Exception as e:
                 print(f"  EpHOF admission error: {e}")
         try:
@@ -977,6 +986,17 @@ class SocketServer:
 
         self.clients = {}
         self.client_states = {}
+        # Monotone game-instance ids for bank per-game dedup (2026-07-22):
+        # stamped at every game boundary; a bank may hold only a few slots
+        # per game id, so one marathon cannot colonize the whole bank.
+        # Seeded ABOVE any uid persisted in the banks — they survive
+        # restarts while this counter would restart at 1, and a collision
+        # binds unrelated games together in dedup.
+        self._game_uid_seq = 0
+        try:
+            self._game_uid_seq = int(self.agent.memory.max_game_uid())
+        except Exception:
+            pass
         # Unwrap continuity across reconnects, keyed by cid: a socket blip
         # must not zero score_offset/wave_offset while the game keeps
         # running (client 24 came back mid-marathon reading wave 36 instead
@@ -1487,6 +1507,7 @@ class SocketServer:
                                     _cs0["score_offset"] = int(_stash.get("score_offset") or 0)
                                     _cs0["wave_offset"] = int(_stash.get("wave_offset") or 0)
                                     _cs0["deaths_this_game"] = int(_stash.get("deaths_this_game") or 0)
+                                    _cs0["game_uid"] = int(_stash.get("game_uid") or 0)
                                     if _gap_wrap:
                                         _cs0["score_offset"] += _mod
                                     if _s_wv is not None and _raw_wv < _s_wv - 200:
@@ -1515,6 +1536,8 @@ class SocketServer:
                                 _cs0["wave_offset"] = 0
                                 _cs0["deaths_this_game"] = 0
                                 _is_new_game = True
+                                self._game_uid_seq += 1
+                                _cs0["game_uid"] = self._game_uid_seq
                             elif (_prev_sc - _raw_sc) <= int(getattr(
                                     RL_CONFIG, "score_torn_read_tolerance", 100_000)):
                                 # Torn BCD read: keep the frame, coerce the
@@ -1599,6 +1622,11 @@ class SocketServer:
                         # baseline: without this stamp the first life of a
                         # reconnect would claim the whole game score.
                         cs["ep_start_score"] = int(frame.game_score)
+                        # Game id for bank dedup: keep an inherited one (set
+                        # by the reconnect stash above), else mint fresh.
+                        if not cs.get("game_uid"):
+                            self._game_uid_seq += 1
+                            cs["game_uid"] = self._game_uid_seq
                     cs["level_number"] = frame.level_number
                     cs["game_score"] = frame.game_score
                     cs["player_alive"] = bool(frame.player_alive)
@@ -1834,7 +1862,8 @@ class SocketServer:
                                     cid, frame.game_score, frame.level_number,
                                     cs["total_reward"], ep_len,
                                     ep_score=max(0, int(frame.game_score)
-                                                 - int(cs.get("ep_start_score", 0))))
+                                                 - int(cs.get("ep_start_score", 0))),
+                                    game_uid=int(cs.get("game_uid") or 0))
                             try:
                                 ep_dqn = cs.get("ep_dqn_score_reward", cs["ep_dqn_reward"])
                                 ep_dqn_frames = cs.get("ep_dqn_frames", 0)
@@ -2032,8 +2061,8 @@ class SocketServer:
                 if _dead_cs is not None and _dead_cs.get("raw_score_prev") is not None:
                     self._unwrap_stash[cid] = {
                         k: _dead_cs.get(k)
-                        for k in ("raw_score_prev", "raw_wave_prev",
-                                  "score_offset", "wave_offset", "deaths_this_game")}
+                        for k in ("raw_score_prev", "raw_wave_prev", "score_offset",
+                                  "wave_offset", "deaths_this_game", "game_uid")}
                     self._unwrap_stash[cid]["t"] = time.time()
                 self._eval_override.pop(cid, None)
                 self.clients[cid] = None

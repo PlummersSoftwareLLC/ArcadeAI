@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
 import os, sys, time, threading, math, json
 from dataclasses import dataclass, field
-from typing import Deque
+from typing import Deque, Optional
 from collections import deque
 
 import numpy as np
@@ -769,6 +769,24 @@ class RLConfigData:
     ephof_min_episode_score: int = 25_000  # absolute per-life admission floor
     ephof_replay_fraction: float = 0.15    # guaranteed batch quota once seeded
     ephof_min_transitions: int = 4_096     # quota activates only past this
+    # ── Bank health (2026-07-22 collapse post-mortem) ───────────────────
+    # The overnight collapse was self-reinforcing bank poisoning: replace-
+    # the-minimum admission with no per-game dedup ratcheted both banks
+    # into a death-tail monoculture of a few marathons, the bar outran
+    # reachable play (zero admissions for ~630M frames), and 25% of every
+    # batch became a frozen off-distribution dataset at privileged IS
+    # weight 1.0 — loss fell 2.30→2.005 while live RScr5M fell 20→4.
+    # These knobs attack each link of that chain.
+    hof_max_per_game: int = 2              # bank slots one game may hold
+    ephof_max_per_game: int = 3            # (per-life bank is a bit looser)
+    bank_starvation_adds: int = 25_000_000 # ring turnover w/o a normal admission = frozen
+    bank_relief_percentile: float = 90.0   # frozen bar decays to this pct of recent offers
+    bank_stale_quota_floor: float = 0.25   # staleness decay floor on bank replay quotas
+    # Un-bypassable exploration floor: the collapse ran 787M frames at a
+    # UI-pinned epsilon 0% (the override path silently bypassed the
+    # epsilon_end floor), leaving no stochastic recovery pathway.  Ratchet
+    # measurement (pure greedy) is exempt.
+    epsilon_hard_floor: float = 0.02
 
     # Target network (periodic hard sync)
     target_update_period: int = 1_000
@@ -1549,6 +1567,12 @@ class MetricsData:
     # time); readers should also fold in the in-progress bucket.
     rscr0_sum_frames: int = 0
     rscr0_sum_score: float = 0.0
+    # Per-slice TD |error| EMAs (bank-poisoning tripwire): a bank slice
+    # whose TD keeps falling while the ring slice's rises is the
+    # memorization signature the 2026-07-22 collapse hid in aggregate loss.
+    slice_td_ring: Optional[float] = None
+    slice_td_hof: Optional[float] = None
+    slice_td_ephof: Optional[float] = None
 
     eval_score_1m_entries: Deque[tuple[float, float, int]] = field(default_factory=deque)
     eval_score_1m_frames: int = 0
@@ -1789,10 +1813,16 @@ class MetricsData:
         with self.lock:
             if self.ratchet_frozen:
                 return 0.0          # measurement protocol: pure greedy
+            # Hard floor on every non-measurement path: the 2026-07-22
+            # collapse ran 787M frames at a UI-pinned 0% with no recovery
+            # pathway.  Operators can lower epsilon, never zero it.
+            floor = float(getattr(RL_CONFIG, "epsilon_hard_floor", 0.02))
             ep = game_settings.epsilon_pct
             if ep >= 0:
-                return ep / 100.0
-            return 0.0 if self.override_epsilon else float(self.epsilon)
+                return max(floor, ep / 100.0)
+            if self.override_epsilon:
+                return floor
+            return max(floor, float(self.epsilon))
 
     @staticmethod
     def _natural_epsilon_for_learner_frame(learner_frame_count: int) -> float:

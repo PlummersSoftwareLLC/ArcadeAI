@@ -8,6 +8,7 @@
 import os, sys, time, shutil
 import numpy as np
 import threading
+from collections import deque
 
 try:
     from .config import RL_CONFIG, decode_token_types, TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT
@@ -184,6 +185,8 @@ class PrioritizedReplayBuffer:
             self.hof_actor_kind  = np.zeros(hof_slots, dtype=np.uint8)
             self.hof_ep_score    = np.full(self._hof_max_eps, -np.inf, dtype=np.float64)
             self.hof_ep_len      = np.zeros(self._hof_max_eps, dtype=np.int32)
+            self.hof_ep_game     = np.full(self._hof_max_eps, -1, dtype=np.int64)
+            self.hof_ep_level    = np.zeros(self._hof_max_eps, dtype=np.int32)
             self._hof_flat       = np.empty(0, dtype=np.int64)
 
         # ── EpHOF: episode (per-life) hall of fame (2026-07) ─────────────
@@ -208,7 +211,26 @@ class PrioritizedReplayBuffer:
             self.ephof_actor_kind  = np.zeros(ephof_slots, dtype=np.uint8)
             self.ephof_ep_score    = np.full(self._ephof_max_eps, -np.inf, dtype=np.float64)
             self.ephof_ep_len      = np.zeros(self._ephof_max_eps, dtype=np.int32)
+            self.ephof_ep_game     = np.full(self._ephof_max_eps, -1, dtype=np.int64)
+            self.ephof_ep_level    = np.zeros(self._ephof_max_eps, dtype=np.int32)
             self._ephof_flat       = np.empty(0, dtype=np.int64)
+        # ── Bank health (2026-07-22 post-mortem) ─────────────────────────
+        # Two clocks per bank, deliberately distinct:
+        #  * last NORMAL admission (beat-the-minimum) arms BAR RELIEF — a
+        #    bank whose bar has outrun reachable play stops admitting and
+        #    must decay its bar toward what current play actually produces;
+        #  * last admission of ANY kind (normal or relief) drives the
+        #    QUOTA STALENESS decay — a bank that is refreshing, even via
+        #    relief, has earned its batch share; only a truly frozen one
+        #    surrenders quota.
+        # Clocks are in ring-adds (one capacity = one ring turnover).
+        self._adds_total = 0
+        self._hof_last_admit_add = 0
+        self._hof_last_normal_admit_add = 0
+        self._ephof_last_admit_add = 0
+        self._ephof_last_normal_admit_add = 0
+        self._hof_recent_offers = deque(maxlen=512)
+        self._ephof_recent_offers = deque(maxlen=512)
         # EpHOF sentinel indices start past the game-HOF sentinel span so the
         # two banks can never alias in update_priorities' >= capacity filter.
         self._ephof_base = self.capacity + (
@@ -305,6 +327,7 @@ class PrioritizedReplayBuffer:
             horizon: int = 1, expert: int = 0, priority_hint: float = 0.0,
             interest: float = 0.0, actor_kind: int | None = None):
         with self.lock:
+            self._adds_total += 1   # bank starvation/staleness clock
             kind = int(actor_kind) if actor_kind is not None else self.actor_kind_from_name(None, expert)
             kind = max(0, min(ACTOR_KIND_COUNT - 1, kind))
             priority = self.tree.max_priority
@@ -427,50 +450,135 @@ class PrioritizedReplayBuffer:
         newest = (self.tree.data_ptr - 1) % self.capacity
         return (newest - offsets) % self.capacity
 
-    def hof_admit(self, indices, game_score: int) -> bool:
-        """Copy an episode into the hall of fame if it ranks all-time.
+    @staticmethod
+    def _bank_span(idxs: np.ndarray, stride: int) -> np.ndarray:
+        """Strided span of the WHOLE episode (first frame through terminal)
+        rather than the death-tail (2026-07-22 post-mortem): banks must
+        enshrine reachable mid-episode competence, not only the sequences
+        that end in death.  Endpoints are always kept — the terminal row
+        grounds the value function."""
+        n = int(idxs.size)
+        if n <= stride:
+            return idxs
+        sel = np.unique(np.linspace(0, n - 1, stride).round().astype(np.int64))
+        return idxs[sel]
 
-        Admission is ABSOLUTE (static floor + replace-the-minimum once full),
-        never the rolling elite gate — a decline must not be able to certify
-        its own play.  Rows are copied, not referenced, so ring eviction
-        cannot touch them.  When the episode exceeds the stride, the TAIL is
-        kept (the frontier/deepest play).  Returns True when admitted.
+    def _bank_admit(self, bank: str, indices, score: float, floor: float,
+                    per_game_cap: int, stride: int, max_eps: int,
+                    game_uid: int, level: int) -> bool:
+        """Shared admission engine for the 'hof' and 'ephof' banks.
+
+        Admission is ABSOLUTE (static floor + replace-the-minimum once
+        full), never the rolling elite gate — a decline must not certify
+        its own play.  Two escapes from the pure ratchet, both from the
+        2026-07-22 collapse post-mortem:
+          * per-game dedup — a game at its slot cap may only supplant its
+            own weakest entry, so no single marathon can colonize the bank;
+          * bar relief — when no NORMAL admission has occurred for a full
+            ring turnover, the bar has outrun reachable play; candidates at
+            or above the relief percentile of recent offers may replace the
+            global minimum even without beating it, backfilling the bank
+            with reachable lives until normal churn resumes.
+        An admission counts as 'normal' only if it beat the global minimum
+        (or filled an empty slot): same-game supplants below the global min
+        must not re-arm the relief clock, or one churning marathon keeps
+        the other 191 slots frozen forever.
         """
-        if not self._hof_enabled:
-            return False
-        score = float(game_score)
-        if score < float(getattr(RL_CONFIG, "hof_min_game_score", 50_000)):
-            return False
         with self.lock:
+            offers = getattr(self, f"_{bank}_recent_offers")
+            offers.append(float(score))
+            if score < floor:
+                return False
             idxs = np.asarray(list(indices), dtype=np.int64)
             idxs = idxs[(idxs >= 0) & (idxs < self.size)]
             if idxs.size < 32:
                 return False
-            if idxs.size > self._hof_stride:
-                idxs = idxs[-self._hof_stride:]
-            if self.hof_ep_count < self._hof_max_eps:
-                ep = self.hof_ep_count
-                self.hof_ep_count += 1
-            else:
-                ep = int(np.argmin(self.hof_ep_score))
-                if score <= float(self.hof_ep_score[ep]):
+            idxs = self._bank_span(idxs, stride)
+            ep_score = getattr(self, f"{bank}_ep_score")
+            ep_len   = getattr(self, f"{bank}_ep_len")
+            ep_game  = getattr(self, f"{bank}_ep_game")
+            ep_level = getattr(self, f"{bank}_ep_level")
+            count    = int(getattr(self, f"{bank}_ep_count"))
+            gmin = float(ep_score[:count].min()) if count > 0 else float("-inf")
+            relief_note = None
+            same = (np.where(ep_game[:count] == game_uid)[0]
+                    if game_uid > 0 else np.empty(0, dtype=np.int64))
+            fresh_slot = False
+            if same.size >= per_game_cap:
+                ep = int(same[np.argmin(ep_score[same])])
+                if score <= float(ep_score[ep]):
                     return False
-                self.hof_total -= int(self.hof_ep_len[ep])
-            base = ep * self._hof_stride
+                normal = score > gmin
+            elif count < max_eps:
+                ep = count
+                fresh_slot = True
+                setattr(self, f"{bank}_ep_count", count + 1)
+                normal = True
+            else:
+                ep = int(np.argmin(ep_score[:count]))
+                normal = score > gmin
+                if not normal:
+                    starve = self._adds_total - int(
+                        getattr(self, f"_{bank}_last_normal_admit_add"))
+                    limit = int(getattr(RL_CONFIG, "bank_starvation_adds", 25_000_000))
+                    if starve > limit and len(offers) >= 64:
+                        pct = float(np.percentile(
+                            np.asarray(offers, dtype=np.float64),
+                            float(getattr(RL_CONFIG, "bank_relief_percentile", 90.0))))
+                        if score >= max(floor, pct):
+                            relief_note = (
+                                f"[{bank.upper()}] bar relief: admitting {score:,.0f} "
+                                f"over frozen min {float(ep_score[ep]):,.0f} "
+                                f"(no normal admission in {starve:,} ring adds)")
+                        else:
+                            return False
+                    else:
+                        return False
+            base = ep * stride
             n = int(idxs.size)
-            self.hof_states[base:base + n]      = self.states[idxs]
-            self.hof_next_states[base:base + n] = self.next_states[idxs]
-            self.hof_actions[base:base + n]     = self.actions[idxs]
-            self.hof_rewards[base:base + n]     = self.rewards[idxs]
-            self.hof_dones[base:base + n]       = self.dones[idxs]
-            self.hof_horizons[base:base + n]    = self.horizons[idxs]
-            self.hof_is_expert[base:base + n]   = self.is_expert[idxs]
-            self.hof_actor_kind[base:base + n]  = self.actor_kind[idxs]
-            self.hof_ep_score[ep] = score
-            self.hof_ep_len[ep] = n
-            self.hof_total += n
-            self._hof_rebuild_flat_locked()
-            return True
+            for f in ("states", "next_states", "actions", "rewards",
+                      "dones", "horizons", "is_expert", "actor_kind"):
+                getattr(self, f"{bank}_{f}")[base:base + n] = getattr(self, f)[idxs]
+            # A fresh slot contributes no prior length — ep_len can hold a
+            # stale value there after a mid-run bank reload shrank ep_count.
+            setattr(self, f"{bank}_total",
+                    int(getattr(self, f"{bank}_total"))
+                    - (0 if fresh_slot else int(ep_len[ep])) + n)
+            ep_score[ep] = float(score)
+            ep_len[ep] = n
+            ep_game[ep] = int(game_uid)
+            ep_level[ep] = int(level)
+            getattr(self, f"_{bank}_rebuild_flat_locked")()
+            setattr(self, f"_{bank}_last_admit_add", self._adds_total)
+            if normal:
+                setattr(self, f"_{bank}_last_normal_admit_add", self._adds_total)
+        if relief_note:
+            print(relief_note)
+        return True
+
+    def max_game_uid(self) -> int:
+        """Highest game uid persisted in either bank (0 when empty).  The
+        server seeds its uid counter ABOVE this at boot: banks survive
+        restarts while the counter would otherwise restart at 1, and a
+        collision binds unrelated games together in per-game dedup."""
+        with self.lock:
+            m = 0
+            if self._hof_enabled and self.hof_ep_count > 0:
+                m = max(m, int(self.hof_ep_game[:self.hof_ep_count].max()))
+            if self._ephof_enabled and self.ephof_ep_count > 0:
+                m = max(m, int(self.ephof_ep_game[:self.ephof_ep_count].max()))
+            return max(0, m)
+
+    def hof_admit(self, indices, game_score: int, game_uid: int = -1, level: int = 0) -> bool:
+        """Admit an episode to the hall of fame, keyed on CUMULATIVE game
+        score at episode end.  See _bank_admit for the admission contract."""
+        if not self._hof_enabled:
+            return False
+        return self._bank_admit(
+            "hof", indices, float(game_score),
+            float(getattr(RL_CONFIG, "hof_min_game_score", 50_000)),
+            max(1, int(getattr(RL_CONFIG, "hof_max_per_game", 2))),
+            self._hof_stride, self._hof_max_eps, int(game_uid), int(level))
 
     def hof_admission_bar(self):
         """Current hall-of-fame admission bar (dashboard HOF column).
@@ -509,74 +617,82 @@ class PrioritizedReplayBuffer:
                 return None
             return bar, best
 
-    def _hof_stats_locked(self):
-        """Hall-of-fame summary for the buffer stats report (call under lock)."""
-        if not self._hof_enabled:
-            return None
-        n = self.hof_ep_count
-        quota_active = self.hof_total >= int(getattr(RL_CONFIG, "hof_min_transitions", 4096))
+    def _bank_stats_locked(self, bank: str, min_tr: int, frac: float, floor: float, max_eps: int):
+        """Bank summary for the buffer stats report (call under lock)."""
+        n = int(getattr(self, f"{bank}_ep_count"))
+        total = int(getattr(self, f"{bank}_total"))
+        quota_active = total >= min_tr
+        scale = self._bank_quota_scale_for(bank)
         stats = {
             "episodes": n,
-            "max_episodes": self._hof_max_eps,
-            "transitions": self.hof_total,
+            "max_episodes": max_eps,
+            "transitions": total,
             "quota_active": quota_active,
-            "fraction": float(getattr(RL_CONFIG, "hof_replay_fraction", 0.0)) if quota_active else 0.0,
-            "admission_floor": float(getattr(RL_CONFIG, "hof_min_game_score", 0)),
+            "fraction": (frac * scale) if quota_active else 0.0,
+            "quota_scale": scale,
+            "admission_floor": floor,
+            "starve_adds": int(self._adds_total
+                               - int(getattr(self, f"_{bank}_last_normal_admit_add"))),
         }
         if n > 0:
-            scores = self.hof_ep_score[:n]
+            scores = getattr(self, f"{bank}_ep_score")[:n]
+            levels = getattr(self, f"{bank}_ep_level")[:n]
+            games = getattr(self, f"{bank}_ep_game")[:n]
             stats.update(best=float(scores.max()), worst=float(scores.min()),
-                         median=float(np.median(scores)))
+                         median=float(np.median(scores)),
+                         distinct_games=int(np.unique(games[games > 0]).size),
+                         level_min=int(levels.min()), level_max=int(levels.max()),
+                         level_median=int(np.median(levels)))
             # Once full, the WORST admitted score is the live admission bar.
-            if n >= self._hof_max_eps:
+            if n >= max_eps:
                 stats["admission_floor"] = max(stats["admission_floor"], float(scores.min()))
         return stats
+
+    def _hof_stats_locked(self):
+        if not self._hof_enabled:
+            return None
+        return self._bank_stats_locked(
+            "hof", int(getattr(RL_CONFIG, "hof_min_transitions", 4096)),
+            float(getattr(RL_CONFIG, "hof_replay_fraction", 0.0)),
+            float(getattr(RL_CONFIG, "hof_min_game_score", 0)), self._hof_max_eps)
 
     def _hof_rebuild_flat_locked(self):
         parts = [np.arange(ep * self._hof_stride, ep * self._hof_stride + int(self.hof_ep_len[ep]), dtype=np.int64)
                  for ep in range(self.hof_ep_count) if self.hof_ep_len[ep] > 0]
         self._hof_flat = np.concatenate(parts) if parts else np.empty(0, dtype=np.int64)
 
-    def ephof_admit(self, indices, episode_score: int) -> bool:
-        """Copy an episode into the per-life hall of fame if its SINGLE-LIFE
-        score ranks all-time.  Same absolute-admission contract as hof_admit
-        (static floor + replace-the-minimum once full); whole life kept,
-        tail-capped at the stride.  Returns True when admitted."""
+    def ephof_admit(self, indices, episode_score: int, game_uid: int = -1, level: int = 0) -> bool:
+        """Admit a life to the per-life hall of fame, keyed on the score
+        earned WITHIN that single life.  See _bank_admit for the contract."""
         if not self._ephof_enabled:
             return False
-        score = float(episode_score)
-        if score < float(getattr(RL_CONFIG, "ephof_min_episode_score", 25_000)):
-            return False
-        with self.lock:
-            idxs = np.asarray(list(indices), dtype=np.int64)
-            idxs = idxs[(idxs >= 0) & (idxs < self.size)]
-            if idxs.size < 32:
-                return False
-            if idxs.size > self._ephof_stride:
-                idxs = idxs[-self._ephof_stride:]
-            if self.ephof_ep_count < self._ephof_max_eps:
-                ep = self.ephof_ep_count
-                self.ephof_ep_count += 1
-            else:
-                ep = int(np.argmin(self.ephof_ep_score))
-                if score <= float(self.ephof_ep_score[ep]):
-                    return False
-                self.ephof_total -= int(self.ephof_ep_len[ep])
-            base = ep * self._ephof_stride
-            n = int(idxs.size)
-            self.ephof_states[base:base + n]      = self.states[idxs]
-            self.ephof_next_states[base:base + n] = self.next_states[idxs]
-            self.ephof_actions[base:base + n]     = self.actions[idxs]
-            self.ephof_rewards[base:base + n]     = self.rewards[idxs]
-            self.ephof_dones[base:base + n]       = self.dones[idxs]
-            self.ephof_horizons[base:base + n]    = self.horizons[idxs]
-            self.ephof_is_expert[base:base + n]   = self.is_expert[idxs]
-            self.ephof_actor_kind[base:base + n]  = self.actor_kind[idxs]
-            self.ephof_ep_score[ep] = score
-            self.ephof_ep_len[ep] = n
-            self.ephof_total += n
-            self._ephof_rebuild_flat_locked()
-            return True
+        return self._bank_admit(
+            "ephof", indices, float(episode_score),
+            float(getattr(RL_CONFIG, "ephof_min_episode_score", 25_000)),
+            max(1, int(getattr(RL_CONFIG, "ephof_max_per_game", 3))),
+            self._ephof_stride, self._ephof_max_eps, int(game_uid), int(level))
+
+    def _bank_quota_scale_for(self, bank: str) -> float:
+        """Staleness scale for a bank's replay quota.  A bank still FILLING
+        is never stale — relief cannot apply to it and its quota is already
+        gated by min_transitions; staleness is only meaningful once the bar
+        (the full bank's minimum) exists to outrun live play."""
+        if int(getattr(self, f"{bank}_ep_count")) < int(getattr(self, f"_{bank}_max_eps")):
+            return 1.0
+        return self._bank_quota_scale(int(getattr(self, f"_{bank}_last_admit_add")))
+
+    def _bank_quota_scale(self, last_admit_add: int) -> float:
+        """Staleness decay on a bank's replay quota: full share while the
+        bank has admitted within one ring turnover, then a linear surrender
+        toward the floor — even a frozen bank cannot dominate the gradient
+        indefinitely (2026-07-22: 25% of every batch was a bank with zero
+        admissions for ~25 ring turnovers)."""
+        limit = max(1, int(getattr(RL_CONFIG, "bank_starvation_adds", 25_000_000)))
+        starve = (self._adds_total - int(last_admit_add)) / limit
+        if starve <= 1.0:
+            return 1.0
+        floor = float(getattr(RL_CONFIG, "bank_stale_quota_floor", 0.25))
+        return max(floor, 1.0 - 0.375 * (starve - 1.0))
 
     def _ephof_rebuild_flat_locked(self):
         parts = [np.arange(ep * self._ephof_stride, ep * self._ephof_stride + int(self.ephof_ep_len[ep]), dtype=np.int64)
@@ -584,26 +700,12 @@ class PrioritizedReplayBuffer:
         self._ephof_flat = np.concatenate(parts) if parts else np.empty(0, dtype=np.int64)
 
     def _ephof_stats_locked(self):
-        """EpHOF summary for the buffer stats report (call under lock)."""
         if not self._ephof_enabled:
             return None
-        n = self.ephof_ep_count
-        quota_active = self.ephof_total >= int(getattr(RL_CONFIG, "ephof_min_transitions", 4096))
-        stats = {
-            "episodes": n,
-            "max_episodes": self._ephof_max_eps,
-            "transitions": self.ephof_total,
-            "quota_active": quota_active,
-            "fraction": float(getattr(RL_CONFIG, "ephof_replay_fraction", 0.0)) if quota_active else 0.0,
-            "admission_floor": float(getattr(RL_CONFIG, "ephof_min_episode_score", 0)),
-        }
-        if n > 0:
-            scores = self.ephof_ep_score[:n]
-            stats.update(best=float(scores.max()), worst=float(scores.min()),
-                         median=float(np.median(scores)))
-            if n >= self._ephof_max_eps:
-                stats["admission_floor"] = max(stats["admission_floor"], float(scores.min()))
-        return stats
+        return self._bank_stats_locked(
+            "ephof", int(getattr(RL_CONFIG, "ephof_min_transitions", 4096)),
+            float(getattr(RL_CONFIG, "ephof_replay_fraction", 0.0)),
+            float(getattr(RL_CONFIG, "ephof_min_episode_score", 0)), self._ephof_max_eps)
 
     def sample(self, batch_size: int, beta: float = 0.4):
         """Sample a prioritised batch. Returns (states, actions, rewards,
@@ -621,10 +723,12 @@ class PrioritizedReplayBuffer:
             hof_count = 0
             if self._hof_enabled and self.hof_total >= int(getattr(RL_CONFIG, "hof_min_transitions", 4096)):
                 hof_frac = max(0.0, min(0.25, float(getattr(RL_CONFIG, "hof_replay_fraction", 0.0))))
+                hof_frac *= self._bank_quota_scale_for("hof")
                 hof_count = min(batch_size // 4, int(round(batch_size * hof_frac)))
             ephof_count = 0
             if self._ephof_enabled and self.ephof_total >= int(getattr(RL_CONFIG, "ephof_min_transitions", 4096)):
                 ephof_frac = max(0.0, min(0.30, float(getattr(RL_CONFIG, "ephof_replay_fraction", 0.0))))
+                ephof_frac *= self._bank_quota_scale_for("ephof")
                 ephof_count = min(batch_size // 4, int(round(batch_size * ephof_frac)))
             # Combined banks may never crowd the ring below half the batch.
             if hof_count + ephof_count > batch_size // 2:
@@ -666,6 +770,14 @@ class PrioritizedReplayBuffer:
                 pri = np.maximum(1e-10, self.tree.tree[per_indices + self.tree.capacity])
                 w = (self.size * (pri / total)) ** (-beta)
                 weights[:per_indices.size] = w / max(1e-12, float(w.max()))
+                # Honest bank weights (2026-07-22): bank rows previously rode
+                # weight 1.0 — the PER max — giving 25% of the batch a
+                # privileged gradient pull over live data (mean PER weight is
+                # well below 1).  Bank rows now carry exactly the mean PER
+                # weight: an average vote, never a megaphone.
+                if hof_count + ephof_count > 0:
+                    weights[int(indices.size):] = float(
+                        np.mean(weights[:per_indices.size]))
 
             # Bank rows (HOF / EpHOF) ride sentinel indices >= capacity;
             # update_priorities filters them out (no sum-tree leaves).  EpHOF
@@ -915,6 +1027,13 @@ class PrioritizedReplayBuffer:
             np.savez(os.path.join(dirpath, "hof_meta.npz"),
                      ep_score=self.hof_ep_score[:self.hof_ep_count],
                      ep_len=self.hof_ep_len[:self.hof_ep_count],
+                     ep_game=self.hof_ep_game[:self.hof_ep_count],
+                     ep_level=self.hof_ep_level[:self.hof_ep_count],
+                     # Staleness watermarks (ages, not raw clocks — the adds
+                     # counter is process-local): a frozen bank must not
+                     # reload as "fresh" and reclaim full quota.
+                     stale_age=np.int64(self._adds_total - self._hof_last_admit_add),
+                     stale_age_normal=np.int64(self._adds_total - self._hof_last_normal_admit_add),
                      stride=np.int64(self._hof_stride),
                      state_size=np.int64(self.state_size))
             if verbose:
@@ -945,6 +1064,26 @@ class PrioritizedReplayBuffer:
             self.hof_actor_kind[:used] = np.load(os.path.join(dirpath, "hof_actor_kind.npy"))[:used]
             self.hof_ep_score[:n_eps] = ep_score[:n_eps]
             self.hof_ep_len[:n_eps] = ep_len[:n_eps]
+            # Legacy saves lack game/level metadata: -1 ids are treated as
+            # unique by dedup.  New-format ids stay valid because the server
+            # seeds its uid counter above max_game_uid() at boot.
+            if "ep_game" in meta.files:
+                self.hof_ep_game[:n_eps] = np.asarray(meta["ep_game"], dtype=np.int64)[:n_eps]
+                self.hof_ep_level[:n_eps] = np.asarray(meta["ep_level"], dtype=np.int32)[:n_eps]
+            else:
+                self.hof_ep_game[:n_eps] = -1
+                self.hof_ep_level[:n_eps] = 0
+            # Zero tail metadata: a mid-run reload can SHRINK ep_count below
+            # slots the live bank had filled; a stale ep_len there corrupts
+            # the fresh-slot accounting on the next admission.
+            self.hof_ep_len[n_eps:] = 0
+            self.hof_ep_score[n_eps:] = -np.inf
+            self.hof_ep_game[n_eps:] = -1
+            self.hof_ep_level[n_eps:] = 0
+            # Restore staleness ages relative to this process's clock.
+            if "stale_age" in meta.files:
+                self._hof_last_admit_add = self._adds_total - int(meta["stale_age"])
+                self._hof_last_normal_admit_add = self._adds_total - int(meta["stale_age_normal"])
             self.hof_ep_count = n_eps
             self.hof_total = int(self.hof_ep_len[:n_eps].sum())
             self._hof_rebuild_flat_locked()
@@ -972,6 +1111,10 @@ class PrioritizedReplayBuffer:
             np.savez(os.path.join(dirpath, "ephof_meta.npz"),
                      ep_score=self.ephof_ep_score[:self.ephof_ep_count],
                      ep_len=self.ephof_ep_len[:self.ephof_ep_count],
+                     ep_game=self.ephof_ep_game[:self.ephof_ep_count],
+                     ep_level=self.ephof_ep_level[:self.ephof_ep_count],
+                     stale_age=np.int64(self._adds_total - self._ephof_last_admit_add),
+                     stale_age_normal=np.int64(self._adds_total - self._ephof_last_normal_admit_add),
                      stride=np.int64(self._ephof_stride),
                      state_size=np.int64(self.state_size))
             if verbose:
@@ -1002,6 +1145,19 @@ class PrioritizedReplayBuffer:
             self.ephof_actor_kind[:used] = np.load(os.path.join(dirpath, "ephof_actor_kind.npy"))[:used]
             self.ephof_ep_score[:n_eps] = ep_score[:n_eps]
             self.ephof_ep_len[:n_eps] = ep_len[:n_eps]
+            if "ep_game" in meta.files:
+                self.ephof_ep_game[:n_eps] = np.asarray(meta["ep_game"], dtype=np.int64)[:n_eps]
+                self.ephof_ep_level[:n_eps] = np.asarray(meta["ep_level"], dtype=np.int32)[:n_eps]
+            else:
+                self.ephof_ep_game[:n_eps] = -1
+                self.ephof_ep_level[:n_eps] = 0
+            self.ephof_ep_len[n_eps:] = 0
+            self.ephof_ep_score[n_eps:] = -np.inf
+            self.ephof_ep_game[n_eps:] = -1
+            self.ephof_ep_level[n_eps:] = 0
+            if "stale_age" in meta.files:
+                self._ephof_last_admit_add = self._adds_total - int(meta["stale_age"])
+                self._ephof_last_normal_admit_add = self._adds_total - int(meta["stale_age_normal"])
             self.ephof_ep_count = n_eps
             self.ephof_total = int(self.ephof_ep_len[:n_eps].sum())
             self._ephof_rebuild_flat_locked()
