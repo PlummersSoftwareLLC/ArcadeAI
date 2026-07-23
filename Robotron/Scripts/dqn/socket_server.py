@@ -1028,17 +1028,27 @@ class SocketServer:
         return count
 
     def _auto_curriculum_level(self) -> int:
-        """Frontier-biased random start level (Dave's design, 2026-07-19).
+        """Auto-curriculum start level: frontier-biased with a uniform floor.
 
-        N = max(floor, ceil(ELvl1M)) + spread; start = 1 + int(N * sqrt(u)):
-        density rises linearly toward (and past) the eval frontier, thin at
-        the bottom (eval clients guarantee wave-1 play).  Drawn per packet,
-        but Robotron latches the start level only at game start, so each new
-        game samples the distribution exactly once.
+        N = max(floor, ceil(ELvl1M)) + spread.  With probability
+        stratified_auto_uniform_frac the start is UNIFORM over 1..N;
+        otherwise the original frontier-biased draw 1 + int(N * sqrt(u))
+        (Dave's design, 2026-07-19).  The uniform share exists because the
+        pure sqrt draw quadratically suppresses low starts (P[start<15] ~1%
+        at N~145): once the marathon cohort matures, the 25M ring's sliding
+        window narrows to deep-wave play only, general early/mid-wave
+        competence loses its gradient share, and live play bleeds while
+        loss falls (2026-07-23 — recurred with the banks fixed and
+        exonerated, so ring narrowing is the remaining driver).  Drawn per
+        packet, but Robotron latches the start level only at game start,
+        so each new game samples the distribution exactly once.
         """
         _elvl = float(getattr(metrics, "eval_level_1m_average", 0.0) or 0.0)
         _n = max(int(getattr(RL_CONFIG, "stratified_auto_floor", 5)),
                  int(_elvl + 0.999)) + int(getattr(RL_CONFIG, "stratified_auto_spread", 8))
+        _u_frac = float(getattr(RL_CONFIG, "stratified_auto_uniform_frac", 0.35))
+        if random.random() < _u_frac:
+            return max(1, min(255, 1 + int(_n * random.random())))
         return max(1, min(255, 1 + int(_n * (random.random() ** 0.5))))
 
     def _is_eval_client(self, cid: int) -> bool:

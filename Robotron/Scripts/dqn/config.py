@@ -796,6 +796,12 @@ class RLConfigData:
     # cleanly.  0 disables.  The frames-stopped-entirely hang is separate
     # and already reaped by CLIENT_IDLE_TIMEOUT_S.
     client_stall_timeout_s: float = 120.0
+    # Auto-curriculum uniform share (2026-07-23 ring-narrowing fix): this
+    # fraction of auto-curriculum starts draw UNIFORM over 1..N instead of
+    # the frontier-biased sqrt draw, keeping early/mid-wave play flowing
+    # into the ring after the marathon cohort matures.  See
+    # _auto_curriculum_level for the failure this prevents.
+    stratified_auto_uniform_frac: float = 0.35
 
     # Target network (periodic hard sync)
     target_update_period: int = 1_000
