@@ -97,3 +97,7 @@ Robotron/collapsed_run_archive/collapsed_best_escr1m72k.pt.json
 Robotron/collapsed_run_archive/collapsed_f76M_s373k_latest.pt
 Robotron/collapsed_run_archive/posterm_run_best.pt
 Robotron/collapsed_run_archive/posterm_run_latest.pt
+# Model checkpoint archives (large .pt files)
+Robotron/checkpoint_archive/
+Robotron/collapsed_run_archive/
+Robotron/incumbent_archive/
