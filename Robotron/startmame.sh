@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LUA_SCRIPT="$SCRIPT_DIR/Scripts/main.lua"
 RELAY_SCRIPT="$SCRIPT_DIR/Scripts/audio_relay.py"
+STAGE_ROMSET_SCRIPT="$SCRIPT_DIR/stage_robotron_romset.sh"
 LOG_DIR="$SCRIPT_DIR/logs"
 ROM_DIR="$SCRIPT_DIR/roms"
 MAME_BIN="${MAME_BIN:-mame}"
@@ -507,7 +508,22 @@ if ! VERIFY_OUTPUT="$("$MAME_BIN" -rompath "$ROMPATH" -verifyroms robotron 2>&1)
     echo "warning: Robotron ROM verification failed for rompath: $ROMPATH" >&2
     printf '%s\n' "$VERIFY_OUTPUT" >&2
     if printf '%s\n' "$VERIFY_OUTPUT" | grep -q "NOT FOUND"; then
-        echo "hint: if this is a legacy-named patched set, run ./stage_robotron_romset.sh from Robotron/ to stage MAME's expected filenames." >&2
+        if [[ -x "$STAGE_ROMSET_SCRIPT" && -f "$ROM_DIR/robotron.zip" ]]; then
+            echo "Detected missing canonical Robotron filenames; staging $ROM_DIR/robotron.zip..." >&2
+            "$STAGE_ROMSET_SCRIPT" --no-verify >&2
+            if ! VERIFY_OUTPUT="$("$MAME_BIN" -rompath "$ROMPATH" -verifyroms robotron 2>&1)"; then
+                echo "warning: Robotron ROM verification still failed after staging:" >&2
+                printf '%s\n' "$VERIFY_OUTPUT" >&2
+                if printf '%s\n' "$VERIFY_OUTPUT" | grep -q "NOT FOUND"; then
+                    echo "error: required Robotron ROM files are still missing after staging; cannot launch MAME." >&2
+                    exit 1
+                fi
+            fi
+        else
+            echo "hint: if this is a legacy-named patched set, run ./stage_robotron_romset.sh from Robotron/ to stage MAME's expected filenames." >&2
+            echo "error: required Robotron ROM files are missing; cannot launch MAME." >&2
+            exit 1
+        fi
     fi
     echo "warning: continuing anyway because custom/patched ROM sets may fail -verifyroms." >&2
 fi
