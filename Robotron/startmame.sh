@@ -280,9 +280,9 @@ launch_client() {
 
     log_file="$LOG_DIR/mame_instance_${slot}.log"
     if [[ "$attached" -eq 1 ]]; then
-        ROBOTRON_SOCKET_ADDRESS="$client_socket" ROBOTRON_PREVIEW_CLIENT="$preview_flag" ROBOTRON_CLIENT_SLOT="$slot" ROBOTRON_EVAL_MODE="$EVAL_MODE" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $throttle_flag $sound_flag $video_flag -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT" &
+        ROBOTRON_SOCKET_ADDRESS="$client_socket" ROBOTRON_PREVIEW_CLIENT="$preview_flag" ROBOTRON_CLIENT_SLOT="$slot" ROBOTRON_EVAL_MODE="$EVAL_MODE" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $CHEAT_FLAG $throttle_flag $sound_flag $video_flag -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT" &
     else
-        ROBOTRON_SOCKET_ADDRESS="$client_socket" ROBOTRON_PREVIEW_CLIENT="$preview_flag" ROBOTRON_CLIENT_SLOT="$slot" ROBOTRON_EVAL_MODE="$EVAL_MODE" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $throttle_flag $sound_flag $video_flag -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT" >> "$log_file" 2>&1 &
+        ROBOTRON_SOCKET_ADDRESS="$client_socket" ROBOTRON_PREVIEW_CLIENT="$preview_flag" ROBOTRON_CLIENT_SLOT="$slot" ROBOTRON_EVAL_MODE="$EVAL_MODE" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $CHEAT_FLAG $throttle_flag $sound_flag $video_flag -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT" >> "$log_file" 2>&1 &
     fi
     LAST_LAUNCH_PID=$!
     LAST_LAUNCH_SOCKET="$client_socket"
@@ -491,15 +491,22 @@ else
     echo "Note: this MAME build does not support -skip_warnings; continuing without it."
 fi
 
+CHEAT_FLAG=""
+if "$MAME_BIN" -showusage 2>&1 | grep -Eq -- '^[[:space:]]*-cheat([[:space:]]|$)'; then
+    CHEAT_FLAG="-cheat"
+else
+    echo "Note: this MAME build does not support -cheat; continuing without it."
+fi
+
 if [[ ! -d "$ROM_DIR" ]]; then
     echo "error: ROM directory not found: $ROM_DIR" >&2
     exit 1
 fi
 
 if ! "$MAME_BIN" -rompath "$ROMPATH" -verifyroms robotron >/dev/null 2>&1; then
-    echo "error: Robotron ROM verification failed for rompath: $ROMPATH" >&2
+    echo "warning: Robotron ROM verification failed for rompath: $ROMPATH" >&2
     "$MAME_BIN" -rompath "$ROMPATH" -verifyroms robotron || true
-    exit 1
+    echo "warning: continuing anyway because custom/patched ROM sets may fail -verifyroms." >&2
 fi
 
 RUNNING_COUNT="$(count_running_robotron_instances)"
@@ -557,7 +564,7 @@ if [[ "$FOREGROUND" -eq 1 ]]; then
     CLIENT_SOCKET_ADDRESS="${socket_info%%|*}"
     PREVIEW_CLIENT_FLAG="${socket_info##*|}"
     echo "Socket target: $CLIENT_SOCKET_ADDRESS"
-    env ROBOTRON_SOCKET_ADDRESS="$CLIENT_SOCKET_ADDRESS" ROBOTRON_PREVIEW_CLIENT="$PREVIEW_CLIENT_FLAG" ROBOTRON_CLIENT_SLOT=0 ROBOTRON_EVAL_MODE="$EVAL_MODE" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $THROTTLE_FLAG $SOUND_FLAG $VIDEO_FLAG -window -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT"
+    env ROBOTRON_SOCKET_ADDRESS="$CLIENT_SOCKET_ADDRESS" ROBOTRON_PREVIEW_CLIENT="$PREVIEW_CLIENT_FLAG" ROBOTRON_CLIENT_SLOT=0 ROBOTRON_EVAL_MODE="$EVAL_MODE" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $CHEAT_FLAG $THROTTLE_FLAG $SOUND_FLAG $VIDEO_FLAG -window -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT"
     status=$?
     cleanup_audio_relays
     cleanup_audio_fifos
