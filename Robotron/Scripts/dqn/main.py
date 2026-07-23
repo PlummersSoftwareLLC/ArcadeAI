@@ -1048,6 +1048,7 @@ def main():
     bs_strikes = 0
     bs_next_warn = 0.0
     bs_next_starve_warn = 0.0
+    last_bank_save = time.time()
     wd_last_steps = -1
     ratchet_tick_errors = 0
     try:
@@ -1143,6 +1144,18 @@ def main():
                                       f"admissions and quota decay active")
                 except Exception:
                     pass
+            # Decoupled bank persistence: HOF/EpHOF admissions must not
+            # wait for the rare full-ring save (2026-07-23: 12h of bank
+            # churn, including the 83M record game, existed only in RAM).
+            if time.time() - last_bank_save >= float(
+                    getattr(RL_CONFIG, "bank_save_interval_s", 1800.0)):
+                last_bank_save = time.time()
+                try:
+                    _saved = agent.memory.save_banks_if_dirty()
+                    if _saved:
+                        print(f"[BANKS] periodic save: {'; '.join(_saved)}")
+                except Exception as e:
+                    print(f"[BANKS] periodic save failed: {e}")
             if time.time() - last_save >= 300:
                 if ratchet is None:
                     agent.save(LATEST_MODEL_PATH, show_status=False)

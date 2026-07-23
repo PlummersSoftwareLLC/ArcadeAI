@@ -231,6 +231,12 @@ class PrioritizedReplayBuffer:
         self._ephof_last_normal_admit_add = 0
         self._hof_recent_offers = deque(maxlen=512)
         self._ephof_recent_offers = deque(maxlen=512)
+        # Dirty markers for the decoupled bank save (2026-07-23): banks
+        # previously persisted only inside the rare full-ring save and went
+        # 12h stale in RAM.  A bank is dirty when its last-admission clock
+        # has moved past the value at its last successful save.
+        self._hof_saved_admit_add = 0
+        self._ephof_saved_admit_add = 0
         # EpHOF sentinel indices start past the game-HOF sentinel span so the
         # two banks can never alias in update_priorities' >= capacity filter.
         self._ephof_base = self.capacity + (
@@ -1036,6 +1042,7 @@ class PrioritizedReplayBuffer:
                      stale_age_normal=np.int64(self._adds_total - self._hof_last_normal_admit_add),
                      stride=np.int64(self._hof_stride),
                      state_size=np.int64(self.state_size))
+            self._hof_saved_admit_add = self._hof_last_admit_add
             if verbose:
                 print(f"  HOF saved: {self.hof_ep_count} episodes / {self.hof_total:,} transitions")
 
@@ -1084,6 +1091,8 @@ class PrioritizedReplayBuffer:
             if "stale_age" in meta.files:
                 self._hof_last_admit_add = self._adds_total - int(meta["stale_age"])
                 self._hof_last_normal_admit_add = self._adds_total - int(meta["stale_age_normal"])
+            # Disk and memory are identical right now: bank starts clean.
+            self._hof_saved_admit_add = self._hof_last_admit_add
             self.hof_ep_count = n_eps
             self.hof_total = int(self.hof_ep_len[:n_eps].sum())
             self._hof_rebuild_flat_locked()
@@ -1117,6 +1126,7 @@ class PrioritizedReplayBuffer:
                      stale_age_normal=np.int64(self._adds_total - self._ephof_last_normal_admit_add),
                      stride=np.int64(self._ephof_stride),
                      state_size=np.int64(self.state_size))
+            self._ephof_saved_admit_add = self._ephof_last_admit_add
             if verbose:
                 print(f"  EpHOF saved: {self.ephof_ep_count} episodes / {self.ephof_total:,} transitions")
 
@@ -1158,6 +1168,7 @@ class PrioritizedReplayBuffer:
             if "stale_age" in meta.files:
                 self._ephof_last_admit_add = self._adds_total - int(meta["stale_age"])
                 self._ephof_last_normal_admit_add = self._adds_total - int(meta["stale_age_normal"])
+            self._ephof_saved_admit_add = self._ephof_last_admit_add
             self.ephof_ep_count = n_eps
             self.ephof_total = int(self.ephof_ep_len[:n_eps].sum())
             self._ephof_rebuild_flat_locked()
@@ -1165,6 +1176,23 @@ class PrioritizedReplayBuffer:
             print(f"  EpHOF loaded: {self.ephof_ep_count} episodes / {self.ephof_total:,} transitions "
                   f"(best life {self.ephof_ep_score[:self.ephof_ep_count].max():,.0f})")
         return True
+
+    def save_banks_if_dirty(self, verbose: bool = False) -> list:
+        """Persist HOF/EpHOF on their own cadence, decoupled from the rare
+        full-ring save (2026-07-23: banks rode the ring-save cadence, went
+        12h stale in RAM, and a crash would have lost every admission
+        since — including the record 83M game).  No-ops for a bank with no
+        admissions since its last save, so quiet periods cost nothing."""
+        saved = []
+        if (self._hof_enabled and self._hof_dir
+                and self._hof_last_admit_add != self._hof_saved_admit_add):
+            self._save_hof(self._hof_dir, verbose)
+            saved.append(f"HOF {self.hof_ep_count} eps / {self.hof_total:,} tr")
+        if (self._ephof_enabled and self._ephof_dir
+                and self._ephof_last_admit_add != self._ephof_saved_admit_add):
+            self._save_ephof(self._ephof_dir, verbose)
+            saved.append(f"EpHOF {self.ephof_ep_count} eps / {self.ephof_total:,} tr")
+        return saved
 
     def save(self, filepath: str, verbose: bool = True):
         """Save the full replay buffer as individual .npy files in a directory."""

@@ -2229,6 +2229,15 @@ hud_stats_wraps = 0
 hud_stats_prev_score = nil
 hud_stats_prev_wave = nil
 hud_stats_prev_alive = nil
+-- Stall watchdog (2026-07-23): a hung MAME (SELF TEST at boot, or a frozen
+-- deep game) leaves the score register bit-identical forever.  The server
+-- reaps the connection at 120s but cannot restart a remote MAME; exiting
+-- here lets the startmame.sh supervisor respawn this slot cleanly (it
+-- logs "[SUPERVISOR] respawned client N").  A paused MAME stops the frame
+-- callback entirely, so pausing can never trip this.
+STALL_EXIT_SECS = 180
+hud_stall_score = nil
+hud_stall_t0 = nil
 
 local function hud_track_stats()
     if not hud_stats_mem then
@@ -2245,6 +2254,19 @@ local function hud_track_stats()
     if not ok then return end
     score = math.max(0, math.floor(tonumber(score) or 0))
     wave = math.floor(tonumber(wave) or 0)
+    -- Stall watchdog: raw score comparison (a BCD tear differs from prev,
+    -- which merely re-arms the timer; a truly hung game is bit-identical).
+    local stall_now = os.time()
+    if score ~= hud_stall_score then
+        hud_stall_score = score
+        hud_stall_t0 = stall_now
+    elseif hud_stall_t0 and (stall_now - hud_stall_t0) >= STALL_EXIT_SECS then
+        print(string.format(
+            "[STALL WATCHDOG] score frozen at %d for %ds - exiting for supervisor respawn",
+            score, stall_now - hud_stall_t0))
+        hud_stall_t0 = stall_now   -- no exit spam while MAME shuts down
+        pcall(function() manager.machine:exit() end)
+    end
     if hud_stats_prev_score ~= nil then
         if score < hud_stats_prev_score and score < HUD_REPLAY_INTERVAL then
             -- New game: counters reset.  (Small dips at high score are BCD

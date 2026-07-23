@@ -802,6 +802,10 @@ class RLConfigData:
     # into the ring after the marathon cohort matures.  See
     # _auto_curriculum_level for the failure this prevents.
     stratified_auto_uniform_frac: float = 0.35
+    # Decoupled bank persistence (2026-07-23): HOF/EpHOF save on this
+    # cadence independent of the full ring save, so a crash can no longer
+    # lose hours of bank admissions.  Dirty-gated: quiet periods no-op.
+    bank_save_interval_s: float = 1800.0
 
     # Target network (periodic hard sync)
     target_update_period: int = 1_000
