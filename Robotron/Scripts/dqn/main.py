@@ -376,13 +376,20 @@ def keyboard_handler(agent, kb):
                 agent.flush_replay_buffer()
                 print_with_terminal_restore(kb, "Replay buffer flushed.")
                 display_metrics_row(agent, kb)
-            elif key == "L":
-                RL_CONFIG.lr = min(1e-2, RL_CONFIG.lr * 2.0)
-                print_with_terminal_restore(kb, f"LR increased to {RL_CONFIG.lr:.2e}")
+            elif key == "1":
+                agent.lr_manual_scale = max(1.0 / 64.0, getattr(agent, "lr_manual_scale", 1.0) / 2.0)
+                print_with_terminal_restore(
+                    kb, f"LR scale x{agent.lr_manual_scale:g} -> {agent.get_lr():.2e}")
                 display_metrics_row(agent, kb)
-            elif key == "l":
-                RL_CONFIG.lr = max(1e-6, RL_CONFIG.lr / 2.0)
-                print_with_terminal_restore(kb, f"LR decreased to {RL_CONFIG.lr:.2e}")
+            elif key == "2":
+                agent.lr_manual_scale = 1.0
+                print_with_terminal_restore(
+                    kb, f"LR restored to natural schedule -> {agent.get_lr():.2e}")
+                display_metrics_row(agent, kb)
+            elif key == "3":
+                agent.lr_manual_scale = min(64.0, getattr(agent, "lr_manual_scale", 1.0) * 2.0)
+                print_with_terminal_restore(
+                    kb, f"LR scale x{agent.lr_manual_scale:g} -> {agent.get_lr():.2e}")
                 display_metrics_row(agent, kb)
 
             time.sleep(0.1)
@@ -450,7 +457,7 @@ def print_network_info(agent, dashboard_status: str = "disabled"):
     print(f"   Dashboard:        {dashboard_status}")
 
     print(f"\nKeys: [q]uit [s]ave [c]lear [h]eader [space]row [o]verride [e]xpert [p]epsilon [t]rain [v]erbose [a]ttention")
-    print(f"   [7/8/9] expert-/reset/+   [4/5/6] epsilon-/reset/+   [b] buffer stats   [f] flush buffer")
+    print(f"   [7/8/9] expert-/reset/+   [4/5/6] epsilon-/reset/+   [1/2/3] lr-/reset/+   [b] buffer stats   [f] flush buffer")
     print("\n" + "=" * 90 + "\n")
 
 

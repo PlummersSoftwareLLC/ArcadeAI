@@ -210,15 +210,18 @@ class RainbowAgent:
         # lr_anchor_step re-bases the warmup+cosine WITHOUT touching
         # training_steps (which the expert/BC schedules key on).
         step = self.training_steps - int(getattr(self, "lr_anchor_step", 0))
+        # Manual override (keyboard 1/2/3): scales whatever the gearbox
+        # schedule produces, so it composes with gear changes and warmup.
+        scale = float(getattr(self, "lr_manual_scale", 1.0))
         if step < cfg.lr_warmup_steps:
-            return lr_hi * (step + 1) / max(1, cfg.lr_warmup_steps)
+            return lr_hi * (step + 1) / max(1, cfg.lr_warmup_steps) * scale
         decay_horizon = max(1, period)
         if bool(getattr(cfg, "lr_use_restarts", False)):
             t = (step - cfg.lr_warmup_steps) % decay_horizon
         else:
             t = min(step - cfg.lr_warmup_steps, decay_horizon)
         cosine = 0.5 * (1.0 + math.cos(math.pi * t / decay_horizon))
-        return lr_lo + (lr_hi - lr_lo) * cosine
+        return (lr_lo + (lr_hi - lr_lo) * cosine) * scale
 
     def _update_lr(self):
         lr = self.get_lr()

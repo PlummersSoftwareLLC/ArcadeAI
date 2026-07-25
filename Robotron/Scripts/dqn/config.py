@@ -1312,6 +1312,17 @@ class GameSettings:
         self._epsilon_pct: int = -1   # -1 = auto (follow decay), 0-100 = manual override %
         self._expert_pct: int = -1    # -1 = auto (follow decay), 0-100 = manual override %
         self._auto_curriculum: bool = False
+        self._difficulty: int = 5     # GA1 master difficulty 1-10 (5 = factory)
+
+    @property
+    def difficulty(self) -> int:
+        with self._lock:
+            return self._difficulty
+
+    @difficulty.setter
+    def difficulty(self, value: int):
+        with self._lock:
+            self._difficulty = max(1, min(10, int(value)))
 
     @property
     def start_advanced(self) -> bool:
@@ -1371,6 +1382,7 @@ class GameSettings:
                 "epsilon_pct": self._epsilon_pct,
                 "expert_pct": self._expert_pct,
                 "auto_curriculum": self._auto_curriculum,
+                "difficulty": self._difficulty,
             }
 
     def reset(self) -> None:
@@ -1412,6 +1424,8 @@ class GameSettings:
                     self._expert_pct = max(-1, min(100, int(data["expert_pct"])))
                 if "auto_curriculum" in data:
                     self._auto_curriculum = bool(data["auto_curriculum"])
+                if "difficulty" in data:
+                    self._difficulty = max(1, min(10, int(data["difficulty"])))
         except FileNotFoundError:
             pass  # first run — use defaults
         except Exception:

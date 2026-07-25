@@ -9,8 +9,10 @@ start_level_min).
 
 Game-flow contract (Robotron-specific):
   • Inbound framing: 4-byte big-endian length prefix, then the payload.
-  • Payload header ``>HddBIBBBIBB`` (n, subj, obj, done, score, player_alive,
-    save, start_pressed, replay_level, num_lasers, wave), then n f32 (big-endian).
+  • Payload header ``>HddBIBBBIBBB`` (n, subj, obj, done, score, player_alive,
+    save, start_pressed, replay_level, num_lasers, wave, lives), then n f32
+    (big-endian).  The trailing lives byte (255 = unknown) is v2; v1 headers
+    without it are still accepted (variant auto-detected from length).
   • The model consumes the compact slice of the wire (18 core + 22 ELIST values
     + 112 grouped object rows); the full wire is still used by the expert/debug
     paths.
@@ -134,6 +136,7 @@ class FrameData:
     level_number: int
     game_score: int
     num_lasers: int
+    lives: int = -1          # actual lives from Lua (v2 header); -1/255 = unknown
     preview_width: int = 0
     preview_height: int = 0
     preview_format: int = 0
@@ -145,6 +148,33 @@ class FrameData:
 
 _HDR_FMT = ">HddBIBBBIBB"
 _HDR_SIZE = struct.calcsize(_HDR_FMT)
+# v2 (2026-07-24): one trailing byte — actual lives from the Lua client
+# (255 = unknown).  Version is detected per-frame from total-length
+# consistency, so old and new clients can coexist during a rolling restart.
+_HDR_FMT_V2 = ">HddBIBBBIBBB"
+_HDR_SIZE_V2 = struct.calcsize(_HDR_FMT_V2)
+
+
+def _detect_header(data: bytes):
+    """Pick the header variant whose size makes the payload length add up.
+
+    Returns (fmt, size, has_lives) or None.  n (first 2 bytes) is common to
+    both variants; a variant matches iff header + n floats consumes the
+    buffer exactly, or leaves a well-formed length-prefixed preview tail.
+    """
+    if len(data) < 2:
+        return None
+    n = struct.unpack(">H", data[:2])[0]
+    for fmt, size, has_lives in ((_HDR_FMT_V2, _HDR_SIZE_V2, True),
+                                 (_HDR_FMT, _HDR_SIZE, False)):
+        base = size + n * 4
+        if len(data) == base:
+            return fmt, size, has_lives
+        if len(data) >= base + 4:
+            plen = struct.unpack(">I", data[base:base + 4])[0]
+            if base + 4 + plen == len(data):
+                return fmt, size, has_lives
+    return None
 
 # Ingest sanity: reject crash/garbage frames at the wire boundary (see
 # RL_CONFIG.max_plausible_game_score).  Read once at import like the other
@@ -159,9 +189,19 @@ def parse_frame_data(data: bytes, parse_preview: bool = False) -> Optional[Frame
     """Parse the Robotron binary wire protocol from Lua."""
     if not data or len(data) < _HDR_SIZE:
         return None
+    variant = _detect_header(data)
+    if variant is None:
+        return None
+    hdr_fmt, hdr_size, has_lives = variant
+    lives = -1
     try:
-        (n, subj, obj, done, score, alive, save,
-         start, replay, lasers, wave) = struct.unpack(_HDR_FMT, data[:_HDR_SIZE])
+        fields = struct.unpack(hdr_fmt, data[:hdr_size])
+        if has_lives:
+            (n, subj, obj, done, score, alive, save,
+             start, replay, lasers, wave, lives) = fields
+        else:
+            (n, subj, obj, done, score, alive, save,
+             start, replay, lasers, wave) = fields
     except struct.error:
         return None
 
@@ -179,10 +219,10 @@ def parse_frame_data(data: bytes, parse_preview: bool = False) -> Optional[Frame
                   f"(> {_limit} = base {_MAX_PLAUSIBLE_GAME_SCORE} + {_MAX_PLAUSIBLE_PER_LEVEL}/level); likely game crash")
         return None
 
-    base_len = _HDR_SIZE + n * 4
+    base_len = hdr_size + n * 4
     if len(data) < base_len:
         return None
-    state = np.frombuffer(data[_HDR_SIZE:base_len], dtype=">f4", count=n).astype(np.float32)
+    state = np.frombuffer(data[hdr_size:base_len], dtype=">f4", count=n).astype(np.float32)
     if state.shape[0] != n:
         return None
 
@@ -302,7 +342,7 @@ def parse_frame_data(data: bytes, parse_preview: bool = False) -> Optional[Frame
         state=state, subjreward=float(subj), objreward=float(obj),
         done=bool(done), player_alive=bool(alive), save_signal=bool(save),
         start_pressed=bool(start), level_number=int(wave),
-        game_score=int(score), num_lasers=int(lasers),
+        game_score=int(score), num_lasers=int(lasers), lives=int(lives),
         preview_width=int(preview_width), preview_height=int(preview_height),
         preview_format=int(preview_format), preview_pixels=preview_pixels,
         preview_encoded_format=int(preview_encoded_format),
@@ -1252,12 +1292,16 @@ class SocketServer:
                     "selected_preview": (selected is not None and int(selected) == int(cid)),
                     "preview_capable": bool(cs.get("preview_capable", False)),
                     "eval": bool(cs.get("eval_only", False)),
-                    # Server-side estimate: start + earned - deaths (DIP knobs
-                    # lives_start / lives_replay_interval; see config).
-                    "lives": max(0, int(getattr(RL_CONFIG, "lives_start", 3))
-                                 + int(cs.get("game_score", 0))
-                                 // max(1, int(getattr(RL_CONFIG, "lives_replay_interval", 25_000)))
-                                 - int(cs.get("deaths_this_game", 0))),
+                    # Actual lives from the Lua client (v2 header, derived
+                    # from the ZP1RP replay threshold).  -1/255 = unknown
+                    # (old client, or attached mid-game before the bonus
+                    # interval is known) -> fall back to the old estimate.
+                    "lives": (int(cs.get("lives", -1))
+                              if 0 <= int(cs.get("lives", -1)) < 255
+                              else max(0, int(getattr(RL_CONFIG, "lives_start", 3))
+                                       + int(cs.get("game_score", 0))
+                                       // max(1, int(getattr(RL_CONFIG, "lives_replay_interval", 25_000)))
+                                       - int(cs.get("deaths_this_game", 0)))),
                 })
         if changed:
             self._clear_preview_cache()
@@ -1369,6 +1413,14 @@ class SocketServer:
             source_u8 |= 0x40
         if hud_enabled:
             source_u8 |= 0x80
+        # v2 clients (detected by their v2 frame header) get a 6th byte: the
+        # GA1 master difficulty (1-10) to poke into CMOS.  v1 clients keep the
+        # 5-byte action so their fixed-size read never desyncs.
+        cs = self.client_states.get(cid)
+        if isinstance(cs, dict) and cs.get("proto_v2", False):
+            return struct.pack(">bbBBBB", int(move_cmd), int(fire_cmd),
+                               source_u8, start_adv, start_level,
+                               max(1, min(10, int(game_settings.difficulty))))
         return struct.pack(">bbBBB", int(move_cmd), int(fire_cmd),
                            source_u8, start_adv, start_level)
 
@@ -1441,6 +1493,11 @@ class SocketServer:
                 should_parse_preview = bool(preview_enabled and self._is_preview_client(cid))
 
                 frame = parse_frame_data(data, parse_preview=should_parse_preview)
+                if frame is not None and frame.lives >= 0:
+                    # v2 wire header seen -> client understands 6-byte actions.
+                    _csv = self.client_states.get(cid)
+                    if isinstance(_csv, dict) and not _csv.get("proto_v2"):
+                        _csv["proto_v2"] = True
                 if not frame:
                     sock.sendall(self._pack_action(
                         -1, -1, _SRC_NONE, cid,
@@ -1639,6 +1696,7 @@ class SocketServer:
                             cs["game_uid"] = self._game_uid_seq
                     cs["level_number"] = frame.level_number
                     cs["game_score"] = frame.game_score
+                    cs["lives"] = int(getattr(frame, "lives", -1))
                     # Stalled-client reaper (score-frozen hang): frames keep
                     # arriving but the score never moves — MAME stuck on the
                     # SELF TEST screen at boot, or a mid-game freeze with the

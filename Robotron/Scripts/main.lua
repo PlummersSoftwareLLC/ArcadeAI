@@ -2239,6 +2239,92 @@ STALL_EXIT_SECS = 180
 hud_stall_score = nil
 hud_stall_t0 = nil
 
+-- ── Wire lives (2026-07-24) ─────────────────────────────────────────────
+-- Lives shipped to the server in the frame header, replacing the server's
+-- score//interval estimate.  Earned lives come from ZP1RP ground truth:
+-- RP holds the NEXT replay threshold, starts each game at the DIP bonus
+-- interval and advances by exactly that interval per award, so
+-- earned = RP/interval - 1 with no hardcoded interval anywhere.  Deaths
+-- are counted on the same done edge the training signal uses.  255 is the
+-- "unknown" sentinel (mid-game attach before a new game reveals the
+-- interval); the server falls back to its estimate for that value.
+WIRE_LIVES_UNKNOWN = 255
+wire_lives_deaths = 0
+wire_lives_interval = 0
+wire_lives_prev_score = nil
+wire_lives_last = WIRE_LIVES_UNKNOWN
+
+-- ── Server-controlled difficulty (2026-07-24) ──────────────────────────
+-- The server's v2 action carries the intended GA1 master difficulty
+-- (1-10, 5 = factory).  GETWV (RRG23.ASM) re-reads GA1 from CMOS at every
+-- wave start, so a live poke takes effect at the next wave.  We also
+-- recompute the adjustment checksum (FCHK: sum of low nibbles $CC00-$CC23
+-- + $37 fudge, stored as two nibbles at $CC8C/$CC8D) so the power-up CMOS
+-- test never factory-resets the machine (which would clobber free play).
+CMOS_BASE = 0xCC00
+CMOS_GA1 = 0xCC14          -- 2 BCD nibbles (tens, units)
+CMOS_ADJ_END = 0xCC24      -- ENDADJ: checksummed adjustment range is [BASE, END)
+CMOS_ADJSUM = 0xCC8C       -- 2 nibbles (hi, lo)
+SERVER_DIFFICULTY = 5
+difficulty_poked = nil
+difficulty_poke_frame = 0
+
+local function poke_difficulty(memory, diff)
+    diff = math.max(1, math.min(10, math.floor(diff or 5)))
+    memory:write_u8(CMOS_GA1, (diff >= 10) and 1 or 0)
+    memory:write_u8(CMOS_GA1 + 1, diff % 10)
+    local sum = 0
+    for addr = CMOS_BASE, CMOS_ADJ_END - 1 do
+        sum = (sum + (memory:read_u8(addr) & 0xF)) & 0xFF
+    end
+    sum = (sum + 0x37) & 0xFF
+    memory:write_u8(CMOS_ADJSUM, (sum >> 4) & 0xF)
+    memory:write_u8(CMOS_ADJSUM + 1, sum & 0xF)
+end
+
+local function difficulty_apply(memory, frame_idx)
+    -- Poke on change, plus a periodic re-poke (~10 s) in case the game's
+    -- own CMOS writes (audits, high-score entry) ever land on top of ours.
+    if difficulty_poked ~= SERVER_DIFFICULTY
+            or (frame_idx - difficulty_poke_frame) >= 600 then
+        local ok, err = pcall(poke_difficulty, memory, SERVER_DIFFICULTY)
+        if ok then
+            if difficulty_poked ~= SERVER_DIFFICULTY then
+                print(string.format("[DIFFICULTY] GA1 poked to %d", SERVER_DIFFICULTY))
+            end
+            difficulty_poked = SERVER_DIFFICULTY
+            difficulty_poke_frame = frame_idx
+        else
+            trace_log(frame_idx, "difficulty_poke_error", tostring(err))
+        end
+    end
+end
+
+local function wire_lives_track(score, replay_level, death_edge)
+    local s = math.max(0, math.floor(score or 0))
+    local rp = math.max(0, math.floor(replay_level or 0))
+    if wire_lives_prev_score ~= nil and s < wire_lives_prev_score and s < 100000 then
+        -- New game: reset death count and re-learn the interval from RP.
+        wire_lives_deaths = 0
+        wire_lives_interval = 0
+    end
+    wire_lives_prev_score = math.max(s, wire_lives_prev_score or s)
+    if wire_lives_interval == 0 and rp >= 5000 and rp <= 100000 then
+        wire_lives_interval = rp
+    end
+    if death_edge then
+        wire_lives_deaths = wire_lives_deaths + 1
+    end
+    if wire_lives_interval > 0 then
+        local earned = math.max(0, math.floor(rp / wire_lives_interval) - 1)
+        wire_lives_last = math.max(0, math.min(WIRE_LIVES_UNKNOWN - 1,
+            HUD_LIVES_START + earned - wire_lives_deaths))
+    else
+        wire_lives_last = WIRE_LIVES_UNKNOWN
+    end
+    return wire_lives_last
+end
+
 local function hud_track_stats()
     if not hud_stats_mem then
         local ok, m = pcall(function()
@@ -2292,9 +2378,15 @@ end
 local function hud_stats_line()
     local score = hud_stats_prev_score or 0
     local true_wave = hud_stats_wraps * 256 + (hud_stats_prev_wave or 0)
-    local lives = math.max(0, HUD_LIVES_START
-                           + math.floor(score / HUD_REPLAY_INTERVAL)
-                           - hud_stats_deaths)
+    -- Prefer the RP-derived wire value (single source of truth with the
+    -- dashboard); the old score//interval form only covers the pre-first-
+    -- new-game window where the interval is still unknown.
+    local lives = wire_lives_last
+    if lives == WIRE_LIVES_UNKNOWN then
+        lives = math.max(0, HUD_LIVES_START
+                         + math.floor(score / HUD_REPLAY_INTERVAL)
+                         - hud_stats_deaths)
+    end
     local eff = math.floor(score / math.max(1, true_wave))
     return string.format("LIVES:%d  EFF:%d  WAVE:%d", lives, eff, true_wave)
 end
@@ -3209,7 +3301,7 @@ local function serialize_frame(player_alive, score, replay_level, num_lasers, wa
                                nearest_spawner_dist, nearest_spawner_dx, nearest_spawner_dy, num_spawners,
                                enemy_state, lane_values, grid_values, pool_values,
                                done, subj_reward, obj_reward, save_signal, start_cmd,
-                               preview_w, preview_h, preview_fmt, preview_blob)
+                               preview_w, preview_h, preview_fmt, preview_blob, lives)
     local score_u32 = math.max(0, math.min(4294967295, math.floor(score or 0)))
     local replay_u32 = math.max(0, math.min(4294967295, math.floor(replay_level or 0)))
     local lasers_u8 = math.max(0, math.min(255, math.floor(num_lasers or 0)))
@@ -3263,8 +3355,9 @@ local function serialize_frame(player_alive, score, replay_level, num_lasers, wa
         error(string.format("state size mismatch: got=%d expected=%d", num_values, EXPECTED_STATE_VALUES))
     end
 
+    local lives_u8 = math.max(0, math.min(255, math.floor(lives or WIRE_LIVES_UNKNOWN)))
     local header = string.pack(
-        ">HddBIBBBIBB",
+        ">HddBIBBBIBBB",
         num_values,
         subj_reward,
         obj_reward,
@@ -3275,7 +3368,8 @@ local function serialize_frame(player_alive, score, replay_level, num_lasers, wa
         math.max(0, math.min(1, math.floor(start_cmd or 0))),
         replay_u32,
         lasers_u8,
-        wave_u8
+        wave_u8,
+        lives_u8
     )
 
     -- Pack floats in chunks (one string.pack call per 64 values) instead of
@@ -3335,22 +3429,51 @@ local function process_frame_via_socket(frame_payload, frame_idx)
         local started = os.clock()
         local legacy_buffer_ready_at = nil
 
+        local v5_buffer_ready_at = nil
         while (os.clock() - started) < SOCKET_READ_TIMEOUT_S do
-            if #ACTION_RX_BUFFER >= 5 then
-                local action_bytes = string.sub(ACTION_RX_BUFFER, 1, 5)
-                ACTION_RX_BUFFER = string.sub(ACTION_RX_BUFFER, 6)
-                local move_dir, fire_dir, source, start_advanced, start_level_min = string.unpack("bbBBB", action_bytes)
+            if #ACTION_RX_BUFFER >= 6 then
+                -- v2 action: 5 bytes + GA1 difficulty byte.
+                local action_bytes = string.sub(ACTION_RX_BUFFER, 1, 6)
+                ACTION_RX_BUFFER = string.sub(ACTION_RX_BUFFER, 7)
+                local move_dir, fire_dir, source, start_advanced, start_level_min, difficulty = string.unpack("bbBBBB", action_bytes)
                 START_ADVANCED = (start_advanced or 0) ~= 0
                 START_LEVEL_MIN = math.max(1, math.min(81, math.floor(start_level_min or 1)))
+                SERVER_DIFFICULTY = math.max(1, math.min(10, math.floor(difficulty or 5)))
                 trace_log(
                     frame_idx,
                     "socket_read_ok",
                     string.format(
-                        "move=%d fire=%d src=%d adv=%d level=%d",
-                        move_dir, fire_dir, source, start_advanced or 0, START_LEVEL_MIN
+                        "move=%d fire=%d src=%d adv=%d level=%d diff=%d",
+                        move_dir, fire_dir, source, start_advanced or 0, START_LEVEL_MIN, SERVER_DIFFICULTY
                     )
                 )
                 return {move_dir, fire_dir, source}
+            end
+
+            if #ACTION_RX_BUFFER == 5 then
+                -- 5-byte action (server hasn't seen our v2 header yet, or is
+                -- an old server).  Same settle-wait pattern as the 3-byte
+                -- legacy case so a split 6-byte packet isn't misparsed.
+                if v5_buffer_ready_at == nil then
+                    v5_buffer_ready_at = os.clock() + 0.003
+                elseif os.clock() >= v5_buffer_ready_at then
+                    local action_bytes = ACTION_RX_BUFFER
+                    ACTION_RX_BUFFER = ""
+                    local move_dir, fire_dir, source, start_advanced, start_level_min = string.unpack("bbBBB", action_bytes)
+                    START_ADVANCED = (start_advanced or 0) ~= 0
+                    START_LEVEL_MIN = math.max(1, math.min(81, math.floor(start_level_min or 1)))
+                    trace_log(
+                        frame_idx,
+                        "socket_read_ok",
+                        string.format(
+                            "move=%d fire=%d src=%d adv=%d level=%d",
+                            move_dir, fire_dir, source, start_advanced or 0, START_LEVEL_MIN
+                        )
+                    )
+                    return {move_dir, fire_dir, source}
+                end
+            else
+                v5_buffer_ready_at = nil
             end
 
             if #ACTION_RX_BUFFER == 3 then
@@ -3367,7 +3490,7 @@ local function process_frame_via_socket(frame_payload, frame_idx)
                 legacy_buffer_ready_at = nil
             end
 
-            local need = 5 - #ACTION_RX_BUFFER
+            local need = 6 - #ACTION_RX_BUFFER
             if need < 1 then
                 need = 1
             end
@@ -3681,7 +3804,8 @@ function frame_callback()
         frame.obs.num_spawners,
         frame.enemy_state, frame.obs.lane_summary_features, frame.obs.local_grid_features, frame.obs.pool_features,
         rewards.done, rewards.subj_reward, rewards.obj_reward, save_signal, start_cmd,
-        preview.w, preview.h, preview.fmt, preview.blob
+        preview.w, preview.h, preview.fmt, preview.blob,
+        wire_lives_track(frame.score, frame.replay_level, rewards.done)
     )
     if not ok_payload then
         trace_log(frame_counter, "serialize_frame_error", tostring(payload_or_err), true)
@@ -3698,6 +3822,9 @@ function frame_callback()
         move_cmd, fire_cmd, socket_ok = -1, -1, true
     elseif current_socket then
         move_cmd, fire_cmd, socket_ok = process_frame_via_socket(payload, frame_counter)
+        if socket_ok then
+            difficulty_apply(mem, frame_counter)
+        end
     else
         if (now - last_connection_attempt_time) >= CONNECTION_RETRY_INTERVAL_S then
             trace_log(frame_counter, "socket_retry", "attempting reconnect")

@@ -1912,6 +1912,16 @@ def _render_dashboard_html() -> str:
           </label>
           <label style="gap:6px;">Advanced <span class="toggle-switch"><input type="checkbox" id="gsAdvanced" checked><span class="slider"></span></span></label>
         </div>
+        <div class="game-settings-row">
+          <label title="GA1 master difficulty (1-10, 5 = factory). Scales enemy speeds/fire rates ~5.5%/step every wave; poked into CMOS at each game start.">Difficulty:
+            <select id="gsDifficulty">
+              <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+              <option value="4">4</option><option value="5" selected>5</option><option value="6">6</option>
+              <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+              <option value="10">10</option>
+            </select>
+          </label>
+        </div>
       </article>
     </section>
 
@@ -2178,8 +2188,9 @@ def _render_dashboard_html() -> str:
     const gsAdvancedEl = document.getElementById("gsAdvanced");
     const gsLevelEl = document.getElementById("gsLevel");
     const gsAutoCurrEl = document.getElementById("gsAutoCurriculum");
+    const gsDifficultyEl = document.getElementById("gsDifficulty");
     const _gsAdmin = new URLSearchParams(window.location.search).get("admin") === "yes";
-    if (!_gsAdmin) { gsAdvancedEl.disabled = true; gsLevelEl.disabled = true; gsAutoCurrEl.disabled = true; }
+    if (!_gsAdmin) { gsAdvancedEl.disabled = true; gsLevelEl.disabled = true; gsAutoCurrEl.disabled = true; gsDifficultyEl.disabled = true; }
     /* Epsilon / Expert up-down buttons — admin gate */
     document.querySelectorAll('#epsUD .ud-btn, #xprtUD .ud-btn').forEach(btn => {
       if (!_gsAdmin) { btn.disabled = true; return; }
@@ -2219,6 +2230,9 @@ def _render_dashboard_html() -> str:
       gsAutoCurrEl.addEventListener("change", () => {
         _postGameSettings({ auto_curriculum: gsAutoCurrEl.checked });
         _applyAutoCurriculum(gsAutoCurrEl.checked);
+      });
+      gsDifficultyEl.addEventListener("change", () => {
+        _postGameSettings({ difficulty: parseInt(gsDifficultyEl.value, 10) });
       });
     }
     const MAX_ROBOTRON_AUTO_START_LEVEL = 81;
@@ -4763,6 +4777,9 @@ def _render_dashboard_html() -> str:
         }
         if (gsAdvancedEl.checked !== gs.start_advanced) gsAdvancedEl.checked = gs.start_advanced;
         if (parseInt(gsLevelEl.value, 10) !== gs.start_level_min) _setGameLevelValue(gs.start_level_min);
+        if (gs.difficulty != null && parseInt(gsDifficultyEl.value, 10) !== gs.difficulty) {
+          gsDifficultyEl.value = String(Math.max(1, Math.min(10, gs.difficulty)));
+        }
       }
       // ── Auto-curriculum: continuously recompute level each tick ──
       if (gsAutoCurrEl.checked && now.average_level != null) {
@@ -5116,6 +5133,8 @@ def _make_handler(state: _DashboardState):
                         game_settings.expert_pct = int(data["expert_pct"])
                     if "auto_curriculum" in data:
                         game_settings.auto_curriculum = bool(data["auto_curriculum"])
+                    if "difficulty" in data:
+                        game_settings.difficulty = int(data["difficulty"])
                     game_settings.save()
                     body = json.dumps(game_settings.snapshot()).encode("utf-8")
                     self._send(body, "application/json")
