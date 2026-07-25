@@ -51,7 +51,13 @@ except ImportError:
 
 metrics = config_metrics
 
-ENGINE_VERSION = 24  # Restored to the record lineage (2026-07-19): the staged
+ENGINE_VERSION = 27  # "wider" branch (2026-07-25): trunk (1600,1200,800) ×1.5
+# -> (2400,1800,1200), single-knob width test from frame 0 vs the v24 curve
+# (v24 plateau: EScr1M ~500K difficulty-7 era, loss pinned 1.80).  Engine 27
+# because 25 is burned (staging episode) and 26 stays reserved for the queued
+# rung-3 (2000,1500,1000).  v24/v23 checkpoints refuse to load here BY DESIGN
+# — a raw cross-load would shape-skip the trunk into a frankenstein.
+# (was v24:) Restored to the record lineage (2026-07-19): the staged
 # rung-3 bump (engine 25, 11M dims) never launched and would have orphaned the
 # live 1.68M lineage's checkpoints on any restart.  Rung 3, when deliberately
 # staged, should use engine 26 (25 is burned by this staging episode).

@@ -489,7 +489,14 @@ class RLConfigData:
     # have refused the live 1.68M lineage's checkpoints and silently started
     # an 11M net from scratch.  Rung 3 remains a queued experiment; stage it
     # deliberately when its night comes: dims (2000,1500,1000), engine 26+.
-    trunk_layer_sizes: tuple[int, ...] = (1600, 1200, 800)
+    # WIDTH LADDER, "wider" branch (2026-07-25): (1600,1200,800) × 1.5 ->
+    # (2400,1800,1200).  Motivation: the v24 lineage plateaued at EScr1M
+    # ~473-562K (difficulty-7 era) with loss pinned at ~1.80 over 70M+ frames
+    # at LR 1e-4 — a capacity equilibrium, not a data problem.  Single-knob
+    # width test per ladder protocol: everything else identical, judged from
+    # frame 0 against the v24 curve at matched steps.  Skips the queued
+    # rung-3 (2000,1500,1000); engine 27 (25 burned, 26 reserved for rung 3).
+    trunk_layer_sizes: tuple[int, ...] = (2400, 1800, 1200)
     trunk_hidden: int = 256
     trunk_layers: int = 2
     use_layer_norm: bool = True
