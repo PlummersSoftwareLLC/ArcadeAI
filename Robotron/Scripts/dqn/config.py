@@ -1308,7 +1308,13 @@ ROBOTRON_SELECTABLE_LEVELS = list(range(1, 41))
 # start_advanced/auto_curriculum in game settings (operator settings win);
 # eval clients remain hard-pinned to wave 1 so EScr1M stays comparable.
 STRATIFIED_TRAINING_STARTS = True
-STRATIFIED_START_LEVELS = (1, 5, 9, 13)
+# (2026-07-26) Rebalanced for the difficulty-10 campaign: the auto-curriculum
+# episode (EScr1M 560K -> 265K while loss FELL 1.90 -> 1.78) re-proved that
+# all-frontier starts drain early-wave play from the ring and marathon
+# survival bleeds.  Two wave-1 slots (~40% of the fleet) keep the full-game
+# spine and free-life economy in the data; 17/25 ship the beyond-frontier
+# experience the old (1,5,9,13) never had.
+STRATIFIED_START_LEVELS = (1, 1, 9, 17, 25)
 
 class GameSettings:
     """Thread-safe container for operator-adjustable game settings."""
