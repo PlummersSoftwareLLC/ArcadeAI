@@ -2252,6 +2252,7 @@ WIRE_LIVES_UNKNOWN = 255
 wire_lives_deaths = 0
 wire_lives_interval = 0
 wire_lives_prev_score = nil
+wire_lives_low_frames = 0
 wire_lives_last = WIRE_LIVES_UNKNOWN
 
 -- ── Server-controlled difficulty (2026-07-24) ──────────────────────────
@@ -2303,13 +2304,30 @@ end
 local function wire_lives_track(score, replay_level, death_edge)
     local s = math.max(0, math.floor(score or 0))
     local rp = math.max(0, math.floor(replay_level or 0))
-    if wire_lives_prev_score ~= nil and s < wire_lives_prev_score and s < 100000 then
-        -- New game: reset death count and re-learn the interval from RP.
-        wire_lives_deaths = 0
-        wire_lives_interval = 0
+    if wire_lives_prev_score == nil then wire_lives_prev_score = s end
+    if s < wire_lives_prev_score then
+        -- Score decreased: a new game, or a torn BCD read.  Require the low
+        -- score to persist a few frames before resetting so a one-frame
+        -- tear can't fake a new game (the old monotone-max guard here kept
+        -- prev pinned at the previous game's final score, which made this
+        -- branch fire EVERY frame below 100K and wreck deaths + interval).
+        if s < 100000 then
+            wire_lives_low_frames = wire_lives_low_frames + 1
+            if wire_lives_low_frames >= 3 then
+                wire_lives_deaths = 0
+                wire_lives_prev_score = s
+                wire_lives_low_frames = 0
+            end
+        end
+    else
+        wire_lives_prev_score = s
+        wire_lives_low_frames = 0
     end
-    wire_lives_prev_score = math.max(s, wire_lives_prev_score or s)
-    if wire_lives_interval == 0 and rp >= 5000 and rp <= 100000 then
+    -- Learn the bonus interval ONCE, from the first threshold of a fresh
+    -- game while the score is still below it: at that moment RP equals the
+    -- DIP interval exactly.  It is a machine constant — never relearn it
+    -- mid-game (that's how the old code corrupted it to 75K/100K).
+    if wire_lives_interval == 0 and rp >= 5000 and rp <= 100000 and s < rp then
         wire_lives_interval = rp
     end
     if death_edge then
