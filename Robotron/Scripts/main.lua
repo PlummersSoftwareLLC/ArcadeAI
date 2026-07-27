@@ -2281,19 +2281,28 @@ difficulty_poke_frame = 0
 -- byte's high bit, or EVAL_MODE==1) are exempt: EScr1M measures unbounded
 -- games.  Cap < 256, so capped clients never see the wave-byte wrap.
 WAVE_RESET_CAP = 45
-wavecap_cooldown = 0
+wavecap_prev_wave = nil
 
-local function wavecap_check(frame_idx, wave, player_alive)
-    if wavecap_cooldown > 0 then
-        wavecap_cooldown = wavecap_cooldown - 1
-        return
-    end
-    if WAVE_RESET_CAP > 0 and not SERVER_IS_EVAL and EVAL_MODE ~= 1
-            and (wave or 0) >= WAVE_RESET_CAP and (player_alive or 0) ~= 0 then
+local function wavecap_check(frame_idx, wave, player_alive, score)
+    -- EDGE-triggered only: fire exactly on the (cap-1) -> cap wave advance
+    -- of a live, real game.  A level-triggered check here caused a reset
+    -- loop (2026-07-27): soft_reset reloads this script (wiping any
+    -- cooldown global) while the wave byte still holds the old deep value
+    -- during boot/attract, so the cap re-fired every cycle.  Edge + score
+    -- guard can't refire across a reset: after reload prev_wave is nil and
+    -- a fresh game's score is far below the threshold.  Legacy marathons
+    -- already past the cap are left to finish naturally.
+    local w = math.floor(wave or 0)
+    local fire = WAVE_RESET_CAP > 0 and not SERVER_IS_EVAL and EVAL_MODE ~= 1
+        and (player_alive or 0) ~= 0
+        and wavecap_prev_wave == WAVE_RESET_CAP - 1
+        and w == WAVE_RESET_CAP
+        and math.floor(score or 0) >= 50000
+    wavecap_prev_wave = w
+    if fire then
         print(string.format(
-            "[WAVECAP] wave %d >= %d - soft reset (training-data rebalance)",
-            wave, WAVE_RESET_CAP))
-        wavecap_cooldown = 600   -- one trigger; reset takes effect within frames
+            "[WAVECAP] wave advance %d -> %d - soft reset (training-data rebalance)",
+            WAVE_RESET_CAP - 1, w))
         pcall(function() manager.machine:soft_reset() end)
     end
 end
@@ -3873,7 +3882,7 @@ function frame_callback()
         move_cmd, fire_cmd, socket_ok = process_frame_via_socket(payload, frame_counter)
         if socket_ok then
             difficulty_apply(mem, frame_counter)
-            wavecap_check(frame_counter, frame.wave_number, frame.player_alive)
+            wavecap_check(frame_counter, frame.wave_number, frame.player_alive, frame.score)
         end
     else
         if (now - last_connection_attempt_time) >= CONNECTION_RETRY_INTERVAL_S then
