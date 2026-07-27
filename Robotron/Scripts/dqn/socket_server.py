@@ -1369,7 +1369,8 @@ class SocketServer:
         preview_enabled: bool = False,
         hud_enabled: bool = False,
     ):
-        if self._is_eval_client(cid):
+        is_eval = self._is_eval_client(cid)
+        if is_eval:
             # Eval clients always start a fresh game at wave 1: EScr1M measures
             # true full-game performance, not curriculum-boosted play.
             start_adv = 0
@@ -1418,9 +1419,15 @@ class SocketServer:
         # 5-byte action so their fixed-size read never desyncs.
         cs = self.client_states.get(cid)
         if isinstance(cs, dict) and cs.get("proto_v2", False):
+            # High bit of the difficulty byte = "you are an eval client":
+            # eval clients are exempt from the Lua wave-cap soft reset (they
+            # must play unbounded games for EScr1M).  Pre-wavecap Lua clamps
+            # the byte to 10, so the flag is backward-harmless.
+            diff_b = max(1, min(10, int(game_settings.difficulty)))
+            if is_eval:
+                diff_b |= 0x80
             return struct.pack(">bbBBBB", int(move_cmd), int(fire_cmd),
-                               source_u8, start_adv, start_level,
-                               max(1, min(10, int(game_settings.difficulty))))
+                               source_u8, start_adv, start_level, diff_b)
         return struct.pack(">bbBBB", int(move_cmd), int(fire_cmd),
                            source_u8, start_adv, start_level)
 

@@ -2267,8 +2267,36 @@ CMOS_GA1 = 0xCC14          -- 2 BCD nibbles (tens, units)
 CMOS_ADJ_END = 0xCC24      -- ENDADJ: checksummed adjustment range is [BASE, END)
 CMOS_ADJSUM = 0xCC8C       -- 2 nibbles (hi, lo)
 SERVER_DIFFICULTY = 5
+SERVER_IS_EVAL = false
 difficulty_poked = nil
 difficulty_poke_frame = 0
+
+-- ── Wave cap for training clients (2026-07-27) ─────────────────────────
+-- Marathon games monopolize the replay ring with deep-wave frames and
+-- early-wave competence bleeds (the recurring ring-narrowing collapse).
+-- Training clients soft-reset once the wave counter reaches the cap, so
+-- every client cycles the full wave-1->cap arc continuously.  Waves are
+-- already TD-isolated (wave_clear_training_terminal), so the reset costs
+-- the learner nothing.  Eval clients (SERVER_IS_EVAL via the difficulty
+-- byte's high bit, or EVAL_MODE==1) are exempt: EScr1M measures unbounded
+-- games.  Cap < 256, so capped clients never see the wave-byte wrap.
+WAVE_RESET_CAP = 45
+wavecap_cooldown = 0
+
+local function wavecap_check(frame_idx, wave, player_alive)
+    if wavecap_cooldown > 0 then
+        wavecap_cooldown = wavecap_cooldown - 1
+        return
+    end
+    if WAVE_RESET_CAP > 0 and not SERVER_IS_EVAL and EVAL_MODE ~= 1
+            and (wave or 0) >= WAVE_RESET_CAP and (player_alive or 0) ~= 0 then
+        print(string.format(
+            "[WAVECAP] wave %d >= %d - soft reset (training-data rebalance)",
+            wave, WAVE_RESET_CAP))
+        wavecap_cooldown = 600   -- one trigger; reset takes effect within frames
+        pcall(function() manager.machine:soft_reset() end)
+    end
+end
 
 local function poke_difficulty(memory, diff)
     diff = math.max(1, math.min(10, math.floor(diff or 5)))
@@ -3456,7 +3484,10 @@ local function process_frame_via_socket(frame_payload, frame_idx)
                 local move_dir, fire_dir, source, start_advanced, start_level_min, difficulty = string.unpack("bbBBBB", action_bytes)
                 START_ADVANCED = (start_advanced or 0) ~= 0
                 START_LEVEL_MIN = math.max(1, math.min(81, math.floor(start_level_min or 1)))
-                SERVER_DIFFICULTY = math.max(1, math.min(10, math.floor(difficulty or 5)))
+                -- High bit = server says we're an eval client (wave-cap exempt).
+                local diff_raw = math.floor(difficulty or 5)
+                SERVER_IS_EVAL = (diff_raw & 0x80) ~= 0
+                SERVER_DIFFICULTY = math.max(1, math.min(10, diff_raw & 0x7F))
                 trace_log(
                     frame_idx,
                     "socket_read_ok",
@@ -3842,6 +3873,7 @@ function frame_callback()
         move_cmd, fire_cmd, socket_ok = process_frame_via_socket(payload, frame_counter)
         if socket_ok then
             difficulty_apply(mem, frame_counter)
+            wavecap_check(frame_counter, frame.wave_number, frame.player_alive)
         end
     else
         if (now - last_connection_attempt_time) >= CONNECTION_RETRY_INTERVAL_S then
