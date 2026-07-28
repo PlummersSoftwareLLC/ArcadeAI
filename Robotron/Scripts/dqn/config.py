@@ -1314,7 +1314,12 @@ STRATIFIED_TRAINING_STARTS = True
 # survival bleeds.  Two wave-1 slots (~40% of the fleet) keep the full-game
 # spine and free-life economy in the data; 17/25 ship the beyond-frontier
 # experience the old (1,5,9,13) never had.
-STRATIFIED_START_LEVELS = (1, 1, 9, 17, 25)
+# (2026-07-28) Frontier slide #1: the expert-10%/eps-2% breakout pushed eval
+# to wave 35-72 and EScr1M past 2M peak / ~1.2M sustained — growth stopped at
+# the wave-45 cap's data horizon (no fleet play, no HOF entries past it).
+# Anchor stays doubled; frontier slots march to 17/33/49.  Slide again when
+# the eval frontier outgrows the (raised, 75) cap.
+STRATIFIED_START_LEVELS = (1, 1, 17, 33, 49)
 
 class GameSettings:
     """Thread-safe container for operator-adjustable game settings."""

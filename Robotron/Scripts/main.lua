@@ -2280,7 +2280,10 @@ difficulty_poke_frame = 0
 -- the learner nothing.  Eval clients (SERVER_IS_EVAL via the difficulty
 -- byte's high bit, or EVAL_MODE==1) are exempt: EScr1M measures unbounded
 -- games.  Cap < 256, so capped clients never see the wave-byte wrap.
-WAVE_RESET_CAP = 45
+-- (2026-07-28) 45 -> 75: frontier slide #1, one wave-fold past the eval
+-- frontier (eval deaths ~35-72 after the breakout).  Keep the cap one fold
+-- ahead of ELvl1M's ceiling; slide with STRATIFIED_START_LEVELS in config.py.
+WAVE_RESET_CAP = 75
 wavecap_prev_wave = nil
 
 local function wavecap_check(frame_idx, wave, player_alive, score)
