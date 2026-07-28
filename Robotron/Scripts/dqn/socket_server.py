@@ -1403,7 +1403,14 @@ class SocketServer:
                 # deep-wave experience in the buffer regardless of policy
                 # quality, breaking the wave-1 curriculum lock-in where deep
                 # data existed only while the policy could reach it.
-                levels = STRATIFIED_START_LEVELS
+                # (2026-07-28, Dave) Decade tracking: the frontier slots
+                # follow the eval frontier instead of a static tuple —
+                # D = most recent wave ending in 1 at/below ELvl1M (reaching
+                # wave 50 -> start 41).  Mix (1,1,D,D,D): the proven 40%
+                # wave-1 anchor, all frontier pressure on the live decade.
+                _f = float(getattr(metrics, "eval_level_1m_average", 0.0) or 0.0)
+                _d = max(1, ((int(_f) - 1) // 10) * 10 + 1)
+                levels = (1, 1, _d, _d, _d)
                 start_level = max(1, min(255, int(levels[cid % len(levels)])))
                 start_adv = 1 if start_level > 1 else 0
             else:
