@@ -984,7 +984,12 @@ class RLConfigData:
 
     # ── exploration ─────────────────────────────────────────────────────
     epsilon_start: float = 1.0
-    epsilon_end: float = 0.05
+    # (2026-07-29) 0.05 -> 0.02: the difficulty-10 breakout recipe (expert 10%
+    # / eps 2%) is the wider branch's validated operating point — at +27%
+    # enemy speed every random action is near-fatal, and the recipe's edge
+    # over 5%/5% is ~1.3M vs ~1.0M EScr1M.  Baked in because the UI override
+    # died on every restart and silently cost a regression THREE times.
+    epsilon_end: float = 0.02
     epsilon_decay_frames: int = 1_250_000   # 2.5M -> 1.25M (doubled fade, 2026-07-16)
     # Most epsilon steps were affordance-guided (a second mini-expert), so only
     # this fraction broke out of the heuristic manifold.  Raised so exploration
@@ -1022,7 +1027,10 @@ class RLConfigData:
     # value over 1%.  A config-level floor also survives restarts, unlike the
     # keyboard override, which reset to the old 5% floor on every boot and
     # repeatedly landed the run on unvalidated settings.
-    expert_ratio_end: float = 0.05   # 0.01 -> 0.05: permanent 5% expert floor.
+    # (2026-07-29) 0.05 -> 0.10 (was 0.01 -> 0.05 "permanent 5% floor"): the
+    # breakout-recipe expert share, baked in with epsilon_end above so a
+    # restart can't silently revert the fleet to the weaker 5%/5% regime.
+    expert_ratio_end: float = 0.10
     # The one stable run this project produced held 5% expert; every 1% run
     # oscillates (EScr1M swinging 82K<->218K around a ~110K mean with stable
     # wave-10 training depth) — the signature of an under-stabilized policy that
