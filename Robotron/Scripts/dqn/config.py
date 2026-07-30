@@ -662,7 +662,13 @@ class RLConfigData:
     # 278 GB + ~1 GB aux -> ~42 GB slack).  If the remount is ever lost
     # (fstab entry removed), boot fails immediately with ENOSPC — that is
     # the guard working; remount and relaunch.
-    memory_size: int = 25_000_000
+    # (2026-07-30) 25M -> 6M for engine v28: 4-frame states are 11128 wide,
+    # and the ring keeps TWO fp16 state arrays (states + next_states) =
+    # ~43.5KB/transition.  25M wanted ~1.04TB; 6M ≈ 250GB fits the 320GB
+    # /dev/shm with headroom on this 461GB box.  Cost: ring turnover drops
+    # from ~90 min to ~20 min — the HOF/EpHOF banks and interest quotas
+    # carry more retention weight accordingly.
+    memory_size: int = 6_000_000
     priority_alpha: float = 0.7
     priority_beta_start: float = 0.4
     priority_beta_frames: int = 10_000_000
