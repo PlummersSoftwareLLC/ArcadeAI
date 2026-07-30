@@ -137,7 +137,12 @@ MODEL_LANE_END = MODEL_LANE_OFFSET + MODEL_LANE_FEATURES                      # 
 MODEL_GRID_OFFSET = MODEL_LANE_END                                            # 2296
 MODEL_GRID_END = MODEL_GRID_OFFSET + TACTICAL_GRID_FEATURES                   # 2782
 SINGLE_FRAME_STATE_SIZE = MODEL_GRID_END                                      # 2782
-_frame_stack_env = os.getenv("DQN_FRAME_STACK", os.getenv("ROBOTRON_DQN_FRAME_STACK", "1"))
+# (2026-07-30) Default 1 -> 4: engine v28 reflex experiment.  EScrF sat in
+# the 24-29 band through every regime while all gains/losses came from
+# survival depth — the signature of a reflex/information bound at +27%
+# enemy speed.  4 stacked frames give the trunk real motion history
+# (~130ms) instead of single-snapshot inference.  Env var still overrides.
+_frame_stack_env = os.getenv("DQN_FRAME_STACK", os.getenv("ROBOTRON_DQN_FRAME_STACK", "4"))
 try:
     FRAME_STACK_COUNT = max(1, int(_frame_stack_env))
 except Exception:

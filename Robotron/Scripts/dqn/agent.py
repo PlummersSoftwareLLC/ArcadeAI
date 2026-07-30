@@ -51,7 +51,13 @@ except ImportError:
 
 metrics = config_metrics
 
-ENGINE_VERSION = 27  # "wider" branch (2026-07-25): trunk (1600,1200,800) ×1.5
+ENGINE_VERSION = 28  # (2026-07-30) 4-frame stacking: state 2782 -> 11128
+# (2782 x 4), attacking the reflex bound (EScrF pinned 24-29 through every
+# regime; all gains were survival depth).  Trunk dims unchanged from v27.
+# v27 checkpoints/banks refuse to load here BY DESIGN — stored states are
+# single-frame.  Cold start; v27 peak banked at
+# checkpoint_archive/wider_v27_escr1m765k_20260727.pt + auto best saves.
+# (was v27:) "wider" branch (2026-07-25): trunk (1600,1200,800) ×1.5
 # -> (2400,1800,1200), single-knob width test from frame 0 vs the v24 curve
 # (v24 plateau: EScr1M ~500K difficulty-7 era, loss pinned 1.80).  Engine 27
 # because 25 is burned (staging episode) and 26 stays reserved for the queued
