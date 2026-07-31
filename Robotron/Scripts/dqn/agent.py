@@ -177,6 +177,26 @@ class RainbowAgent:
                 self.memory.ensure_live_mmap(self._ring_dir)
             except Exception as e:
                 print(f"  [WARN] replay live-mmap init failed: {e}")
+            # (2026-07-31) Fail LOUD if a big ring ends up on RAM arrays.
+            # The fallback is a deferred OOM kill: the 10M-cap v28 launch
+            # got ENOSPC on the second fallocate, "fell back" to RAM, and
+            # the kernel killed the trainer 40 minutes later at 454GB.
+            # A saved ring deferring to load() is fine (size adopts there);
+            # an EMPTY buffer without mmap backing is only safe when the
+            # arrays are genuinely RAM-sized.
+            _ring_gb = 2 * int(cfg.memory_size) * int(state_size) * 2 / 1e9
+            _saved_ring = False
+            try:
+                _meta = os.path.join(self._ring_dir, "_meta.npy")
+                _saved_ring = os.path.isfile(_meta) and int(np.load(_meta)[1]) > 0
+            except Exception:
+                pass
+            if (self.memory._mmap_dir is None and len(self.memory) == 0
+                    and not _saved_ring and _ring_gb > 64):
+                raise RuntimeError(
+                    f"replay ring needs {_ring_gb:.0f}GB but live-mmap backing "
+                    f"failed and no saved ring exists — refusing RAM fallback. "
+                    f"Free {cfg.replay_tmpfs_dir} or lower memory_size.")
 
         # AMP (CUDA only)
         self.use_amp = cfg.enable_amp and (self.device.type == "cuda")

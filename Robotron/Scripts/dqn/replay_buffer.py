@@ -1375,6 +1375,7 @@ class PrioritizedReplayBuffer:
                     return False  # real data present: defer to load()/adoption
             except Exception:
                 return False      # unreadable meta: leave the directory alone
+        created_paths = []
         try:
             os.makedirs(abs_path, exist_ok=True)
             # Stale atomic-save leftovers (<dir>.tmp) are incomplete by
@@ -1396,6 +1397,7 @@ class PrioritizedReplayBuffer:
                             arr = candidate
                     if arr is None:
                         arr = np.lib.format.open_memmap(path, mode="w+", dtype=dtype, shape=shape)
+                        created_paths.append(path)
                         # Reserve the FULL file now (tmpfs honors fallocate).
                         # Sparse files defer allocation to page-fault time, so
                         # an over-committed tmpfs kills the trainer with a
@@ -1418,6 +1420,14 @@ class PrioritizedReplayBuffer:
                 print(f"  Replay buffer live-mmap backing at {abs_path} (saves are flushes)")
             return True
         except Exception as e:
+            # (2026-07-31) Clean up any partially-reserved files from THIS
+            # call: an orphaned 222GB states.npy from a failed fallocate ate
+            # /dev/shm and helped OOM-kill the first v28 launch.
+            for p in created_paths:
+                try:
+                    os.remove(p)
+                except Exception:
+                    pass
             print(f"  [WARN] live-mmap backing unavailable ({e}) — using RAM arrays")
             return False
 
