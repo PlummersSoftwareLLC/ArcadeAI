@@ -1001,7 +1001,13 @@ class RLConfigData:
     # over 5%/5% is ~1.3M vs ~1.0M EScr1M.  Baked in because the UI override
     # died on every restart and silently cost a regression THREE times.
     epsilon_end: float = 0.02
-    epsilon_decay_frames: int = 1_250_000   # 2.5M -> 1.25M (doubled fade, 2026-07-16)
+    # (2026-08-01) 1.25M -> 120M frames: with the floor baked at 2% (mature-
+    # policy setting), the old 1.25M-frame fade dumped a COLD net to 2%
+    # exploration within minutes of birth — the v28a run converged
+    # prematurely at ~100K EScr1M with anomalously low loss.  120M frames
+    # ≈ 6h of fleet time: real exploration through the first overnight,
+    # landing on the validated floor by morning.
+    epsilon_decay_frames: int = 120_000_000
     # Most epsilon steps were affordance-guided (a second mini-expert), so only
     # this fraction broke out of the heuristic manifold.  Raised so exploration
     # can actually discover better-than-expert behaviour.
@@ -1065,7 +1071,11 @@ class RLConfigData:
     # lockstep so the whole crutch fades together (they are meant to move on the
     # same step schedule).
     expert_ratio_decay_start_step: int = 0
-    expert_ratio_decay_steps: int = 150_000
+    # (2026-08-01) 150K -> 450K steps (~7h at v28's ~17 steps/s): keep the
+    # demonstration scaffold up through the cold net's whole first night
+    # instead of dropping to the 10% floor 2.5h in.  Pairs with the
+    # epsilon_decay_frames stretch above — cold-start diet, same floors.
+    expert_ratio_decay_steps: int = 450_000
     expert_ratio: float = 0.60
 
     # Expert BC — also step-based (same FPS-independence rationale as above).
