@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+"""Thread-safe in-memory chat store for dashboard comments."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import re
+import threading
+import time
+from collections import deque
+from typing import Any
+
+
+class ChatStore:
+    """Small bounded chat log with monotonically increasing message IDs."""
+
+    def __init__(self, max_messages: int = 240, persist_path: str | None = None):
+        self._lock = threading.Lock()
+        self._max_messages = max(10, int(max_messages))
+        self._rows: deque[dict[str, Any]] = deque(maxlen=self._max_messages)
+        self._next_id = 1
+        self._persist_path = Path(persist_path) if persist_path else self._default_persist_path()
+        self._load_from_disk()
+
+    @staticmethod
+    def _default_persist_path() -> Path:
+        scripts_dir = Path(__file__).resolve().parent.parent
+        logs_dir = scripts_dir.parent / "logs"
+        return logs_dir / "dashboard_chat.jsonl"
+
+    @staticmethod
+    def _sanitize_text(text: str) -> str:
+        cleaned = str(text)
+        cleaned = cleaned.replace("\r", " ").replace("\n", " ").replace("\t", " ")
+        cleaned = "".join(ch for ch in cleaned if ch >= " " and ch not in {"\x7f"})
+        cleaned = re.sub(r"[\u202a-\u202e\u2066-\u2069]", "", cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        return cleaned
+
+    @staticmethod
+    def _sanitize_ip(ip: str) -> str:
+        raw = str(ip or "").strip()
+        if not raw:
+            return "unknown"
+        safe = "".join(ch for ch in raw if ch.isalnum() or ch in ".:[]-%")
+        safe = safe.strip("%")
+        return safe[:64] if safe else "unknown"
+
+    @staticmethod
+    def _sanitize_display_name(name: str) -> str:
+        cleaned = ChatStore._sanitize_text(name)
+        if not cleaned:
+            return ""
+        return cleaned[:16]
+
+    @staticmethod
+    def _mask_ip_for_display(ip: str) -> str:
+        safe_ip = ChatStore._sanitize_ip(ip)
+        ipv4 = safe_ip.split(".")
+        if len(ipv4) == 4 and all(part.isdigit() for part in ipv4):
+            return f"{ipv4[0]}.{ipv4[1]}.{ipv4[2]}.X"
+        ipv6 = safe_ip.split(":")
+        if len(ipv6) > 1:
+            parts = ipv6[:-1] + ["X"]
+            return ":".join(parts)
+        return safe_ip
+
+    @classmethod
+    def _public_row(cls, row: dict[str, Any]) -> dict[str, Any]:
+        display_name = cls._sanitize_display_name(row.get("display_name", ""))
+        display_ip = cls._mask_ip_for_display(row.get("ip", "unknown"))
+        return {
+            "id": int(row.get("id", 0) or 0),
+            "ts": float(row.get("ts", 0.0) or 0.0),
+            "text": cls._sanitize_text(row.get("text", "")),
+            "display_name": display_name,
+            "display_ip": display_ip,
+            "sender": display_name or display_ip,
+        }
+
+    def _load_from_disk(self) -> None:
+        path = self._persist_path
+        try:
+            if not path.exists():
+                return
+            max_seen_id = 0
+            for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    row = json.loads(line)
+                except Exception:
+                    continue
+                if not isinstance(row, dict):
+                    continue
+                msg = self._sanitize_text(row.get("text", ""))
+                if not msg:
+                    continue
+                if len(msg) > 240:
+                    msg = msg[:240]
+                ip = self._sanitize_ip(row.get("ip", "unknown"))
+                display_name = self._sanitize_display_name(row.get("display_name", ""))
+                try:
+                    ts = float(row.get("ts", 0.0) or 0.0)
+                except Exception:
+                    ts = 0.0
+                if ts <= 0.0:
+                    ts = float(time.time())
+                try:
+                    rid = int(row.get("id", 0) or 0)
+                except Exception:
+                    rid = 0
+                if rid > max_seen_id:
+                    max_seen_id = rid
+                self._rows.append(
+                    {
+                        "id": rid,
+                        "ts": ts,
+                        "ip": ip,
+                        "display_name": display_name,
+                        "text": msg,
+                    }
+                )
+            self._next_id = max(1, max_seen_id + 1)
+        except Exception:
+            return
+
+    def _append_to_disk(self, row: dict[str, Any]) -> None:
+        path = self._persist_path
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(row, ensure_ascii=True, separators=(",", ":")) + "\n")
+        except Exception:
+            pass
+
+    def add_message(self, ip: str, text: str, display_name: str = "") -> dict[str, Any] | None:
+        msg = self._sanitize_text(text)
+        if not msg:
+            return None
+        msg = msg[:240]
+        safe_ip = self._sanitize_ip(ip)
+        safe_name = self._sanitize_display_name(display_name)
+        with self._lock:
+            row = {
+                "id": self._next_id,
+                "ts": float(time.time()),
+                "ip": safe_ip,
+                "display_name": safe_name,
+                "text": msg,
+            }
+            self._next_id += 1
+            self._rows.append(row)
+            self._append_to_disk(row)
+            return self._public_row(row)
+
+    def snapshot(self, limit: int = 120) -> list[dict[str, Any]]:
+        take = max(1, min(self._max_messages, int(limit)))
+        with self._lock:
+            rows = list(self._rows)[-take:]
+        return [self._public_row(row) for row in rows]

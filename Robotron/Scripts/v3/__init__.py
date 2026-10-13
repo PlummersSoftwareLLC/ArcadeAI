@@ -1,1 +1,1 @@
-# Robotron AI v3 — Neurosymbolic PPO with Set Transformer
+# Robotron AI v3 - object-ray PPO

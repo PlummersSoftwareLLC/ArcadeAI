@@ -4,19 +4,15 @@ This `Robotron/Scripts` project is now a stripped baseline for Robotron-specific
 
 ## Current Scope
 
-- Lua sends a **2210-value hybrid state vector** each frame:
-  - 98 global features
-    - alive / score / replay / lasers / wave
-    - player position and velocity
-    - `ZP1ENM` enemy-state bag (50 normalized bytes)
-    - per-category counts / presence / nearest-distance summaries
-    - quadrant danger / rescue summaries
-    - wall proximity
-  - `12 x 12 x 8` player-centered spatial grid
-    - local danger, projectile, brute, human, obstacle, wall, density, and approach channels
-  - `64 x 15` object tokens
-    - salient objects from `OPTR`, `HPTR`, `RPTR`, `PPTR`
-    - relative position, true velocity, distance, direction, threat, size, type flags
+- Lua sends a **1890-value wire packet** each frame:
+  - 18 core player/game values
+  - 22 `ZP1ENM` / ELIST bytes
+  - legacy lane/grid sections kept on the wire for server stability
+  - distance-sorted state-bag pools for 64 destructibles/projectiles, 16 hulks, 16 obstacles, and 16 humans
+- Python v3 now converts those state-bag pools into an **object-ray representation**:
+  - HUD-consistent collision-center object positions from `OPTR`, `HPTR`, `RPTR`, and `PPTR`
+  - 32-feature entity tokens with relative/absolute position, velocity, timing, threat, type, and role flags
+  - per-action move/fire ray features so each joystick direction is scored against the current geometry
 - Python returns **dual 8-way joystick actions**:
   - movement direction index `0..7`
   - firing direction index `0..7`
@@ -25,7 +21,7 @@ This `Robotron/Scripts` project is now a stripped baseline for Robotron-specific
 ## Protocol (Lua -> Python)
 
 - Header format: `>HddBIBBIBB`
-  - `H`: number of float state values (currently `2210`)
+  - `H`: number of float state values (currently `1890`)
   - `d`: subjective reward
   - `d`: objective reward
   - `B`: done flag
@@ -39,15 +35,26 @@ This `Robotron/Scripts` project is now a stripped baseline for Robotron-specific
 
 ## Protocol (Python -> Lua)
 
-- Action format: `bb`
+- Action format: `bbBBB`
   - movement direction index `0..7`
   - firing direction index `0..7`
+  - source byte / preview flags
+  - advanced-start flag
+  - start-level minimum
+
+When advanced start is off, Python now sends level `1` so Robotron starts on the
+default wave.
 
 ## Startup Diagnostics
 
+- Run the Python v3 server from `Robotron/Scripts`:
+  - `python3 run_v3.py`
 - Run foreground diagnostics:
   - `cd Robotron`
   - `./startmame.sh --fg`
+- Point MAME at a remote Python host:
+  - `ROBOTRON_SOCKET_ADDRESS=ubvmdell:9998 ./startmame.sh --fg`
+  - or `./startmame.sh --fg --socket-address ubvmdell:9998`
 - Background mode now reports explicit process liveness:
   - `./startmame.sh`
 - Startup trace output is written to:
@@ -56,6 +63,7 @@ This `Robotron/Scripts` project is now a stripped baseline for Robotron-specific
 
 Lua debug controls in `Robotron/Scripts/main.lua`:
 
+- Press `H` in a MAME window to toggle the local hitbox HUD. Set `ROBOTRON_LOCAL_HUD=1` to start it enabled.
 - `DEBUG_STARTUP_TRACE` (default `false`)
 - `DEBUG_TRACE_FRAMES` (default `10`)
 - `DEBUG_BYPASS_SOCKET_FOR_FRAMES` (default `0`)
@@ -87,7 +95,7 @@ export ROBOTRON_WEBRTC_ICE_SERVERS='[
 ```
 
 If unset or invalid, dashboard uses built-in ICE defaults from
-`Robotron/Scripts/config.py` (`WEBRTC_ICE_SERVERS`).
+`Robotron/Scripts/v3/metrics_dashboard.py`.
 
 ## TODO (Known Missing Robotron Wiring)
 

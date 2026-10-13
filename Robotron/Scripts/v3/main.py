@@ -12,6 +12,7 @@ import time
 import signal
 import threading
 import select as _select
+import socket
 import torch
 
 from .config import CONFIG, GAME_SETTINGS, MODEL_DIR, CHECKPOINT_PATH
@@ -35,6 +36,33 @@ def _env_enabled(name: str, default: bool) -> bool:
     if raw is None:
         return default
     return raw.strip().lower() not in {"0", "false", "off", "no"}
+
+
+def _best_lan_ip() -> str:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("8.8.8.8", 80))
+            ip = sock.getsockname()[0]
+            if ip and not ip.startswith("127."):
+                return ip
+    except Exception:
+        pass
+    try:
+        ip = socket.gethostbyname(socket.gethostname())
+        if ip and not ip.startswith("127."):
+            return ip
+    except Exception:
+        pass
+    return "127.0.0.1"
+
+
+def _resolve_dashboard_url_host(bind_host: str) -> str:
+    explicit = os.getenv("ROBOTRON_DASHBOARD_PUBLIC_HOST", "").strip()
+    if explicit:
+        return explicit
+    if bind_host in {"0.0.0.0", "::", "[::]"}:
+        return _best_lan_ip()
+    return bind_host
 
 
 class _KeyboardHandler:
@@ -91,8 +119,8 @@ class _KeyboardHandler:
 
 BANNER = """
 ╔═══════════════════════════════════════════════════════════════════╗
-║  ROBOTRON AI v3 — Set Transformer + PPO                         ║
-║  Neurosymbolic RL with Potential Field Expert Guidance           ║
+║  ROBOTRON AI v3 — Object-Ray Transformer + PPO                  ║
+║  HUD-Grounded Entities with Action-Conditioned Geometry          ║
 ╚═══════════════════════════════════════════════════════════════════╝
 """
 
@@ -134,6 +162,7 @@ def main():
     print(f"\n  Expert ratio: {agent.get_expert_ratio():.1%}")
     print(f"  Epsilon: {agent.get_epsilon():.3f}")
     print(f"  BC weight: {agent._get_bc_weight():.3f}")
+    print(f"  Curriculum: advanced={'on' if GAME_SETTINGS.start_advanced else 'off'}  min_level={GAME_SETTINGS.start_level_min}")
     print(f"  LR: {CONFIG.train.lr:.1e}")
     print()
 
@@ -173,6 +202,11 @@ def main():
         open_browser=open_browser,
     )
     dashboard.start()
+    dashboard_url_host = _resolve_dashboard_url_host(dashboard.host)
+    dashboard_url = f"http://{dashboard_url_host}:{dashboard.port}"
+    print(f"  Dashboard: {dashboard_url}")
+    if dashboard.host != dashboard_url_host:
+        print(f"             (bound {dashboard.host}:{dashboard.port})")
 
     # Tabular status reporter
     def status_reporter():
@@ -287,8 +321,10 @@ def main():
             shutdown_event.wait(300.0)  # save every 5 minutes
             if shutdown_event.is_set():
                 break
-            agent.save()
-            print("[v3] Auto-saved checkpoint")
+            if agent.save():
+                print("[v3] Auto-saved checkpoint")
+            else:
+                print("[v3] Auto-save skipped after save failure")
 
     saver = threading.Thread(target=auto_saver, daemon=True)
     saver.start()
@@ -300,6 +336,8 @@ def main():
         pass
     finally:
         kb.restore()
+        if dashboard is not None:
+            dashboard.stop()
         print("Saving final checkpoint...")
         agent.save()
         print("Done.")
