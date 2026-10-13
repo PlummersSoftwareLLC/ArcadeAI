@@ -248,7 +248,7 @@ def keyboard_handler(agent, kb):
 
 
 # ── Network info ────────────────────────────────────────────────────────────
-def print_network_info(agent):
+def print_network_info(agent, dashboard_status: str = "disabled"):
     print("\n" + "=" * 90)
     print("TEMPEST AI v2 — Rainbow-Attention Engine".center(90))
     print("=" * 90)
@@ -279,6 +279,9 @@ def print_network_info(agent):
     print(f"   Expert: {RL_CONFIG.expert_ratio_start*100:.0f}% → {RL_CONFIG.expert_ratio_end*100:.0f}% over {RL_CONFIG.expert_ratio_decay_frames:,} frames")
     print(f"   BC weight: {RL_CONFIG.expert_bc_weight} → {RL_CONFIG.expert_bc_min_weight}")
 
+    print(f"\n🌐 Services:")
+    print(f"   Dashboard:        {dashboard_status}")
+
     print(f"\n⌨️  Keys: [q]uit [s]ave [c]lear [h]eader [space]row [o]override [e]xpert [p]epsilon [t]rain [v]erbose [a]ttention")
     print(f"   [7/8/9] expert−/reset/+   [4/5/6] epsilon−/reset/+   [b] buffer stats   [f] flush buffer")
     print("\n" + "=" * 90 + "\n")
@@ -292,9 +295,8 @@ def main():
     dev = getattr(agent.device, "type", "unknown")
     print(f"🧮 Device: {dev.upper()}")
 
-    print_network_info(agent)
-
     dashboard = None
+    dashboard_status = "disabled"
 
     if os.path.exists(LATEST_MODEL_PATH):
         loaded = agent.load(LATEST_MODEL_PATH)
@@ -332,12 +334,14 @@ def main():
             dashboard.start()
             dashboard_url_host = _resolve_dashboard_url_host(dashboard.host)
             dashboard_url = f"http://{dashboard_url_host}:{dashboard.port}"
-            print(f"📊 Metrics dashboard: {dashboard_url}")
+            dashboard_status = dashboard_url
             if dashboard.host != dashboard_url_host:
-                print(f"   Bound on {dashboard.host}:{dashboard.port}")
+                dashboard_status = f"{dashboard_url} (bound {dashboard.host}:{dashboard.port})"
         except Exception as e:
             dashboard = None
-            print(f"⚠ Dashboard startup failed: {e}")
+            dashboard_status = f"unavailable ({e})"
+
+    print_network_info(agent, dashboard_status=dashboard_status)
 
     server = SocketServer(SERVER_CONFIG.host, SERVER_CONFIG.port, agent, metrics)
     metrics.global_server = server

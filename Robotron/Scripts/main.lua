@@ -7,17 +7,19 @@
         + 22 ELIST bytes (first 22 of 50; rest are reserved padding)
         + 8 directional predictive lane summaries × 30 features computed from all visible objects
         + 9×9 local egocentric tactical grid × 6 channels
-        + 4 role-specific pools:
-            projectile: 1 occupancy + 24 slots × 10 features
-            danger:     1 occupancy + 32 slots × 10 features
-            human:      1 occupancy + 12 slots × 7 features
-            electrode:  1 occupancy + 8 slots × 5 features
+        + 4 distance-sorted state-bag pools, each row using 10 common features:
+            destructible: 1 occupancy + 64 slots × 10 features
+            hulk:         1 occupancy + 16 slots × 10 features
+            obstacle:     1 occupancy + 16 slots × 10 features
+            human:        1 occupancy + 16 slots × 10 features
       - Receives joystick commands: movement_dir (-1 neutral or 0..7) and firing_dir (-1 neutral or 0..7)
 --]]
 
-RAW_SOCKET_ADDRESS = os.getenv("ROBOTRON_SOCKET_ADDRESS") or "ubvmdell:9998"
+RAW_SOCKET_ADDRESS = os.getenv("ROBOTRON_SOCKET_ADDRESS") or "m2macpro:9998"
 PREVIEW_CLIENT_FLAG = (os.getenv("ROBOTRON_PREVIEW_CLIENT") == "1") and 1 or 0
 CLIENT_SLOT = math.max(0, math.floor(tonumber(os.getenv("ROBOTRON_CLIENT_SLOT") or "0") or 0))
+-- Eval override: 0 = auto (server decides by cid), 1 = force eval, 2 = force non-eval.
+EVAL_MODE = math.max(0, math.min(2, math.floor(tonumber(os.getenv("ROBOTRON_EVAL_MODE") or "0") or 0)))
 SOCKET_ADDRESS = RAW_SOCKET_ADDRESS
 if string.sub(SOCKET_ADDRESS, 1, 7) ~= "socket." then
     SOCKET_ADDRESS = "socket." .. SOCKET_ADDRESS
@@ -78,20 +80,27 @@ DEBUG_TRACE_FILE = "logs/startup_trace.log"
 DEBUG_FORCE_ACTION_FRAMES = 0
 DEBUG_FORCE_MOVE_DIR = 2  -- right
 DEBUG_FORCE_FIRE_DIR = 2  -- right
-DEATH_PENALTY_POINTS = 25000
--- Subjective shaping rewards (raw points; scaled in Python by subj_reward_scale).
--- Goal: densify survival signal without dominating objective score rewards.
+DEATH_PENALTY_POINTS = 0
+SUBJECTIVE_REWARD_ENABLED = false
 SUBJ_ENEMY_WEIGHT = 8.0
 SUBJ_HUMAN_WEIGHT = 12.0
-SUBJ_SURVIVAL_BONUS = 2.0
--- Survival shaping is only awarded while there are humans left to rescue.
-SUBJ_SURVIVAL_REQUIRE_HUMANS = true
--- Per-frame penalty when alive but no humans remain; helps avoid end-of-wave stalling.
-SUBJ_NO_HUMANS_EXISTENCE_PENALTY = 2.0
-SUBJ_DEATH_PENALTY = 25.0
+SUBJ_HUMAN_STALL_BASE_PENALTY = 1.5
+SUBJ_HUMAN_STALL_PENALTY = 4.0
+SUBJ_HUMAN_PROGRESS_EPS = 0.003
+SUBJ_LAST_HUMAN_STALL_MULT = 1.75
+SUBJ_HUMAN_EVADE_SCALE = 0.35
+SUBJ_LAST_HUMAN_EVADE_SCALE = 0.20
+-- Death is handled Python-side as an explicit Death reward component. Keeping
+-- another death subtraction inside Shape made the dashboard hard to read and
+-- double-counted the same event.
+SUBJ_DEATH_PENALTY = 0.0
 SUBJ_ENEMY_NEAR_NORM = 0.035
 SUBJ_ENEMY_FAR_NORM = 0.200
 SUBJ_HUMAN_NEAR_NORM = 0.120
+-- Discount used for potential-based shaping of the state-only terms (enemy
+-- spacing + human proximity).  MUST match RL_CONFIG.gamma on the Python side
+-- so the shaping F = gamma*Phi(s')-Phi(s) stays policy-invariant (Ng et al. 1999).
+POTENTIAL_GAMMA = 0.995
 ADVANCED_SHAPING = {
     priority_aim_weight = 10.0,
     brain_guard_weight = 8.0,
@@ -111,6 +120,9 @@ AIM_TARGET_CATS = {
     grunt = true, hulk = true, brain = true, tank = true,
     spawner = true, enforcer = true, projectile = true, electrode = true,
 }
+SUBJ_HUMAN_GENERIC_AIM_SCALE = 0.20
+SUBJ_HUMAN_PROTECT_RADIUS_NORM = 0.16
+SUBJ_HUMAN_PROTECT_THREAT_MIN = 0.45
 ADVANCED_SHAPING.priority_aim_bonus = {
     grunt = 1.00,
     hulk = 0.85,
@@ -139,6 +151,13 @@ SUBJ_EVADE_WEIGHT = 10.0       -- reward when moving away from nearest threat
 EVADE_DANGER_NORM  = 0.08      -- only reward evasion when enemy within this normalised dist
 MOVE_DIR_VEC = FIRE_DIR_VEC    -- same 8-way mapping for move directions
 
+-- End-of-wave anti-stall pressure. Once there are no humans left, the useful
+-- job is clearing the board, not farming evasion reward by kiting stragglers.
+SUBJ_NO_HUMAN_EVADE_SCALE = 0.25
+SUBJ_NO_HUMAN_CLEAR_PENALTY = 4.0
+SUBJ_NO_HUMAN_CLEAR_NEAR_NORM = EVADE_DANGER_NORM
+SUBJ_NO_HUMAN_CLEAR_FAR_NORM = SUBJ_ENEMY_FAR_NORM
+
 -- Wall-hugging penalty: per-axis penalty when within 16 px of a wall.
 -- Stacks additively so a corner costs double.
 SUBJ_WALL_PENALTY  = 15.0      -- penalty per wall axis per frame
@@ -163,10 +182,11 @@ previous_player_alive = 1
 previous_score = 0
 previous_wave_number = 0
 prev_num_humans = 0
+prev_potential = 0.0       -- previous-frame shaping potential Phi(s) (state-only terms)
 prev_fire_cmd = -1          -- fire direction from previous frame
 prev_move_cmd = -1          -- move direction from previous frame
 prev_aim_objects = nil      -- classified objects from previous frame
-last_action_source = 0      -- 0=none, 1=dqn, 2=epsilon, 3=expert, 4=forced_random
+last_action_source = 0      -- 0=none, 1=dqn, 2=epsilon, 3=expert, 4=eval/forced_random
 
 -- Fire-hold state:  The game's LSPROC laser routine (RRG23.ASM) requires
 -- the fire joystick to stay in the SAME direction for 3 consecutive frames
@@ -181,11 +201,12 @@ prev_aim_py16 = nil         -- player y16 from previous frame
 prev_nearest_enemy_x16 = nil
 prev_nearest_enemy_y16 = nil
 prev_nearest_enemy_dist = nil
+prev_nearest_human_dist = nil
 
 -- Autoboot input sequence (MAME input level, no game-specific memory logic required).
 -- Every cycle: pulse Coin 1, then pulse 1P Start shortly after.
 AUTOBOOT_ENABLED = true
-AUTOBOOT_CYCLE_FRAMES = 300
+AUTOBOOT_CYCLE_FRAMES = 120
 AUTOBOOT_COIN_PULSE_FRAMES = 3
 AUTOBOOT_START_DELAY_FRAMES = 18
 AUTOBOOT_START_PULSE_FRAMES = 3
@@ -251,7 +272,7 @@ ACTIVE_LISTS = {
     {name = "pptr", addr = PPTR_ADDR},   -- fatal: electrodes
 }
 
--- Per-type entity categories. Order MUST match Python config/aimodel.py.
+-- Per-type entity categories. Order MUST match Python v3 state processing.
 ENTITY_CATEGORIES = {
     {name = "grunt",      slots = 40, peak = 80},
     {name = "hulk",       slots = 16, peak = 25},
@@ -293,20 +314,17 @@ TACTICAL_GRID_HALF_RANGE_Y = (TACTICAL_GRID_H * TACTICAL_GRID_CELL_SIZE) * 0.5
 TACTICAL_GRID_FEATURES = TACTICAL_GRID_W * TACTICAL_GRID_H * TACTICAL_GRID_CHANNELS
 TACTICAL_GRID_LOOKAHEAD_FRAMES = 4.0
 TACTICAL_TTC_MAX_FRAMES = 24.0
-PROJECTILE_POOL_SLOTS = 24
-PROJECTILE_SLOT_FEATURES = 10
-DANGER_POOL_SLOTS = 32
-DANGER_SLOT_FEATURES = 10
-HUMAN_POOL_SLOTS = 12
-HUMAN_SLOT_FEATURES = 7
-ELECTRODE_POOL_SLOTS = 8
-ELECTRODE_SLOT_FEATURES = 5
+STATE_BAG_SLOT_FEATURES = 10
+DESTRUCTIBLE_POOL_SLOTS = 64
+HULK_POOL_SLOTS = 16
+OBSTACLE_POOL_SLOTS = 16
+HUMAN_POOL_SLOTS = 16
 TACTICAL_LANE_TOTAL_FEATURES = TACTICAL_LANE_COUNT * TACTICAL_LANE_FEATURES
 TACTICAL_POOL_TOTAL_FEATURES =
-    (1 + (PROJECTILE_POOL_SLOTS * PROJECTILE_SLOT_FEATURES))
-    + (1 + (DANGER_POOL_SLOTS * DANGER_SLOT_FEATURES))
-    + (1 + (HUMAN_POOL_SLOTS * HUMAN_SLOT_FEATURES))
-    + (1 + (ELECTRODE_POOL_SLOTS * ELECTRODE_SLOT_FEATURES))
+    (1 + (DESTRUCTIBLE_POOL_SLOTS * STATE_BAG_SLOT_FEATURES))
+    + (1 + (HULK_POOL_SLOTS * STATE_BAG_SLOT_FEATURES))
+    + (1 + (OBSTACLE_POOL_SLOTS * STATE_BAG_SLOT_FEATURES))
+    + (1 + (HUMAN_POOL_SLOTS * STATE_BAG_SLOT_FEATURES))
 EXPECTED_STATE_VALUES = LEGACY_CORE_FEATURES + ZP1ENM_EMIT_COUNT + TACTICAL_LANE_TOTAL_FEATURES + TACTICAL_GRID_FEATURES + TACTICAL_POOL_TOTAL_FEATURES
 
 local function _make_zero_feature_block(count)
@@ -351,38 +369,18 @@ local CATEGORY_IS_DANGEROUS = {
     spawner = true, enforcer = true, projectile = true, electrode = true,
 }
 
+local CATEGORY_IS_DESTRUCTIBLE = {
+    grunt = true, brain = true, tank = true,
+    spawner = true, enforcer = true, projectile = true,
+}
+
 local CATEGORY_IS_STATIC = {
     electrode = true,
 }
 
 local prev_object_sample_x = {}
 local prev_object_sample_y = {}
-
-local function _empty_slot_ptrs(slot_count)
-    local out = {}
-    for i = 1, slot_count do
-        out[i] = 0
-    end
-    return out
-end
-
-local prev_pool_slot_ptrs = {
-    projectile = _empty_slot_ptrs(PROJECTILE_POOL_SLOTS),
-    danger = _empty_slot_ptrs(DANGER_POOL_SLOTS),
-    human = _empty_slot_ptrs(HUMAN_POOL_SLOTS),
-    electrode = _empty_slot_ptrs(ELECTRODE_POOL_SLOTS),
-}
-
-local function _reset_legacy_slot_assignments()
-    prev_pool_slot_ptrs = {
-        projectile = _empty_slot_ptrs(PROJECTILE_POOL_SLOTS),
-        danger = _empty_slot_ptrs(DANGER_POOL_SLOTS),
-        human = _empty_slot_ptrs(HUMAN_POOL_SLOTS),
-        electrode = _empty_slot_ptrs(ELECTRODE_POOL_SLOTS),
-    }
-end
-
-_reset_legacy_slot_assignments()
+local prev_object_sample_category = {}
 
 local function _select_top_k_sorted(bucket, limit, better_fn)
     local selected = {}
@@ -418,76 +416,9 @@ local function _select_top_k_sorted(bucket, limit, better_fn)
     return selected, selected_n
 end
 
-local function _dangerous_priority_better(a, b)
-    if b == nil then return true end
-    local ta, tb = tonumber(a.threat) or 0.0, tonumber(b.threat) or 0.0
-    if ta ~= tb then
-        return ta > tb
-    end
-    return (tonumber(a.dist_norm) or 1.0) < (tonumber(b.dist_norm) or 1.0)
-end
-
 local function _nearest_distance_better(a, b)
     if b == nil then return true end
     return (tonumber(a.dist_norm) or 1.0) < (tonumber(b.dist_norm) or 1.0)
-end
-
-local function _projectile_priority_better(a, b)
-    if b == nil then return true end
-    local tta = tonumber(a.ttc_norm) or 1.0
-    local ttb = tonumber(b.ttc_norm) or 1.0
-    if tta ~= ttb then
-        return tta < ttb
-    end
-    local ca = tonumber(a.closest_pass_norm) or 1.0
-    local cb = tonumber(b.closest_pass_norm) or 1.0
-    if ca ~= cb then
-        return ca < cb
-    end
-    return (tonumber(a.dist_norm) or 1.0) < (tonumber(b.dist_norm) or 1.0)
-end
-
-local function _stable_assign_pool_slots(pool_name, bucket, slot_count, better_fn)
-    local selected, selected_n = _select_top_k_sorted(bucket, slot_count, better_fn)
-    local assigned = {}
-    local selected_by_ptr = {}
-    for i = 1, selected_n do
-        selected_by_ptr[selected[i].ptr] = selected[i]
-    end
-
-    local prev_slots = prev_pool_slot_ptrs[pool_name] or _empty_slot_ptrs(slot_count)
-    for slot_idx = 1, slot_count do
-        local prev_ptr = prev_slots[slot_idx]
-        local obj = prev_ptr and prev_ptr ~= 0 and selected_by_ptr[prev_ptr] or nil
-        if obj ~= nil then
-            assigned[slot_idx] = obj
-            selected_by_ptr[prev_ptr] = nil
-        end
-    end
-
-    -- Fill remaining holes in priority order
-    local fill_idx = 1
-    for slot_idx = 1, slot_count do
-        if assigned[slot_idx] == nil then
-            while fill_idx <= selected_n do
-                local obj = selected[fill_idx]
-                fill_idx = fill_idx + 1
-                if obj ~= nil and selected_by_ptr[obj.ptr] ~= nil then
-                    assigned[slot_idx] = obj
-                    selected_by_ptr[obj.ptr] = nil
-                    break
-                end
-            end
-        end
-    end
-
-    local next_slots = {}
-    for i = 1, slot_count do
-        next_slots[i] = assigned[i] and assigned[i].ptr or 0
-    end
-    prev_pool_slot_ptrs[pool_name] = next_slots
-
-    return assigned, selected_n
 end
 
 -- OCVECT-based entity classification (auto-discovered at runtime).
@@ -496,13 +427,14 @@ local discovered_tank_ocvect = nil     -- TNKIL address once discovered via grow
 local unresolved_7x16 = {}             -- {[ocvect] = true} for ambiguous 7×16 on RPTR
 local DEBUG_LOG_DISCOVERY = false      -- set true to log OCVECT classification discoveries
 
--- Debug HUD overlay state (draws entity letters on screen each frame).
+-- Debug HUD overlay state (draws entity hitboxes on the local MAME screen).
 mame_screen = nil                -- MAME screen device for draw_text
 hud_objects = nil                -- last frame's classified object list (reference)
 hud_player_x16 = nil
 hud_player_y16 = nil
 hud_player_box = nil
-DEBUG_HUD_ENABLED = true         -- default ON; toggle with H hotkey
+DEBUG_HUD_ENABLED = env_flag("ROBOTRON_LOCAL_HUD", false) -- local MAME HUD; toggle with H
+PREVIEW_HUD_ENABLED = false      -- server-controlled preview overlay request
 hud_key_code = nil               -- MAME input code for 'H' key (lazy-init)
 hud_key_was_down = false         -- edge-detect so hold doesn't strobe
 PREVIEW_FORMAT_RGB565 = 1
@@ -510,13 +442,16 @@ PREVIEW_FORMAT_RGB565_LZSS = 2
 PREVIEW_FORMAT_RGB565_RLE = 3
 -- Enable preview support; server controls streaming per-client via action source flags.
 PREVIEW_CAPTURE_ENABLED = true
-PREVIEW_FPS = math.max(1, math.floor(env_number("ROBOTRON_PREVIEW_FPS", 30) or 30))
+PREVIEW_FPS_MAX = 30
+PREVIEW_FPS = math.max(
+    1,
+    math.min(PREVIEW_FPS_MAX, math.floor(env_number("ROBOTRON_PREVIEW_FPS", PREVIEW_FPS_MAX) or PREVIEW_FPS_MAX))
+)
 PREVIEW_MIN_INTERVAL_S = (1.0 / PREVIEW_FPS)
--- Capture near dashboard size at the source; sending full-resolution snapshots
--- through Lua was the dominant cost for the preview client.
-PREVIEW_MAX_WIDTH = math.max(64, math.floor(env_number("ROBOTRON_PREVIEW_MAX_WIDTH", 320) or 320))
-PREVIEW_MAX_HEIGHT = math.max(64, math.floor(env_number("ROBOTRON_PREVIEW_MAX_HEIGHT", 240) or 240))
-PREVIEW_TRY_RLE = env_flag("ROBOTRON_PREVIEW_RLE", false)
+-- A max width/height <= 0 means native snapshot resolution.
+PREVIEW_MAX_WIDTH = math.floor(env_number("ROBOTRON_PREVIEW_MAX_WIDTH", 0) or 0)
+PREVIEW_MAX_HEIGHT = math.floor(env_number("ROBOTRON_PREVIEW_MAX_HEIGHT", 0) or 0)
+PREVIEW_TRY_RLE = env_flag("ROBOTRON_PREVIEW_RLE", true)
 PREVIEW_RLE_MIN_SAVINGS_BYTES = math.max(64, math.floor(env_number("ROBOTRON_PREVIEW_RLE_MIN_SAVINGS", 256) or 256))
 PREVIEW_MAX_BYTES = 2000000
 SOCKET_MAX_PAYLOAD_BYTES = 4194304
@@ -531,6 +466,11 @@ preview_source_h = 0
 preview_target_w = 0
 preview_target_h = 0
 picture_bounds_cache = {}
+
+function hud_draw_requested()
+    return DEBUG_HUD_ENABLED or (preview_stream_enabled and PREVIEW_HUD_ENABLED)
+end
+
 START_ADVANCED = false
 START_LEVEL_MIN = 1
 ACTION_RX_BUFFER = ""
@@ -799,6 +739,7 @@ local POS_Y_MIN   = GAME_YMIN * 256                        -- 6144
 local POS_Y_RANGE = (GAME_YMAX - GAME_YMIN) * 256          -- 53760
 local POS_MAX_DIAG = math.sqrt(POS_X_RANGE * POS_X_RANGE
                              + POS_Y_RANGE * POS_Y_RANGE)  -- ≈64022
+local VELOCITY_REUSE_MAX_DELTA_WORLD = 8192.0  -- 32px; larger jumps are slot reuse/spawn churn
 
 local WALL_MARGIN_NORM_X = 4096.0 / POS_X_RANGE  -- 16 px normalised (~0.118)
 local WALL_MARGIN_NORM_Y = 4096.0 / POS_Y_RANGE  -- 16 px normalised (~0.076)
@@ -1352,6 +1293,68 @@ local function compute_evasion_reward(move_cmd, px16, py16, enemy_x16, enemy_y16
     return score * proximity
 end
 
+local function compute_no_human_clear_penalty(player_alive, done, score_delta, num_humans, nearest_enemy_dist_norm)
+    if player_alive ~= 1 or done then
+        return 0.0
+    end
+    if (tonumber(num_humans) or 0) > 0 then
+        return 0.0
+    end
+    if (tonumber(score_delta) or 0) > 0 then
+        return 0.0
+    end
+    if nearest_enemy_dist_norm == nil then
+        return 0.0
+    end
+
+    local enemy_dist = clamp01(nearest_enemy_dist_norm)
+    if enemy_dist >= 0.999 then
+        return 0.0
+    end
+
+    local span = math.max(1e-6, SUBJ_NO_HUMAN_CLEAR_FAR_NORM - SUBJ_NO_HUMAN_CLEAR_NEAR_NORM)
+    local far_factor = clamp01((enemy_dist - SUBJ_NO_HUMAN_CLEAR_NEAR_NORM) / span)
+    return SUBJ_NO_HUMAN_CLEAR_PENALTY * (0.5 + (0.5 * far_factor))
+end
+
+local function compute_human_rescue_stall_penalty(
+    player_alive,
+    done,
+    score_delta,
+    num_humans,
+    nearest_human_dist_norm,
+    prev_human_dist_norm
+)
+    if player_alive ~= 1 or done then
+        return 0.0
+    end
+    local humans = math.max(0, math.floor(tonumber(num_humans) or 0))
+    if humans <= 0 then
+        return 0.0
+    end
+    if (tonumber(score_delta) or 0) > 0 then
+        return 0.0
+    end
+    if nearest_human_dist_norm == nil or prev_human_dist_norm == nil then
+        return 0.0
+    end
+
+    local cur_dist = clamp01(nearest_human_dist_norm)
+    local prev_dist = clamp01(prev_human_dist_norm)
+    local progress = prev_dist - cur_dist
+    if progress > SUBJ_HUMAN_PROGRESS_EPS then
+        return 0.0
+    end
+
+    local dist_factor = clamp01(cur_dist / math.max(1e-6, SUBJ_HUMAN_NEAR_NORM))
+    local stall_penalty = SUBJ_HUMAN_STALL_BASE_PENALTY +
+        (SUBJ_HUMAN_STALL_PENALTY * (0.35 + (0.65 * dist_factor)))
+    if humans == 1 then
+        stall_penalty = stall_penalty * SUBJ_LAST_HUMAN_STALL_MULT
+    end
+    return stall_penalty
+end
+
 function movement_alignment_score(move_cmd, target_x, target_y)
     if move_cmd == nil or move_cmd < 0 or move_cmd > 7 then
         return 0.0
@@ -1365,6 +1368,75 @@ function movement_alignment_score(move_cmd, target_x, target_y)
     local tx = target_x / len
     local ty = target_y / len
     return clamp01((vec[1] * tx + vec[2] * ty) / 1.414)
+end
+
+function compute_contextual_wall_penalty(move_cmd, px16, py16, nearest_enemy_dist_norm)
+    if px16 == nil or py16 == nil then
+        return 0.0
+    end
+    local vec = MOVE_DIR_VEC[move_cmd] or {0, 0}
+    local px = norm_pos_x(px16)
+    local py = norm_pos_y(py16)
+    local danger_pressure = 0.0
+    if nearest_enemy_dist_norm ~= nil then
+        danger_pressure = clamp01((SUBJ_ENEMY_FAR_NORM - nearest_enemy_dist_norm) / math.max(1e-6, SUBJ_ENEMY_FAR_NORM))
+    end
+
+    local function wall_axis_penalty(depth, push_into_wall)
+        if depth <= 0.0 then
+            return 0.0
+        end
+        -- Penalize walls strongly when the chosen move pushes deeper into them,
+        -- and lightly when the player is near a wall under pressure. This avoids
+        -- punishing deliberate edge use when the safest move is away from danger.
+        local pressure = math.max(push_into_wall, 0.25 * danger_pressure)
+        return SUBJ_WALL_PENALTY * depth * pressure
+    end
+
+    local penalty = 0.0
+    if px < WALL_MARGIN_NORM_X then
+        penalty = penalty + wall_axis_penalty(clamp01((WALL_MARGIN_NORM_X - px) / WALL_MARGIN_NORM_X), clamp01(-vec[1]))
+    elseif px > (1.0 - WALL_MARGIN_NORM_X) then
+        penalty = penalty + wall_axis_penalty(clamp01((px - (1.0 - WALL_MARGIN_NORM_X)) / WALL_MARGIN_NORM_X), clamp01(vec[1]))
+    end
+    if py < WALL_MARGIN_NORM_Y then
+        penalty = penalty + wall_axis_penalty(clamp01((WALL_MARGIN_NORM_Y - py) / WALL_MARGIN_NORM_Y), clamp01(-vec[2]))
+    elseif py > (1.0 - WALL_MARGIN_NORM_Y) then
+        penalty = penalty + wall_axis_penalty(clamp01((py - (1.0 - WALL_MARGIN_NORM_Y)) / WALL_MARGIN_NORM_Y), clamp01(vec[2]))
+    end
+    return penalty
+end
+
+local function target_is_near_human(obj, objects)
+    if obj == nil or objects == nil or obj.x16 == nil or obj.y16 == nil then
+        return false
+    end
+    for _, other in ipairs(objects) do
+        if other.category == "human" and other.x16 ~= nil and other.y16 ~= nil then
+            local dx = (obj.x16 or 0) - other.x16
+            local dy = (obj.y16 or 0) - other.y16
+            local d = math.sqrt((dx * dx) + (dy * dy)) / math.max(1e-6, POS_MAX_DIAG)
+            if d <= SUBJ_HUMAN_PROTECT_RADIUS_NORM then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function human_aware_aim_scale(category, obj, objects, num_humans)
+    if math.max(0, math.floor(tonumber(num_humans) or 0)) <= 0 then
+        return 1.0
+    end
+    if category == "brain" or category == "projectile" then
+        return 1.0
+    end
+    if CATEGORY_IS_DANGEROUS[category] and not CATEGORY_IS_STATIC[category] and
+       clamp01(obj.threat or 0.0) >= SUBJ_HUMAN_PROTECT_THREAT_MIN and
+       target_is_near_human(obj, objects) then
+        return 1.0
+    end
+    return SUBJ_HUMAN_GENERIC_AIM_SCALE
 end
 
 function priority_target_bonus(category, wave_number, num_humans, dist_norm)
@@ -1411,7 +1483,8 @@ function compute_priority_aim_reward(fire_cmd, px16, py16, objects, wave_number,
                 local base_score = clamp01(1.0 - dist / 32768.0)
                 local threat = clamp01(obj.threat or 0.0)
                 local bonus = priority_target_bonus(cat, wave_number, num_humans, obj.dist_norm)
-                local score = clamp01((0.55 * base_score + 0.45 * threat) * bonus)
+                local aim_scale = human_aware_aim_scale(cat, obj, objects, num_humans)
+                local score = clamp01((0.55 * base_score + 0.45 * threat) * bonus * aim_scale)
                 if score > best_score then
                     best_score = score
                 end
@@ -1598,6 +1671,30 @@ local function collision_center_y16(base_y16, off_y_px, box_h_px)
     return math.floor((tonumber(base_y16) or 0.0) + (shift_px * 256.0) + 0.5)
 end
 
+local function hud_collision_center_x16(obj_x_px, off_x_px, box_w_px, fallback_base_x16)
+    if obj_x_px == nil then
+        return collision_center_x16(fallback_base_x16, off_x_px, box_w_px)
+    end
+    local center_screen_x =
+        ((tonumber(obj_x_px) or 0.0) * HUD_SCREEN_X_SCALE) +
+        (tonumber(off_x_px) or 0.0) +
+        (0.5 * math.max(1.0, tonumber(box_w_px) or 1.0)) -
+        6.0
+    return math.floor(((center_screen_x / HUD_SCREEN_X_SCALE) * 256.0) + 0.5)
+end
+
+local function hud_collision_center_y16(obj_y_px, off_y_px, box_h_px, fallback_base_y16)
+    if obj_y_px == nil then
+        return collision_center_y16(fallback_base_y16, off_y_px, box_h_px)
+    end
+    local center_y =
+        (tonumber(obj_y_px) or 0.0) +
+        (tonumber(off_y_px) or 0.0) +
+        (0.5 * math.max(1.0, tonumber(box_h_px) or 1.0)) -
+        7.0
+    return math.floor((center_y * 256.0) + 0.5)
+end
+
 local function try_resolve_7x16(all_objects, enemy_state)
     -- Try to resolve ambiguous 7×16 RPTR objects (hulk / brain / tank)
     -- by matching per-OCVECT counts to ELIST counters.
@@ -1743,7 +1840,7 @@ end
 local function _object_threat_score(obj)
     local base = CATEGORY_THREAT_WEIGHT[obj.category] or 0.4
     local proximity = 1.0 - clamp01(obj.dist_norm or 1.0)
-    local approach = clamp01((obj.approach or 0.0 + 1.0) * 0.5)
+    local approach = clamp01(((obj.approach or 0.0) + 1.0) * 0.5)
     if obj.category == "human" then
         return base * (0.35 + proximity)
     end
@@ -1758,11 +1855,13 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
 
     local player_pict_ptr = read_u16_be(memory, PLOBJ_ADDR + OPICT_OFF)
     local player_hit_off_x, player_hit_off_y, player_hit_w, player_hit_h = picture_collision_bounds(memory, player_pict_ptr)
-    local player_center_x16 = collision_center_x16(player_x16, player_hit_off_x, player_hit_w)
-    local player_center_y16 = collision_center_y16(player_y16, player_hit_off_y, player_hit_h)
+    local player_objx = memory:read_u8(PLOBJ_ADDR + OBJX_OFF)
+    local player_objy = memory:read_u8(PLOBJ_ADDR + OBJY_OFF)
+    local player_center_x16 = hud_collision_center_x16(player_objx, player_hit_off_x, player_hit_w, player_x16)
+    local player_center_y16 = hud_collision_center_y16(player_objy, player_hit_off_y, player_hit_h, player_y16)
 
     local all_objects = {}
-    local hud_enabled = DEBUG_HUD_ENABLED
+    local hud_enabled = hud_draw_requested()
     for _, list_def in ipairs(ACTIVE_LISTS) do
         local ptr = read_u16_be(memory, list_def.addr)
         local seen = {}
@@ -1779,8 +1878,8 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
             else
                 local raw_x16 = read_u16_be(memory, ptr + OX16_OFF)
                 local raw_y16 = read_u16_be(memory, ptr + OY16_OFF)
-                local objx = hud_enabled and (memory:read_u8(ptr + OBJX_OFF) or 0) or nil
-                local objy = hud_enabled and (memory:read_u8(ptr + OBJY_OFF) or 0) or nil
+                local objx = memory:read_u8(ptr + OBJX_OFF)
+                local objy = memory:read_u8(ptr + OBJY_OFF)
                 local pict_ptr = read_u16_be(memory, ptr + OPICT_OFF)
                 local fonipc_ptr = read_u16_be(memory, ptr + FONIPC_OFF)
                 local width, height = 0, 0
@@ -1790,8 +1889,8 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
                 end
                 local collision_pict_ptr = (fonipc_ptr ~= nil and fonipc_ptr ~= 0) and fonipc_ptr or pict_ptr
                 local hit_off_x, hit_off_y, hit_w, hit_h = picture_collision_bounds(memory, collision_pict_ptr)
-                local x16 = collision_center_x16(raw_x16, hit_off_x, hit_w)
-                local y16 = collision_center_y16(raw_y16, hit_off_y, hit_h)
+                local x16 = hud_collision_center_x16(objx, hit_off_x, hit_w, raw_x16)
+                local y16 = hud_collision_center_y16(objy, hit_off_y, hit_h, raw_y16)
 
                 local rel_dx16 = 0
                 local rel_dy16 = 0
@@ -1842,19 +1941,16 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
                     height = height,
                     hit_w = hit_w,
                     hit_h = hit_h,
+                    objx = objx,
+                    objy = objy,
+                    hit_off_x = hit_off_x,
+                    hit_off_y = hit_off_y,
                     rel_dx16 = rel_dx16,
                     rel_dy16 = rel_dy16,
                     dist_world = dist_world,
                     dist_norm = dnorm,
                     category = cat,
                 }
-                if hud_enabled then
-                    local obj = all_objects[#all_objects]
-                    obj.objx = objx
-                    obj.objy = objy
-                    obj.hit_off_x = hit_off_x
-                    obj.hit_off_y = hit_off_y
-                end
                 ptr = read_u16_be(memory, ptr + OLINK_OFF)
             end
         end
@@ -1872,7 +1968,7 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
 
     local buckets = {}
     local counts = {}
-    local classified_objects = hud_enabled and {} or nil
+    local classified_objects = {}
     local object_count = 0
     local nearest_enemy_dist = nil
     local nearest_human_dist = nil
@@ -1888,11 +1984,14 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
 
     local projectile_bucket = buckets["projectile"]
     local dangerous_bucket = {}
+    local destructible_bucket = {}
+    local hulk_bucket = buckets["hulk"]
     local human_bucket = buckets["human"]
-    local electrode_bucket = buckets["electrode"]
+    local obstacle_bucket = buckets["electrode"]
     local compute_full_tactical_features = not SKIP_UNUSED_TACTICAL_FEATURES
     local current_sample_x = {}
     local current_sample_y = {}
+    local current_sample_category = {}
     for _, obj in ipairs(all_objects) do
         if obj.category == nil and obj.list_name == "rptr" then
             obj.category = "hulk"
@@ -1902,10 +2001,20 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
             local vy = 0.0
             local vx16 = 0.0
             local vy16 = 0.0
-            local prev_x = prev_object_sample_x[obj.ptr]
-            if prev_x ~= nil then
-                vx16 = (obj.x16 - prev_x)
-                vy16 = (obj.y16 - (prev_object_sample_y[obj.ptr] or obj.y16))
+            local prev_rel_x = prev_object_sample_x[obj.ptr]
+            local prev_rel_y = prev_object_sample_y[obj.ptr]
+            local prev_cat = prev_object_sample_category[obj.ptr]
+            if prev_rel_x ~= nil and prev_rel_y ~= nil and prev_cat == obj.category then
+                vx16 = (obj.rel_dx16 or 0.0) - prev_rel_x
+                vy16 = (obj.rel_dy16 or 0.0) - prev_rel_y
+                local velocity_jump = (
+                    math.abs(vx16) > VELOCITY_REUSE_MAX_DELTA_WORLD
+                    or math.abs(vy16) > VELOCITY_REUSE_MAX_DELTA_WORLD
+                )
+                if velocity_jump then
+                    vx16 = 0.0
+                    vy16 = 0.0
+                end
                 vx = clamp11(vx16 / POS_X_RANGE)
                 vy = clamp11(vy16 / POS_Y_RANGE)
             end
@@ -1915,46 +2024,46 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
             obj.vy16 = vy16
             obj.dx = clamp11((obj.rel_dx16 or 0.0) / POS_X_RANGE)
             obj.dy = clamp11((obj.rel_dy16 or 0.0) / POS_Y_RANGE)
-            if compute_full_tactical_features then
-                local dist_world = obj.dist_world or 0.0
-                if dist_world > 1.0 then
-                    obj.dir_x = clamp11((obj.rel_dx16 or 0.0) / dist_world)
-                    obj.dir_y = clamp11((obj.rel_dy16 or 0.0) / dist_world)
-                else
-                    obj.dir_x = 0.0
-                    obj.dir_y = 0.0
-                end
-                local radial = -((obj.vx * obj.dir_x) + (obj.vy * obj.dir_y))
-                obj.approach = clamp11(radial * 2.0)
-                obj.threat = _object_threat_score(obj)
-                local ttc_norm, closest_pass_norm = _predictive_motion_features(
-                    obj.rel_dx16 or 0.0,
-                    obj.rel_dy16 or 0.0,
-                    obj.vx16 or 0.0,
-                    obj.vy16 or 0.0
-                )
-                obj.ttc_norm = ttc_norm
-                obj.closest_pass_norm = closest_pass_norm
+            -- Per-object motion/threat features are CHEAP (a sqrt or two per
+            -- object) and are consumed by the DQN state-bag pools, so they are
+            -- always computed.  SKIP_UNUSED_TACTICAL_FEATURES only gates the
+            -- expensive lane-affordance and 9x9 grid blocks below, which the
+            -- DQN slice discards.
+            local dist_world = obj.dist_world or 0.0
+            if dist_world > 1.0 then
+                obj.dir_x = clamp11((obj.rel_dx16 or 0.0) / dist_world)
+                obj.dir_y = clamp11((obj.rel_dy16 or 0.0) / dist_world)
             else
-                obj.approach = 0.0
-                obj.threat = 0.0
-                obj.ttc_norm = 1.0
-                obj.closest_pass_norm = 1.0
+                obj.dir_x = 0.0
+                obj.dir_y = 0.0
             end
+            local radial = -((obj.vx * obj.dir_x) + (obj.vy * obj.dir_y))
+            obj.approach = clamp11(radial * 2.0)
+            obj.threat = _object_threat_score(obj)
+            local ttc_norm, closest_pass_norm = _predictive_motion_features(
+                obj.rel_dx16 or 0.0,
+                obj.rel_dy16 or 0.0,
+                obj.vx16 or 0.0,
+                obj.vy16 or 0.0
+            )
+            obj.ttc_norm = ttc_norm
+            obj.closest_pass_norm = closest_pass_norm
 
             counts[obj.category] = counts[obj.category] + 1
-            current_sample_x[obj.ptr] = obj.x16
-            current_sample_y[obj.ptr] = obj.y16
+            current_sample_x[obj.ptr] = obj.rel_dx16 or 0.0
+            current_sample_y[obj.ptr] = obj.rel_dy16 or 0.0
+            current_sample_category[obj.ptr] = obj.category
             buckets[obj.category][#buckets[obj.category] + 1] = obj
+            if CATEGORY_IS_DESTRUCTIBLE[obj.category] then
+                destructible_bucket[#destructible_bucket + 1] = obj
+            end
             if obj.category == "projectile" then
                 -- projectile_bucket already aliases buckets["projectile"]
             elseif obj.category ~= "human" and obj.category ~= "electrode" then
                 dangerous_bucket[#dangerous_bucket + 1] = obj
             end
             object_count = object_count + 1
-            if hud_enabled then
-                classified_objects[#classified_objects + 1] = obj
-            end
+            classified_objects[#classified_objects + 1] = obj
 
             if obj.category == "human" then
                 if nearest_human_dist == nil or obj.dist_norm < nearest_human_dist then
@@ -1983,6 +2092,7 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
 
     prev_object_sample_x = current_sample_x
     prev_object_sample_y = current_sample_y
+    prev_object_sample_category = current_sample_category
 
     local lane_summary_features = ZERO_TACTICAL_LANE_FEATURES
     local local_grid_features = ZERO_TACTICAL_GRID_FEATURES
@@ -1993,14 +2103,14 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
             dangerous_bucket,
             projectile_bucket,
             human_bucket,
-            electrode_bucket
+            obstacle_bucket
         )
-        local_grid_features = _build_local_tactical_grid(dangerous_bucket, projectile_bucket, human_bucket, electrode_bucket)
+        local_grid_features = _build_local_tactical_grid(dangerous_bucket, projectile_bucket, human_bucket, obstacle_bucket)
     end
-    local projectile_assigned, projectile_count = _stable_assign_pool_slots("projectile", projectile_bucket, PROJECTILE_POOL_SLOTS, _projectile_priority_better)
-    local danger_assigned, danger_count = _stable_assign_pool_slots("danger", dangerous_bucket, DANGER_POOL_SLOTS, _dangerous_priority_better)
-    local human_assigned, human_count = _stable_assign_pool_slots("human", human_bucket, HUMAN_POOL_SLOTS, _nearest_distance_better)
-    local electrode_assigned, electrode_count = _stable_assign_pool_slots("electrode", electrode_bucket, ELECTRODE_POOL_SLOTS, _nearest_distance_better)
+    local destructible_assigned, destructible_count = _select_top_k_sorted(destructible_bucket, DESTRUCTIBLE_POOL_SLOTS, _nearest_distance_better)
+    local hulk_assigned, hulk_count = _select_top_k_sorted(hulk_bucket, HULK_POOL_SLOTS, _nearest_distance_better)
+    local obstacle_assigned, obstacle_count = _select_top_k_sorted(obstacle_bucket, OBSTACLE_POOL_SLOTS, _nearest_distance_better)
+    local human_assigned, human_count = _select_top_k_sorted(human_bucket, HUMAN_POOL_SLOTS, _nearest_distance_better)
 
     if hud_enabled then
         for _, cat in ipairs(ENTITY_CATEGORIES) do
@@ -2026,91 +2136,45 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
         hud_objects = nil
     end
 
-    -- ── Emit tactical pools ───────────────────────────────────────────
+    -- ── Emit distance-sorted state-bag pools ─────────────────────────
+    -- Common 10-wide row:
+    -- [present, dx, dy, dist, vx, vy, threat, approach, ttc, type_norm]
     local pool_features = {}
     local type_denom = math.max(1, UNIFIED_NUM_TYPES - 1)
-    pool_features[#pool_features + 1] = math.min(1.0, projectile_count / PROJECTILE_POOL_SLOTS)
-    for i = 1, PROJECTILE_POOL_SLOTS do
-        local obj = projectile_assigned[i]
-        if obj then
-            pool_features[#pool_features + 1] = 1.0
-            pool_features[#pool_features + 1] = obj.dx
-            pool_features[#pool_features + 1] = obj.dy
-            pool_features[#pool_features + 1] = obj.dist_norm
-            pool_features[#pool_features + 1] = obj.vx or 0.0
-            pool_features[#pool_features + 1] = obj.vy or 0.0
-            pool_features[#pool_features + 1] = obj.threat or 0.0
-            pool_features[#pool_features + 1] = obj.ttc_norm or 1.0
-            pool_features[#pool_features + 1] = obj.closest_pass_norm or obj.dist_norm or 1.0
-            pool_features[#pool_features + 1] = obj.approach or 0.0
-        else
-            for _ = 1, PROJECTILE_SLOT_FEATURES do
-                pool_features[#pool_features + 1] = 0.0
+    local function emit_state_bag_pool(assigned, selected_count, slot_count)
+        pool_features[#pool_features + 1] = math.min(1.0, selected_count / math.max(1, slot_count))
+        for i = 1, slot_count do
+            local obj = assigned[i]
+            if obj then
+                local type_id = UNIFIED_TYPE_ID[obj.category] or 0
+                pool_features[#pool_features + 1] = 1.0
+                pool_features[#pool_features + 1] = obj.dx
+                pool_features[#pool_features + 1] = obj.dy
+                pool_features[#pool_features + 1] = obj.dist_norm
+                pool_features[#pool_features + 1] = obj.vx or 0.0
+                pool_features[#pool_features + 1] = obj.vy or 0.0
+                pool_features[#pool_features + 1] = obj.threat or 0.0
+                pool_features[#pool_features + 1] = obj.approach or 0.0
+                pool_features[#pool_features + 1] = obj.ttc_norm or 1.0
+                pool_features[#pool_features + 1] = type_id / type_denom
+            else
+                for _ = 1, STATE_BAG_SLOT_FEATURES do
+                    pool_features[#pool_features + 1] = 0.0
+                end
             end
         end
     end
 
-    pool_features[#pool_features + 1] = math.min(1.0, danger_count / DANGER_POOL_SLOTS)
-    for i = 1, DANGER_POOL_SLOTS do
-        local obj = danger_assigned[i]
-        if obj then
-            local type_id = UNIFIED_TYPE_ID[obj.category] or 0
-            pool_features[#pool_features + 1] = 1.0
-            pool_features[#pool_features + 1] = obj.dx
-            pool_features[#pool_features + 1] = obj.dy
-            pool_features[#pool_features + 1] = obj.dist_norm
-            pool_features[#pool_features + 1] = obj.vx or 0.0
-            pool_features[#pool_features + 1] = obj.vy or 0.0
-            pool_features[#pool_features + 1] = obj.threat or 0.0
-            pool_features[#pool_features + 1] = obj.approach or 0.0
-            pool_features[#pool_features + 1] = obj.ttc_norm or 1.0
-            pool_features[#pool_features + 1] = type_id / type_denom
-        else
-            for _ = 1, DANGER_SLOT_FEATURES do
-                pool_features[#pool_features + 1] = 0.0
-            end
-        end
-    end
-
-    pool_features[#pool_features + 1] = math.min(1.0, human_count / HUMAN_POOL_SLOTS)
-    for i = 1, HUMAN_POOL_SLOTS do
-        local obj = human_assigned[i]
-        if obj then
-            pool_features[#pool_features + 1] = 1.0
-            pool_features[#pool_features + 1] = obj.dx
-            pool_features[#pool_features + 1] = obj.dy
-            pool_features[#pool_features + 1] = obj.dist_norm
-            pool_features[#pool_features + 1] = obj.vx or 0.0
-            pool_features[#pool_features + 1] = obj.vy or 0.0
-            pool_features[#pool_features + 1] = obj.threat or 0.0
-        else
-            for _ = 1, HUMAN_SLOT_FEATURES do
-                pool_features[#pool_features + 1] = 0.0
-            end
-        end
-    end
-
-    pool_features[#pool_features + 1] = math.min(1.0, electrode_count / ELECTRODE_POOL_SLOTS)
-    for i = 1, ELECTRODE_POOL_SLOTS do
-        local obj = electrode_assigned[i]
-        if obj then
-            pool_features[#pool_features + 1] = 1.0
-            pool_features[#pool_features + 1] = obj.dx
-            pool_features[#pool_features + 1] = obj.dy
-            pool_features[#pool_features + 1] = obj.dist_norm
-            pool_features[#pool_features + 1] = obj.threat or 0.0
-        else
-            for _ = 1, ELECTRODE_SLOT_FEATURES do
-                pool_features[#pool_features + 1] = 0.0
-            end
-        end
-    end
+    emit_state_bag_pool(destructible_assigned, destructible_count, DESTRUCTIBLE_POOL_SLOTS)
+    emit_state_bag_pool(hulk_assigned, hulk_count, HULK_POOL_SLOTS)
+    emit_state_bag_pool(obstacle_assigned, obstacle_count, OBSTACLE_POOL_SLOTS)
+    emit_state_bag_pool(human_assigned, human_count, HUMAN_POOL_SLOTS)
 
     local num_humans = counts["human"] or 0
     local num_spawners = counts["spawner"] or 0
 
-    hud_player_x16 = memory:read_u8(PLOBJ_ADDR + OBJX_OFF)
-    hud_player_y16 = memory:read_u8(PLOBJ_ADDR + OBJY_OFF)
+    hud_player_x16 = player_objx
+    hud_player_y16 = player_objy
     hud_player_box = {x = player_hit_off_x, y = player_hit_off_y, w = player_hit_w, h = player_hit_h}
 
     return {
@@ -2129,6 +2193,7 @@ local function extract_world_features(memory, player_x16, player_y16, enemy_stat
         lane_summary_features = lane_summary_features,
         local_grid_features = local_grid_features,
         pool_features = pool_features,
+        reward_objects = classified_objects,
     }
 end
 
@@ -2150,7 +2215,244 @@ HUD_PLAYER_BOX_W = 4           -- matches expert collision box width in pixels
 HUD_PLAYER_BOX_H = 12          -- matches expert collision box height in pixels
 HUD_SCREEN_X_SCALE = 2         -- Robotron pixels are doubled horizontally on screen
 
+-- ── HUD gameplay stats (2026-07-20) ─────────────────────────────────────
+-- LIVES / EFFICIENCY / true WAVE on the bottom line.  The 1982 ROM shows
+-- reserve lives only as icons (capped), so marathon reserves are invisible;
+-- home ports added a numeric line for exactly this reason.  All three stats
+-- are derived locally from three RAM reads — no protocol involvement.
+-- Constants mirror the machine DIPs (and config.py lives_start/interval).
+HUD_LIVES_START = 3
+HUD_REPLAY_INTERVAL = 20000
+hud_stats_mem = nil
+hud_stats_deaths = 0
+hud_stats_wraps = 0
+hud_stats_prev_score = nil
+hud_stats_prev_wave = nil
+hud_stats_prev_alive = nil
+-- Stall watchdog (2026-07-23): a hung MAME (SELF TEST at boot, or a frozen
+-- deep game) leaves the score register bit-identical forever.  The server
+-- reaps the connection at 120s but cannot restart a remote MAME; exiting
+-- here lets the startmame.sh supervisor respawn this slot cleanly (it
+-- logs "[SUPERVISOR] respawned client N").  A paused MAME stops the frame
+-- callback entirely, so pausing can never trip this.
+STALL_EXIT_SECS = 180
+hud_stall_score = nil
+hud_stall_t0 = nil
+
+-- ── Wire lives (2026-07-24) ─────────────────────────────────────────────
+-- Lives shipped to the server in the frame header, replacing the server's
+-- score//interval estimate.  Earned lives come from ZP1RP ground truth:
+-- RP holds the NEXT replay threshold, starts each game at the DIP bonus
+-- interval and advances by exactly that interval per award, so
+-- earned = RP/interval - 1 with no hardcoded interval anywhere.  Deaths
+-- are counted on the same done edge the training signal uses.  255 is the
+-- "unknown" sentinel (mid-game attach before a new game reveals the
+-- interval); the server falls back to its estimate for that value.
+WIRE_LIVES_UNKNOWN = 255
+wire_lives_deaths = 0
+wire_lives_interval = 0
+wire_lives_prev_score = nil
+wire_lives_low_frames = 0
+wire_lives_last = WIRE_LIVES_UNKNOWN
+
+-- ── Server-controlled difficulty (2026-07-24) ──────────────────────────
+-- The server's v2 action carries the intended GA1 master difficulty
+-- (1-10, 5 = factory).  GETWV (RRG23.ASM) re-reads GA1 from CMOS at every
+-- wave start, so a live poke takes effect at the next wave.  We also
+-- recompute the adjustment checksum (FCHK: sum of low nibbles $CC00-$CC23
+-- + $37 fudge, stored as two nibbles at $CC8C/$CC8D) so the power-up CMOS
+-- test never factory-resets the machine (which would clobber free play).
+CMOS_BASE = 0xCC00
+CMOS_GA1 = 0xCC14          -- 2 BCD nibbles (tens, units)
+CMOS_ADJ_END = 0xCC24      -- ENDADJ: checksummed adjustment range is [BASE, END)
+CMOS_ADJSUM = 0xCC8C       -- 2 nibbles (hi, lo)
+SERVER_DIFFICULTY = 5
+SERVER_IS_EVAL = false
+difficulty_poked = nil
+difficulty_poke_frame = 0
+
+-- ── Wave cap for training clients (2026-07-27) ─────────────────────────
+-- Marathon games monopolize the replay ring with deep-wave frames and
+-- early-wave competence bleeds (the recurring ring-narrowing collapse).
+-- Training clients soft-reset once the wave counter reaches the cap, so
+-- every client cycles the full wave-1->cap arc continuously.  Waves are
+-- already TD-isolated (wave_clear_training_terminal), so the reset costs
+-- the learner nothing.  Eval clients (SERVER_IS_EVAL via the difficulty
+-- byte's high bit, or EVAL_MODE==1) are exempt: EScr1M measures unbounded
+-- games.  Cap < 256, so capped clients never see the wave-byte wrap.
+-- (2026-07-28) 45 -> 75: frontier slide #1, one wave-fold past the eval
+-- frontier (eval deaths ~35-72 after the breakout).  Keep the cap one fold
+-- ahead of ELvl1M's ceiling; slide with STRATIFIED_START_LEVELS in config.py.
+WAVE_RESET_CAP = 75
+wavecap_prev_wave = nil
+
+local function wavecap_check(frame_idx, wave, player_alive, score)
+    -- EDGE-triggered only: fire exactly on the (cap-1) -> cap wave advance
+    -- of a live, real game.  A level-triggered check here caused a reset
+    -- loop (2026-07-27): soft_reset reloads this script (wiping any
+    -- cooldown global) while the wave byte still holds the old deep value
+    -- during boot/attract, so the cap re-fired every cycle.  Edge + score
+    -- guard can't refire across a reset: after reload prev_wave is nil and
+    -- a fresh game's score is far below the threshold.  Legacy marathons
+    -- already past the cap are left to finish naturally.
+    local w = math.floor(wave or 0)
+    local fire = WAVE_RESET_CAP > 0 and not SERVER_IS_EVAL and EVAL_MODE ~= 1
+        and (player_alive or 0) ~= 0
+        and wavecap_prev_wave == WAVE_RESET_CAP - 1
+        and w == WAVE_RESET_CAP
+        and math.floor(score or 0) >= 50000
+    wavecap_prev_wave = w
+    if fire then
+        print(string.format(
+            "[WAVECAP] wave advance %d -> %d - soft reset (training-data rebalance)",
+            WAVE_RESET_CAP - 1, w))
+        pcall(function() manager.machine:soft_reset() end)
+    end
+end
+
+local function poke_difficulty(memory, diff)
+    diff = math.max(1, math.min(10, math.floor(diff or 5)))
+    memory:write_u8(CMOS_GA1, (diff >= 10) and 1 or 0)
+    memory:write_u8(CMOS_GA1 + 1, diff % 10)
+    local sum = 0
+    for addr = CMOS_BASE, CMOS_ADJ_END - 1 do
+        sum = (sum + (memory:read_u8(addr) & 0xF)) & 0xFF
+    end
+    sum = (sum + 0x37) & 0xFF
+    memory:write_u8(CMOS_ADJSUM, (sum >> 4) & 0xF)
+    memory:write_u8(CMOS_ADJSUM + 1, sum & 0xF)
+end
+
+local function difficulty_apply(memory, frame_idx)
+    -- Poke on change, plus a periodic re-poke (~10 s) in case the game's
+    -- own CMOS writes (audits, high-score entry) ever land on top of ours.
+    if difficulty_poked ~= SERVER_DIFFICULTY
+            or (frame_idx - difficulty_poke_frame) >= 600 then
+        local ok, err = pcall(poke_difficulty, memory, SERVER_DIFFICULTY)
+        if ok then
+            if difficulty_poked ~= SERVER_DIFFICULTY then
+                print(string.format("[DIFFICULTY] GA1 poked to %d", SERVER_DIFFICULTY))
+            end
+            difficulty_poked = SERVER_DIFFICULTY
+            difficulty_poke_frame = frame_idx
+        else
+            trace_log(frame_idx, "difficulty_poke_error", tostring(err))
+        end
+    end
+end
+
+local function wire_lives_track(score, replay_level, death_edge)
+    local s = math.max(0, math.floor(score or 0))
+    local rp = math.max(0, math.floor(replay_level or 0))
+    if wire_lives_prev_score == nil then wire_lives_prev_score = s end
+    if s < wire_lives_prev_score then
+        -- Score decreased: a new game, or a torn BCD read.  Require the low
+        -- score to persist a few frames before resetting so a one-frame
+        -- tear can't fake a new game (the old monotone-max guard here kept
+        -- prev pinned at the previous game's final score, which made this
+        -- branch fire EVERY frame below 100K and wreck deaths + interval).
+        if s < 100000 then
+            wire_lives_low_frames = wire_lives_low_frames + 1
+            if wire_lives_low_frames >= 3 then
+                wire_lives_deaths = 0
+                wire_lives_prev_score = s
+                wire_lives_low_frames = 0
+            end
+        end
+    else
+        wire_lives_prev_score = s
+        wire_lives_low_frames = 0
+    end
+    -- Learn the bonus interval ONCE, from the first threshold of a fresh
+    -- game while the score is still below it: at that moment RP equals the
+    -- DIP interval exactly.  It is a machine constant — never relearn it
+    -- mid-game (that's how the old code corrupted it to 75K/100K).
+    if wire_lives_interval == 0 and rp >= 5000 and rp <= 100000 and s < rp then
+        wire_lives_interval = rp
+    end
+    if death_edge then
+        wire_lives_deaths = wire_lives_deaths + 1
+    end
+    if wire_lives_interval > 0 then
+        local earned = math.max(0, math.floor(rp / wire_lives_interval) - 1)
+        wire_lives_last = math.max(0, math.min(WIRE_LIVES_UNKNOWN - 1,
+            HUD_LIVES_START + earned - wire_lives_deaths))
+    else
+        wire_lives_last = WIRE_LIVES_UNKNOWN
+    end
+    return wire_lives_last
+end
+
+local function hud_track_stats()
+    if not hud_stats_mem then
+        local ok, m = pcall(function()
+            return manager.machine.devices[":maincpu"].spaces["program"]
+        end)
+        if ok and m then hud_stats_mem = m else return end
+    end
+    local ok, score, wave, alive = pcall(function()
+        return read_player_score(hud_stats_mem),
+               read_wave_number(hud_stats_mem),
+               read_player_alive(hud_stats_mem)
+    end)
+    if not ok then return end
+    score = math.max(0, math.floor(tonumber(score) or 0))
+    wave = math.floor(tonumber(wave) or 0)
+    -- Stall watchdog: raw score comparison (a BCD tear differs from prev,
+    -- which merely re-arms the timer; a truly hung game is bit-identical).
+    local stall_now = os.time()
+    if score ~= hud_stall_score then
+        hud_stall_score = score
+        hud_stall_t0 = stall_now
+    elseif hud_stall_t0 and (stall_now - hud_stall_t0) >= STALL_EXIT_SECS then
+        print(string.format(
+            "[STALL WATCHDOG] score frozen at %d for %ds - exiting for supervisor respawn",
+            score, stall_now - hud_stall_t0))
+        hud_stall_t0 = stall_now   -- no exit spam while MAME shuts down
+        pcall(function() manager.machine:exit() end)
+    end
+    if hud_stats_prev_score ~= nil then
+        if score < hud_stats_prev_score and score < HUD_REPLAY_INTERVAL then
+            -- New game: counters reset.  (Small dips at high score are BCD
+            -- carry tears — ignored below by keeping prev at the max.)
+            hud_stats_deaths = 0
+            hud_stats_wraps = 0
+        elseif (hud_stats_prev_wave or 0) - wave > 200 and (alive or 0) ~= 0 then
+            hud_stats_wraps = hud_stats_wraps + 1   -- wave byte lapped 255
+        end
+        -- Death: alive 1 -> 0 that is NOT the between-wave teleport blink
+        -- (same guard as the training done signal).
+        if (hud_stats_prev_alive or 0) ~= 0 and (alive or 0) == 0
+                and wave <= (hud_stats_prev_wave or wave) then
+            hud_stats_deaths = hud_stats_deaths + 1
+        end
+    end
+    hud_stats_prev_score = math.max(score, (score < HUD_REPLAY_INTERVAL) and score
+                                    or (hud_stats_prev_score or score))
+    hud_stats_prev_wave = wave
+    hud_stats_prev_alive = alive
+end
+
+local function hud_stats_line()
+    local score = hud_stats_prev_score or 0
+    local true_wave = hud_stats_wraps * 256 + (hud_stats_prev_wave or 0)
+    -- Prefer the RP-derived wire value (single source of truth with the
+    -- dashboard); the old score//interval form only covers the pre-first-
+    -- new-game window where the interval is still unknown.
+    local lives = wire_lives_last
+    if lives == WIRE_LIVES_UNKNOWN then
+        lives = math.max(0, HUD_LIVES_START
+                         + math.floor(score / HUD_REPLAY_INTERVAL)
+                         - hud_stats_deaths)
+    end
+    local eff = math.floor(score / math.max(1, true_wave))
+    return string.format("LIVES:%d  EFF:%d  WAVE:%d", lives, eff, true_wave)
+end
+
 function draw_debug_hud()
+    -- Stats accumulate every frame regardless of HUD visibility, so the
+    -- numbers are correct the moment the overlay is toggled on.
+    pcall(hud_track_stats)
     -- Toggle HUD on/off with the 'H' key (edge-triggered).
     local ok_input, inp = pcall(function() return manager.machine.input end)
     if ok_input and inp then
@@ -2169,14 +2471,14 @@ function draw_debug_hud()
             if ok_pressed then
                 if down and not hud_key_was_down then
                     DEBUG_HUD_ENABLED = not DEBUG_HUD_ENABLED
-                    print("[HUD] toggled " .. (DEBUG_HUD_ENABLED and "ON" or "OFF"))
+                    print("[HUD] local HUD toggled " .. (DEBUG_HUD_ENABLED and "ON" or "OFF"))
                 end
                 hud_key_was_down = down
             end
         end
     end
 
-    if not DEBUG_HUD_ENABLED then return end
+    if not hud_draw_requested() then return end
 
     -- Lazy-init: grab the screen device on first use.
     if not mame_screen then
@@ -2212,6 +2514,12 @@ function draw_debug_hud()
         end)
     end
 
+    -- Gameplay stats on the bottom line (LIVES / EFF / true WAVE).
+    pcall(function()
+        local h = tonumber(mame_screen.height) or 240
+        mame_screen:draw_text(2, h - 9, hud_stats_line(), 0xFF00FFFF, 0xC0000000)
+    end)
+
     -- Helper: draw the tight non-zero bitmap bounds used by collision art.
     local function draw_hitbox(x_px, y_px, off_x_px, off_y_px, w_px, h_px, color)
         local left = (x_px * HUD_SCREEN_X_SCALE) + off_x_px - 6
@@ -2225,7 +2533,7 @@ function draw_debug_hud()
     end
 
     -- Player hit box
-    -- Color by action source: green=DQN, red=epsilon, blue=expert, white=other
+    -- Color by action source: green=DQN, red=epsilon/eval, blue=expert, white=other
     local player_color = HUD_PLAYER_COLOR
     if last_action_source == 1 then
         player_color = 0xFF00FF00   -- green: DQN
@@ -2271,6 +2579,13 @@ function clear_pending_preview()
     pending_preview_w = 0
     pending_preview_h = 0
     pending_preview_fmt = PREVIEW_FORMAT_RGB565
+end
+
+function set_preview_stream_enabled(enabled)
+    preview_stream_enabled = PREVIEW_CAPTURE_ENABLED and enabled
+    if not preview_stream_enabled then
+        clear_pending_preview()
+    end
 end
 
 local function lzss_compress_bytes(data)
@@ -2435,7 +2750,13 @@ local function capture_game_preview()
         if vw ~= preview_source_w or vh ~= preview_source_h or preview_target_w <= 0 or preview_target_h <= 0 then
             preview_source_w = vw
             preview_source_h = vh
-            local scale = math.min(1.0, PREVIEW_MAX_WIDTH / vw, PREVIEW_MAX_HEIGHT / vh)
+            local scale = 1.0
+            if PREVIEW_MAX_WIDTH and PREVIEW_MAX_WIDTH > 0 then
+                scale = math.min(scale, PREVIEW_MAX_WIDTH / vw)
+            end
+            if PREVIEW_MAX_HEIGHT and PREVIEW_MAX_HEIGHT > 0 then
+                scale = math.min(scale, PREVIEW_MAX_HEIGHT / vh)
+            end
             preview_target_w = math.max(1, math.floor(vw * scale + 0.5))
             preview_target_h = math.max(1, math.floor(vh * scale + 0.5))
         end
@@ -2487,16 +2808,8 @@ local function capture_game_preview()
 end
 
 local function frame_done_callback()
-    -- Only draw HUD / capture screen when this client is the active preview
-    -- source.  The server toggles preview_stream_enabled per-frame via bit 0x40
-    -- in the action source byte, so non-active clients skip the expensive
-    -- snapshot_pixels() call and all HUD draw_line/draw_text work entirely.
-    if not preview_stream_enabled then
-        clear_pending_preview()
-        return
-    end
     draw_debug_hud()
-    if PREVIEW_CAPTURE_ENABLED then
+    if PREVIEW_CAPTURE_ENABLED and preview_stream_enabled then
         capture_game_preview()
     else
         clear_pending_preview()
@@ -2708,7 +3021,8 @@ local function close_socket()
         current_socket = nil
     end
     ACTION_RX_BUFFER = ""
-    preview_stream_enabled = false
+    set_preview_stream_enabled(false)
+    PREVIEW_HUD_ENABLED = false
 end
 
 local function open_socket()
@@ -2720,10 +3034,13 @@ local function open_socket()
         local result = sock:open(SOCKET_ADDRESS)
         if result == nil then
             -- Required 2-byte handshake:
-            --   bit0     = preview-capable flag
-            --   bits1-15 = launcher slot (stable audio/video identity)
-            local preview_capable = (PREVIEW_CLIENT_FLAG ~= 0) and 1 or 0
-            local handshake_u16 = math.max(0, math.min(65535, (CLIENT_SLOT * 2) + preview_capable))
+            --   bit0      = preview-capable flag
+            --   bits1-13  = launcher slot (stable audio/video identity, <=8191)
+            --   bits14-15 = eval mode (0=auto, 1=force-eval, 2=force-noeval)
+            local preview_capable = PREVIEW_CAPTURE_ENABLED and 1 or 0
+            local slot13 = math.min(8191, CLIENT_SLOT)
+            local handshake_u16 = math.max(0, math.min(65535,
+                (EVAL_MODE * 16384) + (slot13 * 2) + preview_capable))
             sock:write(string.pack(">H", handshake_u16))
             current_socket = sock
         else
@@ -3021,7 +3338,7 @@ end
 
 function Controls:apply_action(move_dir, fire_dir, start_cmd, coin_cmd)
     apply_direction(self.move_up, self.move_down, self.move_left, self.move_right, move_dir)
-    -- Fire hold is now applied Python-side (socket_server.py) so the replay
+    -- Fire hold is now applied Python-side (v3/socket_server.py) so the replay
     -- buffer stores the effective action, not the model's raw request.
     -- The fire_dir received here IS the effective (held) direction.
     apply_direction(self.fire_up, self.fire_down, self.fire_left, self.fire_right, fire_dir)
@@ -3042,7 +3359,7 @@ local function serialize_frame(player_alive, score, replay_level, num_lasers, wa
                                nearest_spawner_dist, nearest_spawner_dx, nearest_spawner_dy, num_spawners,
                                enemy_state, lane_values, grid_values, pool_values,
                                done, subj_reward, obj_reward, save_signal, start_cmd,
-                               preview_w, preview_h, preview_fmt, preview_blob)
+                               preview_w, preview_h, preview_fmt, preview_blob, lives)
     local score_u32 = math.max(0, math.min(4294967295, math.floor(score or 0)))
     local replay_u32 = math.max(0, math.min(4294967295, math.floor(replay_level or 0)))
     local lasers_u8 = math.max(0, math.min(255, math.floor(num_lasers or 0)))
@@ -3096,8 +3413,9 @@ local function serialize_frame(player_alive, score, replay_level, num_lasers, wa
         error(string.format("state size mismatch: got=%d expected=%d", num_values, EXPECTED_STATE_VALUES))
     end
 
+    local lives_u8 = math.max(0, math.min(255, math.floor(lives or WIRE_LIVES_UNKNOWN)))
     local header = string.pack(
-        ">HddBIBBBIBB",
+        ">HddBIBBBIBBB",
         num_values,
         subj_reward,
         obj_reward,
@@ -3108,12 +3426,20 @@ local function serialize_frame(player_alive, score, replay_level, num_lasers, wa
         math.max(0, math.min(1, math.floor(start_cmd or 0))),
         replay_u32,
         lasers_u8,
-        wave_u8
+        wave_u8,
+        lives_u8
     )
 
+    -- Pack floats in chunks (one string.pack call per 64 values) instead of
+    -- one call per value; ~10x fewer Lua/C transitions on the hot path.
     local state_payload_parts = {}
-    for i = 1, num_values do
-        state_payload_parts[#state_payload_parts + 1] = string.pack(">f", state_values[i])
+    local chunk = 64
+    local i = 1
+    while i <= num_values do
+        local n = math.min(chunk, num_values - i + 1)
+        state_payload_parts[#state_payload_parts + 1] =
+            string.pack(">" .. string.rep("f", n), unpack(state_values, i, i + n - 1))
+        i = i + n
     end
     local state_payload = table.concat(state_payload_parts)
 
@@ -3161,22 +3487,54 @@ local function process_frame_via_socket(frame_payload, frame_idx)
         local started = os.clock()
         local legacy_buffer_ready_at = nil
 
+        local v5_buffer_ready_at = nil
         while (os.clock() - started) < SOCKET_READ_TIMEOUT_S do
-            if #ACTION_RX_BUFFER >= 5 then
-                local action_bytes = string.sub(ACTION_RX_BUFFER, 1, 5)
-                ACTION_RX_BUFFER = string.sub(ACTION_RX_BUFFER, 6)
-                local move_dir, fire_dir, source, start_advanced, start_level_min = string.unpack("bbBBB", action_bytes)
+            if #ACTION_RX_BUFFER >= 6 then
+                -- v2 action: 5 bytes + GA1 difficulty byte.
+                local action_bytes = string.sub(ACTION_RX_BUFFER, 1, 6)
+                ACTION_RX_BUFFER = string.sub(ACTION_RX_BUFFER, 7)
+                local move_dir, fire_dir, source, start_advanced, start_level_min, difficulty = string.unpack("bbBBBB", action_bytes)
                 START_ADVANCED = (start_advanced or 0) ~= 0
                 START_LEVEL_MIN = math.max(1, math.min(81, math.floor(start_level_min or 1)))
+                -- High bit = server says we're an eval client (wave-cap exempt).
+                local diff_raw = math.floor(difficulty or 5)
+                SERVER_IS_EVAL = (diff_raw & 0x80) ~= 0
+                SERVER_DIFFICULTY = math.max(1, math.min(10, diff_raw & 0x7F))
                 trace_log(
                     frame_idx,
                     "socket_read_ok",
                     string.format(
-                        "move=%d fire=%d src=%d adv=%d level=%d",
-                        move_dir, fire_dir, source, start_advanced or 0, START_LEVEL_MIN
+                        "move=%d fire=%d src=%d adv=%d level=%d diff=%d",
+                        move_dir, fire_dir, source, start_advanced or 0, START_LEVEL_MIN, SERVER_DIFFICULTY
                     )
                 )
                 return {move_dir, fire_dir, source}
+            end
+
+            if #ACTION_RX_BUFFER == 5 then
+                -- 5-byte action (server hasn't seen our v2 header yet, or is
+                -- an old server).  Same settle-wait pattern as the 3-byte
+                -- legacy case so a split 6-byte packet isn't misparsed.
+                if v5_buffer_ready_at == nil then
+                    v5_buffer_ready_at = os.clock() + 0.003
+                elseif os.clock() >= v5_buffer_ready_at then
+                    local action_bytes = ACTION_RX_BUFFER
+                    ACTION_RX_BUFFER = ""
+                    local move_dir, fire_dir, source, start_advanced, start_level_min = string.unpack("bbBBB", action_bytes)
+                    START_ADVANCED = (start_advanced or 0) ~= 0
+                    START_LEVEL_MIN = math.max(1, math.min(81, math.floor(start_level_min or 1)))
+                    trace_log(
+                        frame_idx,
+                        "socket_read_ok",
+                        string.format(
+                            "move=%d fire=%d src=%d adv=%d level=%d",
+                            move_dir, fire_dir, source, start_advanced or 0, START_LEVEL_MIN
+                        )
+                    )
+                    return {move_dir, fire_dir, source}
+                end
+            else
+                v5_buffer_ready_at = nil
             end
 
             if #ACTION_RX_BUFFER == 3 then
@@ -3193,7 +3551,7 @@ local function process_frame_via_socket(frame_payload, frame_idx)
                 legacy_buffer_ready_at = nil
             end
 
-            local need = 5 - #ACTION_RX_BUFFER
+            local need = 6 - #ACTION_RX_BUFFER
             if need < 1 then
                 need = 1
             end
@@ -3217,16 +3575,12 @@ local function process_frame_via_socket(frame_payload, frame_idx)
 
     local move_dir, fire_dir, source = unpack(read_result)
     local source_u8 = (source or 0) & 0xFF
-    if PREVIEW_CAPTURE_ENABLED then
-        preview_stream_enabled = (source_u8 & 0x40) ~= 0
-    else
-        preview_stream_enabled = false
-    end
+    set_preview_stream_enabled((source_u8 & 0x40) ~= 0)
     -- Source byte bits:
     --   low nibble = action source
     --   0x40 = preview enabled
-    --   0x80 = HUD enabled
-    DEBUG_HUD_ENABLED = (source_u8 & 0x80) ~= 0
+    --   0x80 = preview HUD overlay enabled
+    PREVIEW_HUD_ENABLED = (source_u8 & 0x80) ~= 0
     last_action_source = source_u8 & 0x0F
     return move_dir or -1, fire_dir or -1, true
 end
@@ -3318,7 +3672,22 @@ end
 function compute_frame_rewards(frame)
     local player_alive = frame.player_alive
     local player_x16 = frame.player_x16
-    local done = (previous_player_alive == 1 and player_alive == 0)
+    -- FALSE-DEATH FIX (2026-07-16).  read_player_alive() reports 0 whenever
+    -- STATUS_PLAYER_INACTIVE (0x01) is set, and Robotron asserts that bit
+    -- during the between-wave teleport.  So a WAVE CLEAR looked identical to a
+    -- death: probe capture across 12 clients showed w1/a1/d0 -> w2/a0/d1 on
+    -- ~84% of clears.  Downstream that charged death_penalty (-10) for
+    -- CLEARING a wave, closed the n-step episode there, and made Tz = r land
+    -- on the v_min support floor as bootstrap-free "ground truth" that
+    -- finishing a wave is catastrophic (n_step=16 propagated it back over the
+    -- final 16 frames at >=92% strength).  Net effect: clearing a wave scored
+    -- roughly -7 while farming it scored positive, so the optimal policy under
+    -- the stated reward was "never kill the last enemy" — precisely the
+    -- passive-survival attractor chased all week (EpLen up, score down).
+    -- The wave counter disambiguates: on a real death the wave is unchanged;
+    -- on a clear it increments.
+    local wave_advanced = (frame.wave_number or 0) > (previous_wave_number or 0)
+    local done = (previous_player_alive == 1 and player_alive == 0) and not wave_advanced
     local score_delta = frame.score - previous_score
     if score_delta < 0 then
         score_delta = 0
@@ -3330,36 +3699,86 @@ function compute_frame_rewards(frame)
 
     local spacing_score = enemy_spacing_score(frame.obs.nearest_enemy_dist)
     local rescue_score = human_proximity_score(frame.obs.nearest_human_dist)
-    local aim_score = compute_aim_reward(prev_fire_cmd, prev_aim_px16, prev_aim_py16, prev_aim_objects)
+    local aim_score = compute_priority_aim_reward(
+        prev_fire_cmd, prev_aim_px16, prev_aim_py16,
+        prev_aim_objects, frame.wave_number, frame.num_humans)
     local evade_score = compute_evasion_reward(prev_move_cmd, prev_aim_px16, prev_aim_py16,
         prev_nearest_enemy_x16, prev_nearest_enemy_y16, prev_nearest_enemy_dist)
-    local survival_bonus = (player_alive == 1) and SUBJ_SURVIVAL_BONUS or 0.0
-
-    local wall_penalty = 0.0
-    if player_alive == 1 and player_x16 then
-        local px = norm_pos_x(player_x16)
-        local py = norm_pos_y(frame.player_y16)
-        if px < WALL_MARGIN_NORM_X or px > (1.0 - WALL_MARGIN_NORM_X) then
-            wall_penalty = wall_penalty + SUBJ_WALL_PENALTY
-        end
-        if py < WALL_MARGIN_NORM_Y or py > (1.0 - WALL_MARGIN_NORM_Y) then
-            wall_penalty = wall_penalty + SUBJ_WALL_PENALTY
-        end
+    local brain_guard_score = compute_brain_guard_reward(
+        prev_move_cmd, prev_fire_cmd, prev_aim_px16, prev_aim_py16,
+        prev_aim_objects, frame.wave_number, frame.num_humans)
+    local humans_left = math.max(0, math.floor(tonumber(frame.num_humans) or 0))
+    local no_humans_left = humans_left <= 0
+    if humans_left == 1 then
+        evade_score = evade_score * SUBJ_LAST_HUMAN_EVADE_SCALE
+    elseif humans_left > 1 then
+        evade_score = evade_score * SUBJ_HUMAN_EVADE_SCALE
+    elseif no_humans_left then
+        evade_score = evade_score * SUBJ_NO_HUMAN_EVADE_SCALE
     end
 
-    local subj_reward = survival_bonus
-        + (spacing_score * SUBJ_ENEMY_WEIGHT)
-        + (rescue_score * SUBJ_HUMAN_WEIGHT)
-        + (aim_score * SUBJ_AIM_WEIGHT)
-        + (evade_score * SUBJ_EVADE_WEIGHT)
-        - wall_penalty
+    -- Potential-based shaping (Ng et al. 1999) for the state-only terms.
+    -- Phi(s) = enemy-spacing + human-proximity potential.  Emitting the per-frame
+    -- CHANGE  F = gamma*Phi(s') - Phi(s)  (instead of Phi itself) keeps these terms
+    -- policy-invariant AND action-relative: it rewards MOVING toward good states
+    -- rather than merely BEING in them.  The old absolute form added ~Phi every
+    -- frame (~20/frame x ~700 frames), inflating V(s) and collapsing the dueling
+    -- advantage stream into noise; the telescoping potential form does not.
+    local potential = (spacing_score * SUBJ_ENEMY_WEIGHT) + (rescue_score * SUBJ_HUMAN_WEIGHT)
+    local shaping = 0.0
     if done then
-        subj_reward = subj_reward - SUBJ_DEATH_PENALTY
+        -- Terminal potential is 0 by convention: F = gamma*0 - Phi(s).
+        shaping = -prev_potential
+        prev_potential = 0.0
+    elseif previous_player_alive == 0 then
+        -- First alive frame of a new life: no continuous transition to shape yet.
+        shaping = 0.0
+        prev_potential = potential
+    else
+        shaping = (POTENTIAL_GAMMA * potential) - prev_potential
+        prev_potential = potential
+    end
+
+    local wall_penalty = 0.0
+    if player_alive == 1 then
+        wall_penalty = compute_contextual_wall_penalty(
+            prev_move_cmd, player_x16, frame.player_y16, frame.obs.nearest_enemy_dist)
+    end
+    local no_human_clear_penalty = compute_no_human_clear_penalty(
+        player_alive,
+        done,
+        score_delta,
+        frame.num_humans,
+        frame.obs.nearest_enemy_dist
+    )
+    local prev_human_dist_for_reward = nil
+    if previous_player_alive == 1 and previous_wave_number == frame.wave_number and prev_num_humans == humans_left then
+        prev_human_dist_for_reward = prev_nearest_human_dist
+    end
+    local human_stall_penalty = compute_human_rescue_stall_penalty(
+        player_alive,
+        done,
+        score_delta,
+        humans_left,
+        frame.obs.nearest_human_dist,
+        prev_human_dist_for_reward
+    )
+
+    local subj_reward = shaping
+        + (aim_score * ADVANCED_SHAPING.priority_aim_weight)
+        + (evade_score * SUBJ_EVADE_WEIGHT)
+        + (brain_guard_score * ADVANCED_SHAPING.brain_guard_weight)
+        - wall_penalty
+        - no_human_clear_penalty
+        - human_stall_penalty
+    if not SUBJECTIVE_REWARD_ENABLED then
+        subj_reward = 0.0
     end
 
     trace_log(frame_counter, "reward_calc",
-        string.format("score_delta=%d done=%s obj_reward=%.1f subj_reward=%.2f enemy_dist=%s human_dist=%s",
+        string.format("score_delta=%d done=%s obj_reward=%.1f subj_reward=%.2f shape=%.2f aim=%.2f evade=%.2f brain=%.2f wall=%.2f clear=%.2f hstall=%.2f enemy_dist=%s human_dist=%s",
             score_delta, tostring(done), obj_reward, subj_reward,
+            shaping, aim_score, evade_score, brain_guard_score, wall_penalty, no_human_clear_penalty, human_stall_penalty,
             frame.obs.nearest_enemy_dist and string.format("%.4f", frame.obs.nearest_enemy_dist) or "nil",
             frame.obs.nearest_human_dist and string.format("%.4f", frame.obs.nearest_human_dist) or "nil"))
 
@@ -3417,7 +3836,7 @@ function frame_callback()
         dead_frame_counter = dead_frame_counter + 1
         prev_object_sample_x = {}
         prev_object_sample_y = {}
-        _reset_legacy_slot_assignments()
+        prev_object_sample_category = {}
     else
         dead_frame_counter = 0
     end
@@ -3446,7 +3865,8 @@ function frame_callback()
         frame.obs.num_spawners,
         frame.enemy_state, frame.obs.lane_summary_features, frame.obs.local_grid_features, frame.obs.pool_features,
         rewards.done, rewards.subj_reward, rewards.obj_reward, save_signal, start_cmd,
-        preview.w, preview.h, preview.fmt, preview.blob
+        preview.w, preview.h, preview.fmt, preview.blob,
+        wire_lives_track(frame.score, frame.replay_level, rewards.done)
     )
     if not ok_payload then
         trace_log(frame_counter, "serialize_frame_error", tostring(payload_or_err), true)
@@ -3463,6 +3883,10 @@ function frame_callback()
         move_cmd, fire_cmd, socket_ok = -1, -1, true
     elseif current_socket then
         move_cmd, fire_cmd, socket_ok = process_frame_via_socket(payload, frame_counter)
+        if socket_ok then
+            difficulty_apply(mem, frame_counter)
+            wavecap_check(frame_counter, frame.wave_number, frame.player_alive, frame.score)
+        end
     else
         if (now - last_connection_attempt_time) >= CONNECTION_RETRY_INTERVAL_S then
             trace_log(frame_counter, "socket_retry", "attempting reconnect")
@@ -3519,12 +3943,17 @@ function frame_callback()
     -- aim-reward attribution.
     prev_fire_cmd = effective_fire
     prev_move_cmd = move_cmd
-    prev_aim_objects = hud_objects   -- reuse the same reference (set in extract_world_features)
+    prev_aim_objects = frame.obs.reward_objects
     prev_aim_px16 = frame.player_x16
     prev_aim_py16 = frame.player_y16
     prev_nearest_enemy_x16 = frame.obs.nearest_enemy_x16
     prev_nearest_enemy_y16 = frame.obs.nearest_enemy_y16
     prev_nearest_enemy_dist = frame.obs.nearest_enemy_dist
+    if player_alive == 1 and (frame.num_humans or 0) > 0 then
+        prev_nearest_human_dist = frame.obs.nearest_human_dist
+    else
+        prev_nearest_human_dist = nil
+    end
 
     trace_log(frame_counter, "frame_end", "done=" .. tostring(rewards.done))
     frame_counter = frame_counter + 1
@@ -3579,6 +4008,11 @@ if not apply_rrchris_patch() then
 end
 
 print("Robotron socket target: " .. SOCKET_ADDRESS)
+if EVAL_MODE > 0 then
+    print("Robotron eval override: " .. (EVAL_MODE == 1 and "EVAL (greedy, wave-1)" or "NON-EVAL (training)"))
+else
+    print("Robotron eval override: none (server decides)")
+end
 if SKIP_UNUSED_TACTICAL_FEATURES then
     print("Robotron tactical lanes/grid: skipped for fast V3 observations")
 end
@@ -3597,19 +4031,27 @@ previous_wave_number = math.max(0, math.floor(read_wave_number(mem) or 0))
 
 global_callback_ref = register_frame_callback(frame_callback)
 
--- All preview-capable instances register the frame_done callback.  The server
--- decides per-frame which client should actually capture/stream preview data by
--- toggling the preview flag in the action source byte.
+-- All instances register the frame-done callback so the local H hotkey can draw
+-- a HUD independent of preview streaming.  The server still decides per-frame
+-- which client should capture/stream preview data via the action source byte.
 if PREVIEW_CLIENT_FLAG == 1 then
-    print(string.format(
-        "[HUD] Preview capture configured: %dfps max=%dx%d rle=%s",
-        PREVIEW_FPS, PREVIEW_MAX_WIDTH, PREVIEW_MAX_HEIGHT, tostring(PREVIEW_TRY_RLE)
-    ))
-    if register_frame_done_callback(frame_done_callback) ~= nil or emu.register_frame_done ~= nil then
-        print("[HUD] Registered frame_done callback for debug overlay + preview capture")
-    else
-        print("[HUD] Frame-done callback unavailable in this MAME build; preview capture disabled")
+    local preview_size_desc = "native"
+    if PREVIEW_MAX_WIDTH > 0 or PREVIEW_MAX_HEIGHT > 0 then
+        preview_size_desc = tostring(PREVIEW_MAX_WIDTH) .. "x" .. tostring(PREVIEW_MAX_HEIGHT)
     end
+    print(string.format(
+        "[HUD] Preview capture configured: %dfps max=%s rle=%s",
+        PREVIEW_FPS, preview_size_desc, tostring(PREVIEW_TRY_RLE)
+    ))
+end
+if register_frame_done_callback(frame_done_callback) ~= nil or emu.register_frame_done ~= nil then
+    if PREVIEW_CLIENT_FLAG == 1 then
+        print("[HUD] Registered frame_done callback for local HUD + preview capture")
+    else
+        print("[HUD] Registered frame_done callback for local HUD")
+    end
+else
+    print("[HUD] Frame-done callback unavailable in this MAME build; local HUD/preview overlay disabled")
 end
 
 register_stop_callback(on_mame_exit)

@@ -28,7 +28,6 @@ import select
 import threading
 import traceback
 import random
-import pathlib
 import numpy as np
 import torch
 from collections import deque
@@ -39,7 +38,7 @@ from .config import CONFIG, GAME_SETTINGS, WIRE_PARAMS_COUNT
 from .agent import PPOAgent
 from .expert import get_expert_action, get_expert_action_from_entities
 from .state_processor import extract_entities
-from .reward import shape_reward
+from .reward import shape_reward_with_components, move_potential
 from .metrics_display import add_episode_to_reward_windows, add_episode_to_eplen_windows
 from .rollout_buffer import RolloutBuffer
 
@@ -55,6 +54,8 @@ _FIRE_DIR_VECTORS = (
 _START_PULSE_VALID_FRAMES = 240
 _GAMEPLAY_RESET_DEAD_FRAMES = 180
 _GAMEPLAY_PLAUSIBLE_START_STREAK = 8
+_GAMEPLAY_PROGRESS_ALIVE_STREAK = 30
+_ACTION_MIX_WINDOW = 50_000
 
 
 def _env_flag(name: str, default: bool = False) -> bool:
@@ -225,6 +226,20 @@ def parse_frame_data(data: bytes, parse_preview: bool = False) -> Optional[Frame
     )
 
 
+def _frame_confirms_gameplay(cs: dict, frame: FrameData) -> bool:
+    pulse_confirms_gameplay = (
+        cs.get("start_pulse_window", 0) > 0
+        and cs.get("alive_streak", 0) >= 15
+        and cs.get("plausible_start_streak", 0) >= _GAMEPLAY_PLAUSIBLE_START_STREAK
+    )
+    progress_confirms_gameplay = (
+        frame.player_alive
+        and cs.get("alive_streak", 0) >= _GAMEPLAY_PROGRESS_ALIVE_STREAK
+        and (frame.game_score > 0 or frame.level_number > 1)
+    )
+    return bool(pulse_confirms_gameplay or progress_confirms_gameplay)
+
+
 # ── Action encoding (matching game's joystick directions) ──────────────────
 
 def encode_action_to_game(move_dir: int, fire_dir: int) -> tuple[int, int]:
@@ -253,6 +268,11 @@ def _apply_fire_hold(cs: dict, raw_fire: int) -> int:
     return next_fire
 
 
+def _stored_action_label(cs: dict, key: str, default: int = 8) -> int:
+    """Read a stored action label while preserving valid action 0."""
+    return int(cs.get(key, default))
+
+
 # ── Metrics (lightweight rolling stats) ─────────────────────────────────────
 
 class Metrics:
@@ -262,8 +282,14 @@ class Metrics:
         self.lock = threading.Lock()
         self.total_frames = 0
         self.episode_rewards = deque(maxlen=200)
+        self.reward_components = deque(maxlen=200)
         self.episode_lengths = deque(maxlen=200)
         self.fps_window = deque(maxlen=60)
+        self._policy_sampled_window = deque()
+        self._policy_sampled_count = 0
+        # Cumulative count of frames the policy itself drove (excludes expert /
+        # epsilon). Drives the guidance schedules when schedule_on_policy_frames.
+        self.policy_frames = 0
         self.peak_game_score = 0
         self.avg_game_score = 0.0
         self.total_games_played = 0
@@ -291,6 +317,10 @@ class Metrics:
         self.game_preview_raw_bytes = 0
         self.game_preview_compression_ratio = 1.0
         self.game_preview_fps = 0.0
+        self.total_inference_time = 0.0
+        self.total_inference_requests = 0
+        self.total_expert_time = 0.0
+        self.total_expert_requests = 0
         # Reference to the server for client row queries
         self.global_server = None
 
@@ -305,9 +335,17 @@ class Metrics:
                 self._fps_frames = 0
                 self._last_fps_time = now
 
-    def add_episode(self, reward: float, length: int, level: float = 0.0, game_score: int = 0):
+    def add_episode(
+        self,
+        reward: float,
+        length: int,
+        level: float = 0.0,
+        game_score: int = 0,
+        reward_components: dict[str, float] | None = None,
+    ):
         with self.lock:
             self.episode_rewards.append(reward)
+            self.reward_components.append(dict(reward_components or {}))
             self.episode_lengths.append(length)
             self.episodes_this_run += 1
             if level > 0:
@@ -323,12 +361,46 @@ class Metrics:
         with self.lock:
             self.client_count = count
 
+    def add_inference_time(self, seconds: float):
+        with self.lock:
+            self.total_inference_time += max(0.0, float(seconds))
+            self.total_inference_requests += 1
+
+    def add_expert_time(self, seconds: float):
+        with self.lock:
+            self.total_expert_time += max(0.0, float(seconds))
+            self.total_expert_requests += 1
+
+    def record_policy_sampled(self, policy_sampled: bool):
+        with self.lock:
+            sampled = bool(policy_sampled)
+            if sampled:
+                self.policy_frames += 1
+            if len(self._policy_sampled_window) >= _ACTION_MIX_WINDOW:
+                dropped = self._policy_sampled_window.popleft()
+                if dropped:
+                    self._policy_sampled_count = max(0, self._policy_sampled_count - 1)
+            self._policy_sampled_window.append(sampled)
+            if sampled:
+                self._policy_sampled_count += 1
+
     @property
     def avg_reward(self) -> float:
         with self.lock:
             if not self.episode_rewards:
                 return 0.0
             return sum(self.episode_rewards) / len(self.episode_rewards)
+
+    def avg_reward_components(self) -> dict[str, float]:
+        with self.lock:
+            if not self.reward_components:
+                return {}
+            keys = ("score", "subj", "surv", "prox", "death", "wave", "move", "clip")
+            n = len(self.reward_components)
+            return {
+                key: sum(float(row.get(key, 0.0)) for row in self.reward_components) / n
+                for key in keys
+            }
 
     @property
     def avg_ep_len(self) -> float:
@@ -343,6 +415,14 @@ class Metrics:
             if not self.fps_window:
                 return 0.0
             return sum(self.fps_window) / len(self.fps_window)
+
+    @property
+    def policy_sampled_fraction(self) -> float:
+        with self.lock:
+            total = len(self._policy_sampled_window)
+            if total <= 0:
+                return 0.0
+            return float(self._policy_sampled_count) / float(total)
 
 
 # ── Batched inference ───────────────────────────────────────────────────────
@@ -368,14 +448,14 @@ class InferenceBatcher:
     GPU isolation strategy:
       - Multi-GPU: inference runs on infer_device with infer_net — completely
         independent of training on train_device.  No lock needed.
-      - Single-GPU with CUDA streams: inference runs on infer_stream,
-        training on train_stream.  Streams overlap on the hardware scheduler.
-        A lightweight gpu_lock is kept only for the brief net.eval()/train()
-        mode toggle when both happen on the same net object.
+      - Single-GPU: inference and training share one nn.Module, so a gpu_lock
+        serializes forward/backward/optimizer mutation even when CUDA streams
+        exist. Streams do not make module weight updates thread-safe.
       - CPU/MPS: falls back to a simple gpu_lock (same as before).
     """
 
-    def __init__(self, agent, max_batch: int = 64, max_wait_ms: float = 1.5):
+    def __init__(self, agent, max_batch: int = 64, max_wait_ms: float = 1.5,
+                 client_count_fn=None):
         self.agent = agent
         self.net = agent.get_inference_net()
         self.device = agent.infer_device
@@ -383,20 +463,30 @@ class InferenceBatcher:
         self._multi_gpu = agent._multi_gpu
         self.max_batch = max_batch
         self.max_wait_s = max_wait_ms / 1000.0
+        # Expected number of clients that may submit each cycle. Because every
+        # client thread BLOCKS on its own result, in-flight requests can never
+        # exceed the connected-client count — so the straggler window is closed
+        # the instant that many have arrived instead of waiting for an
+        # unreachable max_batch.
+        self._client_count_fn = client_count_fn or (lambda: max_batch)
         self._queue: deque[_InferenceRequest] = deque()
-        self._lock = threading.Lock()
-        self._has_work = threading.Event()
+        # A single condition variable drives the producer→consumer hand-off.
+        # Its internal lock guards _queue; notify() wakes the GPU thread the
+        # moment a request is enqueued, so batches coalesce with no
+        # fixed-interval polling.
+        self._cond = threading.Condition()
         self._stopped = False
-        # gpu_lock is only needed when inference and training share the
-        # same net object AND there are no CUDA streams (i.e. CPU/MPS).
+        # gpu_lock is needed whenever inference and training share the same
+        # network object. Multi-GPU uses a separate frozen inference copy.
         self.gpu_lock = threading.Lock()
-        self._use_gpu_lock = (self.stream is None and not self._multi_gpu)
+        self._use_gpu_lock = not self._multi_gpu
         self._thread = threading.Thread(target=self._run, daemon=True, name="infer-batch")
         self._thread.start()
 
     def stop(self):
-        self._stopped = True
-        self._has_work.set()
+        with self._cond:
+            self._stopped = True
+            self._cond.notify_all()
 
     def submit_action(self, tensors: dict) -> dict:
         """Submit tensors for action sampling.  Blocks until result ready.
@@ -404,9 +494,9 @@ class InferenceBatcher:
         Returns dict: move_action, fire_action, log_prob, entropy, value
         """
         req = _InferenceRequest(tensors, need_actions=True)
-        with self._lock:
+        with self._cond:
             self._queue.append(req)
-        self._has_work.set()
+            self._cond.notify()
         req.event.wait()
         return req.result
 
@@ -416,34 +506,45 @@ class InferenceBatcher:
         Returns scalar value estimate.
         """
         req = _InferenceRequest(tensors, need_actions=False)
-        with self._lock:
+        with self._cond:
             self._queue.append(req)
-        self._has_work.set()
+            self._cond.notify()
         req.event.wait()
         return req.result["value"]
 
     def _run(self):
         """GPU thread main loop: collect → batch → forward → distribute."""
+        fallback = {
+            "move_action": 0, "fire_action": 0,
+            "move_log_prob": 0.0, "fire_log_prob": 0.0,
+            "log_prob": 0.0, "entropy": 0.0, "value": 0.0,
+        }
         while not self._stopped:
-            self._has_work.wait(timeout=0.05)
-            self._has_work.clear()
-            if self._stopped:
-                break
-
-            # Collect batch — drain queue, brief wait for stragglers
             batch: list[_InferenceRequest] = []
-            deadline = time.monotonic() + self.max_wait_s
+            with self._cond:
+                # Block until the first request lands (or shutdown is signalled).
+                while not self._queue and not self._stopped:
+                    self._cond.wait(timeout=0.05)
+                if self._stopped:
+                    break
 
-            while len(batch) < self.max_batch:
-                with self._lock:
+                # First request is in. Open a short window so the rest of the
+                # active clients can join this same GPU launch, but fire the
+                # instant every active client has submitted — they each block on
+                # their result, so the queue can't grow past the client count.
+                target = min(self.max_batch, max(1, int(self._client_count_fn())))
+                deadline = time.monotonic() + self.max_wait_s
+                while True:
                     while self._queue and len(batch) < self.max_batch:
                         batch.append(self._queue.popleft())
-                if len(batch) >= self.max_batch:
-                    break
-                remaining = deadline - time.monotonic()
-                if remaining <= 0 or len(batch) > 0:
-                    break
-                time.sleep(min(0.0005, remaining))
+                    if len(batch) >= target:
+                        break  # every active client has checked in — go now
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        break
+                    # Sleep until the next submit notifies us or the window ends;
+                    # no fixed-interval polling.
+                    self._cond.wait(timeout=remaining)
 
             if not batch:
                 continue
@@ -454,12 +555,17 @@ class InferenceBatcher:
                 # On error return fallbacks so client threads don't hang
                 for req in batch:
                     if req.result is None:
-                        req.result = {
-                            "move_action": 0, "fire_action": 0,
-                            "move_log_prob": 0.0, "fire_log_prob": 0.0,
-                            "log_prob": 0.0, "entropy": 0.0, "value": 0.0,
-                        }
+                        req.result = dict(fallback)
                     req.event.set()
+
+        # Shutdown: release any clients still blocked on a result.
+        with self._cond:
+            pending = list(self._queue)
+            self._queue.clear()
+        for req in pending:
+            if req.result is None:
+                req.result = dict(fallback)
+            req.event.set()
 
     @torch.no_grad()
     def _process_batch(self, batch: list[_InferenceRequest]):
@@ -468,23 +574,28 @@ class InferenceBatcher:
         efs = torch.cat([r.tensors["entity_features"] for r in batch], dim=0).to(self.device, non_blocking=True)
         ems = torch.cat([r.tensors["entity_mask"] for r in batch], dim=0).to(self.device, non_blocking=True)
         gcs = torch.cat([r.tensors["global_context"] for r in batch], dim=0).to(self.device, non_blocking=True)
+        mafs = torch.cat([r.tensors["move_action_features"] for r in batch], dim=0).to(self.device, non_blocking=True)
+        fafs = torch.cat([r.tensors["fire_action_features"] for r in batch], dim=0).to(self.device, non_blocking=True)
 
-        if self.stream is not None:
-            # CUDA stream path — no lock needed (multi-GPU: separate device;
-            # single-GPU: stream isolation handles scheduling)
-            with torch.cuda.stream(self.stream):
-                self.net.eval()
-                out = self.net.forward(efs, ems, gcs)
-            # Synchronize so results are ready before CPU reads them
-            self.stream.synchronize()
-        elif self._use_gpu_lock:
-            # CPU/MPS fallback — serialise with training via lock
+        if self._use_gpu_lock:
             with self.gpu_lock:
-                self.net.eval()
-                out = self.net.forward(efs, ems, gcs)
+                if self.stream is not None:
+                    with torch.cuda.stream(self.stream):
+                        self.net.eval()
+                        out = self.net.forward(efs, ems, gcs, mafs, fafs)
+                    self.stream.synchronize()
+                else:
+                    self.net.eval()
+                    out = self.net.forward(efs, ems, gcs, mafs, fafs)
         else:
-            self.net.eval()
-            out = self.net.forward(efs, ems, gcs)
+            if self.stream is not None:
+                with torch.cuda.stream(self.stream):
+                    self.net.eval()
+                    out = self.net.forward(efs, ems, gcs, mafs, fafs)
+                self.stream.synchronize()
+            else:
+                self.net.eval()
+                out = self.net.forward(efs, ems, gcs, mafs, fafs)
 
         # NaN-safe logit clamping
         move_logits = out["move_logits"].clamp(-50.0, 50.0)
@@ -507,29 +618,31 @@ class InferenceBatcher:
         log_probs = move_log_probs + fire_log_probs
         entropies = move_dist.entropy() + fire_dist.entropy()
 
-        # Move to CPU once for all items
-        move_actions = move_actions.cpu()
-        fire_actions = fire_actions.cpu()
-        move_log_probs = move_log_probs.cpu()
-        fire_log_probs = fire_log_probs.cpu()
-        log_probs = log_probs.cpu()
-        entropies = entropies.cpu()
-        values = values.cpu()
+        # One GPU→CPU transfer per tensor, then a single C-level .tolist()
+        # conversion each. Avoids ~7×B per-element .item() Python round-trips
+        # when fanning results back out to 8-16 client threads.
+        move_actions_l = move_actions.cpu().tolist()
+        fire_actions_l = fire_actions.cpu().tolist()
+        move_log_probs_l = move_log_probs.cpu().tolist()
+        fire_log_probs_l = fire_log_probs.cpu().tolist()
+        log_probs_l = log_probs.cpu().tolist()
+        entropies_l = entropies.cpu().tolist()
+        values_l = values.cpu().tolist()
 
         # Distribute results back to client threads
         for i, req in enumerate(batch):
             if req.need_actions:
                 req.result = {
-                    "move_action": int(move_actions[i].item()),
-                    "fire_action": int(fire_actions[i].item()),
-                    "move_log_prob": float(move_log_probs[i].item()),
-                    "fire_log_prob": float(fire_log_probs[i].item()),
-                    "log_prob": float(log_probs[i].item()),
-                    "entropy": float(entropies[i].item()),
-                    "value": float(values[i].item()),
+                    "move_action": int(move_actions_l[i]),
+                    "fire_action": int(fire_actions_l[i]),
+                    "move_log_prob": float(move_log_probs_l[i]),
+                    "fire_log_prob": float(fire_log_probs_l[i]),
+                    "log_prob": float(log_probs_l[i]),
+                    "entropy": float(entropies_l[i]),
+                    "value": float(values_l[i]),
                 }
             else:
-                req.result = {"value": float(values[i].item())}
+                req.result = {"value": float(values_l[i])}
             req.event.set()
 
 
@@ -557,6 +670,8 @@ class SocketServer:
         self.max_clients = max_clients or cfg.max_clients
 
         self.metrics = Metrics()
+        self.metrics.total_frames = max(0, int(getattr(agent, "total_frames", 0) or 0))
+        self.metrics.policy_frames = max(0, int(getattr(agent, "policy_frames", 0) or 0))
         self.metrics.global_server = self
         self.running = False
         self.shutdown_event = threading.Event()
@@ -575,15 +690,16 @@ class SocketServer:
         self._train_batch_size = CONFIG.train.rollout_length  # collect this many before training
 
         # ── Batched inference ────────────────────────────────────────
+        # Fire each batch as soon as every connected client has submitted
+        # rather than waiting out the straggler window for an unreachable
+        # max_batch (each client blocks on its result, so in-flight requests
+        # are bounded by the connected-client count).
         self.batcher = InferenceBatcher(
             agent=agent,
-            max_batch=max(64, self.max_clients + 8),
+            max_batch=max(128, self.max_clients + 8),
             max_wait_ms=1.5,
+            client_count_fn=lambda: len(self.client_states),
         )
-        default_skip_expert_value = True
-        if self.agent.infer_device.type == "cpu":
-            default_skip_expert_value = _env_flag("ROBOTRON_SKIP_EXPERT_VALUE_ON_CPU", True)
-        self._skip_expert_value = _env_flag("ROBOTRON_SKIP_EXPERT_VALUE", default_skip_expert_value)
 
     def start(self):
         """Start the server (blocking)."""
@@ -595,9 +711,6 @@ class SocketServer:
         server_sock.bind((self.host, self.port))
         server_sock.listen(self.max_clients)
         print(f"v3 Socket server listening on {self.host}:{self.port}")
-
-        # Write server_shards.env so startmame.sh sends ALL clients to this single port
-        self._write_shard_env()
 
         try:
             while self.running and not self.shutdown_event.is_set():
@@ -617,7 +730,6 @@ class SocketServer:
                     daemon=True,
                 )
                 thread.start()
-                print(f"Client {cid} connected from {addr}")
                 self.metrics.update_client_count(len(self.client_states))
         finally:
             self.running = False
@@ -629,37 +741,16 @@ class SocketServer:
         self.shutdown_event.set()
         self.batcher.stop()
 
-    def _write_shard_env(self):
-        """Write server_shards.env so startmame.sh routes all clients here."""
-        host = os.getenv("ROBOTRON_SOCKET_PUBLIC_HOST", "").strip()
-        if not host:
-            bind_host = str(self.host or "127.0.0.1")
-            if bind_host in {"0.0.0.0", "::", "[::]"}:
-                host = "127.0.0.1"
-            else:
-                host = bind_host
-        log_dir = pathlib.Path(__file__).resolve().parent.parent.parent / "logs"
-        log_dir.mkdir(parents=True, exist_ok=True)
-        env_path = log_dir / "server_shards.env"
-        tmp_path = env_path.with_suffix(".tmp")
-        lines = [
-            f"ROBOTRON_SHARD_ENABLED=0",
-            f"ROBOTRON_SOCKET_HOST={host}",
-            f"ROBOTRON_MASTER_PORT={self.port}",
-            f"ROBOTRON_WORKER_PORTS=",
-            f"ROBOTRON_PREVIEW_SLOT=0",
-        ]
-        tmp_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        tmp_path.replace(env_path)
-        print(f"  Wrote {env_path} (all clients → port {self.port})")
-
     # ── Training coordinator ────────────────────────────────────────────
 
     def _push_transition(
         self,
+        client_id: int,
         entity_features: torch.Tensor,
         entity_mask: torch.Tensor,
         global_context: torch.Tensor,
+        move_action_features: torch.Tensor,
+        fire_action_features: torch.Tensor,
         move_action: int,
         fire_action: int,
         log_prob: float,
@@ -668,6 +759,7 @@ class SocketServer:
         reward: float,
         done: bool,
         next_value: float,
+        frame_seq: int = 0,
         expert_move: int = 8,
         expert_fire: int = 8,
         is_expert: bool = False,
@@ -676,7 +768,9 @@ class SocketServer:
     ):
         """Thread-safe push of one transition. Triggers training when batch is full."""
         txn = (
-            entity_features, entity_mask, global_context,
+            int(client_id),
+            int(frame_seq),
+            entity_features, entity_mask, global_context, move_action_features, fire_action_features,
             move_action, fire_action, log_prob, value, has_value, reward, done, next_value,
             expert_move, expert_fire, is_expert, policy_sampled, fire_locked,
         )
@@ -713,7 +807,11 @@ class SocketServer:
         """Drain transition queue into a RolloutBuffer and run PPO update."""
         try:
             with self._transition_lock:
-                batch_size = min(len(self._transition_queue), self._train_batch_size)
+                max_drain = max(
+                    self._train_batch_size,
+                    int(getattr(CONFIG.train, "max_rollout_drain", self._train_batch_size) or self._train_batch_size),
+                )
+                batch_size = min(len(self._transition_queue), max_drain)
                 if batch_size < 64:
                     return  # not enough data
                 batch = [self._transition_queue.popleft() for _ in range(batch_size)]
@@ -725,12 +823,20 @@ class SocketServer:
                 device=torch.device("cpu"),
             )
 
+            client_ids: list[int] = []
+            frame_seqs: list[int] = []
+            next_values: list[float] = []
             for t, txn in enumerate(batch):
-                (ef, em, gc, ma, fa, lp, val, has_val, rew, done, next_val,
+                (client_id, frame_seq, ef, em, gc, maf, faf, ma, fa, lp, val, has_val, rew, done, next_val,
                  ex_m, ex_f, is_exp, policy_sampled, fire_locked) = txn
+                client_ids.append(int(client_id))
+                frame_seqs.append(int(frame_seq))
+                next_values.append(float(next_val))
                 rollout.entity_features[t, 0] = ef
                 rollout.entity_masks[t, 0] = em
                 rollout.global_contexts[t, 0] = gc
+                rollout.move_action_features[t, 0] = maf
+                rollout.fire_action_features[t, 0] = faf
                 rollout.move_actions[t, 0] = ma
                 rollout.fire_actions[t, 0] = fa
                 rollout.log_probs[t, 0] = lp
@@ -743,30 +849,30 @@ class SocketServer:
                 rollout.is_expert[t, 0] = is_exp
                 rollout.policy_sampled[t, 0] = policy_sampled
                 rollout.fire_locked[t, 0] = fire_locked
-                if has_val:
-                    bootstrap = 0.0 if done else float(next_val)
-                    rollout.advantages[t, 0] = float(rew) + (float(CONFIG.train.gamma) * bootstrap) - float(val)
-                    rollout.returns[t, 0] = rollout.advantages[t, 0] + float(val)
-                else:
-                    rollout.advantages[t, 0] = 0.0
-                    rollout.returns[t, 0] = 0.0
 
             rollout.step = batch_size
             rollout.ready = True
+            self._compute_grouped_advantages(rollout, client_ids, next_values, frame_seqs)
 
             # Run training on the appropriate device/stream
-            if self.agent.train_stream is not None:
+            if self.batcher._use_gpu_lock:
+                with self.batcher.gpu_lock:
+                    if self.agent.train_stream is not None:
+                        with torch.cuda.stream(self.agent.train_stream):
+                            self.agent.train_step(rollout)
+                        self.agent.train_stream.synchronize()
+                    else:
+                        self.agent.train_step(rollout)
+            elif self.agent.train_stream is not None:
                 with torch.cuda.stream(self.agent.train_stream):
                     self.agent.train_step(rollout)
                 self.agent.train_stream.synchronize()
-            elif self.batcher._use_gpu_lock:
-                with self.batcher.gpu_lock:
-                    self.agent.train_step(rollout)
             else:
                 self.agent.train_step(rollout)
 
             # Sync weights to inference network after training update
             self.agent.sync_inference_weights()
+            self.agent._weights_updated.clear()
 
         except Exception as e:
             print(f"[v3] Training error: {e}")
@@ -776,10 +882,46 @@ class SocketServer:
                 self._training_active.clear()
                 self._train_thread = None
 
+    @staticmethod
+    def _compute_grouped_advantages(
+        rollout: RolloutBuffer,
+        client_ids: list[int],
+        next_values: list[float],
+        frame_seqs: Optional[list[int]] = None,
+    ) -> None:
+        """Compute GAE independently for each client timeline in a drained batch."""
+        gamma = float(CONFIG.train.gamma)
+        lam = float(CONFIG.train.gae_lambda)
+        by_client: dict[int, list[int]] = {}
+        for idx, client_id in enumerate(client_ids):
+            by_client.setdefault(int(client_id), []).append(idx)
+
+        rollout.advantages.zero_()
+        rollout.returns.zero_()
+        for indices in by_client.values():
+            if frame_seqs is not None:
+                indices.sort(key=lambda i: int(frame_seqs[i]))
+            last_gae = 0.0
+            for idx in reversed(indices):
+                has_value = bool(rollout.has_value[idx, 0].item())
+                if not has_value:
+                    last_gae = 0.0
+                    continue
+                done = bool(rollout.dones[idx, 0].item())
+                non_terminal = 0.0 if done else 1.0
+                reward = float(rollout.rewards[idx, 0].item())
+                value = float(rollout.values[idx, 0].item())
+                bootstrap = 0.0 if done else float(next_values[idx])
+                delta = reward + gamma * bootstrap * non_terminal - value
+                last_gae = delta + gamma * lam * non_terminal * last_gae
+                rollout.advantages[idx, 0] = last_gae
+                rollout.returns[idx, 0] = last_gae + value
+
 
     def _new_client_state(self) -> dict:
         return {
             "frames": 0,
+            "connected_frames": 0,
             "game_frames": 0,
             "player_alive": False,
             "alive_streak": 0,
@@ -789,8 +931,13 @@ class SocketServer:
             "plausible_start_streak": 0,
             "level_number": 0,
             "start_wave": 1,
+            "reward_prev_wave": 0,
             "game_score": 0,
+            "raw_game_score": 0,
             "num_lasers": 0,
+            "raw_num_lasers": 0,
+            "raw_level_number": 0,
+            "status": "waiting",
             "last_time": time.time(),
             "fps": 0.0,
             "was_done": False,
@@ -812,6 +959,8 @@ class SocketServer:
             "last_log_prob": 0.0,
             "last_value": 0.0,
             "last_has_value": False,
+            "frame_seq": 0,
+            "last_frame_seq": 0,
             "last_is_expert": False,
             "last_expert_move": 8,
             "last_expert_fire": 8,
@@ -937,25 +1086,29 @@ class SocketServer:
             selected, changed = self._ensure_preview_client_selected_locked()
             rows = []
             for cid, cs in self.client_states.items():
-                if bool(cs.get("gameplay_seen", False)):
-                    lives = max(0, int(cs.get("num_lasers", 0) or 0))
-                    level = max(0, int(cs.get("level_number", 0) or 0))
-                    score = max(0, int(cs.get("game_score", 0) or 0))
-                else:
-                    lives = level = score = 0
+                # ZP1LAS is the remaining ship counter after the current ship,
+                # so zero is a valid "last life" value, not necessarily idle.
+                lives = max(0, int(cs.get("num_lasers", 0) or 0))
+                level = max(0, int(cs.get("level_number", 0) or 0))
+                score = max(0, int(cs.get("game_score", 0) or 0))
                 rows.append({
                     "client_id": int(cid),
                     "client_slot": int(cs.get("client_slot", cid)),
                     "duration_seconds": float(max(0, int(cs.get("game_frames", 0) or 0))) / 60.0,
+                    "connected_duration_seconds": float(max(0, int(cs.get("connected_frames", cs.get("frames", 0)) or 0))) / 60.0,
                     "lives": lives,
                     "level": level,
                     "score": score,
+                    "status": str(cs.get("status", "unknown")),
+                    "player_alive": bool(cs.get("player_alive", False)),
+                    "gameplay_seen": bool(cs.get("gameplay_seen", False)),
+                    "dead_streak": max(0, int(cs.get("dead_streak", 0) or 0)),
                     "selected_preview": (selected is not None and int(selected) == int(cid)),
                     "preview_capable": bool(cs.get("preview_capable", False)),
                 })
         if changed:
             self._clear_preview_cache()
-        rows.sort(key=lambda r: int(r.get("client_id", 0)))
+        rows.sort(key=lambda r: (int(r.get("client_slot", r.get("client_id", 0))), int(r.get("client_id", 0))))
         return rows
 
     def get_selected_preview_client_id(self) -> Optional[int]:
@@ -1019,6 +1172,7 @@ class SocketServer:
         source_code: int,
         preview_enabled: bool = False,
         hud_enabled: bool = False,
+        client_slot: int = 0,
     ) -> bytes:
         """Pack 5-byte action response for Lua.
 
@@ -1028,7 +1182,9 @@ class SocketServer:
           bit 7:    HUD enable flag
         """
         start_adv = 1 if GAME_SETTINGS.start_advanced else 0
-        start_level = max(1, GAME_SETTINGS.start_level_min)
+        start_level = 1
+        if start_adv:
+            start_level = max(1, min(81, int(GAME_SETTINGS.start_level_min)))
         source_u8 = (int(source_code) & 0x0F)
         if preview_enabled:
             source_u8 |= 0x40
@@ -1099,7 +1255,7 @@ class SocketServer:
                 should_parse_preview = bool(self._is_preview_client(cid) and preview_enabled)
                 frame = parse_frame_data(data, parse_preview=should_parse_preview)
                 if not frame:
-                    sock.sendall(self._pack_action(-1, -1, 0, preview_enabled=preview_enabled, hud_enabled=hud_enabled))
+                    sock.sendall(self._pack_action(-1, -1, 0, preview_enabled=preview_enabled, hud_enabled=hud_enabled, client_slot=client_slot))
                     continue
 
                 with self.client_lock:
@@ -1107,9 +1263,13 @@ class SocketServer:
                         break
                     cs = self.client_states[cid]
                     cs["frames"] += 1
-                    cs["game_frames"] = cs.get("game_frames", 0) + 1
+                    cs["connected_frames"] = cs.get("connected_frames", 0) + 1
+                    cs["last_time"] = time.time()
                     cs["player_alive"] = frame.player_alive
                     cs["num_lasers"] = frame.num_lasers
+                    cs["raw_num_lasers"] = frame.num_lasers
+                    cs["raw_level_number"] = frame.level_number
+                    cs["raw_game_score"] = max(0, frame.game_score)
 
                     # Track alive/dead streaks
                     if frame.player_alive:
@@ -1122,9 +1282,7 @@ class SocketServer:
                     if cs["dead_streak"] >= _GAMEPLAY_RESET_DEAD_FRAMES:
                         cs["gameplay_seen"] = False
                         cs["start_pulse_window"] = 0
-                        cs["level_number"] = 0
                         cs["start_wave"] = 1
-                        cs["game_score"] = 0
 
                     # Detect game start
                     if frame.start_pressed:
@@ -1138,33 +1296,36 @@ class SocketServer:
                     else:
                         cs["plausible_start_streak"] = 0
 
-                    if (
-                        cs.get("start_pulse_window", 0) > 0
-                        and cs.get("alive_streak", 0) >= 15
-                        and cs.get("plausible_start_streak", 0) >= _GAMEPLAY_PLAUSIBLE_START_STREAK
-                    ):
+                    if _frame_confirms_gameplay(cs, frame):
                         if not cs.get("gameplay_seen"):
                             cs["gameplay_seen"] = True
                             cs["ep_frames"] = 0
+                            cs["game_frames"] = 0
                             cs["start_wave"] = max(1, frame.level_number)
                         cs["start_pulse_window"] = 0
 
-                    if frame.player_alive and cs.get("gameplay_seen"):
+                    if frame.player_alive:
                         cs["level_number"] = frame.level_number
                         cs["game_score"] = max(0, frame.game_score)
+                        if cs.get("gameplay_seen"):
+                            cs["game_frames"] = cs.get("game_frames", 0) + 1
+                            cs["status"] = "playing"
+                        else:
+                            cs["game_frames"] = 0
+                            cs["status"] = "starting"
+                    else:
+                        cs["status"] = "waiting" if cs.get("dead_streak", 0) >= _GAMEPLAY_RESET_DEAD_FRAMES else "dead"
 
-                    if (
-                        frame.player_alive
-                        and cs.get("gameplay_seen")
-                        and frame.num_lasers == 0
-                        and frame.game_score > self.metrics.peak_game_score
-                    ):
-                        self.metrics.peak_game_score = frame.game_score
+                    if frame.player_alive and cs.get("gameplay_seen") and frame.num_lasers == 0:
+                        with self.metrics.lock:
+                            if frame.game_score > self.metrics.peak_game_score:
+                                self.metrics.peak_game_score = frame.game_score
 
                     # Track per-game score
                     if frame.player_alive:
                         if frame.game_score < cs.get("last_alive_game_score", 0):
                             cs["ep_frames"] = 0
+                            cs["game_frames"] = 0
                             cs["start_wave"] = max(1, frame.level_number)
                         cs["last_alive_game_score"] = frame.game_score
 
@@ -1174,23 +1335,82 @@ class SocketServer:
 
                 self.metrics.update_frame()
                 self.agent.total_frames = self.metrics.total_frames
+                self.agent.policy_frames = self.metrics.policy_frames
 
                 pending_reward = None
+                pending_reward_components = None
                 pending_prev_tensors = None
                 pending_prev_action = None
                 pending_prev_log_prob = 0.0
                 pending_prev_value = 0.0
                 pending_prev_has_value = False
+                pending_prev_frame_seq = 0
                 pending_prev_expert_move = 8
                 pending_prev_expert_fire = 8
                 pending_prev_is_expert = False
                 pending_prev_policy_sampled = False
                 pending_prev_fire_locked = False
 
+                # Current-frame movement potential Φ(s) for PBRS. Wire fields:
+                # nearest-human distance = state[10], humans-present proxy =
+                # state[13] (count/255, so any human -> >0). Computed every frame
+                # (even the first, where the reward block below is skipped) so it
+                # can be cached as the "prev" potential for the next transition.
+                # Forced to 0 on a terminal frame to guarantee Φ(terminal)=0,
+                # which keeps the shaping policy-invariant.
+                try:
+                    cur_nearest_human = float(frame.state[10])
+                    cur_num_humans = float(frame.state[13])
+                except (IndexError, TypeError, ValueError):
+                    cur_nearest_human, cur_num_humans = 1.0, 0.0
+                # Nearest-enemy distance is core wire field index 9 (0-1); feeds
+                # both the danger-flee term of the movement potential and the
+                # proximity penalty below.
+                try:
+                    cur_nearest_enemy = float(frame.state[9])
+                except (IndexError, TypeError, ValueError):
+                    cur_nearest_enemy = 1.0
+                cur_move_potential = 0.0 if frame.done else move_potential(
+                    cur_nearest_human, cur_num_humans, frame.player_alive,
+                    cur_nearest_enemy,
+                )
+
                 # ── Process previous step reward → prepare transition ──
                 if cs.get("last_state") is not None and cs.get("last_action") is not None:
-                    pending_reward = shape_reward(frame.objreward, frame.subjreward, frame.done)
+                    # Wave-clear detection: a wave increment while alive means the
+                    # previous action finished clearing a wave. Guard against the
+                    # initial 0→start_wave jump at episode start.
+                    wave_completed = False
+                    cur_wave = int(frame.level_number)
+                    if frame.player_alive and not frame.done:
+                        prev_wave = int(cs.get("reward_prev_wave", 0))
+                        if prev_wave > 0 and cur_wave > prev_wave:
+                            wave_completed = True
+                        cs["reward_prev_wave"] = cur_wave
+
+                    # Score delta (objreward carries the per-frame score change;
+                    # ignore it on the terminal frame, where death dominates).
+                    score_delta = max(0.0, float(frame.objreward)) if not frame.done else 0.0
+                    # Nearest-enemy distance (core wire field index 9) was read
+                    # above for the movement potential; reuse it here.
+                    nearest_enemy_dist = cur_nearest_enemy
+
+                    pending_reward, pending_reward_components = shape_reward_with_components(
+                        frame.objreward,
+                        frame.subjreward,
+                        frame.done,
+                        player_alive=frame.player_alive,
+                        score_delta=score_delta,
+                        nearest_enemy_dist=nearest_enemy_dist,
+                        wave_completed=wave_completed,
+                        wave_number=cur_wave,
+                        move_potential_prev=float(cs.get("move_potential", 0.0)),
+                        move_potential_cur=cur_move_potential,
+                    )
                     cs["total_reward"] += pending_reward
+                    totals = cs.setdefault("reward_components", {})
+                    for key, val in (pending_reward_components or {}).items():
+                        totals[key] = float(totals.get(key, 0.0)) + float(val)
                     cs["ep_frames"] = cs.get("ep_frames", 0) + 1
 
                     pending_prev_tensors = cs.get("last_tensors")
@@ -1198,8 +1418,9 @@ class SocketServer:
                     pending_prev_log_prob = float(cs.get("last_log_prob", 0.0) or 0.0)
                     pending_prev_value = float(cs.get("last_value", 0.0) or 0.0)
                     pending_prev_has_value = bool(cs.get("last_has_value", False))
-                    pending_prev_expert_move = int(cs.get("last_expert_move", 8) or 8)
-                    pending_prev_expert_fire = int(cs.get("last_expert_fire", 8) or 8)
+                    pending_prev_frame_seq = int(cs.get("last_frame_seq", 0) or 0)
+                    pending_prev_expert_move = _stored_action_label(cs, "last_expert_move")
+                    pending_prev_expert_fire = _stored_action_label(cs, "last_expert_fire")
                     pending_prev_is_expert = bool(cs.get("last_is_expert", False))
                     pending_prev_policy_sampled = bool(cs.get("last_policy_sampled", False))
                     pending_prev_fire_locked = bool(cs.get("last_fire_locked", False))
@@ -1208,9 +1429,12 @@ class SocketServer:
                 if frame.done:
                     if pending_prev_tensors is not None and pending_prev_action is not None and pending_reward is not None:
                         self._push_transition(
+                            client_id=cid,
                             entity_features=pending_prev_tensors["entity_features"],
                             entity_mask=pending_prev_tensors["entity_mask"],
                             global_context=pending_prev_tensors["global_context"],
+                            move_action_features=pending_prev_tensors["move_action_features"],
+                            fire_action_features=pending_prev_tensors["fire_action_features"],
                             move_action=pending_prev_action[0],
                             fire_action=pending_prev_action[1],
                             log_prob=pending_prev_log_prob,
@@ -1219,6 +1443,7 @@ class SocketServer:
                             reward=pending_reward,
                             done=True,
                             next_value=0.0,
+                            frame_seq=pending_prev_frame_seq,
                             expert_move=pending_prev_expert_move,
                             expert_fire=pending_prev_expert_fire,
                             is_expert=pending_prev_is_expert,
@@ -1238,13 +1463,21 @@ class SocketServer:
                         self.metrics.add_episode(
                             ep_reward, ep_len,
                             level=ep_level, game_score=ep_score,
+                            reward_components=cs.get("reward_components", {}),
                         )
                         add_episode_to_reward_windows(ep_reward, ep_len)
                         add_episode_to_eplen_windows(ep_len)
+                        self.agent.update_guidance_rescue(
+                            self.metrics.avg_reward,
+                            avg_score=self.metrics.avg_game_score,
+                            avg_ep_len=self.metrics.avg_ep_len,
+                            bc_fire_loss=self.agent.last_bc_fire_loss,
+                            bc_move_loss=self.agent.last_bc_move_loss,
+                        )
                     cs["was_done"] = True
                     _pv = self._preview_enabled_for_client(cid)
                     _hd = self._hud_enabled_for_client(cid)
-                    sock.sendall(self._pack_action(-1, -1, 0, preview_enabled=_pv, hud_enabled=_hd))
+                    sock.sendall(self._pack_action(-1, -1, 0, preview_enabled=_pv, hud_enabled=_hd, client_slot=client_slot))
                     cs["last_state"] = cs["last_action"] = None
                     cs["last_tensors"] = None
                     cs["last_log_prob"] = 0.0
@@ -1259,21 +1492,28 @@ class SocketServer:
                     cs["prev_action_source"] = None
                     cs["episode_id"] = cs.get("episode_id", 1) + 1
                     cs["total_reward"] = 0.0
+                    cs["reward_components"] = {}
                     cs["ep_frames"] = 0
+                    cs["reward_prev_wave"] = 0
+                    cs["move_potential"] = 0.0
                     continue
 
                 if cs.get("was_done"):
                     cs["was_done"] = False
                     cs["total_reward"] = 0.0
+                    cs["reward_components"] = {}
                     cs["ep_frames"] = 0
 
                 # Skip dead/attract frames
                 if not frame.player_alive:
                     if pending_prev_tensors is not None and pending_prev_action is not None and pending_reward is not None:
                         self._push_transition(
+                            client_id=cid,
                             entity_features=pending_prev_tensors["entity_features"],
                             entity_mask=pending_prev_tensors["entity_mask"],
                             global_context=pending_prev_tensors["global_context"],
+                            move_action_features=pending_prev_tensors["move_action_features"],
+                            fire_action_features=pending_prev_tensors["fire_action_features"],
                             move_action=pending_prev_action[0],
                             fire_action=pending_prev_action[1],
                             log_prob=pending_prev_log_prob,
@@ -1282,6 +1522,7 @@ class SocketServer:
                             reward=pending_reward,
                             done=True,
                             next_value=0.0,
+                            frame_seq=pending_prev_frame_seq,
                             expert_move=pending_prev_expert_move,
                             expert_fire=pending_prev_expert_fire,
                             is_expert=pending_prev_is_expert,
@@ -1304,9 +1545,11 @@ class SocketServer:
                     cs["fire_hold_dir"] = -1
                     cs["fire_hold_count"] = 0
                     cs["fire_pending_dir"] = -1
+                    cs["reward_prev_wave"] = 0
+                    cs["move_potential"] = 0.0
                     _pv = self._preview_enabled_for_client(cid)
                     _hd = self._hud_enabled_for_client(cid)
-                    sock.sendall(self._pack_action(-1, -1, 0, preview_enabled=_pv, hud_enabled=_hd))
+                    sock.sendall(self._pack_action(-1, -1, 0, preview_enabled=_pv, hud_enabled=_hd, client_slot=client_slot))
                     continue
 
                 # ── Choose action ───────────────────────────────────────
@@ -1339,28 +1582,40 @@ class SocketServer:
 
                 if use_expert:
                     wave = max(1, cs.get("level_number", 1))
+                    t0 = time.perf_counter()
                     # Use pre-extracted entities from the already-processed
                     # frame inside the agent's frame buffer — avoids the old
                     # double-extraction path.
                     buf = self.agent._get_frame_buffer(cid)
                     latest = buf[-1] if buf else None
                     if latest is not None:
+                        _px = float(wire_state[5]) if wire_state.size > 6 else 0.5
+                        _py = float(wire_state[6]) if wire_state.size > 6 else 0.5
                         move_idx, fire_idx = get_expert_action_from_entities(
                             latest["entity_features"],
                             latest["entity_mask"],
                             latest["num_entities"],
                             wave_number=wave,
+                            px=_px,
+                            py=_py,
+                            locked_fire=locked_fire,
                         )
                     else:
-                        move_idx, fire_idx = get_expert_action(wire_state, wave_number=wave)
+                        move_idx, fire_idx = get_expert_action(wire_state, wave_number=wave, locked_fire=locked_fire)
+                    self.metrics.add_expert_time(time.perf_counter() - t0)
                     expert_move_out = move_idx
                     if locked_fire is not None:
                         fire_idx = locked_fire
                     expert_fire_out = fire_idx
                     action_source = "expert"
-                    if pending_prev_has_value or not self._skip_expert_value:
-                        value = self.batcher.submit_value(tensors)
-                        has_value = True
+                    # Always compute the value head for expert frames so they
+                    # carry a real critic estimate and keep each client's GAE
+                    # timeline continuous (no broken chains during the guided
+                    # phase where most frames are expert-driven).
+                    t0 = time.perf_counter()
+                    value = self.batcher.submit_value(tensors)
+                    self.metrics.add_inference_time(time.perf_counter() - t0)
+                    has_value = True
                     tensors_dict = self.agent._detach_tensors(tensors)
                 else:
                     is_epsilon = random.random() < epsilon
@@ -1369,11 +1624,15 @@ class SocketServer:
                         fire_idx = random.randrange(CONFIG.model.num_fire_actions)
                         if locked_fire is not None:
                             fire_idx = locked_fire
+                        t0 = time.perf_counter()
                         value = self.batcher.submit_value(tensors)
+                        self.metrics.add_inference_time(time.perf_counter() - t0)
                         has_value = True
                         log_prob = 0.0
                     else:
+                        t0 = time.perf_counter()
                         res = self.batcher.submit_action(tensors)
+                        self.metrics.add_inference_time(time.perf_counter() - t0)
                         move_idx = res["move_action"]
                         fire_idx = res["fire_action"]
                         log_prob = res["move_log_prob"] if locked_fire is not None else res["log_prob"]
@@ -1387,9 +1646,12 @@ class SocketServer:
 
                 if pending_prev_tensors is not None and pending_prev_action is not None and pending_reward is not None:
                     self._push_transition(
+                        client_id=cid,
                         entity_features=pending_prev_tensors["entity_features"],
                         entity_mask=pending_prev_tensors["entity_mask"],
                         global_context=pending_prev_tensors["global_context"],
+                        move_action_features=pending_prev_tensors["move_action_features"],
+                        fire_action_features=pending_prev_tensors["fire_action_features"],
                         move_action=pending_prev_action[0],
                         fire_action=pending_prev_action[1],
                         log_prob=pending_prev_log_prob,
@@ -1398,6 +1660,7 @@ class SocketServer:
                         reward=pending_reward,
                         done=False,
                         next_value=value,
+                        frame_seq=pending_prev_frame_seq,
                         expert_move=pending_prev_expert_move,
                         expert_fire=pending_prev_expert_fire,
                         is_expert=pending_prev_is_expert,
@@ -1416,11 +1679,15 @@ class SocketServer:
                 cs["last_log_prob"] = log_prob
                 cs["last_value"] = value
                 cs["last_has_value"] = has_value
+                cs["last_frame_seq"] = int(cs.get("frame_seq", 0) or 0)
+                cs["frame_seq"] = int(cs.get("last_frame_seq", 0) or 0) + 1
                 cs["last_is_expert"] = use_expert
                 cs["last_expert_move"] = expert_move_out
                 cs["last_expert_fire"] = expert_fire_out
                 cs["last_policy_sampled"] = policy_sampled
                 cs["last_fire_locked"] = fire_locked_now
+                cs["move_potential"] = cur_move_potential
+                self.metrics.record_policy_sampled(policy_sampled)
 
                 # Save signal
                 if frame.save_signal:
@@ -1439,7 +1706,7 @@ class SocketServer:
 
                 _pv = self._preview_enabled_for_client(cid)
                 _hd = self._hud_enabled_for_client(cid)
-                sock.sendall(self._pack_action(move_cmd, fire_cmd, source_byte, preview_enabled=_pv, hud_enabled=_hd))
+                sock.sendall(self._pack_action(move_cmd, fire_cmd, source_byte, preview_enabled=_pv, hud_enabled=_hd, client_slot=client_slot))
 
         except Exception as e:
             is_expected = isinstance(e, (ConnectionError, BrokenPipeError, ConnectionResetError, TimeoutError))
@@ -1454,4 +1721,3 @@ class SocketServer:
                 sock.close()
             except Exception:
                 pass
-            print(f"Client {cid} disconnected")
