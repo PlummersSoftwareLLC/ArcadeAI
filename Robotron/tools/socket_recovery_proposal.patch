@@ -1,0 +1,206 @@
+--- a/Robotron/Scripts/main.lua
++++ b/Robotron/Scripts/main.lua
+@@ -3645,13 +3645,20 @@
+ 
+         log_socket_receive_timeout(#ACTION_RX_BUFFER, math.max(0, socket_time_now() - started))
+         ACTION_RX_BUFFER = ""
+-        trace_log(frame_idx, "socket_read_timeout", "using neutral action")
+-        return {-1, -1}
++        trace_log(frame_idx, "socket_read_timeout", "closing connection; using neutral action")
++        return nil
+     end)
+ 
+     if not read_ok then
+         trace_log(frame_idx, "socket_read_error", tostring(read_result))
+         print("Socket read error: " .. tostring(read_result))
++        close_socket()
++        return -1, -1, false
++    end
++
++    if read_result == nil then
++        -- Replies carry no request ID. Reusing this stream after a timeout
++        -- could apply a late reply to the next state or lose byte alignment.
+         close_socket()
+         return -1, -1, false
+     end
+--- a/Robotron/Scripts/dqn/socket_server.py
++++ b/Robotron/Scripts/dqn/socket_server.py
+@@ -941,7 +941,7 @@
+ 
+ 
+ class _InferenceRequest:
+-    __slots__ = ("state", "epsilon", "locked_fire", "event", "action", "cancelled")
++    __slots__ = ("state", "epsilon", "locked_fire", "event", "action", "cancelled", "error")
+ 
+     def __init__(self, state, epsilon: float, locked_fire=None):
+         self.state = state
+@@ -950,6 +950,7 @@
+         self.event = threading.Event()
+         self.action = None
+         self.cancelled = False
++        self.error = None
+ 
+ 
+ class AsyncInferenceBatcher:
+@@ -961,32 +962,51 @@
+         self.max_wait_s = max(0.0, float(max_wait_ms) / 1000.0)
+         self.request_timeout_s = max(0.001, float(request_timeout_ms) / 1000.0)
+         self.queue = queue.Queue(maxsize=20000)
++        self._request_lock = threading.Lock()
++        self._pending = set()
+         self.running = True
+         self._thread = threading.Thread(target=self._consume, daemon=True, name="InferBatchWorker")
+         self._thread.start()
+ 
+     def infer(self, state, epsilon: float, locked_fire=None):
+-        if not self.running:
+-            return self.agent.act(state, epsilon, locked_fire=locked_fire)
+         req = _InferenceRequest(state, epsilon, locked_fire=locked_fire)
++        with self._request_lock:
++            if not self.running:
++                raise RuntimeError("Inference batcher is stopped")
++            self._pending.add(req)
++        deadline = time.perf_counter() + self.request_timeout_s
+         try:
+-            self.queue.put(req, timeout=self.request_timeout_s)
+-        except queue.Full:
+-            return self.agent.act(state, epsilon, locked_fire=locked_fire)
+-        if not req.event.wait(timeout=self.request_timeout_s):
+-            # Cancel BEFORE falling back to a solo act(): an abandoned request
+-            # left live in the queue still gets batched and inferred — every
+-            # timed-out frame was costing TWO inferences.  Under load, 32
+-            # handlers timing out at once turned into 32 solo CUDA calls plus
+-            # the batcher's ghost work, which kept latency above the timeout
+-            # forever: a self-sustaining stampede (measured: AvgInf pinned at
+-            # ~104ms for an entire boot on 2026-07-13).  Cancelling the
+-            # request breaks the amplification; the longer timeout (config:
+-            # inference_request_timeout_ms) keeps handlers in the batched
+-            # path through transient stalls instead of defecting.
+-            req.cancelled = True
+-            return self.agent.act(state, epsilon, locked_fire=locked_fire)
+-        return req.action if req.action is not None else (0, 0, False)
++            self.queue.put(req, timeout=max(0.0, deadline - time.perf_counter()))
++        except queue.Full as exc:
++            with self._request_lock:
++                self._pending.discard(req)
++                req.cancelled = True
++            raise TimeoutError("Inference queue admission timed out") from exc
++        if not req.event.wait(timeout=max(0.0, deadline - time.perf_counter())):
++            # Cancellation can skip queued work, but cannot undo an in-flight
++            # batch. Never launch a second solo inference for the same state.
++            with self._request_lock:
++                self._pending.discard(req)
++                req.cancelled = True
++            raise TimeoutError("Batched inference request timed out")
++        with self._request_lock:
++            error, action = req.error, req.action
++        if error is not None:
++            raise RuntimeError(error)
++        if action is None:
++            raise RuntimeError("Inference completed without an action")
++        return action
++
++    def _finish(self, batch, actions=None, error=None):
++        with self._request_lock:
++            for idx, req in enumerate(batch):
++                self._pending.discard(req)
++                if req.cancelled:
++                    continue
++                req.error = error
++                if error is None:
++                    req.action = actions[idx]
++                req.event.set()
+ 
+     def _consume(self):
+         while self.running or not self.queue.empty():
+@@ -1006,9 +1026,10 @@
+                 except queue.Empty:
+                     break
+ 
+-            # Drop requests whose handler already gave up and solo-inferred —
+-            # running them here would be pure duplicate GPU work.
+-            batch = [r for r in batch if not r.cancelled]
++            # Skip queued requests whose handler already timed out. A request
++            # that expires after dispatch may finish once, without solo work.
++            with self._request_lock:
++                batch = [r for r in batch if self.running and not r.cancelled]
+             if not batch:
+                 continue
+ 
+@@ -1017,29 +1038,38 @@
+                 epsilons = [r.epsilon for r in batch]
+                 locked_fires = [r.locked_fire for r in batch]
+                 actions = self.agent.act_batch(states, epsilons, locked_fires=locked_fires)
++                # Model-space move/fire indices are integers 0..8 (8 = idle).
++                if (not isinstance(actions, (list, tuple)) or len(actions) != len(batch)
++                        or any(not isinstance(a, (list, tuple)) or len(a) != 3
++                               or type(a[0]) is not int or not 0 <= a[0] <= 8
++                               or type(a[1]) is not int or not 0 <= a[1] <= 8
++                               or type(a[2]) is not bool for a in actions)):
++                    raise RuntimeError("Inference returned a malformed action batch")
+             except Exception as e:
+-                print(f"AsyncInferenceBatcher error: {e}")
+-                actions = []
+-
+-            for idx, req in enumerate(batch):
+-                act = actions[idx] if idx < len(actions) else None
+-                if act is None:
+-                    try:
+-                        act = self.agent.act(req.state, req.epsilon, locked_fire=req.locked_fire)
+-                    except Exception:
+-                        act = (0, 0, False)
+-                req.action = act
++                error = f"Batched inference failed ({type(e).__name__}: {e})"
++                print(error)
++                self._finish(batch, error=error)
++                continue
++
++            self._finish(batch, actions=actions)
++
++    def stop(self):
++        # Publish failure before joining: a blocked GPU dispatch must not
++        # delay waiter shutdown or later overwrite a stop with a valid action.
++        with self._request_lock:
++            self.running = False
++            for req in self._pending:
++                req.cancelled = True
++                req.error = "Inference batcher stopped before completion"
+                 req.event.set()
+-
+-    def stop(self):
+-        self.running = False
++            self._pending.clear()
+         self._thread.join(timeout=5.0)
+         while True:
+             try:
+                 req = self.queue.get_nowait()
+             except queue.Empty:
+                 break
+-            req.action = (0, 0, False)
++            req.error = "Inference batcher stopped before dispatch"
+             req.event.set()
+ 
+ 
+@@ -1549,12 +1579,19 @@
+ 
+     @staticmethod
+     def _recv_exact(sock, n, timeout_s=0.5):
+-        """Read exactly *n* bytes; return None on timeout, b"" on EOF/socket error."""
++        """Read *n* bytes; None means idle with no bytes consumed.
++
++        A partial timeout is a broken frame, so the handler must close the
++        connection rather than treating the remaining bytes as a new header.
++        EOF/socket errors return b"" as before.
++        """
+         buf = bytearray()
+-        deadline = time.time() + timeout_s
++        deadline = time.monotonic() + timeout_s
+         while len(buf) < n:
+-            remaining = deadline - time.time()
++            remaining = deadline - time.monotonic()
+             if remaining <= 0:
++                if buf:
++                    raise ConnectionError(f"Partial read timeout ({len(buf)}/{n} bytes)")
+                 return None
+             try:
+                 r, _, _ = select.select([sock], [], [], min(0.05, remaining))

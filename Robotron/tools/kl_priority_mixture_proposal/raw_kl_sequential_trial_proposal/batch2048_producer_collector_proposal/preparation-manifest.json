@@ -1,0 +1,72 @@
+{
+  "API": {
+    "bind_capture": "(capture_FULL_PIN, opaque_source_FULL_PIN, FINAL_acquisition_FULL_PIN, output) -> producer_observation FULL_PIN",
+    "capture_live": "(spec, output, host=None) -> capture FULL_PIN"
+  },
+  "actual_acquisition": null,
+  "actual_checkpoint": null,
+  "actual_owner": null,
+  "actual_phase_CPU_result": null,
+  "application_imports": false,
+  "bounds": {
+    "CSV_age_seconds": null,
+    "artifact_bytes": 4194304,
+    "csv_header_bytes": 32768,
+    "csv_suffix_bytes": 262144,
+    "live_collection_monotonic_seconds": 10,
+    "total_artifact_bytes_per_stage": 33554432,
+    "unit_show_timeout_seconds": 3
+  },
+  "files": {
+    "API.txt": {
+      "bytes": 2780,
+      "mode": "0o444",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_producer_collector_proposal/API.txt",
+      "sha256": "1a3b8402e2bedca2c861014b6d7b501467cf558f53b8567be7236427cd166343"
+    },
+    "PREPARATION.txt": {
+      "bytes": 3012,
+      "mode": "0o444",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_producer_collector_proposal/PREPARATION.txt",
+      "sha256": "b8781ec7bcdabecaf8936da6000d904a2a2c0f8ae8fba9d3b2e489aa3f212ee7"
+    },
+    "collect_producer.py": {
+      "bytes": 23824,
+      "mode": "0o444",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_producer_collector_proposal/collect_producer.py",
+      "sha256": "b6a338297ca91f39b1270db8179fac06cd3ba3d6ef5fb175df46968ca6c3bcfb"
+    },
+    "future-plan.json": {
+      "bytes": 2136,
+      "mode": "0o444",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_producer_collector_proposal/future-plan.json",
+      "sha256": "317c567176652baee65beefd957a532ce8f0cd779e0f5c413800818a33247f2d"
+    },
+    "source-lock.json": {
+      "bytes": 2261,
+      "mode": "0o444",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_producer_collector_proposal/source-lock.json",
+      "sha256": "07bbc415719fd8d52dbfc3894d917ae966da2e74136dbe94d9ac3f4f0dda2549"
+    },
+    "test_collect_producer.py": {
+      "bytes": 19043,
+      "mode": "0o444",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_producer_collector_proposal/test_collect_producer.py",
+      "sha256": "aa1b2b35d3a4c683bc84b6f6d480bd9729ba84adfc71efdd20650b8d67fdde6f"
+    }
+  },
+  "guard_selection": {
+    "authored_methods": 17,
+    "class_name": "ProducerCollectorGuards",
+    "executed": false,
+    "file": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_producer_collector_proposal/test_collect_producer.py"
+  },
+  "production_or_state_edits": false,
+  "qualification_pass": false,
+  "runtime_queries": false,
+  "schema": "robotron-batch2048-producer-collector-preparation-v1",
+  "scope": "New two-stage metadata collector only; final root lifecycle/controller wiring and genuine CE2048 readiness remain required.",
+  "source_lock_sha256": "07bbc415719fd8d52dbfc3894d917ae966da2e74136dbe94d9ac3f4f0dda2549",
+  "status": "SOURCE_ONLY_UNEXECUTED_PEER_PENDING",
+  "tests_executed": false
+}

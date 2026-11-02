@@ -1,0 +1,315 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_one_trial_installed_ce_revision2_proposal/run_raw_kl_transition.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_proposal/run_CE_batch_transition.py
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env python3
+-"""One root-owned activate_kl or return_ce transition; literal PLAN by default.
++"""Unconsumed root-owned CE batch-profile transition draft; PLAN by default.
+ 
+ SOURCE PREPARATION ONLY. Uses pinned v4 ownership/storage primitives. No trial
+ watcher, automatic retry, old-state restore, evaluator or promotion runs here.
+@@ -23,10 +23,10 @@
+ import time
+ import traceback
+ 
+-SCHEMA = 'robotron-raw-kl-installed-phase-transition-job-v3'
+-RESULT_SCHEMA = 'robotron-raw-kl-installed-phase-transition-result-v3'
+-V4 = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision4/run_live8_maintenance.py')
+-V4_SHA = 'fdf7c8bfb123b494252acf83d724a51acda95bb7f00877eace28b60d0377ed18'
++SCHEMA = 'robotron-ce-batch-profile-transition-job-v1'
++RESULT_SCHEMA = 'robotron-ce-batch-profile-transition-result-v1'
++V4 = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_proposal/owned_lifecycle.py')
++V4_SHA = '6f961e5c724ae70bb4abf4641f7a3a6a27d55579e9acb2808ee15de08960d8ac'
+ PHASE = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/verify_phase_snapshot.py')
+ PHASE_SHA = 'b2e732dc731b2b601f7499d2cafd5841896daf2b0713d496b98cb6b8d7279519'
+ STRICT_SHA = '9ef38e17e1b9eee3f6c43e40005812f2ebe3cff16d08bf61d3e820c2d41134c8'
+@@ -41,21 +41,46 @@
+ MAX_JSON = 2 << 20
+ ANCESTOR = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_transition_adapter_proposal/run_raw_kl_transition.py')
+ ANCESTOR_SHA = '8a606d4c152e85c867f5517555ce80fb05cc883decad1f84da0784e4d32bdd3c'
+-HORIZON = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/horizon_observer_proposal/horizon_observer.py')
+-HORIZON_SHA = '25d70b4a3888dcba83ea9020c333cba32cfbd19c93b6e69037d6299b161fd7ec'
++HORIZON = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/horizon_observer2048.py')
++HORIZON_SHA = 'e8809615c3a837da3400f56d58ecdbfd59b13b83c574c65643731afe8b13a124'
++
++
++BOUNDARY = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_boundary_proposal/profile_boundary.py')
++BOUNDARY_SHA = '29786c0e759bdfb518361f903117b301bcc11a3620202e4bec29775f157e18a6'
++ORIGINAL_STRICT_SHA = '7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead'
++CPU2048_BINDING = None  # Runtime peer is preparing a NEW provenance-reviewed wrapper.
++DRAFT_BLOCKERS = (
++    'reviewed2 CPU2048 source binding is unresolved',
++    'actual producer-observation collector is not implemented',
++    'legacy2048 maintenance-insurance/verifier provenance is unresolved',
++    'actual2048 numerical readiness and future root precommit are unbound',
++)
++_BOUNDARY = None
++
++
++def boundary():
++    global _BOUNDARY
++    if _BOUNDARY is None:
++        data = BOUNDARY.read_bytes()
++        require(hashlib.sha256(data).hexdigest() == BOUNDARY_SHA, 'Boundary source changed')
++        spec = importlib.util.spec_from_file_location('_ce_batch_profile_boundary', BOUNDARY)
++        module = importlib.util.module_from_spec(spec)
++        exec(compile(data, str(BOUNDARY), 'exec'), module.__dict__)
++        _BOUNDARY = module
++    return _BOUNDARY
++
++
++def require_execution_ready():
++    require(not DRAFT_BLOCKERS and CPU2048_BINDING is not None,
++        'UNCONSUMED DRAFT: ' + '; '.join(DRAFT_BLOCKERS))
+ 
+ 
+ def require(value, message):
+     if not value: raise RuntimeError(message)
+ 
+ 
+-def selected_environment(before, metric, record):
+-    require(metric in ('kl','ce'), 'Unknown static metric')
+-    result = dict(before)
+-    for flag in FLAGS: result.pop(flag, None)
+-    result.update(DQN_PER_PRIORITY_METRIC=metric,DQN_PRIORITY_PHASE_RECORD=record['path'],
+-        DQN_PRIORITY_PHASE_RECORD_SHA256=record['sha256'])
+-    return result
++def selected_environment(before, spec, record):
++    return boundary().selected_environment(before, spec, record)
+ 
+ 
+ def four(value):
+@@ -68,21 +93,8 @@
+     return {key:pin[key] for key in ('path','sha256','bytes')}
+ 
+ 
+-def start_record(mode, phase_id, core_sha, model_dir, checkpoint, boot_proof):
+-    require(mode in ('activate_kl','return_ce') and re.fullmatch(r'[A-Za-z0-9_-]{1,100}',phase_id or ''), 'Invalid transition identity')
+-    require(re.fullmatch(r'[0-9a-f]{64}',core_sha or ''), 'Invalid immutable trial core SHA')
+-    previous = boot_proof.get('saved_priority_metric_phase')
+-    if mode == 'activate_kl':
+-        require(isinstance(previous,dict) and previous.get('metric') == 'ce' and previous.get('valid') is True,
+-            'Installed-source activation requires newest verified valid CE predecessor')
+-    if mode == 'return_ce':
+-        require(isinstance(previous,dict) and previous.get('metric') == 'kl' and previous.get('valid') is True,
+-            'CE return requires actual newest valid KL phase; no historical rollback')
+-    require(previous is None or previous.get('phase_id') != phase_id, 'New phase ID required')
+-    return dict(schema='robotron-priority-metric-start-v1',phase_id=phase_id,
+-        metric='kl' if mode == 'activate_kl' else 'ce',action='start',
+-        previous_metric='unknown' if previous is None else previous['metric'],checkpoint=triple(checkpoint),
+-        model_dir=model_dir,root_precommit_sha256=core_sha)
++def start_record(spec, phase_id, core_sha, model_dir, checkpoint, boot_proof, floor):
++    return boundary().start_record(spec, phase_id, core_sha, model_dir, checkpoint, boot_proof, floor)
+ 
+ 
+ def expected_start(record, record_pin, boot_proof):
+@@ -173,7 +185,7 @@
+         require(item['path']==str(path) and item['sha256']==sha,'Wrong consumed companion source: '+name)
+         base.pin(item,base.MAX_SOURCE)
+     ending=job['ending_proof']
+-    if job['mode']=='activate_kl':
++    if job['mode']=='activate_batch2048':
+         require(ending is None,'Activation cannot invent an ending decision')
+         return None
+     require(isinstance(ending,dict) and set(ending)=={'observer_job','activation_receipt','decision','candidate'},
+@@ -194,7 +206,7 @@
+         start['boot_id']==observer['start_request']['boot_id'] and
+         start['monotonic_s']==observer['start_request']['monotonic_s'],
+         'Ending belongs to a different activation/owner/original clock origin')
+-    require(decision['schema']=='robotron-raw-kl-horizon-observation-v1' and
++    require(decision['schema']=='robotron-ce-batch2048-horizon-observation-v1' and
+         decision['state'] in ('LATCH','INCOMPLETE') and decision['qualification_pass'] is False and
+         decision['boot_id']==observer['start_request']['boot_id'], 'Only first latched/incomplete ending is supported')
+     observed=horizon.number(decision['observed_monotonic_s'],'ending observation')
+@@ -298,7 +310,7 @@
+     require(job_pin['sha256'] == args.expected_job_sha256 and job_pin['identity']['mode'] == '0o444' and
+         job_pin['identity']['uid']==os.getuid() and job_pin['identity']['nlink']==1,'Root job must be exact owned readonly metadata')
+     job = json.loads(Path(args.job).read_text());require(base.fingerprint(args.job,MAX_JSON) == job_pin,'Root job changed')
+-    require(job['schema'] == SCHEMA and job['mode'] in ('activate_kl','return_ce'),'One transition only')
++    require(job['schema'] == SCHEMA and job['mode'] in ('activate_batch2048','return_batch4096'),'One transition only')
+     output=base.canonical(job['output_directory'],False)
+     require(not output.exists() and output.parent.is_dir(),'Output must be NEW')
+     game = base.canonical(job['game_root']);require(base.canonical(job['model_dir']) == game/'models_dqn','Held model directory differs')
+@@ -344,6 +356,16 @@
+     require(not any(x['path'] in destinations or x['path'] in (str(Path(job['model_dir'])/'managed_save.request.json.completed'),
+         job['settings_lifecycle']['initial']['path'],job['original_dropin']['path']) for x in job['static_pins']),
+         'Mutable source/settings/completion/owned override must have explicit lifecycle, not static inode pins')
++    profile_boundary = boundary()
++    require(job['batch_boundary'] == profile_boundary.direction(job['mode'], job['batch_boundary']['profile_binding']),
++        'Wrong exact CE batch direction/profile')
++    base.pin(job['batch_profile'], base.MAX_SOURCE)
++    require(triple(job['batch_profile']) == profile_boundary.PROFILE_BINDING['pin'], 'Profile file PIN differs')
++    require(env.get('DQN_BATCH_SIZE') == str(job['batch_boundary']['before_batch_size']),
++        'Actual before batch differs from declared transition')
++    require(job['helper_pins']['profile_boundary']['path'] == str(BOUNDARY) and
++        job['helper_pins']['profile_boundary']['sha256'] == BOUNDARY_SHA, 'Recurring boundary source differs')
++    require_execution_ready()  # Never act with unknown CPU/producer/insurance readiness.
+     validate_installed_phase(job,base,game,env)
+     capture = env.get(FLAGS[0])
+     require(not env.get(FLAGS[1]),'Unknown old trace session forbidden')
+@@ -412,7 +434,7 @@
+     for name,value in CANDIDATE.items():
+         require(job['before']['bindings']['source_hashes'][str(game/'Scripts/dqn'/name)]==value,
+             'Installed source is not exact candidate5: '+name)
+-    metric='ce' if job['mode']=='activate_kl' else 'kl'
++    metric='ce'
+     running=job['running_phase'];record=base.read_json(running['record']);boot=base.read_json(running['boot_verification'])
+     require(record['metric']==metric and running['expected']==expected_start(record,running['record'],boot) and
+         record['action']=='start' and record['checkpoint']==running['boot_checkpoint'] and
+@@ -430,6 +452,8 @@
+     class Runtime(base.Runtime):
+         def __init__(self,job,output):
+             self.job,self.output=copy.deepcopy(job),output
++            self.batch_boundary=boundary()
++            self.batch_boundary.checked_spec(self.job['batch_boundary'])
+             self.job['readiness_timeout_s']=job['timeouts']['ready_s']
+             tools=Path(job['helper_pins']['live_host']['path']).parent
+             sys.dont_write_bytecode=True;sys.path.insert(0,str(tools))
+@@ -496,7 +520,8 @@
+                 except OSError as e:
+                     if e.errno in (errno.ENOENT,errno.ESRCH):continue
+                     raise
+-                names=set(base.BLOCKED)|{'run_raw_kl_transition.py','verify_phase_snapshot.py'}
++                names=set(base.BLOCKED)|{'run_raw_kl_transition.py','run_CE_batch_transition.py',
++                    'verify_phase_snapshot.py','verify_phase_snapshot_2048.py'}
+                 require(not any(os.path.basename(os.fsdecode(a)) in names for a in argv if a),'Competing owned helper '+entry.name)
+             self.request_guard()
+             require(not any(x.is_dir() for x in Path('/dev/shm').glob('robotron-snapshot-smoke-*')),'Private diagnostic tmpfs remains')
+@@ -506,7 +531,7 @@
+ 
+         def inspect(self,phase):
+             self.static();current=self.host.describe()
+-            env=self.job['before']['environment'] if phase=='before' else selected_environment(self.job['before']['environment'],self.record['metric'],self.record_pin)
++            env=self.job['before']['environment'] if phase=='before' else selected_environment(self.job['before']['environment'],self.job['batch_boundary'],self.record_pin)
+             base.binding_matches(current,self.job['before'],self.expected_sources(phase),env)
+             require(current['trainer']['Restart']==('no' if self.host.dropin_expected is not None else self.job['before']['trainer']['Restart']) and
+                 self.host._dropin_bytes()==self.host.dropin_expected,'Owned Restart=no override drift')
+@@ -517,9 +542,9 @@
+ 
+         def start_phase(self):
+             self.static();self.absence();require(fingerprint(self.current_checkpoint['source']['path'])==self.current_checkpoint['source'],'Newest boot bytes changed')
+-            self.record=start_record(self.job['mode'],self.job['phase_id'],self.job['trial_core']['sha256'],self.job['model_dir'],self.current_checkpoint['source'],read_json(self.current_checkpoint['verification']))
++            self.record=start_record(self.job['batch_boundary'],self.job['phase_id'],self.job['trial_core']['sha256'],self.job['model_dir'],self.current_checkpoint['source'],read_json(self.current_checkpoint['verification']),self.floor)
+             self.record_pin=publish(self.output/'phase-record.json',self.record)
+-            env=selected_environment({},self.record['metric'],self.record_pin)
++            env=self.batch_boundary.override_environment(self.job['before']['environment'],self.job['batch_boundary'],self.record_pin)
+             require(all(not any(c in str(v) for c in ('\n','"','%')) for v in env.values()),'Unsafe static override value')
+             lines=['[Service]','Restart=no']+['Environment="'+k+'='+v+'"' for k,v in env.items()]+['UnsetEnvironment='+' '.join(FLAGS)]
+             self.dropin=('\n'.join(lines)+'\n').encode();self.host.write_dropin(self.dropin,self.host.dropin_expected)
+@@ -547,27 +572,49 @@
+                 pairs[name]=dict(current=current,archive=archive)
+             context=copy.deepcopy(self.job['verifier']['context'])
+             context['model_package']={name:pairs[name]['current'] for name in ('model.py','config.py','learning_control.py','__init__.py')}
++            # Bind the current configured unit/drop-in at this actual snapshot,
++            # rather than reusing the preceding profile's historical unit file.
++            unit_argv=['systemctl','--user','cat',self.job['trainer_unit']]
++            observed=subprocess.run(unit_argv,capture_output=True,text=True,timeout=5,check=False)
++            require(observed.returncode==0,'Current trainer unit metadata unavailable')
++            context['archived_trainer_unit']=publish(directory/'trainer-unit-asof-capture.json',
++                dict(argv=unit_argv,returncode=observed.returncode,stdout=observed.stdout,stderr=observed.stderr))
+             return pairs,context
++
++        def collect_producer_observation(self,label,purpose,owner,source,acquisition):
++            raise RuntimeError('DRAFT: actual2048 producer collector is not implemented; no fabricated observation')
+ 
+         def cpu_phase(self,label,purpose,owner,source,copied,phase,acquisition,ledger_key):
+             require(ledger_key not in self.cpu_attempts,'Phase CPU already attempted; no retry')
+             root=self.output/label;root.mkdir(mode=0o700)
++            route=self.batch_boundary.phase_cpu_boundary(self.job['batch_boundary'],purpose,
++                **({} if (self.job['batch_boundary']['before_batch_size'] if purpose=='newest_stopped' else self.job['batch_boundary']['after_batch_size'])==4096 else
++                    dict(profile_pin=self.job['batch_profile'],
++                         producer_observation=self.collect_producer_observation(label,purpose,owner,source,acquisition))))
++            family=self.job['phase_verifier'] if route['batch_size']==4096 else self.job['phase_verifier2048']
++            require(route['batch_size']==4096 or CPU2048_BINDING is not None and family==CPU2048_BINDING,
++                'Unresolved reviewed2 CPU2048 source binding')
++            script=family['script'];strict=family['strict_base']
++            base.pin(script,base.MAX_SOURCE);base.pin(strict,base.MAX_SOURCE)
+             pairs,context=self.phase_sources(label)
++            context['held_recipe_context']=copy.deepcopy(self.batch_boundary.PROFILE_BINDING['value']['held_recipe_context'])
++            context['held_recipe_context']['batch_size']=route['batch_size']
+             phase,context,archives=phase_metadata(base,phase,context,root/'metadata')
+             publish(root/'metadata-archives.json',archives)
+             acquisition_pin=publish(root/'acquisition.json',acquisition)
+             spec=dict(purpose=purpose,owner=owner,observed_clients=acquisition['client_count'],phase_record=phase['record'],
+                 boot_checkpoint=phase['boot_checkpoint'],boot_verification=phase['boot_verification'],expected_phase=phase['expected'],
+                 acquisition=acquisition_pin,sources=pairs)
+-            job=dict(schema='robotron-phase-snapshot-checkpoint-CPU-job-v1',verifier_sha256=PHASE_SHA,strict_phase_base_sha256=STRICT_SHA,
+-                original_strict_base_sha256=self.job['verifier']['script']['sha256'],experiment=self.job['experiment'],source=source,
++            job=dict(schema=route['job_schema'],verifier_sha256=script['sha256'],strict_phase_base_sha256=strict['sha256'],
++                original_strict_base_sha256=ORIGINAL_STRICT_SHA,experiment=self.job['experiment'],source=source,
+                 verification_copy=copied,clock_floor=acquisition['clock_floor'],source_control_context=context,
+                 output_directory=str(root/'cpu-output'),phase_snapshot=spec)
++            job.update(route['additional_job_fields'])
+             jp=publish(root/'cpu-job.json',job);base.validate_python_binding(self.job['verifier'],self.job['insurance_verification'],hash_executable=True)
+             env=dict(os.environ,CUDA_VISIBLE_DEVICES='',OMP_NUM_THREADS='2',MKL_NUM_THREADS='2',OPENBLAS_NUM_THREADS='2')
+             for key in ('LD_PRELOAD','PYTHONPATH'):env.pop(key,None)
+-            argv=[self.job['verifier']['python'],'-Xgil=0','-I','-B',str(PHASE),'--execute','--job',jp['path'],
+-                '--expected-job-sha256',jp['sha256'],'--expected-verifier-sha256',PHASE_SHA]
++            argv=[self.job['verifier']['python'],'-Xgil=0','-I','-B',script['path'],'--execute','--job',jp['path'],
++                '--expected-job-sha256',jp['sha256'],'--expected-verifier-sha256',script['sha256']]
+             try:
+                 with (root/'cpu.stdout').open('xb') as out,(root/'cpu.stderr').open('xb') as err:
+                     with self.metrics.block_restore_signals():self.cpu_attempts[ledger_key]='started'
+@@ -580,7 +627,7 @@
+             require(completed.returncode==0,'First phase CPU verification failed; no retry')
+             try:
+                 pin=fingerprint(root/'cpu-output/cpu-verification.json',MAX_JSON);proof=read_json(pin)
+-                require(proof['status']=='PASS' and proof['root_job']==job and proof['phase_metadata_verified'] is True and
++                require(proof['status']=='PASS' and proof['schema']==route['result_schema'] and proof['root_job']==job and proof['phase_metadata_verified'] is True and
+                     proof['sha256']==source['sha256'],'Phase CPU proof mismatched')
+             except BaseException:self.verification_failed=True;raise
+             pin=archive_metadata(base,pin,root/'cpu-report-readonly.json')
+@@ -588,10 +635,10 @@
+             return pin,proof
+ 
+         def post_stop_ending(self,retired):
+-            # Every numeric check is AFTER exact known KL retirement. Nothing in
++            # Every numeric check is AFTER exact known CE2048 retirement. Nothing in
+             # this limb can extend the pre-start3600s owner-presence ceiling.
+             self.static();self.absence()
+-            require(self.job['mode']=='return_ce' and retired==self.retired_owner==self.insured==self.ending['owner'],
++            require(self.job['mode']=='return_batch4096' and retired==self.retired_owner==self.insured==self.ending['owner'],
+                 'Post-stop candidate belongs to another retired owner')
+             self.floor=clock_max(self.floor,self.ending['floor'])
+             result=dict(state=self.ending['state'],decision=self.ending['decision'],
+@@ -667,7 +714,7 @@
+             source,copied=base.exclusive_copy(target,root/'startup-readonly-copy.pt')
+             boot=read_json(self.current_checkpoint['verification'])
+             phase=dict(record=self.record_pin,boot_checkpoint=triple(self.current_checkpoint['source']),boot_verification=self.current_checkpoint['verification'],
+-                expected=expected_start(self.record,self.record_pin,boot))
++                expected=self.batch_boundary.expected_start(self.record,self.record_pin,boot))
+             acquisition=dict(schema='robotron-owned-phase-snapshot-acquisition-v1',purpose='startup',experiment=self.job['experiment'],
+                 model_dir=self.job['model_dir'],owner_before=owner,owner_after=after,client_count=0,source_checkpoint=triple(source),
+                 clock_floor=four(raw),phase_record_sha256=self.record_pin['sha256'],boot_checkpoint=phase['boot_checkpoint'],
+@@ -706,8 +753,10 @@
+                     row = self.metrics.compact_api(raw)
+                     row.update(csv=self.job["baseline_csv"], observed_unix_s=time.time(), observed_monotonic_s=time.monotonic(), log_errors=[])
+                     row["csv_scope"] = "Held pre-stop baseline; actual new CSV is checked after192 reconnect"
+-                local = dict(batch_size=4096, replay_cap=8, initial_snapshot=dict(csv=self.job["baseline_csv"]),
+-                    exposure_identity={kind:self.metrics.exposure_key(row["exposure"][kind]) for kind in ("optimizer", "replay")})
++                local = self.batch_boundary.csv_guard_plan(self.job['batch_boundary'],
++                    'running192' if actors else 'startup0', self.job['baseline_csv'],
++                    {kind:self.metrics.exposure_key(row['exposure'][kind]) for kind in ('optimizer','replay')},
++                    current['environment'])
+                 require(all(value["process_id"] == owner["pid"] for value in local["exposure_identity"].values()), "Exposure epoch is not owned by the new trainer")
+                 issues = self.metrics.api_issues(row, local)
+                 if not actors:
+@@ -768,7 +817,7 @@
+         r.host.begin_transition_logs(before['bindings']['logs'],before['trainer_stdout'])
+         r.host.pause(dict(initial=r.job['before']))
+         retired=r.stop_owned(before);event('stopped',owner=retired)
+-        if r.job['mode']=='return_ce':
++        if r.job['mode']=='return_batch4096':
+             ending=r.post_stop_ending(retired);event('ending_candidate_CPU_and_floor',proof=ending)
+         boot=r.stopped_checkpoint(retired,'newest-stopped');event('newest_CPU',checkpoint=boot)
+         banks=r.banks.stopped_state(r.job['bank_spec']);event('stopped_disk_state',banks=banks)
+@@ -832,8 +881,9 @@
+     parser.add_argument('--expected-job-sha256');parser.add_argument('--expected-controller-sha256')
+     args=parser.parse_args(argv)
+     if not args.launch:
+-        print('PLAN_ONLY: one root-bound raw-KL/CE transition; no reads/imported helpers/runtime/actions')
++        print('PLAN_ONLY_UNCONSUMED_CE_BATCH_DRAFT: no reads/imported helpers/runtime/actions; blockers='+repr(DRAFT_BLOCKERS))
+         return 0
++    require_execution_ready()  # Before job/source/helper/runtime reads or output creation.
+     runtime=None;output=None
+     try:
+         require(not any(n=='torch' or n.startswith(('torch.','numpy','dqn')) for n in sys.modules),'Fresh stdlib-only parent required')

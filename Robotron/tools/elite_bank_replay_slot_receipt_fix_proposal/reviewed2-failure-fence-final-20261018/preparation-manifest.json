@@ -1,0 +1,331 @@
+{
+  "schema": "robotron-elite-bank-ring-receipt-corrected-source-preparation-v2",
+  "status": "SOURCE_ONLY_UNSELECTED_UNAPPLIED_UNEXECUTED",
+  "files": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/reviewed2-failure-fence-final-20261018/README.txt",
+      "sha256": "6df59247598ca6c5d6b660777e42998ff95e6be8322869db24ccfd46a31a0802",
+      "bytes": 4321,
+      "identity": {
+        "device": 2304,
+        "inode": 81297772,
+        "bytes": 4321,
+        "mtime_ns": 1792335877616605087,
+        "ctime_ns": 1792335877616605087,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/reviewed2-failure-fence-final-20261018/source-preservation.json",
+      "sha256": "dde98b6087c3d4c78cb3b6eeb7d81083bbabd8870b7c4cb080e27ef7a5078be0",
+      "bytes": 26532,
+      "identity": {
+        "device": 2304,
+        "inode": 81297769,
+        "bytes": 26532,
+        "mtime_ns": 1792335877614173207,
+        "ctime_ns": 1792335877614173207,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/reviewed2-failure-fence-final-20261018/test-source-contract.json",
+      "sha256": "21967932f1d9c68bb179b010649765a1be8e3c4bb0651e3799116c2e1acb7eb3",
+      "bytes": 4001,
+      "identity": {
+        "device": 2304,
+        "inode": 81297770,
+        "bytes": 4001,
+        "mtime_ns": 1792335877615051610,
+        "ctime_ns": 1792335877615051610,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/reviewed2-failure-fence-final-20261018/test_receipt_fix_deferred.py",
+      "sha256": "b7e664abc5e483ea843162db0209a0773caf84a954ffa45099f0ca16a3e6c92b",
+      "bytes": 26970,
+      "identity": {
+        "device": 2304,
+        "inode": 81297771,
+        "bytes": 26970,
+        "mtime_ns": 1792335877615938429,
+        "ctime_ns": 1792335877615938429,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/reviewed2-failure-fence-final-20261018/unapplied.patch",
+      "sha256": "4e059193a475c1945cd356227ff655f6d7b42f6267ce6dbc28c290e063fc139c",
+      "bytes": 52756,
+      "identity": {
+        "device": 2304,
+        "inode": 81297768,
+        "bytes": 52756,
+        "mtime_ns": 1792335877607738913,
+        "ctime_ns": 1792335877611929647,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  ],
+  "supersedes_blocked_manifest": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/preparation-manifest.json",
+    "sha256": "0040a7a7006db478e9197493c9afb0596625e7df9e8b99455c932f31b2d37fac",
+    "bytes": 10587,
+    "identity": {
+      "device": 2304,
+      "inode": 81297761,
+      "bytes": 10587,
+      "mtime_ns": 1792335467823247836,
+      "ctime_ns": 1792335467823247836,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "blocked_draft_reason": "Source-only peer/root found missing failure-to-incomplete bookkeeping; no draft execution/apply.",
+  "preserved_intermediate_files": {
+    "unapplied.patch": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/reviewed2-failed-step-history-20261018/unapplied.patch",
+      "sha256": "1bfe41d72d6b96004b30a28e25aa24dc5b8039f7344f58dcbbc43ff54c75d556",
+      "bytes": 52556,
+      "identity": {
+        "device": 2304,
+        "inode": 81297763,
+        "bytes": 52556,
+        "mtime_ns": 1792335737453351022,
+        "ctime_ns": 1792335737453453678,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "source-preservation.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/reviewed2-failed-step-history-20261018/source-preservation.json",
+      "sha256": "c7678faec3ff7a3889c2ef725b6d552966c8e77c13509ae72028123f1b91f3c5",
+      "bytes": 24055,
+      "identity": {
+        "device": 2304,
+        "inode": 81297764,
+        "bytes": 24055,
+        "mtime_ns": 1792335737456252920,
+        "ctime_ns": 1792335737456252920,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "test-source-contract.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/reviewed2-failed-step-history-20261018/test-source-contract.json",
+      "sha256": "0a6628d6419ae46dc687f8968f4b0c9dfe2d23d123d9cc6b535f53280c0f620a",
+      "bytes": 3969,
+      "identity": {
+        "device": 2304,
+        "inode": 81297765,
+        "bytes": 3969,
+        "mtime_ns": 1792335737457167387,
+        "ctime_ns": 1792335737457167387,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "test_receipt_fix_deferred.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/reviewed2-failed-step-history-20261018/test_receipt_fix_deferred.py",
+      "sha256": "008f7b4b5adece036429e7886d97bc403f66ca2f3a3ce0d076c9924a8d436cb6",
+      "bytes": 25713,
+      "identity": {
+        "device": 2304,
+        "inode": 81297766,
+        "bytes": 25713,
+        "mtime_ns": 1792335737458150814,
+        "ctime_ns": 1792335737458150814,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "independent_invariant_proof": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/independent-ring-residency-source-proof.json",
+    "sha256": "af24a1adaf8b98cb3a2b9682e02e2741e50a1b31ad32f7e3d93d78d08274c548",
+    "bytes": 17132,
+    "identity": {
+      "device": 2304,
+      "inode": 81297748,
+      "bytes": 17132,
+      "mtime_ns": 1792335319427804687,
+      "ctime_ns": 1792335319427804687,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "independent_invariant_scope": "Unmodified af24 source proof; b120 related context only, no corrected patch approval.",
+  "baseline_characterization": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_freshness_proposal/preparation-manifest.json",
+    "sha256": "1e487838f00e202f757a4065299efa91a106e4ce1e9058858402e32bed3ec73d",
+    "bytes": 4721,
+    "identity": {
+      "device": 2304,
+      "inode": 81295420,
+      "bytes": 4721,
+      "mtime_ns": 1792332403856813573,
+      "ctime_ns": 1792332403857085030,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "base_sources": {
+    "replay_buffer.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/replay_buffer.py",
+      "sha256": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f",
+      "bytes": 113613,
+      "identity": {
+        "device": 2304,
+        "inode": 79724825,
+        "bytes": 113613,
+        "mtime_ns": 1792224696813330592,
+        "ctime_ns": 1792224696813836930,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "agent.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/agent.py",
+      "sha256": "865a0df717b39951b7f7c516e4a962e3d48cf4d3dc11295ff266e58653e6c74b",
+      "bytes": 98429,
+      "identity": {
+        "device": 2304,
+        "inode": 79724997,
+        "bytes": 98429,
+        "mtime_ns": 1792239930859030766,
+        "ctime_ns": 1792239930859896369,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "socket_server.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py",
+      "sha256": "f44ddfe31408b77b6d622e1d4ec4cda60a03999dc984d9e11b5aeac38911a9ed",
+      "bytes": 140517,
+      "identity": {
+        "device": 2304,
+        "inode": 79696030,
+        "bytes": 140517,
+        "mtime_ns": 1792306967914113042,
+        "ctime_ns": 1792306967928089640,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "extra_sources": {
+    "model.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/model.py",
+      "sha256": "bcd174f05610c6f773ca8c53f9155206eba4f7b6a11383516ddd71f3b513eeb4",
+      "bytes": 42429,
+      "identity": {
+        "device": 2304,
+        "inode": 79696088,
+        "bytes": 42429,
+        "mtime_ns": 1791931870132810020,
+        "ctime_ns": 1791931870132810020,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "actor_tags.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/actor_tags.py",
+      "sha256": "fc5b868a7fb68d4ab7ba65ba872ea0e845759af6143edfe648239d57cb7f1591",
+      "bytes": 153,
+      "identity": {
+        "device": 2304,
+        "inode": 79725280,
+        "bytes": 153,
+        "mtime_ns": 1792119887012144236,
+        "ctime_ns": 1792119887012144236,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "expected_tests": 11,
+  "guard_argv": [
+    "/usr/bin/env",
+    "-u",
+    "LD_PRELOAD",
+    "-u",
+    "PYTHONPATH",
+    "CUDA_VISIBLE_DEVICES=",
+    "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/reviewed2-failure-fence-final-20261018",
+    "-p",
+    "test_receipt_fix_deferred.py",
+    "-v"
+  ],
+  "recommended_caps": {
+    "CPUQuota": "100%",
+    "MemoryMax": "512M",
+    "MemorySwapMax": "0",
+    "TasksMax": "128",
+    "RuntimeMaxSec": "60",
+    "TimeoutStopSec": "5"
+  },
+  "candidate_sources": {
+    "replay_buffer.py": {
+      "sha256": "b71590df855beb86f53eaaccbe21e12eb26a7c831c4534ddb467b8877bdec070",
+      "bytes": 120222
+    },
+    "agent.py": {
+      "sha256": "eaf7f9f8454b87fb4e27b766f227b142118af9154d8680efe0d6921237ea53a5",
+      "bytes": 99107
+    },
+    "socket_server.py": {
+      "sha256": "ec8419cdfb2963f1909a5de8c272b0bf7666f98190d4b48256f6bb3fe294c39d",
+      "bytes": 143238
+    }
+  },
+  "text_forward_reverse": true,
+  "unchanged_function_entries": 184,
+  "future_gate": "Entire current nativequality terminal/scientific disposition/full ownedclosure/explicit source-workload freeze release; original baseline6 before patch11; incidence/cost proof before deployment.",
+  "actual_tests": null,
+  "actual_apply": null,
+  "actual_deployment": null,
+  "actual_incidence": null,
+  "actual_learning_benefit": null,
+  "author_actions": {
+    "new_proposal_files_only": true,
+    "source_text_reads": true,
+    "AST": false,
+    "compile": false,
+    "imports": false,
+    "tests": false,
+    "runtime": false,
+    "live_or_growing_reads": false,
+    "PT_model_replay_reads": false
+  }
+}

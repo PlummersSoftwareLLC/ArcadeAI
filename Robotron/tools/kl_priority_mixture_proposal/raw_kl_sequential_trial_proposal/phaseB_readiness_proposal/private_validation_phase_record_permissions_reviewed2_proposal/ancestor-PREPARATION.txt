@@ -1,0 +1,75 @@
+Raw-KL Stage B private readiness preparation — 2026-10-17
+
+SOURCE ONLY. No author imports, syntax compilation, tests, tensor/checkpoint
+reads, runtime queries, sampling, launches, source installation or live actions.
+Root explicitly authorized this NEW implementation. Frozen design8d49/ec8b,
+optional science1144/corrected fixture2f083 and all earlier results are retained.
+The five scientific candidate files remain byte-exact; this harness changes no
+CE objective, LR/bank/scaler policy, priority formula or optimizer implementation.
+
+Roles: kl18 then fresh resume then fresh return_ce. Each constructs the actual
+private candidate RainbowAgent, compiles/warms its real losses, captures/validates
+all128 serving graphs and loads actual verified448 model/Adam/scaler/schedule.
+The only constructor factory substitution is FixedReplayAdapter: genuine old
+attempt01 tuple, synthetic eligible size6M, actual6M SumTree/native updates, no
+full ring/bank storage or successful replay load. cfg.replay_tmpfs_dir is changed
+only to the owned role directory so even constructor header probes remain private.
+After load proof, serving graphs are deliberately released in this private process
+before rebuilding the real three-slot prefetcher and running the isolated learner.
+This is not proof that serving and learning coexist within GPU0's memory budget.
+
+The exact initial saved448 clocks are2156883logical/7387004928samples/
+452630871learner/905164910fleet. All81 initialized Adam slots must be2155894;
+remaining parameters preserve their actual uninitialized distinction. Saved scale
+1048576 is retained, without forcing admission. Natural diagnostic pre-step2156900
+is reached on ordinal18. Each ordinal has512 declared synthetic fleet-frame credits
+under unchanged cap8 and loaded anchors; no learner/measurement credit, no clock
+rewind, cap bypass, genuine-ingestion claim, replacement or19th step.
+
+The held full train_step performs actual scaled backward, unscale, one clip,
+fused Adam/scaler, packed found_inf/exposure, priority readback and native updates.
+Observers preserve original calls/results and retain same-forward small outputs,
+actual schedule/LRs, unscaled preclip gradients, named parameter/Adam progress,
+signed/mass stats and exact ordered leaf updates. Applied proof additionally needs
+finite packed norm and changed parameters AND exp_avg/exp_avg_sq, excluding step
+counters/buffers. Known skip requires unchanged online/Adam plus scaler backoff.
+All-skip18 may complete observationally but readiness remains false; no scale rescue.
+
+Actual agent.save(save_replay=False) targets one absent post-step-checkpoint.pt.
+Source-proven .tmp publication is bounded by entered/complete records and the
+parent's exact-path active-save guard; final post-reap scan is strict. Both fresh
+load roles use independent readonly copies of these NEWEST bytes. Resume requires
+same phase/root precommit; return_ce is an explicit new phase declaring KL ancestry.
+Both execute zero learner steps. No original448/protected/insurance rollback.
+
+Before FIRST execution the fixed limits are600s per role/2100s total, CPU2,
+host16GiB/allocator12GiB/processVRAM13GiB/artifacts6GiB/tmpfs128MiB/tasks128.
+Constructor warmups plus128 graphs may fail within these bounds. No smaller input,
+batch, graph coverage, scaler, numeric tolerance or automatic budget rescue is
+allowed. Persistent outputs are roughly1.1GB of independent checkpoints plus two
+native gradient payloads and small JSON; three compiler caches remain an unknown
+additional cost under the same6GiB observed total. No artifact-size guarantee.
+
+Authored tests are82 and UNEXECUTED at preparation: parent/process/storage58
+stdlib guards plus worker24 (12stdlib,12tinyCPU). Worker tests use the exact held
+pressure predicate, mocked acquired leases and real tiny CPU tensors for proof
+assertions/observer wrappers. They do not execute the actual constructor, full
+train_step, native C or CUDA. The earlier optional21 tinyCPU PASS is separate,
+with its original17 fixture errors retained. There is no Stage B actual PASS yet.
+
+future-argv.json is a template, not a materialized run or job. Future root owns
+the fresh isolated CPU82 selection, source preflight, actual exclusive GPU0 window,
+owned waiting-gate resolution, detached3s retained unit, actual terminal archive,
+cleanup and any later rearm. Parent literal default makes no helper/data/runtime
+calls. No --wait/--collect carrier: its argv would conflict with existing guards;
+record carrier reaped before trigger and retain original PID/start/invocation/
+exit before root releases the unit. Do not execute during the448 quality campaign.
+
+Results always qualification_pass=False. Stage A internal loss/gradient validation
+remains independently required, as do actual constructor/optimizer/native/phase
+limbs here before any live proposal. Fixed old CE-selected input under new448
+weights is not a current replay population, coherent learning anchor, causal speed
+comparison, live entropy/KL identity or policy efficacy result. A future sequential
+search needs its own fixed budget/stops; freeze one candidate, end KL and explicitly
+return to CE BEFORE preparing fresh R/C/R/C confirmation, with no midcampaign source
+or metric change. No user-imposed60minute budget exists; none is activated here.

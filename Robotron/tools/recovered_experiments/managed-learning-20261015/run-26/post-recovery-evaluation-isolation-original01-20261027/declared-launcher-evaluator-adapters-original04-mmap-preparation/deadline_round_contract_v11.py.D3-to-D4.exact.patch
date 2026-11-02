@@ -1,0 +1,20 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original03-private-AST-preparation/deadline_round_contract_v11.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original04-mmap-preparation/deadline_round_contract_v11.py
+@@ -13,7 +13,7 @@
+ LEGACY_REVIEW_SHA = 'f2b311fd6d375e6b1e35c571b91cfb8c209881855834941d5b0292b51a9bbf5e'
+ LEGACY_JOB = BASE / 'deadline-score32-fixed-fleet-admission-original03-preparation-20261026/fixed-RCRC-deadline32-study-original03/C2/job.json'
+ LEGACY_JOB_SHA = 'b6f9d229836f6cbe2897e2fa3ef6426209998ac9b361c47d1a48a95200cd1fc5'
+-HEALTH_SHAS = {'client': '96ec161c65ce42281f16f0534f4886ea08d9cf5e1a70e761eb4271515d289fea', 'worker': 'add918117d28c57d5c32f0161c9f5e72339beb9801b1c95a5602d7da0ef2dce6', 'health': 'fa431bef15daa9c0bc7d2ba539d42bebdee5ebe2694c320dddf2e9c118ed3c0a', 'health_base': '44371d76f1be25453050a1a508afb70325a86bcec965fe19fbd47a0ab3bf65ef', 'API_projection': '6145874201af09b41f2dc4a358513f7ecc0406166dd5c7f082087a8e5b2ffa03', 'round_admission': '9a5506a5b2163506f0cd40f71ca9c0a78945653a6ae9ae5552fb5a2bf70a4087', 'launcher_census': '9da0759190ee2dc60393e293b707285168f35fe5a99c8707c10a8c0f834be26f', 'durability': '5dbeb347474dd9289ae18a2de0c438820f535fa9d75badaa3cfbf82dff6c1aa5', 'control': 'a2ce55471f7ff14490553cf05871e79a0ff15c925d01441065821b0f95daade8'}
++HEALTH_SHAS = {'client': '96ec161c65ce42281f16f0534f4886ea08d9cf5e1a70e761eb4271515d289fea', 'worker': '5dfa00a65199eadfee3512b0cbb3d02519ca7204e5a85fa53fe3c875cbbc449b', 'health': '50a4ee15e5ede1437e08d7870e28a2e6020194a4737b5fe56f36f802421a9c77', 'health_base': '6953c0a7a11fc08886cf99b69fa19968606e2252c68bde9bcc94e5400171565a', 'API_projection': '6145874201af09b41f2dc4a358513f7ecc0406166dd5c7f082087a8e5b2ffa03', 'round_admission': '9a5506a5b2163506f0cd40f71ca9c0a78945653a6ae9ae5552fb5a2bf70a4087', 'launcher_census': '9da0759190ee2dc60393e293b707285168f35fe5a99c8707c10a8c0f834be26f', 'durability': '5dbeb347474dd9289ae18a2de0c438820f535fa9d75badaa3cfbf82dff6c1aa5', 'control': 'a2ce55471f7ff14490553cf05871e79a0ff15c925d01441065821b0f95daade8'}
+ PRIVATE_FIELDS = ('source_package', 'actor_source_sha256', 'loaded_rom_sha256',
+     'prior_ROM_identity_proof', 'lua', 'mame', 'rompath', 'boot_seed', 'seed_runtime',
+     'main_sources', 'actor_slots', 'origin_port', 'proxy_ports', 'device',
+@@ -111,7 +111,7 @@
+     require(recovery['current_boot_id'] == Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
+             'Restored coordinator belongs to a different boot')
+     h.checked(job['lease'])
+-    require(family['round_observer_reviewer']['sha256'] == '02a7ec5ba10bbee1893ab2b66ef6d1feae0301d774aea818b2c781d777fe1aab', 'Exact independent round observer reviewer required')
++    require(family['round_observer_reviewer']['sha256'] == 'b583bae60bc09b56666851b80851a582a4e14b4508d0221cf43769045c1b49f2', 'Exact independent round observer reviewer required')
+     h.checked(family['round_observer_reviewer'])
+     return validate_derivation(job['runtime']['path'], family['reviewer']['path'])
+ 

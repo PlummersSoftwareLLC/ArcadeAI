@@ -1,0 +1,13 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-selected-metadata600-original01-preparation/closed-metadata-reuse-guard-template-original01-preparation/select_closed_metadata_guard_D7_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-selected-metadata600-original01-preparation/closed-metadata-reuse-guard-final-original01-preparation/select_closed_metadata_guard_D7_v2.py
+@@ -10,8 +10,8 @@
+ from pathlib import Path
+ 
+ LOCAL = Path(__file__).resolve().parent
+-GENERATOR_SHA = None  # UNFILLED; this template cannot qualify or prepare a guard.
+-PREPARER_SHA = None  # UNFILLED; this template cannot qualify or prepare a guard.
++GENERATOR_SHA = '2511a0c465df372af331312a5e647804c2cd5c369ae1ff237bb130c65c45b7fa'
++PREPARER_SHA = '5445dc72090ea2823d3eac1d368cc0db51e5c30133e7e11668459f436fac0606'
+ CLOSER_SHA = '2afa743774550aa613703aab64f82ec0da6f539509978e82744c7b9a7d99110a'
+ 
+ 

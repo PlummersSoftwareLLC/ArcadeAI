@@ -1,0 +1,20 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/observe_continuous_static192_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/fullgame-source-family-original01/fullgame_round_observer_v6.py
+@@ -17,7 +17,7 @@
+ import time
+ import urllib.request
+ 
+-SCHEMA = 'robotron-continuous-static192-observer-proof2s-job-v1'
++SCHEMA = 'robotron-fullgame-continuous-static192-observer-proof2s-job-v1'
+ 
+ 
+ def require(value, message):
+@@ -135,7 +135,7 @@
+ def run(job, job_pin):
+     require(job['schema'] == SCHEMA and job['attempt'] == 1 and job['no_retry'] is True, 'One original observer required')
+     require(job['interval_s'] == .2 and job['initial_samples'] == 100 and job['maximum_gap_s'] == 2.0
+-            and job['work_s'] == 4200 and job['runtime_s'] == 4260, 'Exact deadline observer bounds required')
++            and job['work_s'] == 22200 and job['runtime_s'] == 22260, 'Exact complete-game observer bounds required')
+     require(job.get('source_bound_retired_API_projection') is True
+             and job.get('source_bound_completed_original192_bootstrap') is True
+             and job.get('source_bound_static_original192_partition') is True

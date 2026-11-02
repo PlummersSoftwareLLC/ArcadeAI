@@ -1,0 +1,82 @@
+{
+  "schema": "robotron-next-bank-floor-hypothesis-preparation-v1",
+  "status": "SOURCE_ONLY_CONDITIONAL_NO_IMPLEMENTATION",
+  "selected_hypotheses": 1,
+  "files": {
+    "DECISION.txt": {
+      "sha256": "e12d593e4cead795f5ec5549cbfa88f4db7dc03d7de29f954481944ca3cc7f1e",
+      "bytes": 7003,
+      "mode": "0o444"
+    },
+    "evidence.json": {
+      "sha256": "c9f7465a0818c320625160453784c9ed75763d7e19325afb098bb02e9da94429",
+      "bytes": 12374,
+      "mode": "0o444"
+    }
+  },
+  "inputs": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-four-readout-analysis-reviewed1-20261017/analysis.json",
+      "sha256": "819c316d2aaa969f68a254f596d661749ad1586e1aee1f2d01f5b2d5c176b29e",
+      "bytes": 218140
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-controller-20261017/observation-1456.json",
+      "sha256": "e60cbcbdc1736cd5ddb662fa019750b977e4b196d9b99c56b0d4a49147a1198a",
+      "bytes": 104699
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-controller-20261017/observer-job.json",
+      "sha256": "1f8e7814e0eb26fe76661bcd1b1cd619aea5936c9f99b844ab8ebb565b1287ee",
+      "bytes": 26402
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-return-CE-20261017/ending-candidate-CPU/cpu-report-readonly.json",
+      "sha256": "fab34662a2de4419121231a5b5417f7026a4690e183500d35e615f7210f25837",
+      "bytes": 64903
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-first-horizon-candidate-and-CE-return-independent-saved-review-20261017/review-receipt.json",
+      "sha256": "b18dc615b7695741ed582cbbe179d35e093ac5524592240bf0d0d6128f60d3e6",
+      "bytes": 55472
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/replay_buffer.py",
+      "sha256": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f",
+      "bytes": 113613
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/training.py",
+      "sha256": "90b847856f810cb4f52513a4bd0625b2d15d4801107bff398060faae25bc4be4",
+      "bytes": 35009
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/loss_kernel.py",
+      "sha256": "23eb8fc0d8409c9f31ef26ec4596da9c2257e3985abbbfa7d5fbdcb337e21f67",
+      "bytes": 9373
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/config.py",
+      "sha256": "19abcbde4d08cf8465b82185ac6dd52eb8965adb8611584e0677c4c7ff21d1fd",
+      "bytes": 117528
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/priority_phase.py",
+      "sha256": "ee3c0d02bc1eab55e92ffd605c3736fe5a0ef905a8a8ee242c687301ea2b7c5b",
+      "bytes": 8049
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/model.py",
+      "sha256": "bcd174f05610c6f773ca8c53f9155206eba4f7b6a11383516ddd71f3b513eeb4",
+      "bytes": 42429
+    }
+  ],
+  "actual_current_quality_outcome": null,
+  "actual_protected_next_reference": null,
+  "actual_current_phase_calibration": null,
+  "actual_future_trial": null,
+  "tests_or_imports_or_model_reads_or_runtime_actions": false,
+  "installed_or_canonical_changes": false,
+  "freeze_gate": "After FULL current campaign/audits/cleanup and root source-freeze release only; root separate decision/precommit required.",
+  "qualification_pass": false
+}

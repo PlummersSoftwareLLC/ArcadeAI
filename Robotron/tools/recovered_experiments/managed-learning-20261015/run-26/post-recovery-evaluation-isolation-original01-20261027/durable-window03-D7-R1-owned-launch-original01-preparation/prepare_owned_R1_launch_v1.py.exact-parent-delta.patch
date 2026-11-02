@@ -1,0 +1,171 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window02-D6-R1-owned-launch-original01-preparation/prepare_owned_R1_launch_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-R1-owned-launch-original01-preparation/prepare_owned_R1_launch_v1.py
+@@ -14,11 +14,10 @@
+ G=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ I=G/'logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027'
+ A=Path(__file__).resolve().parent
+-S=I/'durable-window02-D6-fixed-RCRC-study-original01'
+-L=I/'durable-window02-D6-selected-metadata600-original01-preparation'
+-F=I/'declared-launcher-evaluator-adapters-original06-fresh-study-namespaces-preparation/source-family-original02-unit-authority'
+-CANDIDATE='862fb4cde4ecb146b5b23a83b77ccbf1675a980bc310f6c2a6a8806d87b7c81e'
+-FINALIZER_SHA='45336cba9197102357ae1639b50f0155011dbb0e7b608c2709ecbb9f029091ad'
++S=I/'durable-window03-D7-fixed-RCRC-study-original01'
++L=I/'durable-window03-D7-selected-metadata600-original01-preparation'
++F=I/'declared-launcher-evaluator-adapters-original07-proof2s-preparation/source-family-original01'
++FINALIZER_SHA='d3482ef378bfa84b83b6b4c2fef1f284096cdbb0dd222504e580ea54f69d6da6'
+ 
+ 
+ def require(ok,message):
+@@ -35,6 +34,44 @@
+     require(pin is not None and pin['identity']['mode']=='0o444' and pin['identity']['nlink']==1
+         and pin['bytes']<=2<<20,'Filled immutable bounded metadata PIN required')
+     return json.loads(h.checked(pin).read_bytes())
++
++
++def capture_candidate(study,h):
++    capture=G/'logs/managed-learning-20261015/run-26/post-natural-turnover-durable-next-candidate-20261029-original03'
++    result_pin=h.pin(capture/'result.json');result=read(result_pin,h)
++    plan_pin=h.pin(capture/'window-plan.json');plan=read(plan_pin,h)
++    require(plan_pin['sha256']=='43ace243055948eba395f97ba96faef339997c5d94cec6b50aea3104dbe9ae68'
++        and result['state']=='captured_CPU_verified'and result['owner']==plan['owner']
++        and result['original_DQN_window_unchanged']is True
++        and plan['thresholds']==dict(applied_updates=5000,replay_inserts=1_000_000,elapsed_s=3600)
++        and all(result['added'][key]>=value for key,value in plan['thresholds'].items()),
++        'Actual completed own-threshold W03 capture required')
++    candidate=study['policies']['candidate'];endpoint=result['endpoint']
++    require(endpoint['path']==candidate['checkpoint']['path']==str(capture/'endpoint.pt')
++        and endpoint['sha256']==candidate['checkpoint']['sha256']
++        and endpoint['bytes']==candidate['checkpoint']['bytes']
++        and endpoint['sha256']not in ('b23152ece3bb614831a278fe0572c07433f1bee59c5accef5a1ab7d3007af883',
++            '862fb4cde4ecb146b5b23a83b77ccbf1675a980bc310f6c2a6a8806d87b7c81e',
++            'e078b0da4ce4e25146fab7484f8489f590e1086370746cb392afcd7f5f8adef5',
++            'a6e17a3c6cd8a9b6cb5479e6c6cbd1a284c1cd880372d0d02441680bc708e502'),
++        'Actual new W03 endpoint differs from selected study or repeats failed policy')
++    cpu_pin=h.pin(result['CPU_verification']['path'])
++    require(all(cpu_pin[key]==value for key,value in result['CPU_verification'].items())
++        and cpu_pin==candidate['immutable_numerical_or_protection_authority'],
++        'Actual W03 CPU authority differs')
++    cpu=read(cpu_pin,h)
++    require(cpu['checkpoint']['sha256']==endpoint['sha256']
++        and cpu['clocks']==candidate['expected_policy_clocks']
++        and cpu['online_target_shapes_and_finiteness_verified']is True
++        and cpu['priority_phase_valid']is True and cpu['priority_phase']['metric']=='ce'
++        and cpu['optimizer_lrs']==[3.125e-6]and cpu['Adam_parameters']==81
++        and cpu['Adam_step_min']==cpu['Adam_step_max']>plan['entry_Adam_step']
++        and cpu['CUDA_initialized']is False,
++        'Actual completed W03 CPU metadata differs')
++    evidence=study['prospective_capture_evidence']
++    require(all(pin in evidence for pin in (result_pin,plan_pin,cpu_pin)),
++        'Study does not hold the actual W03 capture and CPU metadata')
++    return dict(result=result_pin,plan=plan_pin,CPU_verification=cpu_pin,sha256=endpoint['sha256'])
+ 
+ 
+ def unit_absent(unit):
+@@ -59,38 +96,41 @@
+ 
+ 
+ def prepare(args):
+-    h=load('_window02_R1_prepare_helpers',G/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py',
++    h=load('_window03_R1_prepare_helpers',G/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py',
+         '2b6902933b502ac20dacbd444fbf786315d6c960fcad1d5b5bf223dd569708c1')
+     input_pin=h.pin(args.inputs.resolve());require(input_pin['sha256']==args.inputs_sha256,'Actual Root operation input differs')
+     inputs=read(input_pin,h)
+     require(set(inputs)=={'schema','source_preparation','base_readiness','review_precommit','review_CPU',
+-        'output_readiness','output_selection'}and inputs['schema']=='robotron-window02-D6-R1-ROOT-operation-inputs-v1',
++        'output_readiness','output_selection'}and inputs['schema']=='robotron-window03-D7-R1-ROOT-operation-inputs-v1',
+         'Exact prospective Root operation inputs required')
+-    require(inputs['source_preparation']['path']==str(A/'prepared-window02-D6-R1-wrapper-display-SOURCE-ONLY-NOT-LAUNCHED.json'),
++    require(inputs['source_preparation']['path']==str(A/'prepared-window03-D7-R1-wrapper-display-SOURCE-ONLY-NOT-LAUNCHED.json'),
+         'Exact source-only R1 preparation packet required')
+     prepared=read(inputs['source_preparation'],h);sources=prepared['sources']
+-    require(prepared['schema']=='robotron-window02-D6-owned-R1-source-preparation-v1'
+-        and prepared['known_candidate_sha256']==CANDIDATE
++    require(prepared['schema']=='robotron-window03-D7-owned-R1-source-preparation-v1'
++        and prepared['known_candidate_sha256']is None
++        and prepared['actual_serialized_manifest']is None and prepared['actual_study_precommit']is None
++        and prepared['actual_serialized_R1_native_job']is None and prepared['actual_guard_index']is None
+         and sources['generator']==h.pin(Path(__file__).resolve())
+-        and sources['wrapper']['path']==str(A/'run_owned_R1_window02_v1.py')
+-        and sources['projector']['path']==str(A/'project_owned_R1_window02_v1.py')
+-        and sources['finalizer']['path']==str(L/'finalize_window02_D6_readiness_v1.py')
++        and sources['wrapper']['path']==str(A/'run_owned_R1_window03_v1.py')
++        and sources['projector']['path']==str(A/'project_owned_R1_window03_v1.py')
++        and sources['finalizer']['path']==str(L/'finalize_window03_D7_readiness_v1.py')
+         and sources['finalizer']['sha256']==FINALIZER_SHA,'Root-selected frozen R1 source contract differs')
+     for pin in sources.values():h.checked(pin)
+     require(inputs['base_readiness']is not None and inputs['review_precommit']is not None and inputs['review_CPU']is not None
+         and inputs['output_readiness']is not None and inputs['output_selection']is not None,
+         'Actual guard/review operation inputs remain unfilled')
+     base=read(inputs['base_readiness'],h);manifest_pin=base['prepared_manifest'];manifest=read(manifest_pin,h)
+-    require(manifest_pin==prepared['actual_serialized_manifest'] and manifest_pin['path']==str(S/'prepared-four-legs-NOT-LAUNCH-QUALIFIED.json')
++    require(manifest['source_preparer']==sources['study_preparer'] and manifest_pin['path']==str(S/'prepared-four-legs-NOT-LAUNCH-QUALIFIED.json')
+         and manifest['engineering_only']is False and [c['leg']for c in manifest['cases']]==['R1','C1','R2','C2'],
+-        'Exact fresh D6 four-job manifest required')
++        'Exact fresh D7 four-job manifest required')
+     study=read(manifest['study_precommit'],h)
+-    require(manifest['study_precommit']==prepared['actual_study_precommit'] and study['schema']=='robotron-deadline32-fixed-fresh-RCRC-study-v1'
++    require(manifest['study_precommit']['path']==str(S/'study-precommit.json') and study['schema']=='robotron-deadline32-fixed-fresh-RCRC-study-v1'
+         and study['ordered_legs']==['R1','C1','R2','C2']and study['no_retry']is True
+-        and study['policies']['candidate']['checkpoint']['sha256']==CANDIDATE
+         and study['policies']['reference']['checkpoint']['sha256']=='b23152ece3bb614831a278fe0572c07433f1bee59c5accef5a1ab7d3007af883',
+-        'Actual window02 candidate and protected pair required')
+-    require(base['exact_four_guards']==prepared['actual_guard_index'], 'Actual NEW qualified guard index differs')
++        'Actual window03 candidate and protected pair required')
++    candidate=capture_candidate(study,h)
++    require(base['exact_four_guards']['path']==str(L/'actual-closed-metadata-guard-original01/all-four-exact-native-guard-receipts.json'),
++        'Actual NEW qualified guard index differs')
+     guards=read(base['exact_four_guards'],h);closed=read(guards['original_all4_CPU_closeout'],h)
+     report=read(closed['actual_CPU_report'],h);authority=read(report['closed_metadata_readiness_authority'],h)
+     require(guards['status']=='PASS'and len(guards['guards'])==4 and closed['actual_exit']==0
+@@ -99,7 +139,7 @@
+         and closed['all_six_descriptors_resources_argv_birth_units_cgroup_and_release_verified']is True
+         and report['readiness_semantics_reused_from_closed_metadata']==report['readiness_raw_full_integrity_passes']==4
+         and authority['native_prepared']==manifest_pin
+-        and authority['source_contract']['sha256']=='51dba1d3150db4af359b57dec6c5d29e23d3b2ae4a360dfde5a7ee16d5dc0ecc',
++        and authority['source_contract']['sha256']=='5eb7f9b8cdb10be8635b839dbb0eb762ef87cfea8a7e90d6648b5f716b2e090a',
+         'Actual NEW exact four-job guard qualification required')
+     for case,pin in zip(manifest['cases'],guards['guards']):
+         guard=read(pin,h)
+@@ -112,7 +152,7 @@
+         and cpu['status']=='PASS_ENGINEERING_ONLY'and cpu['actual_exit']==0
+         and read(cpu['original_job'],h)['review_precommit']==inputs['review_precommit'],
+         'Actual completed review-preparation qualification required')
+-    namespace='window02-retired-api-'+manifest['study_precommit']['sha256'][:16]+'-r1'
++    namespace='window03-proof2s-'+manifest['study_precommit']['sha256'][:16]+'-r1'
+     wrapper_unit='robotron-'+namespace+'-wrapper-original01-20261029.service'
+     projector_unit='robotron-'+namespace+'-passive-display-original01-20261029.service'
+     for unit in (wrapper_unit,projector_unit):unit_absent(unit)
+@@ -121,8 +161,8 @@
+     output=Path(inputs['output_selection']);ready_path=Path(inputs['output_readiness'])
+     require(output.parent==A and ready_path.parent==A and output.resolve()==output and ready_path.resolve()==ready_path
+         and output!=ready_path and not output.exists()and not ready_path.exists(),
+-        'Separate exclusive canonical A2 readiness/selection outputs required')
+-    finalizer=load('_window02_R1_actual_finalizer',h.checked(sources['finalizer']),FINALIZER_SHA)
++        'Separate exclusive canonical A3 readiness/selection outputs required')
++    finalizer=load('_window03_R1_actual_finalizer',h.checked(sources['finalizer']),FINALIZER_SHA)
+     started_wall=time.time();started_mono=time.monotonic()
+     ready_pin=finalizer.finalize(Path(inputs['base_readiness']['path']),Path(inputs['review_precommit']['path']),
+         Path(inputs['review_CPU']['path']),ready_path)
+@@ -133,18 +173,18 @@
+         and ready['exact_review_precommit_and_source_CPU_binding_verified']is True,
+         'Same-operation final preflight did not qualify')
+     case=manifest['cases'][0];entry=ready['configurations'][0]
+-    require(case['leg']==entry['leg']=='R1'and case['role']=='reference' and case['native_job']==prepared['actual_serialized_R1_native_job']
++    require(case['leg']==entry['leg']=='R1'and case['role']=='reference' and case['native_job']['path']==str(S/'R1/job.json')
+         and case['runtime']==sources['native']and case['native_controller']==entry['controller']==sources['controller'],
+         'Actual R1 launch sources differ')
+-    cfg=read(entry['config'],h);controller=load('_window02_R1_actual_controller',h.checked(sources['controller']),sources['controller']['sha256'])
++    cfg=read(entry['config'],h);controller=load('_window03_R1_actual_controller',h.checked(sources['controller']),sources['controller']['sha256'])
+     require(controller.checked_config(entry['config']['path'])==cfg,'Actual study-derived controller config differs')
+     created_wall=time.time();created_mono=time.monotonic()
+     require(started_wall<=ready['checked_unix_s']<=created_wall and 0<=created_wall-ready['checked_unix_s']<=30
+         and 0<=created_mono-started_mono<=30,'Actual final preflight must complete in one30s operation')
+-    selection=dict(schema='robotron-window02-D6-original-R1-launch-selection-v1',source=h.pin(Path(__file__).resolve()),
++    selection=dict(schema='robotron-window03-D7-original-R1-launch-selection-v1',source=h.pin(Path(__file__).resolve()),
+         source_preparation=inputs['source_preparation'],ROOT_operation_inputs=input_pin,sources=sources,
+         readiness=ready_pin,prepared_manifest=manifest_pin,study_precommit=manifest['study_precommit'],
+-        candidate_sha256=CANDIDATE,reference_sha256=study['policies']['reference']['checkpoint']['sha256'],
++        candidate_sha256=candidate['sha256'],candidate_capture=candidate,reference_sha256=study['policies']['reference']['checkpoint']['sha256'],
+         R1=dict(native_job=case['native_job'],config=entry['config'],native_unit=cfg['unit']),
+         wrapper_unit=wrapper_unit,projector_unit=projector_unit,original_attempt=1,no_retry=True,
+         operation_started_unix_s=started_wall,operation_started_monotonic_s=started_mono,

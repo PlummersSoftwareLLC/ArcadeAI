@@ -1,0 +1,21 @@
+{
+  "actual_execution": null,
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-c",
+    "import sys, unittest; sys.path.insert(0, '/home/dave/source/repos/ArcadeAI/Robotron'); from tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.batch2048_phase_boundary_proposal import test_profile_boundary as t; suite=unittest.defaultTestLoader.loadTestsFromTestCase(t.ProfileBoundaryContracts); result=unittest.TextTestRunner(verbosity=2).run(suite); raise SystemExit(0 if result.wasSuccessful() else 1)"
+  ],
+  "expected_methods": 10,
+  "selected_class": "tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.batch2048_phase_boundary_proposal.test_profile_boundary.ProfileBoundaryContracts",
+  "status": "FUTURE_ROOT_CPU_GUARDS_ONLY_NOT_EXECUTED",
+  "suggested_limits": {
+    "CPUQuota": "200%",
+    "CUDA_VISIBLE_DEVICES": "",
+    "MemoryMax": "512M",
+    "MemorySwapMax": "0",
+    "RuntimeMaxSec": 60,
+    "TasksMax": 64
+  }
+}

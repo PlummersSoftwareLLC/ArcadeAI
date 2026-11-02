@@ -1,0 +1,128 @@
+UNSELECTED, UNAPPLIED, SOURCE-ONLY; NO IMPORTS, EXECUTION OR TESTS
+
+This is the missing on-demand exposure companion to telemetry manifest225a.
+The sealed metrics-dashboard-readonly-endpoint.patch makes two finite edits to
+held Scripts/dqn/metrics_dashboard.py3013d511: add rejected_gap_body() and one
+GET /api/rejected_gaps branch. It changes no sampler, history, /api/now, HTML,
+heartbeat, POST/control, listener, authentication, model or replay operation.
+The existing dashboard bind/access policy is inherited, not broadened here.
+No selected source, environment, control, unit, process or API was changed/read.
+
+EXACT FUTURE CONTENT SELECTION
+Use existing telemetry rejected_gap_telemetry_reviewed3.py SHA256
+d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd
+(12216 bytes) as Scripts/dqn/rejected_gap_telemetry.py. Do not copy the original
+proposal basename file56cd or intermediate33727. Apply/reconstruct original
+socket insertion patchb095 against held socket4a only after root selects the
+future source bundle. This API patch targets held dashboard3013d511 only.
+No runtime helper copy is made here. Any combined logging serialization source
+must be reconstructed/rebased and reviewed with both complete changes; previous
+socket patch context overlaps that proposal. No blind sequential application or
+final combined socket hash is claimed. Original225a and its peer46002fe2 remain
+preserved. This proposal does not alter the reviewed3 helper or socket patch.
+
+WIRING AND LOCK ORDER
+Existing Scripts/dqn/main.py989-1009 constructs the dashboard with metrics and
+then assigns metrics.global_server=server. Startup before that assignment returns
+server_unavailable. The new body method keeps one local reference to that server
+and calls the b095 rejected_gap_snapshot() getter. No main.py or metrics schema
+change is necessary. The getter reaches only the d586 diagnostic lock/copy;
+dashboard self.lock, metrics.lock, client_lock, model locks and replay locks are
+not taken by this endpoint. JSON serialization and HTTP writing happen after
+the helper releases its lock. No reverse diagnostic-lock-to-client-lock edge is
+added. Existing insertion points may take client_lock then diagnostic lock.
+
+The endpoint is omitted from touch_web_client's route tuple. Reading it does not
+change browser counts, previews, policy/control, observer counters or witnesses.
+It is not added to HTML polling, the dashboard sampler or cached now/history.
+POST on this path remains the existing404. There is no enable/reset/drain action.
+The observer remains enabled only at SocketServer construction when replay_enabled
+is true AND ROBOTRON_REJECTED_GAP_TELEMETRY equals exactly1. Default is disabled;
+replay-off private evaluators remain disabled even if that environment is inherited.
+This is a future source proposal, not a hot-enable mechanism for the current main.
+
+RESPONSE CONTRACT
+GET on the existing root-verified dashboard address at /api/rejected_gaps returns
+HTTP200 application/json with Cache-Control:no-store through the existing _send.
+An HTTP200 means the diagnostic request returned, not that observation is available.
+Envelope: {schema:robotron-rejected-gap-api-v1, available:bool, reason:string,
+snapshot:object|null}. A present snapshot is the exact bounded d586 schema
+robotron-rejected-gap-observation-v1, with process/instance, fault/saturation,
+fixed counters, active/pending/in-progress counts and first32 closure witnesses.
+
+Reasons: server_unavailable (startup/no reference), getter_unavailable (socket
+source lacks getter), disabled, observer_error, counter_saturated, available,
+observer_unavailable (including d586 tracking overflow), snapshot_error (getter,
+shape, contradictory availability or finite-JSON serialization failure), and
+response_too_large. False availability is never changed to true or replaced with
+successful zero counters. Fault/overflow snapshots remain present for inspection;
+getter/serialization/oversize failures expose snapshot:null without exception
+text or arbitrary client payload. Schema and exact boolean flags are checked.
+available:true is rejected if disabled/faulted/saturated flags contradict it.
+The pinned helper, not an arbitrary getter, supplies bounded tracked structure.
+
+Strict allow_nan=False JSON and a128KiB final response limit are used. Oversize
+results become a small unavailable envelope. The limit bounds emitted bytes;
+the trusted helper's256 connections/32 witnesses and fixed scalar fields bound
+construction. No arbitrary-getter CPU/memory budget or HTTP rate limiter is
+claimed. A stale server reference during shutdown still describes that specific
+observer instance, not independently proven current ownership or healthy gameplay.
+
+READ SEMANTICS / LOW-COST FUTURE COLLECTION
+The helper snapshot is readonly and internally diagnostic-lock coherent; client
+stages and other API/gameplay clocks are not jointly atomic. Pending and in-progress
+counts must accompany differences. Read the endpoint only at a low precommitted
+rate (root proposed10s; cost remains unmeasured and it is not hardcoded here),
+retain external request brackets plus process/instance and availability,
+and compare counters only within the same available observer instance. First32
+witnesses are global closure-completion order, not an unbiased policy sample.
+UID continuity is classifier-only; calls/returns do not prove physical insertion
+or learning. No new live rate, throughput, causality or efficacy result is claimed.
+Enabled event locks, extra flag-off calls, snapshot copying/serialization and HTTP
+work have unmeasured cost. Future root tests/overhead measurement remain necessary.
+
+EXACT FUTURE SOURCE-CLOSURE WORK (NOT AUTHORED OR SELECTED HERE)
+Native tools/run_frozen_sidecar.py363-370 explicitly lists12 evaluator sources.
+Its socket import at455 will import the new helper EVEN when private replay is
+off. Add Scripts/dqn/rejected_gap_telemetry.py to source_hashes()'s dqn filename
+tuple; bind its exact selected d586 hash. Also bind the actual combined socket
+hash. The evaluator self hash changes when that tuple changes, so the future
+closure is E13. The same run_frozen_sidecar.py also appears in execution_sources
+inside run_quality_campaign.py107-111: execution still has4 paths but that hash
+changes too. Current run_quality_campaign body can derive the expanded evaluator
+map dynamically; its own bytes need not change solely for this list addition.
+
+metrics_dashboard.py and dqn/main.py are not imported by the native frozen-sidecar
+path inspected here; do not claim they are E13 additions merely for this endpoint.
+The main's complete source closure must include the new helper, changed socket
+and changed dashboard, with unchanged main.py authenticated too. Existing61-entry
+source maps are historical: a future full source set must account explicitly for
+the additional helper, rather than omit it to satisfy a literal61 predicate.
+
+Current a128 companion is INCOMPATIBLE UNCHANGED. Its quality_bindings.py40 EVALUATOR
+dict is exact E12/socket4a, EXECUTION includes the old evaluator hash; validate()
+420-427 requires61 sources, equality to old recovery source map, and socket equal
+the old EVALUATOR entry. Its439-446 historical_evaluator construction retains
+the old12 shape/history. A future family must preserve historical closures as
+historical, not create them by replacing one key in new E13.
+Current carrier source_checks120-124/prepare133 pins old cd034 SIDECAR_SHA and exact
+old12+4 maps; its helper/binder hashes and source archives must be rebound in a
+new unselected sibling. Current auditor EVALUATOR_NAMES35-36 inventory and
+BOUNDARY_SOURCES38-42, validate_future_plan94-97 and actual-source archive loop
+275-285 require honest new inventories/selected hashes. Its row/life/admission,
+tail/runtime classification and fixed individual-C gates must remain unchanged.
+New source-aware precommit, readiness/capture/current-owner lineage and associated
+root audit selectors also need genuine future bindings. Do not execute old a128,
+its old root wait/audit cases, or reinterpret original receipts as E13. No future
+binding, native plan, checkpoint, owner, deployment or outcome is invented here.
+
+DEFERRED VALIDATION
+Only AST parsing, finite patch reconstruction, reverse-byte equality, function
+text comparisons and source/closed-metadata hashes were performed. No proposed
+or project module was imported, and no test/HTTP/runtime/model/replay access ran.
+Future focused tests should exercise real endpoint method+handler routing over
+fake server/getter: enabled/disabled/startup/missing getter/fault/overflow, invalid
+flags/schema, nonfinite/oversize and raised snapshot; strict JSON, cap and no
+drain; no heartbeat, sampler/history mutation or GET-to-control path; unchanged
+now/history/POST behavior; real helper/getter composition and lock ordering.
+These are deferred tests, not authored executable proofs or deployment approval.

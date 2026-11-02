@@ -1,0 +1,16 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/df519-vs-S2-fixed-cutoff-liveness-screen-original01-20261031/Root-observe-original-screen-and-learning-totals-v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/LR625-postdose-vs-frozenS2-fixedcutoff-screen-original01-20261031/selected-source/Root-observe-original-screen-and-learning-totals-v4.py
+@@ -1,5 +1,5 @@
+ import pathlib,json,time,urllib.request,csv,datetime,zoneinfo,hashlib
+-b=pathlib.Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26');j=b/'df519-vs-S2-fixed-cutoff-liveness-screen-original01-20261031';m=b/'fleet-only-v6-overlap-handoff-original01-20261031';out=j/'Root-controller-runtime-original01'
++b=pathlib.Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26');j=b/'LR625-postdose-vs-frozenS2-fixedcutoff-screen-original01-20261031';m=b/'fleet-only-v6-overlap-handoff-original01-20261031';out=j/'Root-controller-runtime-original01'
+ def birth(pid):
+  try:return int(pathlib.Path('/proc',str(pid),'stat').read_text().rsplit(')',1)[1].split()[19])
+  except FileNotFoundError:return None
+@@ -61,5 +61,5 @@
+ observation['Main_learner_metrics']={key:api.get(key) for key in ['loss','grad_norm','bc_loss','q_mean']}
+ observation['Main_learner_metrics']['categorical_kl']=diag.get('categorical_kl')
+ 
+-print(json.dumps({'UTC':observation['UTC'],'Main_learner_metrics':observation['Main_learner_metrics'],'exposure':observation.get('actual_exposure',observation.get('exposure_trace_error')),'outer_live':outerlive,'leg':leg,'legs':{k:v for k,v in observation.items() if k.startswith(('R1','C1'))},'Main_FPS':api['fps'],'Main_clients':api['client_count'],'Main_healthy_same_original':observation['Main']['same_original_birth'] and api['training_enabled'],'controls_unchanged':controlsha=='51b209ec8a6b00c2f656802e10cf184bcdc539c57d6ccc72d50e56082c37b6e8','v6_same_original_live':observation['v6']['same_original_birth'],'v6_status_age_s':now-st['updated_unix_s'],'v6_counts':st['counts'],'v6_errors':st['errors'][:2],'v6_rebind_hints':observation['v6']['rebind_hints']}))
++print(json.dumps({'UTC':observation['UTC'],'Main_learner_metrics':observation['Main_learner_metrics'],'exposure':observation.get('actual_exposure',observation.get('exposure_trace_error')),'outer_live':outerlive,'leg':leg,'legs':{k:v for k,v in observation.items() if k.startswith(('R1','C1'))},'Main_FPS':api['fps'],'Main_clients':api['client_count'],'Main_healthy_same_original':observation['Main']['same_original_birth'] and api['training_enabled'],'controls_unchanged':controlsha=='b38b801fbdbfd872b8f859e7ec99e7341d3b59e0d0b333074a75145625db55c4','v6_same_original_live':observation['v6']['same_original_birth'],'v6_status_age_s':now-st['updated_unix_s'],'v6_counts':st['counts'],'v6_errors':st['errors'][:2],'v6_rebind_hints':observation['v6']['rebind_hints']}))
+ 

@@ -1,0 +1,14 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/stop-sources/current227_main_hold_guard_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/preview-flags-preserveRAM-trainer-restart-original01/stop-sources/current192_main_hold_guard_v1.py
+@@ -95,6 +95,11 @@
+ 
+ def owner_and_files(job):
+     owner=job['owner']
++    require(job['schema']=='robotron-current-fresh192-continuation-registry-v1'
++            and (owner['pid'],owner['starttime_ticks'],owner['invocation_id']) ==
++                (1062324,117468652,'429ceaf754ca49b495056180a0350411')
++            and len(job['actors'])==192 and {a['slot']for a in job['actors']}==set(range(192)),
++            'Exact new original trainer and real192 registry required')
+     require(process_start(owner['pid'])==owner['starttime_ticks'], 'Original trainer changed')
+     for actor in job['actors']:
+         require(process_start(actor['pid'])==actor['starttime_ticks']

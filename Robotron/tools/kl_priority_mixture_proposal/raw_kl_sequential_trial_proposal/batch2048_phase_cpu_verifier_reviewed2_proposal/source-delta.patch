@@ -1,0 +1,164 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_proposal/verify_phase_snapshot_2048.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/verify_phase_snapshot_2048.py
+@@ -2,6 +2,8 @@
+ """One root-bound phase snapshot; default prints a literal PLAN without reads."""
+ import argparse
+ import csv
++from datetime import datetime, timezone
++from decimal import Decimal
+ import io
+ import shlex
+ import copy
+@@ -21,8 +23,8 @@
+ ORIGINAL_SHA256 = '7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead'
+ STRICT_PATH = HERE / 'strict_phase_base_2048.py'
+ STRICT_SHA256 = '47677509f170c4c3b6a1c03918e02ab13996af1ceafffac29b7536c2fad61f80'
+-SCHEMA = 'robotron-batch2048-phase-snapshot-checkpoint-CPU-job-v1'
+-RESULT_SCHEMA = 'robotron-batch2048-phase-snapshot-checkpoint-CPU-result-v1'
++SCHEMA = 'robotron-batch2048-phase-snapshot-checkpoint-CPU-job-reviewed2-v1'
++RESULT_SCHEMA = 'robotron-batch2048-phase-snapshot-checkpoint-CPU-result-reviewed2-v1'
+ ACQUISITION_SCHEMA = 'robotron-owned-phase-snapshot-acquisition-v1'
+ PHASE_SCHEMA = 'robotron-priority-metric-phase-v1'
+ PROFILE_PATH = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json')
+@@ -116,6 +118,109 @@
+     require(not output.exists() and output.parent.is_dir() and output.parent.stat().st_uid == os.getuid(),
+             'Output must be NEW under owned parent')
+     return job, pin, source, output
++
++
++def precise_unit(unit, owner):
++    require(unit['argv'] == ['systemctl', '--user', '--timestamp=us+utc', 'show', owner['unit'], '--all']
++            and unit.get('environment_overrides') == {'TZ': 'UTC'} and unit['returncode'] == 0,
++            'Exact successful UTC microsecond producer unit show required')
++    shown = dict(line.split('=', 1) for line in unit['stdout'].splitlines() if '=' in line)
++    require(shown.get('MainPID') == shown.get('ExecMainPID') == str(owner['pid'])
++            and shown.get('InvocationID') == owner['invocation_id'] and shown.get('NRestarts') == '0'
++            and shown.get('Restart') == 'no' and shown.get('ControlGroup') == owner['cgroup'],
++            'Actual producer unit owner differs')
++    text = shown.get('ExecMainStartTimestamp', '')
++    require(re.fullmatch(r'[A-Z][a-z]{2} [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6} UTC', text),
++            'Authoritative unit start must retain UTC microseconds')
++    start = datetime.strptime(text, '%a %Y-%m-%d %H:%M:%S.%f UTC').replace(tzinfo=timezone.utc)
++    require(start.strftime('%a %Y-%m-%d %H:%M:%S.%f UTC') == text,
++            'Unit start calendar differs')
++    mono = shown.get('ExecMainStartTimestampMonotonic', '')
++    require(mono.isdecimal() and int(mono) > 0, 'Original unit monotonic start missing')
++    environment = dict(part.split('=', 1) for part in shlex.split(shown.get('Environment', '')) if '=' in part)
++    require(environment.get('DQN_BATCH_SIZE') == '2048' and environment.get('DQN_PER_PRIORITY_METRIC') == 'ce',
++            'Dedicated producer unit2048/CE environment missing')
++    delta = start - datetime(1970, 1, 1, tzinfo=timezone.utc)
++    micros = (delta.days * 86400 + delta.seconds) * 1000000 + delta.microseconds
++    return shown, micros
++
++
++def check_producer_csv_origin(job, observation, environment, unit, row, base, evidence):
++    """Validate archived root collection facts; never reopen the live source CSV."""
++    origin = immutable(observation['csv_origin'], base, evidence, 'batch2048/producer_csv_origin', as_json=True)
++    fields = {'schema', 'owner_before', 'owner_after', 'environment_before', 'environment_after',
++              'unit_before', 'unit_after', 'csv_archive', 'source_csv', 'header_bytes',
++              'row_start_offset', 'row_end_offset', 'header_sha256', 'row_sha256',
++              'observed_before_unix_s', 'observed_after_unix_s'}
++    require(isinstance(origin, dict) and set(origin) == fields
++            and origin['schema'] == 'robotron-root-batch2048-producer-CSV-origin-v2', 'Exact producer CSV origin required')
++    owner = observation['owner']
++    require(base.trainer_identity(origin['owner_before']) == base.trainer_identity(origin['owner_after']) == owner,
++            'CSV collection owner changed')
++    require(origin['environment_before'] == observation['environment'] and origin['unit_before'] == observation['trainer_unit']
++            and origin['csv_archive'] == observation['csv'], 'CSV origin does not join original observations')
++    env_after = immutable(origin['environment_after'], base, evidence, 'batch2048/environment_after', as_json=True)
++    unit_after = immutable(origin['unit_after'], base, evidence, 'batch2048/unit_after', as_json=True)
++    require(env_after == environment, 'Producer environment changed across CSV collection')
++    before_fields, start_us = precise_unit(unit, owner)
++    after_fields, after_start_us = precise_unit(unit_after, owner)
++    stable = ('MainPID', 'ExecMainPID', 'InvocationID', 'ControlGroup', 'NRestarts', 'Restart',
++              'ExecMainStartTimestamp', 'ExecMainStartTimestampMonotonic', 'Environment')
++    require(all(before_fields.get(k) == after_fields.get(k) for k in stable) and start_us == after_start_us,
++            'Original producer unit changed across CSV collection')
++    declared_start = Decimal(str(observation['producer_started_unix_s']))
++    require(declared_start == Decimal(start_us) / 1000000, 'Declared producer start differs from original precise unit start')
++    times = [origin[k] for k in ('observed_before_unix_s', 'observed_after_unix_s')]
++    require(all(type(v) in (int, float) and math.isfinite(v) and v > 0 for v in times)
++            and declared_start <= Decimal(str(times[0])) <= Decimal(str(times[1]))
++            and times[1] == observation['observed_unix_s'], 'CSV collection chronology differs')
++    raw = Path(observation['csv']['path']).read_bytes()
++    lines = raw.splitlines(keepends=True)
++    require(len(lines) == 2 and all(line.endswith(b'\n') for line in lines), 'Archive must retain exact complete header and one row bytes')
++    parsed = list(csv.reader(io.StringIO(raw.decode('utf-8'))))
++    require(len(parsed) == 2 and len(parsed[0]) == len(parsed[1]) and len(set(parsed[0])) == len(parsed[0])
++            and dict(zip(parsed[0], parsed[1])) == row, 'CSV header/row geometry or parse differs')
++    require(type(origin['header_bytes']) is int and origin['header_bytes'] == len(lines[0])
++            and origin['header_sha256'] == hashlib.sha256(lines[0]).hexdigest()
++            and origin['row_sha256'] == hashlib.sha256(lines[1]).hexdigest(), 'CSV byte archive differs from source-row evidence')
++    source = origin['source_csv']
++    require(isinstance(source, dict) and set(source) == {'path', 'regular_file', 'opened_nofollow',
++            'fd_before', 'path_before', 'fd_after', 'path_after'} and source['regular_file'] is True
++            and source['opened_nofollow'] is True, 'Exact regular nofollow source CSV evidence required')
++    run_dir = environment.get('ROBOTRON_RUN_DIR')
++    require(type(run_dir) is str and Path(run_dir).is_absolute() and '..' not in Path(run_dir).parts
++            and source['path'] == str(Path(run_dir) / 'training.csv'), 'CSV source is not the actual producer run-directory file')
++    identity_keys = {'device', 'inode', 'bytes', 'mtime_ns', 'ctime_ns', 'mode', 'uid', 'nlink'}
++    for key in ('fd_before', 'path_before', 'fd_after', 'path_after'):
++        value = source[key]
++        require(isinstance(value, dict) and set(value) == identity_keys
++                and all(type(value[k]) is int and value[k] >= 0 for k in identity_keys - {'mode'})
++                and value['uid'] == os.getuid() and value['nlink'] == 1
++                and value['mode'] in ('0o600', '0o640', '0o644', '0o660', '0o664'), 'CSV source identity/ownership differs')
++    first, last = source['fd_before'], source['fd_after']
++    require(first == source['path_before'] and last == source['path_after']
++            and all(first[k] == last[k] for k in ('device', 'inode', 'uid', 'nlink', 'mode'))
++            and last['bytes'] >= first['bytes'] and last['mtime_ns'] >= first['mtime_ns'], 'CSV FD/path replaced or truncated across read')
++    begin, end = origin['row_start_offset'], origin['row_end_offset']
++    require(type(begin) is int and type(end) is int and begin >= len(lines[0])
++            and end == begin + len(lines[1]) and end <= first['bytes'] <= last['bytes'], 'CSV source row offsets differ')
++    stamp = row.get('utc', '')
++    require(re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,6})?(?:Z|\+00:00)', stamp),
++            'CSV UTC must be timezone-aware with retained producer precision')
++    actual = datetime.fromisoformat(stamp.replace('Z', '+00:00'))
++    delta = actual - datetime(1970, 1, 1, tzinfo=timezone.utc)
++    row_us = (delta.days * 86400 + delta.seconds) * 1000000 + delta.microseconds
++    require(start_us <= row_us and Decimal(row_us) / 1000000 <= Decimal(str(times[1])),
++            'CSV row predates the exact new owner or comes from the future')
++    require(row.get('experiment') == job['experiment'] and row.get('measurement_active') == 'False',
++            'CSV experiment/nonmeasurement mode differs')
++    floor = clocks(evidence['actual_boot_clocks'], 'genuine already-verified boot clocks')
++    for source_name, name in (('steps', 'training_steps'), ('optimized_samples', 'optimized_samples'),
++                              ('learner_frames', 'learner_frame_count'), ('frames', 'frame_count')):
++        value = row.get(source_name, '')
++        require(value.isdecimal() and int(value) >= floor[name], 'CSV clock predates genuine boot: ' + name)
++    evidence.update(producer_CSV_origin_verified=True, producer_CSV_row_utc=stamp,
++                    producer_start_unix_us=start_us, producer_CSV_origin=origin)
+ 
+ 
+ def check_batch2048_context(job, base, evidence):
+@@ -150,8 +255,9 @@
+             and environment.get('DQN_PER_PRIORITY_METRIC') == 'ce', 'Actual producer selected environment differs')
+     unit = immutable(observation['trainer_unit'], base, evidence, 'batch2048/trainer_unit', as_json=True)
+     owner = observation['owner']
+-    require(unit['argv'] == ['systemctl', '--user', 'show', owner['unit'], '--all'] and unit['returncode'] == 0,
+-            'Exact successful original producer unit show required')
++    require(unit['argv'] == ['systemctl', '--user', '--timestamp=us+utc', 'show', owner['unit'], '--all']
++            and unit.get('environment_overrides') == {'TZ': 'UTC'} and unit['returncode'] == 0,
++            'Exact successful original UTC microsecond producer unit show required')
+     shown = dict(line.split('=', 1) for line in unit['stdout'].splitlines() if '=' in line)
+     require(shown.get('MainPID') == shown.get('ExecMainPID') == str(owner['pid'])
+             and shown.get('InvocationID') == owner['invocation_id'] and shown.get('NRestarts') == '0'
+@@ -166,7 +272,8 @@
+     require(all(type(v) in (int, float) and math.isfinite(v) and v > 0 for v in times) and times[0] <= times[1], 'Producer observation chronology differs')
+     verified = observation['csv_scope'] == 'producer2048'
+     if verified:
+-        require(rows[0].get('batch_size') == '2048' and observation['csv_origin'] is None, 'Actual producer CSV2048 required')
++        require(rows[0].get('batch_size') == '2048', 'Actual producer CSV2048 required')
++        check_producer_csv_origin(job, observation, environment, unit, rows[0], base, evidence)
+     else:
+         require(role == 'treatment_startup' and spec['purpose'] == 'startup' and spec['observed_clients'] == 0
+                 and observation['csv_scope'] == 'pretransition_baseline4096' and rows[0].get('batch_size') == '4096',
+@@ -336,8 +443,8 @@
+         require(base_pin['sha256'] == STRICT_SHA256 and original_pin['sha256'] == ORIGINAL_SHA256, 'Strict source changed')
+         evidence.update(strict_phase_base=base_pin, original_strict_base=original_pin)
+         model_dir = base.check_context(job, evidence)
++        spec, boot, record = check_acquisition(job, base, evidence, model_dir)
+         check_batch2048_context(job, base, evidence)
+-        spec, boot, record = check_acquisition(job, base, evidence, model_dir)
+         copied = base.check_root_copy(job, evidence)
+         base.validate_checkpoint(copied, job['clock_floor'], evidence, metadata_callback=lambda checkpoint, ev:
+             verify_phase(checkpoint, ev, spec['expected_phase'], evidence['actual_boot_clocks'], job['clock_floor'],

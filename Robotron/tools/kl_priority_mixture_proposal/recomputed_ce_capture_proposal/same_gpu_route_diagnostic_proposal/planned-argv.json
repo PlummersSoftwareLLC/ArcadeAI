@@ -1,0 +1,85 @@
+{
+  "status": "SOURCE_PREPARED_NOT_EXECUTED",
+  "authored_stdlib_methods": 62,
+  "selected_test_modules": [
+    "Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.same_gpu_route_diagnostic_proposal.test_process_scan",
+    "Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.same_gpu_route_diagnostic_proposal.test_storage_watcher",
+    "Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.same_gpu_route_diagnostic_proposal.test_route_contract"
+  ],
+  "test_argv": [
+    "python3",
+    "-B",
+    "-m",
+    "unittest",
+    "Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.same_gpu_route_diagnostic_proposal.test_process_scan",
+    "Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.same_gpu_route_diagnostic_proposal.test_storage_watcher",
+    "Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.same_gpu_route_diagnostic_proposal.test_route_contract"
+  ],
+  "parent_argv": [
+    "ABS_REPO/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "ABS_BUNDLE/cuda_trace_parent.py",
+    "--directory",
+    "ABS_NEW_RUN26_ROUTE_OUTPUT",
+    "--launch"
+  ],
+  "worker_argv": [
+    "ABS_REPO/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "ABS_BUNDLE/cuda_trace_worker.py",
+    "--manifest",
+    "ABS_NEW_OUTPUT/launch-manifest.json",
+    "--variant",
+    "route1"
+  ],
+  "fixed_science": {
+    "selected_original_index": 1,
+    "forward_routes": [
+      "original4",
+      "conditional5"
+    ],
+    "batch_rows": 4096,
+    "actual_attempts": 0,
+    "explicit_worker_backward_calls": 0,
+    "owned_optimizer_steps": 0,
+    "qualification_pass": false,
+    "tolerance": {
+      "rtol": 0.0002,
+      "atol": 2e-05
+    }
+  },
+  "service": {
+    "prefix": "robotron-snapshot-smoke-",
+    "Type": "exec",
+    "RemainAfterExit": "yes",
+    "Delegate": "cpu memory pids",
+    "DelegateSubgroup": "snapshot-supervisor",
+    "CPUQuota": "200%",
+    "MemoryMax": "16G",
+    "MemorySwapMax": "0",
+    "TasksMax": 128,
+    "RuntimeMaxSec": 660,
+    "KillSignal": "SIGINT",
+    "TimeoutStopSec": 90,
+    "SendSIGKILL": "no"
+  },
+  "inner_bounds": {
+    "cpu_threads": 2,
+    "memory_bytes": 17179869184,
+    "vram_allocator_bytes": 12884901888,
+    "vram_process_bytes": 13958643712,
+    "artifact_bytes": 6442450944,
+    "tmpfs_bytes": 134217728,
+    "tasks": 128,
+    "phase_timeout_s": 180,
+    "total_timeout_s": 600
+  },
+  "scheduling": "Root-owned detached3s timer; carrier reaped before trigger; no --wait/--collect. Retain same original invocation and terminal code/status before release.",
+  "environment": "Parent CUDA hidden, LD_PRELOAD/PYTHONPATH unset; child exact stable GPU0 UUID with private paths via inherited reviewed environment.",
+  "release": "Root cleanup proof before exact terminal-unit release, then rearm only owned cancelled waiting448 at unchanged target/label/originaldeadline if still appropriate. Never completed384.",
+  "author_executed": false
+}

@@ -1,0 +1,2194 @@
+{
+  "schema": "robotron-private-startup-diagnostic-package-v2",
+  "unix_s": 1792490627.6149614,
+  "root": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron",
+  "parent_manifest": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/profile04/runtime-source-package.json",
+    "sha256": "3ee43f9bd95fdda8f02abc048999a84513da71125dfd6b2e6558f45d2de6caf9",
+    "bytes": 14795,
+    "identity": {
+      "device": 2304,
+      "inode": 81930580,
+      "bytes": 14795,
+      "mtime_ns": 1792466421402762923,
+      "ctime_ns": 1792467124800515210,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "builder_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/prepare_diagnostic_package_v2.py",
+    "sha256": "6c7b88d365561354e78e03ea2801f44fdeffc7f5c9f7f72d61a27df605eb8f4f",
+    "bytes": 7332,
+    "identity": {
+      "device": 2304,
+      "inode": 81933808,
+      "bytes": 7332,
+      "mtime_ns": 1792490196715880237,
+      "ctime_ns": 1792490394172581021,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "utility_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/prepare_diagnostic_package_v1.py",
+    "sha256": "0856ed1a51b741a0cdb013e1af575362fcbd3d0a0e4289e2959b74077cd65098",
+    "bytes": 11025,
+    "identity": {
+      "device": 2304,
+      "inode": 81930640,
+      "bytes": 11025,
+      "mtime_ns": 1792481709276056793,
+      "ctime_ns": 1792481902629941574,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "builder_inputs": {
+    "prepare_startup_lua_v1.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/prepare_startup_lua_v1.py",
+      "sha256": "2405f837982fd0df43230599409ab04b25655da30c6132d9aa7f1ae1e0dfa3d0",
+      "bytes": 3156,
+      "identity": {
+        "device": 2304,
+        "inode": 81930633,
+        "bytes": 3156,
+        "mtime_ns": 1792480068929531027,
+        "ctime_ns": 1792480318775901103,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "prepare_startup_server_v1.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/prepare_startup_server_v1.py",
+      "sha256": "eb11f4ca578088ab20980eefba5ff40bde47ee283133d3ced6ee5881baefc6ca",
+      "bytes": 3682,
+      "identity": {
+        "device": 2304,
+        "inode": 81930638,
+        "bytes": 3682,
+        "mtime_ns": 1792480971388678353,
+        "ctime_ns": 1792481271978055135,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "startup_prefix_v1.lua": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup_prefix_v1.lua",
+      "sha256": "07fda72281355fd6bd78439533b337c0a8aea66b77b7c53e8085483ce09d3d61",
+      "bytes": 7999,
+      "identity": {
+        "device": 2304,
+        "inode": 81930632,
+        "bytes": 7999,
+        "mtime_ns": 1792480060724493121,
+        "ctime_ns": 1792480318775901103,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "startup_server_prefix_v1.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup_server_prefix_v1.py",
+      "sha256": "77992b95bac8da672e3b24e1f1cf2d7ea2a65943ee0785597d3c96867c072a37",
+      "bytes": 17944,
+      "identity": {
+        "device": 2304,
+        "inode": 81930637,
+        "bytes": 17944,
+        "mtime_ns": 1792480954987603199,
+        "ctime_ns": 1792481271978055135,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "prepare_acceptance_lua_v1.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/prepare_acceptance_lua_v1.py",
+      "sha256": "684f312eae23daeaa43f29a48b5b129fdb37dd42a72bbbf2658b2cb4b7555ffe",
+      "bytes": 7320,
+      "identity": {
+        "device": 2304,
+        "inode": 81933809,
+        "bytes": 7320,
+        "mtime_ns": 1792490150287708053,
+        "ctime_ns": 1792490394170581015,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "startup_acceptance_tap_v1.lua": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup_acceptance_tap_v1.lua",
+      "sha256": "ef21dcf03c455d71c99434d543833b2a68af3f18a53793e7852b94b777c36b02",
+      "bytes": 10101,
+      "identity": {
+        "device": 2304,
+        "inode": 81933739,
+        "bytes": 10101,
+        "mtime_ns": 1792488770161566208,
+        "ctime_ns": 1792488910531093664,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "source_count": 126,
+  "byte_count": 2487413,
+  "files": {
+    "Scripts/display.lua": "018eeb3476979db8dd5d65b7153041f9ad2953faa6ad609d159dc99e34eca755",
+    "Scripts/dqn/__init__.py": "a2b3412fc502b7631295d639092e320d73f848895b994edc16bf9eebf8b5054c",
+    "Scripts/dqn/actor_tags.py": "fc5b868a7fb68d4ab7ba65ba872ea0e845759af6143edfe648239d57cb7f1591",
+    "Scripts/dqn/agent.py": "865a0df717b39951b7f7c516e4a962e3d48cf4d3dc11295ff266e58653e6c74b",
+    "Scripts/dqn/bank_output.py": "85a161a445dc44e8bb0ef225a5630b485ff0c4d4874f9d04367544ab744caa9d",
+    "Scripts/dqn/config.py": "19abcbde4d08cf8465b82185ac6dd52eb8965adb8611584e0677c4c7ff21d1fd",
+    "Scripts/dqn/dashboard_history.py": "5dd229f7a0119d00a901ee6e570b53716b830ad0ed71929ed53a019f74e0b6cb",
+    "Scripts/dqn/exact_inference_graphs.py": "222d5b8ba06df940006fc2d4e1c152b1a44313ff056312c94c49fb6bae8145db",
+    "Scripts/dqn/experiment_status.py": "aa1d018902be0875ff237e9cb3fa1bb29f066f4480123cf783a99091551d722c",
+    "Scripts/dqn/expert_fast.py": "eac28fe5bb753b7008c7824b90e90cc0da37ab8d0e549fd90b35bc860929ae9c",
+    "Scripts/dqn/frozen_evaluation.py": "65430d472231e3a1bf0f794cc65603bf5e41c495c446d9a4bab59ad0d3a3a669",
+    "Scripts/dqn/game_journal.py": "3b8dc9ecf592cdb868443e9c1b21cde3ef398ac0a79a2d00c1c70a811bdeb90e",
+    "Scripts/dqn/inference_actor.py": "7cc812adeab8dc7cb989f9024592767928afa786966b85f3488023fb8d6b34ce",
+    "Scripts/dqn/learning_control.py": "29a74b25be391290b07373cdce4680ae7513db31596929f0bc9972aaf0ab220d",
+    "Scripts/dqn/learning_exposure.py": "30d9191e9fc845d80e52a7a891244fcf0c7041cf60529f6559b15e6d47ac5c7f",
+    "Scripts/dqn/loss_kernel.py": "23eb8fc0d8409c9f31ef26ec4596da9c2257e3985abbbfa7d5fbdcb337e21f67",
+    "Scripts/dqn/main.py": "61fa053eea882e7e9ca1d95cd8dc081c45dec75677b12c51231aa95f51da0282",
+    "Scripts/dqn/managed_driver.py": "05407642f75a5dc883ba7f45512f36711ffb66f29bce41fc860aba182644dc36",
+    "Scripts/dqn/managed_measurement.py": "9649d0ba199bdc0943202164da7a9058e5d578b9c411ce26a950b2595c7e96e6",
+    "Scripts/dqn/metrics_dashboard.py": "3d1aa1950e6b1c5224ace3aecb9c837e433e5c36941b89465b414749f903da27",
+    "Scripts/dqn/metrics_display.py": "e843a7d77df8bc8b7da7673b60f1088edcf25210277be33d0610485d1fd741ad",
+    "Scripts/dqn/model.py": "bcd174f05610c6f773ca8c53f9155206eba4f7b6a11383516ddd71f3b513eeb4",
+    "Scripts/dqn/native_sumtree.py": "de0900aecd09668dc0551d4ecec118351a1228e2a664bc183c5c06b865e52250",
+    "Scripts/dqn/nstep_buffer.py": "e46f03e9a626b3a24dea702344b0bbf050f1fdc5af672fc8fc9d18e6afef74c1",
+    "Scripts/dqn/pipeline_telemetry.py": "fa866eaaba56883a9df28046238ec0c235248dbf43837496caf40560c0aa69b6",
+    "Scripts/dqn/prefetch.py": "02871bc515ba23f8d353131e9b6b6b4e390692803578febee7c8d643dd308a27",
+    "Scripts/dqn/priority_phase.py": "ee3c0d02bc1eab55e92ffd605c3736fe5a0ef905a8a8ee242c687301ea2b7c5b",
+    "Scripts/dqn/recomputed_ce_capture.py": "6c3ef3735342295154f24b37f7fe0f54c2f05bd13789629c856214441e087263",
+    "Scripts/dqn/rejected_gap_telemetry.py": "d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd",
+    "Scripts/dqn/replay_buffer.py": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f",
+    "Scripts/dqn/run_telemetry.py": "fac30f1f75d4d5272d21b2cdb2eae865aa519e1f344c04b3efbfdd6436a25863",
+    "Scripts/dqn/socket_server.py": "46566ea7c654efcde3fe1ddc4a285b7b449e6cae3bc7d6ab1f549fe5264ac077",
+    "Scripts/dqn/test_bank_output.py": "18a551d83503a1ba179e13731a1e7d1041ef74ee8cc3ee9c2239d6bc0b7308e5",
+    "Scripts/dqn/test_bank_persistence.py": "773bfdc8a73118258830c85498a4f6f0d7d6a9a2514ce58aad853a49dc38fdc6",
+    "Scripts/dqn/test_dashboard_history.py": "cc107d8f4938aea3bea7721b612a5925b233ca9257d473222e3f191319113d1b",
+    "Scripts/dqn/test_direct_replay.py": "dd3a718e1ebeb50f5ed052ed8cb22643b40de599a923723de975b7d61eb11a7b",
+    "Scripts/dqn/test_exact_inference_graphs.py": "bb4570adddbadc75353a2d9b1838e69688cd1d76bbc8ede770ceea4108a73027",
+    "Scripts/dqn/test_experiment_status.py": "c2f4ecbd7bdc6f466ce7374bd7f9d67e53aa3530150c7a758f8a00584ec246eb",
+    "Scripts/dqn/test_frozen_evaluation.py": "d8bbb136d80e39185fc48fffd8b7d2ad96ad89572b5ef77b7f267bd2e74fc238",
+    "Scripts/dqn/test_game_journal.py": "a6a5e77c0d50f1e5cfc9a17da84025689406fa98edebe32784637236b5c5f288",
+    "Scripts/dqn/test_inference_actor.py": "10d76102927f4db4cfedc16f93d95261d99e8d7092ef381c2c06bdc45c830c80",
+    "Scripts/dqn/test_learning_control.py": "df4513e84a0cda72dbd0763b8014b3b6de3bce7eea0e138473cba5618e2c14e1",
+    "Scripts/dqn/test_learning_exposure.py": "1bfbb9b2bf1f1ea2692a91db294c303a7b723b0ccd936fa6c1b2dbe8c4d4b784",
+    "Scripts/dqn/test_loss_kernel.py": "216861dfaa9bcaa4d9ba2532a40408fe6b9f7832c6ef0da1c043ea30f63b5f2e",
+    "Scripts/dqn/test_managed_driver.py": "260fe9ce5bed95327102aa037897fdc118c41d6b9b9720b5cb20c61df23c8777",
+    "Scripts/dqn/test_managed_measurement.py": "45ba1c1aaf9da7c335d8a159cac844d2ca06761501b67f5cd9bf6d4eea396212",
+    "Scripts/dqn/test_measurement_actor.py": "c1d2c2270aaf90c6fce61968bd9b4bffa7bc1a48f61ca8c752e5f29cd5e2abc9",
+    "Scripts/dqn/test_native_batch_update.py": "5c1df4edb5d07543936ceb36de0d5b85f2d153b4b7f70a92423f1a73a2a3a82d",
+    "Scripts/dqn/test_native_sumtree.py": "83864812b1f1f5fd01585acddba8cfb09f864f79899e2dec283f51bc451ad750",
+    "Scripts/dqn/test_performance.py": "2127cede9f048c70454e65f51f334894878dc9c165ac2cc2738c053410dfa12a",
+    "Scripts/dqn/test_pipeline_telemetry.py": "d691ce4ae5e5655939cb9bcec05ffe8a4a19120aa4bec010bebd11e2d3d1c579",
+    "Scripts/dqn/test_prefetch_cuda.py": "5e2deeef401aa1d85e8aa81333626fa4501b587d6bb2feb9328be33fb763b742",
+    "Scripts/dqn/test_replay_pressure.py": "93fb64f6710f883cdf954ed94366b8752a49f732a8c5c8938e295b081ffe9cd1",
+    "Scripts/dqn/test_run_telemetry.py": "8adf9b7ff4b8ad75aed64e04dcc3b5404a73bd702d36855227e37580b48eb4fb",
+    "Scripts/dqn/test_smoke.py": "519796d8ece3d2a51870a9bc46bb02cd995abaf9d045c335de76dd86c4a54b95",
+    "Scripts/dqn/training.py": "90b847856f810cb4f52513a4bd0625b2d15d4801107bff398060faae25bc4be4",
+    "Scripts/logic.lua": "e876f6269a39dbe95163da1b890017f4e067460bd087f50eaf099e27f9c58d3e",
+    "Scripts/main.lua": "77074b4e85384f7197905c6155294d40d9ed6df8a8abdd4878a0f6fc5580ded5",
+    "Scripts/robotron_host_wait.c": "a0d288c7f562d74ced0ef826a05ebd97ba2c37b19fde1e91d3188a6bad66980d",
+    "Scripts/robotron_socket_wait.c": "fc9ed2719839f72e36346d0886e5b32116a167d49414b506dc8b5f4252464cfc",
+    "Scripts/startup_acceptance_tap_v1.lua": "ef21dcf03c455d71c99434d543833b2a68af3f18a53793e7852b94b777c36b02",
+    "Scripts/startup_prefix_v1.lua": "07fda72281355fd6bd78439533b337c0a8aea66b77b7c53e8085483ce09d3d61",
+    "Scripts/startup_server_prefix_v1.py": "77992b95bac8da672e3b24e1f1cf2d7ea2a65943ee0785597d3c96867c072a37",
+    "Scripts/state.lua": "e3d5a2b6844b810e561bd9a930eab4fd893d2c50f04d609099e8c431d53d30d9",
+    "tools/analyze_learning_games.py": "b92dc8e0e4557e5bf299cf75152bd2469bf488ae5e5ed20a503fc069f5c64cac",
+    "tools/benchmark_cuda_graph_coverage.py": "0c033d748bee5f10a9dc05b40ad394ebed8fc657e569a3f39c397bf6b5fcafd1",
+    "tools/benchmark_cuda_graph_inference.py": "2ba16ec1dadd093dbb68df8fca487f7ab94aae15679601432743573e43fbc94b",
+    "tools/benchmark_replay_gather.py": "430862116d634f6a0dc6d61f38afd12b921fe5f6f3f5c1ce2d585141caab971f",
+    "tools/benchmark_sidecar_inference.py": "39d90c6dc70d69a4fef4c7244868819ddd06f7cc4283998d821632cf0ce2bde5",
+    "tools/build_host_wait.py": "bd30b340ee196c8d440615364d59310c6b0bcf92e772d69d864d17ae55c996c9",
+    "tools/build_socket_wait.py": "69f0bd1b8194aa375af2ca6cca6431a28bdbd86ff0416832b0e1d457e61a54cc",
+    "tools/checkpoint_at_frame.py": "5d8d7ab2456f2d6a8ad89327596cec654feae9a66db98190a07c87063a3be2b1",
+    "tools/compare_frozen_measurements.py": "53f744737a722fec2760c0001dc5747b19b05e07a1de8699764c781f04da6be0",
+    "tools/compare_sidecar_measurements.py": "7779b59f088b9879021a821bc3d05def20f35255a34fecb61c7dd2a206d3bae2",
+    "tools/confirmed_terminal_evidence.py": "2416a19e63d9bcea7521795c139bbde269dc229124a1d34c5fc2a6a4d4aa6502",
+    "tools/cpu_affinity_pilot.py": "ee1fa4f3018eccc479cfe4e484883505115aaeeb8778801657d2a37af6b071f0",
+    "tools/inference_worker_affinity.py": "dc6f18fe418cd19b0f8bd4c915fbfdc0ac9c4e2433bd6e98dafe096d2e7df25f",
+    "tools/manage_learning.py": "3dc81cb40b9c4794158f4ef3d2e5974c50949665ce1c6988f1d331bcddf4d938",
+    "tools/observe_learning.py": "42c84865b09c5d8b0bd064b210c6498adb5503364d480f8fee2daf649b639bc2",
+    "tools/parallel_state_fill_trial.py": "5555017afd066300554cc11097a5be3dbcfde956488d29d3e933b1421f59c54f",
+    "tools/post_continuity_audit_completed_leg.py": "9bcdfaa19bafae20d914072c2bd4680cfb16af1dc03fdbb3cab3c573871e259b",
+    "tools/post_continuity_window.py": "f44f392188bcc6924baab87b2762d6a80879331078f76495bb4c00686b8b65f3",
+    "tools/prepare_post_continuity_cpu_job.py": "f5244ce87b2f45fe3389e6ead1d32e38d4f605d8f4e1d1a139a885ec321c8191",
+    "tools/preview_socket_recovery.py": "116c661b5f98c438a3a12549faa0ab45181eaf76ea04852f8ab410f02b68f174",
+    "tools/probe_checkpoint_cpu.py": "98e9ac57159865a9652edfc28cbbddc54022ff9dbeeac633fe76bb951f182dbc",
+    "tools/protect_quality_winner.py": "e45965d3057ec8542ab2b05fd2250209e53986a0977fbb1294aa54f64a11f0f0",
+    "tools/render_learning_progress.py": "5960cf631f75026b98e5218ba2d4efa15ecbf50b6f72d63cf13ea365b54729ea",
+    "tools/restore_serial_after_parallel_trial.py": "c115253a36d2aca082da28520d733483cca9ecb3a59b65f97840ba5a3e39b7c0",
+    "tools/run_frozen_sidecar.py": "966516ef448e33917bd5a1d53dacd8fde06df3fb3a596164019b5a80ee9552be",
+    "tools/run_quality_campaign.py": "6c1699bf038659f822850fcc77dbd813ecf80b77a9c4a3bdc719ed7e646f52a3",
+    "tools/sidecar_boot.py": "f06492e6d96cd472d9f0073b4c643e820bcacb6a96c5f542a59d6b6874e62362",
+    "tools/smoke_agent_cuda_graphs.py": "874d5f527a4e53c9859b5914678d64a4cebc4b5a62eea93836bceaed4c1ca18a",
+    "tools/smoke_select_wait_mame.py": "919c1235ee60672cb41fd7a4f34896d823ada9f148758b783b3b8bc646c416f3",
+    "tools/start_managed_training.py": "ee061bfee0e60c9a1272fd038957029322ea1c0d08966898d2026397f2309493",
+    "tools/test_agent_cuda_graph_smoke.py": "a680bdefa90a34f3881d6b3fbeffdca96f3c7b4eee65fd7b227563664198fad2",
+    "tools/test_analyze_learning_games.py": "4de0e24a32fdd022e2ced84710538ebcca1c06b2ef9ffe85245d3c57d214b573",
+    "tools/test_benchmark_sidecar_inference.py": "f7bcf825f14bf6f9da768d6b8e31995d49f70efa93e32c314f2bbbde175c5a12",
+    "tools/test_compare_frozen_measurements.py": "ba4dc83aa71449d3ca0f581b67fb1dd386adbd9a36e91bf5d737b9e0e1777131",
+    "tools/test_compare_sidecar_measurements.py": "4563918d5798e6818c19b02b4e3b6aeb2d3ad0ef0a09643a82bc82725f9a4341",
+    "tools/test_confirmed32m_campaign.py": "ed9b3225b2a45b3fe5ef34b99054bd29c77a5bd30bfc8c7ef14c111783f03caf",
+    "tools/test_confirmed_quality_readback.py": "0101ee1d1ac1acca77b81180f4f3165b50b788ef1ead22c97efc85bb2bd193f2",
+    "tools/test_cpu_affinity_pilot.py": "2544711ac3467a3a45cd31d596252bbd1507a438c371cfeae827a9bc00146d90",
+    "tools/test_cuda_graph_coverage.py": "d1671d53a50aae8f3b55d1099349aa832657ffee2ed4ccdc3029978a76052cf2",
+    "tools/test_cuda_graph_inference_prototype.py": "2f4434d21ad7846f5f7c100b8852ad4b7296233a880b6eedd2b7a1e15a9a95c8",
+    "tools/test_eval_capacity.py": "d7bdf7c6b065aa20b2db3fbc066b64cb7de631d28d0a11737673e31c5fc20c7a",
+    "tools/test_fleet_actor_discovery.py": "65f76c0b037f54c99f1f2d8741edfcb5ae4f4b8640176ecd5c425902884d3612",
+    "tools/test_fleet_ownership.py": "62924a15c896c2d4e0e72d0a729c63b822cfe114b64026295972e6d34af7eee6",
+    "tools/test_frozen_sidecar.py": "f2ac807735d551b84873e8df8a490ce9c9d5b6bf11d93841172aae7d9bed1452",
+    "tools/test_host_wait.py": "f22ed2f2e8113584e18797edad32a614f4e0ffa67b4b95a0541573262d267e29",
+    "tools/test_inference_batch_wait_override.py": "ea9fd310f39558cb77b37337860a21f65066078d8b05883ec63c9a3bcce6c1eb",
+    "tools/test_inference_deadline_policy.py": "f8fb9bd8df71ff1382d3f32bb386be212e3a43d0c4a2a648cff80087c98b2c70",
+    "tools/test_inference_worker_affinity.py": "c354da2ad2ce3bcd8bd23fa36cee7de4821eae8312137bf7ea6802d38fb916b1",
+    "tools/test_parallel_state_fill_trial.py": "ac7bf87768853a3c10f9378cbfb71df9704d71464a614711939c38232eac1772",
+    "tools/test_post_continuity_audit_completed_leg.py": "c4756ae3b4b4d8623b48a7b7d056f676eb50ee0e3daee6587bc36aa49d1f5ab0",
+    "tools/test_post_continuity_window.py": "d148cf3714d7b2855eb40dce4eb20a7434042ec044df05bc6f84dfdebcc7c0cc",
+    "tools/test_protect_quality_winner.py": "ddc57247570e96bce4956cdf77cf1a03ffdb9996b9e81b93216a51f178ef8df7",
+    "tools/test_restore_serial_after_parallel_trial.py": "6fa41028b7bac340f49c028f4b2135ac0506892712146ed5cabc36396c5a796e",
+    "tools/test_run_quality_campaign.py": "19eb0e633555bb01a1ed5654f4bd35b2ab1c1973d2bd2425204d0c89a59591f9",
+    "tools/test_select_wait.py": "3b67185fcf72daff6d31f2e7d54a82943a4b4aea955a6476cf982cb9d3bf5477",
+    "tools/test_sidecar_boot.py": "3db989cd2d324d8bbe701298e05844c1dd7c9833a19d912148661aa83f56ffe8",
+    "tools/test_socket_recovery_proposal.py": "bc27b6dedf4ef34c3b19cc2363bdf1f80837054fa113ba33356ad641ca5fa04e",
+    "tools/test_socket_wait.py": "329a66f02549f1152f8f515fbf3b7eb0b426d911de677d58003bf9ba0396732f",
+    "tools/test_start_managed_training.py": "61e5e79ff16247f5558b1e70c5e4d8d19d6718ea884a1fe3224dfc5df170e1a5",
+    "tools/test_watch_original_quality_audits.py": "6ccf29ddba24c0eb53b83db86aae35c92eb9bca36c8e83590e58a3c72ed49416",
+    "tools/tune_batch.py": "d46770f916ce6cfcb3a8b168f3c8d2f1918b00dd3ff201f9b30d75b208398a25",
+    "tools/watch_original_quality_audits.py": "878d5db4cd2f43c830dc25ae6c0c23e5a6f0bd14ee46630ca66e421f8901c2a0"
+  },
+  "file_pins": {
+    "Scripts/display.lua": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/display.lua",
+      "sha256": "018eeb3476979db8dd5d65b7153041f9ad2953faa6ad609d159dc99e34eca755",
+      "bytes": 198,
+      "identity": {
+        "device": 2304,
+        "inode": 81934015,
+        "bytes": 198,
+        "mtime_ns": 1792490627492827478,
+        "ctime_ns": 1792490627492827478,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/__init__.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/__init__.py",
+      "sha256": "a2b3412fc502b7631295d639092e320d73f848895b994edc16bf9eebf8b5054c",
+      "bytes": 219,
+      "identity": {
+        "device": 2304,
+        "inode": 81934017,
+        "bytes": 219,
+        "mtime_ns": 1792490627493914586,
+        "ctime_ns": 1792490627493914586,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/actor_tags.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/actor_tags.py",
+      "sha256": "fc5b868a7fb68d4ab7ba65ba872ea0e845759af6143edfe648239d57cb7f1591",
+      "bytes": 153,
+      "identity": {
+        "device": 2304,
+        "inode": 81934018,
+        "bytes": 153,
+        "mtime_ns": 1792490627494795933,
+        "ctime_ns": 1792490627494795933,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/agent.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/agent.py",
+      "sha256": "865a0df717b39951b7f7c516e4a962e3d48cf4d3dc11295ff266e58653e6c74b",
+      "bytes": 98429,
+      "identity": {
+        "device": 2304,
+        "inode": 81934019,
+        "bytes": 98429,
+        "mtime_ns": 1792490627495565472,
+        "ctime_ns": 1792490627495565472,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/bank_output.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/bank_output.py",
+      "sha256": "85a161a445dc44e8bb0ef225a5630b485ff0c4d4874f9d04367544ab744caa9d",
+      "bytes": 9104,
+      "identity": {
+        "device": 2304,
+        "inode": 81934020,
+        "bytes": 9104,
+        "mtime_ns": 1792490627496800164,
+        "ctime_ns": 1792490627496800164,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/config.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/config.py",
+      "sha256": "19abcbde4d08cf8465b82185ac6dd52eb8965adb8611584e0677c4c7ff21d1fd",
+      "bytes": 117528,
+      "identity": {
+        "device": 2304,
+        "inode": 81934021,
+        "bytes": 117528,
+        "mtime_ns": 1792490627497582375,
+        "ctime_ns": 1792490627497582375,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/dashboard_history.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/dashboard_history.py",
+      "sha256": "5dd229f7a0119d00a901ee6e570b53716b830ad0ed71929ed53a019f74e0b6cb",
+      "bytes": 2673,
+      "identity": {
+        "device": 2304,
+        "inode": 81934022,
+        "bytes": 2673,
+        "mtime_ns": 1792490627498502730,
+        "ctime_ns": 1792490627498502730,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/exact_inference_graphs.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/exact_inference_graphs.py",
+      "sha256": "222d5b8ba06df940006fc2d4e1c152b1a44313ff056312c94c49fb6bae8145db",
+      "bytes": 16644,
+      "identity": {
+        "device": 2304,
+        "inode": 81934023,
+        "bytes": 16644,
+        "mtime_ns": 1792490627499255437,
+        "ctime_ns": 1792490627499255437,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/experiment_status.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/experiment_status.py",
+      "sha256": "aa1d018902be0875ff237e9cb3fa1bb29f066f4480123cf783a99091551d722c",
+      "bytes": 10342,
+      "identity": {
+        "device": 2304,
+        "inode": 81934024,
+        "bytes": 10342,
+        "mtime_ns": 1792490627500137872,
+        "ctime_ns": 1792490627500137872,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/expert_fast.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/expert_fast.py",
+      "sha256": "eac28fe5bb753b7008c7824b90e90cc0da37ab8d0e549fd90b35bc860929ae9c",
+      "bytes": 3754,
+      "identity": {
+        "device": 2304,
+        "inode": 81934025,
+        "bytes": 3754,
+        "mtime_ns": 1792490627500987763,
+        "ctime_ns": 1792490627500987763,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/frozen_evaluation.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/frozen_evaluation.py",
+      "sha256": "65430d472231e3a1bf0f794cc65603bf5e41c495c446d9a4bab59ad0d3a3a669",
+      "bytes": 4647,
+      "identity": {
+        "device": 2304,
+        "inode": 81934026,
+        "bytes": 4647,
+        "mtime_ns": 1792490627501778070,
+        "ctime_ns": 1792490627501778070,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/game_journal.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/game_journal.py",
+      "sha256": "3b8dc9ecf592cdb868443e9c1b21cde3ef398ac0a79a2d00c1c70a811bdeb90e",
+      "bytes": 21596,
+      "identity": {
+        "device": 2304,
+        "inode": 81934027,
+        "bytes": 21596,
+        "mtime_ns": 1792490627502621881,
+        "ctime_ns": 1792490627502621881,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/inference_actor.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/inference_actor.py",
+      "sha256": "7cc812adeab8dc7cb989f9024592767928afa786966b85f3488023fb8d6b34ce",
+      "bytes": 20486,
+      "identity": {
+        "device": 2304,
+        "inode": 81934028,
+        "bytes": 20486,
+        "mtime_ns": 1792490627503870493,
+        "ctime_ns": 1792490627503870493,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/learning_control.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/learning_control.py",
+      "sha256": "29a74b25be391290b07373cdce4680ae7513db31596929f0bc9972aaf0ab220d",
+      "bytes": 4395,
+      "identity": {
+        "device": 2304,
+        "inode": 81934029,
+        "bytes": 4395,
+        "mtime_ns": 1792490627504716864,
+        "ctime_ns": 1792490627504716864,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/learning_exposure.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/learning_exposure.py",
+      "sha256": "30d9191e9fc845d80e52a7a891244fcf0c7041cf60529f6559b15e6d47ac5c7f",
+      "bytes": 9123,
+      "identity": {
+        "device": 2304,
+        "inode": 81934030,
+        "bytes": 9123,
+        "mtime_ns": 1792490627505576099,
+        "ctime_ns": 1792490627505576099,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/loss_kernel.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/loss_kernel.py",
+      "sha256": "23eb8fc0d8409c9f31ef26ec4596da9c2257e3985abbbfa7d5fbdcb337e21f67",
+      "bytes": 9373,
+      "identity": {
+        "device": 2304,
+        "inode": 81934031,
+        "bytes": 9373,
+        "mtime_ns": 1792490627506456774,
+        "ctime_ns": 1792490627506456774,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/main.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/main.py",
+      "sha256": "61fa053eea882e7e9ca1d95cd8dc081c45dec75677b12c51231aa95f51da0282",
+      "bytes": 67287,
+      "identity": {
+        "device": 2304,
+        "inode": 81934032,
+        "bytes": 67287,
+        "mtime_ns": 1792490627507335401,
+        "ctime_ns": 1792490627507335401,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/managed_driver.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/managed_driver.py",
+      "sha256": "05407642f75a5dc883ba7f45512f36711ffb66f29bce41fc860aba182644dc36",
+      "bytes": 5639,
+      "identity": {
+        "device": 2304,
+        "inode": 81934033,
+        "bytes": 5639,
+        "mtime_ns": 1792490627508182572,
+        "ctime_ns": 1792490627508182572,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/managed_measurement.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/managed_measurement.py",
+      "sha256": "9649d0ba199bdc0943202164da7a9058e5d578b9c411ce26a950b2595c7e96e6",
+      "bytes": 11427,
+      "identity": {
+        "device": 2304,
+        "inode": 81934034,
+        "bytes": 11427,
+        "mtime_ns": 1792490627508906799,
+        "ctime_ns": 1792490627508906799,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/metrics_dashboard.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/metrics_dashboard.py",
+      "sha256": "3d1aa1950e6b1c5224ace3aecb9c837e433e5c36941b89465b414749f903da27",
+      "bytes": 236331,
+      "identity": {
+        "device": 2304,
+        "inode": 81934035,
+        "bytes": 236331,
+        "mtime_ns": 1792490627509718674,
+        "ctime_ns": 1792490627509718674,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/metrics_display.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/metrics_display.py",
+      "sha256": "e843a7d77df8bc8b7da7673b60f1088edcf25210277be33d0610485d1fd741ad",
+      "bytes": 25955,
+      "identity": {
+        "device": 2304,
+        "inode": 81934036,
+        "bytes": 25955,
+        "mtime_ns": 1792490627511116823,
+        "ctime_ns": 1792490627511116823,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/model.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/model.py",
+      "sha256": "bcd174f05610c6f773ca8c53f9155206eba4f7b6a11383516ddd71f3b513eeb4",
+      "bytes": 42429,
+      "identity": {
+        "device": 2304,
+        "inode": 81934037,
+        "bytes": 42429,
+        "mtime_ns": 1792490627511953465,
+        "ctime_ns": 1792490627511953465,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/native_sumtree.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/native_sumtree.py",
+      "sha256": "de0900aecd09668dc0551d4ecec118351a1228e2a664bc183c5c06b865e52250",
+      "bytes": 10691,
+      "identity": {
+        "device": 2304,
+        "inode": 81934038,
+        "bytes": 10691,
+        "mtime_ns": 1792490627512782108,
+        "ctime_ns": 1792490627512782108,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/nstep_buffer.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/nstep_buffer.py",
+      "sha256": "e46f03e9a626b3a24dea702344b0bbf050f1fdc5af672fc8fc9d18e6afef74c1",
+      "bytes": 3592,
+      "identity": {
+        "device": 2304,
+        "inode": 81934039,
+        "bytes": 3592,
+        "mtime_ns": 1792490627513607007,
+        "ctime_ns": 1792490627513607007,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/pipeline_telemetry.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/pipeline_telemetry.py",
+      "sha256": "fa866eaaba56883a9df28046238ec0c235248dbf43837496caf40560c0aa69b6",
+      "bytes": 6214,
+      "identity": {
+        "device": 2304,
+        "inode": 81934040,
+        "bytes": 6214,
+        "mtime_ns": 1792490627514683107,
+        "ctime_ns": 1792490627514683107,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/prefetch.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/prefetch.py",
+      "sha256": "02871bc515ba23f8d353131e9b6b6b4e390692803578febee7c8d643dd308a27",
+      "bytes": 15674,
+      "identity": {
+        "device": 2304,
+        "inode": 81934041,
+        "bytes": 15674,
+        "mtime_ns": 1792490627515418662,
+        "ctime_ns": 1792490627515418662,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/priority_phase.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/priority_phase.py",
+      "sha256": "ee3c0d02bc1eab55e92ffd605c3736fe5a0ef905a8a8ee242c687301ea2b7c5b",
+      "bytes": 8049,
+      "identity": {
+        "device": 2304,
+        "inode": 81934042,
+        "bytes": 8049,
+        "mtime_ns": 1792490627516204136,
+        "ctime_ns": 1792490627516204136,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/recomputed_ce_capture.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/recomputed_ce_capture.py",
+      "sha256": "6c3ef3735342295154f24b37f7fe0f54c2f05bd13789629c856214441e087263",
+      "bytes": 26538,
+      "identity": {
+        "device": 2304,
+        "inode": 81934043,
+        "bytes": 26538,
+        "mtime_ns": 1792490627516876715,
+        "ctime_ns": 1792490627516876715,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/rejected_gap_telemetry.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/rejected_gap_telemetry.py",
+      "sha256": "d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd",
+      "bytes": 12216,
+      "identity": {
+        "device": 2304,
+        "inode": 81934044,
+        "bytes": 12216,
+        "mtime_ns": 1792490627517602893,
+        "ctime_ns": 1792490627517602893,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/replay_buffer.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/replay_buffer.py",
+      "sha256": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f",
+      "bytes": 113613,
+      "identity": {
+        "device": 2304,
+        "inode": 81934045,
+        "bytes": 113613,
+        "mtime_ns": 1792490627518311408,
+        "ctime_ns": 1792490627518311408,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/run_telemetry.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/run_telemetry.py",
+      "sha256": "fac30f1f75d4d5272d21b2cdb2eae865aa519e1f344c04b3efbfdd6436a25863",
+      "bytes": 13426,
+      "identity": {
+        "device": 2304,
+        "inode": 81934046,
+        "bytes": 13426,
+        "mtime_ns": 1792490627519621012,
+        "ctime_ns": 1792490627519621012,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/socket_server.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/socket_server.py",
+      "sha256": "46566ea7c654efcde3fe1ddc4a285b7b449e6cae3bc7d6ab1f549fe5264ac077",
+      "bytes": 141180,
+      "identity": {
+        "device": 2304,
+        "inode": 81934047,
+        "bytes": 141180,
+        "mtime_ns": 1792490627520399831,
+        "ctime_ns": 1792490627520399831,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_bank_output.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_bank_output.py",
+      "sha256": "18a551d83503a1ba179e13731a1e7d1041ef74ee8cc3ee9c2239d6bc0b7308e5",
+      "bytes": 10764,
+      "identity": {
+        "device": 2304,
+        "inode": 81934048,
+        "bytes": 10764,
+        "mtime_ns": 1792490627521633595,
+        "ctime_ns": 1792490627521633595,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_bank_persistence.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_bank_persistence.py",
+      "sha256": "773bfdc8a73118258830c85498a4f6f0d7d6a9a2514ce58aad853a49dc38fdc6",
+      "bytes": 17063,
+      "identity": {
+        "device": 2304,
+        "inode": 81934049,
+        "bytes": 17063,
+        "mtime_ns": 1792490627522388222,
+        "ctime_ns": 1792490627522388222,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_dashboard_history.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_dashboard_history.py",
+      "sha256": "cc107d8f4938aea3bea7721b612a5925b233ca9257d473222e3f191319113d1b",
+      "bytes": 4229,
+      "identity": {
+        "device": 2304,
+        "inode": 81934050,
+        "bytes": 4229,
+        "mtime_ns": 1792490627523154721,
+        "ctime_ns": 1792490627523154721,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_direct_replay.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_direct_replay.py",
+      "sha256": "dd3a718e1ebeb50f5ed052ed8cb22643b40de599a923723de975b7d61eb11a7b",
+      "bytes": 9180,
+      "identity": {
+        "device": 2304,
+        "inode": 81934051,
+        "bytes": 9180,
+        "mtime_ns": 1792490627523855075,
+        "ctime_ns": 1792490627523855075,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_exact_inference_graphs.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_exact_inference_graphs.py",
+      "sha256": "bb4570adddbadc75353a2d9b1838e69688cd1d76bbc8ede770ceea4108a73027",
+      "bytes": 18427,
+      "identity": {
+        "device": 2304,
+        "inode": 81934052,
+        "bytes": 18427,
+        "mtime_ns": 1792490627524537542,
+        "ctime_ns": 1792490627524537542,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_experiment_status.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_experiment_status.py",
+      "sha256": "c2f4ecbd7bdc6f466ce7374bd7f9d67e53aa3530150c7a758f8a00584ec246eb",
+      "bytes": 8343,
+      "identity": {
+        "device": 2304,
+        "inode": 81934053,
+        "bytes": 8343,
+        "mtime_ns": 1792490627525166248,
+        "ctime_ns": 1792490627525166248,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_frozen_evaluation.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_frozen_evaluation.py",
+      "sha256": "d8bbb136d80e39185fc48fffd8b7d2ad96ad89572b5ef77b7f267bd2e74fc238",
+      "bytes": 3813,
+      "identity": {
+        "device": 2304,
+        "inode": 81934054,
+        "bytes": 3813,
+        "mtime_ns": 1792490627525916554,
+        "ctime_ns": 1792490627525916554,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_game_journal.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_game_journal.py",
+      "sha256": "a6a5e77c0d50f1e5cfc9a17da84025689406fa98edebe32784637236b5c5f288",
+      "bytes": 11719,
+      "identity": {
+        "device": 2304,
+        "inode": 81934055,
+        "bytes": 11719,
+        "mtime_ns": 1792490627526781325,
+        "ctime_ns": 1792490627526781325,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_inference_actor.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_inference_actor.py",
+      "sha256": "10d76102927f4db4cfedc16f93d95261d99e8d7092ef381c2c06bdc45c830c80",
+      "bytes": 23354,
+      "identity": {
+        "device": 2304,
+        "inode": 81934056,
+        "bytes": 23354,
+        "mtime_ns": 1792490627527605616,
+        "ctime_ns": 1792490627527605616,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_learning_control.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_learning_control.py",
+      "sha256": "df4513e84a0cda72dbd0763b8014b3b6de3bce7eea0e138473cba5618e2c14e1",
+      "bytes": 4800,
+      "identity": {
+        "device": 2304,
+        "inode": 81934057,
+        "bytes": 4800,
+        "mtime_ns": 1792490627528440627,
+        "ctime_ns": 1792490627528440627,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_learning_exposure.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_learning_exposure.py",
+      "sha256": "1bfbb9b2bf1f1ea2692a91db294c303a7b723b0ccd936fa6c1b2dbe8c4d4b784",
+      "bytes": 13437,
+      "identity": {
+        "device": 2304,
+        "inode": 81934058,
+        "bytes": 13437,
+        "mtime_ns": 1792490627529318710,
+        "ctime_ns": 1792490627529318710,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_loss_kernel.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_loss_kernel.py",
+      "sha256": "216861dfaa9bcaa4d9ba2532a40408fe6b9f7832c6ef0da1c043ea30f63b5f2e",
+      "bytes": 17953,
+      "identity": {
+        "device": 2304,
+        "inode": 81934059,
+        "bytes": 17953,
+        "mtime_ns": 1792490627530193849,
+        "ctime_ns": 1792490627530193849,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_managed_driver.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_managed_driver.py",
+      "sha256": "260fe9ce5bed95327102aa037897fdc118c41d6b9b9720b5cb20c61df23c8777",
+      "bytes": 4017,
+      "identity": {
+        "device": 2304,
+        "inode": 81934060,
+        "bytes": 4017,
+        "mtime_ns": 1792490627531042332,
+        "ctime_ns": 1792490627531042332,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_managed_measurement.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_managed_measurement.py",
+      "sha256": "45ba1c1aaf9da7c335d8a159cac844d2ca06761501b67f5cd9bf6d4eea396212",
+      "bytes": 15601,
+      "identity": {
+        "device": 2304,
+        "inode": 81934061,
+        "bytes": 15601,
+        "mtime_ns": 1792490627531753119,
+        "ctime_ns": 1792490627531753119,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_measurement_actor.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_measurement_actor.py",
+      "sha256": "c1d2c2270aaf90c6fce61968bd9b4bffa7bc1a48f61ca8c752e5f29cd5e2abc9",
+      "bytes": 12793,
+      "identity": {
+        "device": 2304,
+        "inode": 81934062,
+        "bytes": 12793,
+        "mtime_ns": 1792490627532484993,
+        "ctime_ns": 1792490627532484993,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_native_batch_update.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_native_batch_update.py",
+      "sha256": "5c1df4edb5d07543936ceb36de0d5b85f2d153b4b7f70a92423f1a73a2a3a82d",
+      "bytes": 9374,
+      "identity": {
+        "device": 2304,
+        "inode": 81934063,
+        "bytes": 9374,
+        "mtime_ns": 1792490627533276100,
+        "ctime_ns": 1792490627533276100,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_native_sumtree.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_native_sumtree.py",
+      "sha256": "83864812b1f1f5fd01585acddba8cfb09f864f79899e2dec283f51bc451ad750",
+      "bytes": 11071,
+      "identity": {
+        "device": 2304,
+        "inode": 81934064,
+        "bytes": 11071,
+        "mtime_ns": 1792490627534007879,
+        "ctime_ns": 1792490627534007879,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_performance.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_performance.py",
+      "sha256": "2127cede9f048c70454e65f51f334894878dc9c165ac2cc2738c053410dfa12a",
+      "bytes": 20556,
+      "identity": {
+        "device": 2304,
+        "inode": 81934065,
+        "bytes": 20556,
+        "mtime_ns": 1792490627534775401,
+        "ctime_ns": 1792490627534775401,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_pipeline_telemetry.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_pipeline_telemetry.py",
+      "sha256": "d691ce4ae5e5655939cb9bcec05ffe8a4a19120aa4bec010bebd11e2d3d1c579",
+      "bytes": 17393,
+      "identity": {
+        "device": 2304,
+        "inode": 81934066,
+        "bytes": 17393,
+        "mtime_ns": 1792490627536085614,
+        "ctime_ns": 1792490627536085614,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_prefetch_cuda.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_prefetch_cuda.py",
+      "sha256": "5e2deeef401aa1d85e8aa81333626fa4501b587d6bb2feb9328be33fb763b742",
+      "bytes": 8482,
+      "identity": {
+        "device": 2304,
+        "inode": 81934067,
+        "bytes": 8482,
+        "mtime_ns": 1792490627536887569,
+        "ctime_ns": 1792490627536887569,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_replay_pressure.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_replay_pressure.py",
+      "sha256": "93fb64f6710f883cdf954ed94366b8752a49f732a8c5c8938e295b081ffe9cd1",
+      "bytes": 5195,
+      "identity": {
+        "device": 2304,
+        "inode": 81934068,
+        "bytes": 5195,
+        "mtime_ns": 1792490627537620243,
+        "ctime_ns": 1792490627537620243,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_run_telemetry.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_run_telemetry.py",
+      "sha256": "8adf9b7ff4b8ad75aed64e04dcc3b5404a73bd702d36855227e37580b48eb4fb",
+      "bytes": 11171,
+      "identity": {
+        "device": 2304,
+        "inode": 81934069,
+        "bytes": 11171,
+        "mtime_ns": 1792490627538348470,
+        "ctime_ns": 1792490627538348470,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/test_smoke.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/test_smoke.py",
+      "sha256": "519796d8ece3d2a51870a9bc46bb02cd995abaf9d045c335de76dd86c4a54b95",
+      "bytes": 61567,
+      "identity": {
+        "device": 2304,
+        "inode": 81934070,
+        "bytes": 61567,
+        "mtime_ns": 1792490627539104697,
+        "ctime_ns": 1792490627539104697,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/dqn/training.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/dqn/training.py",
+      "sha256": "90b847856f810cb4f52513a4bd0625b2d15d4801107bff398060faae25bc4be4",
+      "bytes": 35009,
+      "identity": {
+        "device": 2304,
+        "inode": 81934071,
+        "bytes": 35009,
+        "mtime_ns": 1792490627539871355,
+        "ctime_ns": 1792490627539871355,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/logic.lua": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/logic.lua",
+      "sha256": "e876f6269a39dbe95163da1b890017f4e067460bd087f50eaf099e27f9c58d3e",
+      "bytes": 640,
+      "identity": {
+        "device": 2304,
+        "inode": 81934072,
+        "bytes": 640,
+        "mtime_ns": 1792490627540614398,
+        "ctime_ns": 1792490627540614398,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/main.lua": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/main.lua",
+      "sha256": "77074b4e85384f7197905c6155294d40d9ed6df8a8abdd4878a0f6fc5580ded5",
+      "bytes": 175001,
+      "identity": {
+        "device": 2304,
+        "inode": 81934073,
+        "bytes": 175001,
+        "mtime_ns": 1792490627541240544,
+        "ctime_ns": 1792490627541240544,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/robotron_host_wait.c": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/robotron_host_wait.c",
+      "sha256": "a0d288c7f562d74ced0ef826a05ebd97ba2c37b19fde1e91d3188a6bad66980d",
+      "bytes": 1525,
+      "identity": {
+        "device": 2304,
+        "inode": 81934074,
+        "bytes": 1525,
+        "mtime_ns": 1792490627542157091,
+        "ctime_ns": 1792490627542157091,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/robotron_socket_wait.c": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/robotron_socket_wait.c",
+      "sha256": "fc9ed2719839f72e36346d0886e5b32116a167d49414b506dc8b5f4252464cfc",
+      "bytes": 5245,
+      "identity": {
+        "device": 2304,
+        "inode": 81934075,
+        "bytes": 5245,
+        "mtime_ns": 1792490627542946982,
+        "ctime_ns": 1792490627542946982,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/startup_acceptance_tap_v1.lua": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/startup_acceptance_tap_v1.lua",
+      "sha256": "ef21dcf03c455d71c99434d543833b2a68af3f18a53793e7852b94b777c36b02",
+      "bytes": 10101,
+      "identity": {
+        "device": 2304,
+        "inode": 81934076,
+        "bytes": 10101,
+        "mtime_ns": 1792490627543712681,
+        "ctime_ns": 1792490627543712681,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/startup_prefix_v1.lua": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/startup_prefix_v1.lua",
+      "sha256": "07fda72281355fd6bd78439533b337c0a8aea66b77b7c53e8085483ce09d3d61",
+      "bytes": 7999,
+      "identity": {
+        "device": 2304,
+        "inode": 81934077,
+        "bytes": 7999,
+        "mtime_ns": 1792490627544534700,
+        "ctime_ns": 1792490627544534700,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/startup_server_prefix_v1.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/startup_server_prefix_v1.py",
+      "sha256": "77992b95bac8da672e3b24e1f1cf2d7ea2a65943ee0785597d3c96867c072a37",
+      "bytes": 17944,
+      "identity": {
+        "device": 2304,
+        "inode": 81934078,
+        "bytes": 17944,
+        "mtime_ns": 1792490627545322095,
+        "ctime_ns": 1792490627545322095,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "Scripts/state.lua": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/Scripts/state.lua",
+      "sha256": "e3d5a2b6844b810e561bd9a930eab4fd893d2c50f04d609099e8c431d53d30d9",
+      "bytes": 1378,
+      "identity": {
+        "device": 2304,
+        "inode": 81934079,
+        "bytes": 1378,
+        "mtime_ns": 1792490627546169809,
+        "ctime_ns": 1792490627546169809,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/analyze_learning_games.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/analyze_learning_games.py",
+      "sha256": "b92dc8e0e4557e5bf299cf75152bd2469bf488ae5e5ed20a503fc069f5c64cac",
+      "bytes": 18451,
+      "identity": {
+        "device": 2304,
+        "inode": 81934081,
+        "bytes": 18451,
+        "mtime_ns": 1792490627547003988,
+        "ctime_ns": 1792490627547003988,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/benchmark_cuda_graph_coverage.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/benchmark_cuda_graph_coverage.py",
+      "sha256": "0c033d748bee5f10a9dc05b40ad394ebed8fc657e569a3f39c397bf6b5fcafd1",
+      "bytes": 16660,
+      "identity": {
+        "device": 2304,
+        "inode": 81934082,
+        "bytes": 16660,
+        "mtime_ns": 1792490627547794455,
+        "ctime_ns": 1792490627547794455,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/benchmark_cuda_graph_inference.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/benchmark_cuda_graph_inference.py",
+      "sha256": "2ba16ec1dadd093dbb68df8fca487f7ab94aae15679601432743573e43fbc94b",
+      "bytes": 23715,
+      "identity": {
+        "device": 2304,
+        "inode": 81934083,
+        "bytes": 23715,
+        "mtime_ns": 1792490627548556858,
+        "ctime_ns": 1792490627548556858,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/benchmark_replay_gather.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/benchmark_replay_gather.py",
+      "sha256": "430862116d634f6a0dc6d61f38afd12b921fe5f6f3f5c1ce2d585141caab971f",
+      "bytes": 6359,
+      "identity": {
+        "device": 2304,
+        "inode": 81934084,
+        "bytes": 6359,
+        "mtime_ns": 1792490627549255292,
+        "ctime_ns": 1792490627549255292,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/benchmark_sidecar_inference.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/benchmark_sidecar_inference.py",
+      "sha256": "39d90c6dc70d69a4fef4c7244868819ddd06f7cc4283998d821632cf0ce2bde5",
+      "bytes": 16421,
+      "identity": {
+        "device": 2304,
+        "inode": 81934085,
+        "bytes": 16421,
+        "mtime_ns": 1792490627549974463,
+        "ctime_ns": 1792490627549974463,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/build_host_wait.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/build_host_wait.py",
+      "sha256": "bd30b340ee196c8d440615364d59310c6b0bcf92e772d69d864d17ae55c996c9",
+      "bytes": 3634,
+      "identity": {
+        "device": 2304,
+        "inode": 81934086,
+        "bytes": 3634,
+        "mtime_ns": 1792490627550757026,
+        "ctime_ns": 1792490627550757026,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/build_socket_wait.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/build_socket_wait.py",
+      "sha256": "69f0bd1b8194aa375af2ca6cca6431a28bdbd86ff0416832b0e1d457e61a54cc",
+      "bytes": 3490,
+      "identity": {
+        "device": 2304,
+        "inode": 81934087,
+        "bytes": 3490,
+        "mtime_ns": 1792490627551652965,
+        "ctime_ns": 1792490627551652965,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/checkpoint_at_frame.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/checkpoint_at_frame.py",
+      "sha256": "5d8d7ab2456f2d6a8ad89327596cec654feae9a66db98190a07c87063a3be2b1",
+      "bytes": 3742,
+      "identity": {
+        "device": 2304,
+        "inode": 81934088,
+        "bytes": 3742,
+        "mtime_ns": 1792490627552525672,
+        "ctime_ns": 1792490627552525672,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/compare_frozen_measurements.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/compare_frozen_measurements.py",
+      "sha256": "53f744737a722fec2760c0001dc5747b19b05e07a1de8699764c781f04da6be0",
+      "bytes": 16688,
+      "identity": {
+        "device": 2304,
+        "inode": 81934089,
+        "bytes": 16688,
+        "mtime_ns": 1792490627553320491,
+        "ctime_ns": 1792490627553320491,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/compare_sidecar_measurements.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/compare_sidecar_measurements.py",
+      "sha256": "7779b59f088b9879021a821bc3d05def20f35255a34fecb61c7dd2a206d3bae2",
+      "bytes": 10212,
+      "identity": {
+        "device": 2304,
+        "inode": 81934090,
+        "bytes": 10212,
+        "mtime_ns": 1792490627554148845,
+        "ctime_ns": 1792490627554148845,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/confirmed_terminal_evidence.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/confirmed_terminal_evidence.py",
+      "sha256": "2416a19e63d9bcea7521795c139bbde269dc229124a1d34c5fc2a6a4d4aa6502",
+      "bytes": 9396,
+      "identity": {
+        "device": 2304,
+        "inode": 81934091,
+        "bytes": 9396,
+        "mtime_ns": 1792490627554939920,
+        "ctime_ns": 1792490627554939920,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/cpu_affinity_pilot.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/cpu_affinity_pilot.py",
+      "sha256": "ee1fa4f3018eccc479cfe4e484883505115aaeeb8778801657d2a37af6b071f0",
+      "bytes": 20930,
+      "identity": {
+        "device": 2304,
+        "inode": 81934092,
+        "bytes": 20930,
+        "mtime_ns": 1792490627555730675,
+        "ctime_ns": 1792490627555730675,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/inference_worker_affinity.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/inference_worker_affinity.py",
+      "sha256": "dc6f18fe418cd19b0f8bd4c915fbfdc0ac9c4e2433bd6e98dafe096d2e7df25f",
+      "bytes": 33475,
+      "identity": {
+        "device": 2304,
+        "inode": 81934093,
+        "bytes": 33475,
+        "mtime_ns": 1792490627556581270,
+        "ctime_ns": 1792490627556581270,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/manage_learning.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/manage_learning.py",
+      "sha256": "3dc81cb40b9c4794158f4ef3d2e5974c50949665ce1c6988f1d331bcddf4d938",
+      "bytes": 3824,
+      "identity": {
+        "device": 2304,
+        "inode": 81934094,
+        "bytes": 3824,
+        "mtime_ns": 1792490627557400921,
+        "ctime_ns": 1792490627557400921,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/observe_learning.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/observe_learning.py",
+      "sha256": "42c84865b09c5d8b0bd064b210c6498adb5503364d480f8fee2daf649b639bc2",
+      "bytes": 873,
+      "identity": {
+        "device": 2304,
+        "inode": 81934095,
+        "bytes": 873,
+        "mtime_ns": 1792490627558176252,
+        "ctime_ns": 1792490627558176252,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/parallel_state_fill_trial.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/parallel_state_fill_trial.py",
+      "sha256": "5555017afd066300554cc11097a5be3dbcfde956488d29d3e933b1421f59c54f",
+      "bytes": 41220,
+      "identity": {
+        "device": 2304,
+        "inode": 81934096,
+        "bytes": 41220,
+        "mtime_ns": 1792490627558963198,
+        "ctime_ns": 1792490627558963198,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/post_continuity_audit_completed_leg.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/post_continuity_audit_completed_leg.py",
+      "sha256": "9bcdfaa19bafae20d914072c2bd4680cfb16af1dc03fdbb3cab3c573871e259b",
+      "bytes": 37055,
+      "identity": {
+        "device": 2304,
+        "inode": 81934097,
+        "bytes": 37055,
+        "mtime_ns": 1792490627559817089,
+        "ctime_ns": 1792490627559817089,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/post_continuity_window.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/post_continuity_window.py",
+      "sha256": "f44f392188bcc6924baab87b2762d6a80879331078f76495bb4c00686b8b65f3",
+      "bytes": 11568,
+      "identity": {
+        "device": 2304,
+        "inode": 81934098,
+        "bytes": 11568,
+        "mtime_ns": 1792490627560662788,
+        "ctime_ns": 1792490627560662788,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/prepare_post_continuity_cpu_job.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/prepare_post_continuity_cpu_job.py",
+      "sha256": "f5244ce87b2f45fe3389e6ead1d32e38d4f605d8f4e1d1a139a885ec321c8191",
+      "bytes": 9481,
+      "identity": {
+        "device": 2304,
+        "inode": 81934099,
+        "bytes": 9481,
+        "mtime_ns": 1792490627561472999,
+        "ctime_ns": 1792490627561472999,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/preview_socket_recovery.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/preview_socket_recovery.py",
+      "sha256": "116c661b5f98c438a3a12549faa0ab45181eaf76ea04852f8ab410f02b68f174",
+      "bytes": 9405,
+      "identity": {
+        "device": 2304,
+        "inode": 81934100,
+        "bytes": 9405,
+        "mtime_ns": 1792490627562267946,
+        "ctime_ns": 1792490627562267946,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/probe_checkpoint_cpu.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/probe_checkpoint_cpu.py",
+      "sha256": "98e9ac57159865a9652edfc28cbbddc54022ff9dbeeac633fe76bb951f182dbc",
+      "bytes": 12208,
+      "identity": {
+        "device": 2304,
+        "inode": 81934101,
+        "bytes": 12208,
+        "mtime_ns": 1792490627563062189,
+        "ctime_ns": 1792490627563062189,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/protect_quality_winner.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/protect_quality_winner.py",
+      "sha256": "e45965d3057ec8542ab2b05fd2250209e53986a0977fbb1294aa54f64a11f0f0",
+      "bytes": 9580,
+      "identity": {
+        "device": 2304,
+        "inode": 81934102,
+        "bytes": 9580,
+        "mtime_ns": 1792490627563828175,
+        "ctime_ns": 1792490627563828175,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/render_learning_progress.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/render_learning_progress.py",
+      "sha256": "5960cf631f75026b98e5218ba2d4efa15ecbf50b6f72d63cf13ea365b54729ea",
+      "bytes": 59772,
+      "identity": {
+        "device": 2304,
+        "inode": 81934103,
+        "bytes": 59772,
+        "mtime_ns": 1792490627564615698,
+        "ctime_ns": 1792490627564615698,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/restore_serial_after_parallel_trial.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/restore_serial_after_parallel_trial.py",
+      "sha256": "c115253a36d2aca082da28520d733483cca9ecb3a59b65f97840ba5a3e39b7c0",
+      "bytes": 23913,
+      "identity": {
+        "device": 2304,
+        "inode": 81934104,
+        "bytes": 23913,
+        "mtime_ns": 1792490627565454293,
+        "ctime_ns": 1792490627565454293,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/run_frozen_sidecar.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/run_frozen_sidecar.py",
+      "sha256": "966516ef448e33917bd5a1d53dacd8fde06df3fb3a596164019b5a80ee9552be",
+      "bytes": 35573,
+      "identity": {
+        "device": 2304,
+        "inode": 81934105,
+        "bytes": 35573,
+        "mtime_ns": 1792490627566354712,
+        "ctime_ns": 1792490627566354712,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/run_quality_campaign.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/run_quality_campaign.py",
+      "sha256": "6c1699bf038659f822850fcc77dbd813ecf80b77a9c4a3bdc719ed7e646f52a3",
+      "bytes": 23475,
+      "identity": {
+        "device": 2304,
+        "inode": 81934106,
+        "bytes": 23475,
+        "mtime_ns": 1792490627567196123,
+        "ctime_ns": 1792490627567196123,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/sidecar_boot.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/sidecar_boot.py",
+      "sha256": "f06492e6d96cd472d9f0073b4c643e820bcacb6a96c5f542a59d6b6874e62362",
+      "bytes": 16028,
+      "identity": {
+        "device": 2304,
+        "inode": 81934107,
+        "bytes": 16028,
+        "mtime_ns": 1792490627567953310,
+        "ctime_ns": 1792490627567953310,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/smoke_agent_cuda_graphs.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/smoke_agent_cuda_graphs.py",
+      "sha256": "874d5f527a4e53c9859b5914678d64a4cebc4b5a62eea93836bceaed4c1ca18a",
+      "bytes": 18851,
+      "identity": {
+        "device": 2304,
+        "inode": 81934108,
+        "bytes": 18851,
+        "mtime_ns": 1792490627568705504,
+        "ctime_ns": 1792490627568705504,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/smoke_select_wait_mame.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/smoke_select_wait_mame.py",
+      "sha256": "919c1235ee60672cb41fd7a4f34896d823ada9f148758b783b3b8bc646c416f3",
+      "bytes": 16139,
+      "identity": {
+        "device": 2304,
+        "inode": 81934109,
+        "bytes": 16139,
+        "mtime_ns": 1792490627569359491,
+        "ctime_ns": 1792490627569359491,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/start_managed_training.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/start_managed_training.py",
+      "sha256": "ee061bfee0e60c9a1272fd038957029322ea1c0d08966898d2026397f2309493",
+      "bytes": 9307,
+      "identity": {
+        "device": 2304,
+        "inode": 81934110,
+        "bytes": 9307,
+        "mtime_ns": 1792490627570020997,
+        "ctime_ns": 1792490627570020997,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_agent_cuda_graph_smoke.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_agent_cuda_graph_smoke.py",
+      "sha256": "a680bdefa90a34f3881d6b3fbeffdca96f3c7b4eee65fd7b227563664198fad2",
+      "bytes": 1321,
+      "identity": {
+        "device": 2304,
+        "inode": 81934111,
+        "bytes": 1321,
+        "mtime_ns": 1792490627570741576,
+        "ctime_ns": 1792490627570741576,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_analyze_learning_games.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_analyze_learning_games.py",
+      "sha256": "4de0e24a32fdd022e2ced84710538ebcca1c06b2ef9ffe85245d3c57d214b573",
+      "bytes": 4615,
+      "identity": {
+        "device": 2304,
+        "inode": 81934112,
+        "bytes": 4615,
+        "mtime_ns": 1792490627571591755,
+        "ctime_ns": 1792490627571591755,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_benchmark_sidecar_inference.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_benchmark_sidecar_inference.py",
+      "sha256": "f7bcf825f14bf6f9da768d6b8e31995d49f70efa93e32c314f2bbbde175c5a12",
+      "bytes": 5213,
+      "identity": {
+        "device": 2304,
+        "inode": 81934113,
+        "bytes": 5213,
+        "mtime_ns": 1792490627572415437,
+        "ctime_ns": 1792490627572415437,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_compare_frozen_measurements.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_compare_frozen_measurements.py",
+      "sha256": "ba4dc83aa71449d3ca0f581b67fb1dd386adbd9a36e91bf5d737b9e0e1777131",
+      "bytes": 5051,
+      "identity": {
+        "device": 2304,
+        "inode": 81934114,
+        "bytes": 5051,
+        "mtime_ns": 1792490627573219536,
+        "ctime_ns": 1792490627573219536,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_compare_sidecar_measurements.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_compare_sidecar_measurements.py",
+      "sha256": "4563918d5798e6818c19b02b4e3b6aeb2d3ad0ef0a09643a82bc82725f9a4341",
+      "bytes": 11098,
+      "identity": {
+        "device": 2304,
+        "inode": 81934115,
+        "bytes": 11098,
+        "mtime_ns": 1792490627573993747,
+        "ctime_ns": 1792490627573993747,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_confirmed32m_campaign.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_confirmed32m_campaign.py",
+      "sha256": "ed9b3225b2a45b3fe5ef34b99054bd29c77a5bd30bfc8c7ef14c111783f03caf",
+      "bytes": 8356,
+      "identity": {
+        "device": 2304,
+        "inode": 81934116,
+        "bytes": 8356,
+        "mtime_ns": 1792490627574827190,
+        "ctime_ns": 1792490627574827190,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_confirmed_quality_readback.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_confirmed_quality_readback.py",
+      "sha256": "0101ee1d1ac1acca77b81180f4f3165b50b788ef1ead22c97efc85bb2bd193f2",
+      "bytes": 2371,
+      "identity": {
+        "device": 2304,
+        "inode": 81934117,
+        "bytes": 2371,
+        "mtime_ns": 1792490627575621849,
+        "ctime_ns": 1792490627575621849,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_cpu_affinity_pilot.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_cpu_affinity_pilot.py",
+      "sha256": "2544711ac3467a3a45cd31d596252bbd1507a438c371cfeae827a9bc00146d90",
+      "bytes": 7694,
+      "identity": {
+        "device": 2304,
+        "inode": 81934118,
+        "bytes": 7694,
+        "mtime_ns": 1792490627576424380,
+        "ctime_ns": 1792490627576424380,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_cuda_graph_coverage.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_cuda_graph_coverage.py",
+      "sha256": "d1671d53a50aae8f3b55d1099349aa832657ffee2ed4ccdc3029978a76052cf2",
+      "bytes": 2813,
+      "identity": {
+        "device": 2304,
+        "inode": 81934119,
+        "bytes": 2813,
+        "mtime_ns": 1792490627577221246,
+        "ctime_ns": 1792490627577221246,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_cuda_graph_inference_prototype.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_cuda_graph_inference_prototype.py",
+      "sha256": "2f4434d21ad7846f5f7c100b8852ad4b7296233a880b6eedd2b7a1e15a9a95c8",
+      "bytes": 5942,
+      "identity": {
+        "device": 2304,
+        "inode": 81934120,
+        "bytes": 5942,
+        "mtime_ns": 1792490627578013409,
+        "ctime_ns": 1792490627578013409,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_eval_capacity.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_eval_capacity.py",
+      "sha256": "d7bdf7c6b065aa20b2db3fbc066b64cb7de631d28d0a11737673e31c5fc20c7a",
+      "bytes": 14415,
+      "identity": {
+        "device": 2304,
+        "inode": 81934121,
+        "bytes": 14415,
+        "mtime_ns": 1792490627578838052,
+        "ctime_ns": 1792490627578838052,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_fleet_actor_discovery.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_fleet_actor_discovery.py",
+      "sha256": "65f76c0b037f54c99f1f2d8741edfcb5ae4f4b8640176ecd5c425902884d3612",
+      "bytes": 7122,
+      "identity": {
+        "device": 2304,
+        "inode": 81934122,
+        "bytes": 7122,
+        "mtime_ns": 1792490627579995848,
+        "ctime_ns": 1792490627579995848,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_fleet_ownership.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_fleet_ownership.py",
+      "sha256": "62924a15c896c2d4e0e72d0a729c63b822cfe114b64026295972e6d34af7eee6",
+      "bytes": 3402,
+      "identity": {
+        "device": 2304,
+        "inode": 81934123,
+        "bytes": 3402,
+        "mtime_ns": 1792490627581147820,
+        "ctime_ns": 1792490627581147820,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_frozen_sidecar.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_frozen_sidecar.py",
+      "sha256": "f2ac807735d551b84873e8df8a490ce9c9d5b6bf11d93841172aae7d9bed1452",
+      "bytes": 33297,
+      "identity": {
+        "device": 2304,
+        "inode": 81934124,
+        "bytes": 33297,
+        "mtime_ns": 1792490627582014639,
+        "ctime_ns": 1792490627582014639,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_host_wait.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_host_wait.py",
+      "sha256": "f22ed2f2e8113584e18797edad32a614f4e0ffa67b4b95a0541573262d267e29",
+      "bytes": 5837,
+      "identity": {
+        "device": 2304,
+        "inode": 81934125,
+        "bytes": 5837,
+        "mtime_ns": 1792490627582838162,
+        "ctime_ns": 1792490627582838162,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_inference_batch_wait_override.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_inference_batch_wait_override.py",
+      "sha256": "ea9fd310f39558cb77b37337860a21f65066078d8b05883ec63c9a3bcce6c1eb",
+      "bytes": 3794,
+      "identity": {
+        "device": 2304,
+        "inode": 81934126,
+        "bytes": 3794,
+        "mtime_ns": 1792490627583562165,
+        "ctime_ns": 1792490627583562165,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_inference_deadline_policy.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_inference_deadline_policy.py",
+      "sha256": "f8fb9bd8df71ff1382d3f32bb386be212e3a43d0c4a2a648cff80087c98b2c70",
+      "bytes": 3803,
+      "identity": {
+        "device": 2304,
+        "inode": 81934127,
+        "bytes": 3803,
+        "mtime_ns": 1792490627584258487,
+        "ctime_ns": 1792490627584258487,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_inference_worker_affinity.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_inference_worker_affinity.py",
+      "sha256": "c354da2ad2ce3bcd8bd23fa36cee7de4821eae8312137bf7ea6802d38fb916b1",
+      "bytes": 13757,
+      "identity": {
+        "device": 2304,
+        "inode": 81934128,
+        "bytes": 13757,
+        "mtime_ns": 1792490627585026106,
+        "ctime_ns": 1792490627585026106,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_parallel_state_fill_trial.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_parallel_state_fill_trial.py",
+      "sha256": "ac7bf87768853a3c10f9378cbfb71df9704d71464a614711939c38232eac1772",
+      "bytes": 41729,
+      "identity": {
+        "device": 2304,
+        "inode": 81934129,
+        "bytes": 41729,
+        "mtime_ns": 1792490627585866909,
+        "ctime_ns": 1792490627585866909,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_post_continuity_audit_completed_leg.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_post_continuity_audit_completed_leg.py",
+      "sha256": "c4756ae3b4b4d8623b48a7b7d056f676eb50ee0e3daee6587bc36aa49d1f5ab0",
+      "bytes": 5205,
+      "identity": {
+        "device": 2304,
+        "inode": 81934130,
+        "bytes": 5205,
+        "mtime_ns": 1792490627586799232,
+        "ctime_ns": 1792490627586799232,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_post_continuity_window.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_post_continuity_window.py",
+      "sha256": "d148cf3714d7b2855eb40dce4eb20a7434042ec044df05bc6f84dfdebcc7c0cc",
+      "bytes": 3592,
+      "identity": {
+        "device": 2304,
+        "inode": 81934131,
+        "bytes": 3592,
+        "mtime_ns": 1792490627587699395,
+        "ctime_ns": 1792490627587699395,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_protect_quality_winner.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_protect_quality_winner.py",
+      "sha256": "ddc57247570e96bce4956cdf77cf1a03ffdb9996b9e81b93216a51f178ef8df7",
+      "bytes": 10567,
+      "identity": {
+        "device": 2304,
+        "inode": 81934132,
+        "bytes": 10567,
+        "mtime_ns": 1792490627588523622,
+        "ctime_ns": 1792490627588523622,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_restore_serial_after_parallel_trial.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_restore_serial_after_parallel_trial.py",
+      "sha256": "6fa41028b7bac340f49c028f4b2135ac0506892712146ed5cabc36396c5a796e",
+      "bytes": 15055,
+      "identity": {
+        "device": 2304,
+        "inode": 81934133,
+        "bytes": 15055,
+        "mtime_ns": 1792490627589271017,
+        "ctime_ns": 1792490627589271017,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_run_quality_campaign.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_run_quality_campaign.py",
+      "sha256": "19eb0e633555bb01a1ed5654f4bd35b2ab1c1973d2bd2425204d0c89a59591f9",
+      "bytes": 20423,
+      "identity": {
+        "device": 2304,
+        "inode": 81934134,
+        "bytes": 20423,
+        "mtime_ns": 1792490627589946123,
+        "ctime_ns": 1792490627589946123,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_select_wait.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_select_wait.py",
+      "sha256": "3b67185fcf72daff6d31f2e7d54a82943a4b4aea955a6476cf982cb9d3bf5477",
+      "bytes": 19303,
+      "identity": {
+        "device": 2304,
+        "inode": 81934135,
+        "bytes": 19303,
+        "mtime_ns": 1792490627590637773,
+        "ctime_ns": 1792490627590637773,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_sidecar_boot.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_sidecar_boot.py",
+      "sha256": "3db989cd2d324d8bbe701298e05844c1dd7c9833a19d912148661aa83f56ffe8",
+      "bytes": 13669,
+      "identity": {
+        "device": 2304,
+        "inode": 81934136,
+        "bytes": 13669,
+        "mtime_ns": 1792490627591512080,
+        "ctime_ns": 1792490627591512080,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_socket_recovery_proposal.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_socket_recovery_proposal.py",
+      "sha256": "bc27b6dedf4ef34c3b19cc2363bdf1f80837054fa113ba33356ad641ca5fa04e",
+      "bytes": 17002,
+      "identity": {
+        "device": 2304,
+        "inode": 81934137,
+        "bytes": 17002,
+        "mtime_ns": 1792490627592429492,
+        "ctime_ns": 1792490627592429492,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_socket_wait.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_socket_wait.py",
+      "sha256": "329a66f02549f1152f8f515fbf3b7eb0b426d911de677d58003bf9ba0396732f",
+      "bytes": 12700,
+      "identity": {
+        "device": 2304,
+        "inode": 81934138,
+        "bytes": 12700,
+        "mtime_ns": 1792490627593175382,
+        "ctime_ns": 1792490627593175382,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_start_managed_training.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_start_managed_training.py",
+      "sha256": "61e5e79ff16247f5558b1e70c5e4d8d19d6718ea884a1fe3224dfc5df170e1a5",
+      "bytes": 5706,
+      "identity": {
+        "device": 2304,
+        "inode": 81934139,
+        "bytes": 5706,
+        "mtime_ns": 1792490627594000345,
+        "ctime_ns": 1792490627594000345,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/test_watch_original_quality_audits.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/test_watch_original_quality_audits.py",
+      "sha256": "6ccf29ddba24c0eb53b83db86aae35c92eb9bca36c8e83590e58a3c72ed49416",
+      "bytes": 2101,
+      "identity": {
+        "device": 2304,
+        "inode": 81934140,
+        "bytes": 2101,
+        "mtime_ns": 1792490627594751964,
+        "ctime_ns": 1792490627594751964,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/tune_batch.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/tune_batch.py",
+      "sha256": "d46770f916ce6cfcb3a8b168f3c8d2f1918b00dd3ff201f9b30d75b208398a25",
+      "bytes": 6857,
+      "identity": {
+        "device": 2304,
+        "inode": 81934141,
+        "bytes": 6857,
+        "mtime_ns": 1792490627595391710,
+        "ctime_ns": 1792490627595391710,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "tools/watch_original_quality_audits.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/evaluation_startup_proposal/startup-diagnostic-profile02/Robotron/tools/watch_original_quality_audits.py",
+      "sha256": "878d5db4cd2f43c830dc25ae6c0c23e5a6f0bd14ee46630ca66e421f8901c2a0",
+      "bytes": 8089,
+      "identity": {
+        "device": 2304,
+        "inode": 81934142,
+        "bytes": 8089,
+        "mtime_ns": 1792490627596149537,
+        "ctime_ns": 1792490627596149537,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "changed_parent_files": [
+    "Scripts/dqn/socket_server.py",
+    "Scripts/main.lua"
+  ],
+  "added_files": [
+    "Scripts/startup_acceptance_tap_v1.lua",
+    "Scripts/startup_prefix_v1.lua",
+    "Scripts/startup_server_prefix_v1.py"
+  ],
+  "unchanged_parent_files": 121,
+  "Lua_exact_raw_prefix_reversible": true,
+  "Lua_exact_original_reversible": true,
+  "server_entire_operational_AST_preserved": true,
+  "game_journal_and_measurement_byte_identical": true,
+  "tap_package_integration_present": true,
+  "tap_runtime_integration_present": false,
+  "production_changed": false,
+  "current_cohort_altered": false,
+  "launch_selected": false,
+  "protocol_selected": false,
+  "installed_binary_ABI_proven": false,
+  "real_ROM_start_proven": false,
+  "quality_qualified": false,
+  "learning_speed_gain_verified": false,
+  "remaining_required_work": [
+    "New runtime/launcher source versions bound to this exact126 manifest",
+    "Collect and independently join raw Lua/server/tap evidence, including every invalid/partial prefix",
+    "Real MAME ABI and loaded-byte proof after original current study/review closes and winner protection",
+    "First-start certification and a prospective identical-role quality protocol before any eligibility change"
+  ]
+}

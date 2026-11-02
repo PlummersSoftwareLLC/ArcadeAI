@@ -1,0 +1,80 @@
+{
+  "schema": "robotron-closed-job-fingerprint-shape-reference-v1",
+  "scope": "Only authentic closed job-PIN/report.job_file leaves are read by future tests. Embedded paths are strings, never opened. This is not a future actual case or numeric acceptance; original d203 wrapperFAIL is preserved.",
+  "job_pin": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/LR25-continuation-capture-trial01-20261018/candidate-CPU-job.json",
+    "sha256": "e187d06bb2e326906616026bdc23598dc53c02a5b5b0de18169291e5d3cd35a7",
+    "bytes": 23189,
+    "identity": {
+      "device": 2304,
+      "inode": 81292449,
+      "bytes": 23189,
+      "mtime_ns": 1792328595293613077,
+      "ctime_ns": 1792328595293613077,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "report_job_file": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/LR25-continuation-capture-trial01-20261018/candidate-CPU-job.json",
+    "sha256": "e187d06bb2e326906616026bdc23598dc53c02a5b5b0de18169291e5d3cd35a7",
+    "device": 2304,
+    "inode": 81292449,
+    "bytes": 23189,
+    "mtime_ns": 1792328595293613077,
+    "ctime_ns": 1792328595293613077,
+    "mode": "0o444",
+    "uid": 1001,
+    "nlink": 1
+  },
+  "closed_original_report_status": "PASS",
+  "closed_original_wrapper_status": "FAIL",
+  "closed_provenance": {
+    "capture": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/LR25-continuation-capture-trial01-20261018/result.json",
+      "sha256": "e21df01b2133f0b4c7cd27c890524e7df0faad17b93c1fb2dd14e29f0aab6aaa",
+      "bytes": 11028,
+      "identity": {
+        "device": 2304,
+        "inode": 81292451,
+        "bytes": 11028,
+        "mtime_ns": 1792328595296976610,
+        "ctime_ns": 1792328595296976610,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "report": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/LR25-continuation-candidate-CPU-original01-root-execution-20261018/candidate-CPU-report-readonly.json",
+      "sha256": "c9f04209979e0574d0ae1d8f422c5bf75080d251aaf169934460c33dd0f5b2e9",
+      "bytes": 68012,
+      "identity": {
+        "device": 2304,
+        "inode": 81292589,
+        "bytes": 68012,
+        "mtime_ns": 1792328711297725352,
+        "ctime_ns": 1792328711297725352,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "original_FAIL_release": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/LR25-continuation-candidate-CPU-original01-root-execution-20261018/root-original-CPU-result-and-owned-release.json",
+      "sha256": "cc2850f8a85fa6cc03c6bc1d3fb817d601b0cf0974a85c16c776d86b60ca304f",
+      "bytes": 5936,
+      "identity": {
+        "device": 2304,
+        "inode": 81292604,
+        "bytes": 5936,
+        "mtime_ns": 1792328711344339889,
+        "ctime_ns": 1792328711344339889,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  }
+}

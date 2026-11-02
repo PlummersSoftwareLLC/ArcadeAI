@@ -1,0 +1,14 @@
+{
+  "schema": "robotron-priority-metric-start-v1",
+  "phase_id": "ROOT_CHOSEN_UNIQUE_FUTURE_PHASE",
+  "metric": "kl",
+  "action": "start",
+  "previous_metric": "unknown",
+  "checkpoint": {
+    "path": null,
+    "sha256": null,
+    "bytes": null
+  },
+  "model_dir": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn",
+  "root_precommit_sha256": null
+}

@@ -1,0 +1,148 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/accepted-preview-declared-subset-source-original01/declared_preview_subset_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/accepted-RAW-preview-declared-subset-source-original01/declared_raw_preview_subset_v1.py
+@@ -1,4 +1,4 @@
+-"""Accepted-preview declared-subset source definitions; default CLI is inert.
++"""Accepted RAW-preview declared-subset definitions; default CLI is inert.
+ 
+ No batches, stops, installs, retries or binding publication. INPUT remains the
+ cached supervisor's original192 oldLua/env0. Current OUTPUT is separate and may
+@@ -8,6 +8,9 @@
+ import hashlib
+ import json
+ import os
++
++RAW_TARGET_SHA = 'cbd8109f8d62f65c26c38ea91c73b3285fda0812895ee5e5fbf4e8565afedbd1'
++RAW_WIRE_POLICY = dict(format=1, name='raw_rgb565be', RLE_enabled=False)
+ 
+ 
+ def require(value, message):
+@@ -21,7 +24,9 @@
+     return set(values)
+ 
+ 
+-def source_contracts(manifest, overrides):
++def source_contracts(manifest, overrides, target_lua):
++    require(target_lua['sha256'] == RAW_TARGET_SHA and target_lua != manifest['target_lua'],
++            'Separate accepted RAW target required; cached INPUT507 remains immutable')
+     selected = subset(overrides)
+     require(set(manifest['slots']) == {str(v) for v in range(192)}, 'Original192 INPUT required')
+     result = {}
+@@ -29,14 +34,14 @@
+         require(row['expected_environment']['ROBOTRON_EVAL_MODE'] == '0'
+                 and type(row['eval']) is bool, 'Cached original INPUT0 and actual role required')
+         upgraded = int(key) in selected
+-        source = manifest['target_lua'] if upgraded else manifest['original_lua']
++        source = target_lua if upgraded else manifest['original_lua']
+         result[key] = dict(slot=int(key), upgraded=upgraded, actual_eval=row['eval'],
+             eval_mode=('1' if row['eval'] else '2') if upgraded else '0',
+             lua_path=source['path'], lua_sha256=source['sha256'])
+     return result
+ 
+ 
+-def prepare_output(manifest, overrides, args, environment, base):
++def prepare_output(manifest, overrides, args, environment, base, target_lua):
+     """Keep bfff INPUT/wait/argv validation, then apply ONLY declared outputs.
+ 
+     bfff prepares a163-specific output. Reset its two output values to the
+@@ -44,19 +49,19 @@
+     No other argv/environment value is reconstructed or changed.
+     """
+     command, output = base.prepare_launch(manifest, args, environment)
+-    contract = source_contracts(manifest, overrides)[environment['ROBOTRON_CLIENT_SLOT']]
++    contract = source_contracts(manifest, overrides, target_lua)[environment['ROBOTRON_CLIENT_SLOT']]
+     at = command.index('-autoboot_script') + 1
+     command[at] = contract['lua_path']
+     output['ROBOTRON_EVAL_MODE'] = contract['eval_mode']
+     return command, output
+ 
+ 
+-def validate_output_registry(registry, manifest, input_actors, roles):
++def validate_output_registry(registry, manifest, input_actors, roles, target_lua):
+     require(registry['schema'] == 'robotron-preview-current-mixed-output-registry-v1'
+             and set(registry['actors']) == {str(v) for v in range(192)}
+             and len({row['pid'] for row in registry['actors'].values()}) == 192,
+             'Distinct actual current192 OUTPUT registry required')
+-    contracts = source_contracts(manifest, registry['override_slots'])
++    contracts = source_contracts(manifest, registry['override_slots'], target_lua)
+     require(set(roles) == set(contracts), 'Actual OUTPUT roles incomplete')
+     for slot, actual in registry['actors'].items():
+         require(type(actual['pid']) is int and actual['pid'] > 0
+@@ -80,6 +85,9 @@
+     authority = read(plan['accepted_one_slot_authority'])
+     require(authority['mode'] == accepted163.ACCEPT, 'Only an actually accepted one-slot authority opens rollout')
+     manifest = accepted163.validate_authority(authority, read, base)
++    target_lua = accepted163.accepted_target(authority, read, base)
++    require(target_lua == authority['output_lua'] and authority['wire_policy'] == RAW_WIRE_POLICY,
++            'Accepted RAW target/wire policy differ')
+     require(plan['input_manifest'] == authority['base_manifest'], 'Cached INPUT manifest changed')
+     chosen = subset(plan['override_slots'])
+     registry = read(plan['current_output_registry'])
+@@ -92,6 +100,8 @@
+             and selection['current_output_registry'] == plan['current_output_registry']
+             and selection['fresh_parent_snapshot'] == plan['fresh_parent_snapshot']
+             and selection['override_slots'] == plan['override_slots']
++            and selection['output_lua'] == target_lua
++            and selection['wire_policy'] == RAW_WIRE_POLICY
+             and type(selection['maximum_new_overrides']) is int
+             and 0 <= len(chosen - existing) <= selection['maximum_new_overrides'] <= 192,
+             'ROOT must prospectively choose a bounded addition subset')
+@@ -101,22 +111,23 @@
+     roles = role_reader(api)
+     require(roles == registry['actual_roles'], 'Current OUTPUT CID/role proof differs')
+     census = base.strict_json(base.read_bytes_pin(manifest['role_census']))
+-    validate_output_registry(registry, manifest, census['actual_snapshot']['actors'], roles)
++    validate_output_registry(registry, manifest, census['actual_snapshot']['actors'], roles, target_lua)
+     parent = read(plan['fresh_parent_snapshot'])
+     require(parent['owners']['fleet']['process'] == authority['supervisor_process'],
+             'Fresh original supervisor INPUT process changed')
+-    return dict(manifest=manifest, current_registry=registry, source_contracts=source_contracts(manifest, plan['override_slots']),
++    return dict(manifest=manifest, target_lua=target_lua, wire_policy=RAW_WIRE_POLICY,
++                current_registry=registry, source_contracts=source_contracts(manifest, plan['override_slots'], target_lua),
+                 parent_owner=authority['supervisor_owner'], parent_process=authority['supervisor_process'],
+                 newly_declared_slots=sorted(chosen - existing))
+ 
+ 
+-def validate_bounded_transition(before, after, manifest, input_actors, before_roles, after_roles, maximum_new):
++def validate_bounded_transition(before, after, manifest, input_actors, before_roles, after_roles, maximum_new, target_lua):
+     """Pure future observation join. Does not cause any actor transition."""
+     old = subset(before['override_slots']); new = subset(after['override_slots'])
+     require(old <= new and type(maximum_new) is int and 0 <= len(new - old) <= maximum_new,
+             'Undeclared coverage removal or oversized future addition')
+-    validate_output_registry(before, manifest, input_actors, before_roles)
+-    contracts = validate_output_registry(after, manifest, input_actors, after_roles)
++    validate_output_registry(before, manifest, input_actors, before_roles, target_lua)
++    contracts = validate_output_registry(after, manifest, input_actors, after_roles, target_lua)
+     added = new - old
+     for slot in range(192):
+         key = str(slot)
+@@ -132,17 +143,18 @@
+                 all_other_output_identities_CIDs_and_roles_unchanged=True)
+ 
+ 
+-def prepare_policy(prior_policy, manifest, overrides, snapshot, actual_roles, held_hashes, input_actors, collector):
++def prepare_policy(prior_policy, manifest, overrides, snapshot, actual_roles, held_hashes, input_actors, collector, target_lua):
+     """Pure new policy object from actual future full OUTPUT; no publication."""
+     registry = dict(schema='robotron-preview-current-mixed-output-registry-v1',
+                     override_slots=overrides, actors=snapshot['actors'])
+-    contracts = validate_output_registry(registry, manifest, input_actors, actual_roles)
++    contracts = validate_output_registry(registry, manifest, input_actors, actual_roles, target_lua)
+     policy = copy.deepcopy(prior_policy)
+     policy.update(schema='robotron-preview-declared-subset-supervision-policy-v1',
+         baseline_actors=copy.deepcopy(snapshot['actors']), baseline_owners=copy.deepcopy(snapshot['owners']),
+         held_hashes_sha256=hashlib.sha256(json.dumps(held_hashes, sort_keys=True, separators=(',', ':')).encode()).hexdigest(),
+         preview_slot_contracts=contracts, preview_override_slots=list(overrides),
+-        preview_input_lua=manifest['original_lua'], preview_target_lua=manifest['target_lua'],
++        preview_input_lua=manifest['original_lua'], preview_target_lua=target_lua,
++        preview_wire_policy=copy.deepcopy(RAW_WIRE_POLICY),
+         preview_input_roles={key: value['eval'] for key, value in manifest['slots'].items()})
+     collector.validate_snapshot(policy, snapshot, 192)
+     return policy
+@@ -151,7 +163,7 @@
+ def dispatch(plan, args, environment, read, base, accepted163, role_reader, fuse, collector, exec_function=None):
+     """Accepted persistent admission only. This function never starts a batch."""
+     context = validate_plan(plan, read, base, accepted163, role_reader)
+-    command, output = prepare_output(context['manifest'], plan['override_slots'], args, environment, base)
++    command, output = prepare_output(context['manifest'], plan['override_slots'], args, environment, base, context['target_lua'])
+     slot = environment['ROBOTRON_CLIENT_SLOT']
+     if int(slot) in subset(plan['override_slots']):
+         # Unlike a163-only input census, this is the chosen slot's CURRENT

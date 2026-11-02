@@ -1,0 +1,71 @@
+{
+  "GPU_execution": false,
+  "elapsed_s": 0.45604579499922693,
+  "observed_disk_peak_bytes": 301995,
+  "original_child_results": [
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "-I",
+        "-B",
+        "-c",
+        "import importlib,sys,unittest; sys.path.insert(0,sys.argv[1]); m=importlib.import_module(sys.argv[2]); s=unittest.defaultTestLoader.loadTestsFromModule(m); assert s.countTestCases()==int(sys.argv[3]); r=unittest.TextTestRunner(verbosity=2).run(s); assert not any(n=='torch' or n.startswith('torch.') or n=='numpy' or n.startswith('numpy.') for n in sys.modules); sys.exit(0 if r.wasSuccessful() and not r.skipped else 1)",
+        "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal",
+        "private_rehearsal_proposal.test_process_scan",
+        "18"
+      ],
+      "child_reaped": true,
+      "elapsed_s": 0.16636447701603174,
+      "error": null,
+      "index": 0,
+      "returncode": 0,
+      "stderr_sha256": "f27cee2fb66eae124ebb826da82061ed99e0eb3ef6a638fef0bd8862defa3dfd",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "-I",
+        "-B",
+        "-c",
+        "import importlib,sys,unittest; sys.path.insert(0,sys.argv[1]); m=importlib.import_module(sys.argv[2]); s=unittest.defaultTestLoader.loadTestsFromModule(m); assert s.countTestCases()==int(sys.argv[3]); r=unittest.TextTestRunner(verbosity=2).run(s); assert not any(n=='torch' or n.startswith('torch.') or n=='numpy' or n.startswith('numpy.') for n in sys.modules); sys.exit(0 if r.wasSuccessful() and not r.skipped else 1)",
+        "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal",
+        "private_rehearsal_proposal.test_storage_watcher",
+        "25"
+      ],
+      "child_reaped": true,
+      "elapsed_s": 0.16570581804262474,
+      "error": null,
+      "index": 1,
+      "returncode": 0,
+      "stderr_sha256": "b33d30dc8cac22f436e4e312bd2dc7d1047a9ecbaae16b9fe86b3189cdb8aef8",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "-I",
+        "-B",
+        "-c",
+        "import importlib,sys,unittest; sys.path.insert(0,sys.argv[1]); m=importlib.import_module(sys.argv[2]); s=unittest.defaultTestLoader.loadTestsFromModule(m); assert s.countTestCases()==int(sys.argv[3]); r=unittest.TextTestRunner(verbosity=2).run(s); assert not any(n=='torch' or n.startswith('torch.') or n=='numpy' or n.startswith('numpy.') for n in sys.modules); sys.exit(0 if r.wasSuccessful() and not r.skipped else 1)",
+        "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal",
+        "private_rehearsal_proposal.test_rehearsal_contract",
+        "9"
+      ],
+      "child_reaped": true,
+      "elapsed_s": 0.11591917701298371,
+      "error": null,
+      "index": 2,
+      "returncode": 1,
+      "stderr_sha256": "ab70a8f06e8cbae7f3dd950bcda3abd82ac9f821ebaba493a04c4471940c8931",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "production_applied": false,
+  "qualification_pass": false,
+  "schema": "robotron-rehearsal-private-stdlib52-completion-v1",
+  "source_unchanged": true,
+  "status": "FAIL",
+  "tests_passed": null,
+  "utc": "2026-10-17T04:45:18.737178+00:00"
+}

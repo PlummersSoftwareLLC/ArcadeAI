@@ -1,0 +1,164 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/inference_worker_affinity.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/helpers/inference_worker_affinity.py
+@@ -30,13 +30,22 @@
+ import time
+ import urllib.request
+ 
+-try:
+-    from . import cpu_affinity_pilot as identity
+-except ImportError:
+-    import cpu_affinity_pilot as identity
+-
+-
+-GAME = Path(__file__).resolve().parents[1]
++# Load the canonical identity source explicitly; a cached plain-name module is not authority.
++import importlib.util
++_IDENTITY_PATH = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/cpu_affinity_pilot.py')
++_IDENTITY_SHA = 'ee1fa4f3018eccc479cfe4e484883505115aaeeb8778801657d2a37af6b071f0'
++_identity_data = _IDENTITY_PATH.read_bytes()
++if (_IDENTITY_PATH.resolve(strict=True) != _IDENTITY_PATH or _IDENTITY_PATH.is_symlink()
++        or hashlib.sha256(_identity_data).hexdigest() != _IDENTITY_SHA):
++    raise RuntimeError('Canonical identity source changed')
++_identity_spec = importlib.util.spec_from_file_location('_ce_batch_recipe_identity_' + _IDENTITY_SHA, _IDENTITY_PATH)
++identity = importlib.util.module_from_spec(_identity_spec)
++exec(compile(_identity_data, str(_IDENTITY_PATH), 'exec'), identity.__dict__)
++if Path(identity.__file__).resolve() != _IDENTITY_PATH:
++    raise RuntimeError('Canonical identity module path differs')
++
++
++GAME = Path('/home/dave/source/repos/ArcadeAI/Robotron')  # Relocated helper keeps the literal Robotron root.
+ SCHEMA = "robotron-inference-affinity-trial-v1"
+ PHASES = ("A", "B", "Areturn")
+ THREAD_NAME = "InferBatchWorke"
+@@ -317,7 +326,10 @@
+         require(self.thread_identity(binding["thread"]["tid"]) == binding, "Trainer/thread identity changed")
+         return sorted(os.sched_getaffinity(binding["thread"]["tid"]))
+ 
+-    def bindings(self):
++    def bindings(self, *, expected_batch_size=4096):
++        require(type(expected_batch_size) is int and expected_batch_size in (2048, 4096),
++                "Only an exact supported batch size is permitted")
++        expected_recipe = dict(ENV_RECIPE, DQN_BATCH_SIZE=str(expected_batch_size))
+         self.no_sidecars()
+         worker = self.thread_identity()
+         self.worker = worker
+@@ -325,7 +337,7 @@
+         environment = dict(item.split("=", 1) for item in (proc / "environ").read_bytes().decode().split("\0") if "=" in item)
+         selected = {key: value for key, value in environment.items()
+                     if key.startswith(("DQN_", "ROBOTRON_")) or key == "CUDA_VISIBLE_DEVICES"}
+-        require(all(selected.get(key) == value for key, value in ENV_RECIPE.items()), "Trainer environment differs from selected recipe")
++        require(all(selected.get(key) == value for key, value in expected_recipe.items()), "Trainer environment differs from selected recipe")
+         self.csv_path = Path(selected["ROBOTRON_RUN_DIR"]) / "training.csv"
+         require(re.fullmatch(r"robotron-managed-[A-Za-z0-9_.-]+-fleet\.service", self.fleet_unit), "Unexpected fleet unit name")
+         cgroup = subprocess.run(["systemctl", "--user", "show", self.fleet_unit, "--value", "-p", "ControlGroup"],
+@@ -597,4 +609,4 @@
+ 
+ 
+ if __name__ == "__main__":
+-    raise SystemExit(main())
++    raise SystemExit("PLAN_ONLY: unconsumed shared recipe helper; no standalone affinity trial")
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/parallel_state_fill_trial.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/helpers/parallel_state_fill_trial.py
+@@ -25,12 +25,51 @@
+ import time
+ import urllib.request
+ 
++# A fresh authenticated local metrics module is required even when the old plain
++# inference_worker_affinity name is already cached. No process-global recipe edit.
++import hashlib
++import importlib.util
++import stat
++_METRICS_PATH = Path(__file__).resolve().with_name('inference_worker_affinity.py')
++_METRICS_SHA = '579dafd9410f9e97872074c444e5fb0e79b24a67e7476568c27faaf3341fd9ed'
++_descriptor = os.open(_METRICS_PATH, os.O_RDONLY | os.O_NOFOLLOW)
+ try:
+-    from . import inference_worker_affinity as metrics
+-    from . import protect_quality_winner as protection
+-except ImportError:
+-    import inference_worker_affinity as metrics
+-    import protect_quality_winner as protection
++    _before = os.fstat(_descriptor)
++    if (not stat.S_ISREG(_before.st_mode) or _before.st_uid != os.getuid()
++            or _before.st_nlink != 1 or _before.st_mode & 0o777 != 0o444
++            or not 0 < _before.st_size < 1 << 20):
++        raise RuntimeError('Local metrics must be owned readonly bounded source')
++    _metrics_data = os.read(_descriptor, _before.st_size + 1)
++    _stamp = lambda s: (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns, s.st_uid, s.st_nlink, s.st_mode)
++    if (_stamp(os.fstat(_descriptor)) != _stamp(_before)
++            or _stamp(_METRICS_PATH.stat()) != _stamp(_before)
++            or hashlib.sha256(_metrics_data).hexdigest() != _METRICS_SHA):
++        raise RuntimeError('Local metrics source identity or digest differs')
++finally:
++    os.close(_descriptor)
++_metrics_spec = importlib.util.spec_from_file_location('_ce_batch_recipe_metrics_' + _METRICS_SHA, _METRICS_PATH)
++metrics = importlib.util.module_from_spec(_metrics_spec)
++exec(compile(_metrics_data, str(_METRICS_PATH), 'exec'), metrics.__dict__)
++if Path(metrics.__file__).resolve() != _METRICS_PATH:
++    raise RuntimeError('Local metrics module path differs')
++# Protection stays at its canonical original source, retaining existing __file__ checks.
++_PROTECTION_PATH = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/protect_quality_winner.py')
++_PROTECTION_SHA = 'e45965d3057ec8542ab2b05fd2250209e53986a0977fbb1294aa54f64a11f0f0'
++_protection_data = _PROTECTION_PATH.read_bytes()
++if (_PROTECTION_PATH.resolve(strict=True) != _PROTECTION_PATH or _PROTECTION_PATH.is_symlink()
++        or hashlib.sha256(_protection_data).hexdigest() != _PROTECTION_SHA):
++    raise RuntimeError('Canonical protection source changed')
++_protection_spec = importlib.util.spec_from_file_location('_ce_batch_recipe_protection_' + _PROTECTION_SHA, _PROTECTION_PATH)
++protection = importlib.util.module_from_spec(_protection_spec)
++# Its existing fallback imports resolve against the canonical tools directory.
++_original_search_path = sys.path[:]
++try:
++    sys.path.insert(0, str(_PROTECTION_PATH.parent))
++    exec(compile(_protection_data, str(_PROTECTION_PATH), 'exec'), protection.__dict__)
++finally:
++    sys.path[:] = _original_search_path
++if Path(protection.__file__).resolve() != _PROTECTION_PATH:
++    raise RuntimeError('Canonical protection module path differs')
+ 
+ 
+ FLAG = "DQN_PARALLEL_STATE_FILL"
+@@ -154,6 +193,9 @@
+             finally:os.close(descriptor)
+         self.command("daemon-reload")
+ 
++    def recipe_batch_size(self):
++        return 4096
++
+     def _inspect(self):
+         self.no_sidecars()
+         trainer, fleet = self.unit(self.trainer_unit), self.unit(self.fleet_unit)
+@@ -164,7 +206,7 @@
+         require(all(self.trainer_unit not in fleet[key].split() for key in ("Requires", "BindsTo", "PartOf")), "Fleet would stop/restart with trainer")
+         require(trainer["ControlGroup"].endswith("/" + self.trainer_unit), "Unexpected trainer cgroup")
+         mh = metrics.Host(int(trainer["MainPID"]), self.fleet_unit)
+-        binding = mh.bindings()
++        binding = mh.bindings(expected_batch_size=self.recipe_batch_size())
+         for actor in binding["actors"]:
+             if self.actor_stopped(actor):
+                 require(actor in self.paused,"An actor was already stopped outside this trial")
+@@ -694,4 +736,4 @@
+     return 0
+ 
+ 
+-if __name__=="__main__":raise SystemExit(main())
++if __name__=="__main__":raise SystemExit("PLAN_ONLY: unconsumed shared recipe helper; no standalone replay trial")
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_reviewed2_proposal/run_CE_batch_transition.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/run_CE_batch_transition.py
+@@ -541,6 +541,10 @@
+             self.banks=base.load_module(job['helper_pins']['bank_state']['path'],'raw_kl_bank_state')
+             outer=self
+             class Host(self.primitives.LiveHost):
++                def recipe_batch_size(self):
++                    require(outer.phase in ('before','after'),'Unknown owned recipe phase')
++                    key='before_batch_size' if outer.phase=='before' else 'after_batch_size'
++                    return outer.job['batch_boundary'][key]
+                 def runtime_dropin(self):return Path(job['original_dropin']['path'])
+                 def no_sidecars(self):super().no_sidecars();outer.exclusive()
+             self.host=Host(job['trainer_unit'],job['fleet_unit']);self.phase='before'
+@@ -1027,6 +1031,7 @@
+     if not args.launch:
+         print('PLAN_ONLY_CE_BATCH: no reads/imported helpers/runtime/actions; actual prerequisites required; blockers='+repr(DRAFT_BLOCKERS))
+         return 0
++    raise RuntimeError('UNSELECTED shared-recipe proposal: root must select a fresh pinned controller/deadline family before launch')
+     require(args.job and args.expected_job_sha256 and args.expected_controller_sha256, 'Explicit actual root bindings required')
+     execution_readiness().preflight_transition(args.job,args.expected_job_sha256,__file__,args.expected_controller_sha256)
+     runtime=None;output=None

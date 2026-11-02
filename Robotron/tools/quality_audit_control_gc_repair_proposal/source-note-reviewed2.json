@@ -1,0 +1,97 @@
+{
+  "schema": "robotron-quality-audit-control-GC-repair-reviewed2-source-addendum-v1",
+  "utc": "2026-10-18T05:15:30.983448+00:00",
+  "status": "SOURCE_ONLY_UNSELECTED_UNEXECUTED",
+  "source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/control_audit_reviewed2.py",
+    "sha256": "3c600a37d6502de5b82a1ab04c12901ee6e693c1c5272e0a92b46af87e8f452d",
+    "bytes": 16717,
+    "identity": {
+      "device": 2304,
+      "inode": 81529004,
+      "bytes": 16717,
+      "mtime_ns": 1792300493497560614,
+      "ctime_ns": 1792300493497560614,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "preserved_prior_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/control_audit.py",
+    "sha256": "5790497e003f789373b61ae1e522bb31e8ba47881fa3b26d64430f62b871aba1",
+    "bytes": 16346,
+    "identity": {
+      "device": 2304,
+      "inode": 81529002,
+      "bytes": 16346,
+      "mtime_ns": 1792300294498642413,
+      "ctime_ns": 1792300350422878385,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "preserved_prior_note": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/source-note.json",
+    "sha256": "241811a5c8f1827be14efbe2d1918423acc2fe5382a55fa8d6c447ae24256854",
+    "bytes": 11611,
+    "identity": {
+      "device": 2304,
+      "inode": 81529003,
+      "bytes": 11611,
+      "mtime_ns": 1792300412289352220,
+      "ctime_ns": 1792300412289352220,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "exact_predicate_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-terminal-release-root-preparation-20261017/archive_and_release_trial02.py",
+    "sha256": "d525f6a0910354023dec54bc6f54b45651912942cdc5a5eb51dc2de814361f65",
+    "bytes": 27046,
+    "identity": {
+      "device": 2304,
+      "inode": 81004896,
+      "bytes": 27046,
+      "mtime_ns": 1792243659727994644,
+      "ctime_ns": 1792243694639845567,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "delta": "Only the nonzero stop acceptance inside an already-confirmed-absent branch changes. Require timer, exit5, saved stderr SHA/bytes equality, and exact stripped per-unit not-loaded reason. Reverse this finite replacement and bytes equal prior5790497; all other launch/observe/archive/release/CLI code unchanged.",
+  "reason": "Fresh absence alone does not classify an arbitrary stop5 as autoGC. Exact owned-unit stderr plus the launch identity/fresh-NF predicates closes that ambiguity without rewriting the actual stop return or raw newline.",
+  "archive_flag_meaning": {
+    "original_archived_before_release": "All six real archive command attempts/raw outputs were persisted before any release action. It is not an assertion that all commands succeeded.",
+    "all_six_original_archive_commands_succeeded": "True exactly when every actual command exit is0; terminal timer cat1 remains false even for a proven GC exception.",
+    "unit_released_and_lifecycle_complete": "Both become true only after both exact original units have confirmed absence. Any unresolved cleanup keeps both false."
+  },
+  "test_definition_clarifications": [
+    "The original12 source-only cases remain unexecuted. Add: timer stop5 with fresh NF but wrong-unit/unknown stderr or tampered saved stderr bytes MUST refuse, preserve5 and leave lifecycle incomplete.",
+    "The matching-stop5 case must retain its full raw newline/exit5 and accept only exact owned not-loaded signatures; no invented stop0 or second stop.",
+    "Source-note case12 source-PIN drift is checked at launch, not continuously during observation. Postlaunch source immutability/freeze remains an external root selection requirement; this helper does not claim a new per-poll source check."
+  ],
+  "future_waiter_integration": [
+    "Authenticate exact reviewed2 source SHA and new receipt schema rather than weakening old0a1 reverse-exact selected-control guard.",
+    "Require original observed_live identity, Code1 and actual original_exit, lifecycle_complete true, unit_released true, and both owned_release.confirmed_absent true before accepting housekeeping closure.",
+    "Keep original audit nonzero/result and quality-report validity separate from lifecycle closure. The direct reviewed2 CLI returns original nonzero even after successful owned release; it returns0 only for audit0 plus complete lifecycle."
+  ],
+  "CLI": [
+    "/usr/bin/python3",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/control_audit_reviewed2.py",
+    "--execute",
+    "--expected-source-sha256",
+    "3c600a37d6502de5b82a1ab04c12901ee6e693c1c5272e0a92b46af87e8f452d",
+    "--config",
+    null
+  ],
+  "actual_root_config": null,
+  "actual_execution": null,
+  "tests_executed": 0,
+  "imports_or_runtime_queries_by_author": false,
+  "selected_waiter_or_control_changes": false
+}

@@ -1,0 +1,37 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/dashboard-current-work-status-original01-20261030/dashboard_work_status.selected-source.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/dashboard-current-work-status-original01-20261030/dashboard_work_status_observation_clock_v2.py
+@@ -93,6 +93,16 @@
+             "last_progress_age_s": age, "updated_unix_s": now}
+ 
+ 
++def semantic_observation_time(control, now):
++    """Manual phase freshness belongs to its observation, not this writer poll."""
++    stamp = control.get("observation_unix_s")
++    if stamp is None:
++        stamp = control["next_work"].get("updated_unix_s")
++    if type(stamp) not in (int, float) or not 0 < stamp <= now:
++        raise ValueError("Manual work status needs an actual finite nonfuture observation time")
++    return stamp
++
++
+ def main():
+     parser = argparse.ArgumentParser(description=__doc__)
+     parser.add_argument("--control", type=Path, required=True)
+@@ -118,11 +128,15 @@
+             work.pop("estimated_completion_unix_s", None)
+             if control.get("mode") == "offline_validation":
+                 public["offline_validation"] = benchmark_progress(control["benchmark"], work, now)
+-            work["updated_unix_s"] = now
++                observed = now  # This mode actually re-observes its original benchmark each poll.
++            else:
++                observed = semantic_observation_time(control, now)
++            work["updated_unix_s"] = observed
+             public["next_work"] = work
+-            public["updated_unix_s"] = now
++            public["updated_unix_s"] = observed
+             atomic(args.public, public)
+             heartbeat = dict(pid=pid, birth=birth, updated_unix_s=now,
++                             observation_unix_s=observed, observation_age_s=now-observed,
+                              current_stage=work.get("current_stage"),
+                              progress=public.get("offline_validation"))
+             atomic(args.runtime / "heartbeat.json", heartbeat)

@@ -1,0 +1,194 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/quality_trial02_terminal_closure_proposal/close_quality_trial02.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE543M_quality_terminal_closure_proposal/close_quality_CE543M.py
+@@ -1,21 +1,21 @@
+-"""Root-only trial02 quality terminal archive and exact owned release. PLAN default."""
++"""Root-only CE543M quality terminal archive and exact owned release. PLAN default."""
+ import argparse
+ import importlib.util
+ import json
+ from pathlib import Path
+ 
+ RUN = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26')
+-UNIT = 'robotron-quality-448M-vs-rawkl-trial02-first8M-20261017.service'
++UNIT = 'robotron-quality-448M-vs-CE543M-20261017.service'
+ TIMER = UNIT.removesuffix('.service')+'.timer'
+-PID, START, INV = 638119, 33529197, '325ea02d8cde47869eb8340b3de73f69'
+-PLAN_SHA = 'b502625ed8e39f01fa57af1c9f9cc8283794aa14e351e2b9bc9ec1268b267ecf'
+-BINDING_SHA = '3b16c36da91c63fd4fb218f1fed3c1c5a5fe8caff73534d880aeaeccfe4c81fe'
++PID, START, INV = 894289, 34316549, '4bcb24eb3bb344da9dc67b483a8ee946'
++PLAN_SHA = '25aaded11bf956b715cc5fb58be1901d236a30444e74253594461f8d11c00d75'
++BINDING_SHA = 'f43719ed4dc60a4c275a7414995aa79d0f40062c76964200cf8700a8abe50dc3'
+ HEALTH = RUN/'rawKL-trial02-terminal-release-root-preparation-20261017/archive_and_release_trial02.py'
+ HEALTH_SHA = 'd525f6a0910354023dec54bc6f54b45651912942cdc5a5eb51dc2de814361f65'
+-LAUNCH = RUN/'rawKL-trial02-quality-durable-launch-20261017'
+-LAUNCH_PINS = {'original-controller-identity.json':'b75df2f61bc294ddbe5a40c76dbcad7286f27df7855ba038c84f098667f2d204',
+-    'original-controller-running-show.json':'42c62d4309bfb37ef0dcfd15d0ed776934cab267f1c65628a8770a44a72c770a',
+-    'original-timer-show-after-carrier-reaped.json':'462ee8ede7dbd5c4b315dea9112fbf7753febb50d9ee6c0398431b2e5f358a07'}
++LAUNCH = RUN/'CE543M-quality-durable-launch-20261017'
++LAUNCH_PINS = {'original-controller-identity.json':'1277b3efd3a1c3f4a12df6bd5a7b0375ec0da7340a9d9aa5680bd279a8415b2f',
++    'original-controller-running-show.json':'afd7a5723162b6dfcb01ba597972015205c5e38d0b6db9419e43f4ad00e6926e',
++    'original-timer-show-after-carrier-reaped.json':'0642dfae0ed1401fca27b61a35d3d6fbd736ff44a5a51841ff6532ad3be244ca'}
+ 
+ def require(value, message):
+     if not value: raise RuntimeError(message)
+@@ -23,7 +23,7 @@
+ def load_ops():
+     import hashlib
+     require(hashlib.sha256(HEALTH.read_bytes()).hexdigest()==HEALTH_SHA,'Unchanged health utility SHA differs')
+-    spec=importlib.util.spec_from_file_location('_quality_trial02_unchanged_health',HEALTH)
++    spec=importlib.util.spec_from_file_location('_quality_CE543M_unchanged_health',HEALTH)
+     module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module); return module
+ 
+ def read_job(path, expected, ops):
+@@ -31,7 +31,7 @@
+     require(pin['sha256']==expected and pin['identity']['mode']=='0o444' and pin['identity']['nlink']==1,'Exact readonly root job required')
+     job=json.loads(data)
+     require(set(job)=={'schema','binding_job','timer_invocation_id','terminal_status','terminal_summary','root_acceptance','legs','output_directory'}
+-        and job['schema']=='robotron-trial02-quality-owned-closure-job-v1','Wrong explicit closure job fields')
++        and job['schema']=='robotron-CE543M-quality-owned-closure-job-v1','Wrong explicit closure job fields')
+     for name in ('binding_job','terminal_status','terminal_summary','root_acceptance'):
+         require(isinstance(job[name],dict) and {'path','sha256','bytes','identity'}<=set(job[name]),'Unbound final PIN: '+name)
+     require(job['binding_job']['sha256']==BINDING_SHA and isinstance(job['timer_invocation_id'],str)
+@@ -47,7 +47,7 @@
+             and all(type(x.get('pid')) is int and x['pid']>0 and type(x.get('starttime_ticks')) is int and x['starttime_ticks']>0 for x in leg['actors']),
+             'Actual original sixteen actor identities required')
+     out=Path(job['output_directory'])
+-    require(out.is_absolute() and out.parent==RUN and out.name.startswith('rawKL-trial02-quality-terminal-closure-')
++    require(out.is_absolute() and out.parent==RUN and out.name.startswith('CE543M-quality-terminal-closure-')
+         and not out.exists() and not out.is_symlink(),'New direct-run26 closure output required')
+     return job,pin,out
+ 
+@@ -95,9 +95,7 @@
+         n=leg['index']; role=('reference' if n in (1,3) else 'candidate'); original=ops.pinned(leg['finished_record'])
+         receipt=ops.pinned(leg['receipt']); audit=ops.pinned(leg['audit_receipt']); execution=ops.pinned(leg['audit_execution']); review=ops.pinned(leg['independent_review'])
+         observed=ops.pinned(leg['startup_observation']); label=('R1','C1','R2','C2')[n-1]
+-        parent=observed['quality_owner'] if n==1 else observed['owners'][UNIT]
+-        unit=observed['quality_unit'] if n==1 else observed['unit_show_all'][UNIT]
+-        evaluator=observed['evaluator'] if n==1 else observed[label+'_evaluator']
++        parent=observed['quality_owner']; unit=observed['quality_unit']; evaluator=observed['evaluator']
+         require((parent['pid'],parent['starttime_ticks'],unit['InvocationID'])==(PID,START,INV)
+             and {k:evaluator[k] for k in ('pid','starttime_ticks')}==leg['evaluator']
+             and {(x['slot'],x['pid'],x['starttime_ticks']) for x in observed[label+'_actors']}=={
+@@ -125,8 +123,9 @@
+             require(execution['original_exit']==2 and execution['original_result']=='exit-code' and audit.get('valid') is False,'Failed original audit requires root forward review')
+             dispositions.append('root_accepted_narrow_manual_review')  # Explicit root acceptance below; no log exemption here.
+         require(execution['owned_release'] and {x['unit'] for x in execution['owned_release']}=={
+-            f'robotron-rawkl-trial02-quality-leg{n:02d}-audit-reviewed1-20261017.'+suffix for suffix in ('service','timer')},'Foreign/missing audit release unit')
+-        require(all(x.get('final_load_state')=='not-found' for x in execution['owned_release']),'Original audit units not released')
++            f'robotron-CE543M-quality-original-row-leg{n:02d}-audit-reviewed1-20261017.'+suffix for suffix in ('service','timer')},'Foreign/missing audit release unit')
++        require(all(x.get('final_load_state')=='not-found' or x.get('already_absent') is True
++            for x in execution['owned_release']),'Original audit units not released')
+         for release in execution['owned_release']:
+             require(ops.show(release['unit'])[0]['LoadState']=='not-found','Audit CPU unit reappeared')
+         observed_start=ops.process_start(execution['original_pid'])
+@@ -174,8 +173,10 @@
+         original_execution=proof,root_job=job_pin,qualification_pass=False,source_freeze_released=False,publication=False,owned_release=releases)
+     try:
+         require(proof['exec_code']==1 and proof['exit_status']==0 and proof['result']=='success','Original parent failed; retained archive requires root review')
+-        cfg=ops.pinned(job['binding_job']); bindings=ops.pinned(cfg['evidence']['outer_job']); activation_job=ops.pinned(cfg['evidence']['activation_job'])
+-        activation=ops.pinned(cfg['evidence']['activation']); ce=ops.pinned(cfg['evidence']['ce_return'])
++        cfg=ops.pinned(job['binding_job']); capture=ops.pinned(cfg['evidence']['capture_result'])
++        capture_job=ops.pinned(capture['root_job']); history=capture_job['history']
++        bindings=ops.pinned(history['outer_job']); activation_job=ops.pinned(history['activation_job'])
++        activation=ops.pinned(history['activation']); ce=ops.pinned(history['CE_return'])
+         require((ce['owner']['pid'],ce['owner']['starttime_ticks'],ce['owner']['invocation_id'])==(620749,33475842,'3e0b59be7ec5484d9cc8d33265e74d77'),'Current CE owner binding differs')
+         evidence=final_proofs(ops,job,cfg,record)
+         result['bound_final_proofs']=ops.publish(out/'bound-final-proofs.json',evidence)
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/quality_trial02_terminal_closure_proposal/test_quality_closure.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE543M_quality_terminal_closure_proposal/test_quality_closure.py
+@@ -9,7 +9,7 @@
+ import unittest
+ from unittest.mock import patch
+ 
+-SPEC=importlib.util.spec_from_file_location('quality_closure_under_test',Path(__file__).with_name('close_quality_trial02.py'))
++SPEC=importlib.util.spec_from_file_location('quality_closure_under_test',Path(__file__).with_name('close_quality_CE543M.py'))
+ M=importlib.util.module_from_spec(SPEC); SPEC.loader.exec_module(M)
+ 
+ class FakeOps:
+@@ -73,12 +73,16 @@
+     acceptance=dict(status='PASS_ROOT_ALL_FOUR',plan_sha256=M.PLAN_SHA,binding_job_sha256=M.BINDING_SHA,
+         accepted_leg_indices=[1,2,3,4],campaign_outcome=outcome,leg_receipt_sha256=[],audit_receipt_sha256=[],
+         audit_original_exit=[0]*4,independent_review_sha256=[],audit_disposition=['original_audit_valid']*4)
+-    cfg=dict(campaign=dict(output_directory=campaign),evidence={})
+-    for key,value in [('outer_job',{}),('activation_job',{}),('activation',{}),('ce_return',dict(owner=dict(
++    # Actual new binding has only capture/phase-CPU evidence; historical context is reached through capture.root_job.history.
++    history={}
++    for key,value in [('outer_job',{}),('activation_job',{}),('activation',{}),('CE_return',dict(owner=dict(
+         pid=620749,starttime_ticks=33475842,invocation_id='3e0b59be7ec5484d9cc8d33265e74d77')))]:
+-        cfg['evidence'][key]=pin(key,value)
++        history[key]=pin(key,value)
++    capture_job=pin('capture-job',dict(history=history))
++    cfg=dict(campaign=dict(output_directory=campaign),evidence=dict(capture_result=pin('capture-result',dict(root_job=capture_job)),
++        phase_cpu_job={},phase_cpu_report={},phase_cpu_completion={}))
+     binding=pin('binding',cfg); binding['sha256']=M.BINDING_SHA
+-    job=dict(schema='robotron-trial02-quality-owned-closure-job-v1',binding_job=binding,timer_invocation_id='a'*32,
++    job=dict(schema='robotron-CE543M-quality-owned-closure-job-v1',binding_job=binding,timer_invocation_id='a'*32,
+         terminal_status=pin(campaign+'/status.json',state),terminal_summary=pin(campaign+'/summary.json',summary),
+         root_acceptance=pin('root-acceptance',acceptance),legs=[],output_directory='unused')
+     for n,label in enumerate(('R1','C1','R2','C2'),1):
+@@ -89,7 +93,7 @@
+         original=dict(index=n,state='finished',returncode=0,pid=evaluator['pid'],role='reference' if n in (1,3) else 'candidate',receipt_path=receipt['path'])
+         state['legs'].append(original); summary['legs'].append(dict(index=n,returncode=0,valid=True,receipt_sha256=receipt['sha256']))
+         audit=pin('audit'+str(n),dict(leg=n,valid=True,plan_sha256=M.PLAN_SHA,receipt_sha256=receipt['sha256']))
+-        units=[f'robotron-rawkl-trial02-quality-leg{n:02d}-audit-reviewed1-20261017.'+suffix for suffix in ('timer','service')]
++        units=[f'robotron-CE543M-quality-original-row-leg{n:02d}-audit-reviewed1-20261017.'+suffix for suffix in ('timer','service')]
+         execution=pin('execution'+str(n),dict(audit_receipt=audit,source_pins_held=True,original_archived_before_release=True,
+             original_pid=30000+n,original_starttime_ticks=40000+n,original_invocation='c'*32,original_result='success',
+             original_exec_code=1,original_exit=0,owned_release=[dict(unit=u,final_load_state='not-found') for u in units]))
+@@ -97,8 +101,7 @@
+             original_audit=dict(pid=30000+n,starttime_ticks=40000+n,invocation_id='c'*32,exec_code=1,exit_status=0,result='success'),
+             original_evaluator=dict(pid=evaluator['pid']),key_artifacts=[copy.deepcopy(audit),copy.deepcopy(execution)]))
+         observed={label+'_actors':actors}
+-        if n==1: observed.update(quality_owner=dict(pid=M.PID,starttime_ticks=M.START),quality_unit=dict(InvocationID=M.INV),evaluator=evaluator)
+-        else: observed.update(owners={M.UNIT:dict(pid=M.PID,starttime_ticks=M.START)},unit_show_all={M.UNIT:dict(InvocationID=M.INV)},**{label+'_evaluator':evaluator})
++        observed.update(quality_owner=dict(pid=M.PID,starttime_ticks=M.START),quality_unit=dict(InvocationID=M.INV),evaluator=evaluator)
+         job['legs'].append(dict(index=n,receipt=receipt,finished_record=pin('finished'+str(n),original),audit_receipt=audit,
+             audit_execution=execution,independent_review=review,startup_observation=pin('startup'+str(n),copy.deepcopy(observed)),evaluator=evaluator,actors=actors))
+         acceptance['leg_receipt_sha256'].append(receipt['sha256']); acceptance['audit_receipt_sha256'].append(audit['sha256'])
+@@ -114,7 +117,7 @@
+         with patch.object(M,'load_ops',side_effect=AssertionError('input/runtime import')),contextlib.redirect_stdout(io.StringIO()):
+             self.assertEqual(M.main([]),0)
+     def test_nonterminal_wrong_owner_and_restart_refuse_before_output(self):
+-        for key,value in [('MainPID','638119'),('ExecMainPID','7'),('InvocationID','b'*32),('NRestarts','1')]:
++        for key,value in [('MainPID',str(M.PID)),('ExecMainPID','7'),('InvocationID','b'*32),('NRestarts','1')]:
+             with self.subTest(key=key):
+                 ops,job,_,_=fixture(); ops.units[M.UNIT][key]=value
+                 with self.assertRaises(RuntimeError): self.close(ops,job)
+@@ -141,8 +144,14 @@
+         ops,job,_,_=fixture(); ops.values['receipt4']['pending']=1
+         result=self.close(ops,job); self.assertFalse(result['owned_cleanup_complete']); self.assertFalse(self.stops(ops))
+     def test_supplied_wrong_private_start_rejected_against_saved_observation(self):
+-        ops,job,cfg,_=fixture(); job['legs'][3]['evaluator']['starttime_ticks']+=1
+-        with self.assertRaises(RuntimeError): M.final_proofs(ops,job,cfg,None)
++        for wrong in ('start','legacy_keys'):
++            with self.subTest(wrong=wrong):
++                ops,job,cfg,_=fixture()
++                if wrong=='start': job['legs'][3]['evaluator']['starttime_ticks']+=1
++                else:
++                    observed=ops.values['startup4']
++                    observed['owners']={M.UNIT:observed.pop('quality_owner')}
++                with self.assertRaises((RuntimeError,KeyError)): M.final_proofs(ops,job,cfg,None)
+     def test_explicit_root_accepted_narrow_manual_audit_preserves_exit2(self):
+         ops,job,cfg,acceptance=fixture(); ops.values['audit1']=dict(leg=1,valid=False,result='needs_review')
+         ops.values['execution1']['original_exit']=2; acceptance['audit_original_exit'][0]=2
+@@ -152,13 +161,19 @@
+         result=M.final_proofs(ops,job,cfg,None); self.assertEqual(result['audit_original_exit'],[2,0,0,0])
+         acceptance['audit_disposition'][0]='original_audit_valid'
+         with self.assertRaises(RuntimeError): M.final_proofs(ops,job,cfg,None)
+-    def test_unknown_audit_exit_and_foreign_release_refused(self):
++    def test_unknown_audit_exit_foreign_release_and_absent_timer_contract(self):
+         for change in ('exit','unit'):
+             with self.subTest(change=change):
+                 ops,job,cfg,_=fixture()
+                 if change=='exit': ops.values['execution2']['original_exit']=1
+                 else: ops.values['execution2']['owned_release'][0]['unit']='foreign.timer'
+                 with self.assertRaises(RuntimeError): M.final_proofs(ops,job,cfg,None)
++        ops,job,cfg,_=fixture()
++        release=ops.values['execution1']['owned_release'][0]
++        release.pop('final_load_state'); release['already_absent']=True
++        self.assertEqual(M.final_proofs(ops,job,cfg,None)['audit_original_exit'],[0]*4)
++        ops.units[release['unit']]=dict(LoadState='loaded')
++        with self.assertRaises(RuntimeError): M.final_proofs(ops,job,cfg,None)
+     def test_unrelated_same_leg_pass_does_not_authenticate_execution(self):
+         for change in ('pid','artifact'):
+             with self.subTest(change=change):

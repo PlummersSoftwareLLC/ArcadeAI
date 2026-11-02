@@ -1,0 +1,123 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/run-trial02-quality-terminal16-guards-root-reviewed2-20261017.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-quality17-guards-source-preparation-20261017/run_quality17_guards.py
+@@ -1,4 +1,4 @@
+-"""Root's exact terminal16 mock guards; retain originals before owned release."""
++"""Root's exact CE2048 trial02 quality17 guards; retain originals before owned release."""
+ import ast
+ import datetime
+ import hashlib
+@@ -12,10 +12,12 @@
+ 
+ REPO = Path('/home/dave/source/repos/ArcadeAI')
+ RUN = REPO / 'Robotron/logs/managed-learning-20261015/run-26'
+-SRC = REPO / 'Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/quality_trial02_terminal_closure_proposal'
+-MANIFEST_SHA = 'eb890f858cff5250fd457ac0143d63cd342d47cdde1c36471d9485a0f2c9b1d1'
+-OUT = RUN / 'rawKL-trial02-quality-terminal16-guards-root-execution-reviewed1-20261017'
+-UNIT = 'robotron-rawkl-trial02-quality-terminal16-guards-reviewed1-20261017.service'
++SRC = REPO / 'Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_quality_carrier_proposal'
++BINDER_SRC = SRC.with_name('CE2048_trial02_quality_binding_proposal')
++MANIFEST_SHA = '3b8199a76c0b157ef16d4ec4ae0badcd327ac7d2f0551346a487c4e154879a5a'
++BINDER_MANIFEST_SHA = '3d7b87869b4271a0279b4c9a3d21c56be8bbd36c96d3bf32b07fe55ee71be4a0'
++OUT = RUN / 'CE2048-trial02-quality17-guards-root-execution-reviewed1-20261017'
++UNIT = 'robotron-CE2048-trial02-quality17-guards-reviewed1-20261017.service'
+ TIMER = UNIT.removesuffix('.service') + '.timer'
+ 
+ 
+@@ -87,23 +89,45 @@
+ 
+ 
+ def launch(manifest_sha):
+-    manifest = SRC / 'preparation-manifest.json'
+-    require(manifest_sha == MANIFEST_SHA == sha(manifest), 'Wrong sealed closure bundle')
+-    for name, entry in json.loads(manifest.read_bytes())['files'].items():
+-        require(sha(SRC / name) == entry['sha256'] and (SRC / name).stat().st_size == entry['bytes'], 'Source pin changed')
++    require(manifest_sha == MANIFEST_SHA, 'Wrong sealed quality carrier manifest')
+     pins = {}
+-    for path in SRC.iterdir():
+-        if path.is_file():
+-            require(not path.is_symlink() and path.stat().st_mode & 0o777 == 0o444, 'Unsealed source: ' + str(path))
+-            pins[path.name] = sha(path)
+-    testpath = SRC / 'test_quality_closure.py'
+-    expected = sum(isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith('test_')
+-        for node in ast.walk(ast.parse(testpath.read_text())))
+-    require(expected == 16, 'Exact sixteen authored guards required')
++    for folder, expected_manifest in ((SRC, MANIFEST_SHA), (BINDER_SRC, BINDER_MANIFEST_SHA)):
++        manifest = folder / 'preparation-manifest.json'
++        require(sha(manifest) == expected_manifest, 'Wrong sealed quality source family')
++        entries = json.loads(manifest.read_bytes())['files']
++        entries = entries.values() if isinstance(entries, dict) else entries
++        for entry in entries:
++            path = Path(entry['path'])
++            require(path.parent == folder and sha(path) == entry['sha256']
++                and path.stat().st_size == entry['bytes'], 'Source pin changed')
++        for path in folder.iterdir():
++            if path.is_file():
++                require(not path.is_symlink() and path.stat().st_mode & 0o777 == 0o444, 'Unsealed source: ' + str(path))
++                pins[str(path)] = sha(path)
++    test_specs = [(BINDER_SRC / 'test_quality_bindings.py', 'CE2048QualityContracts', 13),
++                  (SRC / 'test_carrier_contract.py', 'CE2048CarrierContracts', 4)]
++    expected = 0
++    for testpath, class_name, count in test_specs:
++        actual = sum(isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith('test_')
++            for node in ast.walk(ast.parse(testpath.read_text())))
++        require(actual == count, 'Exact selected guard methods required: ' + str(testpath))
++        expected += actual
++    require(expected == 17, 'Exact seventeen authored guards required')
+     require(not OUT.exists() and all(show(unit)[0]['LoadState'] == 'not-found' for unit in (UNIT, TIMER)), 'New-only execution required')
+     OUT.mkdir()
+     (OUT / 'tmp').mkdir()
+-    code = 'import sys,unittest,importlib.util;spec=importlib.util.spec_from_file_location("_root_quality_terminal16_tests",' + repr(str(testpath)) + ');module=importlib.util.module_from_spec(spec);sys.modules[spec.name]=module;spec.loader.exec_module(module);suite=unittest.defaultTestLoader.loadTestsFromTestCase(module.QualityClosureGuards);assert suite.countTestCases()==16;r=unittest.TextTestRunner(verbosity=2).run(suite);sys.exit(not r.wasSuccessful())'
++    code = '\n'.join([
++        'import sys,unittest,importlib.util',
++        'suite=unittest.TestSuite()',
++        'selected=' + repr([(str(path), name, count) for path, name, count in test_specs]),
++        'for index,(path,name,count) in enumerate(selected):',
++        ' spec=importlib.util.spec_from_file_location("_root_CE2048_quality17_"+str(index),path)',
++        ' module=importlib.util.module_from_spec(spec);sys.modules[spec.name]=module;spec.loader.exec_module(module)',
++        ' part=unittest.defaultTestLoader.loadTestsFromTestCase(getattr(module,name));assert part.countTestCases()==count',
++        ' suite.addTests(part)',
++        'assert suite.countTestCases()==17',
++        'result=unittest.TextTestRunner(verbosity=2).run(suite)',
++        'sys.exit(not result.wasSuccessful())'])
+     argv = ['systemd-run', '--user', '--unit=' + UNIT,
+         '--property=Type=exec', '--property=RemainAfterExit=yes', '--property=Restart=no',
+         '--property=CPUQuota=100%', '--property=MemoryMax=512M', '--property=MemorySwapMax=0',
+@@ -118,7 +142,7 @@
+     save(OUT / 'root-runner-source.py', Path(__file__).read_bytes())
+     intent = save(OUT / 'root-launch-intent.json', dict(utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+         unit=UNIT, timer=TIMER, argv=argv, source_pins=pins, expected_tests=expected,
+-        root_runner_sha256=sha(__file__), scope='Exact stdlib FakeOps guards only; no actual closure/runtime/PT/GPU action'))
++        root_runner_sha256=sha(__file__), scope='Exact CE2048 binder13+carrier4 stdlib mocked-I/O guards only; no actual trial/quality/runtime/PT/GPU action'))
+     returned = call(argv)
+     returned.update(carrier_reaped_by_subprocess_run=returned['returncode'] is not None, returned_monotonic_ns=time.monotonic_ns())
+     save(OUT / 'root-scheduling-carrier-return.json', returned)
+@@ -145,7 +169,7 @@
+         timer_observed_cat=timer_cat_pin, observed_live=service['MainPID'] == str(pid))
+     save(OUT / 'root-observed-original-identity.json', observed)
+     require(observed['exec_start_monotonic_us'] * 1000 > returned['returned_monotonic_ns'], 'Test started before carrier reap; identity preserved')
+-    print(json.dumps(dict(status='SCHEDULED_ONCE', original_pid=pid, original_invocation=observed['invocation_id'], expected_tests=16, unit=UNIT)))
++    print(json.dumps(dict(status='SCHEDULED_ONCE', original_pid=pid, original_invocation=observed['invocation_id'], expected_tests=17, unit=UNIT)))
+ 
+ 
+ def original_terminal(observed):
+@@ -199,7 +223,7 @@
+         if initial['returncode'] != 0:
+             errors.append('original-timer-cat-unavailable')
+     try:
+-        held = all(sha(SRC / name) == digest for name, digest in intent['source_pins'].items())
++        held = all(sha(path) == digest for path, digest in intent['source_pins'].items())
+     except Exception:
+         held = False
+     try:
+@@ -245,9 +269,9 @@
+         require(final['LoadState'] == 'not-found', 'Exact test unit not released')
+         releases.append(dict(unit=unit, returncode=stopped['returncode'], final_load_state='not-found'))
+     original_absent(observed)
+-    passed = original['original_exec_code'] == 1 and original['original_exit'] == 0 and original['original_result'] == 'success' and original['test_methods'] == intent['expected_tests'] == 16 and '\nOK\n' in stderr and held
++    passed = original['original_exec_code'] == 1 and original['original_exit'] == 0 and original['original_result'] == 'success' and original['test_methods'] == intent['expected_tests'] == 17 and '\nOK\n' in stderr and held
+     receipt = dict(status='PASS' if passed else 'FAILED', **original, original_archived_before_release=True,
+-        owned_release=releases, scope='Exact sixteen stdlib FakeOps guards only; no actual campaign closure or playing-quality inference')
++        owned_release=releases, scope='Exact seventeen CE2048 binder/carrier stdlib mocked-I/O guards only; no actual campaign closure or playing-quality inference')
+     save(OUT / 'root-result-review-and-release.json', receipt)
+     print(json.dumps(dict(status=receipt['status'], original_exit=original['original_exit'], directory=str(OUT))))
+ 

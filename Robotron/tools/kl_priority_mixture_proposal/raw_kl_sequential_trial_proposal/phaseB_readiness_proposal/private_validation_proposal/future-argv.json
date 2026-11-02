@@ -1,0 +1,59 @@
+{
+  "actual_execution": null,
+  "actual_output": null,
+  "budgets": {
+    "CPU_threads": 2,
+    "allocator_GiB": 12,
+    "artifact_GiB": 6,
+    "host_GiB": 16,
+    "process_VRAM_GiB": 13,
+    "role_seconds": 600,
+    "tasks": 128,
+    "total_seconds": 2100
+  },
+  "carrier": "Root creates precommitted delegated retained service via detached3s timer, carrier exits before trigger; no--wait/no--collect; no launch duringquality",
+  "cpu_tests": {
+    "argv": [
+      "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+      "-Xgil=0",
+      "-I",
+      "-B",
+      "-c",
+      "import importlib,sys,unittest;sys.path.insert(0,'/home/dave/source/repos/ArcadeAI/Robotron');p='tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.phaseB_readiness_proposal.private_validation_proposal';pairs=[('test_process_scan','ProcessScanTests'),('test_storage_watcher','StorageWatcherTests'),('test_stage_b_parent','ParentContracts'),('test_stage_b_contract','LedgerContracts'),('test_stage_b_contract','LeaseContracts'),('test_stage_b_contract','TinyCPUContracts')];suite=unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(getattr(importlib.import_module(p+'.'+m),c)) for m,c in pairs);result=unittest.TextTestRunner(verbosity=2).run(suite);sys.exit(not result.wasSuccessful())"
+    ],
+    "env": {
+      "CUDA_VISIBLE_DEVICES": "",
+      "MKL_NUM_THREADS": "2",
+      "OMP_NUM_THREADS": "2",
+      "OPENBLAS_NUM_THREADS": "2"
+    },
+    "expected_methods": 82,
+    "limits": {
+      "CPUQuota": "200%",
+      "MemoryMax": "3G",
+      "MemorySwapMax": "0",
+      "RuntimeMaxSec": 120,
+      "TasksMax": 128
+    },
+    "selection": "exact6classes; no broad discovery/no old tests/replay/model loads"
+  },
+  "future_gpu_argv_template": [
+    "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/private_validation_proposal/cuda_trace_parent.py",
+    "--launch",
+    "--directory",
+    "<ROOT_NEW_ABSOLUTE_OWNED_OUTPUT>"
+  ],
+  "parent_plan_only_argv": [
+    "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/private_validation_proposal/cuda_trace_parent.py"
+  ],
+  "root_preflight_actual_owner_unit_checkpoint_gate_pins": null,
+  "schema": "robotron-raw-kl-stageB-future-argv-v1"
+}

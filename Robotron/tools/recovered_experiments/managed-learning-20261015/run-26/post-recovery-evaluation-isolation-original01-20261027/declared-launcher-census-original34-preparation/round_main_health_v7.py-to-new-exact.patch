@@ -1,0 +1,172 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/round_main_health_v7.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/round_main_health_launcher_v1.py
+@@ -16,7 +16,7 @@
+ import time
+ import urllib.request
+ 
+-ROOT = Path(__file__).resolve().parents[2]
++ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ LINUX = ROOT / 'tools/quality_capacity_proposal/supervised_main_fleet_v2.py'
+ LINUX_SHA = '1f41d360fa23632cb26d6dee33d3c822bec7f9cf79fdbb75e47f3418059ca5f0'
+ STATIC = ('parent_pid', 'cgroup', 'command', 'environment', 'affinity', 'uids', 'executable')
+@@ -106,48 +106,50 @@
+ 
+ 
+ def collect(case, previous=None):
+-    observer_previous=previous
+-    reader = linux()
+-    started = time.monotonic()
+-    root = Path(case['round_root'])
+-    raw_status = (root / 'status.json').read_bytes()
+-    status = json.loads(raw_status)
+-    directory = root / ('round-%06d' % status['round'])
+-    owners = {role: unit_record(case['units'][role], reader) for role in ['trainer', 'fleet']}
+-    fleet = owners['fleet']['process']
+-    children = Path('/proc', str(fleet['pid']), 'task', str(fleet['pid']), 'children').read_text().split()
+-    actors = {}
+-    for child in children:
+-        record = process_record(int(child), reader)
+-        require(record['command'][0] == record['executable']['path'] == '/usr/games/mame', 'Unknown fleet child')
+-        slot = record['environment']['ROBOTRON_CLIENT_SLOT']
+-        require(slot not in actors, 'Duplicate process slot')
+-        actors[slot] = record
+-    wire = Path(case['completion_journal']).read_bytes()
+-    # An append being written is not a receipt until its terminating newline.
+-    journal,journal_lines={},{}
+-    for line in wire.split(b'\n')[:-1]:
+-        if not line:continue
+-        row=json.loads(line)
+-        journal[row['journal_game_id']]=row
+-        journal_lines[row['journal_game_id']]=line.decode('utf-8')+'\n'
+-    results, receipts = completed_round(directory, journal)
+-    with urllib.request.urlopen('http://127.0.0.1:8771/api/now', timeout=5) as response:
+-        api_wire = response.read(1_048_577)
+-    require(len(api_wire) <= 1_048_576, 'Raw API exceeds bound')
+-    api = json.loads(api_wire)
+-    require(stable_round_status(json.loads((root / 'status.json').read_bytes())) == stable_round_status(status),
+-            'Round publication raced capture')
+-    # Admission owns the complete predecessor chain; retain no duplicate
+-    # decoded previous round in every hot census.
+-    previous = None
+-    require(time.monotonic() - started <= 5, 'Main census exceeded5s')
+-    sample = dict(schema='robotron-round-main-health-snapshot-v1', unix_s=time.time(),
+-        monotonic_s=time.monotonic(), owners=owners, actors=actors, status=status,
+-        started=read(directory / 'started.json'), results=results, receipt_hashes=receipts,
+-        previous_complete=previous, api=api, raw_API_wire=api_wire.decode('utf-8'), api_wire_sha256=hashlib.sha256(api_wire).hexdigest())
+-    sample['observed_counts'] = observed_counts(sample)
+-    return admission().collect(case,sample,observer_previous,journal_lines=journal_lines)
++    observer_previous = previous
++    module = launchers()
++    evidence = dict(stage='starting', started_monotonic_s=time.monotonic())
++    try:
++        reader = linux()
++        started = time.monotonic()
++        root = Path(case['round_root'])
++        raw_status = (root/'status.json').read_bytes()
++        status = json.loads(raw_status)
++        directory = root/('round-%06d'%status['round'])
++        number = status['round'] + int((root/('round-%06d'%(status['round']+1))/'started.json').exists())
++        owners = {role:unit_record(case['units'][role],reader) for role in ['trainer','fleet']}
++        evidence.update(stage='child-capture',raw_status=raw_status.decode(),owners=owners,effective_round=number)
++        fleet = owners['fleet']['process']
++        children = Path('/proc',str(fleet['pid']),'task',str(fleet['pid']),'children').read_text().split()
++        evidence['original_children'] = children
++        actors,census = module.capture_children(case,fleet,lambda pid:process_record(pid,reader),children,number)
++        evidence.update(stage='round-and-API',launcher_census=census)
++        wire = Path(case['completion_journal']).read_bytes()
++        journal,journal_lines = {},{}
++        for line in wire.split(b'\n')[:-1]:
++            if not line:continue
++            row=json.loads(line)
++            journal[row['journal_game_id']]=row
++            journal_lines[row['journal_game_id']]=line.decode('utf-8')+'\n'
++        results,receipts = completed_round(directory,journal)
++        with urllib.request.urlopen('http://127.0.0.1:8771/api/now',timeout=5) as response:
++            api_wire=response.read(1_048_577)
++        require(len(api_wire)<=1_048_576,'Raw API exceeds bound')
++        api=json.loads(api_wire)
++        evidence['raw_API_wire']=api_wire.decode('utf-8')
++        require(stable_round_status(json.loads((root/'status.json').read_bytes()))==stable_round_status(status),
++                'Round publication raced capture')
++        require(time.monotonic()-started<=5,'Main census exceeded5s')
++        sample=dict(schema='robotron-round-main-health-snapshot-v1',unix_s=time.time(),monotonic_s=time.monotonic(),
++            owners=owners,actors=actors,status=status,started=read(directory/'started.json'),results=results,
++            receipt_hashes=receipts,previous_complete=None,api=api,raw_API_wire=api_wire.decode('utf-8'),
++            api_wire_sha256=hashlib.sha256(api_wire).hexdigest(),launcher_census=census)
++        sample['observed_counts']=observed_counts(sample)
++        return admission().collect(case,sample,observer_previous,journal_lines=journal_lines)
++    except (OSError,ValueError,KeyError) as failure:
++        evidence.update(failure=repr(failure),ended_monotonic_s=time.monotonic())
++        if isinstance(failure,module.CensusFailure):evidence['rejected_child_census']=failure.raw_snapshot
++        raise module.CensusFailure(repr(failure),evidence) from failure
+ 
+ 
+ def validate(case, sample, previous=None):
+@@ -161,6 +163,7 @@
+             'Published round counts are ahead, invalid or stale')
+     require(sample.get('observed_counts', counts) == counts, 'Observed count derivation differs')
+     admitted=admission().verify(case,sample,previous)
++    launching=launchers().verify_sample(case,sample,admitted,previous)
+     effective_round=admitted['round']
+     results=admitted['results']
+     pending=admitted['pending']
+@@ -177,6 +180,8 @@
+                 'Original main owner, recipe, cgroup or executable changed')
+     fleet = sample['owners']['fleet']['process']
+     for slot, actor in actors.items():
++        if slot in launching:
++            continue  # Exact raw launcher ownership/input/stage/age was checked above.
+         env = actor['environment']
+         expected_env = dict(case['actor_environment'], ROBOTRON_CLIENT_SLOT=slot,
+             ROBOTRON_ACTOR_ROUND=str(effective_round),
+@@ -235,7 +240,8 @@
+         for slot in set(previous['actors']) & set(actors):
+             original, current = previous['actors'][slot], actors[slot]
+             require(birth(original) == birth(current)
+-                    and all(original[key] == current[key] for key in STATIC),
++                    and (all(original[key] == current[key] for key in STATIC)
++                         or forward_declared_exec(case,original,current)),
+                     'Unplanned actor replacement within a round')
+         for slot in set(previous['actors']) - set(actors):
+             require(results[slot]['pid'] == previous['actors'][slot]['pid'], 'Retirement PID differs')
+@@ -291,7 +297,7 @@
+ 
+ 
+ def certify_API_reconnect(case,sample,previous):
+-    path=Path(__file__).with_name('api_reconnect_projection_v1.py')
++    path=ROOT/'tools/post_recovery_evaluation/api_reconnect_projection_v1.py'
+     require(hashlib.sha256(path.read_bytes()).hexdigest()=='6145874201af09b41f2dc4a358513f7ecc0406166dd5c7f082087a8e5b2ffa03',
+             'Exact reconnect projection verifier required')
+     spec=importlib.util.spec_from_file_location('_round_source_bound_reconnect_projection',path)
+@@ -300,7 +306,7 @@
+ 
+ 
+ def admission():
+-    path=Path(__file__).with_name('round_admission_proof_v2.py')
++    path=ROOT/'tools/post_recovery_evaluation/round_admission_proof_v2.py'
+     require(hashlib.sha256(path.read_bytes()).hexdigest()=='9a5506a5b2163506f0cd40f71ca9c0a78945653a6ae9ae5552fb5a2bf70a4087',
+             'Exact prospective natural-round admission verifier required')
+     import sys
+@@ -310,3 +316,22 @@
+         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+         sys.modules[name]=module
+     return sys.modules[name]
++
++
++def forward_declared_exec(case,original,current):
++    module=launchers()
++    return (birth(original)==birth(current)
++        and all(original[key]==current[key] for key in ('parent_pid','cgroup','affinity','uids'))
++        and module.ORDER[module.phase(case,original)]<module.ORDER[module.phase(case,current)])
++
++
++def launchers():
++    path=Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/launcher_census_v1.py')
++    require(hashlib.sha256(path.read_bytes()).hexdigest()=='9da0759190ee2dc60393e293b707285168f35fe5a99c8707c10a8c0f834be26f','Exact prospective launcher census source required')
++    import sys
++    name='_declared_launcher_census_original34_v1'
++    if name not in sys.modules:
++        spec=importlib.util.spec_from_file_location(name,path)
++        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
++        sys.modules[name]=module
++    return sys.modules[name]

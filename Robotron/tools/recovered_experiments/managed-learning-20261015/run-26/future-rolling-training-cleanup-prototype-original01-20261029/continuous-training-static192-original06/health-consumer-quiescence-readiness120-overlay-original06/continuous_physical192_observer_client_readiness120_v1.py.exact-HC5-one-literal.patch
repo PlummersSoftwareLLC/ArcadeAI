@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_observer_client_v5.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-quiescence-readiness120-overlay-original06/continuous_physical192_observer_client_readiness120_v1.py
+@@ -91,7 +91,7 @@
+         c.require(self.worker_owner['birth'] is not None, 'Original worker birth unavailable')
+         self.owner_pin = self.h.put(self.root / 'original-unit.json', dict(
+             owner=self.worker_owner, raw_properties=fields, argv=command))
+-        limit = min(self.deadline, time.monotonic() + 30)
++        limit = min(self.deadline, time.monotonic() + 120)
+         while time.monotonic() < limit:
+             c.require(c.birth(pid) == self.worker_owner['birth'], 'Original worker ended before readiness')
+             path = self.live_path

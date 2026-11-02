@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-continuous-fresh-candidate-20261029-original05-preparation/typed-Adam-saturation-successor-source-original01/verify_snapshot_raw_Adam_steps_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-policy-only-autosave-capture-original01-20261031/future-LR625-verifier-source-original01/verify_snapshot_raw_Adam_steps_LR625_v1.py
+@@ -68,7 +68,7 @@
+     assert all(math.isfinite(step) for step in steps)
+     assert len(steps) == 81 and min(steps) == max(steps) and min(steps) > 0
+     lrs = [group['lr'] for group in optimizer.param_groups]
+-    assert lrs == [3.125e-6]
++    assert lrs == [6.25e-6]
+     assert not torch.cuda.is_initialized()
+     after = checkpoint.stat()
+     assert (before.st_ino, before.st_size, before.st_mtime_ns) == (

@@ -1,0 +1,590 @@
+--- a/Robotron/tools/render_learning_progress.py
++++ b/Robotron/tools/render_learning_progress.py
+@@ -41,8 +41,122 @@
+             raise ValueError(f"Source changed: {source['path']}")
+ 
+ 
++def validate_protected_annotation(data):
++    """Actual384M protection stays separate from the historical600s curves."""
++    proof = data["protected_incumbent_annotation"]
++    if proof["stage"] != "384M":
++        raise ValueError("Another incumbent requires separately reviewed reporting evidence")
++    def bound(name):
++        pin = proof["evidence"][name]
++        if digest(pin["path"]) != pin["sha256"]:
++            raise ValueError("Changed protected reporting evidence: " + name)
++        return json.loads(Path(pin["path"]).read_text())
++    def current_incumbent():
++        actual = json.loads(Path(proof["state_path"]).read_text())["incumbent"]
++        if actual != proof["state_incumbent"]:
++            raise ValueError("Managed incumbent changed; do not render stale protection")
++        return actual
++    incumbent = current_incumbent()
++    metadata, summary = bound("metadata"), bound("summary")
++    cpu, adoption = bound("CPU_verification"), bound("root_adoption")
++    publication, final_gate = bound("publication_review"), bound("independent_final_gate")
++    if (str((Path(proof["game_root"]) / incumbent["checkpoint"]).resolve()) != proof["protected_checkpoint"]
++            or incumbent["sha256"] != proof["checkpoint_sha256"]
++            or metadata["checkpoint_sha256"] != proof["checkpoint_sha256"]
++            or metadata["protected_checkpoint"] != proof["protected_checkpoint"]
++            or metadata["plan_sha256"] != summary["plan_sha256"]
++            or metadata["assessment"]["qualified_improvement"] is not True
++            or summary["qualified_improvement"] is not True
++            or summary["outcome"] != "qualified_improvement"):
++        raise ValueError("Protected confirmation identity/provenance differs")
++    adopted = {key: value for key, value in incumbent.items()
++               if key not in ("root_promotion_receipt", "root_promotion_receipt_sha256")}
++    if (adoption["status"] != "PASS384_PROTECTED_QUALIFIED_MANAGED_INCUMBENT_ADOPTED_NEXT_REFERENCE384"
++            or adoption["new_incumbent"] != adopted
++            or adoption["next_fixed_reference"] != incumbent["checkpoint"]
++            or adoption["publication_review_sha256"] != proof["evidence"]["publication_review"]["sha256"]
++            or adoption["all_original_games_audited"] != 377
++            or adoption["main_learner_restored_or_restarted"] is not False
++            or adoption["training_recipe_affinity_or_model_structure_changed"] is not False
++            or publication["original_publication_exit"] != 0
++            or publication["publication_child_reaped"] is not True
++            or publication["both_independent_candidate_gates_pass"] is not True
++            or publication["checkpoint_sha256"] != proof["checkpoint_sha256"]
++            or publication["metadata_sha256"] != proof["evidence"]["metadata"]["sha256"]):
++        raise ValueError("Publication and actual managed adoption are not established")
++    if (cpu["status"] != "PASS" or cpu["sha256"] != proof["checkpoint_sha256"]
++            or cpu["cuda_initialized"] is not False or cpu["visible_cuda_devices"] != 0
++            or cpu["clocks"]["learner_frame_count"] != 388633116
++            or final_gate["status"] != "PASS"
++            or not all(item["mean_pass"] and item["median_pass"]
++                       for item in final_gate["individual_candidate_gates"])):
++        raise ValueError("Actual CPU and independent final gate proof differ")
++    if data["fixed_transport_learning"][-1]["checkpoint_sha256"] != "5076199285752a8748ce9566bc74c6b67210a03ae7f04f132f92b786dea102da":
++        raise ValueError("Keep the historical600s curve through192M")
++    all_ids, candidates, references, candidate_counts = set(), [], [], []
++    common = None
++    for item, audit_pin in zip(summary["legs"], proof["original_row_audits"]):
++        path = item["receipt_path"]
++        if (item["returncode"] != 0 or item["valid"] is not True
++                or digest(path) != item["receipt_sha256"]
++                or metadata["evidence_sha256"].get(path) != item["receipt_sha256"]
++                or digest(audit_pin["path"]) != audit_pin["sha256"]):
++            raise ValueError("Completed campaign leg differs from protected evidence")
++        receipt = json.loads(Path(path).read_text())
++        audit = json.loads(Path(audit_pin["path"]).read_text())
++        leg = validate_receipt(receipt)
++        validate_backend(receipt, verify_checkpoint=False)
++        ids = {row["journal_game_id"] for row in leg["rows"]}
++        if (all_ids & ids or ids != set(item["included_game_ids"])
++                or sorted(ids) != audit["admission_ids"] or audit["valid"] is not True
++                or audit["receipt_sha256"] != item["receipt_sha256"]
++                or audit["leg"] != item["index"] or audit["role"] != item["role"]
++                or receipt["job"]["cohort_s"] != 1200.0
++                or receipt["job"]["timeout_s"] != 2400.0
++                or receipt["job"]["game_boundary_diagnostics"] is not True
++                or receipt["source_hashes"] != metadata["evaluator_source_hashes"]
++                or receipt["ended_source_hashes"] != receipt["source_hashes"]):
++            raise ValueError("Original full-tail1200s/diagnosticsTRUE evidence differs")
++        signature = dict(numeric=receipt["numeric_policy"], runtime=receipt["runtime"],
++                         boot=receipt["boot_assets"]["identity"],
++                         job={key: value for key, value in receipt["job"].items()
++                              if key not in ("checkpoint", "directory", "label")})
++        common = signature if common is None else common
++        if signature != common:
++            raise ValueError("Actual384 confirmation source/backend cohort contexts differ")
++        all_ids.update(ids)
++        if item["role"] == "candidate":
++            if (receipt["checkpoint_sha256"] != proof["checkpoint_sha256"]
++                    or any(receipt["clocks"][key] != cpu["clocks"][key]
++                           for key in ("training_steps", "optimized_samples", "learner_frame_count"))):
++                raise ValueError("Confirmed candidate checkpoint/clocks differ")
++            candidates.append(leg["rows"])
++            candidate_counts.append(len(leg["rows"]))
++        else:
++            references.extend(leg["rows"])
++    if (len(summary["legs"]) != 4 or len(proof["original_row_audits"]) != 4
++            or len(all_ids) != 377 or len(references) != 205 or candidate_counts != [85, 87]):
++        raise ValueError("Actual377-game confirmation counts differ")
++    ref_scores = [row["score"] for row in references]
++    mean_floor, median_floor = 1.05 * statistics.mean(ref_scores), statistics.median(ref_scores)
++    if not all(statistics.mean(row["score"] for row in cohort) >= mean_floor
++               and statistics.median(row["score"] for row in cohort) >= median_floor
++               for cohort in candidates):
++        raise ValueError("Both separate candidates must pass the same fresh205-reference gates")
++    scores = [row["score"] for cohort in candidates for row in cohort]
++    actual = dict(count=len(scores), mean=statistics.mean(scores),
++                  median=statistics.median(scores),
++                  se=statistics.stdev(scores) / math.sqrt(len(scores)))
++    if not all(math.isclose(actual[key], proof["descriptive_candidate_pool"][key], rel_tol=1e-12)
++               for key in actual):
++        raise ValueError("Separate descriptive confirmation statistics differ")
++    current_incumbent()
++    return proof
++
++
+ def validate_data(data):
+     check_sources(data)
++    validate_protected_annotation(data)
+     seen, protocols, cohorts = set(), {}, 0
+     backend_references = {}
+     for group in [*data["learning"], *data.get("sidecar_learning", []),
+@@ -302,16 +416,18 @@
+     timeline = data.get("fixed_transport_plot_order")
+     positions = None if timeline is None else [timeline.index(group["label"]) for group in fixed_groups]
+     fixed_upper, fixed_gain = quality_series_axis(fixed_ax, fixed_groups,
+-        "C  GPU0 compiled · fixed transport, 3s", "192M incumbent · hollow: single-cohort 96M guard",
+-        "128M", "#b87536", positions=positions, gain_reference_index=-2)
++        "C  GPU0 compiled · fixed transport, 3s", "Historical600s cohorts through192M · hollow: unpromoted96M guard",
++        "128M", "#b87536", positions=positions, gain_reference_index=[g["label"] for g in fixed_groups].index("GPU0 fixed-transport 128M confirmed"))
+ 
+     fixed_upper = observational_guard_overlay(fixed_ax, fixed_groups,
+         data.get("observational_guards", []), order=timeline)
+ 
+     batch_aba_axis(rate_ax, data["batch_aba_throughput"])
+     stage = data["plotting"]["confirmed_stage"]
++    protection = data["protected_incumbent_annotation"]
++    pool = protection["descriptive_candidate_pool"]
+     fig.text(.07, .965, "Robotron · learning progress and training throughput", fontsize=20, fontweight="bold")
+-    fig.text(.07, .925, f"Confirmed through 192M; 96M / 160M guards unpromoted · three separate quality series · batch 4096 / 192 actors", fontsize=11, color="#536171")
++    fig.text(.07, .925, f"Protected {protection['stage']} · 1200s / diagnostics ON · n={pool['count']} / mean {pool['mean']:,.0f} · cohorts +9.81% / +9.06% vs fresh256M", fontsize=11, color="#536171")
+     for y, line in zip([.115, .085, .055, .025], data["caption"].splitlines()):
+         fig.text(.07, y, line, fontsize=8.2, color="#647582", va="top")
+     fig.canvas.draw()
+--- a/Robotron/logs/managed-learning-20261015/learning-and-throughput-progress.json
++++ b/Robotron/logs/managed-learning-20261015/learning-and-throughput-progress.json
+@@ -1,7 +1,7 @@
+ {
+-  "schema": "robotron-learning-throughput-figure-v7",
++  "schema": "robotron-learning-throughput-figure-v8",
+   "created_utc": "2026-10-16T16:55:17.971086+00:00",
+-  "scope": "Confirmed quality through192M; separate unpromoted single96M and two160M guards. Three distinct backend series; dated throughput and bank observations remain descriptive.",
++  "scope": "Protected384M from distinct1200s diagnosticsTRUE full-tail qualification; historical quality curves stop at192M. Guards/backend provenance and dated throughput/bank caveats retained.",
+   "learning": [
+     {
+       "label": "Original 10M reference",
+@@ -353,62 +353,6 @@
+     "marginal_192_samples_per_s_gain_fraction": 0.022570528796788336,
+     "interval_rate_note": "frames_per_s and samples_per_s are measured reporting-interval rates; rolling console fps is excluded."
+   },
+-  "validation": {
+-    "each_receipt_validated": true,
+-    "all_receipt_game_ids_disjoint": true,
+-    "constituent_game_count": 2613,
+-    "no_fabricated_merged_receipts": true,
+-    "throughput_means_recomputed_from_training_rows": true,
+-    "measurement_frames_constant_within_each_throughput_trial": true,
+-    "all_sources_unchanged_after_render": true,
+-    "standalone_canvas_text_bounds_checked": true,
+-    "png_integrity_verified": true,
+-    "prior_source_hashes_unchanged_before_refresh": true,
+-    "pooled_4M_matches_independent_campaign": true,
+-    "source_and_protected_4M_checkpoint_hash_match": true,
+-    "constituent_cohort_count": 26,
+-    "pooled_8M_matches_independent_campaign": true,
+-    "source_and_protected_8M_checkpoint_hash_match": true,
+-    "separate_backend_series": true,
+-    "only_valid_completed_private_measurements_included": true,
+-    "pooled_16M_matches_independent_campaign": true,
+-    "source_and_protected_16M_checkpoint_hash_match": true,
+-    "recorded_protocol_matches_within_each_backend_series": true,
+-    "canvas_visually_reviewed": true,
+-    "quality_backend_series_count": 3,
+-    "pooled_32M_matches_independent_campaign": true,
+-    "source_and_protected_32M_checkpoint_hash_match": true,
+-    "current_three_full_private_backends_match": true,
+-    "old_quality_group_data_unchanged": true,
+-    "all17_receipts_revalidated": true,
+-    "all1939_game_ids_disjoint": true,
+-    "old_campaign_and_seven_protected_metadata_bytes_preserved": true,
+-    "production_guarded_sources_unchanged": true,
+-    "all19_receipts_revalidated": true,
+-    "all2156_game_ids_disjoint": true,
+-    "pooled_64M_matches_independent_campaign": true,
+-    "source_and_protected_64M_checkpoint_hash_match": true,
+-    "current_five_full_private_backends_match": true,
+-    "all20_receipts_revalidated": true,
+-    "all2237_game_ids_disjoint": true,
+-    "single96_guard_unpromoted": true,
+-    "protected64M_reference_unchanged": true,
+-    "first_stream_event_descriptive_only": true,
+-    "all22_receipts_revalidated": true,
+-    "all2385_game_ids_disjoint": true,
+-    "pooled_128M_matches_independent_campaign": true,
+-    "each_128M_leg_passes_original64M_gate": true,
+-    "current_managed_reference_128M": false,
+-    "previous_fixed_transport_points_unchanged": true,
+-    "model_payloads_rehashed_for_this_refresh": false,
+-    "model_payload_scope": "Reuse exact root publication/protection and previous source hash attestations; rendering checks small source bytes and model file stats, no model payload rehash or loading. Standard standalone renderer retains its original full payload validation.",
+-    "current_managed_reference_192M": true,
+-    "all26_receipts_revalidated": true,
+-    "all2613_game_ids_disjoint": true,
+-    "pooled_192M_matches_independent_campaign": true,
+-    "each_192M_leg_passes_original128M_gate": true,
+-    "unpromoted160M_guards_history_only": true
+-  },
+   "sources": [
+     {
+       "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-measurements/frozen-reference-best10M-v2.json",
+@@ -631,7 +575,7 @@
+       "sha256": "a9952509862edc6622a32a2c33ea6b01d28e6841d1c135113485b06264ca0707"
+     },
+     {
+-      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/render_learning_progress.py",
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/confirmed384M-reporting-proposal-20261017/before/render_learning_progress.py",
+       "sha256": "33348e12967374cc382c988072839beacb62f948b99ca8a8a1cff00603617a44"
+     },
+     {
+@@ -821,9 +765,81 @@
+     {
+       "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-incumbents/fresh3-192M-confirmed.pt",
+       "sha256": "5076199285752a8748ce9566bc74c6b67210a03ae7f04f132f92b786dea102da"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/confirmed384M-reporting-proposal-20261017/render_learning_progress.py",
++      "sha256": "3074bdef730dfdaff58884eb5360d7984563c1e063ea5a5e70a53acda09bdb4c"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/confirmed384M-reporting-proposal-20261017/compare_sidecar_measurements.py",
++      "sha256": "879590b64e760037a81da2ff574d5994d9259cf1746b8e406177e2220d37c746"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/confirmed384M-reporting-proposal-20261017/compare_frozen_measurements.py",
++      "sha256": "53f744737a722fec2760c0001dc5747b19b05e07a1de8699764c781f04da6be0"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-incumbents/fresh3-384M-confirmed.pt.json",
++      "sha256": "cb79fc9094022bd340a83d29282ed8bb7504b35fbd28a99552a2bb6ea4342ab4"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-256M-vs-384M-20261017/summary.json",
++      "sha256": "5203f0c87a03e504dbe0734ce9324d0a13d0eaefe2f7ca61851d5ce83bb4bb80"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-checkpoint-verification-preparation-20261017/cpu-verification.json",
++      "sha256": "3765ad86e89952c409709e9dd5611f1a0242051c3dd67c800004b73a823b5611"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-managed-incumbent-adoption-root-20261017/root-promotion-and-goal-continuation-receipt.json",
++      "sha256": "d859661e3b0c3b5ec82f043d6a88f2f58079ecb1ddab43c8c33cb62b219d565d"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-protected-publication-root-20261017/root-publication-review.json",
++      "sha256": "09060279843ccb263fb622ac24db4d336501285d11643748ec083f6f17cd2f47"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-final-independent-gate-review-20261017/review-receipt.json",
++      "sha256": "615eef6b7ebc4a0423bb584d4f23e886692fa0c07281120747835d3963d71ffd"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-reference01-independent-original-row-audit-20261017/review-receipt.json",
++      "sha256": "b117e5e54deb85b140c96dd61256a787003a250f90d989d6446ea58c7f9230c4"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-candidate01-independent-original-row-audit-20261017/review-receipt.json",
++      "sha256": "fcb51f552e1a6194c39b2ef804d60469036d26efe048221baacd40dd3320303d"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-reference02-independent-original-row-audit-20261017/review-receipt.json",
++      "sha256": "d2f612b9977ed2696e12e1b63e5a1ff5ebfb08473ec187be40cfbdf07443dff0"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-candidate02-independent-original-row-audit-20261017/review-receipt.json",
++      "sha256": "2a4ed0eef48b35196bee6156c06d202eb2e3f7257d22baab3ec8274ce0efe832"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-incumbents/fresh3-384M-confirmed.pt",
++      "sha256": "ac8bc98038a7860f1682e66311fd48657361eaa8ec7aff1f44bd53cf84090963"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-256M-vs-384M-20261017/01-reference/receipt.json",
++      "sha256": "f56fcc6c9d853efffbb61a0a9402b520bfcc188cc9ccfa91c676a0026136bd26"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-256M-vs-384M-20261017/02-candidate/receipt.json",
++      "sha256": "a313e6b304c9115c5b8b895820f29a7e3524bd29ad67bbd70c40dee360b54044"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-256M-vs-384M-20261017/03-reference/receipt.json",
++      "sha256": "2256a3bf1394ad95427be15164cffff86b40c884551101378fb7d8620905e1d1"
++    },
++    {
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-256M-vs-384M-20261017/04-candidate/receipt.json",
++      "sha256": "c46ef90a61b270edd2a6e7f0e63628a9142c754da59e232db3e73f0af0bf7420"
+     }
+   ],
+-  "caption": "Quality: complete greedy wave-1 games at difficulty 5; mean \u00b11 SE, not formal confidence. Separate valid cohorts and repeated looks; recovery changes are not a causal ablation.\nA: historical GB300 (*4M/8M select-v1/1000 \u00b5s; earlier busy). B: earlier GPU0 transport. C: confirmed 192M +28.9% vs 128M; 96M hollow /160M unplotted guards unpromoted.\nD: settled 2026-10-16 UTC A\u2013B\u2013A counter samples/s; GPU-only energy. Batch and compiler trials change learning exposure; sequential trajectories do not establish causal quality effects.\nFirst natural bank events: memmap 34 \u2192 stream 0 deadline lines; 32.813 \u2192 33.003s overall brackets. Descriptive observations, not proof of causality or a universal fix.",
++  "caption": "Quality: complete greedy wave-1 games at difficulty 5; mean \u00b11 SE, not formal confidence. Separate valid cohorts and repeated looks; recovery changes are not a causal ablation.\nA: historical GB300 (*4M/8M select-v1/1000 \u00b5s; earlier busy). B: earlier GPU0 transport. C: historical 192M +28.9% vs 128M; 96M hollow /160M unplotted guards unpromoted.\nD: settled 2026-10-16 UTC A\u2013B\u2013A counter samples/s; GPU-only energy. Batch and compiler trials change learning exposure; sequential trajectories do not establish causal quality effects.\nFirst natural bank events: memmap 34 \u2192 stream 0 deadline lines; 32.813 \u2192 33.003s overall brackets. Descriptive observations, not proof of causality or a universal fix.",
+   "plotting": {
+     "library": "matplotlib",
+     "version": "3.11.2",
+@@ -837,11 +853,11 @@
+       3696,
+       2574
+     ],
+-    "confirmed_stage": "192M (fixed-transport GPU0)",
+-    "renderer": "/home/dave/source/repos/ArcadeAI/Robotron/tools/render_learning_progress.py",
+-    "renderer_sha256": "33348e12967374cc382c988072839beacb62f948b99ca8a8a1cff00603617a44",
++    "confirmed_stage": "384M protected (1200s/diagnosticsTRUE annotation; historical C through192M)",
++    "renderer": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/confirmed384M-reporting-proposal-20261017/render_learning_progress.py",
++    "renderer_sha256": "3074bdef730dfdaff58884eb5360d7984563c1e063ea5a5e70a53acda09bdb4c",
+     "score_axis_maximum": 90000,
+-    "reproduction_command": "python Robotron/tools/render_learning_progress.py Robotron/logs/managed-learning-20261015/learning-and-throughput-progress.json",
++    "reproduction_command": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/confirmed384M-reporting-proposal-20261017/private-render-argv.json",
+     "sidecar_score_axis_maximum": 110000,
+     "fixed_transport_score_axis_maximum": 290000
+   },
+@@ -921,7 +937,7 @@
+     "device_precision_provenance": "Parent session provenance: both stages used the production GB300 FP32 inference backend. First-leg sidecars record pacing, actor count and source hashes; confirmation receipts do not independently persist device/precision/backend fields."
+   },
+   "progress": {
+-    "latest_confirmed_stage": "192M",
++    "latest_confirmed_stage": "384M",
+     "historical_GB300_gain_8M_vs_original_pct": 149.33693517493052,
+     "GPU0_compiled_gain_16M_vs_8M_pct": 35.629339886732446,
+     "cross_backend_ratio": null,
+@@ -931,7 +947,7 @@
+     "GPU0_fixed_transport_gain_64M_vs_32M_pct": 25.46731541627887,
+     "selected_training_batch": 4096,
+     "selected_training_actors": 192,
+-    "current_managed_reference": "192M confirmed original113-game pool",
++    "current_managed_reference": "384M protected; original85+87candidate-game descriptive172pool, separate1200s/diagnosticsTRUE",
+     "previous64M_reference_preserved": true,
+     "GPU0_fixed_transport_gain_128M_vs_64M_pct": 35.8211258371812,
+     "previous128M_reference_preserved": true,
+@@ -3392,5 +3408,241 @@
+       "tensor_count": 243
+     },
+     "scope": "Actual ROOT promotion after both separate fixed legs pass. Original113 rows only,128M148 baseline;96M/160M guards history only. No causal batch/compiler attribution."
++  },
++  "protected_incumbent_annotation": {
++    "stage": "384M",
++    "game_root": "/home/dave/source/repos/ArcadeAI/Robotron",
++    "state_path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/state.json",
++    "state_incumbent": {
++      "utc": "2026-10-17T06:49:20.633603+00:00",
++      "published_utc": "2026-10-17T06:47:27.877088+00:00",
++      "checkpoint": "models_dqn/managed-incumbents/fresh3-384M-confirmed.pt",
++      "sha256": "ac8bc98038a7860f1682e66311fd48657361eaa8ec7aff1f44bd53cf84090963",
++      "origin": "models_dqn/managed-checkpoints/fresh3-384M.pt",
++      "counts": [
++        85,
++        87
++      ],
++      "means": [
++        364260,
++        361793.9655172414
++      ],
++      "medians": [
++        408600,
++        393475
++      ],
++      "combined_n": 172,
++      "combined_mean": 363012.6453488372,
++      "combined_median": 406225.0,
++      "combined_se": 10030.682174430978,
++      "candidate_pool_is_descriptive_only": true,
++      "saved_clocks": {
++        "training_steps": 1906843,
++        "optimized_samples": 6362841088,
++        "baseline_batch_size": 512,
++        "last_target_update_samples": 6362337280,
++        "frame_count": 777145030,
++        "learner_frame_count": 388633116,
++        "measurement_frame_count": 7550388,
++        "total_training_steps": 1906843,
++        "expert_ratio": 0.09999999999999998,
++        "epsilon": 0.1,
++        "engine_version": 28,
++        "lr_anchor_step": 0.0,
++        "lr_gear": "climb",
++        "state_size": 11128,
++        "single_frame_state_size": 2782,
++        "frame_stack": 4
++      },
++      "receipts": [
++        "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-256M-vs-384M-20261017/02-candidate/receipt.json",
++        "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-256M-vs-384M-20261017/04-candidate/receipt.json"
++      ],
++      "reference_receipts": [
++        "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-256M-vs-384M-20261017/01-reference/receipt.json",
++        "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-256M-vs-384M-20261017/03-reference/receipt.json"
++      ],
++      "fresh_reference": {
++        "count": 205,
++        "mean": 331723.2926829268,
++        "median": 340825.0,
++        "actor_slot_counts": {
++          "4096": 11,
++          "4097": 11,
++          "4098": 14,
++          "4099": 12,
++          "4100": 13,
++          "4101": 14,
++          "4102": 13,
++          "4103": 12,
++          "4104": 15,
++          "4105": 12,
++          "4106": 15,
++          "4107": 12,
++          "4108": 12,
++          "4109": 13,
++          "4110": 13,
++          "4111": 13
++        }
++      },
++      "individual_candidate_checks": [
++        {
++          "index": 2,
++          "mean": 364260.0,
++          "median": 408600.0,
++          "mean_ratio": 1.0980838790484724,
++          "mean_pass": true,
++          "median_pass": true
++        },
++        {
++          "index": 4,
++          "mean": 361793.9655172414,
++          "median": 393475.0,
++          "mean_ratio": 1.0906498684222854,
++          "mean_pass": true,
++          "median_pass": true
++        }
++      ],
++      "campaign_report": "logs/managed-learning-20261015/quality-256M-vs-384M-20261017/summary.json",
++      "campaign_sha256": "5203f0c87a03e504dbe0734ce9324d0a13d0eaefe2f7ca61851d5ce83bb4bb80",
++      "plan_sha256": "81210cb86ad7cd78b3f9a7f4c764b83aad3364d0d8f0e382e29f340245a54704",
++      "metadata_path": "models_dqn/managed-incumbents/fresh3-384M-confirmed.pt.json",
++      "metadata_sha256": "cb79fc9094022bd340a83d29282ed8bb7504b35fbd28a99552a2bb6ea4342ab4",
++      "independent_original_row_audits": [
++        {
++          "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-reference01-independent-original-row-audit-20261017/review-receipt.json",
++          "sha256": "b117e5e54deb85b140c96dd61256a787003a250f90d989d6446ea58c7f9230c4"
++        },
++        {
++          "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-candidate01-independent-original-row-audit-20261017/review-receipt.json",
++          "sha256": "fcb51f552e1a6194c39b2ef804d60469036d26efe048221baacd40dd3320303d"
++        },
++        {
++          "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-reference02-independent-original-row-audit-20261017/review-receipt.json",
++          "sha256": "d2f612b9977ed2696e12e1b63e5a1ff5ebfb08473ec187be40cfbdf07443dff0"
++        },
++        {
++          "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-candidate02-independent-original-row-audit-20261017/review-receipt.json",
++          "sha256": "2a4ed0eef48b35196bee6156c06d202eb2e3f7257d22baab3ec8274ce0efe832"
++        }
++      ],
++      "independent_final_gate_review": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-final-independent-gate-review-20261017/review-receipt.json",
++      "independent_final_gate_review_sha256": "615eef6b7ebc4a0423bb584d4f23e886692fa0c07281120747835d3963d71ffd",
++      "CPU_verification": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-checkpoint-verification-preparation-20261017/cpu-verification.json",
++      "CPU_verification_sha256": "3765ad86e89952c409709e9dd5611f1a0242051c3dd67c800004b73a823b5611",
++      "backend": "GPU0_FP32_TF32_inductor_16actors_slots4096to4111_wait1000us_1200s_admission_2400s_timeout_fulltails_boundary_diagnostics",
++      "scope": "Each candidate independently passes mean>=1.05*pooled fresh256M reference and median>=fresh reference median; minimum50 whole games/all16 slots/runtime validity/full tails. Candidate172-game pool is descriptive only. Frozen-policy qualification, no causal learning-speed/statistical-proof/live-learner-rollback claim.",
++      "root_promotion_receipt": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-managed-incumbent-adoption-root-20261017/root-promotion-and-goal-continuation-receipt.json",
++      "root_promotion_receipt_sha256": "d859661e3b0c3b5ec82f043d6a88f2f58079ecb1ddab43c8c33cb62b219d565d"
++    },
++    "protected_checkpoint": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-incumbents/fresh3-384M-confirmed.pt",
++    "checkpoint_sha256": "ac8bc98038a7860f1682e66311fd48657361eaa8ec7aff1f44bd53cf84090963",
++    "evidence": {
++      "metadata": {
++        "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-incumbents/fresh3-384M-confirmed.pt.json",
++        "sha256": "cb79fc9094022bd340a83d29282ed8bb7504b35fbd28a99552a2bb6ea4342ab4"
++      },
++      "summary": {
++        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-256M-vs-384M-20261017/summary.json",
++        "sha256": "5203f0c87a03e504dbe0734ce9324d0a13d0eaefe2f7ca61851d5ce83bb4bb80"
++      },
++      "CPU_verification": {
++        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-checkpoint-verification-preparation-20261017/cpu-verification.json",
++        "sha256": "3765ad86e89952c409709e9dd5611f1a0242051c3dd67c800004b73a823b5611"
++      },
++      "root_adoption": {
++        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-managed-incumbent-adoption-root-20261017/root-promotion-and-goal-continuation-receipt.json",
++        "sha256": "d859661e3b0c3b5ec82f043d6a88f2f58079ecb1ddab43c8c33cb62b219d565d"
++      },
++      "publication_review": {
++        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-protected-publication-root-20261017/root-publication-review.json",
++        "sha256": "09060279843ccb263fb622ac24db4d336501285d11643748ec083f6f17cd2f47"
++      },
++      "independent_final_gate": {
++        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-final-independent-gate-review-20261017/review-receipt.json",
++        "sha256": "615eef6b7ebc4a0423bb584d4f23e886692fa0c07281120747835d3963d71ffd"
++      }
++    },
++    "original_row_audits": [
++      {
++        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-reference01-independent-original-row-audit-20261017/review-receipt.json",
++        "sha256": "b117e5e54deb85b140c96dd61256a787003a250f90d989d6446ea58c7f9230c4"
++      },
++      {
++        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-candidate01-independent-original-row-audit-20261017/review-receipt.json",
++        "sha256": "fcb51f552e1a6194c39b2ef804d60469036d26efe048221baacd40dd3320303d"
++      },
++      {
++        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-reference02-independent-original-row-audit-20261017/review-receipt.json",
++        "sha256": "d2f612b9977ed2696e12e1b63e5a1ff5ebfb08473ec187be40cfbdf07443dff0"
++      },
++      {
++        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-candidate02-independent-original-row-audit-20261017/review-receipt.json",
++        "sha256": "2a4ed0eef48b35196bee6156c06d202eb2e3f7257d22baab3ec8274ce0efe832"
++      }
++    ],
++    "descriptive_candidate_pool": {
++      "count": 172,
++      "mean": 363012.6453488372,
++      "median": 406225.0,
++      "se": 10030.682174430978
++    },
++    "scope": "Actual377-game1200s/2400s diagnosticsTRUE qualification and protected/managed384M; candidate172pool descriptive only, distinct from old600s curves. Main was not restored or restarted; no causal learning-speed claim."
++  },
++  "historical_validation_through192M": {
++    "each_receipt_validated": true,
++    "all_receipt_game_ids_disjoint": true,
++    "constituent_game_count": 2613,
++    "no_fabricated_merged_receipts": true,
++    "throughput_means_recomputed_from_training_rows": true,
++    "measurement_frames_constant_within_each_throughput_trial": true,
++    "all_sources_unchanged_after_render": true,
++    "standalone_canvas_text_bounds_checked": true,
++    "png_integrity_verified": true,
++    "prior_source_hashes_unchanged_before_refresh": true,
++    "pooled_4M_matches_independent_campaign": true,
++    "source_and_protected_4M_checkpoint_hash_match": true,
++    "constituent_cohort_count": 26,
++    "pooled_8M_matches_independent_campaign": true,
++    "source_and_protected_8M_checkpoint_hash_match": true,
++    "separate_backend_series": true,
++    "only_valid_completed_private_measurements_included": true,
++    "pooled_16M_matches_independent_campaign": true,
++    "source_and_protected_16M_checkpoint_hash_match": true,
++    "recorded_protocol_matches_within_each_backend_series": true,
++    "canvas_visually_reviewed": true,
++    "quality_backend_series_count": 3,
++    "pooled_32M_matches_independent_campaign": true,
++    "source_and_protected_32M_checkpoint_hash_match": true,
++    "current_three_full_private_backends_match": true,
++    "old_quality_group_data_unchanged": true,
++    "all17_receipts_revalidated": true,
++    "all1939_game_ids_disjoint": true,
++    "old_campaign_and_seven_protected_metadata_bytes_preserved": true,
++    "production_guarded_sources_unchanged": true,
++    "all19_receipts_revalidated": true,
++    "all2156_game_ids_disjoint": true,
++    "pooled_64M_matches_independent_campaign": true,
++    "source_and_protected_64M_checkpoint_hash_match": true,
++    "current_five_full_private_backends_match": true,
++    "all20_receipts_revalidated": true,
++    "all2237_game_ids_disjoint": true,
++    "single96_guard_unpromoted": true,
++    "protected64M_reference_unchanged": true,
++    "first_stream_event_descriptive_only": true,
++    "all22_receipts_revalidated": true,
++    "all2385_game_ids_disjoint": true,
++    "pooled_128M_matches_independent_campaign": true,
++    "each_128M_leg_passes_original64M_gate": true,
++    "current_managed_reference_128M": false,
++    "previous_fixed_transport_points_unchanged": true,
++    "model_payloads_rehashed_for_this_refresh": false,
++    "model_payload_scope": "Reuse exact root publication/protection and previous source hash attestations; rendering checks small source bytes and model file stats, no model payload rehash or loading. Standard standalone renderer retains its original full payload validation.",
++    "current_managed_reference_192M": true,
++    "all26_receipts_revalidated": true,
++    "all2613_game_ids_disjoint": true,
++    "pooled_192M_matches_independent_campaign": true,
++    "each_192M_leg_passes_original128M_gate": true,
++    "unpromoted160M_guards_history_only": true
+   }
+ }

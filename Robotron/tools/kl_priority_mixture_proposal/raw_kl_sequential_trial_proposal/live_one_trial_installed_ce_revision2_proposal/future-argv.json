@@ -1,0 +1,98 @@
+{
+  "schema": "robotron-installed-CE-one-raw-kl-trial-future-argv-v2",
+  "status": "SOURCE_PREPARATION_ONLY",
+  "actual_job": null,
+  "actual_armed_receipt": null,
+  "actual_new_owner": null,
+  "actual_candidate": null,
+  "test_count": 57,
+  "test_modules": [
+    "Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.live_one_trial_installed_ce_revision2_proposal.test_one_trial",
+    "Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.live_one_trial_installed_ce_revision2_proposal.test_early_insurance",
+    "Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.live_one_trial_installed_ce_revision2_proposal.test_installed_ce_boundary"
+  ],
+  "tests": [
+    "python3",
+    "-I",
+    "-B",
+    "-c",
+    "import sys,unittest; sys.path.insert(0,'/home/dave/source/repos/ArcadeAI'); unittest.main(module=None,argv=['unittest', 'Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.live_one_trial_installed_ce_revision2_proposal.test_one_trial', 'Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.live_one_trial_installed_ce_revision2_proposal.test_early_insurance', 'Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.live_one_trial_installed_ce_revision2_proposal.test_installed_ce_boundary', '-v'])"
+  ],
+  "deadline": [
+    "python3",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_one_trial_installed_ce_revision2_proposal/deadline_guard.py",
+    "--execute",
+    "--job",
+    "ROOT_FINAL_JOB",
+    "--expected-job-sha256",
+    "ROOT_FINAL_JOB_SHA",
+    "--expected-source-sha256",
+    "FROZEN_DEADLINE_SHA"
+  ],
+  "controller": [
+    "python3",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_one_trial_installed_ce_revision2_proposal/run_one_trial.py",
+    "--execute",
+    "--job",
+    "ROOT_FINAL_JOB",
+    "--expected-job-sha256",
+    "ROOT_FINAL_JOB_SHA",
+    "--expected-controller-sha256",
+    "FROZEN_CONTROLLER_SHA",
+    "--expected-armed-sha256",
+    "ACTUAL_ARMED_RECEIPT_SHA"
+  ],
+  "service_properties": {
+    "tests": {
+      "Type": "exec",
+      "RemainAfterExit": "yes",
+      "Restart": "no",
+      "CPUQuota": "200%",
+      "MemoryMax": "512M",
+      "MemorySwapMax": "0",
+      "TasksMax": 64,
+      "RuntimeMaxSec": 60
+    },
+    "deadline": {
+      "Type": "exec",
+      "RemainAfterExit": "yes",
+      "Restart": "no",
+      "CPUQuota": "100%",
+      "MemoryMax": "256M",
+      "MemorySwapMax": "0",
+      "TasksMax": 32,
+      "RuntimeMaxSec": 6000
+    },
+    "controller": {
+      "Type": "exec",
+      "RemainAfterExit": "yes",
+      "Restart": "no",
+      "CPUQuota": "200%",
+      "MemoryMax": "4G",
+      "MemorySwapMax": "0",
+      "TasksMax": 128,
+      "RuntimeMaxSec": 7200,
+      "KillSignal": "SIGINT",
+      "TimeoutStopSec": 900,
+      "SendSIGKILL": "no"
+    }
+  },
+  "environment": {
+    "CUDA_VISIBLE_DEVICES": "",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "OMP_NUM_THREADS": "2",
+    "MKL_NUM_THREADS": "2",
+    "OPENBLAS_NUM_THREADS": "2",
+    "NUMEXPR_NUM_THREADS": "2"
+  },
+  "unset_environment": [
+    "LD_PRELOAD",
+    "PYTHONPATH"
+  ],
+  "archive_rule": "Retain SAME original unit PID/start/invocation and full show/cat/invjournal/actual child exit before any release. Root creates actual service names and canonical state updates.",
+  "execution_scope": "A new separately precommitted trial only; trial01 FAILED and forward CE repair are immutable history. No actual trial02 job is provided."
+}

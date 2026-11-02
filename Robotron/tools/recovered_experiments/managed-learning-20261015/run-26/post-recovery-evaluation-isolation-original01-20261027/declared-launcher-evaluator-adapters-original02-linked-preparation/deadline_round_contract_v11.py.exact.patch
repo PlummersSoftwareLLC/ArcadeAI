@@ -1,0 +1,73 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/deadline_round_contract_v11.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original02-linked-preparation/deadline_round_contract_v11.py
+@@ -5,7 +5,7 @@
+ import json
+ from pathlib import Path
+ 
+-ROOT = Path(__file__).resolve().parents[2]
++ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ BASE = ROOT / 'logs/managed-learning-20261015/run-26'
+ LEGACY_NATIVE = BASE / 'deadline-score60min-protocol-original01-preparation-20261026/run_deadline32_leg_v1.py'
+ LEGACY_NATIVE_SHA = '85b2efdd43c8c1c7a0f48610908bec1ded2b936d066080328b6862fc394ae556'
+@@ -13,7 +13,7 @@
+ LEGACY_REVIEW_SHA = 'f2b311fd6d375e6b1e35c571b91cfb8c209881855834941d5b0292b51a9bbf5e'
+ LEGACY_JOB = BASE / 'deadline-score32-fixed-fleet-admission-original03-preparation-20261026/fixed-RCRC-deadline32-study-original03/C2/job.json'
+ LEGACY_JOB_SHA = 'b6f9d229836f6cbe2897e2fa3ef6426209998ac9b361c47d1a48a95200cd1fc5'
+-HEALTH_SHAS = {'control': 'a2ce55471f7ff14490553cf05871e79a0ff15c925d01441065821b0f95daade8', 'durability': '5dbeb347474dd9289ae18a2de0c438820f535fa9d75badaa3cfbf82dff6c1aa5', 'client': '6db3730b6ff94587d1ae417611297f10e776ce30aafbcae243c1b68faa1866ce', 'worker': '153b6d727bb9e67b507b5b314af114fb705e656ce77f3cfb290f4bb82c556be0', 'health': '51cab6ad216b0c70f65c6581ce2d7e934e11ade1d3da213602fa0167cf89feb6', 'health_base': 'daa4503f193a94540a3547f254aea108b2ec07c1a70b0b653d32bb4a609ccc49', 'API_projection': '6145874201af09b41f2dc4a358513f7ecc0406166dd5c7f082087a8e5b2ffa03', 'round_admission': '9a5506a5b2163506f0cd40f71ca9c0a78945653a6ae9ae5552fb5a2bf70a4087'}
++HEALTH_SHAS = {'client': '96ec161c65ce42281f16f0534f4886ea08d9cf5e1a70e761eb4271515d289fea', 'worker': 'add918117d28c57d5c32f0161c9f5e72339beb9801b1c95a5602d7da0ef2dce6', 'health': 'fa431bef15daa9c0bc7d2ba539d42bebdee5ebe2694c320dddf2e9c118ed3c0a', 'health_base': '44371d76f1be25453050a1a508afb70325a86bcec965fe19fbd47a0ab3bf65ef', 'API_projection': '6145874201af09b41f2dc4a358513f7ecc0406166dd5c7f082087a8e5b2ffa03', 'round_admission': '9a5506a5b2163506f0cd40f71ca9c0a78945653a6ae9ae5552fb5a2bf70a4087', 'launcher_census': '9da0759190ee2dc60393e293b707285168f35fe5a99c8707c10a8c0f834be26f', 'durability': '5dbeb347474dd9289ae18a2de0c438820f535fa9d75badaa3cfbf82dff6c1aa5', 'control': 'a2ce55471f7ff14490553cf05871e79a0ff15c925d01441065821b0f95daade8'}
+ PRIVATE_FIELDS = ('source_package', 'actor_source_sha256', 'loaded_rom_sha256',
+     'prior_ROM_identity_proof', 'lua', 'mame', 'rompath', 'boot_seed', 'seed_runtime',
+     'main_sources', 'actor_slots', 'origin_port', 'proxy_ports', 'device',
+@@ -72,19 +72,20 @@
+ 
+ 
+ def validate_static(job, protocol, family, h):
+-    require(protocol['schema'] == 'robotron-native-round-main-health-protocol-v10'
++    require(protocol['schema'] == 'robotron-native-round-main-health-declared-launcher-protocol-v1'
+             and protocol['case'] == job['main_binding'] and protocol['raw_API_required'] is True
+             and protocol['close_requires_final_sample'] is True and protocol['hot_max_gap_s'] == .5
+             and protocol['initial_samples'] == 100
+             and protocol['raw_queue_protocol'] == 'pending-byte-digest-v2'
+             and protocol['volatile_live_tmpfs'] is True
+             and protocol['source_bound_API_reconnect_projection'] is True
+-            and protocol['source_bound_natural_round_admission'] is True, 'Exact hot round-health protocol required')
+-    require(family['schema'] == 'robotron-deadline32-round-main-source-family-v11'
++            and protocol['source_bound_natural_round_admission'] is True
++            and protocol['source_bound_declared_launcher_census'] is True, 'Exact hot round-health protocol required')
++    require(family['schema'] == 'robotron-deadline32-declared-launcher-source-family-v1'
+             and family['runtime'] == job['runtime'] and family['deadline_components'] == job['components']
+             and family['main_observer'] == job['observer_sources']
+             and family['current_main_binding'] == job['main_binding'], 'Native/family source binding differs')
+-    require(set(family['main_observer']) == {'client', 'worker', 'health', 'health_base', 'API_projection', 'round_admission', 'interpreter', 'durability', 'control'}, 'Exact round observer family required')
++    require(set(family['main_observer']) == {'client', 'worker', 'health', 'health_base', 'API_projection', 'round_admission', 'interpreter', 'durability', 'control', 'launcher_census'}, 'Exact round observer family required')
+     for key, digest in HEALTH_SHAS.items():
+         require(family['main_observer'][key]['sha256'] == digest, 'Selected round observer source differs: ' + key)
+     for value in family['main_observer'].values():
+@@ -110,7 +111,7 @@
+     require(recovery['current_boot_id'] == Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
+             'Restored coordinator belongs to a different boot')
+     h.checked(job['lease'])
+-    require(family['round_observer_reviewer']['sha256'] == '802d84f382fd51a45b156ce447fb31afed75ca19cd81f312cda00b1bc699ecd6', 'Exact independent round observer reviewer required')
++    require(family['round_observer_reviewer']['sha256'] == '02a7ec5ba10bbee1893ab2b66ef6d1feae0301d774aea818b2c781d777fe1aab', 'Exact independent round observer reviewer required')
+     h.checked(family['round_observer_reviewer'])
+     return validate_derivation(job['runtime']['path'], family['reviewer']['path'])
+ 
+@@ -118,8 +119,8 @@
+ def validate_binding(job, protocol, family, read, h):
+     binding = read(job['main_binding'])
+     require(binding['schema'] == 'robotron-round-main-health-case-v1'
+-            and len(binding['inputs']) == 243 and binding['experiment'] == job['training_experiment'],
+-            'Exact243-input recovered main recipe context required')
++            and len(binding['inputs']) == 247 and binding['experiment'] == job['training_experiment'],
++            'Exact247-input recovered main recipe context required')
+     baseline = read(binding['baseline_snapshot'])
+     health = load('_deadline_round_context_health', h.checked(family['main_observer']['health']))
+     health.check_inputs(binding, full=True)
+@@ -159,6 +160,6 @@
+     expected_slots = set(map(str, range(192)))
+     for value in outcome['samples']:
+         sample = json.loads(h.checked(value).read_bytes())['snapshot']
+-        require(set(sample['actors']) | set(sample['results']) == expected_slots,
++        require(set(sample['actors']) | set(sample['results']) | set(sample.get('round_admission', {}).get('pending', [])) == expected_slots,
+                 'Readiness proof does not account for all192 training slots')
+     return verified

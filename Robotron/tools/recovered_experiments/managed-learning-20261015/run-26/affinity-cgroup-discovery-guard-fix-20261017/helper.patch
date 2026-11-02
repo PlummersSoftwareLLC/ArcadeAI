@@ -1,0 +1,85 @@
+--- before/inference_worker_affinity.py
++++ after/inference_worker_affinity.py
+@@ -15,6 +15,7 @@
+ import argparse
+ from contextlib import contextmanager
+ import csv
++import errno
+ import hashlib
+ import json
+ import math
+@@ -131,6 +132,42 @@
+         ends = [int(value) for value in part.split("-")]
+         online.update(range(ends[0], ends[-1] + 1))
+     return online
++
++
++def discover_fleet_actors(cgroup):
++    """Classify a cgroup snapshot, then strictly inspect every MAME actor.
++
++    Supervisors also own short-lived sleep/pgrep children. Their disappearance
++    before classification is harmless; exact slots and the caller's complete
++    immutable binding comparison still detect missing or replaced actors.
++    """
++    actors, logs = [], set()
++    for pid in (Path('/sys/fs/cgroup') / cgroup.lstrip('/') / 'cgroup.procs').read_text().split():
++        process = Path('/proc') / pid
++        try:
++            argv = process.joinpath('cmdline').read_bytes().split(b'\0')
++        except OSError as error:
++            if error.errno in (errno.ENOENT, errno.ESRCH):
++                continue
++            raise GuardFailure(f'Fleet candidate PID {pid} cmdline discovery failed: {error}') from error
++        if not (len(argv) > 1 and argv[1] == b'robotron' and argv[0].endswith(b'/mame')):
++            continue
++        operation = 'identity'
++        try:
++            actor = identity.identify_process(int(pid), 'mame')
++            operation = 'cgroup'
++            require(process.joinpath('cgroup').read_text().strip() == '0::' + cgroup,
++                    'Actor left the owned fleet cgroup')
++            for descriptor in ('1', '2'):
++                operation = 'stdout/stderr fd ' + descriptor
++                logs.add(str((process / 'fd' / descriptor).resolve(strict=True)))
++            actors.append(actor)
++        except (OSError, ValueError) as error:
++            raise GuardFailure(f'Classified MAME PID {pid} {operation} inspection failed: {error}') from error
++    actors.sort(key=lambda actor: actor['client_slot'])
++    require([actor['client_slot'] for actor in actors] == list(range(192)),
++            'Expected exact main actor slots 0..191')
++    return actors, logs
+ 
+ 
+ def compact_api(raw):
+@@ -294,20 +331,7 @@
+         cgroup = subprocess.run(["systemctl", "--user", "show", self.fleet_unit, "--value", "-p", "ControlGroup"],
+                                 capture_output=True, text=True, timeout=5, check=True).stdout.strip()
+         require(cgroup.startswith("/user.slice/") and cgroup.endswith("/" + self.fleet_unit), "Unexpected fleet cgroup")
+-        actors, logs = [], set()
+-        for pid in (Path("/sys/fs/cgroup") / cgroup.lstrip("/") / "cgroup.procs").read_text().split():
+-            p = Path("/proc") / pid
+-            try:
+-                argv = p.joinpath("cmdline").read_bytes().split(b"\0")
+-                if len(argv) > 1 and argv[1] == b"robotron" and argv[0].endswith(b"/mame"):
+-                    actor = identity.identify_process(int(pid), "mame")
+-                    require(p.joinpath("cgroup").read_text().strip() == "0::" + cgroup, "Actor cgroup changed")
+-                    actors.append(actor)
+-                    logs.update(str((p / "fd" / fd).resolve()) for fd in ("1", "2"))
+-            except (FileNotFoundError, ProcessLookupError) as error:
+-                raise GuardFailure("Fleet changed during ownership inspection") from error
+-        actors.sort(key=lambda actor: actor["client_slot"])
+-        require([actor["client_slot"] for actor in actors] == list(range(192)), "Expected exact main actor slots 0..191")
++        actors, logs = discover_fleet_actors(cgroup)
+         logs.update(str((proc / "fd" / fd).resolve()) for fd in ("1", "2"))
+         log_bindings = {}
+         for name in sorted(logs):
+@@ -317,7 +341,8 @@
+         model_dir = Path(selected.get("ROBOTRON_DQN_MODEL_DIR", str(GAME / "models_dqn")))
+         control = Path(selected.get("ROBOTRON_DQN_CONTROL_PATH", str(model_dir / "learning_control.json")))
+         sources = [GAME / "Scripts/main.lua", GAME / "Scripts/run_dqn.py", GAME / "Scripts/robotron_socket_wait.c",
+-                   Path(__file__).resolve(), Path(identity.__file__).resolve()]
++                   Path(__file__).resolve(), Path(identity.__file__).resolve(),
++                   Path(__file__).with_name('test_fleet_actor_discovery.py').resolve()]
+         sources += sorted((GAME / "Scripts/dqn").glob("*.py")) + sorted((GAME / "Scripts/dqn").glob("*.c"))
+         settings = [control, model_dir / "game_settings.json"]
+         return dict(worker=worker, actors=actors, fleet_cgroup=cgroup, environment_sha256=digest(selected),

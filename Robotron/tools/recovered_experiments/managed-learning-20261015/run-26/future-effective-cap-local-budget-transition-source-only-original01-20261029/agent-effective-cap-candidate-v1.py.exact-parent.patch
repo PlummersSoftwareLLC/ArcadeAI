@@ -1,0 +1,23 @@
+--- parent-agent.py
++++ agent-effective-cap-candidate-v1.py
+@@ -166,6 +166,8 @@
+         self._pipeline_telemetry = PipelineTelemetry(sample_every=20)
+         self._learning_optimizer_exposure = OptimizerExposure() if exposure_enabled() else None
+         self._prefetch_paused = False
++        # Unselected proposal: no installer, controller or request transport.
++        self._effective_cap_budget = None
+         _startup_hold = os.getenv("ROBOTRON_CONTINUOUS_STARTUP_HOLD", "0")
+         if _startup_hold not in ("0", "1"):
+             raise ValueError("Explicit continuous startup hold0/1 required")
+@@ -1102,6 +1104,11 @@
+                 time.sleep(0.01)
+                 continue
+             pending_batch = None
++            # Optional proposal hook is inactive unless a separately qualified
++            # installation supplies a source-bound cooperating guard lease.
++            budget = self._effective_cap_budget
++            if budget is not None:
++                budget.service_at_boundary(self, metrics, RL_CONFIG, pending_batch=pending_batch)
+             try:
+                 try:
+                     tok = self._train_queue.get_nowait()

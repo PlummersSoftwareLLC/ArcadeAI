@@ -1,0 +1,23 @@
+--- prepare_durable_endpoint_profiles_v2.py
++++ prepare_durable_endpoint_profiles_v3.py
+@@ -116,12 +116,17 @@
+     canonical=CASE/'canonical-profile-CPU-original01';frozen=CASE/'frozen-profile-CPU-original01'
+     if a.prepare_canonical:
+         prepared=api.prepare(CASE/'result.json',canonical)
+-        h=api.helpers();h.put(canonical/'original-durable-observer-terminal.json',original['observer_terminal'])
++        h=api.helpers();packet=json.loads(h.checked(prepared).read_bytes())
++        job=json.loads(h.checked(packet['job']).read_bytes())
++        require(all(job['checkpoint'][k]==original['endpoint'][k]for k in ('path','sha256','bytes')),
++            'Full profile checkpoint pin differs from original captured endpoint')
++        h.put(canonical/'original-durable-observer-terminal.json',original['observer_terminal'])
+         h.put(canonical/'independent-endpoint-selection.json',dict(schema='robotron-durable-endpoint-selection-v1',
+             status='CAPTURE_AND_NUMERICAL_CPU_ONLY',**{k:v for k,v in original.items()if k not in ('report','observer_terminal')},
+-            policy=dict(checkpoint=original['endpoint'],expected_policy_clocks=original['report']['clocks'],
++            source=h.pin(Path(__file__).resolve()),
++            policy=dict(checkpoint=job['checkpoint'],expected_policy_clocks=original['report']['clocks'],
+                 training_experiment='CE4096-LR125-survival32M-original01-20261023',
+-                immutable_numerical_or_protection_authority=original['CPU_verification']),
++                immutable_numerical_or_protection_authority=h.pin(CASE/'endpoint-CPU.json')),
+             launcher_aware_observer_engineering_qualified=False,scientific_launch_qualified=False,quality_qualified=False,promotion=False))
+     elif a.close_canonical:prepared=api.close(canonical)
+     elif a.prepare_frozen:prepared=api.prepare(CASE/'result.json',frozen,

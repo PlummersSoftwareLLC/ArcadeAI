@@ -1,0 +1,16 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-current-profile-guard-original04/prepare_round_cpu_guard_current_profile_v8.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/future-original05-typed-main-journal128-family-original01/closed-four-fresh-guard-templates-original01/prepare_round_cpu_guard_current_profile_v8.py
+@@ -9,10 +9,10 @@
+ HERE = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
+ LOCAL = Path(__file__).resolve().parent
+ REUSE = LOCAL
+-SOURCE_CONTRACT_SHA = '5941d773a16208201dbbe5110b9dc41a5f0b9b1b04ae8df39d7a0b92146865a9'
++SOURCE_CONTRACT_SHA = None
+ DRIVER_SHA = '868bcbfc64c2c886b2f715e6de88258cafbe367e194590e7e70983a723942c99'
+-SHIM_SHA = '235aafdb90a1ea5d776b92191f2b7f077bf9bc585ddf76dc03cb502f7b80c3e5'
+-EXACT_METADATA_CLASSIFIER = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/prepare_round_cpu_guard_v10.py', 'sha256': '787e91589ddedb506bceb66e20e36d8ca6d62b3b9a6b301209ada1bf3f3c4bd4', 'bytes': 11094, 'identity': {'device': 2304, 'inode': 85358602, 'bytes': 11094, 'mtime_ns': 1793312011307913418, 'ctime_ns': 1793312011307913418, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
++SHIM_SHA = '0c8e8ce4be51367f5ddbbe355ff4e3726576ca84f51329e090ceb5552b9f7242'
++EXACT_METADATA_CLASSIFIER = {'bytes': 11094, 'identity': {'bytes': 11094, 'ctime_ns': 1793335975049163422, 'device': 2304, 'inode': 85460133, 'mode': '0o444', 'mtime_ns': 1793335975049020894, 'nlink': 1, 'uid': 1001}, 'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/future-original05-typed-main-journal128-family-original01/prepare_round_cpu_guard_v10.py', 'sha256': '89be5b822f48cbff2b455e46fad8e8add2fd672cf0c0ab8a3f90d4d1cbc1218b'}
+ 
+ 
+ def load(name, path):

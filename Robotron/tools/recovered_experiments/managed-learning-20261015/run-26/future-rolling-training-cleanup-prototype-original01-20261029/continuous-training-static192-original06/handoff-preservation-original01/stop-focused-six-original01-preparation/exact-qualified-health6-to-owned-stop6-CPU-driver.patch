@@ -1,0 +1,48 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/run_continuous_static192_health_focused_CPU_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/stop-focused-six-original01-preparation/run_owned_stop_focused_six_CPU_v1.py
+@@ -34,7 +34,7 @@
+     source=pin(Path(__file__).resolve());require(source['sha256']==args.source_sha256,'Exact CPU driver required')
+     jp=pin(Path(args.job).resolve());require(jp['sha256']==args.job_sha256,'Exact original CPU job required')
+     job=json.loads(Path(jp['path']).read_bytes())
+-    require(job['schema']=='robotron-continuous-static192-focused-original-CPU-job-v1'
++    require(job['schema']=='robotron-owned-stop-focused-six-CPU-job-v1'
+         and job['source']==source and job['original_attempt']==1 and job['no_retry']is True,
+         'One exact original prospective CPU fixture job required')
+     for value in job['inputs']:
+@@ -44,29 +44,29 @@
+     def audit(event,arguments):
+         if event=='import' and arguments[0].split('.')[0]in('torch','tensorflow','cupy'):
+             raise RuntimeError('No GPU/model library import in focused fixture')
+-        if event in ('subprocess.Popen','os.system','socket.__new__','ctypes.dlopen'):
++        if event in ('subprocess.Popen','os.system','socket.__new__','ctypes.dlopen','os.kill','os.killpg'):
+             raise RuntimeError('No service/process/socket/native launch in focused fixture')
+         if event=='open' and isinstance(arguments[0],(str,bytes,os.PathLike)):
+             text=os.fsdecode(arguments[0])
+-            if text.endswith('.pt') or '/roms/'in text or text=='/usr/games/mame':
++            if text.endswith('.pt') or '/roms/'in text or text=='/usr/games/mame' or text.startswith(('/proc/','/sys/fs/cgroup/')):
+                 raise RuntimeError('No model/ROM/MAME body access in focused fixture')
+     sys.addaudithook(audit)
+     fixture=job['fixture'];require(pin(fixture['path'])==fixture,'Exact fixture file required')
+-    spec=importlib.util.spec_from_file_location('_continuous_static192_health_fixture',fixture['path'])
++    spec=importlib.util.spec_from_file_location('_owned_stop_six_fixture',fixture['path'])
+     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+     suite=unittest.defaultTestLoader.loadTestsFromTestCase(module.Tests)
+     require(suite.countTestCases()==6,'Six focused methods required; no inherited suite rerun')
+-    print(json.dumps(dict(phase='FOCUSED_CONTINUOUS_STATIC192_HEALTH_PREDICATES',methods=6)),flush=True)
++    print(json.dumps(dict(phase='FOCUSED_OWNED_STOP_LIFECYCLE_AND_RECOVERY',methods=6)),flush=True)
+     result=unittest.TextTestRunner(stream=sys.stdout,verbosity=2).run(suite)
+     for value in job['inputs']:
+         require(pin(value['path'])==value,'Fixture source changed during original CPU run')
+     require('torch'not in sys.modules,'Torch unexpectedly imported')
+-    report=dict(schema='robotron-continuous-static192-focused-original-CPU-report-v1',status='PASS'if result.wasSuccessful()else'FAIL',
++    report=dict(schema='robotron-owned-stop-focused-six-CPU-report-v1',status='PASS'if result.wasSuccessful()else'FAIL',
+         original_job=jp,actual_PID=os.getpid(),source=source,fixture=fixture,
+         tests_run=result.testsRun,failures=[str(t)for t,_ in result.failures],errors=[str(t)for t,_ in result.errors],
+         elapsed_s=time.monotonic()-started,Torch_imported=False,GPU_or_MAME_launched=False,
+-        pure_SHA_bound_actual_registry_health_and_transport_functions=True,
+-        temporary_immutable_synthetic_events_and_TCP_API_evidence=True,
++        actual_SHA_bound_Stop_run_and_selected_control_methods=True,
++        temporary_actual_CAS_files_and_synthetic_kernel_unit_socket_clock_collaborators=True,
+         live_collectors_or_proc_API_units_called=False,
+         actual_MAME_model_or_score_bodies_read=False,
+         actual_startup_authority_or_192_runtime_qualified=False,

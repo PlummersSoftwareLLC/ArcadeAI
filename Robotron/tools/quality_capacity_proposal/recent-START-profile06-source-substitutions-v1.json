@@ -1,0 +1,199 @@
+{
+  "schema": "robotron-joint-profile06-exact-source-binding-substitutions-v1",
+  "sources": [
+    {
+      "old": "/home/dave/source/repos/ArcadeAI/Robotron/tools/eval_capacity_proposal/audit_pilot_evidence_score_carry_v1.py",
+      "new": "/home/dave/source/repos/ArcadeAI/Robotron/tools/eval_capacity_proposal/audit_pilot_evidence_score_carry_v2.py",
+      "oldsha": "bb93048c6cee1e844e72b0baa5bb8a7c1c9d18f838d16e28e4cc40913e97ad1a",
+      "newsha": "f3b27dd4a5fb2b8f952467ac67781a846a4e21cd5a4fbe69a7a10e306300eb39",
+      "substitutions": {
+        "41acc755d6daa728fa0b8291d27e60da8f4e80e7d55ab8a2110bcb8b377d85af": "9c9d513328fb8f82427217b2bb2844d73226b3814de34905e28808a93496532e",
+        "profile05/": "profile06/",
+        "84901c887437e99873d65c2348f18ca9e2f022a393f3c5282d68064c9f1fbf40": "b552b2e83a9cc10cf7e4125cef22f571abe9189bd2ad3e63c6f48aa7df0e4516"
+      }
+    },
+    {
+      "old": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/quality32_acquisition_v3.py",
+      "new": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/quality32_acquisition_v4.py",
+      "oldsha": "ce183ba553a244bb93db11ff3679a3ea509d539f97c6142241db308cede23a62",
+      "newsha": "2f8ad3d84b9033c892318d069e0c462bf3f07dd3d0e9e69211008f602153ba70",
+      "substitutions": {
+        "41acc755d6daa728fa0b8291d27e60da8f4e80e7d55ab8a2110bcb8b377d85af": "9c9d513328fb8f82427217b2bb2844d73226b3814de34905e28808a93496532e",
+        "profile05/": "profile06/",
+        "audit_pilot_evidence_score_carry_v1.py": "audit_pilot_evidence_score_carry_v2.py",
+        "bb93048c6cee1e844e72b0baa5bb8a7c1c9d18f838d16e28e4cc40913e97ad1a": "f3b27dd4a5fb2b8f952467ac67781a846a4e21cd5a4fbe69a7a10e306300eb39"
+      }
+    },
+    {
+      "old": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/prepare_quality32_candidate_CPU_v4.py",
+      "new": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/prepare_quality32_candidate_CPU_v5.py",
+      "oldsha": "f5f14c3ae50a8acb09ab1613906413a0734d9df419c5014f712ddf0dd35889f5",
+      "newsha": "993cda7a49999c2bb569f6c7ae74a691dd3e13d1048e49d90e87f8e6886f53b1",
+      "substitutions": {
+        "41acc755d6daa728fa0b8291d27e60da8f4e80e7d55ab8a2110bcb8b377d85af": "9c9d513328fb8f82427217b2bb2844d73226b3814de34905e28808a93496532e",
+        "profile05/": "profile06/",
+        "audit_pilot_evidence_score_carry_v1.py": "audit_pilot_evidence_score_carry_v2.py",
+        "bb93048c6cee1e844e72b0baa5bb8a7c1c9d18f838d16e28e4cc40913e97ad1a": "f3b27dd4a5fb2b8f952467ac67781a846a4e21cd5a4fbe69a7a10e306300eb39",
+        "quality32_acquisition_v3.py": "quality32_acquisition_v4.py",
+        "ce183ba553a244bb93db11ff3679a3ea509d539f97c6142241db308cede23a62": "2f8ad3d84b9033c892318d069e0c462bf3f07dd3d0e9e69211008f602153ba70"
+      }
+    },
+    {
+      "old": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/audit_quality32_evidence_v3.py",
+      "new": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/audit_quality32_evidence_v4.py",
+      "oldsha": "aebf9ab768b0cbe0523233c1a2d714b5d0883233b40ce1dd5dcc4887fcc0d120",
+      "newsha": "f07ccdd098cbf879c7ff98ef26e92e525b7a0ea951c38641fa2b5c0571fa50e3",
+      "substitutions": {
+        "41acc755d6daa728fa0b8291d27e60da8f4e80e7d55ab8a2110bcb8b377d85af": "9c9d513328fb8f82427217b2bb2844d73226b3814de34905e28808a93496532e",
+        "profile05/": "profile06/",
+        "audit_pilot_evidence_score_carry_v1.py": "audit_pilot_evidence_score_carry_v2.py",
+        "bb93048c6cee1e844e72b0baa5bb8a7c1c9d18f838d16e28e4cc40913e97ad1a": "f3b27dd4a5fb2b8f952467ac67781a846a4e21cd5a4fbe69a7a10e306300eb39",
+        "quality32_acquisition_v3.py": "quality32_acquisition_v4.py",
+        "ce183ba553a244bb93db11ff3679a3ea509d539f97c6142241db308cede23a62": "2f8ad3d84b9033c892318d069e0c462bf3f07dd3d0e9e69211008f602153ba70",
+        "prepare_quality32_candidate_CPU_v4.py": "prepare_quality32_candidate_CPU_v5.py",
+        "f5f14c3ae50a8acb09ab1613906413a0734d9df419c5014f712ddf0dd35889f5": "993cda7a49999c2bb569f6c7ae74a691dd3e13d1048e49d90e87f8e6886f53b1",
+        "84901c887437e99873d65c2348f18ca9e2f022a393f3c5282d68064c9f1fbf40": "b552b2e83a9cc10cf7e4125cef22f571abe9189bd2ad3e63c6f48aa7df0e4516"
+      }
+    },
+    {
+      "old": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/review_closed_quality32_v7.py",
+      "new": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/review_closed_quality32_v8.py",
+      "oldsha": "40e465b8cd0a38395e722c7361bb912446b663926d2650ba25cce0c69e0ca991",
+      "newsha": "fa7883223eca627e89663cede037e1787888080ce06b31fcf6f8462fadd28bdb",
+      "substitutions": {
+        "41acc755d6daa728fa0b8291d27e60da8f4e80e7d55ab8a2110bcb8b377d85af": "9c9d513328fb8f82427217b2bb2844d73226b3814de34905e28808a93496532e",
+        "profile05/": "profile06/",
+        "audit_pilot_evidence_score_carry_v1.py": "audit_pilot_evidence_score_carry_v2.py",
+        "bb93048c6cee1e844e72b0baa5bb8a7c1c9d18f838d16e28e4cc40913e97ad1a": "f3b27dd4a5fb2b8f952467ac67781a846a4e21cd5a4fbe69a7a10e306300eb39",
+        "quality32_acquisition_v3.py": "quality32_acquisition_v4.py",
+        "ce183ba553a244bb93db11ff3679a3ea509d539f97c6142241db308cede23a62": "2f8ad3d84b9033c892318d069e0c462bf3f07dd3d0e9e69211008f602153ba70",
+        "prepare_quality32_candidate_CPU_v4.py": "prepare_quality32_candidate_CPU_v5.py",
+        "f5f14c3ae50a8acb09ab1613906413a0734d9df419c5014f712ddf0dd35889f5": "993cda7a49999c2bb569f6c7ae74a691dd3e13d1048e49d90e87f8e6886f53b1",
+        "audit_quality32_evidence_v3.py": "audit_quality32_evidence_v4.py",
+        "aebf9ab768b0cbe0523233c1a2d714b5d0883233b40ce1dd5dcc4887fcc0d120": "f07ccdd098cbf879c7ff98ef26e92e525b7a0ea951c38641fa2b5c0571fa50e3"
+      }
+    },
+    {
+      "old": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/protect_quality32_winner_v5.py",
+      "new": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/protect_quality32_winner_v6.py",
+      "oldsha": "571161db25e16282f28d2067a289202ae7e0b8b40d062e15e94c617c0cbbef2f",
+      "newsha": "815f326b3129721910450c74a96eea3bfcda0b4f70430cb1ba9545388ab9a212",
+      "substitutions": {
+        "41acc755d6daa728fa0b8291d27e60da8f4e80e7d55ab8a2110bcb8b377d85af": "9c9d513328fb8f82427217b2bb2844d73226b3814de34905e28808a93496532e",
+        "profile05/": "profile06/",
+        "audit_pilot_evidence_score_carry_v1.py": "audit_pilot_evidence_score_carry_v2.py",
+        "bb93048c6cee1e844e72b0baa5bb8a7c1c9d18f838d16e28e4cc40913e97ad1a": "f3b27dd4a5fb2b8f952467ac67781a846a4e21cd5a4fbe69a7a10e306300eb39",
+        "quality32_acquisition_v3.py": "quality32_acquisition_v4.py",
+        "ce183ba553a244bb93db11ff3679a3ea509d539f97c6142241db308cede23a62": "2f8ad3d84b9033c892318d069e0c462bf3f07dd3d0e9e69211008f602153ba70",
+        "prepare_quality32_candidate_CPU_v4.py": "prepare_quality32_candidate_CPU_v5.py",
+        "f5f14c3ae50a8acb09ab1613906413a0734d9df419c5014f712ddf0dd35889f5": "993cda7a49999c2bb569f6c7ae74a691dd3e13d1048e49d90e87f8e6886f53b1",
+        "audit_quality32_evidence_v3.py": "audit_quality32_evidence_v4.py",
+        "aebf9ab768b0cbe0523233c1a2d714b5d0883233b40ce1dd5dcc4887fcc0d120": "f07ccdd098cbf879c7ff98ef26e92e525b7a0ea951c38641fa2b5c0571fa50e3",
+        "review_closed_quality32_v7.py": "review_closed_quality32_v8.py",
+        "40e465b8cd0a38395e722c7361bb912446b663926d2650ba25cce0c69e0ca991": "fa7883223eca627e89663cede037e1787888080ce06b31fcf6f8462fadd28bdb"
+      }
+    },
+    {
+      "old": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/quality32_runtime_guard_v7.py",
+      "new": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/quality32_runtime_guard_v8.py",
+      "oldsha": "860032e95c999634370df73153ef058bf36d6cd8d6c9ef44246065afc2a64157",
+      "newsha": "738aafda0f064fd01e6311d1b02c687f551b912d838805ca0aa79247110bbe20",
+      "substitutions": {
+        "41acc755d6daa728fa0b8291d27e60da8f4e80e7d55ab8a2110bcb8b377d85af": "9c9d513328fb8f82427217b2bb2844d73226b3814de34905e28808a93496532e",
+        "profile05/": "profile06/",
+        "audit_pilot_evidence_score_carry_v1.py": "audit_pilot_evidence_score_carry_v2.py",
+        "bb93048c6cee1e844e72b0baa5bb8a7c1c9d18f838d16e28e4cc40913e97ad1a": "f3b27dd4a5fb2b8f952467ac67781a846a4e21cd5a4fbe69a7a10e306300eb39",
+        "quality32_acquisition_v3.py": "quality32_acquisition_v4.py",
+        "ce183ba553a244bb93db11ff3679a3ea509d539f97c6142241db308cede23a62": "2f8ad3d84b9033c892318d069e0c462bf3f07dd3d0e9e69211008f602153ba70",
+        "prepare_quality32_candidate_CPU_v4.py": "prepare_quality32_candidate_CPU_v5.py",
+        "f5f14c3ae50a8acb09ab1613906413a0734d9df419c5014f712ddf0dd35889f5": "993cda7a49999c2bb569f6c7ae74a691dd3e13d1048e49d90e87f8e6886f53b1",
+        "audit_quality32_evidence_v3.py": "audit_quality32_evidence_v4.py",
+        "aebf9ab768b0cbe0523233c1a2d714b5d0883233b40ce1dd5dcc4887fcc0d120": "f07ccdd098cbf879c7ff98ef26e92e525b7a0ea951c38641fa2b5c0571fa50e3",
+        "review_closed_quality32_v7.py": "review_closed_quality32_v8.py",
+        "40e465b8cd0a38395e722c7361bb912446b663926d2650ba25cce0c69e0ca991": "fa7883223eca627e89663cede037e1787888080ce06b31fcf6f8462fadd28bdb",
+        "protect_quality32_winner_v5.py": "protect_quality32_winner_v6.py",
+        "571161db25e16282f28d2067a289202ae7e0b8b40d062e15e94c617c0cbbef2f": "815f326b3129721910450c74a96eea3bfcda0b4f70430cb1ba9545388ab9a212"
+      }
+    },
+    {
+      "old": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/prepare_quality32_campaign_v6.py",
+      "new": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/prepare_quality32_campaign_v7.py",
+      "oldsha": "7f679cfc39387de625f729fe51c0186f6f196e936d10e1ad7e2a2d8610b8ccda",
+      "newsha": "e2ae49f9a4d9f5b0ded62c53a1b80e1ef4d5e050b9849349c42a551238c3240f",
+      "substitutions": {
+        "41acc755d6daa728fa0b8291d27e60da8f4e80e7d55ab8a2110bcb8b377d85af": "9c9d513328fb8f82427217b2bb2844d73226b3814de34905e28808a93496532e",
+        "profile05/": "profile06/",
+        "audit_pilot_evidence_score_carry_v1.py": "audit_pilot_evidence_score_carry_v2.py",
+        "bb93048c6cee1e844e72b0baa5bb8a7c1c9d18f838d16e28e4cc40913e97ad1a": "f3b27dd4a5fb2b8f952467ac67781a846a4e21cd5a4fbe69a7a10e306300eb39",
+        "quality32_acquisition_v3.py": "quality32_acquisition_v4.py",
+        "ce183ba553a244bb93db11ff3679a3ea509d539f97c6142241db308cede23a62": "2f8ad3d84b9033c892318d069e0c462bf3f07dd3d0e9e69211008f602153ba70",
+        "prepare_quality32_candidate_CPU_v4.py": "prepare_quality32_candidate_CPU_v5.py",
+        "f5f14c3ae50a8acb09ab1613906413a0734d9df419c5014f712ddf0dd35889f5": "993cda7a49999c2bb569f6c7ae74a691dd3e13d1048e49d90e87f8e6886f53b1",
+        "audit_quality32_evidence_v3.py": "audit_quality32_evidence_v4.py",
+        "aebf9ab768b0cbe0523233c1a2d714b5d0883233b40ce1dd5dcc4887fcc0d120": "f07ccdd098cbf879c7ff98ef26e92e525b7a0ea951c38641fa2b5c0571fa50e3",
+        "review_closed_quality32_v7.py": "review_closed_quality32_v8.py",
+        "40e465b8cd0a38395e722c7361bb912446b663926d2650ba25cce0c69e0ca991": "fa7883223eca627e89663cede037e1787888080ce06b31fcf6f8462fadd28bdb",
+        "protect_quality32_winner_v5.py": "protect_quality32_winner_v6.py",
+        "571161db25e16282f28d2067a289202ae7e0b8b40d062e15e94c617c0cbbef2f": "815f326b3129721910450c74a96eea3bfcda0b4f70430cb1ba9545388ab9a212",
+        "quality32_runtime_guard_v7.py": "quality32_runtime_guard_v8.py",
+        "860032e95c999634370df73153ef058bf36d6cd8d6c9ef44246065afc2a64157": "738aafda0f064fd01e6311d1b02c687f551b912d838805ca0aa79247110bbe20"
+      }
+    },
+    {
+      "old": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/monitor_supervised_quality32_v4.py",
+      "new": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/monitor_supervised_quality32_v5.py",
+      "oldsha": "fcb0082c815e775fd2219ac09218388076bf8b259d0686fb00e164243ff45b4f",
+      "newsha": "50a3f3c4f4ecc785fcae58382fc143107f07e8edca27de096e70e3ac478e356e",
+      "substitutions": {
+        "41acc755d6daa728fa0b8291d27e60da8f4e80e7d55ab8a2110bcb8b377d85af": "9c9d513328fb8f82427217b2bb2844d73226b3814de34905e28808a93496532e",
+        "profile05/": "profile06/",
+        "audit_pilot_evidence_score_carry_v1.py": "audit_pilot_evidence_score_carry_v2.py",
+        "bb93048c6cee1e844e72b0baa5bb8a7c1c9d18f838d16e28e4cc40913e97ad1a": "f3b27dd4a5fb2b8f952467ac67781a846a4e21cd5a4fbe69a7a10e306300eb39",
+        "quality32_acquisition_v3.py": "quality32_acquisition_v4.py",
+        "ce183ba553a244bb93db11ff3679a3ea509d539f97c6142241db308cede23a62": "2f8ad3d84b9033c892318d069e0c462bf3f07dd3d0e9e69211008f602153ba70",
+        "prepare_quality32_candidate_CPU_v4.py": "prepare_quality32_candidate_CPU_v5.py",
+        "f5f14c3ae50a8acb09ab1613906413a0734d9df419c5014f712ddf0dd35889f5": "993cda7a49999c2bb569f6c7ae74a691dd3e13d1048e49d90e87f8e6886f53b1",
+        "audit_quality32_evidence_v3.py": "audit_quality32_evidence_v4.py",
+        "aebf9ab768b0cbe0523233c1a2d714b5d0883233b40ce1dd5dcc4887fcc0d120": "f07ccdd098cbf879c7ff98ef26e92e525b7a0ea951c38641fa2b5c0571fa50e3",
+        "review_closed_quality32_v7.py": "review_closed_quality32_v8.py",
+        "40e465b8cd0a38395e722c7361bb912446b663926d2650ba25cce0c69e0ca991": "fa7883223eca627e89663cede037e1787888080ce06b31fcf6f8462fadd28bdb",
+        "protect_quality32_winner_v5.py": "protect_quality32_winner_v6.py",
+        "571161db25e16282f28d2067a289202ae7e0b8b40d062e15e94c617c0cbbef2f": "815f326b3129721910450c74a96eea3bfcda0b4f70430cb1ba9545388ab9a212",
+        "quality32_runtime_guard_v7.py": "quality32_runtime_guard_v8.py",
+        "860032e95c999634370df73153ef058bf36d6cd8d6c9ef44246065afc2a64157": "738aafda0f064fd01e6311d1b02c687f551b912d838805ca0aa79247110bbe20",
+        "prepare_quality32_campaign_v6.py": "prepare_quality32_campaign_v7.py",
+        "7f679cfc39387de625f729fe51c0186f6f196e936d10e1ad7e2a2d8610b8ccda": "e2ae49f9a4d9f5b0ded62c53a1b80e1ef4d5e050b9849349c42a551238c3240f"
+      }
+    },
+    {
+      "old": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/prepare_supervised_quality32_monitor_v4.py",
+      "new": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/prepare_supervised_quality32_monitor_v5.py",
+      "oldsha": "1b49ad69e8d58bc0d5b56384566deb62761ef2a721ba557211aecfda487a9c15",
+      "newsha": "c70a05bb6c9e33ba60b87c3b871d15c3705464c907e339e2e0f5fff4db706f43",
+      "substitutions": {
+        "41acc755d6daa728fa0b8291d27e60da8f4e80e7d55ab8a2110bcb8b377d85af": "9c9d513328fb8f82427217b2bb2844d73226b3814de34905e28808a93496532e",
+        "profile05/": "profile06/",
+        "audit_pilot_evidence_score_carry_v1.py": "audit_pilot_evidence_score_carry_v2.py",
+        "bb93048c6cee1e844e72b0baa5bb8a7c1c9d18f838d16e28e4cc40913e97ad1a": "f3b27dd4a5fb2b8f952467ac67781a846a4e21cd5a4fbe69a7a10e306300eb39",
+        "quality32_acquisition_v3.py": "quality32_acquisition_v4.py",
+        "ce183ba553a244bb93db11ff3679a3ea509d539f97c6142241db308cede23a62": "2f8ad3d84b9033c892318d069e0c462bf3f07dd3d0e9e69211008f602153ba70",
+        "prepare_quality32_candidate_CPU_v4.py": "prepare_quality32_candidate_CPU_v5.py",
+        "f5f14c3ae50a8acb09ab1613906413a0734d9df419c5014f712ddf0dd35889f5": "993cda7a49999c2bb569f6c7ae74a691dd3e13d1048e49d90e87f8e6886f53b1",
+        "audit_quality32_evidence_v3.py": "audit_quality32_evidence_v4.py",
+        "aebf9ab768b0cbe0523233c1a2d714b5d0883233b40ce1dd5dcc4887fcc0d120": "f07ccdd098cbf879c7ff98ef26e92e525b7a0ea951c38641fa2b5c0571fa50e3",
+        "review_closed_quality32_v7.py": "review_closed_quality32_v8.py",
+        "40e465b8cd0a38395e722c7361bb912446b663926d2650ba25cce0c69e0ca991": "fa7883223eca627e89663cede037e1787888080ce06b31fcf6f8462fadd28bdb",
+        "protect_quality32_winner_v5.py": "protect_quality32_winner_v6.py",
+        "571161db25e16282f28d2067a289202ae7e0b8b40d062e15e94c617c0cbbef2f": "815f326b3129721910450c74a96eea3bfcda0b4f70430cb1ba9545388ab9a212",
+        "quality32_runtime_guard_v7.py": "quality32_runtime_guard_v8.py",
+        "860032e95c999634370df73153ef058bf36d6cd8d6c9ef44246065afc2a64157": "738aafda0f064fd01e6311d1b02c687f551b912d838805ca0aa79247110bbe20",
+        "prepare_quality32_campaign_v6.py": "prepare_quality32_campaign_v7.py",
+        "7f679cfc39387de625f729fe51c0186f6f196e936d10e1ad7e2a2d8610b8ccda": "e2ae49f9a4d9f5b0ded62c53a1b80e1ef4d5e050b9849349c42a551238c3240f",
+        "monitor_supervised_quality32_v4.py": "monitor_supervised_quality32_v5.py",
+        "fcb0082c815e775fd2219ac09218388076bf8b259d0686fb00e164243ff45b4f": "50a3f3c4f4ecc785fcae58382fc143107f07e8edca27de096e70e3ac478e356e"
+      }
+    }
+  ],
+  "package_sha256": "9c9d513328fb8f82427217b2bb2844d73226b3814de34905e28808a93496532e",
+  "source_selected_for_science": false
+}

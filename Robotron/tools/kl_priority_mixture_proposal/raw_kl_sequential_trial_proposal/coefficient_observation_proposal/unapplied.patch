@@ -1,0 +1,412 @@
+--- a/Robotron/Scripts/dqn/agent.py
++++ b/Robotron/Scripts/dqn/agent.py
+@@ -293,6 +293,9 @@
+         # construction, four-output ABI and math are unchanged in both modes.
+         self._recomputed_ce_capture = None
+         _capture_directory = os.getenv("DQN_RECOMPUTED_CE_CAPTURE_DIR", "").strip()
++        _coefficient_directory = os.getenv("DQN_COEFFICIENT_OBSERVATION_DIR", "").strip()
++        if _coefficient_directory and (_capture_directory or os.getenv("DQN_EXECUTED_CE_TRACE_DIR", "").strip()):
++            raise ValueError("Coefficient observation and existing captures are mutually exclusive")
+         if _capture_directory:
+             if os.getenv("DQN_EXECUTED_CE_TRACE_DIR", "").strip():
+                 raise ValueError("Recomputed capture and executed-target trace are mutually exclusive")
+@@ -302,6 +305,17 @@
+                 runtime=dict(torch=str(torch.__version__), cuda=torch.version.cuda,
+                     device=str(self.device), use_amp=bool(self.use_amp),
+                     fused_adam=bool(self.optimizer.defaults.get("fused", False))))
++
++        if _coefficient_directory:
++            from .coefficient_observation import CoefficientObservation
++            self._recomputed_ce_capture = CoefficientObservation(_coefficient_directory, cfg,
++                optimizer_exposure=self._learning_optimizer_exposure,
++                runtime=dict(torch=str(torch.__version__), cuda=torch.version.cuda,
++                    device=str(self.device), use_amp=bool(self.use_amp),
++                    fused_adam=bool(self.optimizer.defaults.get("fused", False))),
++                source_directory=os.path.dirname(__file__),
++                record_path=os.environ["DQN_COEFFICIENT_OBSERVATION_RECORD"],
++                record_sha256=os.environ["DQN_COEFFICIENT_OBSERVATION_RECORD_SHA256"])
+ 
+         # torch.compile: MUST complete before the background train thread or
+         # socket server exist — all dynamo tracing has to happen serially on
+--- a/Robotron/Scripts/dqn/training.py
++++ b/Robotron/Scripts/dqn/training.py
+@@ -535,6 +535,9 @@
+     priority_errors = host[B:2*B] if kl_priority else td_errors
+     scalar_offset = 2 * B if kl_priority else B
+     loss_val, gn, bc_loss_val = map(float, host[scalar_offset:scalar_offset+3])
++    if capture is not None and hasattr(capture, "packed_cpu"):
++        _capture_observe(capture, "packed_cpu", agent, td_errors,
++            weighted_loss=loss_val, grad_norm=gn, bc_loss=bc_loss_val, indices=indices, weights=weights)
+     if diagnostic_due:
+         _q_pred_min, _q_pred_max, _q_overest, q_mean, agree_move, agree_fire = map(float, host[scalar_offset+3:scalar_offset+9])
+         for name, value in zip(('below_support_mass', 'above_support_mass', 'edge_atom_mass',
+--- /dev/null
++++ b/Robotron/Scripts/dqn/coefficient_observation.py
+@@ -0,0 +1,367 @@
++"""Startup-only first-consumed CE coefficient observation; no device operations.
++
++This observer reuses existing sampler metadata and packed host readback. It never
++captures PRE models/inputs/RNG, reconstructs targets, or measures gradients.
++"""
++import hashlib
++import json
++import math
++import os
++from pathlib import Path
++import re
++import stat
++import threading
++import time
++
++BATCH = 4096
++TOTAL_BYTES = 4 * 1024**2
++ROW_BYTES = 2 * 1024**2
++SMALL_BYTES = 128 * 1024
++SOURCE_NAMES = ('agent.py', 'training.py', 'loss_kernel.py', 'config.py',
++                'priority_phase.py', 'replay_buffer.py', 'prefetch.py',
++                'model.py', 'coefficient_observation.py')
++COUNTERS = ('attempts_started', 'outcomes_recorded', 'applied', 'amp_skipped', 'unavailable')
++
++
++def need(value, message):
++    if not value:
++        raise ValueError(message)
++
++
++def error_text(error):
++    try:
++        return (type(error).__name__ + ': ' + str(error))[:400]
++    except Exception:
++        return 'Unprintable observer exception'
++
++
++def process_identity():
++    # Standard process metadata only; no API, service command or device query.
++    pid = os.getpid()
++    fields = Path('/proc/self/stat').read_text().rsplit(')', 1)[1].split()
++    cgroups = Path('/proc/self/cgroup').read_text().splitlines()
++    cgroup = next(line.split(':', 2)[2] for line in cgroups if line.startswith('0::'))
++    invocation = os.environ.get('INVOCATION_ID', '')
++    unit = cgroup.rsplit('/', 1)[-1]
++    need(unit.endswith('.service') and re.fullmatch('[0-9a-f]{32}', invocation),
++         'An actual retained service invocation is required')
++    return dict(pid=pid, starttime_ticks=int(fields[19]), unit=unit,
++                invocation_id=invocation, cgroup=cgroup)
++
++
++def read_record(path, expected_sha):
++    path = Path(path)
++    need(path.is_absolute() and path == path.resolve(strict=True), 'Canonical record path required')
++    info = path.lstat()
++    need(stat.S_ISREG(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o444
++         and info.st_uid == os.getuid() and info.st_nlink == 1
++         and 0 < info.st_size <= SMALL_BYTES, 'Owned readonly bounded root record required')
++    with path.open('rb') as stream:
++        before = os.fstat(stream.fileno())
++        data = stream.read(SMALL_BYTES + 1)
++        after = os.fstat(stream.fileno())
++    stable = lambda s: (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns,
++                        s.st_mode, s.st_uid, s.st_nlink)
++    need(stable(info) == stable(before) == stable(after) == stable(path.lstat())
++         and len(data) == info.st_size and hashlib.sha256(data).hexdigest() == expected_sha,
++         'Root record changed')
++    return json.loads(data), dict(path=str(path), sha256=expected_sha, bytes=len(data))
++
++
++class ObservedBatch(tuple):
++    def __new__(cls, batch, metadata):
++        value = super().__new__(cls, batch)
++        value.draw_metadata = metadata
++        return value
++
++
++class CoefficientObservation:
++    def __init__(self, directory, cfg, *, optimizer_exposure, runtime, source_directory,
++                 record_path, record_sha256, identity_fn=process_identity):
++        need(int(cfg.batch_size) == BATCH and str(cfg.per_priority_metric) == 'ce',
++             'Enabled observation requires genuine4096 CE profile')
++        need(bool(cfg.use_torch_compile) and bool(cfg.compile_full_loss), 'Compiled loss profile required')
++        need(runtime.get('use_amp') is True and runtime.get('fused_adam') is True
++             and str(runtime.get('device', '')).startswith('cuda'), 'Existing AMP/fused CUDA profile required')
++        need(optimizer_exposure is not None and optimizer_exposure.snapshot()['enabled'],
++             'Existing optimizer exposure must already be enabled')
++        record, record_pin = read_record(record_path, record_sha256)
++        need(record.get('schema') == 'robotron-coefficient-observation-root-record-v1'
++             and record.get('request_id') and record['expected_phase']['metric'] == 'ce'
++             and record['expected_phase']['valid'] is True, 'Explicit CE observation root record required')
++        need(set(record['source_hashes']) == set(SOURCE_NAMES), 'Exact declared source closure required')
++        actual_sources = {name: hashlib.sha256((Path(source_directory) / name).read_bytes()).hexdigest()
++                          for name in SOURCE_NAMES}
++        need(actual_sources == record['source_hashes'], 'Observation/source precommit differs')
++        self.owner = identity_fn()
++        self.directory = Path(directory)
++        need(self.directory.is_absolute() and self.directory.name.startswith('ce-coefficients-')
++             and self.directory == self.directory.resolve(strict=False), 'Canonical NEW coefficient directory required')
++        self.directory.mkdir()
++        self.lock = threading.RLock()
++        self.exposure, self.expected_phase = optimizer_exposure, record['expected_phase']
++        self.capture_id = 'ce-coefficients-' + str(time.monotonic_ns())
++        self.consumed, self.disk_bytes = 0, 0
++        self.current = self.lease = self.lease_owner = self.metrics_context = None
++        self.invalid = self.finished = self.reporting_failed = False
++        self.errors = []
++        self.context = dict(schema='robotron-first-CE-coefficient-observation-v1',
++            capture_id=self.capture_id, owner=self.owner, root_record=record_pin,
++            source_hashes=actual_sources, runtime=runtime, attempts=1,
++            scope='CPU coefficients+existing packed CE/scalars+actual outcome only; no PRE/RNG/target/gradient',
++            device_weight_identity='Source/lifetime join to supplied CPU FP32 weights; no independent device read',
++            qualification_pass=False)
++        self._write('context.json', self.context, SMALL_BYTES)
++
++    def _write(self, name, value, bound):
++        data = (json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + '\n').encode()
++        need(len(data) <= bound and self.disk_bytes + len(data) <= TOTAL_BYTES, 'Observation byte budget exceeded')
++        path = self.directory / name
++        # Charge the full reservation before I/O; failed publication cannot reopen budget.
++        self.disk_bytes += len(data)
++        with path.open('xb') as stream:
++            need(stream.write(data) == len(data), 'Short observation write')
++            stream.flush()
++            os.fchmod(stream.fileno(), 0o444)
++            os.fsync(stream.fileno())
++        fd = os.open(self.directory, os.O_RDONLY | os.O_DIRECTORY)
++        try:
++            os.fsync(fd)
++        finally:
++            os.close(fd)
++
++    def invalidate(self, where, error):
++        # Never alter learner flags, compile route, optimizer, scaler or native tree.
++        try:
++            with self.lock:
++                self.invalid = True
++                if len(self.errors) < 8:
++                    self.errors.append(str(where)[:80] + ': ' + error_text(error))
++                if len(self.errors) == 1:
++                    try:
++                        self._write('observer-error.json', dict(status='INVALID',
++                            attempts_consumed=self.consumed, errors=list(self.errors)), SMALL_BYTES)
++                    except Exception:
++                        self.reporting_failed = True
++        except Exception:
++            self.reporting_failed = True
++
++    def want_draw(self):
++        with self.lock:
++            return not self.invalid and self.consumed == 0
++
++    def sample(self, memory, batch_size, beta, state_out=None):
++        if not self.want_draw():
++            return memory.sample(batch_size, beta=beta, _state_out=state_out)
++        try:
++            batch, metadata = memory.sample_with_metadata(batch_size, beta=beta,
++                capture_id=self.capture_id, _state_out=state_out)
++        except BaseException as error:
++            self.invalidate('original_sampler_exception_before_consumption', error)
++            raise
++        if batch is None:
++            return None
++        try:
++            return ObservedBatch(batch, metadata)
++        except Exception as error:
++            self.invalidate('attach_draw_metadata', error)
++            return batch
++
++    @staticmethod
++    def _clocks(agent, metrics_context=None):
++        value = dict(training_steps=int(agent.training_steps), optimized_samples=int(agent.optimized_samples))
++        if metrics_context is not None:
++            with metrics_context.lock:
++                value.update({key: int(getattr(metrics_context, key)) for key in
++                              ('frame_count', 'learner_frame_count', 'measurement_frame_count')})
++        return value
++
++    def _owned(self, value):
++        import numpy as np
++        remaining = [100000]
++        def copy(part, depth=0):
++            remaining[0] -= 1
++            need(depth <= 8 and remaining[0] >= 0, 'Bounded metadata tree required')
++            if isinstance(part, np.ndarray):
++                need(part.ndim == 1 and part.size <= BATCH and part.dtype.kind in 'biuf',
++                     'Only bounded one-dimensional CPU metadata arrays allowed')
++                return copy(part.copy().tolist(), depth + 1)
++            if isinstance(part, np.generic):
++                return copy(part.item(), depth)
++            if part is None or type(part) in (bool, int, str):
++                need(not isinstance(part, str) or len(part) <= 2000, 'Bounded metadata text required')
++                return part
++            if type(part) is float:
++                return part if math.isfinite(part) else dict(nonfinite=repr(part))
++            if isinstance(part, dict):
++                need(len(part) <= 64 and all(isinstance(k, str) and len(k) <= 128 for k in part), 'Bounded metadata keys required')
++                return {k: copy(v, depth + 1) for k, v in part.items()}
++            if isinstance(part, (tuple, list)):
++                need(len(part) <= BATCH, 'Bounded metadata sequence required')
++                return [copy(v, depth + 1) for v in part]
++            raise TypeError('CPU metadata only; device objects are never converted')
++        return copy(value)
++
++    def _lease_check(self, where):
++        need(self.lease is not None and self.lease.is_current and not self.lease._released
++             and self.lease._owner is self.lease_owner, 'Authentic current prefetch lease required')
++        need(self.current['thread_id'] == threading.get_ident(), 'Observation crossed learner threads')
++        actual = dict(epoch=int(self.lease._epoch), owner_epoch=int(self.lease._owner._epoch),
++                      current=bool(self.lease.is_current))
++        need(actual['epoch'] == actual['owner_epoch'] == self.current['lease_begin']['epoch'], 'Consumed lease changed')
++        self.current['lease_' + where] = actual
++
++    def begin(self, agent, batch, staged, metrics_context=None):
++        with self.lock:
++            if self.consumed or self.invalid:
++                return
++            # Reserve BEFORE any metadata/I/O validation. Failure never selects another ordinal.
++            self.consumed = 1
++            self.current = dict(index=1, capture_id=self.capture_id, complete=False,
++                                before=self._clocks(agent, metrics_context),
++                                exposure_before=self.exposure.snapshot(), thread_id=threading.get_ident())
++            self.lease = staged
++            self.metrics_context = metrics_context
++            need(staged is not None, 'Enabled observation requires existing genuine prefetch lease')
++            self.lease_owner = staged._owner
++            need(self.lease_owner is agent._prefetcher, 'Lease is not owned by the actual agent prefetcher')
++            self.current['lease_begin'] = dict(epoch=int(staged._epoch), owner_epoch=int(staged._owner._epoch),
++                                               current=bool(staged.is_current))
++            self._lease_check('begin')
++            import numpy as np
++            metadata = staged.draw_metadata
++            need(isinstance(metadata, dict) and metadata.get('schema') == 'robotron-replay-draw-observation-v1'
++                 and metadata.get('capture_id') == self.capture_id and not metadata.get('observer_error'), 'Authentic draw/session metadata required')
++            need(len(batch) == 10 and isinstance(batch[8], np.ndarray) and isinstance(batch[9], np.ndarray)
++                 and batch[8].shape == batch[9].shape == (BATCH,) and batch[8].dtype == np.int64
++                 and batch[9].dtype == np.float32,
++                 'Original CPU4096 indices/FP32 weights required')
++            need(isinstance(metadata['indices'], np.ndarray) and metadata['indices'].dtype == np.int64
++                 and isinstance(metadata['supplied_weights_float32'], np.ndarray)
++                 and metadata['supplied_weights_float32'].dtype == np.float32, 'Draw CPU dtypes differ')
++            need(np.array_equal(metadata['indices'], batch[8])
++                 and np.array_equal(metadata['supplied_weights_float32'], batch[9]), 'Consumed draw weights/indices differ')
++            small = metadata['small_batch_fields']
++            for name, position in (('actions',1),('rewards',2),('dones',4),('horizons',5),('is_expert',6),('actor_kind',7)):
++                need(np.array_equal(small[name], batch[position]), 'Consumed small field differs: ' + name)
++            boundaries = metadata['origin_boundaries']
++            position = 0
++            need([v[0] for v in boundaries] == ['per','interesting','recent','hof','ephof'], 'Authentic ordered disjoint origins required')
++            for name, start, stop in boundaries:
++                need(start == position and start <= stop <= BATCH, 'Origin partition differs')
++                selected = batch[8][start:stop]
++                capacity = int(agent.memory.capacity)
++                need(int(metadata['capacity']) == capacity, 'Draw capacity differs')
++                if name in ('per', 'interesting', 'recent'):
++                    need(((selected >= 0) & (selected < capacity)).all(), 'Ring origin contains a bank sentinel')
++                else:
++                    base = capacity if name == 'hof' else int(agent.memory._ephof_base)
++                    need(np.array_equal(selected, base + metadata['banks'][name]['selected_slots']),
++                         'Actual bank origin/sentinel join differs')
++                position = stop
++            need(position == BATCH and np.isfinite(batch[9]).all() and (batch[9] >= 0).all(), 'Complete finite coefficient partition required')
++            phase = agent._priority_phase.snapshot()
++            need(phase['metric'] == 'ce' and phase['valid'] is True
++                 and all(phase[k] == self.expected_phase[k] for k in ('metric','phase_id','root_precommit_sha256','started_from','last_resume_record_sha256'))
++                 and phase['phase_record_sha256'] == self.expected_phase['founder_phase_record_sha256'], 'Actual loaded CE phase differs')
++            need(self.current['exposure_before']['process_id'] == self.owner['pid'], 'Actual exposure process differs')
++            self.current.update(draw=self._owned(metadata), phase=self._owned(phase),
++                indices=self._owned(batch[8]), weights_float32=self._owned(batch[9]),
++                weights_float32_sha256=hashlib.sha256(batch[9].tobytes()).hexdigest(),
++                draw_unknown_scope='Inherited sampler-only unknown statements; actual learner outcome is joined separately at end')
++            self._write('attempt-01.entered.json', {k:v for k,v in self.current.items() if k not in ('draw','indices','weights_float32')}, SMALL_BYTES)
++
++    def pre_loss(self, agent, *ignored_device_objects, **ignored_device_keywords):
++        # No access, conversion, synchronization or reduction on any device argument.
++        with self.lock:
++            if self.current is not None and not self.invalid:
++                self._lease_check('pre_loss')
++
++    def loss(self, *ignored_device_objects, **ignored_device_keywords):
++        pass
++
++    def unsupported_backend(self, reason):
++        self.invalidate('unsupported_backend', RuntimeError(str(reason)))
++
++    def outcome(self, mode, found_inf, ticket):
++        with self.lock:
++            if self.current is not None:
++                need(self.current['thread_id'] == threading.get_ident(), 'Outcome crossed learner threads')
++                self.current['optimizer_observation'] = dict(mode=str(mode),
++                    found_inf=self._owned(found_inf), ticket_finished=bool(ticket is not None and ticket.finished),
++                    ticket_owner_matches=bool(ticket is not None and ticket.owner is self.exposure),
++                    ticket_epoch=None if ticket is None else int(ticket.epoch))
++
++    def packed_cpu(self, agent, ce_cpu, *, weighted_loss, grad_norm, bc_loss, indices, weights):
++        with self.lock:
++            if self.current is None or self.invalid:
++                return
++            self._lease_check('readback')
++            import numpy as np
++            need(isinstance(ce_cpu, np.ndarray) and ce_cpu.shape == (BATCH,) and ce_cpu.dtype == np.float32,
++                 'Existing packed CPU FP32 CE vector required')
++            need(np.array_equal(indices, self.current['indices']) and np.array_equal(weights, self.current['weights_float32']),
++                 'Consumed CPU batch changed before existing readback')
++            self.current['actual'] = dict(ce_float32=self._owned(ce_cpu),
++                ce_float32_sha256=hashlib.sha256(ce_cpu.tobytes()).hexdigest(),
++                weighted_loss=self._owned(weighted_loss), grad_norm=self._owned(grad_norm), bc_loss=self._owned(bc_loss),
++                scope='Actual existing packed host outputs; no additional GPU readback')
++            need(np.isfinite(ce_cpu).all() and math.isfinite(weighted_loss) and math.isfinite(bc_loss),
++                 'Nonfinite actual CE/objective retained; observation invalid')
++
++    def end(self, agent, *, result=None, exception=None, staged=None):
++        with self.lock:
++            if self.finished:
++                return
++            row = self.current
++            if row is None:
++                if self.invalid:
++                    self._finish(None)
++                return
++            try:
++                need(staged is self.lease, 'Exited lease object differs')
++                self._lease_check('exit')
++                after = self.exposure.snapshot()
++                row.update(after=self._clocks(agent, self.metrics_context), exposure_after=after,
++                    exception=None if exception is None else error_text(exception),
++                    learner_return=self._owned(result))
++                before = row['exposure_before']
++                delta = {k:after['total'][k]-before['total'][k] for k in COUNTERS}
++                row['actual_exposure_delta'] = delta
++                observed = row.get('optimizer_observation', {})
++                valid = (all(before[k] == after[k] for k in ('process_id','instance_monotonic_ns','epoch'))
++                    and after['available'] and delta['attempts_started'] == delta['outcomes_recorded'] == 1
++                    and delta['unavailable'] == 0 and delta['applied'] + delta['amp_skipped'] == 1
++                    and observed.get('ticket_finished') and observed.get('ticket_owner_matches')
++                    and observed.get('ticket_epoch') == before['epoch']
++                    and observed.get('mode') == 'single_cuda_found_inf'
++                    and type(observed.get('found_inf')) in (int, float)
++                    and observed['found_inf'] in (0.0, 1.0)
++                    and delta['amp_skipped'] == int(observed['found_inf']))
++                row['optimizer_outcome'] = ('amp_skipped' if delta['amp_skipped'] == 1 else 'applied_admission') if valid else 'unavailable'
++                row['complete'] = bool(valid and exception is None and result is not None
++                    and 'actual' in row and not self.invalid)
++                if not row['complete']:
++                    self.invalidate('incomplete_consumed_attempt', RuntimeError('Original failure/skip without outputs or unsupported outcome'))
++            except Exception as error:
++                self.invalidate('end_observation', error)
++            finally:
++                self.current = self.lease = self.lease_owner = self.metrics_context = None
++            self._finish(row)
++
++    def _finish(self, row):
++        self.finished = True
++        if row is not None:
++            try:
++                self._write('attempt-01.json', row, ROW_BYTES)
++            except Exception as error:
++                self.invalidate('row_publication', error)
++        try:
++            self._write('final.json', dict(status='COMPLETE' if row is not None and row.get('complete')
++                and not self.invalid and not self.reporting_failed else 'INVALID',
++                attempts_consumed=self.consumed, observation_complete=bool(row is not None and row.get('complete')
++                    and not self.invalid and not self.reporting_failed), observer_errors=list(self.errors),
++                cumulative_reserved_bytes=self.disk_bytes, qualification_pass=False,
++                actual_executed_target_observed=False, parameter_gradients_observed=False), SMALL_BYTES)
++        except Exception:
++            self.invalid = self.reporting_failed = True

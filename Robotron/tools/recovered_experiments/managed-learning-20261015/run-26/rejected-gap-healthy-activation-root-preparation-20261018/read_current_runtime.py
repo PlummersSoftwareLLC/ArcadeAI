@@ -1,0 +1,26 @@
+from pathlib import Path
+import base64,datetime,hashlib,importlib.util,json,os,subprocess,sys,urllib.request
+root=Path('/home/dave/source/repos/ArcadeAI');robot=root/'Robotron';prep=robot/'logs/managed-learning-20261015/run-26/rejected-gap-healthy-activation-root-preparation-20261018'
+source=robot/'tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/helpers/parallel_state_fill_trial.py'
+assert hashlib.sha256(source.read_bytes()).hexdigest()=='0993ed57c6c32ad629b7ed078133e77fb0c54b211c8a324ef9bf7327d62b97f3'
+spec=importlib.util.spec_from_file_location('_root_rejected_gap_current_host',source);module=importlib.util.module_from_spec(spec);sys.modules[spec.name]=module;spec.loader.exec_module(module)
+trainer='robotron-managed-run-26-d3b365c9-trainer.service';fleet=trainer.removesuffix('trainer.service')+'fleet.service';dropin=Path('/run/user')/str(os.getuid())/'systemd/user'/(trainer+'.d')/'91-per-priority-phase.conf'
+class CurrentHost(module.LiveHost):
+ def runtime_dropin(self):return dropin
+h=CurrentHost(trainer,fleet);before=h.describe();pid=int(before['trainer']['MainPID']);assert pid==2257565 and before['bindings']['worker']['trainer']['starttime_ticks']==38102590
+assert len(before['bindings']['actors'])==192 and sorted(x['client_slot'] for x in before['bindings']['actors'])==list(range(192));assert len(before['bindings']['source_hashes'])==61
+h.metric_host.configure_logs(before['bindings']['logs']);api=h.metric_host.capture();assert not api['log_errors'] and api['client_count']==192 and api['csv']['batch_size']==4096 and api['csv']['replay_sample_cap']==8
+raw=urllib.request.urlopen('http://127.0.0.1:8771/api/now',timeout=8).read(2*1024*1024+1);assert len(raw)<=2*1024*1024;full=json.loads(raw);assert full['training_enabled'] and full['client_count']==192 and not full['pipeline_read_error'] and not full['bank_persistence_read_error'] and full['lr']==2.5e-5
+assert all(full['host_pipeline']['learning_exposure'][k]['process_id']==pid for k in ['optimizer','replay']);assert before['environment']['DQN_BATCH_SIZE']=='4096' and before['environment']['DQN_PER_PRIORITY_METRIC']=='ce' and not before['environment'].get('ROBOTRON_REJECTED_GAP_TELEMETRY')
+def pin(path):
+ path=Path(path);data=path.read_bytes();s=path.stat();return dict(path=str(path),sha256=hashlib.sha256(data).hexdigest(),bytes=len(data),identity=dict(device=s.st_dev,inode=s.st_ino,bytes=len(data),mtime_ns=s.st_mtime_ns,ctime_ns=s.st_ctime_ns,mode=oct(s.st_mode&511),uid=s.st_uid,nlink=s.st_nlink))
+def publish(path,data):
+ if not isinstance(data,bytes):data=(json.dumps(data,indent=2,allow_nan=False)+'\n').encode()
+ with path.open('xb') as f:f.write(data);f.flush();os.fchmod(f.fileno(),0o444);os.fsync(f.fileno())
+ return pin(path)
+rawpin=publish(prep/'fresh-before-API.raw.json',raw);q=subprocess.run(['systemctl','--user','show',trainer,'-p','MainPID','-p','NRestarts','-p','InvocationID','-p','ControlGroup'],capture_output=True,text=True,timeout=10);assert q.returncode==0;unit=dict(line.split('=',1) for line in q.stdout.splitlines());assert unit['MainPID']=='2257565' and unit['NRestarts']=='0' and unit['InvocationID']=='2cd616ad4ca9405c9584701229cfbf0a'
+owner=dict(pid=pid,starttime_ticks=38102590,unit=trainer,invocation_id=unit['InvocationID'],cgroup=unit['ControlGroup']);masks={str(x['pid']):sorted(os.sched_getaffinity(x['pid'])) for x in before['bindings']['actors']};worker_mask=h.metric_host.mask(before['bindings']['worker']);assert worker_mask==list(range(72)) and all(v==worker_mask for v in masks.values())
+settings=robot/'models_dqn/game_settings.json';sett=pin(settings);settings_values=json.loads(settings.read_text());assert pin(settings)==sett;completed=robot/'models_dqn/managed_save.request.json.completed';assert completed.is_file() and not (completed.parent/'managed_save.request.json').exists() and not (completed.parent/'managed_save.request.json.failed').exists()
+gpu=subprocess.run(['nvidia-smi','--query-compute-apps=gpu_uuid,pid','--format=csv,noheader'],capture_output=True,text=True,timeout=10);assert gpu.returncode==0 and 'GPU-b549355c-78bb-53d8-04a6-da34d45e1dd0' not in gpu.stdout;assert '2257565' in gpu.stdout
+value=dict(schema='robotron-rejected-gap-healthy-fresh-runtime-before-v1',utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),status='PASS_READONLY_METADATA',before=before,current_owner=owner,fresh_API=api,raw_API=rawpin,actor_masks=masks,worker_mask=worker_mask,settings_lifecycle=dict(initial=sett,parsed_values=settings_values,policy='same_bytes_after_owned_stop_only'),original_dropin=dict(path=str(dropin),content_base64=base64.b64encode(dropin.read_bytes()).decode(),mode=dropin.stat().st_mode&511,identity=pin(dropin)['identity'],pin=pin(dropin)),current_completed_request=pin(completed),boot_id=Path('/proc/sys/kernel/random/boot_id').read_text().strip(),gpu_query=dict(argv=gpu.args,exit=0,stdout=gpu.stdout,stderr=gpu.stderr),helper=pin(source),reader_source=pin(Path(__file__)),runtime_or_source_changed=False,model_read=False)
+result=publish(prep/'fresh-runtime-before.json',value);print(json.dumps(dict(result=result,owner=owner,source_count=61,actors=192,learner_frames=api['learner_frame_count'],worker_mask=worker_mask)),flush=True)

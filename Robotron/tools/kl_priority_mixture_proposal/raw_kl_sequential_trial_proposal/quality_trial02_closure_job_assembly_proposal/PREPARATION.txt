@@ -1,0 +1,55 @@
+SOURCE ONLY: root metadata assembly for fixed trial02 quality closure
+
+No assembler/helper import, invocation, tests, runtime query/action or PT/model read
+was performed by this author. No actual closure job or acceptance was generated.
+The unchanged source fb937a56 has root metadata source approval and runtime's
+source-only essential review; final closure execution stays exclusively with root.
+
+Default is literal PLAN, with no input reads or writes. Explicit --execute reads
+only bounded regular JSON/source files and writes a new readonly preparation
+directory after ALL metadata joins pass. It never calls subprocess, imports a
+helper, reads proc/API/GPU, performs model work, calculates score gates, or starts
+closure. Existing closure6f2f/manifesteb890 and every installed source stay unchanged.
+
+known-inputs.json preserves genuine R1/C1/R2 receipts, original-finished-leg
+snapshots, original audit reports and original audit CPU archive/release receipts,
+independent reviews and saved startup observations, plus fixed closure/binding/
+launch sources. Leg3 independent_review is REQUIRED index3befb4d3; full scientific
+a883f519 is separately pinned and joined via full_source_review. The root fixed
+gate proof6e4ac2ac is context only, not reinterpreted or numerically recomputed.
+
+late-bindings-TEMPLATE.json now pins actual final status/summary (not_improved),
+actual parent terminal full-show command, all genuine C2 original receipt/finished
+record/audit/execution/startup observations and independent500cf83f. It is NOT an
+executable closure job. These THREE fields remain UNBOUND/null: root_acceptance,
+preparation_directory, closure_output_directory. Root must create a NEW readonly
+actual late-binding copy, bind actual external acceptance58a555e6 with full PIN
+{path,sha256,bytes,identity}, and select two distinct new direct-run26 paths.
+Do not mutate this frozen template. The assembly fails closed on remaining nulls.
+
+The preparation path must start rawKL-trial02-quality-closure-root-job-. The actual
+closure output path must start rawKL-trial02-quality-terminal-closure-. Neither may
+exist or be a symlink. No extra approval or numerical verification is introduced.
+Root may use its existing acquisition source for a full PIN. The identity encoding
+exactly matches d525: device,inode,bytes,mtime_ns,ctime_ns,mode,uid,nlink.
+
+Output root-job.json has exactly: schema,binding_job,timer_invocation_id,
+terminal_status,terminal_summary,root_acceptance,legs,output_directory. Each ordered
+leg has index,receipt,finished_record,audit_receipt,audit_execution,independent_review,
+startup_observation,evaluator,actors. Original evaluator PID/start and16 actor
+slot/PID/start are derived from authentic saved observations. Finished record
+snapshots must equal the actual terminal status entries. Original timerinv comes
+only from authentic launch462ee8ed:28b5aebebcdc4ad5bb099a684b2a8121.
+
+Root acceptance must externally validate all four original rows/playing gates and
+match actual outcome/plan/binding plus ordered leg_receipt_sha256,
+audit_receipt_sha256,audit_original_exit,independent_review_sha256,audit_disposition.
+For these actual four original audits exits are0; the existing helper's explicit
+manual exit2 disposition remains unaltered. No failed experiment can be rescued by
+this assembler. Valid not_improved closes equally; no publication, promotion,
+source-freeze release, state write, restart or cohort retry is performed.
+
+After assembly root and peer review the exact actual root-job PIN. Root then alone
+may invoke the already sealed closure helper. The helper rechecks actual retained
+original owner, archives both original units before exact timer-first release, and
+checks current main192/resources; metadata assembly itself proves none of that.

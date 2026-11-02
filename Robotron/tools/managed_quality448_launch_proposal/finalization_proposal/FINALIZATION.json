@@ -1,0 +1,128 @@
+{
+  "actual_execution_or_runtime_queries_by_author": false,
+  "automatic_promotion": false,
+  "historical_pool_reused": false,
+  "known_actual_precommit": {
+    "actual_plan_sha256": "5bb1778efdd6b29c6ac9f5defa0373da1c2c8bc13e6324e0c2c17d4cfc4164b4",
+    "campaign_directory": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-384M-vs-448M-20261017",
+    "candidate": {
+      "bytes": 275181008,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-checkpoints/fresh3-448M.pt",
+      "sha256": "1e085a128e237c2bb0636b073e5053dd8bf5be932bcbd8249543b3af20e23021"
+    },
+    "candidate_CPU_proof": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality448M-candidate-root-preparation-reviewed3-20261017/cpu-output/cpu-verification.json",
+      "sha256": "98bae7f701493353a6cb4948d8a4653c5546411d2c40ba10d62f52dc412ddf52"
+    },
+    "candidate_root_job": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality448M-candidate-root-preparation-reviewed3-20261017/root-job.json",
+      "sha256": "61647cd85d45ee30e73404d1f7463486c54cb80dea4c826ef6d799be63efeecb"
+    },
+    "helper": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/protect_quality_winner.py",
+      "sha256": "e45965d3057ec8542ab2b05fd2250209e53986a0977fbb1294aa54f64a11f0f0"
+    },
+    "original_quality_owner": {
+      "invocation_id": "b16156a323ef4b8d94b0fb3758e43a38",
+      "pid": 125723,
+      "starttime_ticks": 32032124,
+      "unit": "robotron-quality-384M-vs-448M-20261017.service"
+    },
+    "per_leg_auditor_source": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality448M-original-row-leg-audit-preparation-20261017/audit_completed_leg.py",
+      "sha256": "2576d4449b12d6b4a3b17898ab9938c6ff8c762829f61a29e3d510f73d585c21"
+    },
+    "reference": {
+      "metadata_sha256": "cb79fc9094022bd340a83d29282ed8bb7504b35fbd28a99552a2bb6ea4342ab4",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-incumbents/fresh3-384M-confirmed.pt",
+      "sha256": "ac8bc98038a7860f1682e66311fd48657361eaa8ec7aff1f44bd53cf84090963"
+    }
+  },
+  "publish_argv_only_if_both_separate_candidates_qualify": [
+    "/usr/bin/env",
+    "-u",
+    "LD_PRELOAD",
+    "-u",
+    "PYTHONPATH",
+    "CUDA_VISIBLE_DEVICES=",
+    "OMP_NUM_THREADS=2",
+    "MKL_NUM_THREADS=2",
+    "OPENBLAS_NUM_THREADS=2",
+    "PYTHONDONTWRITEBYTECODE=1",
+    "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/protect_quality_winner.py",
+    "--campaign-dir",
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-384M-vs-448M-20261017",
+    "--destination",
+    "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-incumbents",
+    "--label",
+    "fresh3-448M-confirmed",
+    "--publish"
+  ],
+  "publish_metadata": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-incumbents/fresh3-448M-confirmed.pt.json",
+  "publish_target": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-incumbents/fresh3-448M-confirmed.pt",
+  "required_future_evidence": {
+    "canonical_managed_adoption": null,
+    "four_original_row_audits": [
+      {
+        "actual_receipt_sha256": null,
+        "audit_receipt": null,
+        "audit_sha256": null,
+        "index": 1,
+        "role": "reference"
+      },
+      {
+        "actual_receipt_sha256": null,
+        "audit_receipt": null,
+        "audit_sha256": null,
+        "index": 2,
+        "role": "candidate"
+      },
+      {
+        "actual_receipt_sha256": null,
+        "audit_receipt": null,
+        "audit_sha256": null,
+        "index": 3,
+        "role": "reference"
+      },
+      {
+        "actual_receipt_sha256": null,
+        "audit_receipt": null,
+        "audit_sha256": null,
+        "index": 4,
+        "role": "candidate"
+      }
+    ],
+    "fresh_pooled_reference": null,
+    "independent_final_gate_review": null,
+    "independent_owned_cleanup": null,
+    "independent_publication_review": null,
+    "individual_C1_C2_gates": null,
+    "original_terminal_archive": null,
+    "protected_publication_result": null,
+    "strict_default_actual_exit0_report": null
+  },
+  "schema": "robotron-quality448-finalization-declarative-plan-v1",
+  "scope": "Generic existing helper is reused unchanged. Declarative future argv only; no final pass/pool/evidence is fabricated.",
+  "status": "SOURCE_ONLY_CONDITIONAL_NO_ACTION",
+  "strict_default_argv_after_terminal": [
+    "/usr/bin/env",
+    "-u",
+    "LD_PRELOAD",
+    "-u",
+    "PYTHONPATH",
+    "CUDA_VISIBLE_DEVICES=",
+    "OMP_NUM_THREADS=2",
+    "MKL_NUM_THREADS=2",
+    "OPENBLAS_NUM_THREADS=2",
+    "PYTHONDONTWRITEBYTECODE=1",
+    "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/protect_quality_winner.py",
+    "--campaign-dir",
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-384M-vs-448M-20261017"
+  ]
+}

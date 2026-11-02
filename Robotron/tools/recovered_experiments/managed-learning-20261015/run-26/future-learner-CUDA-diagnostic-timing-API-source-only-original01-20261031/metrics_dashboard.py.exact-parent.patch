@@ -1,0 +1,54 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/metrics_dashboard.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-learner-CUDA-diagnostic-timing-API-source-only-original01-20261031/selected-source/metrics_dashboard.py
+@@ -76,6 +76,24 @@
+             "positive_infinity" if value > 0 else "negative_infinity"
+         )
+     return snapshot
++
++
++def _training_gpu_compute_diagnostic(sample):
++    """Copy a completed diagnostic observation; never query or synchronize CUDA."""
++    unavailable = dict(available=False, elapsed_ms=None, sample_count=None,
++                       logical_training_step=None, observed_unix_s=None, device=None)
++    if type(sample) is not dict:
++        return unavailable
++    ms, count = sample.get('elapsed_ms'), sample.get('sample_count')
++    step, stamp, device = (sample.get(k) for k in
++                           ('logical_training_step', 'observed_unix_s', 'device'))
++    if not (type(ms) in (int, float) and math.isfinite(ms) and ms >= 0
++            and type(count) is int and count > 0 and type(step) is int and step >= 0
++            and type(stamp) in (int, float) and math.isfinite(stamp) and stamp > 0
++            and type(device) is str and 0 < len(device) <= 80 and device.isprintable()):
++        return unavailable
++    return dict(available=True, elapsed_ms=ms, sample_count=count,
++                logical_training_step=step, observed_unix_s=stamp, device=device)
+ 
+ 
+ def _tail_mean(values, count: int = 20) -> float:
+@@ -661,6 +679,8 @@
+             total_training_steps = int(self.metrics.total_training_steps)
+             last_loss = float(self.metrics.last_loss)
+             last_grad_norm = float(self.metrics.last_grad_norm)
++            gpu_compute_diagnostic = _training_gpu_compute_diagnostic(
++                getattr(self.metrics, 'last_train_gpu_compute_diagnostic', None))
+             last_bc_loss = float(self.metrics.last_bc_loss)
+             sample_dqn_frac = float(getattr(self.metrics, "last_sample_dqn_frac", 0.0))
+             sample_epsilon_frac = float(getattr(self.metrics, "last_sample_epsilon_frac", 0.0))
+@@ -835,6 +855,17 @@
+             "train_sample_ms": float(getattr(self.metrics, "last_train_sample_ms", 0.0)),
+             "train_transfer_ms": float(getattr(self.metrics, "last_train_transfer_ms", 0.0)),
+             "train_compute_ms": float(getattr(self.metrics, "last_train_compute_ms", 0.0)),
++            "train_gpu_compute_ms": gpu_compute_diagnostic['elapsed_ms'],
++            "train_gpu_compute_diagnostic": gpu_compute_diagnostic,
++            "train_gpu_compute_timing_scope": (
++                "Latest completed diagnostic CUDA-event stream span; not an interval average, "
++                "exclusive GPU busy time or SM occupancy. Logical step is before its end-of-step "
++                "increment and may be AMP-skipped. Host observation time follows the existing "
++                "CPU readback; device is the existing training-device label, not a physical GPU mapping."),
++            "train_transfer_timing_scope": (
++                "Legacy mixed field: staged CUDA batches use copy-stream event elapsed when ready; "
++                "otherwise zero means unavailable. Synchronous fallback uses host elapsed time. "
++                "Transfer may overlap learner work; legacy CSV transfer_host_ms has this same scope."),
+             "train_priority_ms": float(getattr(self.metrics, "last_train_priority_ms", 0.0)),
+             "train_step_ms": float(getattr(self.metrics, "last_train_step_ms", 0.0)),
+             "loss": last_loss,

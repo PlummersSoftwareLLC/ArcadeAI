@@ -1,0 +1,17 @@
+import importlib.util,json,os,time
+from pathlib import Path
+G=Path('/home/dave/source/repos/ArcadeAI/Robotron');R=G/'logs/managed-learning-20261015/run-26';B=G/'tools/startup_policy_journal_proposal';D=R/'currentLR125-ownedHealth-firstSave-original01-preparation-20261023';N=R/'quality32-protected1741-vs-currentLR125-restored192-firstSave-original01-preparation-20261023';T=R/'quality32-protected1741-vs-currentLR125-ownedHealth2690-original01-preparation-20261023'
+def load(path,name):
+ sp=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(sp);sp.loader.exec_module(m);return m
+h=load(B/'run_full_policy_startup_v3.py','_complete_h');assert h.pin(h.__file__)['sha256']=='2b6902933b502ac20dacbd444fbf786315d6c960fcad1d5b5bf223dd569708c1'
+def read(pin):return json.loads(h.checked(pin).read_bytes())
+readypin=h.pin(T/'new-original-quality-launch-readiness.json');ready=read(readypin);pairpin=ready['quality_pair'];pair=read(pairpin);family=read(ready['source_family_manifest']);assesspin=h.pin(T/'campaign-assessment-job-original01.json');control=load(h.checked(ready['campaign_CPU_controller']),'_complete_cpu')
+oldcfg=read(h.pin(N/'campaign-assessment-controller-config-original01.json'));argv=oldcfg['argv'][:];argv[3]=ready['campaign_assessor']['path'];argv[argv.index('--job')+1]=assesspin['path'];argv[argv.index('--job-sha256')+1]=assesspin['sha256'];argv[argv.index('--source-sha256')+1]=ready['campaign_assessor']['sha256']
+asscfg=dict(unit='robotron-owned-health-lr125-owned2690-campaign-review-original01-20261023.service',output=str(T/'campaign-assessment-execution-original01'),argv=argv,properties=['CPUQuota=200%','MemoryMax=4G','MemorySwapMax=0','RuntimeMaxSec=660','TasksMax=128','TimeoutStopSec=5','SendSIGKILL=no'],pins=[control.pin(v['path'])for v in [*ready['inputs'],readypin,assesspin]],observation_s=720)
+asscfgpin=h.put(T/'campaign-assessment-controller-config-original01.json',asscfg);control.checked_config(asscfgpin['path']);cfgpin=h.pin(D/'candidate-CPU-preparation-original01/candidate-CPU-controller-config.json');out=Path(read(cfgpin)['output'])
+pre=dict(schema='robotron-fresh-LR125-quality32-sequence-precommit-v1',source=family['sequence'],launch_readiness=readypin,campaign_assessment_config=asscfgpin,endpoint_CPU_report=ready['numerical_CPU_report'],endpoint_CPU_scope=dict(config=cfgpin,owner=h.pin(out/'root-original-identity.json'),closure=h.pin(out/'root-original-result-and-owned-release.json')),all_four_original_legs_fresh=True,original_attempts_per_leg=1,no_retries=True,created_unix_s=time.time());prepin=h.put(T/'original-fresh-sequence-precommit.json',pre)
+plan=read(h.pin(N/'plan.json'));plan.update(output_directory=str(T),created_unix_s=time.time(),precommit=readypin,checkpoints={role:dict(source=pair[role]['policy']['path'],sha256=pair[role]['policy']['sha256'])for role in ['reference','candidate']})
+for leg,folder in zip(plan['legs'],['01-reference','02-candidate','03-reference','04-candidate']):
+ role=leg['role'];leg['job']['label']=f"{pair[role]['saved_clocks']['learner_frame_count']/1e6:.1f}M {role}";leg['evaluator_status_path']=leg['receipt_path']=str(T/'display'/f'{folder}.json')
+h.put(T/'plan.json',plan);(T/'display').mkdir(mode=0o700)
+print(json.dumps(dict(campaign=str(T),candidate_clocks=pair['candidate']['saved_clocks'],pair=pairpin,manifest=ready['source_family_manifest'],readiness=readypin,sequence_precommit=prepin)))

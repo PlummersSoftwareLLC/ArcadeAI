@@ -1,0 +1,13 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/copy_verified_current_continuous_state_mixed_bank_v8.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/current-A2-LR9375-route-source-only-original01-20261031/copy_verified_current_continuous_state_A2_LR9375_v9.py
+@@ -21,8 +21,8 @@
+ G=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ B=G/'logs/managed-learning-20261015/run-26'
+ H=B/'future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01'
+-VERIFIER=Path(__file__).with_name('verify_current_continuous_stopped_fullstate_mixed_bank_v6.py')
+-VERIFIER_SHA='e544eeedb6146cfd413377eceefbe2e3b0afff345de1ce83665e4753f7f9f0f0'
++VERIFIER=Path(__file__).with_name('verify_current_continuous_stopped_fullstate_A2_LR9375_v7.py')
++VERIFIER_SHA='45be28f595c4c2f9dc4ae10eee53aa686114cfe37ec70704ac5cbf2b3044e1ce'
+ ARCHIVE=G/'tools/eval_capacity_proposal/review_original_pilot_raw_API_v1.py'
+ ARCHIVE_SHA='2ed5fde26fe50a23bc9572965e483ae6634b31ffbe5d4147c9f5bc338396d445'
+ DESCRIPTORS=G/'tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision4/bank_state_revision2.py'

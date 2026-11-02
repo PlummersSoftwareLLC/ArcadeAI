@@ -1,0 +1,61 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/readonly-mmap-source-validation-original02/round_main_health_launcher_mmap_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/round_main_health_retired_API_v3.py
+@@ -160,7 +160,8 @@
+             receipt_hashes=receipts,previous_complete=None,api=api,raw_API_wire=api_wire.decode('utf-8'),
+             api_wire_sha256=hashlib.sha256(api_wire).hexdigest(),launcher_census=census)
+         sample['observed_counts']=observed_counts(sample)
+-        return admission().collect(case,sample,observer_previous,journal_lines=journal_lines)
++        sample=admission().collect(case,sample,observer_previous,journal_lines=journal_lines)
++        return api_projection().collect_retired(case,sample,observer_previous,journal_lines=journal_lines)
+     except (OSError,ValueError,KeyError) as failure:
+         evidence.update(failure=repr(failure),ended_monotonic_s=time.monotonic())
+         if isinstance(failure,module.CensusFailure):evidence['rejected_child_census']=failure.raw_snapshot
+@@ -218,15 +219,17 @@
+                 or (slot in active and actor['state'] not in ('T', 't', 'Z', 'X', 'x')),
+                 'Completed actor still executing, or active actor stopped')
+     api = sample['api']
+-    rows = api['client_rows']
++    partition_sample=api_projection().project_retired(case,sample,previous)
++    partition_api=partition_sample['api']
++    rows = partition_api['client_rows']
+     slots = [str(row['client_slot']) for row in rows]
+     if admitted['bootstrap']:
+-        require(len(slots)==len(set(slots))==api['client_count']
++        require(len(slots)==len(set(slots))==partition_api['client_count']
+                 and set(slots)-frozen==active-admitted['registering']
+                 and set(slots)<=set(actors), 'Proved bootstrap API partition differs')
+-    elif not (len(slots) == len(set(slots)) == api['client_count'] and set(slots) - frozen == active
++    elif not (len(slots) == len(set(slots)) == partition_api['client_count'] and set(slots) - frozen == active
+             and set(slots) <= set(actors)):
+-        certify_API_reconnect(case,sample,previous)
++        certify_API_reconnect(case,partition_sample,previous)
+     require(api['training_enabled'] is True and api['measurement_active'] is False
+             and api['lr'] == 3.125e-6 and 0 <= sample['unix_s'] - api['ts'] <= 5
+             and 0 <= api['pipeline_snapshot_age_s'] <= 5, 'Main training state stale or changed')
+@@ -311,13 +314,20 @@
+                 active=len(actors-results), frozen=len(actors & results))
+ 
+ 
++def api_projection():
++    path=Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/api_cached_projections_v2.py')
++    require(hashlib.sha256(path.read_bytes()).hexdigest()=='be49dbc23b7477b136eb0bd0bee7a071b35dd07483c54a57e79663ba797884c2','Exact combined cached-API projection verifier required')
++    import sys
++    name='_round_combined_cached_API_projection_v2'
++    if name not in sys.modules:
++        spec=importlib.util.spec_from_file_location(name,path)
++        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
++        sys.modules[name]=module
++    return sys.modules[name]
++
++
+ def certify_API_reconnect(case,sample,previous):
+-    path=ROOT/'tools/post_recovery_evaluation/api_reconnect_projection_v1.py'
+-    require(hashlib.sha256(path.read_bytes()).hexdigest()=='6145874201af09b41f2dc4a358513f7ecc0406166dd5c7f082087a8e5b2ffa03',
+-            'Exact reconnect projection verifier required')
+-    spec=importlib.util.spec_from_file_location('_round_source_bound_reconnect_projection',path)
+-    module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+-    return module.verify(case,sample,previous)
++    return api_projection().verify(case,sample,previous)
+ 
+ 
+ def admission():

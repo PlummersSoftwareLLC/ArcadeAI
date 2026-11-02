@@ -1,0 +1,14 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/close_current_EVAL_quiescence_health_eight_CPU_v5.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-quiescence-readiness120-overlay-original06/close_readiness120_start_two_CPU_v1.py
+@@ -49,9 +49,9 @@
+     report_pin=h.pin(Path(job['output'])/'report.json');report=read(report_pin)
+     require(report['status']=='PASS'and report['actual_PID']==owner['pid']and report['original_job']==job_pin
+             and report['Torch_imported']is report['GPU_or_MAME_launched']is False,'Actual engineering outcome differs')
+-    require(job['expected_test_count']==8 and report['tests_run']==8
++    require(job['expected_test_count']==2 and report['tests_run']==2
+         and report['schema']==job['expected_report_schema'] and report['failures']==report['errors']==[],
+-        'Exact eight focused groups/schema/empty errors required')
++        'Exact two focused groups/schema/empty errors required')
+     require(report.get('quality_qualified',False)is report.get('promotion',False)is False,'Engineering cannot qualify or promote')
+     return h.put(directory/'independent-original-CPU-scope-closeout.json',dict(schema='robotron-engineering-original-CPU-independent-closeout-v1',status='PASS_ENGINEERING_ONLY',
+         original_job=job_pin,original_config=cfg_pin,original_owner=owner_pin,original_closure=closure_pin,actual_report=report_pin,

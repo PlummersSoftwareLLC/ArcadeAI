@@ -1,0 +1,18 @@
+{
+  "schema": "robotron-bounded-cosample-actual-free314-CPU-test-receipt-v1",
+  "passed": true,
+  "tests_run": 15,
+  "errors": [],
+  "failures": [],
+  "pid": 3859902,
+  "started_unix_s": 1793051236.4750009,
+  "ended_unix_s": 1793051236.4772642,
+  "interpreter": {
+    "executable": "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+    "version": "3.14.8 free-threading build (main, Oct  9 2026, 15:22:36) [Clang 22.1.3 ]",
+    "GIL_enabled": false
+  },
+  "source_sha256": "4846a6c74e9d07fb4ebe9c31be9920b539179915940b679928b323703874cab1",
+  "test_sha256": "5e5b37be6765b5436010d96c7cdbeedb948c30ddfaeac3ef140d66a218df4c35",
+  "scope": "Deterministicinjectedclockmodel only; no sleeps/CPUstress/native/GPU/MAME/hostclock/processcontrol/productionactions. Earlier3.12initialrun15PASS preceded strictJSONtolerance-type guard; this verifiesfinalbytes onactual3.14free-threaded runtime."
+}

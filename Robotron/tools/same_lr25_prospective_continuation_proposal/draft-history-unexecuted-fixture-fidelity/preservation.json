@@ -1,0 +1,6 @@
+{
+  "status": "SOURCE_ONLY_UNEXECUTED_DRAFT_PRESERVED",
+  "original_sha256": "aefe3d44b18752947d6f0a1ff6c53e1eecc13f4b24bf58418209a7e89263fde1",
+  "selected_sha256": "18c29a4ff02ee3ad5726fb608e245e062d16a9bb1b59e83a1570ec0016769757",
+  "reason": "Preseal source walk corrected synthetic control FULLPIN inner bytes/mode and made the second historical-map negative independently exercise execution_source_hashes. All production sources and twelve test methods remain unchanged in scope; no test was executed."
+}

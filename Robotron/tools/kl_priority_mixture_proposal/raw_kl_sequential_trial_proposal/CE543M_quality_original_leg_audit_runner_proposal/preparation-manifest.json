@@ -1,0 +1,93 @@
+{
+  "schema": "robotron-CE543M-original-leg-audit-runner-source-preparation-v1",
+  "status": "SOURCE_ONLY_FROZEN_UNEXECUTED",
+  "files": {
+    "PREPARATION.txt": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE543M_quality_original_leg_audit_runner_proposal/PREPARATION.txt",
+      "sha256": "a017fd556d7b71540f7969c321fb22ca85f0e1819f82201ade6f821b51620226",
+      "bytes": 3514,
+      "mode": "0o444"
+    },
+    "future-CLI.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE543M_quality_original_leg_audit_runner_proposal/future-CLI.json",
+      "sha256": "2fa4777c49670b16cc4d65c1227f5b87e94390d659a78af0fe8885f4d71fcfe8",
+      "bytes": 1284,
+      "mode": "0o444"
+    },
+    "observed-four-commands-TEMPLATE.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE543M_quality_original_leg_audit_runner_proposal/observed-four-commands-TEMPLATE.json",
+      "sha256": "6dafba6e137f11f0e198ac7f04eec2328cd354c4fb95ea165912e800906c14aa",
+      "bytes": 5175,
+      "mode": "0o444"
+    },
+    "run_original_leg_audit.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE543M_quality_original_leg_audit_runner_proposal/run_original_leg_audit.py",
+      "sha256": "e3b4e3492fa3e26dcebdfefb84c5d9c5f7b6468861cf7e7f2c63d0e0804286c5",
+      "bytes": 19839,
+      "mode": "0o444"
+    },
+    "source-delta.patch": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE543M_quality_original_leg_audit_runner_proposal/source-delta.patch",
+      "sha256": "dc2c630b5b3bd46507c4385315d064d8626402c471ca563db2a9cbdb02e183bb",
+      "bytes": 11000,
+      "mode": "0o444"
+    },
+    "source-lock.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE543M_quality_original_leg_audit_runner_proposal/source-lock.json",
+      "sha256": "b35222eab33555f703621b971947d8b1aba92edaf36133ac76b68bb362744ac7",
+      "bytes": 1962,
+      "mode": "0o444"
+    }
+  },
+  "original_runner": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/run-trial02-quality-leg-audit-root-preparation-20261017.py",
+    "sha256": "6b4c25f90d9c40b044d9f5b3053a12ae9dd52eaff3640038608b8f20ea33feb4"
+  },
+  "unchanged_function_bodies": {
+    "archive": {
+      "bytes": 5520,
+      "sha256": "ca86a382230fcbf5a6609b1ace9d25f8ac267e5c4577280522c3fc2364d58de7"
+    },
+    "sha": {
+      "bytes": 545,
+      "sha256": "2f6d3d46565f1c6cd30a312a951c267cc5b79849f11a1d250661a2881fa912bc"
+    },
+    "load": {
+      "bytes": 58,
+      "sha256": "dc32ecfcdc529c12c479345a8e15be57065d0b58e660acae363dbea9a25e50bb"
+    },
+    "pin": {
+      "bytes": 210,
+      "sha256": "81fb33efbeea5a85964cb39be4ca00e5392c35e05d07ea4abe5b459dcc09b300"
+    },
+    "save": {
+      "bytes": 449,
+      "sha256": "4d543b1c58f32c4289b7bbb318a14a7206216cdf6128555f9dcbe64517da3b16"
+    },
+    "call": {
+      "bytes": 168,
+      "sha256": "2177d4b1878d2d85cee505e362ca272baa288d3fbe9c8686de4ba668c4627cc8"
+    },
+    "show": {
+      "bytes": 296,
+      "sha256": "f530b95b5941947937a4e37d041f67d8494f942295aa468276f1c7a439536066"
+    },
+    "start": {
+      "bytes": 149,
+      "sha256": "c8bed408036394bb3605c23510fefe65847530a8d37de3686467ba1b32397949"
+    }
+  },
+  "sealed_auditor_sha256": "734999b906973d8742e28c734bf3f2d704cc3fa1765c0e30a906caaeb5eb176d",
+  "sealed_bindings_sha256": "ecbe6ae896172ae7d44130de0004df7f25f33544b421106cdc325daa78f8cc59",
+  "selected_bundle_manifest_sha256": "7b5738fa857301278bd571f19b72eb3f775003d25f1821b9485346ea9e12fd39",
+  "actual_binding_job_sha256": "f43719ed4dc60a4c275a7414995aa79d0f40062c76964200cf8700a8abe50dc3",
+  "template_actual_plan_sha256": null,
+  "template_actual_quality_owner": null,
+  "template_actual_R1_evaluator": null,
+  "actual_audit_executions": null,
+  "authored_tests": 0,
+  "author_imports_tests_runtime_PT": false,
+  "quality_scoring_source_changed": false,
+  "installed_source_or_state_changed": false,
+  "qualification_pass": false
+}

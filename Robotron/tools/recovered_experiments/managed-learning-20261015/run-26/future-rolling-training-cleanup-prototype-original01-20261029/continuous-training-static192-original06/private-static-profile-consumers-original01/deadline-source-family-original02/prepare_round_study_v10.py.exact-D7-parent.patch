@@ -1,0 +1,257 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original07-proof2s-preparation/source-family-original01/prepare_round_study_v10.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-original02/prepare_round_study_v10.py
+@@ -21,8 +21,8 @@
+ HERE = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
+ LOCAL = Path(__file__).resolve().parent
+ PREVIOUS = BASE/'deadline-score32-fixed-fleet-admission-original03-preparation-20261026/fixed-RCRC-deadline32-study-original03'
+-CAPTURE = BASE/'post-natural-turnover-durable-next-candidate-20261029-original03'
+-CAPTURE_PLAN_SHA = '43ace243055948eba395f97ba96faef339997c5d94cec6b50aea3104dbe9ae68'
++CAPTURE = None  # Actual future post-mode capture is selected by immutable Root metadata.
++CAPTURE_PLAN_SHA = None  # Never reuse a failed pre-mode window.
+ PROTECTED_SHA = 'b23152ece3bb614831a278fe0572c07433f1bee59c5accef5a1ab7d3007af883'
+ LEGS = ('R1', 'C1', 'R2', 'C2')
+ 
+@@ -78,29 +78,58 @@
+     return proof
+ 
+ 
+-def completed_capture(h):
++def completed_capture(h, selected, case):
++    CAPTURE = Path(selected['capture_root'])
+     result_pin = h.pin(CAPTURE/'result.json')
+     result = read(result_pin, h)
+     plan_pin = h.pin(CAPTURE/'window-plan.json')
+-    require(plan_pin['sha256'] == CAPTURE_PLAN_SHA, 'Exact new independent original03 capture plan required')
++    require(plan_pin == selected['capture_plan'] and result_pin == selected['capture_result'],
++            'Actual selected capture plan/result pins required')
+     plan = read(plan_pin, h)
++    selection_mode = selected['candidate_selection_mode']
++    require(selection_mode in ('FRESH_POST_MODE_CAPTURE', 'PRIOR_VALID_CAPTURE_NEW_INFRA_CONTEXT'),
++            'Root must select actual fresh capture or explicit new-context policy reevaluation')
++    if selection_mode == 'FRESH_POST_MODE_CAPTURE':
++        require(plan['continuous_main_authority'] == case['continuous']['source_authority']
++                and plan['static_original_membership'] == case['continuous']['original_membership']
++                and plan['input_inventory_authority'] == case['input_inventory_authority'],
++                'Fresh capture plan is not the actual post-mode original192/source domain')
++    else:
++        reuse = read(selected['policy_reevaluation_authority'], h)
++        require(reuse['schema'] == 'robotron-root-valid-policy-new-infrastructure-context-selection-v1'
++                and reuse['status'] == 'ACTUAL_VALID_CAPTURE_SELECTED_FOR_NEW_COMPARISON'
++                and reuse['capture_plan'] == plan_pin and reuse['capture_result'] == result_pin
++                and reuse['new_main_source_authority'] == case['continuous']['source_authority']
++                and reuse['new_original_membership'] == case['continuous']['original_membership']
++                and reuse['capture_is_independently_qualified_and_closed'] is True
++                and reuse['old_measurement_was_not_a_policy_quality_rejection'] is True
++                and reuse['all_four_comparison_legs_are_fresh'] is True
++                and reuse['no_original_measurement_job_is_retried'] is True
++                and reuse['no_old_score_or_cutoff_pool_is_reused'] is True,
++                'Explicit Root new-context comparison authority is required')
++        closed_capture = read(reuse['original_capture_qualification'], h)
++        require(closed_capture['capture_plan'] == plan_pin and closed_capture['capture_result'] == result_pin
++                and closed_capture['status'] == 'CAPTURE_CPU_VERIFIED_AND_ORIGINAL_SCOPE_CLOSED'
++                and closed_capture['actual_original_exit'] == 0 and closed_capture['original_scope_released'] is True,
++                'Actual original valid capture qualification/closure must be retained')
+     require(result['state'] == 'captured_CPU_verified' and result['owner'] == plan['owner']
+             and result['original_DQN_window_unchanged'] is True, 'Only the completed selected prospective capture is eligible')
+     require(plan['thresholds'] == dict(applied_updates=5000, replay_inserts=1_000_000, elapsed_s=3600)
+             and all(result['added'][key] >= value for key, value in plan['thresholds'].items()),
+             'All three prospective thresholds must be met without borrowing old counts')
+     require(sum(result['added']['by_source'].values()) == result['added']['replay_inserts'], 'Exposure attribution differs')
+-    for value in plan['inputs']:
+-        subset = h.pin(value['path'])
+-        require(all(subset[key] == expected for key, expected in value.items()), 'Capture source/recipe changed')
+-    require(result['endpoint']['path'] == str(CAPTURE/'endpoint.pt'), 'Actual new original03 endpoint path required')
++    if selection_mode == 'FRESH_POST_MODE_CAPTURE':
++        for value in plan['inputs']:
++            subset = h.pin(value['path'])
++            require(all(subset[key] == expected for key, expected in value.items()), 'Current fresh capture source/recipe changed')
++    # Prior valid capture inputs are historical facts certified by its exact
++    # original closed qualification above. They need not remain installed in
++    # the changed MAIN runtime. Fresh current-runtime profile proofs below
++    # remain mandatory for both selected frozen policies.
++    require(result['endpoint']['path'] == str(CAPTURE/'endpoint.pt'), 'Actual new post-mode endpoint path required')
+     checkpoint = subset_pin(result['endpoint'], h)
+-    require(checkpoint['sha256'] not in ('862fb4cde4ecb146b5b23a83b77ccbf1675a980bc310f6c2a6a8806d87b7c81e',
+-            'e078b0da4ce4e25146fab7484f8489f590e1086370746cb392afcd7f5f8adef5',
+-            'a6e17a3c6cd8a9b6cb5479e6c6cbd1a284c1cd880372d0d02441680bc708e502',
+-            '444a14287789b26e3d84564cf4a9e49518d82d91d6a3ed82ca09526ef89c8523',
+-            '684b8506cf404dc23ef49a0081703e75e1b14d47aeab7921f7f54e196b5505fa'),
+-            'Failed original study cannot be retried with its selected policy')
++    # Policy eligibility is independent from an infrastructure-invalid
++    # measurement attempt. No SHA here is a quality-rejection blacklist.
+     authority = subset_pin(result['CPU_verification'], h)
+     cpu = read(authority, h)
+     require(subset_pin(cpu['checkpoint'], h) == checkpoint
+@@ -126,31 +155,35 @@
+     stat_path = Path('/proc', str(owner['pid']), 'stat')
+     require(not stat_path.exists() or int(stat_path.read_text().rsplit(')', 1)[1].split()[19]) != owner['birth'],
+             'Original CPU verification birth remains')
++    reuse_evidence = [] if selection_mode == 'FRESH_POST_MODE_CAPTURE' else [
++        selected['policy_reevaluation_authority'], reuse['original_capture_qualification']]
+     return dict(checkpoint=checkpoint, expected_policy_clocks=cpu['clocks'],
+         training_experiment='CE4096-LR125-survival32M-original01-20261023',
+         immutable_numerical_or_protection_authority=authority), [result_pin, plan_pin, authority,
+         h.pin(CAPTURE/'CPU-original-owner.json'), h.pin(CAPTURE/'CPU-original-terminal.json'),
+-        h.pin(CAPTURE/'CPU-owned-release.json')]
++        h.pin(CAPTURE/'CPU-owned-release.json'), *reuse_evidence]
+ 
+ 
+ def capture_binding(template_pin, h):
+     template = read(template_pin, h)
+-    health = load('_prepare_round_health', Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_health_transport_retired_API_v4.py'))
+-    collector = load('_prepare_round_raw_API', Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-two-second-main-proof-contract-original01-preparation/source-family-original01/round_observer_proof2s_v1.py'))
++    require(template['schema'] == 'robotron-continuous-static192-health-case-v1',
++            'Actual postbarrier static-original192 case required')
++    health = load('_prepare_static_health', Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_transport_v1.py'))
++    collector = load('_prepare_static_raw_API', Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/observe_continuous_static192_v1.py'))
++    health.check_inputs(template, full=True)
+     deadline = time.monotonic()+30
+     while True:
+-        launcher = load('_prepare_exact_declared_launchers',Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/launcher_census_v1.py'))
+-        case = launcher.prepare_case(template)
+-        case['source_guard'] = '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_main_health_retired_API_v4.py'
+-        case['initial_round'] = json.loads((Path(case['round_root'])/'status.json').read_bytes())['round']
++        case = copy.deepcopy(template)
++        case['source_guard'] = '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_health_v1.py'
+         try:
+             baseline = collector.collect(health, case)
+             health.validate(case, baseline)
+             health.check_inputs(case, full=True)
+             return case, baseline
+         except (OSError, ValueError):
+-            require(time.monotonic() < deadline, 'No coherent original main context; no preparation retry')
++            require(time.monotonic() < deadline, 'No coherent original static main context; no preparation retry')
+             time.sleep(.2)
++
+ 
+ 
+ def prior_identities(h):
+@@ -177,8 +210,22 @@
+     return identities, records
+ 
+ 
+-def prepare(output, reference_profile, candidate_profile, *, main_domain_proof, lease_recovery, engineering=False):
++def prepare(output, reference_profile, candidate_profile, *, main_domain_proof, lease_recovery, selection_pin=None, engineering=False):
++    require(selection_pin is not None and engineering is False,
++            'Explicit future Root post-mode selection required; engineering never prepares scientific study')
+     h = load('_round_study_helpers', ROOT/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py')
++    selected = read(selection_pin, h)
++    require(selected['schema'] == 'robotron-root-continuous-static192-fresh-comparison-selection-v1'
++            and selected['status'] == 'ACTUAL_POST_MODE_CONTEXT_SELECTED'
++            and selected['mode'] == 'CONTINUOUS_TRAIN155_EVAL37_ONCE',
++            'Actual new Root-qualified post-mode context selection required')
++    require(selected['current_runtime_profiles'] == dict(
++        main_source_authority=read(selected['main_case'], h)['continuous']['source_authority'],
++        reference_profile=reference_profile, candidate_profile=candidate_profile),
++        'Exact newly qualified current-runtime profile pair must be Root-selected')
++    selected_case = read(selected['main_case'], h)
++    require(selected_case['schema'] == 'robotron-continuous-static192-health-case-v1',
++            'Selected actual main case must have new typed profile')
+     old_ref = read(h.pin(PREVIOUS/'R1/job.json'), h)
+     old_candidate = read(h.pin(PREVIOUS/'C2/job.json'), h)
+     state = json.loads((ROOT/'logs/managed-learning-20261015/state.json').read_bytes())
+@@ -195,7 +242,8 @@
+         candidate = dict(checkpoint=subset_pin(facts['checkpoint'], h), expected_policy_clocks=facts['clocks'],
+             training_experiment=reference['training_experiment'], immutable_numerical_or_protection_authority=authority)
+     else:
+-        candidate, evidence = completed_capture(h)
++        candidate, evidence = completed_capture(h, selected, selected_case)
++        evidence += [selection_pin, selected['main_case'], selected_case['input_inventory_authority']]
+     require(candidate['checkpoint']['sha256'] not in (PROTECTED_SHA, old_candidate['checkpoint']['sha256'])
+             and all(candidate['expected_policy_clocks'][key] > value
+                     for key, value in old_candidate['expected_policy_clocks'].items()),
+@@ -206,7 +254,7 @@
+     require(restored['status'] == 'RESTORED_NEW_BOOT_COORDINATOR', 'Explicit restored coordinator required')
+     main_proof = main_domain_proof
+     read(main_proof, h)
+-    template_pin = h.pin(BASE/'post-recovery-learning-20261027-original03/clean-main-case.json')
++    template_pin = selected['main_case']
+     case, baseline = capture_binding(template_pin, h)
+     require(baseline['api']['managed_experiment'] == reference['training_experiment'], 'Current recovered recipe differs')
+     output = Path(output).absolute()
+@@ -222,11 +270,10 @@
+     native = load('_prepare_actual_round_native', Path(runtime['path']))
+     control = load('_prepare_actual_round_controller', Path(controller['path']))
+     contract = native.round_contract()
+-    protocol = h.put(output/'main-health-protocol.json', dict(schema='robotron-native-round-main-health-declared-launcher-proof2s-protocol-v1',
++    protocol = h.put(output/'main-health-protocol.json', dict(schema='robotron-native-continuous-static192-main-health-proof2s-protocol-v1',
+         case=binding, raw_API_required=True, close_requires_final_sample=True, hot_max_gap_s=2.0, initial_samples=100,
+-        raw_queue_protocol='pending-byte-digest-v2', volatile_live_tmpfs=True,source_bound_API_reconnect_projection=True,source_bound_natural_round_admission=True,source_bound_declared_launcher_census=True))
+-    observer = dict(client=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-two-second-main-proof-contract-original01-preparation/source-family-original01/round_observer_client_proof2s_v1.py')), worker=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-two-second-main-proof-contract-original01-preparation/source-family-original01/round_observer_proof2s_v1.py')),
+-        health=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_health_transport_retired_API_v4.py')),health_base=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_main_health_retired_API_v4.py')),API_projection=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/api_cached_projections_v3.py')),round_admission=h.pin(HERE/'round_admission_proof_v2.py'),launcher_census=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/launcher_census_v1.py')), durability=h.pin(HERE/'buffered_raw_writer_v2.py'), control=h.pin(HERE/'volatile_live_control_v1.py'), interpreter=h.pin(Path('/usr/bin/python3').resolve()))
++        raw_queue_protocol='pending-byte-digest-v2', volatile_live_tmpfs=True,source_bound_retired_API_projection=True,source_bound_completed_original192_bootstrap=True,source_bound_static_original192_partition=True))
++    observer = {'registry': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_registry_v1.py')), 'health_base': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_health_v1.py')), 'health': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_transport_v1.py')), 'worker': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/observe_continuous_static192_v1.py')), 'client': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_observer_client_v1.py')), 'durability': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/buffered_raw_writer_v2.py')), 'control': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/volatile_live_control_v1.py')), 'interpreter': h.pin(Path('/usr/bin/python3.12'))}
+     old_family = read(old_candidate['source_family_manifest'], h)
+     study = h.put(output/'study-precommit.json', dict(schema='robotron-deadline32-fixed-fresh-RCRC-study-v1',
+         created_unix_s=time.time(), ordered_legs=list(LEGS), horizon_ns=old_ref['horizon_ns'],
+@@ -245,7 +292,7 @@
+         directory.mkdir(mode=0o700)
+         role = 'reference' if leg.startswith('R') else 'candidate'
+         selected = reference if role == 'reference' else candidate
+-        namespace = 'deadline32-proof2s-'+study['sha256'][:16]+'-'+leg.lower()+'-original01-20261029'
++        namespace = 'deadline32-static192-proof2s-'+study['sha256'][:16]+'-'+leg.lower()+'-original01-20261029'
+         native_unit = 'robotron-'+namespace+'.service'
+         job = copy.deepcopy(old_ref if role == 'reference' else old_candidate)
+         job.update(unit=native_unit, lease=restored['restored_lease'], runtime=runtime, output=str(directory/'deadline-output-original01'), leg=leg,
+@@ -263,8 +310,8 @@
+                     token = secrets.token_hex(16)
+                 fresh.add(token)
+                 job[key][str(slot)] = token
+-        family = dict(schema='robotron-deadline32-declared-launcher-proof2s-source-family-v1', runtime=runtime,
+-            reviewer=reviewer, main_observer=observer, round_observer_reviewer=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-two-second-main-proof-contract-original01-preparation/source-family-original01/review_round_observer_proof2s_v1.py')),
++        family = dict(schema='robotron-deadline32-static192-proof2s-source-family-v1', runtime=runtime,
++            reviewer=reviewer, main_observer=observer, round_observer_reviewer=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/review_continuous_static192_observer_v1.py')),
+             main_health_finalizer=old_family['main_health_finalizer'], deadline_components=job['components'],
+             private_parent_job=h.pin(PREVIOUS/'C2/job.json'), current_main_binding=binding,
+             lease_recovery_authority=lease_recovery, main_domain_hot_review=main_proof, native_launch_qualified=not engineering,
+@@ -274,13 +321,14 @@
+         job['source_family_manifest'] = family_pin
+         inputs = [*job['inputs'], runtime, reviewer, controller, contract_pin, study, protocol, binding,
+             baseline_pin, family_pin, main_proof, lease_recovery, restored['restored_lease'], reference_profile, candidate_profile,
+-            h.pin(Path(__file__).resolve()), h.pin(HERE/'round_main_health_v7.py'), h.pin(HERE/'round_health_transport_v4.py'), *observer.values(), family['round_observer_reviewer'],
++            h.pin(Path(__file__).resolve()), h.pin(LOCAL.parent/'static_profile_contract_v2.py'),
++            case['input_inventory_authority'], h.pin(HERE/'round_main_health_v7.py'), h.pin(HERE/'round_health_transport_v4.py'), *observer.values(), family['round_observer_reviewer'],
+             family['main_health_finalizer'], family['private_parent_job'], selected['checkpoint'],
+             selected['immutable_numerical_or_protection_authority'], *evidence, *prior]
+         job['inputs'] = list({value['path']:value for value in inputs}.values())
+         context = native.validate_completed_context(job, h)
+-        require(len(context['package_pins']) == 123 and len(context['main_binding']['inputs']) == 247,
+-                'Actual prepared private/main source inventories differ')
++        require(len(context['package_pins']) == 123, 'Actual private package inventory differs')
++        contract.static_profile().validate_inventory(context['main_binding'], h)
+         if not engineering:
+             contract.validate_launch(job, context, h)
+         jp = h.put(directory/'job.json', job)
+@@ -301,8 +349,8 @@
+         schema='robotron-deadline32-four-original-leg-preparation-v1', study_precommit=study,
+         ordered_legs=list(LEGS), cases=records, source_preparer=h.pin(Path(__file__).resolve()), reviewer=reviewer,
+         all256_transport_IDs_fresh_and_disjoint=True, prior_jobs=prior, engineering_only=engineering,
+-        main_domain_slots=192, main_current_active=baseline['observed_counts']['active'],
+-        main_current_completed=baseline['observed_counts']['completed'], exact_job_CPU_closed=False,
++        main_domain_slots=192, main_current_active=len(baseline['actors']),
++        main_current_completed=sum(row['state'] in ('retiring_eval','closed_eval') for row in baseline['status']['slots'].values()), exact_job_CPU_closed=False,
+         native_launch_ready=False, any_scientific_payload_launched=False, quality_qualified=False,
+         remaining='Exact serialized four-job CPU guards and independent scope closure; final hardware/port/lease/unit readiness; one original R1 launch.'))
+ 
+@@ -310,6 +358,8 @@
+ if __name__ == '__main__':
+     parser = argparse.ArgumentParser(description=__doc__)
+     parser.add_argument('--prepare', action='store_true')
++    parser.add_argument('--selection', type=Path)
++    parser.add_argument('--selection-sha256')
+     parser.add_argument('--lease-recovery', type=Path, required=True)
+     parser.add_argument('--main-domain-proof', type=Path, required=True)
+     parser.add_argument('--engineering-entry', action='store_true')
+@@ -318,9 +368,11 @@
+     parser.add_argument('--candidate-profile', type=Path)
+     args = parser.parse_args()
+     if args.prepare:
++        require(args.selection is not None and hashlib.sha256(args.selection.read_bytes()).hexdigest() == args.selection_sha256,
++                'Exact immutable future Root selection required')
+         h = load('_round_preparer_cli_helpers', ROOT/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py')
+         result = prepare(args.output, h.pin(args.reference_profile.resolve()), h.pin(args.candidate_profile.resolve()),
+-                         main_domain_proof=h.pin(args.main_domain_proof.resolve()), lease_recovery=h.pin(args.lease_recovery.resolve()), engineering=args.engineering_entry)
++                         main_domain_proof=h.pin(args.main_domain_proof.resolve()), lease_recovery=h.pin(args.lease_recovery.resolve()), selection_pin=h.pin(args.selection.resolve()), engineering=args.engineering_entry)
+         print(json.dumps(result), flush=True)
+     else:
+         print('PLAN_ONLY_NO_READS_OR_ACTIONS')

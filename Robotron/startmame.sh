@@ -8,6 +8,12 @@ STAGE_ROMSET_SCRIPT="$SCRIPT_DIR/stage_robotron_romset.sh"
 LOG_DIR="$SCRIPT_DIR/logs"
 ROM_DIR="$SCRIPT_DIR/roms"
 MAME_BIN="${MAME_BIN:-mame}"
+# Tagged invocations manage that fleet. Manual launches leave managed jobs alone.
+ROBOTRON_FLEET_ID="${ROBOTRON_FLEET_ID:-}"
+if [[ -n "$ROBOTRON_FLEET_ID" && ! "$ROBOTRON_FLEET_ID" =~ ^[A-Za-z0-9_.-]{1,96}$ ]]; then
+    echo 'error: ROBOTRON_FLEET_ID must contain 1..96 letters, digits, dots, underscores or hyphens' >&2
+    exit 2
+fi
 TMP_AUDIO_GLOB="/tmp/robotron_audio_client"*.wav
 TMP_AUDIO_FIFO_GLOB="/tmp/robotron_audio_client"*.fifo
 AUDIO_BUFFER_BYTES="${ROBOTRON_AUDIO_BUFFER_BYTES:-20000000}"
@@ -22,12 +28,14 @@ VIDEO_ALL_RAW="${ROBOTRON_VIDEO_ALL_CLIENTS:-0}"
 VIDEO_ALL_NORM="$(printf '%s' "$VIDEO_ALL_RAW" | tr '[:upper:]' '[:lower:]')"
 AUDIO_ALL_RAW="${ROBOTRON_AUDIO_ALL_CLIENTS:-0}"
 AUDIO_ALL_NORM="$(printf '%s' "$AUDIO_ALL_RAW" | tr '[:upper:]' '[:lower:]')"
-DEFAULT_SOCKET_HOST="ubvmdell"
+DEFAULT_SOCKET_HOST="dell"
 DEFAULT_SOCKET_PORT="9998"
 SOCKET_HOST="$DEFAULT_SOCKET_HOST"
 SOCKET_PORT="$DEFAULT_SOCKET_PORT"
+SOCKET_PORT_EXPLICIT=0
 SOCKET_ADDRESS=""
 PREVIEW_SLOT_SELECTED=0
+START_LEVEL=""
 
 case "$GAME_AUDIO_ENABLED_NORM" in
     1|true|yes|on)
@@ -92,31 +100,59 @@ else
 fi
 
 usage() {
-    echo "Usage: $0 [COUNT] [novideo] [nonaudio] [--fg] [--throttle-client0] [--socket-address HOST:PORT] [--socket-host HOST] [--socket-port PORT] [-kill]"
+    echo "Usage: $0 [COUNT] [novideo] [nonaudio] [--fg] [--level N] [--throttle-client0] [--socket-address HOST:PORT] [--socket-host HOST] [--socket-port PORT] [-kill]"
     echo "       $0 kill CLIENT_ID"
     echo "  COUNT              Desired number of MAME instances left running (default: 1, background mode only; 0 kills all)"
     echo "  novideo            Launch MAME headless with -video none and -sound none for faster operation"
     echo "  nonaudio           Launch MAME with -sound none while keeping video behavior unchanged"
     echo "  ROBOTRON_VIDEO_ALL_CLIENTS=1 restores software video for every background client"
     echo "  ROBOTRON_AUDIO_ALL_CLIENTS=1 restores audio capture for every background client unless novideo/nonaudio is set"
+    echo "  ROBOTRON_FLEET_ID scopes process reconciliation and supervision to an exact exported fleet tag"
+    echo "  Manual launches leave tagged fleets and Robotron systemd jobs running (Linux)"
     echo "  --socket-address   Set the Python socket target for all clients"
-    echo "  --socket-host      Set socket host (default: ubvmdell)"
-    echo "  --socket-port      Set socket port (default: 9998)"
+    echo "  --socket-host      Set socket host (default: dell)"
+    echo "  --socket-port      Set socket port (default: 9998; manual --fg --eval: 9999)"
     echo "  --fg               Run one MAME instance in foreground"
+    echo "  --level N          Start each game on level 1..81, overriding the trainer's starting level"
     echo "  --throttle-client0 Throttle client 0 to real-time speed (default: unthrottled)"
-    echo "  --eval             Force this launch's client(s) to be EVAL clients (greedy, wave-1, no replay writes)"
+    echo "  --eval             Force EVAL clients (greedy, wave-1; replay follows the server mode)"
     echo "  --noeval           Force this launch's client(s) to be NON-EVAL (normal training clients)"
     echo "  --supervise        Stay running after launch and respawn any client slot that dies"
     echo "                     (checks every ${ROBOTRON_SUPERVISE_INTERVAL:-30}s; a slot crashing"
     echo "                     ${ROBOTRON_RESPAWN_GUARD_MAX:-5}x in ${ROBOTRON_RESPAWN_GUARD_WINDOW:-600}s is quarantined; run under tmux/nohup for long sessions;"
     echo "                     with a supervisor active, 'kill CLIENT_ID' becomes force-restart)"
-    echo "  -kill              Kill all running Robotron MAME instances"
+    echo "  -kill              Kill this invocation's Robotron MAME instances (manual clients by default)"
     echo "  kill CLIENT_ID     Kill one Robotron MAME client by ROBOTRON_CLIENT_SLOT"
-    echo "  Tip: use --socket-address ubvmdell:9998 for a remote host"
+    echo "  Tip: use --fg --eval for manual play on dell:9999"
 }
 
 list_robotron_pids() {
-    pgrep -f 'mame.*robotron' || true
+    # Match the executable and game argument, not shell/log command text that
+    # merely mentions both names (which could kill the caller during a reset).
+    local candidates pid
+    candidates="$(pgrep -f '^([^[:space:]]*/)?(mame|sdlmame)(64)?[[:space:]]+robotron([[:space:]]|$)' || true)"
+    for pid in $candidates; do
+        if [[ -n "${ROBOTRON_FLEET_ID:-}" ]]; then
+            if [[ -r "/proc/$pid/environ" ]] && grep -zFxq -- "ROBOTRON_FLEET_ID=$ROBOTRON_FLEET_ID" "/proc/$pid/environ" 2>/dev/null; then
+                printf '%s\n' "$pid"
+            fi
+        else
+            if [[ -d /proc ]]; then
+                # Unknown ownership and managed actors are outside a manual
+                # invocation. This also protects untagged private evaluators
+                # launched under a Robotron systemd service.
+                [[ -r "/proc/$pid/environ" && -r "/proc/$pid/cgroup" ]] || continue
+                if grep -zEq '^ROBOTRON_FLEET_ID=.+$' "/proc/$pid/environ" 2>/dev/null; then
+                    continue
+                fi
+                if grep -Eq '/robotron[^/]*\.service(/|$)' "/proc/$pid/cgroup" 2>/dev/null; then
+                    continue
+                fi
+            fi
+            printf '%s\n' "$pid"
+        fi
+    done
+    return 0
 }
 
 count_running_robotron_instances() {
@@ -130,7 +166,7 @@ count_running_robotron_instances() {
 }
 
 kill_all_robotron_instances() {
-    local message="${1:-Killing all running Robotron MAME instances...}"
+    local message="${1:-Stopping selected Robotron MAME instances...}"
     local pids
 
     echo "$message"
@@ -159,7 +195,7 @@ kill_client_by_id() {
 
     local pids=""
     local all_robotron_pids
-    all_robotron_pids=$(pgrep -f 'mame.*robotron' || true)
+    all_robotron_pids=$(list_robotron_pids)
 
     # Primary path (Linux): match the exported client slot from process env.
     if [[ -d /proc ]]; then
@@ -172,7 +208,7 @@ kill_client_by_id() {
     fi
 
     # Fallback: command-line marker (works only if launcher preserved it in argv).
-    if [[ -z "${pids//[[:space:]]/}" ]]; then
+    if [[ ! -d /proc && -z "${pids//[[:space:]]/}" && -z "$ROBOTRON_FLEET_ID" ]]; then
         pids=$(ps ax -o pid= -o command= | awk -v cid="$client_id" '
             index($0, "mame") && index($0, "robotron") && $0 ~ ("ROBOTRON_CLIENT_SLOT=" cid "([[:space:]]|$)") {
                 print $1
@@ -189,7 +225,7 @@ kill_client_by_id() {
     echo "$pids" | xargs kill -9
     echo "Killed PIDs: $(echo "$pids" | tr '\n' ' ')"
 
-    if ! pgrep -f 'mame.*robotron' >/dev/null 2>&1; then
+    if [[ -z "$(list_robotron_pids)" ]]; then
         cleanup_audio_relays
         cleanup_audio_wavs
         cleanup_audio_fifos
@@ -212,6 +248,9 @@ cleanup_audio_relays() {
 
 # ── supervisor ──────────────────────────────────────────────────────────────
 SUPERVISOR_PIDFILE="$LOG_DIR/robotron_supervisor.pid"
+if [[ -n "$ROBOTRON_FLEET_ID" ]]; then
+    SUPERVISOR_PIDFILE="$LOG_DIR/robotron_supervisor_${ROBOTRON_FLEET_ID}.pid"
+fi
 SUPERVISE_INTERVAL="${ROBOTRON_SUPERVISE_INTERVAL:-30}"
 RESPAWN_GUARD_WINDOW="${ROBOTRON_RESPAWN_GUARD_WINDOW:-600}"
 RESPAWN_GUARD_MAX="${ROBOTRON_RESPAWN_GUARD_MAX:-5}"
@@ -224,6 +263,14 @@ stop_existing_supervisor() {
             echo "Stopping existing supervisor (PID $spid)..."
             kill "$spid" 2>/dev/null || true
         fi
+        rm -f "$SUPERVISOR_PIDFILE"
+    fi
+}
+
+cleanup_supervisor_pidfile() {
+    # A previous supervisor can finish its sleep after its replacement starts.
+    # Its exit must not remove the replacement's PID file.
+    if [[ -f "$SUPERVISOR_PIDFILE" && "$(cat "$SUPERVISOR_PIDFILE" 2>/dev/null)" == "$$" ]]; then
         rm -f "$SUPERVISOR_PIDFILE"
     fi
 }
@@ -281,9 +328,9 @@ launch_client() {
 
     log_file="$LOG_DIR/mame_instance_${slot}.log"
     if [[ "$attached" -eq 1 ]]; then
-        ROBOTRON_SOCKET_ADDRESS="$client_socket" ROBOTRON_PREVIEW_CLIENT="$preview_flag" ROBOTRON_CLIENT_SLOT="$slot" ROBOTRON_EVAL_MODE="$EVAL_MODE" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $CHEAT_FLAG $throttle_flag $sound_flag $video_flag -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT" &
+        ROBOTRON_START_LEVEL="$START_LEVEL" ROBOTRON_SOCKET_ADDRESS="$client_socket" ROBOTRON_PREVIEW_CLIENT="$preview_flag" ROBOTRON_CLIENT_SLOT="$slot" ROBOTRON_EVAL_MODE="$EVAL_MODE" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $CHEAT_FLAG $throttle_flag $sound_flag $video_flag -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT" &
     else
-        ROBOTRON_SOCKET_ADDRESS="$client_socket" ROBOTRON_PREVIEW_CLIENT="$preview_flag" ROBOTRON_CLIENT_SLOT="$slot" ROBOTRON_EVAL_MODE="$EVAL_MODE" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $CHEAT_FLAG $throttle_flag $sound_flag $video_flag -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT" >> "$log_file" 2>&1 &
+        ROBOTRON_START_LEVEL="$START_LEVEL" ROBOTRON_SOCKET_ADDRESS="$client_socket" ROBOTRON_PREVIEW_CLIENT="$preview_flag" ROBOTRON_CLIENT_SLOT="$slot" ROBOTRON_EVAL_MODE="$EVAL_MODE" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $CHEAT_FLAG $throttle_flag $sound_flag $video_flag -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT" >> "$log_file" 2>&1 &
     fi
     LAST_LAUNCH_PID=$!
     LAST_LAUNCH_SOCKET="$client_socket"
@@ -309,7 +356,7 @@ supervise_loop() {
 
     stop_existing_supervisor
     echo "$$" > "$SUPERVISOR_PIDFILE"
-    trap 'rm -f "$SUPERVISOR_PIDFILE"; echo; echo "[SUPERVISOR] exiting (fleet left running; use '"$0"' -kill to stop it)"; exit 0' INT TERM
+    trap 'cleanup_supervisor_pidfile; echo; echo "[SUPERVISOR] exiting (fleet left running; use '"$0"' -kill to stop it)"; exit 0' INT TERM
     echo "[SUPERVISOR] watching slots 0-$((COUNT - 1)) every ${SUPERVISE_INTERVAL}s" \
          "(quarantine after ${RESPAWN_GUARD_MAX} crashes in ${RESPAWN_GUARD_WINDOW}s; Ctrl-C stops the supervisor only)"
     while :; do
@@ -372,6 +419,26 @@ while [[ $# -gt 0 ]]; do
             FOREGROUND=1
             shift
             ;;
+        --level)
+            if [[ $# -lt 2 ]]; then
+                echo "error: --level requires an integer from 1 to 81" >&2
+                exit 2
+            fi
+            START_LEVEL="$2"
+            if ! [[ "$START_LEVEL" =~ ^([1-9]|[1-7][0-9]|8[01])$ ]]; then
+                echo "error: --level must be an integer from 1 to 81" >&2
+                exit 2
+            fi
+            shift 2
+            ;;
+        --level=*)
+            START_LEVEL="${1#*=}"
+            if ! [[ "$START_LEVEL" =~ ^([1-9]|[1-7][0-9]|8[01])$ ]]; then
+                echo "error: --level must be an integer from 1 to 81" >&2
+                exit 2
+            fi
+            shift
+            ;;
         --socket-address)
             if [[ $# -lt 2 ]]; then
                 echo "error: --socket-address requires HOST:PORT" >&2
@@ -405,10 +472,12 @@ while [[ $# -gt 0 ]]; do
                 exit 2
             fi
             SOCKET_PORT="$2"
+            SOCKET_PORT_EXPLICIT=1
             shift 2
             ;;
         --socket-port=*)
             SOCKET_PORT="${1#*=}"
+            SOCKET_PORT_EXPLICIT=1
             shift
             ;;
         --throttle-client0)
@@ -458,6 +527,16 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+if [[ -n "$START_LEVEL" ]]; then
+    LUA_SCRIPT="$SCRIPT_DIR/Scripts/start_at_level.lua"
+    echo "Starting level: $START_LEVEL (client override)"
+fi
+
+if [[ "$FOREGROUND" -eq 1 && "$EVAL_MODE" -eq 1 && -z "$ROBOTRON_FLEET_ID" && "$SOCKET_PORT_EXPLICIT" -eq 0 && -z "$SOCKET_ADDRESS" ]]; then
+    # Keep interactive play out of the managed training fleet's slot namespace.
+    SOCKET_PORT="9999"
+fi
+
 if [[ -z "$SOCKET_ADDRESS" ]]; then
     SOCKET_ADDRESS="${SOCKET_HOST}:${SOCKET_PORT}"
 fi
@@ -469,7 +548,7 @@ if ! [[ "$COUNT" =~ ^[0-9]+$ ]]; then
 fi
 
 if [[ "$COUNT" -eq 0 ]]; then
-    kill_all_robotron_instances "Target count is 0; stopping all Robotron MAME instances..."
+    kill_all_robotron_instances "Target count is 0; stopping selected Robotron MAME instances..."
     exit 0
 fi
 
@@ -583,7 +662,7 @@ if [[ "$FOREGROUND" -eq 1 ]]; then
     CLIENT_SOCKET_ADDRESS="${socket_info%%|*}"
     PREVIEW_CLIENT_FLAG="${socket_info##*|}"
     echo "Socket target: $CLIENT_SOCKET_ADDRESS"
-    env ROBOTRON_SOCKET_ADDRESS="$CLIENT_SOCKET_ADDRESS" ROBOTRON_PREVIEW_CLIENT="$PREVIEW_CLIENT_FLAG" ROBOTRON_CLIENT_SLOT=0 ROBOTRON_EVAL_MODE="$EVAL_MODE" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $CHEAT_FLAG $THROTTLE_FLAG $SOUND_FLAG $VIDEO_FLAG -window -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT"
+    env ROBOTRON_START_LEVEL="$START_LEVEL" ROBOTRON_SOCKET_ADDRESS="$CLIENT_SOCKET_ADDRESS" ROBOTRON_PREVIEW_CLIENT="$PREVIEW_CLIENT_FLAG" ROBOTRON_CLIENT_SLOT=0 ROBOTRON_EVAL_MODE="$EVAL_MODE" ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES="$SKIP_UNUSED_TACTICAL_FEATURES" "$MAME_BIN" robotron -rompath "$ROMPATH" $CHEAT_FLAG $THROTTLE_FLAG $SOUND_FLAG $VIDEO_FLAG -window -skip_gameinfo $WARNING_FLAG -autoboot_script "$LUA_SCRIPT"
     status=$?
     cleanup_audio_relays
     cleanup_audio_fifos

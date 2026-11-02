@@ -1,0 +1,236 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/reviewer-sources/B64-review_evaluator_count_active600_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/review_cold_slot64_prefix_v1.py
+@@ -1,4 +1,4 @@
+-"""Independent RAM live-control reference600 load review; no game quality."""
++"""Independent original cold-all64 ROM1200 startup-prefix review; no game quality."""
+ GAMES_PER_SLOT = 1
+ ACTOR_COUNT = 64
+ import argparse
+@@ -10,6 +10,7 @@
+ import json
+ import math
+ import os
++import re
+ from pathlib import Path
+ import socket
+ import subprocess
+@@ -80,6 +81,35 @@
+     summary = {name: dict(count=len(items), maximum_wall_s=max((r['wall_s'] for r in items)), total_wall_s=sum((r['wall_s'] for r in items)), total_thread_cpu_s=sum((r['thread_cpu_s'] for r in items)), quota_throttled_periods=sum((r['quota_throttled_periods'] for r in items)), slowest=sorted(items, key=lambda r: r['wall_s'], reverse=True)[:10]) for name, items in by_stage.items()}
+     return dict(events=len(rows), stages=len(stages), GC_events=len(gc), raw_samples=len(samples), maximum_gap_s=max((r['gap_s'] for r in gaps)), stage_summary=summary, largest20_gap_intervals=top, instrumentation_has_some_cost=True, previous_failed_case_cause_reproduced=False, no_scientific_fix_or_reliability_claim=True, quality_qualified=False)
+ 
++def validate_observer420_derivation(historical_family, family, read):
++    pin = family['observer_bound420_derivation']
++    assert pin['sha256'] == 'bb362cf27cdfc065b275fb393706940cd29af7bd5a4b00c9d73d5ee8f556fe9a'
++    derivation = read(pin)
++    assert derivation['schema'] == 'robotron-cold64-observer-bounded420-source-derivation-v1'
++    assert derivation['old_sources_changed'] is derivation['launched'] is False
++    parents, selected = derivation['source_parents'], derivation['selected_sources']
++    assert set(parents) == set(selected) == {'client', 'worker', 'controller', 'reviewer', 'protocol'}
++    assert historical_family['main_observer'] == parents
++    assert family['main_observer'] == selected
++    assert parents['protocol'] == selected['protocol']
++    assert selected['protocol']['sha256'] == '0ec8510b82783b6d47cad99ba63c59045f32e5b9acf6dbfa128b308f9641d2b9'
++    for role in ('client', 'worker', 'controller', 'reviewer'):
++        before = read(parents[role], False).decode()
++        after = read(selected[role], False).decode()
++        if role == 'client':
++            expected = before.replace('12e479b0eb0545dab32da1d8f8130be3622670207c79ecaf0a164b812fa0ec5a', '2b6cd5a25c66f99011621385616efad6adaaa792ef0eab28300ba18a0f6466c7').replace('22260', '420').replace('22320', '480')
++        elif role == 'worker':
++            expected = before.replace('in (180,22260)', 'in (420,)').replace("{180:'3min',22260:'6h 11min'}", "{420:'7min'}")
++        elif role == 'controller':
++            expected = before.replace("'22260'", "'420'").replace("22320<=c['observation_s']<=22380", "480<=c['observation_s']<=480")
++        else:
++            expected = before.replace('22260', '420').replace('22320', '480').replace("'6h 11min'", "'7min'")
++        assert expected != before and after == expected, 'Unexpected observer420 source/predicate delta: ' + role
++    return dict(derivation=pin, historical_sources=parents, selected_bounded420_sources=selected,
++                exact_only_watchdog_observation_and_client_controller_pin_delta_verified=True,
++                historical_coalescing_CPU_proof_preserved_at_original_node=True,
++                selected_protocol_and_health_algorithms_unchanged=True)
++
+ def validate_protocol_provenance(family, read):
+     """Verify historical derivations at their own nodes, then the selected codec.
+ 
+@@ -166,12 +196,73 @@
+     stats = actual['running_projection_publication_stats']
+     assert stats['attempts'] == stats['published'] + stats['coalesced_busy_reader'] == actual['original_raw_main_samples']
+     assert stats['published'] > 0 and stats['coalesced_busy_reader'] > 0 and stats['errors'] == 0
+-    assert read(actual['component_family'])['main_observer'] == family['main_observer']
++    observer420 = validate_observer420_derivation(read(actual['component_family']), family, read)
+     return dict(historical_RAM_codec=RAM_provenance['codec'], historical_serialized_codec=provenance['prospective_protocol'],
+                 selected_protocol=selected, coalescing_protocol_CPU=cpupin, current_context_observer_CPU=actualpin,
++                observer420_historical_to_selected_bridge=observer420,
+                 all_historical_derivations_and_retained_function_AST_verified=True,
+                 selected_running_publisher_exact_source_and_guarded_behavior_verified=True,
+                 raw_runtime_ROM_quality_and_rate_checks_unchanged=True)
++
++def validate_cold_marker(job, result, marker):
++    assert result['schema'] == 'robotron-cold-all64-startup-prefix-result-v1'
++    assert job['diagnostic_role'] == 'cold_all64_startup_prefix_only' and job['wall_limit_s'] == 360
++    assert marker['schema'] == 'robotron-cold-all64-prefix-only-stop-v1'
++    assert marker['reason'] == 'PRECOMMITTED_ALL64_COLD_STARTUP_PREFIX_ONLY_STOP'
++    assert marker['all64_prefixes_certified'] is marker['no_active600_window'] is True
++    assert marker['runtime_errors_before_intentional_stop'] == []
++    assert marker['server_inference_error_before_intentional_stop'] is None
++    assert marker['quality_qualified'] is marker['throughput_gain_verified'] is marker['learning_speed_gain_verified'] is False
++    assert result['active_start'] is result['active_end'] is result['active_frame_rate'] is None
++    assert result['policy_before'] == result['policy_after'] == marker['policy']
++    boundary, admission = marker['boundary'], marker['fixed_admission']
++    assert boundary['ready'] is boundary['active'] is True
++    assert boundary['clients'] == boundary['expected'] == boundary['acknowledged'] == 64
++    assert boundary['actor_slots'] == list(range(4096, 4160))
++    assert boundary['pending_client_ids'] == boundary['replay_pending_client_ids'] == []
++    assert boundary['generation'] == boundary['requested_generation'] == admission['generation'] == marker['policy']['measurement_generation'] == result['controller_exit']['generation']
++    assert admission['experiment'] == marker['policy']['experiment'] == job['label']
++    assert set(marker['prefixes']) == set(marker['subjects']) == {str(s) for s in range(4096, 4160)}
++    nonces = []
++    for slot, value in marker['subjects'].items():
++        entry = result['original_slots'][slot]
++        assert value['pid'] == entry['pid'] and value['birth'] == entry['birth']
++        assert value['handoff'] == entry['handoff'] and 1200 < value['sequence'] <= entry['frames']
++        assert re.fullmatch('[a-f0-9]{64}', value['nonce']) and value['nonce'] != '0' * 64
++        nonces.append(value['nonce'])
++        assert marker['prefixes'][slot] == entry['prefix_summary']
++    assert len(set(nonces)) == 64
++    errors = result['errors']
++    assert errors and errors[0] == "ValueError('PRECOMMITTED_ALL64_COLD_STARTUP_PREFIX_ONLY_STOP_NOT_A_QUALITY_RESULT')"
++    # The marker is reachable only after detected runtime/transport errors were
++    # zero. Every accepted later error comes from the original owned teardown;
++    # retain exact strings, and fail closed on unknown/non-teardown diagnostics.
++    for error in errors[1:]:
++        match = re.fullmatch(r"Original slot(\d+): ValueError\('(Original full-tail exchange interrupted|Original origin client disappeared|Original startup connection ended during a frame|Actual origin inference failed)'\)", error)
++        assert match and 4096 <= int(match.group(1)) <= 4159, 'Unclassified post-marker diagnostic: ' + error
++    return dict(all64_armed_original_boundary=True, original_errors_retained=errors,
++                full_tail_quality_validated=False)
++
++def validate_cleanup_events(result, marker, boundary):
++    assert boundary['schema'] == 'robotron-cold-prefix-intentional-cleanup-boundary-v1'
++    assert boundary['original_prefix_marker'] == result['cold_prefix_marker']
++    begin, declared, after = [boundary[k] for k in ('begin_monotonic_ns', 'declaration_complete_monotonic_ns', 'after_flags_monotonic_ns')]
++    assert all(type(value) is int for value in (begin, declared, after))
++    assert marker['observed_monotonic_s'] * 1e9 <= begin <= declared <= after
++    assert boundary['errors_before_intentional_cleanup'] == [result['errors'][0]]
++    assert boundary['inference_error_before_intentional_cleanup'] is None
++    assert boundary['shutdown_already_set'] is False
++    assert boundary['shutdown_set_before_owned_signals'] is boundary['intentional_cleanup_flag_set'] is boundary['before_first_owned_actor_signal'] is True
++    observed = result['private_failure_events']
++    assert type(observed) is list
++    for event in observed:
++        assert type(event['slot']) is int and 4096 <= event['slot'] <= 4159
++        assert event['intentional_cleanup_observed'] is True
++        assert type(event['observed_monotonic_ns']) is int and event['observed_monotonic_ns'] >= begin
++        assert event['message'] == 'Original slot' + str(event['slot']) + ': ' + event['error']
++    assert collections.Counter(event['message'] for event in observed) == collections.Counter(result['errors'][1:]), 'Unattributed private/runtime/cleanup error'
++    return dict(exact_original_error_event_join=True, intentional_cleanup_source_order_and_clock_boundary_verified=True,
++                original_private_failure_events=observed, original_cleanup_boundary=boundary)
+ 
+ def main():
+     p = argparse.ArgumentParser()
+@@ -187,7 +278,7 @@
+     raw = Path(a.job).read_bytes()
+     assert hashlib.sha256(raw).hexdigest() == a.job_sha256
+     review = json.loads(raw)
+-    assert review['schema'] == 'robotron-evaluator-count-active600-independent-review-job-v1'
++    assert review['schema'] == 'robotron-cold-all64-startup-prefix-independent-review-job-v1'
+     assert os.environ.get('CUDA_VISIBLE_DEVICES') == ''
+     h = load(review['helpers'], '_critical_review_h')
+     reader = load(review['reader'], '_critical_review_reader')
+@@ -200,21 +291,25 @@
+     job = read(job_pin)
+     out = Path(job['output'])
+     result = read(review['native_result'])
+-    assert job['schema'] == 'robotron-evaluator-count-active600-engineering-v1' and job['diagnostic_only'] is True and ('quality_leg' not in job)
++    assert job['schema'] == 'robotron-cold-all64-startup-prefix-original-v1' and job['diagnostic_only'] is True and ('quality_leg' not in job)
+     assert result['complete'] is result['quality_qualified'] is False and result['main_health_failure'] is None
+-    assert result['errors'][0] == "ValueError('PRECOMMITTED_ACTIVE600_SELECTOR_LOAD_STOP_NOT_A_QUALITY_RESULT')"
++    assert result['errors'][0] == "ValueError('PRECOMMITTED_ALL64_COLD_STARTUP_PREFIX_ONLY_STOP_NOT_A_QUALITY_RESULT')"
+     assert result['original_lease_released'] is result['all_original_threads_stopped'] is result['immutable_inputs_unchanged'] is True
+     assert result['original_unsealed_journal_paths'] == []
+-    marker = read(h.pin(out / 'original-all-slots-prefix-diagnostic-stop.json'))
+-    assert marker['reason'] == 'PRECOMMITTED_ACTIVE600_SELECTOR_LOAD_STOP'
++    marker = read(h.pin(out / 'original-all64-startup-prefix-only-stop.json'))
++    assert result['cold_prefix_marker'] == h.pin(out / 'original-all64-startup-prefix-only-stop.json')
++    validate_cold_marker(job, result, marker)
++    cleanup_attribution = validate_cleanup_events(result, marker, read(result['prefix_cleanup_boundary']))
++    load(job['startup_lua_chain']['guard'], '_cold_actual_Lua_chain').validate_job(job)
++    assert marker['reason'] == 'PRECOMMITTED_ALL64_COLD_STARTUP_PREFIX_ONLY_STOP'
+     assert set(marker['prefixes']) == {str(s) for s in range(4096, 4096 + ACTOR_COUNT)}
+-    assert marker['observed_monotonic_s'] - result['native_started_monotonic_s'] >= 600
+-    assert marker['observed_monotonic_s'] < result['native_deadline_monotonic_s'] == result['native_started_monotonic_s'] + 960
++    assert 0 < marker['observed_monotonic_s'] - result['native_started_monotonic_s'] < 300
++    assert marker['observed_monotonic_s'] < result['native_deadline_monotonic_s'] == result['native_started_monotonic_s'] + 360
+     arc = load(review['archive'], '_critical_review_arc')
+     owner = read(review['native_owner'])
+     cfg = read(review['native_config'])
+     fields = arc.archived_closure(read(review['native_closure']), owner, read, exit_zero=False)
+-    for k, v in dict(Id=owner['unit'], InvocationID=owner['invocation_id'], ExecMainPID=str(owner['pid']), ExecMainCode='1', ExecMainStatus='1', CPUQuotaPerSecUSec='12s', MemoryMax=str(24 << 30), MemorySwapMax='0', RuntimeMaxUSec='6h 11min', TasksMax='512', TimeoutStopUSec='30s', KillMode='mixed', SendSIGKILL='no', Restart='no', NRestarts='0').items():
++    for k, v in dict(Id=owner['unit'], InvocationID=owner['invocation_id'], ExecMainPID=str(owner['pid']), ExecMainCode='1', ExecMainStatus='1', CPUQuotaPerSecUSec='12s', MemoryMax=str(24 << 30), MemorySwapMax='0', RuntimeMaxUSec='7min', TasksMax='512', TimeoutStopUSec='30s', KillMode='mixed', SendSIGKILL='no', Restart='no', NRestarts='0').items():
+         assert fields[k] == v
+     command = '/usr/bin/env -u LD_PRELOAD -u PYTHONPATH CUDA_VISIBLE_DEVICES= PYTHONDONTWRITEBYTECODE=1 TMPDIR=' + str(Path(cfg['output']) / 'tmp') + ' ' + ' '.join(cfg['argv'])
+     assert command + ' ; ignore_errors=no ;' in fields['ExecStart']
+@@ -230,7 +325,7 @@
+     assert not Path('/sys/fs/cgroup/user.slice/user-1001.slice/user@1001.service/app.slice', owner['unit']).exists()
+     started = int(fields['ExecMainStartTimestampMonotonic']) / 1000000.0
+     ended = int(fields['ExecMainExitTimestampMonotonic']) / 1000000.0
+-    assert 0 < started < ended <= time.monotonic() and ended - started <= 1020
++    assert 0 < started < ended <= time.monotonic() and ended - started <= 480
+     family = read(job['source_family_manifest'])
+     protocol = read(job['main_health_protocol'])
+     verifier = load(family['main_observer']['reviewer'], '_critical_review_observer')
+@@ -238,7 +333,7 @@
+     assert checked['closed_report'] == result['main_health_report']
+     closed = read(result['main_health_report'])
+     assert closed['actual_status'] == result['main_samples']
+-    assert len(closed['samples']) >= 2800 and closed['deep_samples'] >= 100
++    assert len(closed['samples']) >= 2 and closed['deep_samples'] >= 1
+     engine = load(protocol['health_job']['sources']['full_health_engine'], '_critical_review_engine')
+     capture = family['inet_diag_capture_components']
+     contracts = read(capture['contracts'])
+@@ -295,8 +390,12 @@
+     assert source_guard['status'] == 'PASS_ORIGINAL_QUOTA64_NATIVE_FAMILY_GUARDS_AND_CPU_CLOSED0'
+     assert source_guard['actual_exit'] == 0
+     starts = quota_audit.lines(read(result['journal']['measurement_starts.jsonl'], False))
++    starts_index = quota_audit.indexed(starts, 'startup starts')
++    final_games_index = quota_audit.indexed(quota_audit.lines(read(result['journal']['games.jsonl'], False)), 'closed startup games')
+     admission = read(h.pin(out / 'original-fixed-admission.json'))
+     assert admission['close_unix_ns'] - admission['open_unix_ns'] == 21540000000000
++    assert admission == marker['fixed_admission']
++    prefix_result = dict(result, _admission=admission)
+     cohort = result['after_intentional_stop']
+     selected, counts, outside = quota_audit.select_original_starts(starts, job['label'], cohort['start_ts'], cohort['close_ts'], source_is_start_order=True)
+     assert cohort['started_ids'] == list(selected) and cohort['started'] == len(selected)
+@@ -306,11 +405,8 @@
+     assert cohort['retained_outside_cohort_ids'] == outside
+     assert result['controller_exit']['valid'] is False
+     quota_selection = dict(strategy=quota_runtime.COHORT_SELECTION, started_ids=list(selected), slot_counts=counts, retained_outside_start_ids=outside, completed_at_engineering_stop=cohort['count'], abandoned_after_engineering_stop=cohort['abandoned'], scientific_quality_not_evaluated=True)
+-    timing_pin = result['selector_call_timing']
+-    measurement_reader = load(review['selector_measurement_reader'], '_active600_independent_measurements')
+-    measured = measurement_reader.analyse(job, job_pin, result, read, h)
+-    assert measured['actor_count'] == ACTOR_COUNT
+-    assert measured['main_rates']['both_optimizer_endpoints_fully_classified'] is True
++    assert result['active_start'] is result['active_end'] is result['active_frame_rate'] is None
++    assert result['policy_after'] == result['policy_before'] == marker['policy']
+     assert job['experiment_precommit'] == review['engineering_design']
+     assert job['main_rate_reader'] == review['main_rate_reader']
+     policy = result['policy_before']
+@@ -347,8 +443,10 @@
+         assert len(image) == 102400 and hashlib.sha256(image).hexdigest() == job['loaded_rom_sha256']
+         raw_wire = games.lines(read(entry['files']['proxy.jsonl'], False))
+         assert [r['proxy_event'] for r in raw_wire] == list(range(1, len(raw_wire) + 1))
+-        ledger = wire.audit_prefix_ledger(raw_wire, rows, subject, job['loaded_rom_sha256'], entry)
+-        prefixes.append(dict(slot=slot, ledger=ledger, all1200_original_pairs_and_loaded_ROM_verified=True, full_tail_quality_not_validated=True))
++        certificate = wire.audit_slot_prefix(slot, entry, job, prefix_result, starts_index, final_games_index, read, h.pin, expected_job_sha256=job_pin['sha256'])
++        assert certificate['nonce'] == marker['subjects'][str(slot)]['nonce']
++        assert certificate['certificate_identifier'] == marker['subjects'][str(slot)]['handoff']['certificate_identifier']
++        prefixes.append(dict(slot=slot, certificate=certificate, all1200_original_pairs_ROM_START_nonce_initialized_firstplay_independently_replayed=True, full_tail_quality_not_validated=True))
+     h.checked(job['lease'])
+     fd = os.open(job['lease']['path'], os.O_RDWR | os.O_NOFOLLOW)
+     try:
+@@ -363,7 +461,7 @@
+     assert job['gpu_uuid'] not in gpu.stdout and 'torch' not in sys.modules
+     output = Path(review['output'])
+     output.mkdir(mode=448)
+-    rp = h.put(output / 'report.json', dict(schema='robotron-evaluator-count-active600-independent-review-v1', native_job=job_pin, native_result=review['native_result'], native_actual_interval=[started, ended], native_expected_exit1_verified=True, all_native_archives_resources_commands_pins_release_verified=True, worker_independent_review=checked, raw_replay=replay, initial_readiness=initial, all_declared_original_startup_prefixes=prefixes, declared_actor_count=ACTOR_COUNT, quota64_raw_selection=quota_selection, original_source_family_guard_closeout=review['source_family_guard_closeout'], timing_source_report=timing_pin, timing_analysis=measured, precommitted600s_stop=marker, strict_live_protocol=family['main_observer']['protocol'], archived_RAM_live_lock=lock_pin, original_RAM_live_lock=lock_item['original'], RAM_control_independent_review=RAM, strict_original_reader_and_historical_publisher_AST_verified=True, historical_transient_and_selected_coalescing_provenance_verified=True, protocol_provenance=protocol_provenance, transient_live_components=transient, native600_load_requirement_achieved=True, all_original_fixed_query_kernel_epochs_and_raw_headers_independently_replayed=True, kernel_epochs=kernel_epochs, filtered_capture_components=capture, all_original_errors_retained=result['errors'], private_resources_free=True, scientific_case=False, previous_scientific_failure_reproduced=False, health_fix_verified=False, quality_qualified=False, created_unix_s=time.time()))
++    rp = h.put(output / 'report.json', dict(schema='robotron-cold-all64-startup-prefix-independent-review-v1', native_job=job_pin, native_result=review['native_result'], native_actual_interval=[started, ended], native_expected_exit1_verified=True, all_native_archives_resources_commands_pins_release_verified=True, worker_independent_review=checked, raw_replay=replay, initial_readiness=initial, all_declared_original_startup_prefixes=prefixes, declared_actor_count=ACTOR_COUNT, quota64_raw_selection=quota_selection, original_source_family_guard_closeout=review['source_family_guard_closeout'], cold_prefix_stop=marker, all64_actual_armed_generation_acknowledgements_verified=True, startup_only_expected_exit_and_cleanup_classified=True, cleanup_event_attribution=cleanup_attribution, no_active600_window=True, strict_live_protocol=family['main_observer']['protocol'], archived_RAM_live_lock=lock_pin, original_RAM_live_lock=lock_item['original'], RAM_control_independent_review=RAM, strict_original_reader_and_historical_publisher_AST_verified=True, historical_transient_and_selected_coalescing_provenance_verified=True, protocol_provenance=protocol_provenance, transient_live_components=transient, all64_cold_startup_prefix_requirement_achieved=True, all_original_fixed_query_kernel_epochs_and_raw_headers_independently_replayed=True, kernel_epochs=kernel_epochs, filtered_capture_components=capture, all_original_errors_retained=result['errors'], private_resources_free=True, scientific_case=False, previous_scientific_failure_reproduced=False, health_fix_verified=False, quality_qualified=False, created_unix_s=time.time()))
+     print(json.dumps(dict(report=rp, samples=len(closed['samples']), max_gap_s=replay['maximum_observation_gap_s'])))
+     return 0
+ if __name__ == '__main__':

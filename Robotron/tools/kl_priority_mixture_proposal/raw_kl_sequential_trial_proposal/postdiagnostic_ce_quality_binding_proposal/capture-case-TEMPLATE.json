@@ -1,0 +1,71 @@
+{
+  "schema": "robotron-postdiagnostic-live8M-candidate-case-v1",
+  "capture_authorized": false,
+  "activation": {
+    "result": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-healthy-activation-original01-20261018/result.json",
+      "sha256": "f47b861115c62a87097f6eef0750f9c07db8a6876d59c87ab0a5ff0801a19621",
+      "bytes": 720590,
+      "identity": {
+        "device": 2304,
+        "inode": 83625516,
+        "bytes": 720590,
+        "mtime_ns": 1792307103321702661,
+        "ctime_ns": 1792307103321702661,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "adoption": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-healthy-activation-root-preparation-20261018/root-actual-activation-canonical-adoption.json",
+      "sha256": "490c7cb2de233ded3a9cd6c06d7c3c1d0006c3b714a526a584fe085e13a3ed0b",
+      "bytes": 6500,
+      "identity": {
+        "device": 2304,
+        "inode": 83625571,
+        "bytes": 6500,
+        "mtime_ns": 1792307240470724149,
+        "ctime_ns": 1792307240470724149,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "source_freeze_release": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/accepted-newgame-forward-recovery-root-control-20261017/root-confirmed704-protected-canonical-adoption-and-source-freeze-release-20261018.json",
+    "sha256": "46f10a5e95dee9bc324f6e4496720f055d5248495946635b6c5eb450d9d8a145",
+    "bytes": 38645,
+    "identity": {
+      "device": 2304,
+      "inode": 81925271,
+      "bytes": 38645,
+      "mtime_ns": 1792304921785710980,
+      "ctime_ns": 1792304921785710980,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "runtime_baseline": null,
+  "readiness": null,
+  "control_before": null,
+  "completed_slot": null,
+  "tag": null,
+  "window": {
+    "policy": {
+      "learner_frames": 8000000,
+      "learner_accepted": 8000000,
+      "poll_s": 1,
+      "API_age_s": 5,
+      "pipeline_age_s": 5,
+      "unobservable_s": 30,
+      "no_applied_s": 60,
+      "cutoff_s": null
+    },
+    "preparation_timeout_s": null
+  },
+  "output_directory": null,
+  "cpu_python": null
+}

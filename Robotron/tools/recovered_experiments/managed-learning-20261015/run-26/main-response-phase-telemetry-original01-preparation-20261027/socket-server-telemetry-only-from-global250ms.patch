@@ -1,0 +1,337 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/server-average-telemetry-global250ms-original01-preparation-20261027/socket_server_global250ms_candidate_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/main-response-phase-telemetry-original01-preparation-20261027/sources/socket_server.py
+@@ -29,6 +29,10 @@
+ 
+ import os, sys, time, socket, select, struct, threading, traceback, random, queue
+ import numpy as np
++try:
++    from .response_telemetry import ResponseTelemetry
++except ImportError:
++    from response_telemetry import ResponseTelemetry
+ from collections import deque
+ from dataclasses import dataclass
+ from typing import Optional
+@@ -1160,6 +1164,7 @@
+         self.preview_disabled = not self.replay_enabled
+         self.game_journal = None
+         self._journal_last_error = 0.0
++        self._response_timing = ResponseTelemetry(sample_every=20)
+         try:
+             self.game_journal = GameJournal.from_environment(
+                 os.path.dirname(LATEST_MODEL_PATH),
+@@ -1191,6 +1196,10 @@
+     def rejected_gap_snapshot(self):
+         """Bounded diagnostic-only getter; no counter drain or policy action."""
+         return self._rejected_gaps.snapshot()
++
++    def response_timing_snapshot(self):
++        """Bounded read-only diagnostic snapshot; no application locks/device access."""
++        return self._response_timing.snapshot()
+ 
+     @staticmethod
+     def _measurement_snapshot():
+@@ -1534,7 +1543,7 @@
+             self.metrics.game_preview_compression_ratio = 1.0
+             self.metrics.game_preview_fps = 0.0
+ 
+-    def _cache_client_preview(self, cid: int, frame: FrameData):
++    def _cache_client_preview(self, cid: int, frame: FrameData, *, _response_trace=None):
+         if not self._is_preview_client(cid):
+             return
+         pixels = frame.preview_pixels
+@@ -1550,7 +1559,11 @@
+         enc_fmt = int(frame.preview_encoded_format)
+         enc_bytes = int(frame.preview_encoded_bytes)
+         raw_bytes = int(frame.preview_raw_bytes)
++        if _response_trace is not None: _response_trace.start("preview_metrics_wait")
+         with self.metrics.lock:
++            if _response_trace is not None:
++                _response_trace.stop("preview_metrics_wait")
++                _response_trace.start("preview_metrics_hold")
+             prev_seq = int(getattr(self.metrics, "game_preview_seq", 0))
+             prev_ts = float(getattr(self.metrics, "game_preview_updated_ts", 0.0))
+             now_ts = time.time()
+@@ -1571,6 +1584,7 @@
+                 self.metrics.game_preview_compression_ratio = float(raw_bytes) / float(enc_bytes)
+             else:
+                 self.metrics.game_preview_compression_ratio = 1.0
++        if _response_trace is not None: _response_trace.stop("preview_metrics_hold")
+ 
+     def get_client_rows(self) -> list[dict]:
+         with self.client_lock:
+@@ -1747,6 +1761,10 @@
+     def handle_client(self, sock, cid):
+         local_accum = 0
+         local_measurement_accum = 0
++        _response_trace = None
++        _response_ordinal = 0
++        _response_connection_ns = time.monotonic_ns()
++        _response_recorder = getattr(self, "_response_timing", None)
+         _gap_connection = self._rejected_gaps.event("connect", cid=cid)
+         _gap_ticket = None
+         try:
+@@ -1789,12 +1807,20 @@
+             last_payload_time = time.time()
+ 
+             while self.running and not self.shutdown_event.is_set():
++                if _response_trace is not None:
++                    _response_trace.finish('no_response')
++                _response_trace = None
++                if _response_recorder is not None:
++                    _response_cs = self.client_states.get(cid, {})
++                    _response_trace = _response_recorder.begin(cid, _response_cs.get('client_slot', cid),
++                        _response_ordinal + 1, getattr(self, 'preview_cid', None) == cid, connection_ns=_response_connection_ns)
+                 if (not getattr(self, "replay_enabled", True)
+                         and not getattr(metrics, "measurement_active", False)):
+                     raise ConnectionError("Inference-only server requires active frozen measurement")
+                 # Read 4-byte length header
+                 hdr = self._recv_exact(sock, 4, timeout_s=0.25)
+                 if hdr is None:
++                    if _response_trace is not None: _response_trace.discard()
+                     if time.time() - last_payload_time >= CLIENT_IDLE_TIMEOUT_S:
+                         self._rejected_gaps.event("receive_header_idle", _gap_connection)
+                         raise ConnectionError(
+@@ -1804,6 +1830,8 @@
+                 if len(hdr) < 4:
+                     self._rejected_gaps.event("receive_header_eof", _gap_connection)
+                     raise ConnectionError("EOF")
++                _response_ordinal += 1
++                if _response_trace is not None: _response_trace.mark("payload_wait")
+                 dlen = struct.unpack(">I", hdr)[0]
+                 if dlen <= 0 or dlen > _MAX_FRAME_PAYLOAD_BYTES:
+                     self._rejected_gaps.event("receive_invalid_length", _gap_connection)
+@@ -1813,6 +1841,10 @@
+                 if data is None or len(data) < dlen:
+                     self._rejected_gaps.event("receive_broken_payload", _gap_connection)
+                     raise ConnectionError("Broken payload")
++                if _response_trace is not None:
++                    _response_trace.mark('parse_cache')
++                    if self.async_buffer is not None:
++                        _response_trace.observe_queue(self.async_buffer, ingress=True)
+                 last_payload_time = time.time()
+                 self._rejected_gaps.event("received", _gap_connection)
+                 _gap_ticket = None
+@@ -1838,23 +1870,31 @@
+                     if isinstance(_csv, dict) and not _csv.get("proto_v2"):
+                         _csv["proto_v2"] = True
+                 if not frame:
++                    if _response_trace is not None: _response_trace.start("client_lock_wait")
+                     with self.client_lock:
++                        if _response_trace is not None:
++                            _response_trace.stop("client_lock_wait")
++                            _response_trace.start("client_lock_hold")
+                         self._rejected_gaps.event("reject", _gap_connection, reason="parse_none",
+                             cs=self.client_states.get(cid))
++                    if _response_trace is not None: _response_trace.stop("client_lock_hold")
+                     try:
++                        if _response_trace is not None: _response_trace.mark("action_write")
+                         sock.sendall(self._pack_action(
+                             -1, -1, _SRC_NONE, cid,
+                             preview_enabled=preview_enabled,
+                             hud_enabled=hud_enabled,
+                         ))
++                        if _response_trace is not None: _response_trace.finish("parse_reject", response_sent=True)
+                     except BaseException:
+                         self._rejected_gaps.event("neutral_result", _gap_connection, ok=False)
+                         raise
+                     self._rejected_gaps.event("neutral_result", _gap_connection, ok=True)
+                     continue
+                 if should_parse_preview and frame.preview_pixels:
+-                    self._cache_client_preview(cid, frame)
+-
++                    self._cache_client_preview(cid, frame, _response_trace=_response_trace)
++
++                if _response_trace is not None: _response_trace.mark("classify")
+                 # ── Marathon accounting: unwrap score + wave, reject crashes ─
+                 # Levels routinely pass 255 (byte counter wraps ~mod 256) and
+                 # the BCD score register wraps at a power of 10.  Every frame
+@@ -1879,7 +1919,11 @@
+                 _prev_for_log = None
+                 _is_new_game = False
+                 _boundary_inputs = None
++                if _response_trace is not None: _response_trace.start("client_lock_wait")
+                 with self.client_lock:
++                    if _response_trace is not None:
++                        _response_trace.stop("client_lock_wait")
++                        _response_trace.start("client_lock_hold")
+                     _cs0 = self.client_states.get(cid)
+                     if _cs0 is not None:
+                         _raw_sc = int(frame.game_score)
+@@ -2038,6 +2082,7 @@
+                             _cs0["raw_wave_prev"] = _raw_wv
+                             frame.game_score = int(_cs0.get("score_offset", 0)) + _raw_sc
+                             frame.level_number = int(_cs0.get("wave_offset", 0)) + _raw_wv
++                if _response_trace is not None: _response_trace.stop("client_lock_hold")
+                 if _wrap_note:
+                     print(_wrap_note)
+                 if _verdict != "accept":
+@@ -2048,15 +2093,22 @@
+                         print(f"[INGEST] {_verdict}: cid={cid} raw={frame.game_score:,} "
+                               f"vs baseline {(_prev_for_log or 0):,} — one frame rejected, "
+                               f"baseline kept (torn BCD read or crash frame)")
++                    if _response_trace is not None: _response_trace.start("client_lock_wait")
+                     with self.client_lock:
++                        if _response_trace is not None:
++                            _response_trace.stop("client_lock_wait")
++                            _response_trace.start("client_lock_hold")
+                         self._rejected_gaps.event("reject", _gap_connection,
+                             reason=_verdict.replace("-", "_"), cs=self.client_states.get(cid))
++                    if _response_trace is not None: _response_trace.stop("client_lock_hold")
+                     try:
++                        if _response_trace is not None: _response_trace.mark("action_write")
+                         sock.sendall(self._pack_action(
+                             -1, -1, _SRC_NONE, cid,
+                             preview_enabled=preview_enabled,
+                             hud_enabled=hud_enabled,
+                         ))
++                        if _response_trace is not None: _response_trace.finish("classifier_reject", response_sent=True)
+                     except BaseException:
+                         self._rejected_gaps.event("neutral_result", _gap_connection, ok=False)
+                         raise
+@@ -2066,7 +2118,11 @@
+                 # Single-frame compact input; stacked current-first with recent history.
+                 single_state = slice_model_state(frame.state)
+ 
++                if _response_trace is not None: _response_trace.start("client_lock_wait")
+                 with self.client_lock:
++                    if _response_trace is not None:
++                        _response_trace.stop("client_lock_wait")
++                        _response_trace.start("client_lock_hold")
+                     if cid not in self.client_states:
+                         break
+                     cs = self.client_states[cid]
+@@ -2120,7 +2176,9 @@
+                         cs["fps"] = float(cs.get("fps_frames", 0)) / el
+                         cs["fps_frames"] = 0
+                         cs["last_time"] = now
+-
++                if _response_trace is not None: _response_trace.stop("client_lock_hold")
++
++                if _response_trace is not None: _response_trace.mark("state")
+                 measuring = self._sync_measurement_boundary(cid, cs, frame.game_score)
+                 if (_is_new_game and not measuring
+                         and not cs.get("replay_disabled", False)):
+@@ -2131,9 +2189,11 @@
+                 # Measurement is separate from per-life RL terminal handling.
+                 # The accepted ingest classifier catches small-score resets,
+                 # unlike the legacy ratchet's >=5,000-point cohort gate.
++                if _response_trace is not None: _response_trace.mark("journal")
+                 self._journal_observe(cid, frame, cs, _is_new_game,
+                                       boundary_inputs=_boundary_inputs)
+ 
++                if _response_trace is not None: _response_trace.mark("metrics_aggregate")
+                 # Peak score and rolling score/level telemetry are shared
+                 # metrics state; guard with metrics.lock for dashboard reads.
+                 if not getattr(metrics, "measurement_active", False):
+@@ -2150,6 +2210,7 @@
+                     local_measurement_accum = 0
+                     self._calc_avg_game_state()
+ 
++                if _response_trace is not None: _response_trace.mark("previous_step")
+                 # ── DIAGNOSTIC: wave-transition frame ordering (DQN_WAVE_PROBE=1) ──
+                 # Tests whether Robotron's wave transition asserts
+                 # STATUS_PLAYER_INACTIVE (main.lua read_player_alive), which
+@@ -2309,19 +2370,31 @@
+                             for s0, a, Rn, pR, sn, dn, h, act, intr in matured:
+                                 mv_n, fr_n = split_joint_action(a)
+                                 self._rejected_gaps.event("enqueue_called", _gap_ticket)
++                                if _response_trace is not None:
++                                    _response_trace.observe_queue(self.async_buffer)
++                                    _response_trace.start("enqueue_wait")
+                                 self.async_buffer.step_async(
+                                     s0, (mv_n, fr_n), Rn, sn, bool(dn),
+                                     client_id=cid, actor=act, horizon=int(h), priority_reward=pR,
+                                     interest=intr)
++                                if _response_trace is not None:
++                                    _response_trace.stop("enqueue_wait")
++                                    _response_trace.observe_queue(self.async_buffer)
+                                 self._rejected_gaps.event("enqueue_returned", _gap_ticket)
+                         else:
+                             self._rejected_gaps.event("one_step", _gap_ticket, actor=tag, done=bool(training_done))
+                             self._rejected_gaps.event("enqueue_called", _gap_ticket)
++                            if _response_trace is not None:
++                                _response_trace.observe_queue(self.async_buffer)
++                                _response_trace.start("enqueue_wait")
+                             self.async_buffer.step_async(
+                                 cs["last_state"], (mv_i, fr_i), total_r,
+                                 model_state, bool(training_done), client_id=cid,
+                                 actor=tag, horizon=1, priority_reward=total_r,
+                                 interest=interest)
++                            if _response_trace is not None:
++                                _response_trace.stop("enqueue_wait")
++                                _response_trace.observe_queue(self.async_buffer)
+                             self._rejected_gaps.event("enqueue_returned", _gap_ticket)
+ 
+                     cs["total_reward"] += total_r
+@@ -2386,11 +2459,13 @@
+                     try:
+                         _pv = self._preview_enabled_for_client(cid)
+                         _hd = self._hud_enabled_for_client(cid)
++                        if _response_trace is not None: _response_trace.mark("action_write")
+                         sock.sendall(self._pack_action(
+                             -1, -1, _SRC_NONE, cid,
+                             preview_enabled=_pv,
+                             hud_enabled=_hd,
+                         ))
++                        if _response_trace is not None: _response_trace.finish("done", response_sent=True)
+                     except Exception:
+                         break
+                     cs["last_state"] = cs["last_action"] = None
+@@ -2439,17 +2514,20 @@
+                     try:
+                         _pv = self._preview_enabled_for_client(cid)
+                         _hd = self._hud_enabled_for_client(cid)
++                        if _response_trace is not None: _response_trace.mark("action_write")
+                         sock.sendall(self._pack_action(
+                             -1, -1, _SRC_NONE, cid,
+                             preview_enabled=_pv,
+                             hud_enabled=_hd,
+                         ))
++                        if _response_trace is not None: _response_trace.finish("inactive", response_sent=True)
+                     except Exception:
+                         break
+                     self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_inactive_neutral_write_completed")
+                     continue
+ 
+                 # ── Choose action ───────────────────────────────────────
++                if _response_trace is not None: _response_trace.mark("choose_action")
+                 metrics.increment_total_controls()
+                 mv_idx, fr_idx = 8, 8           # idle defaults
+                 action_source = "none"
+@@ -2476,12 +2554,14 @@
+                                                            locked_fire=locked_fire)
+                         action_source = "expert"
+                     else:
++                        if _response_trace is not None: _response_trace.mark("inference")
+                         t0 = time.perf_counter()
+                         if self.inference_batcher is not None:
+                             mv_idx, fr_idx, is_eps = self.inference_batcher.infer(model_state, epsilon, locked_fire=locked_fire)
+                         else:
+                             mv_idx, fr_idx, is_eps = self.agent.act(model_state, epsilon, locked_fire=locked_fire)
+                         metrics.add_inference_time(time.perf_counter() - t0)
++                        if _response_trace is not None: _response_trace.mark("choose_action")
+                         action_source = policy_source or ("epsilon" if is_eps else "dqn")
+                     if locked_fire is not None:
+                         fr_idx = locked_fire
+@@ -2536,11 +2616,13 @@
+                 try:
+                     _pv = self._preview_enabled_for_client(cid)
+                     _hd = self._hud_enabled_for_client(cid)
++                    if _response_trace is not None: _response_trace.mark("action_write")
+                     sock.sendall(self._pack_action(
+                         move_cmd, fire_cmd, src_code, cid,
+                         preview_enabled=_pv,
+                         hud_enabled=_hd,
+                     ))
++                    if _response_trace is not None: _response_trace.finish("accepted", response_sent=True)
+                 except Exception:
+                     break
+                 self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_action_write_completed")
+@@ -2558,6 +2640,7 @@
+                 sys.stderr.write(error_record)
+                 sys.stderr.flush()
+         finally:
++            if _response_trace is not None: _response_trace.finish("disconnected")
+             self._rejected_gaps.event("disconnect", _gap_connection)
+             # Flush frames accumulated since the last batch so decay schedules
+             # (epsilon / expert ratio) don't lag when a client disconnects.

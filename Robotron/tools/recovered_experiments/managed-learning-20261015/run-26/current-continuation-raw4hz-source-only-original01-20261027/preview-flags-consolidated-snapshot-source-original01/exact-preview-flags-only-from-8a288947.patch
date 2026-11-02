@@ -1,0 +1,72 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/preview-flags-consolidated-snapshot-source-original01/socket_server_consolidated_preview_flags_v1.py
+@@ -1510,6 +1510,27 @@
+             self._clear_preview_cache()
+         return preview_cid is not None and int(cid) == int(preview_cid)
+ 
++    def _preview_flags_for_client(self, cid: int) -> tuple[bool, bool]:
++        # One coherent UI selection snapshot per receive/send boundary. Never
++        # hold client_lock while acquiring metrics.lock. Send takes a FRESH
++        # snapshot after inference; receive flags are not reused for a reply.
++        with self.client_lock:
++            preview_cid, changed = self._ensure_preview_client_selected_locked()
++            selected = preview_cid is not None and int(cid) == int(preview_cid)
++            cs = self.client_states.get(int(cid)) if selected else None
++            capable = isinstance(cs, dict) and bool(cs.get("preview_capable", False))
++        if changed:
++            self._clear_preview_cache()
++        if not selected:
++            return False, False
++        with self.metrics.lock:
++            preview_enabled = (capable
++                and bool(getattr(self.metrics, "preview_capture_enabled", True))
++                and int(getattr(self.metrics, "web_client_count", 0) or 0) > 0)
++            # HUD is selected-only, independent of capture/viewer demand.
++            hud_enabled = bool(getattr(self.metrics, "hud_enabled", False))
++        return bool(preview_enabled), hud_enabled
++
+     def _preview_enabled_for_client(self, cid: int) -> bool:
+         if not self._is_preview_client(cid):
+             return False
+@@ -1859,9 +1880,8 @@
+                     self._rejected_gaps.event("short_payload", _gap_connection)
+                     break
+ 
+-                preview_enabled = self._preview_enabled_for_client(cid)
+-                hud_enabled = self._hud_enabled_for_client(cid)
+-                should_parse_preview = bool(preview_enabled and self._is_preview_client(cid))
++                preview_enabled, hud_enabled = self._preview_flags_for_client(cid)
++                should_parse_preview = bool(preview_enabled)
+ 
+                 frame = parse_frame_data(data, parse_preview=should_parse_preview)
+                 if frame is not None and frame.lives >= 0:
+@@ -2457,8 +2477,7 @@
+                         cs["replay_episode_partial"] = False
+                     cs["was_done"] = True
+                     try:
+-                        _pv = self._preview_enabled_for_client(cid)
+-                        _hd = self._hud_enabled_for_client(cid)
++                        _pv, _hd = self._preview_flags_for_client(cid)
+                         if _response_trace is not None: _response_trace.mark("action_write")
+                         sock.sendall(self._pack_action(
+                             -1, -1, _SRC_NONE, cid,
+@@ -2512,8 +2531,7 @@
+                     if (cs.get("nstep") is not None):
+                         cs["nstep"].reset()
+                     try:
+-                        _pv = self._preview_enabled_for_client(cid)
+-                        _hd = self._hud_enabled_for_client(cid)
++                        _pv, _hd = self._preview_flags_for_client(cid)
+                         if _response_trace is not None: _response_trace.mark("action_write")
+                         sock.sendall(self._pack_action(
+                             -1, -1, _SRC_NONE, cid,
+@@ -2614,8 +2632,7 @@
+                             f"{qinfo}", flush=True)
+ 
+                 try:
+-                    _pv = self._preview_enabled_for_client(cid)
+-                    _hd = self._hud_enabled_for_client(cid)
++                    _pv, _hd = self._preview_flags_for_client(cid)
+                     if _response_trace is not None: _response_trace.mark("action_write")
+                     sock.sendall(self._pack_action(
+                         move_cmd, fire_cmd, src_code, cid,

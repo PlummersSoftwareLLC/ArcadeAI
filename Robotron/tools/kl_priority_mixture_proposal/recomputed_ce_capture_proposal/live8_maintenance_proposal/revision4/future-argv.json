@@ -1,0 +1,11 @@
+{
+  "status": "SOURCE_PREPARATION_ONLY_NOT_EXECUTED",
+  "test_argv": ["python3", "-B", "-m", "unittest", "Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_maintenance_proposal.revision4.test_live8_maintenance", "Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_maintenance_proposal.revision4.test_bank_state_revision2"],
+  "selected_stdlib_methods": 51,
+  "explicit_argv": ["ABS_ROOT_PARENT_PYTHON", "-B", "ABS_THIS_BUNDLE/run_live8_maintenance.py", "--launch", "--job", "ABS_NEW_REVIEWED4_ROOT_JOB", "--expected-job-sha256", "ROOT_JOB_SHA256", "--expected-controller-sha256", "fdf7c8bfb123b494252acf83d724a51acda95bb7f00877eace28b60d0377ed18"],
+  "CPU_verifier_python": "Preserve fresh successful insurance REPO/.venv-gb300/bin/python symlink argv, separate python_binding executable/config/library/provenance pins unchanged",
+  "service_properties": ["Type=exec", "RemainAfterExit=yes", "CPUQuota=200%", "MemoryMax=4G", "TasksMax=128", "RuntimeMaxSec=4800", "KillSignal=SIGINT", "TimeoutStopSec=900", "SendSIGKILL=no"],
+  "lifecycle": "Fresh current-owner insurance and NEW reviewed4 job/output/capture/unit only; detached3s timer, carrier reaped before trigger; retain original invocation/exit before release",
+  "checkpoint_watcher": "Only future exact owned waiting448 helper can be stopped at exclusive boundary; preserve target452629023/original deadline. Completed384 must stay gone.",
+  "author_execution": false
+}

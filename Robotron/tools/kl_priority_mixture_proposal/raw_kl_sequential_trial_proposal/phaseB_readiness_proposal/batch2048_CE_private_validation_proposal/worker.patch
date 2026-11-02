@@ -1,0 +1,156 @@
+--- original/worker
++++ CE2048/worker
+@@ -23,11 +23,11 @@
+ from types import SimpleNamespace
+ 
+ HERE = Path(__file__).resolve().parent
+-ROLES = ('kl18', 'resume', 'return_ce')
++ROLES = ('ce18', 'resume', 'restart_ce')
+ ATTEMPTS = 18
+-BATCH = 4096
++BATCH = 2048
+ CAPACITY = 6000000
+-FRAME_CREDIT = 512
++FRAME_CREDIT = 256
+ INPUT_NAMES = ('states','actions','rewards','next_states','dones','horizons','is_expert','weights')
+ 
+ 
+@@ -145,7 +145,7 @@
+             cfg.priority_alpha==.7 and cfg.enable_amp and cfg.optimizer_fused and
+             cfg.compile_full_loss and cfg.use_torch_compile and cfg.torch_compile_mode=='default' and
+             cfg.replay_prefetch_slots==3 and cfg.replay_direct_state_fill,'Held recipe differs')
+-    require(cfg.per_priority_metric==('ce' if ctx.variant=='return_ce' else 'kl'), 'Role metric differs')
++    require(cfg.per_priority_metric=='ce', 'Role metric differs')
+     require(ctx.config.RESET_METRICS is False,'Load-time metrics reset forbidden')
+     require(not os.getenv('DQN_RECOMPUTED_CE_CAPTURE_DIR') and not os.getenv('DQN_EXECUTED_CE_TRACE_DIR'),
+             'Observation flags forbidden')
+@@ -163,7 +163,8 @@
+     payload=torch.load(pin['path'],map_location='cpu',weights_only=True,mmap=True)
+     ctx.reconstruction.payload_contract(ctx,payload,row,1)
+     require(ctx.parent.stable_file(pin['path'],pin['sha256'],pin['bytes'])==pin,'Genuine source moved on load')
+-    ctx.payload,ctx.original_row,ctx.original_item=payload,row,item
++    # Preserve the original4096 validation above; choose one fixed ordered subset only afterwards.
++    ctx.payload,ctx.original_row,ctx.original_item=fixed_subset(payload),row,item
+     latest=ctx.role['latest']
+     require(ctx.parent.stable_file(latest['path'],latest['sha256'],latest['bytes'])==latest,'Latest copy differs')
+     ctx.expected= torch.load(latest['path'],map_location='cpu',weights_only=True,mmap=True)
+@@ -175,6 +176,21 @@
+             'Actual private native batch update unavailable; no fallback')
+     require(getattr(sys,'_is_gil_enabled',lambda:None)() is False,'Effective GIL changed after numerical imports')
+     ctx.completed=[];ctx.entered_attempts=[];ctx.frame_credit_ledger=[]
++
++
++def fixed_subset(payload):
++    """Pure ordered slicing after the unchanged original4096 payload contract."""
++    require(set(payload['inputs'])==set(INPUT_NAMES), 'Original input names differ')
++    require(all(tuple(value.shape)==((4096,11128) if name in ('states','next_states') else (4096,))
++        for name,value in payload['inputs'].items()), 'Original4096 geometry differs')
++    draw=payload['draw']
++    require(tuple(draw['indices'].shape)==(4096,) and len(draw['small_batch_fields']['actor_kind'])==4096,
++        'Original4096 draw geometry differs')
++    selected=dict(payload)
++    selected['inputs']={name:value[:BATCH] for name,value in payload['inputs'].items()}
++    selected['draw']=dict(draw, indices=draw['indices'][:BATCH],
++        small_batch_fields=dict(draw['small_batch_fields'], actor_kind=draw['small_batch_fields']['actor_kind'][:BATCH]))
++    return selected
+ 
+ 
+ class FixedReplayAdapter:
+@@ -314,7 +330,7 @@
+     exposure=a._learning_optimizer_exposure.snapshot()
+     require(all(value==0 for value in exposure['total'].values()),'Constructor/load admitted an uncounted optimizer call')
+     slots=describe_slots(ctx,named_optimizer(ctx))
+-    if ctx.variant=='kl18':
++    if ctx.variant=='ce18':
+         require(sum(value['initialized'] for value in slots.values())==81 and all(
+             value['step']==2155894 for value in slots.values() if value['initialized']), 'Initial actual81 saved Adam slots differ')
+     return dict(clocks=four_clocks(ctx),graphs=stats,slots=slots,scaler=a.grad_scaler.state_dict(),
+@@ -445,16 +461,15 @@
+             def observed(*args,_original=original,_diagnostic=attribute.endswith('_diagnostics'),**kwargs):
+                 require(self.forward is None,'More than one actual loss forward in a planned step')
+                 outputs=_original(*args,**kwargs)
+-                require(isinstance(outputs,tuple) and len(outputs)==5,'Actual KL compiled5 ABI changed')
++                require(isinstance(outputs,tuple) and len(outputs)==4,'Actual CE compiled4 ABI changed')
+                 # Actual outputs copied before backward, with no second loss call.
+                 values=ctx.science.cpu(ctx,outputs)
+-                self.forward=dict(diagnostic=_diagnostic,ce=values[1].numpy(),priority=values[4].numpy(),
++                self.forward=dict(diagnostic=_diagnostic,ce=values[1].numpy(),priority=values[1].numpy(),
+                     weighted_loss=float(values[0]),bc_loss=float(values[2]),diagnostics=values[3].tolist(),
+                     actual_schedule=args[-1].detach().cpu().tolist(),
+                     actual_lrs=[float(group['lr']) for group in a.optimizer.param_groups])
+-                require(values[4].shape==(BATCH,) and values[4].dtype==torch.float32 and
+-                        outputs[4].requires_grad is False and outputs[4].grad_fn is None,
+-                        'Actual fifth priority vector is not detached FP32')
++                require(values[1].shape==(BATCH,) and values[1].dtype==torch.float32
++                        and values[3].shape==(12,), 'Actual CE vector/diagnostic geometry differs')
+                 require(ctx.science.finite(ctx,values),'Actual executed loss/priority is nonfinite')
+                 ctx.agent.memory.active_forward=self.forward
+                 return outputs
+@@ -570,11 +585,11 @@
+     phase=a._priority_phase.snapshot()
+     require(phase['valid'] and phase['priority_update_calls']==ordinal and
+             phase['ring_rows_submitted']==ordinal*len(a.memory.ring_indices) and
+-            list(phase['last_diagnostics'].values())==observers.forward['diagnostics'][12:],
++            phase['metric']=='ce' and phase['last_diagnostics'] is None,
+             'Actual phase/signed stats/packed readback did not join executed forward')
+     require(float(result)==observers.forward['weighted_loss'] and
+             float(ctx.metrics.last_bc_loss)==observers.forward['bc_loss'], 'Actual objective/BC packed scalars differ')
+-    require(ctx.training.replay_pressure_reached(a),'Expected exact cap8 boundary after fixed4096 update')
++    require(ctx.training.replay_pressure_reached(a),'Expected exact cap8 boundary after fixed2048 update')
+     row=dict(ordinal=ordinal,status='ATTEMPT_COMPLETE',before=before['clocks'],after=after['clocks'],
+         diagnostic_due=diagnostic_due,forward=observers.forward,optimizer_progress=progress,
+         actual_exposure_delta=delta,exposure_before=exposure_before,exposure_after=exposure_after,
+@@ -592,9 +607,9 @@
+ 
+ def save_post_checkpoint(ctx):
+     root=ctx.paths['root'];target=root/'post-step-checkpoint.pt'
+-    require(ctx.variant=='kl18' and len(ctx.completed)==ATTEMPTS and all(
++    require(ctx.variant=='ce18' and len(ctx.completed)==ATTEMPTS and all(
+         not Path(str(target)+suffix).exists() for suffix in ('','.tmp','.bak')),'Save target not unique or attempts incomplete')
+-    marker=dict(schema='robotron-raw-kl-stage-b-save-v1',variant='kl18',stage='entered',path=str(target))
++    marker=dict(schema='robotron-ce-batch2048-stage-b-save-v1',variant='ce18',stage='entered',path=str(target))
+     write_json(root/'save-entered.json',marker)
+     ctx.agent.save(str(target),show_status=False,save_replay=False)
+     require(target.is_file() and not target.is_symlink() and not Path(str(target)+'.tmp').exists() and
+@@ -617,7 +632,7 @@
+     return pin
+ 
+ 
+-def run_kl18(ctx):
++def run_ce18(ctx):
+     a=ctx.agent
+     require(four_clocks(ctx)==ctx.lock['stage_b']['initial_clocks'],'Actual448 start no longer matches fixed18 protocol')
+     ctx.science.restore_rng(ctx,ctx.payload['rng'])
+@@ -662,19 +677,19 @@
+ 
+ def run(ctx):
+     setup(ctx);construct_and_load(ctx)
+-    if ctx.variant=='kl18':detail=run_kl18(ctx)
++    if ctx.variant=='ce18':detail=run_ce18(ctx)
+     else:
+         require(ctx.agent._learning_optimizer_exposure.snapshot()['total']['attempts_started']==0 and
+                 four_clocks(ctx)==ctx.loaded['clocks'],'Fresh phase limb executed unexpected learner work')
+         phase=ctx.agent._priority_phase.snapshot();spec=ctx.agent._priority_phase.spec
+         if ctx.variant=='resume':
+-            require(spec['action']=='resume' and phase['metric']=='kl' and
++            require(spec['action']=='resume' and phase['metric']=='ce' and
+                     phase['priority_update_calls']==ATTEMPTS and
+-                    phase['last_resume_record_sha256']==ctx.role['phase_record']['sha256'], 'Actual KL resume phase differs')
++                    phase['last_resume_record_sha256']==ctx.role['phase_record']['sha256'], 'Actual CE resume phase differs')
+         else:
+-            require(spec['action']=='start' and phase['metric']=='ce' and phase['predecessor']['metric']=='kl' and
++            require(spec['action']=='start' and phase['metric']=='ce' and phase['predecessor']['metric']=='ce' and
+                     phase['priority_update_calls']==0 and phase['ring_rows_submitted']==0,
+-                    'Actual explicit return-to-CE phase differs')
++                    'Actual explicit CE-to-CE restart phase differs')
+         detail=dict(actual_attempts=0,readiness_pass=True,applied_outcomes=0,loaded_phase=phase,
+             source_checkpoint=ctx.role['source'],latest_checkpoint=ctx.role['latest'])
+     ctx.science.modules_private(ctx)
+@@ -690,6 +705,7 @@
+     return dict(status='OBSERVATIONS_COMPLETE',variant=ctx.variant,qualification_pass=False,
+         constructor_verified=True,phase_load_verified=True,loaded_proof=ctx.loaded,
+         private_serving_graph_release=ctx.graph_release,source_lock_sha256=ctx.parent.SOURCE_LOCK_SHA256,
++        input_subset=ctx.lock['input_subset'],batch_rows=BATCH,priority_metric='ce',
+         peak_cuda_allocated=ctx.torch.cuda.max_memory_allocated(0),peak_cuda_reserved=ctx.torch.cuda.max_memory_reserved(0),
+         scope='Actual private constructor/load then isolated whole learner with fixed-input/native-tree adapter; not full live replay/serving',
+         **detail)

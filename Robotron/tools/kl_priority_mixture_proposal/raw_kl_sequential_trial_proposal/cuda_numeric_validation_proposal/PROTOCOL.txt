@@ -1,0 +1,100 @@
+Raw-KL Stage A: fixed same-GPU numeric validation — SOURCE ONLY, UNEXECUTED
+
+This new adapter is scheduled only after the active448M R/C/R/C campaign and
+its terminal source/resource review release. It has no runtime permission now.
+It reuses sealed1144139f raw-KL science5 and test-only2f083c43, not a new loss.
+The prior eight reconstructed-CE mismatches and fixed-index route result stay
+unchanged. Historical capture residuals cannot be rescued by this validation.
+
+Population and exact calls
+
+Bind all8 authentic receipts/context/exposure and immutable507MB PRE payloads
+through the reviewed input binding, but select ONLY original index01 before
+execution. Its original backend is ordinary original_compiled4, not diagnostic.
+No sampling, synthetic batch, checkpoint/model construction through an actual
+agent, source adoption, or live replay body is involved. Inputs are genuine
+signed/raw FP32 features4096x11128; finite geometry/exact hashes are required,
+not a fabricated0..1 range.
+
+One fresh GPU0-only worker runs this fixed order:
+  1. byte-exact original loss de962... / four outputs;
+  2. candidate23eb... default constructor (omit return_priorities) / four;
+  3. same candidate return_priorities=True / five.
+Restore independent PRE online+target tensors/buffers, modes, exact loss
+constants/schedule, captured config and component RNG before EACH route.
+Grad flags are source-defaultTrue, not independently captured facts. Clear
+only this owned model's prior gradient references before restoring each PRE.
+Logical owned cuda:0 maps to physicalGPU0; captured learner device is provenance,
+not a request to touch GPU1. Torch/CUDA version and held default flags stay fixed.
+
+Exactly THREE compiled AMP4096 forward calls and THREE explicit UNSCALED
+weighted-objective backward calls are allowed. No extra warmup/calibration or
+fallback/retry. Compilation uses original factory dynamic=False and
+options={'triton.cudagraphs':False}; no new fullgraph/mode switch. Backward is
+outside autocast, before any clipping. No optimizer/scaler step/update, saved
+scale substitution, clipping, native priority update or parameter mutation.
+This is objective-gradient evidence, NOT trained-scaler admission or actual
+optimizer state/outcome. Owned inert Adam/scaler provide actual forbidden-call
+hooks only; they are not the saved live optimizer. Stage B owns that proof.
+
+Durable evidence and gates
+
+Create-only raw-forward.pt (all outputs/RNG/actual captured four) is fsynced
+before ABI/finite interpretation. Create-only raw-preclip-gradients.pt retains
+every native online/target named gradient/None and RNG after backward before
+gradient-finite interpretation. Partial backward gradients are best-effort
+retained on failure without replacing the primary error. Target grads must
+remainNone; finite online gradients must exist. Model/optimizer/scaler state
+digests remain unchanged. A failed runtime/ABI/nonfinite/storage guard ends the
+whole stage as incomplete; no subset qualification or replacement row.
+
+Compare candidate-defaultCE4 vs original4, then candidateKL5 vs candidateCE4:
+  CE per row: original rtol2e-4 / atol2e-5;
+  objective, BC and original12 diagnostics: original rtol2e-3 / atol2e-6;
+  unclipped unscaled gradients: original rtol2e-3 / atol2e-6 with EXACT None
+  patterns, names/shapes/dtypes. Save full native mismatch masks and per-field
+  errors. Finite tolerance mismatches are retained without rerunning routes.
+Original4 vs historical captured CE uses original CE tolerances SEPARATELY,
+descriptively. It does not gate internal candidate equality or become a
+requalified historical result. Interpretation_requires_review preserves it.
+
+KL5 fifth output must be detached FP32 B-vector with no grad_fn, finite and
+nonnegative. Its19 diagnostics preserve original12 and append raw signed min/
+max, negative count, abs<=1e-6 count, target minimum, max/mean abs(sum(m)-1).
+Require signed_min>=-1e-5, target_min>=0 and mass_max<=1e-5; counts integral
+within0..4096. Returned priority extrema must equal clamp0 of raw signed extrema.
+No target renormalization, rescale or tolerance change. The sealed source uses
+entropy logfloor1e-12 and clamp0; same-forward vector/stat guard is checked.
+KL5 does NOT expose its full projected/entropy rows. This stage does not invent
+an independent full-vector entropy reconstruction or historical actual-H/KL
+claim, and adds no target/H ABI or fourth forward.
+
+Completion and scope
+
+OBSERVATIONS_COMPLETE means all3 routes/evidence exist, even with finite
+comparison mismatches. comparison_pass denotes only the two INTERNAL route
+comparisons. qualification_pass is ALWAYSFalse. Original capture/RNG residuals
+are retained and flagged. No efficacy, replay-population, learning-speed or
+matched-anchor conclusion follows from one index. Stage B actual constructor,
+native/fusedAdam/readback and explicit phase/save/load validation is REQUIRED
+before any proposal adoption; Stage A is not full-agent proof.
+
+Bounds and owned lifecycle
+
+Unmodified reviewed process/storage/token/PDEATH/signal/child-ownership guards
+from3ccd parent and1f72 bootstrap. CPU2, host16GiB, Torch allocation12GiB,
+processGPU13GiB, artifacts6GiB, tmpfs128MiB, tasks128, worker180s/total600s.
+One worker avoids three process startups but still compiles/backpropagates
+three graphs. CUDA feasibility within those unchanged bounds is UNKNOWN;
+failure is preserved, not rescued by batch/scale/limit changes. One raw input
+is CPU-loaded; output/grads are drained to CPU before the next route. Compiler
+caches use the exact reviewed guarded volatile roots. Scientific files are
+create-only; no new watcher exception is added.
+
+Root will create a fresh bound launch after quality release, strict preflight,
+owned waiting-checkpoint pause if needed, and source/CPU-test review. A detached
+3s timer must have its carrier reaped before trigger. Root observes exact live
+PID/start/invocation. Type=exec/RemainAfterExit=yes/Restart=no and no --collect
+retain original terminal code/status before root release. No -wait carrier,
+unit adoption, automatic retry, protected rollback or user approval flow is
+introduced. Root alone owns runtime actions/rearm/deadline and actual exit proof.

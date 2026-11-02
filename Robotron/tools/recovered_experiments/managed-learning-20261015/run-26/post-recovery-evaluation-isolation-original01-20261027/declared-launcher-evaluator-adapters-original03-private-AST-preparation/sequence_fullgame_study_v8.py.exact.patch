@@ -1,0 +1,73 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/sequence_fullgame_study_v8.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original03-private-AST-preparation/sequence_fullgame_study_v8.py
+@@ -15,12 +15,13 @@
+ import time
+ import traceback
+ 
+-HERE=Path(__file__).resolve().parent
++HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
++LOCAL=Path(__file__).resolve().parent
+ HELPER_SHA='b462dbb6562e08ef6efca66bc10f6b0c94273daceb12ac9f86f4a68eb972d6e4'
+ 
+ 
+ def pipeline():
+-    spec=importlib.util.spec_from_file_location('_fullgame_sequence_pipeline',HERE/'fullgame_review_pipeline_v7.py')
++    spec=importlib.util.spec_from_file_location('_fullgame_sequence_pipeline',LOCAL/'fullgame_review_pipeline_v7.py')
+     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
+ 
+ 
+@@ -51,15 +52,15 @@
+         and assessment['review_precommit']==rp and assessment['assessment_launched']is False,
+         'Exact unlaunched final assessment preparation required')
+     prepared=p.read(reviews['native_prepared'])
+-    producer=p.load('_fullgame_sequence_production_eligibility',HERE/'prepare_fullgame_study_v6.py')
++    producer=p.load('_fullgame_sequence_production_eligibility',LOCAL/'prepare_fullgame_study_v6.py')
+     producer.eligible_screen(prepared['screen_assessment'],prepared['reference_epoch'],h)
+     p.require(prepared['engineering_only']is False and reviews['ordered_legs']==prepared['ordered_legs']==p.ORDER,
+         'Exact production RCRC preparation required')
+     publication=p.read(reviews['CPU_guard_publication']);p.require(publication['status']=='PASS'
+         and publication['prepared']==reviews['native_prepared'],'Actual exact-job CPU guard publication required')
+     guards={case['leg']:case for case in publication['cases']};cases=[]
+-    sources=[rp,ap,reviews['native_prepared'],reviews['CPU_guard_publication'],h.pin(HERE/'fullgame_review_pipeline_v7.py'),
+-        h.pin(HERE/'assess_fullgame_study_v8.py'),h.pin(Path(__file__).resolve()),h.pin(p.CPU_CONTROLLER)]
++    sources=[rp,ap,reviews['native_prepared'],reviews['CPU_guard_publication'],h.pin(LOCAL/'fullgame_review_pipeline_v7.py'),
++        h.pin(LOCAL/'assess_fullgame_study_v8.py'),h.pin(Path(__file__).resolve()),h.pin(p.CPU_CONTROLLER)]
+     helper=original_helper(p,h);sources.append(h.pin(Path(helper.__file__)))
+     for case,review in zip(prepared['cases'],reviews['cases']):
+         guard=guards[case['leg']];p.require(review['native_job']==guard['native_job']==case['native_job'],'Exact original job join differs')
+@@ -72,7 +73,7 @@
+     return h.put(output/'sequence-precommit.json',dict(schema='robotron-recovered-fullgame-sequence-precommit-v1',review_precommit=rp,
+         native_prepared=reviews['native_prepared'],assessment_preparation=ap,cases=cases,ordered_legs=p.ORDER,
+         protected_reference_epoch=prepared['reference_epoch'],source=h.pin(Path(__file__).resolve()),
+-        pipeline=h.pin(HERE/'fullgame_review_pipeline_v7.py'),owned_controller_helper=h.pin(Path(helper.__file__)),
++        pipeline=h.pin(LOCAL/'fullgame_review_pipeline_v7.py'),owned_controller_helper=h.pin(Path(helper.__file__)),
+         inputs=list({pin['path']:pin for pin in sources}.values()),output=str(output),original_attempts_per_phase=1,
+         no_retry=True,engineering_only=False,scientific_payload_launched=False,promotion=False))
+ 
+@@ -87,7 +88,7 @@
+         self.job=self.p.read(self.pin)
+         self.p.require(self.job['schema']=='robotron-recovered-fullgame-sequence-precommit-v1'
+             and self.job['engineering_only']is False and self.job['original_attempts_per_phase']==1 and self.job['no_retry']is True
+-            and self.job['source']==self.h.pin(Path(__file__).resolve())and self.job['pipeline']==self.h.pin(HERE/'fullgame_review_pipeline_v7.py'),
++            and self.job['source']==self.h.pin(Path(__file__).resolve())and self.job['pipeline']==self.h.pin(LOCAL/'fullgame_review_pipeline_v7.py'),
+             'Production original sequence/source binding required')
+         self.helper=original_helper(self.p,self.h);self.root=Path(self.job['output']);self.events=self.root/'events'
+         self.state=self.p.ROOT/'logs/managed-learning-20261015/state.json';self.number=0;self.closed=False
+@@ -140,7 +141,7 @@
+ 
+     def preflight(self,case):
+         p,h=self.p,self.h;subject=p.read(case['native_job'])
+-        native=p.load('_fullgame_sequence_actual_native',HERE/'run_fullgame_rounds_v7.py');ctx=native.validate_completed_context(subject,h)
++        native=p.load('_fullgame_sequence_actual_native',LOCAL/'run_fullgame_rounds_v7.py');ctx=native.validate_completed_context(subject,h)
+         native.round_contract().validate_launch(subject,case['native_job'],ctx,h)
+         h.checked(subject['lease']);fd=os.open(subject['lease']['path'],os.O_RDONLY|os.O_NOFOLLOW)
+         try:fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB);fcntl.flock(fd,fcntl.LOCK_UN)
+@@ -178,7 +179,7 @@
+         root=Path(case['native_job']['path']).parent
+         self.invoke(root,'',case['controller'],case['qualified_native_config'],case['leg'])
+         closed=self.p.owned_scope(case['qualified_native_config'],self.h,native=True)
+-        subject=self.p.read(case['native_job']);reviewer=self.p.load('_fullgame_sequence_native_predicates',HERE/'review_fullgame_rounds_v7.py')
++        subject=self.p.read(case['native_job']);reviewer=self.p.load('_fullgame_sequence_native_predicates',LOCAL/'review_fullgame_rounds_v7.py')
+         reviewer.validate_runtime_result(self.p.read(self.h.pin(Path(subject['output'])/'result.json')),subject)
+         self.project('ORIGINAL_NATIVE_CLOSED',case['leg'])
+         return dict(owner=closed['owner_pin'],closure=closed['closure_pin'])

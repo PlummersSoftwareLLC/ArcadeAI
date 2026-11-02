@@ -1,0 +1,34 @@
+{
+  "capture_argv": [
+    "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_live_ce_candidate_capture_proposal/capture_live_CE_candidate.py",
+    "--execute",
+    "--job",
+    "ROOT_ACTUAL_JOB",
+    "--expected-job-sha256",
+    "ROOT_ACTUAL_JOB_SHA256",
+    "--expected-source-sha256",
+    "7be0eaf012e208299548f131fd42651239740692d58b8a6d997a6eee6733e46c"
+  ],
+  "capture_envelope": {
+    "CPUQuota": "200%",
+    "MemoryMax": "768M",
+    "MemorySwapMax": 0,
+    "RuntimeMaxSec": 120,
+    "TasksMax": 64
+  },
+  "guard_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_live_ce_candidate_capture_proposal/test_recovered_capture.py",
+    "RecoveredCaptureContracts",
+    "-v"
+  ],
+  "guard_methods": 4,
+  "status": "UNEXECUTED_BY_AUTHOR",
+  "strict_CPU_separate": "Existing b2e exact job/argv emitted; root may run once2CPU/3GiB/120s retained unit. Capture never launches CPU."
+}

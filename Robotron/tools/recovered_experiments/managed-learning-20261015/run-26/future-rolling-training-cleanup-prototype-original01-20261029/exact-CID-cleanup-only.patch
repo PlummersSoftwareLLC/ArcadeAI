@@ -1,0 +1,49 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/socket_server_cid_cleanup_candidate_v1.py
+@@ -2690,13 +2690,16 @@
+                                   "wave_offset", "deaths_this_game", "game_uid")}
+                     self._unwrap_stash[cid]["t"] = time.time()
+                 self._eval_override.pop(cid, None)
+-                self.clients[cid] = None
++                # Keep this handler as the CID reservation until journal and
++                # FIFO replay cleanup finish; a new connection must not race it.
+                 _, preview_changed = self._ensure_preview_client_selected_locked()
+                 self._sync_client_count_locked()
++            _cid_cleanup_ok = True
+             if self.game_journal is not None and _dead_cs is not None:
+                 try:
+                     self.game_journal.disconnect(cid, lambda: self._journal_context(_dead_cs))
+                 except Exception as exc:
++                    _cid_cleanup_ok = False
+                     self._fail_inference_only(f"Disconnect journal failed: {exc}")
+                     print(f"[JOURNAL] disconnect record failed: {exc}")
+             if not self.shutdown_event.is_set():
+@@ -2704,7 +2707,14 @@
+             if preview_changed:
+                 self._clear_preview_cache()
+             if self.async_buffer is not None:
+-                self.async_buffer.remove_client(cid)
++                try:
++                    _cid_reset_ack = self.async_buffer.remove_client(cid)
++                    if not _cid_reset_ack.wait(timeout=5.0):
++                        raise RuntimeError("FIFO replay cleanup acknowledgment timed out")
++                except Exception as exc:
++                    _cid_cleanup_ok = False
++                    self._fail_inference_only(f"Disconnect replay cleanup failed: {exc}")
++                    print(f"[REPLAY] disconnect cleanup failed: {exc}")
+             # Ratchet cohort accounting: if this client died mid-game and that
+             # game was in the measurement cohort, un-count it so the epoch
+             # doesn't wait for a score that can never arrive.
+@@ -2714,6 +2724,12 @@
+             except Exception:
+                 pass
+             threading.Timer(1.0, self._cleanup).start()
++            # Last per-CID write. Failure leaves the original Thread reserved;
++            # a cleanup timeout never authorizes reuse or a successful handoff.
++            with self.client_lock:
++                if (_cid_cleanup_ok
++                        and self.clients.get(cid) is threading.current_thread()):
++                    self.clients[cid] = None
+ 
+     def _cleanup(self):
+         with self.client_lock:

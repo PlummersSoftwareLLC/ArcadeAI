@@ -1,0 +1,24 @@
+--- a/Robotron/Scripts/dqn/socket_server.py
++++ b/Robotron/Scripts/dqn/socket_server.py
+@@ -1091,6 +1091,7 @@
+         )
+         self.inference_only_error = None
+         self._inference_error_lock = threading.Lock()
++        self._exception_log_lock = threading.Lock()
+         self.async_buffer = AsyncReplayBuffer(agent) if agent and self.replay_enabled else None
+         self.inference_batcher = None
+         if agent and bool(getattr(RL_CONFIG, "inference_batching_enabled", True)):
+@@ -2485,8 +2486,11 @@
+         except Exception as e:
+             if not self.shutdown_event.is_set():
+                 self._fail_inference_only(f"Client {cid} error: {e}")
+-            print(f"Client {cid} error: {e}")
+-            traceback.print_exc()
++            # One stream write keeps concurrent client exception records intact.
++            error_record = f"Client {cid} error: {e}\n{traceback.format_exc()}"
++            with self._exception_log_lock:
++                sys.stderr.write(error_record)
++                sys.stderr.flush()
+         finally:
+             # Flush frames accumulated since the last batch so decay schedules
+             # (epsilon / expert ratio) don't lag when a client disconnects.

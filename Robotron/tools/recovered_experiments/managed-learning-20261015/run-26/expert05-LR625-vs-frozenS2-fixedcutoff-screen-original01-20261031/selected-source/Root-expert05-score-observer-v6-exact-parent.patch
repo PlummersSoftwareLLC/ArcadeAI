@@ -1,0 +1,21 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/later-LR625-vs-frozenS2-fixedcutoff-screen-original01-20261031/selected-source/Root-observe-original-screen-and-learning-totals-v5.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/expert05-LR625-vs-frozenS2-fixedcutoff-screen-original01-20261031/selected-source/Root-observe-original-screen-and-learning-totals-v6.py
+@@ -1,5 +1,5 @@
+ import pathlib,json,time,urllib.request,csv,datetime,zoneinfo,hashlib
+-b=pathlib.Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26');j=b/'later-LR625-vs-frozenS2-fixedcutoff-screen-original01-20261031';m=b/'fleet-only-v6-overlap-handoff-original01-20261031';out=j/'Root-controller-runtime-original01'
++b=pathlib.Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26');j=b/'expert05-LR625-vs-frozenS2-fixedcutoff-screen-original01-20261031';m=b/'fleet-only-v6-overlap-handoff-original01-20261031';out=j/'Root-controller-runtime-original01'
+ def birth(pid):
+  try:return int(pathlib.Path('/proc',str(pid),'stat').read_text().rsplit(')',1)[1].split()[19])
+  except FileNotFoundError:return None
+@@ -16,9 +16,10 @@
+  if result.exists() and not closed.exists():
+   d=json.loads(result.read_text());observation[key+'_native_result']={'complete':d.get('complete'),'errors':d.get('errors',[])[:2],'main_health_failure':str(d.get('main_health_failure'))[:500]}
+ with urllib.request.urlopen('http://127.0.0.1:8771/api/now',timeout=8) as f:api=json.load(f)
++assert api['lr']==6.25e-6 and api['epsilon']==.1 and api['expert_ratio']==.05 and type(api['game_settings']['expert_pct']) is int and api['game_settings']['expert_pct']==5, 'Selected Main LR/exploration/manual expert settings changed'
+ st=json.loads((m/'v6-fleet-original01/status.json').read_text());control=(b.parents[2]/'models_dqn/learning_control.json') if False else pathlib.Path('/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/learning_control.json');controlsha=hashlib.sha256(control.read_bytes()).hexdigest()
+ observation['Main']={k:api.get(k) for k in ['ts','fps','client_count','training_enabled','learner_frame_count','optimized_samples','lr','epsilon','expert_ratio']};observation['Main']['same_original_birth']=birth(208501)==27823352;observation['Main']['control_sha256']=controlsha;observation['v6']={'same_original_birth':birth(965562)==30270092,'counts':st['counts'],'errors':st['errors'][:2],'rebind_hints':sum(x['physical_binding_history_count']>x['incarnation'] for x in st['slots'].values())}
+-row={'observed_unix_s':now,'API_ts':api['ts'],'leg':leg,'game_FPS':api['fps'],'client_count':api['client_count'],'learner_frames':api['learner_frame_count'],'optimized_samples':api['optimized_samples'],'lr':api['lr'],'epsilon':api['epsilon'],'expert':api['expert_ratio'],'control_sha256':controlsha,'supervisor_active_train':st['counts']['active_train'],'supervisor_quarantined':st['counts']['quarantined'],'outer_live':outerlive};p=j/'Root-control-and-throughput-observations-original01.csv';new=not p.exists()
++row={'observed_unix_s':now,'API_ts':api['ts'],'leg':leg,'game_FPS':api['fps'],'client_count':api['client_count'],'learner_frames':api['learner_frame_count'],'optimized_samples':api['optimized_samples'],'lr':api['lr'],'epsilon':api['epsilon'],'expert':api['expert_ratio'],'manual_expert_pct':api['game_settings']['expert_pct'],'control_sha256':controlsha,'supervisor_active_train':st['counts']['active_train'],'supervisor_quarantined':st['counts']['quarantined'],'outer_live':outerlive};p=j/'Root-control-and-throughput-observations-original01.csv';new=not p.exists()
+ with p.open('a') as f:
+  w=csv.DictWriter(f,fieldnames=list(row))
+  if new:w.writeheader()

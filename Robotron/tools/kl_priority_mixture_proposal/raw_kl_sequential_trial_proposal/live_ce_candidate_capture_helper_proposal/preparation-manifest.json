@@ -1,0 +1,43 @@
+{
+  "actual_candidate_unit_job_owner_SHA_bytes_clocks": null,
+  "actual_imports_tests_execution_requests_or_runtime_actions": null,
+  "files": [
+    {
+      "bytes": 4841,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_ce_candidate_capture_helper_proposal/PREPARATION.txt",
+      "sha256": "ef6928588c887cac3f45456d9077bd4bbc110af4fd3303b5415fe5de106c522c"
+    },
+    {
+      "bytes": 22481,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_ce_candidate_capture_helper_proposal/capture_live_CE_candidate.py",
+      "sha256": "980bc51130e00a5394b98e6ef2abbc414147df794b722a06f597cf135424ffff"
+    },
+    {
+      "bytes": 2183,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_ce_candidate_capture_helper_proposal/future-argv.json",
+      "sha256": "bbc7504a66c87d49d111c7b5ab26093b2bf0165fd94f51ab5902b9d101ee49f4"
+    },
+    {
+      "bytes": 529,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_ce_candidate_capture_helper_proposal/root-job.template.json",
+      "sha256": "b14de88f8a115727d6a25cc75e3af741797cbf82a14627439981c53f5b56963f"
+    },
+    {
+      "bytes": 4308,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_ce_candidate_capture_helper_proposal/source-lock.json",
+      "sha256": "af89bfb83cfa63c69810ecd3833ab492659f7431e1d905b9d3e65449358d55cb"
+    },
+    {
+      "bytes": 11640,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_ce_candidate_capture_helper_proposal/test_capture_live_CE.py",
+      "sha256": "f57a6bc51e5d29b89d1d090f8264357e5711f9c280f04fb0726022bb50d0fba7"
+    }
+  ],
+  "focused_guard_methods": 8,
+  "installed_sources_or_controls_edited": false,
+  "no_transition_module_or_actions": true,
+  "schema": "robotron-source-preparation-manifest-v1",
+  "source_peer": "Essential production API and history source peer PASS; final exact manifest/test receipt pending separate immutable peer",
+  "status": "SOURCE_ONLY_STANDALONE_LIVE_CE_CAPTURE_HELPER",
+  "strict_CPU_launched_by_helper": false
+}

@@ -1,0 +1,54 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original05-retired-API-preparation/control_deadline32_rounds_v11.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original06-fresh-study-namespaces-preparation/source-family-original02-unit-authority/control_deadline32_rounds_v11.py
+@@ -65,17 +65,49 @@
+ def checked_config(config):
+     c = json.loads(Path(config).read_text())
+     require(set(c) == {'unit', 'output', 'argv', 'properties', 'pins', 'observation_s'}, 'Exact six-field compiled full-tail32 config required')
+-    require(c['unit'] in {'robotron-deadline32-launcher-v1-'+leg+'-original01-20261029.service' for leg in ('r1','c1','r2','c2')}, 'Exact private compiled full-tail32 namespace required')
+     props = dict((x.split('=', 1) for x in c['properties']))
+     require(len(props) == len(c['properties']) and props == dict(CPUQuota='1200%', MemoryMax='24G', MemorySwapMax='0', RuntimeMaxSec='4260', TasksMax='512', TimeoutStopSec='30', KillMode='mixed', SendSIGKILL='no'), 'Exact bounded compiled32 resources required')
+     require(type(c['observation_s']) is int and c['observation_s'] == 4320, 'Fixed original runtime/shutdown observation required')
+-    expected = ['/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python', '-Xgil=0', '-I', '-B', '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original05-retired-API-preparation/run_deadline32_rounds_v11.py']
++    expected = ['/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python', '-Xgil=0', '-I', '-B', '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original06-fresh-study-namespaces-preparation/source-family-original02-unit-authority/run_deadline32_rounds_v11.py']
+     argv = c['argv']
+     require(type(argv) is list and len(argv) == 12 and (argv[:5] == expected) and (argv[5:7] == ['--execute', '--job']) and (argv[8] == '--job-sha256') and (argv[10] == '--source-sha256') and all((type(v) is str for v in argv)) and all((re.fullmatch('[0-9a-f]{64}', argv[i]) for i in (9, 11))), 'Exact compiled32 original runtime argv required')
+     job = Path(argv[7])
+     root = ROOT / 'Robotron/logs/managed-learning-20261015/run-26'
+     require(job.is_absolute() and job.resolve() == job and (job.name == 'job.json') and job.parent.is_relative_to(root), 'Exact run-26 private job path required')
+     require(type(c['pins']) is list and c['pins'] and any((p['path'] == str(job) and p['sha256'] == argv[9] for p in c['pins'])) and any((p['path'] == expected[4] and p['sha256'] == argv[11] for p in c['pins'])), 'Actual job and runtime must be in the original launch pins')
++    require(job.is_file() and not job.is_symlink() and job.stat().st_size <= 2 << 20,
++            'Bounded actual immutable native job required')
++    job_pin = next(p for p in c['pins'] if p['path'] == str(job) and p['sha256'] == argv[9])
++    require(pin(job) == job_pin and job_pin['identity']['mode'] == '0o444', 'Actual selected job PIN differs')
++    raw = job.read_bytes()
++    require(hashlib.sha256(raw).hexdigest() == argv[9], 'Actual native job bytes differ')
++    subject = json.loads(raw)
++    leg = subject['leg']
++    require(leg in ('R1','C1','R2','C2') and job.parent.name == leg,
++            'Actual native leg/path differs')
++    study_pin = subject['study_precommit']
++    study_path = Path(study_pin['path'])
++    require(study_path == job.parent.parent / 'study-precommit.json' and study_path.resolve() == study_path
++            and study_path.is_file() and not study_path.is_symlink() and study_path.stat().st_size <= 2 << 20,
++            'Exact actual study precommit path required')
++    before = study_path.stat()
++    study_raw = study_path.read_bytes()
++    after = study_path.stat()
++    identity = lambda s: dict(device=s.st_dev,inode=s.st_ino,bytes=s.st_size,mtime_ns=s.st_mtime_ns,
++        ctime_ns=s.st_ctime_ns,mode=oct(s.st_mode & 511),uid=s.st_uid,nlink=s.st_nlink)
++    require(identity(before) == identity(after) == study_pin['identity']
++            and study_pin['identity']['mode'] == '0o444' and study_pin['identity']['uid'] == os.getuid()
++            and study_pin['identity']['nlink'] == 1 and len(study_raw) == study_pin['bytes']
++            and hashlib.sha256(study_raw).hexdigest() == study_pin['sha256']
++            and re.fullmatch('[0-9a-f]{64}', study_pin['sha256']), 'Actual immutable study full PIN differs')
++    study = json.loads(study_raw)
++    require(study['schema'] == 'robotron-deadline32-fixed-fresh-RCRC-study-v1'
++            and study['ordered_legs'] == ['R1','C1','R2','C2'] and study['no_retry'] is True,
++            'Exact fresh original RCRC study required')
++    namespace = 'deadline32-retired-api-'+study_pin['sha256'][:16]+'-'+leg.lower()+'-original01-20261029'
++    require(subject['unit'] == c['unit'] == 'robotron-'+namespace+'.service'
++            and subject['label'] == subject['measurement_label'] == namespace,
++            'Exact actual study/job/leg native and measurement namespace required')
+     return c
+ 
+ def timer_state(s, context):

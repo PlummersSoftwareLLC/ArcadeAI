@@ -1,0 +1,25 @@
+{
+  "actual_execution": null,
+  "changes_to_frozen_contract_or_helper": false,
+  "created_utc": "2026-10-17T10:58:34.194801+00:00",
+  "files": {
+    "ENDING_ORDER.json": {
+      "bytes": 6336,
+      "mode": "0o444",
+      "sha256": "b99dd4ff9684e6d0112df63809e1fe42372704fb8fd9e167be505d541a2045f6"
+    }
+  },
+  "schema": "robotron-raw-kl-ending-order-source-preparation-v1",
+  "scope": "Clarifies order only: candidate freeze/owned KL stop before candidate CPU; distinct early insurance supplies return_ce floor. No new watcher features, lifecycle mode or numerical gate.",
+  "status": "SOURCE_ONLY_UNEXECUTED",
+  "upstream": {
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/horizon_observer_proposal/preparation-manifest.json": {
+      "bytes": 3832,
+      "sha256": "8426b1f164463546ce5a65e2bdbc051c758e72524b27ee68bf0b87e65425567d"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/preparation-manifest.json": {
+      "bytes": 2159,
+      "sha256": "e94d4758a159d6b9b3c9c1d55f431b196c4988c6aa52fc00b95f2d14bf896c15"
+    }
+  }
+}

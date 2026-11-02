@@ -1,0 +1,40 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/continuous_physical192_health_v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_health_v5.py
+@@ -18,8 +18,8 @@
+ LINUX=ROOT/'tools/quality_capacity_proposal/supervised_main_fleet_v2.py'
+ LINUX_SHA='1f41d360fa23632cb26d6dee33d3c822bec7f9cf79fdbb75e47f3418059ca5f0'
+ STATIC=('parent_pid','cgroup','command','environment','affinity','uids','executable')
+-REGISTRY=Path(__file__).with_name('continuous_physical192_registry_v4.py')
+-REGISTRY_SHA='4bd2cd67c68a908a44c984f00f2586cd7116e6fb2ab4cf53ad8037dd2052b8a2'
++REGISTRY=Path(__file__).with_name('continuous_physical192_registry_v5.py')
++REGISTRY_SHA='8cc5340708a73ffb97b16be4b96e72b3d5560ee0b371b7ffd8d67c4074cf76b4'
+ 
+ def require(condition, reason):
+     if not condition:
+@@ -123,7 +123,7 @@
+     require(hashlib.sha256(REGISTRY.read_bytes()).hexdigest() == REGISTRY_SHA,
+             'Exact selected static192 registry verifier required')
+     import sys
+-    name = '_prospective_immutable_bootstrap_pidfd_registry_v4'
++    name = '_prospective_current_eval_quiescence_registry_v5'
+     if name not in sys.modules:
+         spec = importlib.util.spec_from_file_location(name, REGISTRY)
+         value = importlib.util.module_from_spec(spec); spec.loader.exec_module(value)
+@@ -497,7 +497,7 @@
+         require(status==registry().bootstrap_projection(case), 'Held immutable bootstrap projection changed')
+         require(time.monotonic() - started <= 5, 'Continuous physical/registry/API census exceeded5s')
+         ended = time.monotonic()
+-        return dict(schema='robotron-original192-immutable-bootstrap-live-pidfd-snapshot-v4',
++        return dict(schema='robotron-original192-live-pidfd-current-eval-quiescence-snapshot-v5',
+                     unix_s=time.time(), monotonic_s=ended, owners=owners,
+                     status=status, raw_status_wire=raw.decode(), actors=actors,
+                     original_children=child_ids, child_census=capture,
+@@ -537,7 +537,7 @@
+     validate_eval_holder(case,sample,previous)
+     require(case['schema'] == reg.CASE_SCHEMA, 'Explicit new continuous health case required')
+     view = reg.validate_snapshot(case, sample, previous)
+-    require(sample['schema'] == 'robotron-original192-immutable-bootstrap-live-pidfd-snapshot-v4'
++    require(sample['schema'] == 'robotron-original192-live-pidfd-current-eval-quiescence-snapshot-v5'
+             and json.loads(sample['raw_status_wire']) == sample['status'], 'Historical bootstrap certificate raw encoding changed')
+     require(0 <= sample['monotonic_s'] - sample['capture_started_monotonic_s'] <= 5
+             and sample['capture_started_monotonic_s'] <= sample['capture_ended_monotonic_s'] <= sample['monotonic_s'],

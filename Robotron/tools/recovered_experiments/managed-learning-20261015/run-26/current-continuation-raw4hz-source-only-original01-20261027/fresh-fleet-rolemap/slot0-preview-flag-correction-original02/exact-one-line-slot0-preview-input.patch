@@ -1,0 +1,10 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/fresh-fleet-rolemap/exec_fresh_fleet_roles_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/fresh-fleet-rolemap/slot0-preview-flag-correction-original02/exec_fresh_fleet_roles_v2.py
+@@ -175,6 +175,7 @@
+         require(type(slot)is str and re.fullmatch('0|[1-9][0-9]{0,2}',slot)and slot in SLOTS
+             and args==manifest['actor_args'],'Exact fresh actor slot/args required')
+         expected=dict(manifest['actor_environment'],ROBOTRON_CLIENT_SLOT=slot)
++        expected['ROBOTRON_PREVIEW_CLIENT']='1'if slot=='0'else'0'
+         require(controlled(environment)==expected,'Fresh actor INPUT controls differ')
+         output['ROBOTRON_EVAL_MODE']=rolemap['forced_output_mode'][slot]
+     output['LD_PRELOAD']=manifest['wait_library']['path'];output['ROBOTRON_SOCKET_WAIT_PORT']='9998'

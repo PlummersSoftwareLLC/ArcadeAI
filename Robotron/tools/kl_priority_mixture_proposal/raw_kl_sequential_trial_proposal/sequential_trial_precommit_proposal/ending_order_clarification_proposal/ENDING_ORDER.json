@@ -1,0 +1,105 @@
+{
+  "actual_candidate": null,
+  "actual_early_insurance": null,
+  "actual_ending_or_CE_return": null,
+  "actual_trial_owner": null,
+  "author_actions": {
+    "imports_tests_PT_tensor_runtime_actions_or_frozen_edits": false,
+    "source_and_saved_metadata_only": true
+  },
+  "early_before_horizon": {
+    "action": "ONE distinct KL-owner model-only insurance snapshot after healthy192, well before horizon; strict original7d CPU numerical proof under actual installed candidate config19ab and actual owner192 acquisition.",
+    "requirements": [
+      "Precommit unique tag/request; archive original request/completed/failed transition and independent0444modelcopy; actual current owner/invocation/source context.",
+      "Keep original CPU boot/start/accepted0 horizon origins unchanged. Early insurance does not reanchor duration or sample counters.",
+      "Atending the early insurance completion is historical: candidate completion may replace the managed completed slot naturally. Bind actual CURRENT slot separately for return, with historical early insurance archive/proof retained."
+    ],
+    "role": "Known same-owner clock floor for return_ce; NOT eligible candidate, startup phase proof, replacement horizon or a selected policy result."
+  },
+  "ending_order": [
+    {
+      "ordinal": 1,
+      "rule": "Only one candidate request; later counters or shutdown tails cannot rescue a missed3240 horizon.",
+      "step": "First eligible immutable latch"
+    },
+    {
+      "ordinal": 2,
+      "proposed_budget_s": 10,
+      "rule": "Register exact192 actor identities for attempt-all undo; root owns pause deadline/evidence.",
+      "step": "Owned pause"
+    },
+    {
+      "ordinal": 3,
+      "proposed_budget_s": 60,
+      "rule": "Obtain matching unique completed request + stable model bytes + independent0444copy/acquisition evidence. Do NOT wait for candidate CPU verification while KL owner remains alive.",
+      "step": "ONE model-only save completion and independent freeze"
+    },
+    {
+      "ordinal": 4,
+      "proposed_budget_s": 240,
+      "rule": "Use prepared return_ce lifecycle/early same-owner insurance floor; no extra ending save/request/CPU before stop. Prove exact PID/start/unit/invocation/cgroup absence by original3600 ceiling. Never stop an unknown replacement.",
+      "step": "Stop exact owned KL trainer immediately"
+    },
+    {
+      "ordinal": 5,
+      "rule": "After known KL absence, verify actual newest latest and phase against early insurance floor. Preserve actual progress; no insurance/protected/frozen-candidate rollback.",
+      "step": "Strict newest stopped latest CPU proof"
+    },
+    {
+      "ordinal": 6,
+      "rule": "Keep candidate5 installed and Restart=no. Start a NEW CE/actionstart/previousKL record against actual newest verified latest; perform startup phase/banks9maps128graphs/192 proof. Each intended future restart needs a fresh newest-bound record.",
+      "step": "Explicit new CE return"
+    },
+    {
+      "ordinal": 7,
+      "rule": "Candidate purpose binds actual earlier KL-owner request/acquisition and independent frozen bytes; it may run after absence/CE return. Preserve original same-load numerical+phase checks and clock overshoot. No need to pretend old owner is currently live.",
+      "step": "Historical candidate CPU phase verification"
+    },
+    {
+      "ordinal": 8,
+      "rule": "All confirmation outside KL-owner exposure; no source/control changes midcampaign; protected best from actual finalized448 outcome remains future binding.",
+      "step": "Prepare fresh RCRC only after CE return and candidate CPU result"
+    }
+  ],
+  "failure_semantics": [
+    "If candidate request fails or is incomplete, retain that first failure; no second candidate, tag substitution or extended horizon. Root must still retire known KL owner within ceiling.",
+    "Prepare/pin the return job and early insurance before the ending window. Read-only metadata guards may run, but no new numerical prerequisite may delay KL retirement.",
+    "If return preflight fails before its stop call, root still owns separate exact-known-owner stop by ceiling; a failed adapter must not imply KL may continue.",
+    "Unknown/replaced owner, stop timeout or KL owner present at3600 is INVALID/manual. No deadline extension, automatic rollback, hot metric switch or user permission question.",
+    "Reconcile any exact owned pending request only after known retirement before CE start, so CE never services an old KL candidate tag. Preserve both original and later completed-slot evidence.",
+    "Helpers do not themselves enforce physical process death. Root actual ownership/signal/time receipts and original service exits are required."
+  ],
+  "reserve": {
+    "candidate_CPU_s_outside_KL_owner_ceiling": 120,
+    "newest_stopped_CPU_s_outside_KL_owner_ceiling": 120,
+    "proposed_graceful_stop_s": 240,
+    "proposed_one_save_s": 60,
+    "proposed_pause_s": 10,
+    "scope": "Source plan, not a guarantee of exact update stop or actual timing. Pause/save/stop overshoots and ordinary optimizer/FIFO save tails must be recorded.",
+    "slack_s": 50,
+    "total_s": 360
+  },
+  "schema": "robotron-raw-kl-ending-order-clarification-v1",
+  "status": "SOURCE_ONLY_CONDITIONAL_INACTIVE",
+  "unchanged_policy": {
+    "KL_owner_absence_ceiling_s": 3600,
+    "budget_is_root_proposal_not_user_constraint_or_active_trial": true,
+    "first_both_horizons": {
+      "all_five_physical_accepted_adds": 6000000,
+      "learner_frames": 8000000
+    },
+    "first_latch_cutoff_s": 3240,
+    "one_candidate_no_retry_or_tail_rescue": true,
+    "origin": "Durable actual pre-start request monotonic time; never192 readiness/candidate/CPU timestamp"
+  },
+  "upstream": {
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/horizon_observer_proposal/preparation-manifest.json": {
+      "bytes": 3832,
+      "sha256": "8426b1f164463546ce5a65e2bdbc051c758e72524b27ee68bf0b87e65425567d"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/preparation-manifest.json": {
+      "bytes": 2159,
+      "sha256": "e94d4758a159d6b9b3c9c1d55f431b196c4988c6aa52fc00b95f2d14bf896c15"
+    }
+  }
+}

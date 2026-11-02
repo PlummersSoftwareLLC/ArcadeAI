@@ -29,6 +29,14 @@ if __name__ == "__main__":
 
 import os, sys, time, socket, select, struct, threading, traceback, random, queue
 import numpy as np
+try:
+    from .response_telemetry import ResponseTelemetry
+    from .connection_cleanup_receipts import ConnectionCleanupReceipts, current_server_stamp
+    from .bounded_fifo_cleanup_ack_v1 import wait_for_fifo_reset_ack
+except ImportError:
+    from response_telemetry import ResponseTelemetry
+    from connection_cleanup_receipts import ConnectionCleanupReceipts, current_server_stamp
+    from bounded_fifo_cleanup_ack_v1 import wait_for_fifo_reset_ack
 from collections import deque
 from dataclasses import dataclass
 from typing import Optional
@@ -40,7 +48,10 @@ try:
                          TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT,
                          STRATIFIED_TRAINING_STARTS, STRATIFIED_START_LEVELS)
     from .nstep_buffer import NStepReplayBuffer
-    from .replay_buffer import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT
+    from .game_journal import GameJournal
+    from .frozen_evaluation import reset_client_replay_segment
+    from .rejected_gap_telemetry import RejectedGapTelemetry
+    from .actor_tags import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT
     from .model import combine_action, split_joint_action, action_index_to_wire_dir
     from .metrics_display import (
         add_episode_to_dqn100k_window,
@@ -57,7 +68,10 @@ except ImportError:
                         TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT,
                         STRATIFIED_TRAINING_STARTS, STRATIFIED_START_LEVELS)
     from nstep_buffer import NStepReplayBuffer
-    from replay_buffer import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT
+    from game_journal import GameJournal
+    from frozen_evaluation import reset_client_replay_segment
+    from rejected_gap_telemetry import RejectedGapTelemetry
+    from actor_tags import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT
     from model import combine_action, split_joint_action, action_index_to_wire_dir
     from metrics_display import (
         add_episode_to_dqn100k_window,
@@ -183,6 +197,41 @@ _MAX_PLAUSIBLE_GAME_SCORE = int(getattr(RL_CONFIG, "max_plausible_game_score", 2
 _MAX_PLAUSIBLE_PER_LEVEL = int(getattr(RL_CONFIG, "max_plausible_score_per_level", 25_000))
 _MAX_SCORE_JUMP = int(getattr(RL_CONFIG, "max_plausible_score_jump", 250_000))
 _last_implausible_warn_t = 0.0
+
+
+def _continuous_play_score_dip(frame, client, previous_score, previous_wave, recent_start):
+    """Keep the established guard, adding a conservative banked-reserve case.
+
+    A stale recent-START latch does not itself establish a restart while both
+    samples remain alive on the same late wave with unchanged banked reserves.
+    Starting reserves and possible configured register wraps remain ambiguous.
+    """
+    reserves = getattr(frame, "num_lasers", None)
+    previous_reserves = client.get("num_lasers")
+    starting_lives = getattr(RL_CONFIG, "lives_start", 3)
+    modulus = int(getattr(RL_CONFIG, "score_wrap_modulus", 100_000_000))
+    banked_reserves = (
+        type(reserves) is int and type(previous_reserves) is int
+        and type(starting_lives) is int and 1 <= starting_lives < 255
+        and starting_lives <= reserves == previous_reserves < 255)
+    possible_register_wrap = (int(previous_score) >= 0.9 * modulus
+                              and int(frame.game_score) <= 0.1 * modulus)
+    return (
+        bool(frame.player_alive) and not bool(frame.done)
+        and bool(client.get("player_alive", False))
+        and not bool(frame.start_pressed)
+        and previous_wave is not None and int(frame.level_number) == int(previous_wave)
+        and (int(frame.game_score) > 0 or not recent_start
+             or int(frame.level_number) >= 2)
+        and 0 < int(previous_score) - int(frame.game_score)
+        and (
+            int(previous_score) - int(frame.game_score) <= int(
+                getattr(RL_CONFIG, "score_torn_read_tolerance", 100_000))
+            or (int(frame.level_number) >= 2 and not recent_start)
+            or (int(frame.level_number) >= 2 and recent_start
+                and banked_reserves and not possible_register_wrap)
+        )
+    )
 
 
 def parse_frame_data(data: bytes, parse_preview: bool = False) -> Optional[FrameData]:
@@ -657,11 +706,14 @@ def _shape_transition_reward(
 
 # ── Async buffer (queues step() calls to avoid blocking the frame loop) ─────
 class AsyncReplayBuffer:
-    def __init__(self, agent, batch_size=100, max_queue_size=20000):
+    def __init__(self, agent, batch_size=100, max_queue_size=64000):
         self.agent = agent
         self.batch_size = batch_size
         self.queue = queue.Queue(maxsize=max_queue_size)
         self.running = True
+        self._admission = threading.Condition()
+        self._consumer_error = None
+        self._drain_complete = threading.Event()
         self._lookback = int(getattr(RL_CONFIG, "pre_death_lookback", 120))
         self._client_indices = {}          # client_id -> deque(maxlen=lookback)
         self._episode_indices = {}         # client_id -> replay indices for current episode
@@ -679,7 +731,6 @@ class AsyncReplayBuffer:
         self._last_drop_warn = 0.0
         self._thread = threading.Thread(target=self._consume, daemon=True)
         self._thread.start()
-
     def _record_drop(self, n=1):
         with self._drop_lock:
             self.dropped_steps += n
@@ -696,34 +747,62 @@ class AsyncReplayBuffer:
             print(f"[WARN] Replay queue saturated — dropped {total:,} non-terminal "
                   f"transitions so far (consumer can't keep up)")
 
+    def _enqueue_preserving(self, item, *, timeout_s=None):
+        if timeout_s is not None and not (type(timeout_s) in (int, float) and 0 < timeout_s <= 5.0):
+            raise ValueError("Replay enqueue timeout must be in (0, 5] seconds")
+        deadline = None if timeout_s is None else time.monotonic() + timeout_s
+        # One admission fence covers the running check and actual insertion.
+        # Never hold it while waiting for capacity or while executing replay.
+        with self._admission:
+            while self.running:
+                if self._consumer_error is not None or not self._thread.is_alive():
+                    raise RuntimeError("Replay consumer unavailable; command was not enqueued")
+                if deadline is not None and time.monotonic() >= deadline:
+                    raise TimeoutError("Replay command was not enqueued before its deadline")
+                try:
+                    self.queue.put_nowait(item)
+                    return
+                except queue.Full:
+                    remaining = None if deadline is None else deadline - time.monotonic()
+                    if remaining is not None and remaining <= 0:
+                        raise TimeoutError("Replay command was not enqueued before its deadline")
+                    self._admission.wait(timeout=.1 if remaining is None else min(.1, remaining))
+            raise RuntimeError("Replay admission sealed; command was not enqueued")
     def step_async(self, *args, client_id=None, **kwargs):
-        is_terminal = bool(args[4]) if len(args) > 4 else False
-        item = ("step", client_id, args, kwargs)
-        try:
-            self.queue.put_nowait(item)
-        except queue.Full:
-            self._record_drop()
+        # Preserve every transition under transient bank-save/CPU pressure.
+        # Queueing may slow the actor; silently dropping experience corrupts
+        # n-step/episode coverage once faster GB300 inference outruns ingestion.
+        self._enqueue_preserving(("step", client_id, args, kwargs))
 
     def boost_pre_death(self, client_id):
-        try:
-            self.queue.put_nowait(("boost", client_id, None, None))
-        except queue.Full:
-            self._record_drop()
+        self._enqueue_preserving(("boost", client_id, None, None))
 
     def boost_elite_episode(self, client_id, score: int, level: int, total_reward: float, ep_len: int,
                             ep_score: int = 0, game_uid: int = 0):
-        try:
-            self.queue.put_nowait(("elite", client_id,
-                                   (int(score), int(level), float(total_reward), int(ep_len),
-                                    int(ep_score), int(game_uid)), None))
-        except queue.Full:
-            self._record_drop()
+        self._enqueue_preserving(("elite", client_id,
+            (int(score), int(level), float(total_reward), int(ep_len), int(ep_score), int(game_uid)), None))
+
+    def reset_client_async(self, client_id, *, enqueue_timeout_s=None):
+        """ACK only after the sole consumer executes the FIFO reset."""
+        acknowledged = threading.Event()
+        self._enqueue_preserving(("reset_client", client_id, None, {"event": acknowledged}),
+                                 timeout_s=enqueue_timeout_s)
+        return acknowledged
+    def barrier_async(self):
+        """A nonblocking acknowledgment after all preceding replay commands."""
+        acknowledged = threading.Event()
+        self._enqueue_preserving(("barrier", None, None, {"event": acknowledged}))
+        return acknowledged
 
     def _consume(self):
-        while self.running:
+        while True:
             try:
                 item = self.queue.get(timeout=0.01)
             except queue.Empty:
+                with self._admission:
+                    if not self.running and self.queue.empty():
+                        self._drain_complete.set()
+                        return
                 continue
             batch = [item]
             while len(batch) < self.batch_size:
@@ -731,6 +810,8 @@ class AsyncReplayBuffer:
                     batch.append(self.queue.get_nowait())
                 except queue.Empty:
                     break
+            with self._admission:
+                self._admission.notify_all()
             for cmd, cid, a, kw in batch:
                 try:
                     if cmd == "step":
@@ -752,9 +833,18 @@ class AsyncReplayBuffer:
                         self._do_boost(cid)
                     elif cmd == "elite":
                         self._do_elite_episode_boost(cid, *(a or (0, 0, 0.0, 0)))
+                    elif cmd == "reset_client":
+                        self._client_indices.pop(cid, None)
+                        self._episode_indices.pop(cid, None)
+                        kw["event"].set()
+                    elif cmd == "barrier":
+                        kw["event"].set()
                 except Exception as e:
+                    with self._admission:
+                        if self._consumer_error is None:
+                            self._consumer_error = repr(e)
+                        self._admission.notify_all()
                     print(f"AsyncReplayBuffer error: {e}")
-
     def _do_boost(self, client_id):
         indices = self._client_indices.get(client_id)
         if not indices:
@@ -874,29 +964,42 @@ class AsyncReplayBuffer:
             indices.clear()
 
     def remove_client(self, client_id):
-        self._client_indices.pop(client_id, None)
-        self._episode_indices.pop(client_id, None)
+        # Ordinary boundary resets retain preserving backpressure. Disconnect
+        # cleanup has an explicit enqueue bound; timeout never grants reuse.
+        return self.reset_client_async(client_id, enqueue_timeout_s=1.0)
+    def stop(self, *, timeout_s=5.0):
+        if not (type(timeout_s) in (int, float) and 0 < timeout_s <= 5.0):
+            raise ValueError("Replay stop timeout must be in (0, 5] seconds")
+        if threading.current_thread() is self._thread:
+            raise RuntimeError("Replay consumer cannot stop/join itself")
+        with self._admission:
+            self.running = False
+            self._admission.notify_all()
+        # The original consumer alone drains all commands admitted before the
+        # fence. No caller-thread replay/reset execution races its local batch.
+        self._thread.join(timeout=timeout_s)
+        if self._thread.is_alive():
+            raise TimeoutError("Replay consumer remains alive; stop is incomplete")
+        if not self.queue.empty():
+            raise RuntimeError("Replay commands remain undrained; stop is incomplete")
+        if not self._drain_complete.is_set():
+            raise RuntimeError("Replay consumer never acknowledged the sealed drain")
+        if self._consumer_error is not None:
+            raise RuntimeError("Replay consumer failed; persistence is unqualified: " + self._consumer_error)
 
-    def stop(self):
-        self.running = False
-        while True:
-            try:
-                cmd, cid, a, kw = self.queue.get_nowait()
-                if cmd == "step" and a is not None:
-                    self.agent.step(*a, **kw)
-                elif cmd == "boost":
-                    self._do_boost(cid)
-                elif cmd == "elite":
-                    self._do_elite_episode_boost(cid, *(a or (0, 0, 0.0, 0)))
-            except queue.Empty:
-                break
-            except Exception:
-                pass
-        self._thread.join(timeout=5.0)
+    def cleanup_health(self):
+        """Read only: shutdown is not permission to refill a training slot."""
+        with self._admission:
+            alive = self._thread.is_alive()
+            error = self._consumer_error
+            if not alive and (self.running or not self._drain_complete.is_set()):
+                error = error or "Replay consumer ended without a sealed drain acknowledgment"
+            return dict(admission_open=bool(self.running and alive and error is None),
+                        consumer_error=error)
 
 
 class _InferenceRequest:
-    __slots__ = ("state", "epsilon", "locked_fire", "event", "action", "cancelled")
+    __slots__ = ("state", "epsilon", "locked_fire", "event", "action", "cancelled", "error")
 
     def __init__(self, state, epsilon: float, locked_fire=None):
         self.state = state
@@ -905,6 +1008,7 @@ class _InferenceRequest:
         self.event = threading.Event()
         self.action = None
         self.cancelled = False
+        self.error = None
 
 
 class AsyncInferenceBatcher:
@@ -916,32 +1020,51 @@ class AsyncInferenceBatcher:
         self.max_wait_s = max(0.0, float(max_wait_ms) / 1000.0)
         self.request_timeout_s = max(0.001, float(request_timeout_ms) / 1000.0)
         self.queue = queue.Queue(maxsize=20000)
+        self._request_lock = threading.Lock()
+        self._pending = set()
         self.running = True
         self._thread = threading.Thread(target=self._consume, daemon=True, name="InferBatchWorker")
         self._thread.start()
 
     def infer(self, state, epsilon: float, locked_fire=None):
-        if not self.running:
-            return self.agent.act(state, epsilon, locked_fire=locked_fire)
         req = _InferenceRequest(state, epsilon, locked_fire=locked_fire)
+        with self._request_lock:
+            if not self.running:
+                raise RuntimeError("Inference batcher is stopped")
+            self._pending.add(req)
+        deadline = time.perf_counter() + self.request_timeout_s
         try:
-            self.queue.put(req, timeout=self.request_timeout_s)
-        except queue.Full:
-            return self.agent.act(state, epsilon, locked_fire=locked_fire)
-        if not req.event.wait(timeout=self.request_timeout_s):
-            # Cancel BEFORE falling back to a solo act(): an abandoned request
-            # left live in the queue still gets batched and inferred — every
-            # timed-out frame was costing TWO inferences.  Under load, 32
-            # handlers timing out at once turned into 32 solo CUDA calls plus
-            # the batcher's ghost work, which kept latency above the timeout
-            # forever: a self-sustaining stampede (measured: AvgInf pinned at
-            # ~104ms for an entire boot on 2026-07-13).  Cancelling the
-            # request breaks the amplification; the longer timeout (config:
-            # inference_request_timeout_ms) keeps handlers in the batched
-            # path through transient stalls instead of defecting.
-            req.cancelled = True
-            return self.agent.act(state, epsilon, locked_fire=locked_fire)
-        return req.action if req.action is not None else (0, 0, False)
+            self.queue.put(req, timeout=max(0.0, deadline - time.perf_counter()))
+        except queue.Full as exc:
+            with self._request_lock:
+                self._pending.discard(req)
+                req.cancelled = True
+            raise TimeoutError("Inference queue admission timed out") from exc
+        if not req.event.wait(timeout=max(0.0, deadline - time.perf_counter())):
+            # Cancellation can skip queued work, but cannot undo an in-flight
+            # batch. Never launch a second solo inference for the same state.
+            with self._request_lock:
+                self._pending.discard(req)
+                req.cancelled = True
+            raise TimeoutError("Batched inference request timed out")
+        with self._request_lock:
+            error, action = req.error, req.action
+        if error is not None:
+            raise RuntimeError(error)
+        if action is None:
+            raise RuntimeError("Inference completed without an action")
+        return action
+
+    def _finish(self, batch, actions=None, error=None):
+        with self._request_lock:
+            for idx, req in enumerate(batch):
+                self._pending.discard(req)
+                if req.cancelled:
+                    continue
+                req.error = error
+                if error is None:
+                    req.action = actions[idx]
+                req.event.set()
 
     def _consume(self):
         while self.running or not self.queue.empty():
@@ -961,9 +1084,10 @@ class AsyncInferenceBatcher:
                 except queue.Empty:
                     break
 
-            # Drop requests whose handler already gave up and solo-inferred —
-            # running them here would be pure duplicate GPU work.
-            batch = [r for r in batch if not r.cancelled]
+            # Skip queued requests whose handler already timed out. A request
+            # that expires after dispatch may finish once, without solo work.
+            with self._request_lock:
+                batch = [r for r in batch if self.running and not r.cancelled]
             if not batch:
                 continue
 
@@ -972,39 +1096,63 @@ class AsyncInferenceBatcher:
                 epsilons = [r.epsilon for r in batch]
                 locked_fires = [r.locked_fire for r in batch]
                 actions = self.agent.act_batch(states, epsilons, locked_fires=locked_fires)
+                # Model-space move/fire indices are integers 0..8 (8 = idle).
+                if (not isinstance(actions, (list, tuple)) or len(actions) != len(batch)
+                        or any(not isinstance(a, (list, tuple)) or len(a) != 3
+                               or type(a[0]) is not int or not 0 <= a[0] <= 8
+                               or type(a[1]) is not int or not 0 <= a[1] <= 8
+                               or type(a[2]) is not bool for a in actions)):
+                    raise RuntimeError("Inference returned a malformed action batch")
             except Exception as e:
-                print(f"AsyncInferenceBatcher error: {e}")
-                actions = []
+                error = f"Batched inference failed ({type(e).__name__}: {e})"
+                print(error)
+                self._finish(batch, error=error)
+                continue
 
-            for idx, req in enumerate(batch):
-                act = actions[idx] if idx < len(actions) else None
-                if act is None:
-                    try:
-                        act = self.agent.act(req.state, req.epsilon, locked_fire=req.locked_fire)
-                    except Exception:
-                        act = (0, 0, False)
-                req.action = act
-                req.event.set()
+            self._finish(batch, actions=actions)
 
     def stop(self):
-        self.running = False
+        # Publish failure before joining: a blocked GPU dispatch must not
+        # delay waiter shutdown or later overwrite a stop with a valid action.
+        with self._request_lock:
+            self.running = False
+            for req in self._pending:
+                req.cancelled = True
+                req.error = "Inference batcher stopped before completion"
+                req.event.set()
+            self._pending.clear()
         self._thread.join(timeout=5.0)
         while True:
             try:
                 req = self.queue.get_nowait()
             except queue.Empty:
                 break
-            req.action = (0, 0, False)
+            req.error = "Inference batcher stopped before dispatch"
             req.event.set()
 
 
 # ── Socket Server ───────────────────────────────────────────────────────────
 class SocketServer:
-    def __init__(self, host, port, agent, metrics_wrapper=None):
+    def __init__(self, host, port, agent, metrics_wrapper=None, *, replay_enabled=True):
         self.host = host
         self.port = port
         self.agent = agent
-        self.async_buffer = AsyncReplayBuffer(agent) if agent else None
+        # Dedicated frozen evaluators use the same wire/game-boundary code,
+        # without creating a replay consumer or accessing any bank/ring state.
+        # This latch also survives a controller clearing measurement_active.
+        self.replay_enabled = bool(replay_enabled)
+        self._rejected_gaps = RejectedGapTelemetry(enabled=(self.replay_enabled and
+            os.getenv("ROBOTRON_REJECTED_GAP_TELEMETRY", "") == "1"))
+        # Explicit private-evaluator diagnostics only. The live replay-enabled
+        # trainer retains its existing frame path even if this env is inherited.
+        self.game_boundary_diagnostics = (
+            not self.replay_enabled
+            and os.getenv("ROBOTRON_GAME_BOUNDARY_DIAGNOSTICS", "") == "1"
+        )
+        self.inference_only_error = None
+        self._inference_error_lock = threading.Lock()
+        self._exception_log_lock = threading.Lock()
+        self.async_buffer = AsyncReplayBuffer(agent, max_queue_size=8192) if agent and self.replay_enabled else None
         self.inference_batcher = None
         if agent and bool(getattr(RL_CONFIG, "inference_batching_enabled", True)):
             self.inference_batcher = AsyncInferenceBatcher(
@@ -1034,7 +1182,8 @@ class SocketServer:
         # binds unrelated games together in dedup.
         self._game_uid_seq = 0
         try:
-            self._game_uid_seq = int(self.agent.memory.max_game_uid())
+            if self.replay_enabled:
+                self._game_uid_seq = int(self.agent.memory.max_game_uid())
         except Exception:
             pass
         # Unwrap continuity across reconnects, keyed by cid: a socket blip
@@ -1048,7 +1197,317 @@ class SocketServer:
         self._eval_override = {}
         self.client_lock = threading.Lock()
         self.preview_cid: Optional[int] = None
-        self.preview_disabled = False
+        self.preview_disabled = not self.replay_enabled
+        self.game_journal = None
+        self._journal_last_error = 0.0
+        self._response_timing = ResponseTelemetry(sample_every=20)
+        try:
+            self.game_journal = GameJournal.from_environment(
+                os.path.dirname(LATEST_MODEL_PATH),
+                lives_start=int(getattr(RL_CONFIG, "lives_start", 3)))
+            metrics.game_journal = self.game_journal
+            print(f"Raw full-game journal: {self.game_journal.games_path}")
+        except Exception as exc:
+            print(f"[JOURNAL] initialization failed: {exc}")
+            if not self.replay_enabled:
+                if self.inference_batcher is not None:
+                    self.inference_batcher.stop()
+                raise RuntimeError("Inference-only server requires a full-game journal") from exc
+
+        mode = os.getenv("ROBOTRON_CONTINUOUS_TRAINING_MODE", "0")
+        if mode not in ("0", "1"):
+            raise ValueError("Explicit continuous-training mode0/1 required")
+        self.continuous_training_mode = mode == "1"
+        if self.continuous_training_mode:
+            if (not self.replay_enabled or not getattr(metrics,"continuous_training_mode",False)
+                    or not getattr(metrics,"main_measurement_entry_disabled",False)
+                    or getattr(metrics,"measurement_active",False) or getattr(metrics,"ratchet_frozen",False)):
+                raise RuntimeError("Continuous MAIN requires actual pre-entry measurement fence and replay")
+        self._cleanup_receipts = None
+        cleanup_mode = os.getenv("ROBOTRON_ROLLING_TRAINING_CLEANUP", "0")
+        if cleanup_mode not in ("0", "1"):
+            raise ValueError("Explicit rolling cleanup mode0/1 required")
+        if self.continuous_training_mode and cleanup_mode != "1":
+            raise RuntimeError("Continuous MAIN requires original handler/Timer/FIFO cleanup receipts")
+        if cleanup_mode == "1":
+            if (not self.replay_enabled or self.async_buffer is None
+                    or self.game_journal is None or not self.game_journal.retire_after_game):
+                raise RuntimeError("Rolling cleanup requires replay and durable one-game retirement journal")
+            self._cleanup_receipts = ConnectionCleanupReceipts(
+                current_server_stamp(__file__), self.async_buffer.cleanup_health)
+
+    def _require_connection_producer(self, cid, cs):
+        """Only the original live handler may mutate this connection's replay segment."""
+        if self._cleanup_receipts is None:
+            return
+        with self.client_lock:
+            if (self.clients.get(cid) is not threading.current_thread()
+                    or self.client_states.get(cid) is not cs
+                    or type(cs.get("_cleanup_token")) is not str):
+                raise RuntimeError("Stale or non-owner connection replay producer")
+        self._cleanup_receipts.require_active_owner(
+            cs["_cleanup_token"], cid, cs["client_slot"], cs["eval_only"],
+            threading.current_thread())
+        # No client_lock is held across receipt verification or preserving replay
+        # enqueue. This exact handler cannot finalize itself while this runs.
+
+    def connection_cleanup_snapshot(self, cid, slot, journal_game_id=None):
+        if self._cleanup_receipts is None:
+            raise ValueError("Connection cleanup receipts are not enabled")
+        if journal_game_id is None:
+            value = self._cleanup_receipts.lookup_active(cid, slot)
+        else:
+            value = self._cleanup_receipts.lookup_terminal(journal_game_id, cid, slot)
+        active, generation = self._measurement_snapshot()
+        value.update(observed_unix_s=time.time(), observed_monotonic_ns=time.monotonic_ns(),
+                     measurement_active=active, measurement_generation=generation,
+                     continuous_training_mode=self.continuous_training_mode,
+                     main_measurement_entry_disabled=bool(getattr(metrics,"main_measurement_entry_disabled",False)))
+        value["training_refill_candidate"] &= not active
+        return value
+
+    def continuous_training_connections_snapshot(self):
+        policy=self.continuous_training_policy_snapshot()
+        with self.client_lock:
+            tokens=[cs["_cleanup_token"] for cid,cs in self.client_states.items()
+                    if type(cs.get("_cleanup_token")) is str
+                    and self.clients.get(cid) is not None]
+        rows=self._cleanup_receipts.active_identity_rows(tokens)
+        policy.update(schema="robotron-continuous-active-connections-v1",connections=rows,
+            observed_unix_s=time.time(),observed_monotonic_ns=time.monotonic_ns())
+        return policy
+
+    def continuous_training_policy_snapshot(self):
+        if not self.continuous_training_mode or self._cleanup_receipts is None:
+            raise ValueError("Continuous training mode is not enabled")
+        active,generation=self._measurement_snapshot()
+        health=self.async_buffer.cleanup_health()
+        return dict(schema="robotron-continuous-main-policy-v1",
+            server_stamp=dict(self._cleanup_receipts.stamp),
+            continuous_training_mode=True,
+            main_measurement_entry_disabled=bool(getattr(metrics,"main_measurement_entry_disabled",False)),
+            measurement_active=active,measurement_generation=generation,
+            ratchet_frozen=bool(getattr(metrics,"ratchet_frozen",False)),
+            training_enabled=bool(getattr(metrics,"training_enabled",False)),
+            replay_admission_open=health["admission_open"],consumer_error=health["consumer_error"],
+            observed_unix_s=time.time(),observed_monotonic_ns=time.monotonic_ns())
+
+    def connection_cleanup_by_token(self, token):
+        if self._cleanup_receipts is None:
+            raise ValueError("Connection cleanup receipts are not enabled")
+        value=self._cleanup_receipts.lookup_token(token)
+        active,generation=self._measurement_snapshot()
+        value.update(observed_unix_s=time.time(),observed_monotonic_ns=time.monotonic_ns(),
+            measurement_active=active,measurement_generation=generation,
+            continuous_training_mode=self.continuous_training_mode,
+            main_measurement_entry_disabled=bool(getattr(metrics,"main_measurement_entry_disabled",False)))
+        value["training_refill_candidate"] &= not active
+        return value
+
+    @staticmethod
+    def _journal_experiment_label():
+        value = (getattr(metrics, "measurement_label", "measurement")
+                 if getattr(metrics, "measurement_active", False)
+                 else getattr(metrics, "managed_experiment", "natural-schedule"))
+        if isinstance(value, dict):
+            value = value.get("label", value.get("name", value.get("experiment", "")))
+        return str(value)
+
+    def _fail_inference_only(self, reason):
+        if not getattr(self, "replay_enabled", True):
+            with self._inference_error_lock:
+                if self.inference_only_error is None:
+                    self.inference_only_error = str(reason)
+
+    def rejected_gap_snapshot(self):
+        """Bounded diagnostic-only getter; no counter drain or policy action."""
+        return self._rejected_gaps.snapshot()
+
+    def response_timing_snapshot(self):
+        """Bounded read-only diagnostic snapshot; no application locks/device access."""
+        return self._response_timing.snapshot()
+
+    @staticmethod
+    def _measurement_snapshot():
+        with metrics.lock:
+            return (bool(getattr(metrics, "measurement_active", False)),
+                    int(getattr(metrics, "measurement_generation", 0)))
+
+    def _sync_measurement_boundary(self, cid, cs, current_score):
+        active, generation = self._measurement_snapshot()
+        if (cs.get("measurement_generation") != generation
+                or cs.get("measurement_active") != active):
+            self._require_connection_producer(cid, cs)
+            reset_client_replay_segment(cs, current_score)
+            cs["last_game_score"] = int(current_score)
+            cs["last_clear_frame"] = -1
+            if self.game_journal is not None:
+                self.game_journal.policy_boundary(cid, lambda: self._journal_context(cs))
+            event = self.async_buffer.reset_client_async(cid) if self.async_buffer is not None else None
+            # A controller may open its admission window only after BOTH the
+            # actor reset and its FIFO consumer reset have completed.
+            cs["measurement_reset_event"] = event
+            cs["measurement_active"] = active
+            cs["measurement_generation"] = generation
+        return active
+
+    def _reset_new_game_replay_segment(self, cid, cs, current_score, *, enqueue=True):
+        """Isolate a genuine accepted game reset, without inventing a death.
+
+        A missed terminal leaves an incomplete life: discard its uncertain
+        suffix and suppress its HOF/episode admission until the next real done.
+        If the old natural terminal was observed, its counters are already
+        clear and the fresh life retains ordinary admission semantics.
+        """
+        self._require_connection_producer(cid, cs)
+        partial_life = bool(cs.get("replay_episode_partial", False)
+                            or cs.get("last_state") is not None
+                            or int(cs.get("ep_frames", 0)) > 0)
+        # Deliberately reuse the existing field reset, not its unconditional
+        # policy-change partial-life flag or measurement/journal ACK behavior.
+        reset_client_replay_segment(cs, current_score)
+        cs["replay_episode_partial"] = partial_life
+        cs["was_done"] = False
+        cs["ep_t0"] = time.time()
+        cs["last_game_score"] = int(current_score)
+        cs["last_clear_frame"] = -1
+        if self.async_buffer is not None and enqueue:
+            # Same producer FIFO: old steps/elite finish before this reset;
+            # any new-game replay follows it. Stored rows/banks are retained.
+            self.async_buffer.reset_client_async(cid)
+
+    def measurement_boundary_status(self, generation):
+        active, current_generation = self._measurement_snapshot()
+        with self.client_lock:
+            clients = [(cid, cs.get("client_slot", cid), cs.get("measurement_generation"),
+                        cs.get("measurement_active"), cs.get("measurement_reset_event"))
+                       for cid, cs in self.client_states.items()]
+        pending, replay_pending, acknowledged = [], [], []
+        for cid, slot, seen_generation, seen_active, event in clients:
+            if seen_generation != generation or seen_active != active:
+                pending.append(cid)
+            elif event is not None and not event.is_set():
+                replay_pending.append(cid)
+            else:
+                acknowledged.append(cid)
+        ready = (current_generation == generation and bool(clients)
+                 and not pending and not replay_pending)
+        return dict(ready=ready, active=active, generation=current_generation,
+                    requested_generation=generation, clients=len(clients), expected=len(clients),
+                    acknowledged=len(acknowledged), acknowledged_client_ids=acknowledged,
+                    pending_client_ids=pending, replay_pending_client_ids=replay_pending,
+                    actor_slots=sorted(slot for cid, slot, *_ in clients))
+
+    @staticmethod
+    def _account_frame_batch(total_frames, measurement_frames):
+        # Debit measured frames before publishing raw-frame progress.  The
+        # opposite order briefly grants replay credit to a resumed learner.
+        if measurement_frames:
+            with metrics.lock:
+                metrics.measurement_frame_count = int(
+                    getattr(metrics, "measurement_frame_count", 0)) + int(measurement_frames)
+        metrics.update_frame_count(delta=total_frames)
+        # update_epsilon also advances manual pulses.  Neither it nor the
+        # expert schedule may advance from frozen measurement frames.
+        training_frames = total_frames-measurement_frames
+        if training_frames > 0 and not getattr(metrics, "measurement_active", False):
+            metrics.update_epsilon(frames_advanced=training_frames)
+            metrics.update_expert_ratio()
+
+    @staticmethod
+    def _actor_controls(cs):
+        if getattr(metrics, "measurement_active", False):
+            return 0.0, 0.0, "measurement"
+        if cs.get("eval_only", False):
+            return float(getattr(RL_CONFIG, "eval_epsilon", 0.0)), 0.0, "eval"
+        return metrics.get_effective_epsilon(), metrics.get_expert_ratio(), None
+
+    @staticmethod
+    def _replay_writable(cs):
+        return (not cs.get("replay_disabled", False)
+                and not getattr(metrics, "measurement_active", False)
+                and not getattr(metrics, "ratchet_frozen", False)
+                and cs.get("prev_action_source") != "measurement")
+
+    def _journal_context(self, cs):
+        # Read scalar snapshots without taking metrics.lock while the journal
+        # lock is held: report readers may ask for a journal summary while
+        # holding metrics.lock.  Fleet frames are already batched in groups of
+        # eight by the existing ingest code.
+        frozen = bool(getattr(metrics, "ratchet_frozen", False))
+        measuring = bool(getattr(metrics, "measurement_active", False))
+        epsilon = float(getattr(metrics, "epsilon", 0.0))
+        floor = float(getattr(RL_CONFIG, "epsilon_hard_floor", 0.02))
+        if int(game_settings.epsilon_pct) >= 0:
+            epsilon = game_settings.epsilon_pct / 100.0
+        elif bool(getattr(metrics, "override_epsilon", False)):
+            epsilon = floor
+        epsilon = max(floor, epsilon)
+        expert = float(getattr(metrics, "expert_ratio", 0.0))
+        if int(game_settings.expert_pct) >= 0:
+            expert = game_settings.expert_pct / 100.0
+        if measuring:
+            epsilon = expert = 0.0
+        elif cs.get("eval_only"):
+            epsilon = float(getattr(RL_CONFIG, "eval_epsilon", 0.0))
+            expert = 0.0
+        elif frozen:
+            epsilon = expert = 0.0
+        return dict(
+            experiment=self._journal_experiment_label(),
+            fleet_frames=int(getattr(metrics, "frame_count", 0)),
+            learner_frames=int(getattr(metrics, "learner_frame_count", 0)),
+            optimized_samples=int(getattr(self.agent, "optimized_samples", 0)),
+            training_steps=int(getattr(metrics, "total_training_steps", 0)),
+            epsilon=epsilon, expert_ratio=expert,
+            difficulty=int(game_settings.difficulty), ratchet_frozen=frozen,
+            measurement_active=measuring,
+            measurement_generation=int(getattr(metrics, "measurement_generation", 0)),
+            measurement_frames=int(getattr(metrics, "measurement_frame_count", 0)),
+        )
+
+    def _confirmed_journal_boundary(self, cid, frame, cs, reason, row):
+        if (not self.continuous_training_mode or reason != "zero_score_restart"
+                or row.get("boundary_reason") != reason or row.get("complete") is not True
+                or row.get("client_id") != cid or row.get("client_slot") != cs.get("client_slot")
+                or row.get("game_uid") != cs.get("game_uid") or row.get("score") != 0):
+            raise RuntimeError("Exact journal-confirmed zero-game boundary required")
+        self._require_connection_producer(cid,cs)
+        with self.client_lock:
+            if self.client_states.get(cid) is not cs:
+                raise RuntimeError("Confirmed boundary belongs to another connection")
+            self._game_uid_seq += 1
+            cs["game_uid"] = self._game_uid_seq
+            cs["deaths_this_game"] = 0
+        # Local history/UID must be ready before new journal/life rows.
+        # Defer preserving FIFO enqueue until Journal.observe releases its lock.
+        self._reset_new_game_replay_segment(cid,cs,frame.game_score,enqueue=False)
+        cs["_journal_boundary_reset"] = True
+
+    def _journal_observe(self, cid, frame, cs, new_game, boundary_inputs=None):
+        if self.game_journal is None:
+            return
+        try:
+            cs["journal_experiment"] = self._journal_experiment_label()
+            cs["journal_measurement_active"] = bool(getattr(metrics, "measurement_active", False))
+            cs["journal_measurement_generation"] = int(getattr(metrics, "measurement_generation", 0))
+            self.game_journal.observe(cid, frame, cs, new_game=new_game,
+                                      context=lambda: self._journal_context(cs),
+                                      boundary_inputs=boundary_inputs,
+                                      confirmed_boundary=(lambda reason,row:
+                                          self._confirmed_journal_boundary(cid,frame,cs,reason,row))
+                                          if self.continuous_training_mode else None)
+            if getattr(self.game_journal, "retire_after_game", False):
+                cs["retire_after_game"] = self.game_journal.retirement_for_client(cid) is not None
+        except Exception as exc:
+            if (not getattr(self, "replay_enabled", True)
+                    or getattr(self.game_journal, "retire_after_game", False)):
+                self._fail_inference_only(f"Game journal failed: {exc}")
+                raise RuntimeError("Inference-only game journal failed") from exc
+            now = time.time()
+            if now - self._journal_last_error > 30.0:
+                self._journal_last_error = now
+                print(f"[JOURNAL] record failed: {exc}")
 
     def _alloc_id(self):
         with self.client_lock:
@@ -1123,6 +1582,7 @@ class SocketServer:
                 "ep_dqn_frames": 0,
                 "no_human_no_score_frames": 0,
                 "eval_only": eval_only, "ep_t0": time.time(),
+                "replay_disabled": not getattr(self, "replay_enabled", True),
                 "game_t0": time.time(), "cohort_voided": False,
                 "wx_ring": deque(maxlen=10), "wx_dumped": 0,
                 "prev_score_seen": 0, "last_score_advance": time.time(),
@@ -1202,6 +1662,27 @@ class SocketServer:
             self._clear_preview_cache()
         return preview_cid is not None and int(cid) == int(preview_cid)
 
+    def _preview_flags_for_client(self, cid: int) -> tuple[bool, bool]:
+        # One coherent UI selection snapshot per receive/send boundary. Never
+        # hold client_lock while acquiring metrics.lock. Send takes a FRESH
+        # snapshot after inference; receive flags are not reused for a reply.
+        with self.client_lock:
+            preview_cid, changed = self._ensure_preview_client_selected_locked()
+            selected = preview_cid is not None and int(cid) == int(preview_cid)
+            cs = self.client_states.get(int(cid)) if selected else None
+            capable = isinstance(cs, dict) and bool(cs.get("preview_capable", False))
+        if changed:
+            self._clear_preview_cache()
+        if not selected:
+            return False, False
+        with self.metrics.lock:
+            preview_enabled = (capable
+                and bool(getattr(self.metrics, "preview_capture_enabled", True))
+                and int(getattr(self.metrics, "web_client_count", 0) or 0) > 0)
+            # HUD is selected-only, independent of capture/viewer demand.
+            hud_enabled = bool(getattr(self.metrics, "hud_enabled", False))
+        return bool(preview_enabled), hud_enabled
+
     def _preview_enabled_for_client(self, cid: int) -> bool:
         if not self._is_preview_client(cid):
             return False
@@ -1235,7 +1716,7 @@ class SocketServer:
             self.metrics.game_preview_compression_ratio = 1.0
             self.metrics.game_preview_fps = 0.0
 
-    def _cache_client_preview(self, cid: int, frame: FrameData):
+    def _cache_client_preview(self, cid: int, frame: FrameData, *, _response_trace=None):
         if not self._is_preview_client(cid):
             return
         pixels = frame.preview_pixels
@@ -1251,7 +1732,11 @@ class SocketServer:
         enc_fmt = int(frame.preview_encoded_format)
         enc_bytes = int(frame.preview_encoded_bytes)
         raw_bytes = int(frame.preview_raw_bytes)
+        if _response_trace is not None: _response_trace.start("preview_metrics_wait")
         with self.metrics.lock:
+            if _response_trace is not None:
+                _response_trace.stop("preview_metrics_wait")
+                _response_trace.start("preview_metrics_hold")
             prev_seq = int(getattr(self.metrics, "game_preview_seq", 0))
             prev_ts = float(getattr(self.metrics, "game_preview_updated_ts", 0.0))
             now_ts = time.time()
@@ -1272,6 +1757,7 @@ class SocketServer:
                 self.metrics.game_preview_compression_ratio = float(raw_bytes) / float(enc_bytes)
             else:
                 self.metrics.game_preview_compression_ratio = 1.0
+        if _response_trace is not None: _response_trace.stop("preview_metrics_hold")
 
     def get_client_rows(self) -> list[dict]:
         with self.client_lock:
@@ -1336,12 +1822,19 @@ class SocketServer:
 
     @staticmethod
     def _recv_exact(sock, n, timeout_s=0.5):
-        """Read exactly *n* bytes; return None on timeout, b"" on EOF/socket error."""
+        """Read *n* bytes; None means idle with no bytes consumed.
+
+        A partial timeout is a broken frame, so the handler must close the
+        connection rather than treating the remaining bytes as a new header.
+        EOF/socket errors return b"" as before.
+        """
         buf = bytearray()
-        deadline = time.time() + timeout_s
+        deadline = time.monotonic() + timeout_s
         while len(buf) < n:
-            remaining = deadline - time.time()
+            remaining = deadline - time.monotonic()
             if remaining <= 0:
+                if buf:
+                    raise ConnectionError(f"Partial read timeout ({len(buf)}/{n} bytes)")
                 return None
             try:
                 r, _, _ = select.select([sock], [], [], min(0.05, remaining))
@@ -1369,7 +1862,7 @@ class SocketServer:
         preview_enabled: bool = False,
         hud_enabled: bool = False,
     ):
-        is_eval = self._is_eval_client(cid)
+        is_eval = self._is_eval_client(cid) or bool(getattr(metrics, "measurement_active", False))
         if is_eval:
             # Eval clients always start a fresh game at wave 1: EScr1M measures
             # true full-game performance, not curriculum-boosted play.
@@ -1425,6 +1918,9 @@ class SocketServer:
         # GA1 master difficulty (1-10) to poke into CMOS.  v1 clients keep the
         # 5-byte action so their fixed-size read never desyncs.
         cs = self.client_states.get(cid)
+        if (isinstance(cs, dict) and cs.get("retire_after_game", False)
+                and (not self.continuous_training_mode or cs.get("eval_only",False))):
+            source_u8 |= 0x20
         if isinstance(cs, dict) and cs.get("proto_v2", False):
             # High bit of the difficulty byte = "you are an eval client":
             # eval clients are exempt from the Lua wave-cap soft reset (they
@@ -1440,6 +1936,14 @@ class SocketServer:
 
     def handle_client(self, sock, cid):
         local_accum = 0
+        local_measurement_accum = 0
+        _response_trace = None
+        _response_ordinal = 0
+        _response_connection_ns = time.monotonic_ns()
+        _cleanup_token = None
+        _response_recorder = getattr(self, "_response_timing", None)
+        _gap_connection = self._rejected_gaps.event("connect", cid=cid)
+        _gap_ticket = None
         try:
             sock.setblocking(False)
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -1452,6 +1956,11 @@ class SocketServer:
                 raise ConnectionError("No handshake")
             handshake_val = struct.unpack(">H", ping)[0]
             preview_capable, client_slot, eval_mode = self._parse_client_handshake(handshake_val)
+            # The preview bit advertises capture CAPABILITY, even for Lua
+            # clients launched with -video none / PREVIEW_CLIENT=0.  Streaming
+            # is controlled by our request bits and remains disabled above.
+            if not getattr(self, "replay_enabled", True) and eval_mode != 1:
+                raise ConnectionError("Inference-only server requires explicit eval clients")
             with self.client_lock:
                 cs0 = self.client_states.get(cid)
                 if isinstance(cs0, dict):
@@ -1464,6 +1973,15 @@ class SocketServer:
                     elif eval_mode == 2:
                         self._eval_override[cid] = False
                         cs0["eval_only"] = False
+                if self._cleanup_receipts is not None:
+                    if (self.clients.get(cid) is not threading.current_thread()
+                            or not isinstance(cs0, dict) or eval_mode not in (1, 2)):
+                        raise RuntimeError("Exact owned handler and explicit slot role required")
+                    _cleanup_token = self._cleanup_receipts.begin(
+                        cid, int(client_slot), bool(cs0["eval_only"]),
+                        _response_connection_ns, threading.current_thread(),
+                        endpoints=dict(server=list(sock.getsockname()), peer=list(sock.getpeername())))
+                    cs0["_cleanup_token"] = _cleanup_token
                 _, changed = self._ensure_preview_client_selected_locked()
             if eval_mode in (1, 2):
                 print(f"Client {cid} (slot {client_slot}) forced "
@@ -1475,36 +1993,60 @@ class SocketServer:
             last_payload_time = time.time()
 
             while self.running and not self.shutdown_event.is_set():
+                if _response_trace is not None:
+                    _response_trace.finish('no_response')
+                _response_trace = None
+                if _response_recorder is not None:
+                    _response_cs = self.client_states.get(cid, {})
+                    _response_trace = _response_recorder.begin(cid, _response_cs.get('client_slot', cid),
+                        _response_ordinal + 1, getattr(self, 'preview_cid', None) == cid, connection_ns=_response_connection_ns)
+                if (not getattr(self, "replay_enabled", True)
+                        and not getattr(metrics, "measurement_active", False)):
+                    raise ConnectionError("Inference-only server requires active frozen measurement")
                 # Read 4-byte length header
                 hdr = self._recv_exact(sock, 4, timeout_s=0.25)
                 if hdr is None:
+                    if _response_trace is not None: _response_trace.discard()
                     if time.time() - last_payload_time >= CLIENT_IDLE_TIMEOUT_S:
+                        self._rejected_gaps.event("receive_header_idle", _gap_connection)
                         raise ConnectionError(
                             f"idle timeout ({CLIENT_IDLE_TIMEOUT_S:.1f}s without frames)"
                         )
                     continue
                 if len(hdr) < 4:
+                    self._rejected_gaps.event("receive_header_eof", _gap_connection)
                     raise ConnectionError("EOF")
+                _response_ordinal += 1
+                if _response_trace is not None: _response_trace.mark("payload_wait")
                 dlen = struct.unpack(">I", hdr)[0]
                 if dlen <= 0 or dlen > _MAX_FRAME_PAYLOAD_BYTES:
+                    self._rejected_gaps.event("receive_invalid_length", _gap_connection)
                     raise ConnectionError(f"Invalid payload length {dlen}")
 
                 data = self._recv_exact(sock, dlen, timeout_s=0.5)
                 if data is None or len(data) < dlen:
+                    self._rejected_gaps.event("receive_broken_payload", _gap_connection)
                     raise ConnectionError("Broken payload")
+                if _response_trace is not None:
+                    _response_trace.mark('parse_cache')
+                    if self.async_buffer is not None:
+                        _response_trace.observe_queue(self.async_buffer, ingress=True)
                 last_payload_time = time.time()
+                self._rejected_gaps.event("received", _gap_connection)
+                _gap_ticket = None
 
                 if len(data) >= 2:
                     n = struct.unpack(">H", data[:2])[0]
                     if n != WIRE_PARAMS_COUNT:
+                        self._rejected_gaps.event("param_mismatch", _gap_connection)
                         print(f"Client {cid}: param mismatch {n} != {WIRE_PARAMS_COUNT}")
                         break
                 else:
+                    self._rejected_gaps.event("short_payload", _gap_connection)
                     break
 
-                preview_enabled = self._preview_enabled_for_client(cid)
-                hud_enabled = self._hud_enabled_for_client(cid)
-                should_parse_preview = bool(preview_enabled and self._is_preview_client(cid))
+                preview_enabled, hud_enabled = self._preview_flags_for_client(cid)
+                should_parse_preview = bool(preview_enabled)
 
                 frame = parse_frame_data(data, parse_preview=should_parse_preview)
                 if frame is not None and frame.lives >= 0:
@@ -1513,15 +2055,31 @@ class SocketServer:
                     if isinstance(_csv, dict) and not _csv.get("proto_v2"):
                         _csv["proto_v2"] = True
                 if not frame:
-                    sock.sendall(self._pack_action(
-                        -1, -1, _SRC_NONE, cid,
-                        preview_enabled=preview_enabled,
-                        hud_enabled=hud_enabled,
-                    ))
+                    if _response_trace is not None: _response_trace.start("client_lock_wait")
+                    with self.client_lock:
+                        if _response_trace is not None:
+                            _response_trace.stop("client_lock_wait")
+                            _response_trace.start("client_lock_hold")
+                        self._rejected_gaps.event("reject", _gap_connection, reason="parse_none",
+                            cs=self.client_states.get(cid))
+                    if _response_trace is not None: _response_trace.stop("client_lock_hold")
+                    try:
+                        if _response_trace is not None: _response_trace.mark("action_write")
+                        sock.sendall(self._pack_action(
+                            -1, -1, _SRC_NONE, cid,
+                            preview_enabled=preview_enabled,
+                            hud_enabled=hud_enabled,
+                        ))
+                        if _response_trace is not None: _response_trace.finish("parse_reject", response_sent=True)
+                    except BaseException:
+                        self._rejected_gaps.event("neutral_result", _gap_connection, ok=False)
+                        raise
+                    self._rejected_gaps.event("neutral_result", _gap_connection, ok=True)
                     continue
                 if should_parse_preview and frame.preview_pixels:
-                    self._cache_client_preview(cid, frame)
+                    self._cache_client_preview(cid, frame, _response_trace=_response_trace)
 
+                if _response_trace is not None: _response_trace.mark("classify")
                 # ── Marathon accounting: unwrap score + wave, reject crashes ─
                 # Levels routinely pass 255 (byte counter wraps ~mod 256) and
                 # the BCD score register wraps at a power of 10.  Every frame
@@ -1545,11 +2103,28 @@ class SocketServer:
                 _wrap_note = None
                 _prev_for_log = None
                 _is_new_game = False
+                _boundary_inputs = None
+                if _response_trace is not None: _response_trace.start("client_lock_wait")
                 with self.client_lock:
+                    if _response_trace is not None:
+                        _response_trace.stop("client_lock_wait")
+                        _response_trace.start("client_lock_hold")
                     _cs0 = self.client_states.get(cid)
                     if _cs0 is not None:
                         _raw_sc = int(frame.game_score)
                         _raw_wv = int(frame.level_number)
+                        if self.game_boundary_diagnostics:
+                            # Connection-local previous ACCEPTED wire sample;
+                            # preserve current wire fields before score coercion
+                            # or unwrapping. No payload/RAM/state array retained.
+                            _diag_current = (
+                                _raw_sc, _raw_wv, bool(frame.player_alive),
+                                bool(frame.done), bool(frame.start_pressed),
+                                int(getattr(frame, "lives", -1)),
+                                int(_cs0.get("frames", 0)),
+                            )
+                            _diag_previous = _cs0.get("_boundary_previous_accepted")
+                            _diag_last_start_before = int(_cs0.get("last_start_frame", -10**9))
                         if frame.start_pressed:
                             _cs0["last_start_frame"] = int(_cs0.get("frames", 0))
                         _recent_start = (int(_cs0.get("frames", 0))
@@ -1612,6 +2187,21 @@ class SocketServer:
                                 _wrap_note = (f"[UNWRAP] cid={cid} score rolled "
                                               f"{_prev_sc:,} -> {_raw_sc:,} (+{_mod:,}); "
                                               f"true {_cs0['score_offset'] + _raw_sc:,}")
+                            elif _continuous_play_score_dip(
+                                    frame, _cs0, _prev_sc, _prev_wv, _recent_start):
+                                # This must precede the broad <=100K new-game
+                                # branch: even a -50 early-game carry tear used
+                                # to split a live game and admit a bogus final.
+                                _cs0["coerced_score_dips"] = int(_cs0.get("coerced_score_dips", 0)) + 1
+                                _dip_now = time.time()
+                                if _dip_now - float(_cs0.get("last_score_dip_note", 0.0)) >= 30.0:
+                                    _cs0["last_score_dip_note"] = _dip_now
+                                    _wrap_note = (
+                                        f"[INGEST] cid={cid} continuous-play score dip "
+                                        f"{_prev_sc:,} -> {_raw_sc:,} at wave {_raw_wv}; "
+                                        "kept game id and monotone score")
+                                frame.game_score = _prev_sc
+                                _raw_sc = _prev_sc
                             elif _raw_sc <= _new_game_max:
                                 _cs0["score_offset"] = 0
                                 _cs0["wave_offset"] = 0
@@ -1661,10 +2251,23 @@ class SocketServer:
                                 _wrap_note = (_wrap_note or f"[UNWRAP] cid={cid}") + (
                                     f"  [missed-wrap heal: true wave "
                                     f"{_cs0['wave_offset'] + _raw_wv}]")
+                            if self.game_boundary_diagnostics:
+                                # Primitive tuples only while enabled; the
+                                # journal expands a dict ONLY when _begin runs.
+                                # Rejected frames cannot advance this tracker.
+                                _boundary_inputs = (
+                                    _diag_previous, _diag_current, _prev_sc, _prev_wv,
+                                    bool(_cs0.get("player_alive", False)),
+                                    _diag_last_start_before,
+                                    int(_cs0.get("last_start_frame", -10**9)),
+                                    bool(_recent_start), bool(_is_new_game), _verdict,
+                                )
+                                _cs0["_boundary_previous_accepted"] = _diag_current
                             _cs0["raw_score_prev"] = _raw_sc
                             _cs0["raw_wave_prev"] = _raw_wv
                             frame.game_score = int(_cs0.get("score_offset", 0)) + _raw_sc
                             frame.level_number = int(_cs0.get("wave_offset", 0)) + _raw_wv
+                if _response_trace is not None: _response_trace.stop("client_lock_hold")
                 if _wrap_note:
                     print(_wrap_note)
                 if _verdict != "accept":
@@ -1675,20 +2278,42 @@ class SocketServer:
                         print(f"[INGEST] {_verdict}: cid={cid} raw={frame.game_score:,} "
                               f"vs baseline {(_prev_for_log or 0):,} — one frame rejected, "
                               f"baseline kept (torn BCD read or crash frame)")
-                    sock.sendall(self._pack_action(
-                        -1, -1, _SRC_NONE, cid,
-                        preview_enabled=preview_enabled,
-                        hud_enabled=hud_enabled,
-                    ))
+                    if _response_trace is not None: _response_trace.start("client_lock_wait")
+                    with self.client_lock:
+                        if _response_trace is not None:
+                            _response_trace.stop("client_lock_wait")
+                            _response_trace.start("client_lock_hold")
+                        self._rejected_gaps.event("reject", _gap_connection,
+                            reason=_verdict.replace("-", "_"), cs=self.client_states.get(cid))
+                    if _response_trace is not None: _response_trace.stop("client_lock_hold")
+                    try:
+                        if _response_trace is not None: _response_trace.mark("action_write")
+                        sock.sendall(self._pack_action(
+                            -1, -1, _SRC_NONE, cid,
+                            preview_enabled=preview_enabled,
+                            hud_enabled=hud_enabled,
+                        ))
+                        if _response_trace is not None: _response_trace.finish("classifier_reject", response_sent=True)
+                    except BaseException:
+                        self._rejected_gaps.event("neutral_result", _gap_connection, ok=False)
+                        raise
+                    self._rejected_gaps.event("neutral_result", _gap_connection, ok=True)
                     continue
 
                 # Single-frame compact input; stacked current-first with recent history.
                 single_state = slice_model_state(frame.state)
 
+                if _response_trace is not None: _response_trace.start("client_lock_wait")
                 with self.client_lock:
+                    if _response_trace is not None:
+                        _response_trace.stop("client_lock_wait")
+                        _response_trace.start("client_lock_hold")
                     if cid not in self.client_states:
                         break
                     cs = self.client_states[cid]
+                    _gap_ticket = self._rejected_gaps.event("accepted", _gap_connection, cs=cs,
+                        score=int(frame.game_score), wave=int(frame.level_number),
+                        alive=bool(frame.player_alive), done=bool(frame.done), new_game=bool(_is_new_game))
                     cs["frames"] += 1
                     if cs["frames"] == 1:
                         # First frame of a connection: clients (re)connect
@@ -1736,25 +2361,47 @@ class SocketServer:
                         cs["fps"] = float(cs.get("fps_frames", 0)) / el
                         cs["fps_frames"] = 0
                         cs["last_time"] = now
+                if _response_trace is not None: _response_trace.stop("client_lock_hold")
 
+                if _response_trace is not None: _response_trace.mark("state")
+                measuring = self._sync_measurement_boundary(cid, cs, frame.game_score)
+                if (_is_new_game and not measuring
+                        and not cs.get("replay_disabled", False)):
+                    self._reset_new_game_replay_segment(cid, cs, frame.game_score)
+                self._rejected_gaps.event("after_reset", _gap_ticket, cs=cs, writable=self._replay_writable(cs))
                 model_state = self._stack_model_state(cs, single_state)
 
+                # Measurement is separate from per-life RL terminal handling.
+                # The accepted ingest classifier catches small-score resets,
+                # unlike the legacy ratchet's >=5,000-point cohort gate.
+                if _response_trace is not None: _response_trace.mark("journal")
+                self._journal_observe(cid, frame, cs, _is_new_game,
+                                      boundary_inputs=_boundary_inputs)
+                if cs.pop("_journal_boundary_reset",False):
+                    # The confirmed zero boundary cleared the old history after
+                    # the first stack build. Rebuild before any new replay.
+                    if self.async_buffer is not None:
+                        self.async_buffer.reset_client_async(cid)
+                    model_state = self._stack_model_state(cs,single_state)
+
+                if _response_trace is not None: _response_trace.mark("metrics_aggregate")
                 # Peak score and rolling score/level telemetry are shared
                 # metrics state; guard with metrics.lock for dashboard reads.
-                metrics.note_game_score(
-                    frame.game_score, frame.level_number,
-                    score_delta=max(0, int(frame.game_score)
-                                    - int(cs.get("last_game_score", frame.game_score))))
+                if not getattr(metrics, "measurement_active", False):
+                    metrics.note_game_score(
+                        frame.game_score, frame.level_number,
+                        score_delta=max(0, int(frame.game_score)
+                                        - int(cs.get("last_game_score", frame.game_score))))
 
                 local_accum += 1
+                local_measurement_accum += int(measuring)
                 if local_accum >= BATCH:
-                    frames_advanced = local_accum
-                    metrics.update_frame_count(delta=local_accum)
+                    self._account_frame_batch(local_accum, local_measurement_accum)
                     local_accum = 0
-                    metrics.update_epsilon(frames_advanced=frames_advanced)
-                    metrics.update_expert_ratio()
+                    local_measurement_accum = 0
                     self._calc_avg_game_state()
 
+                if _response_trace is not None: _response_trace.mark("previous_step")
                 # ── DIAGNOSTIC: wave-transition frame ordering (DQN_WAVE_PROBE=1) ──
                 # Tests whether Robotron's wave transition asserts
                 # STATUS_PLAYER_INACTIVE (main.lua read_player_alive), which
@@ -1809,7 +2456,10 @@ class SocketServer:
                     pass
 
                 # ── Process previous step ───────────────────────────────
-                if cs.get("last_state") is not None and cs.get("last_action") is not None:
+                if (cs.get("last_state") is not None and cs.get("last_action") is not None
+                        and not getattr(metrics, "measurement_active", False)
+                        and cs.get("prev_action_source") != "measurement"):
+                    self._rejected_gaps.event("previous_step", _gap_ticket)
                     mv_i, fr_i = cs["last_action"]
                     try:
                         score_delta_probe = max(0, int(frame.game_score) - int(cs.get("last_game_score", frame.game_score)))
@@ -1873,7 +2523,7 @@ class SocketServer:
                     # them cannot corrupt EScr1M: eval behavior stays pure
                     # greedy regardless of where its frames go.  Only the
                     # ratchet-frozen measurement case remains excluded.
-                    if self.agent and not metrics.ratchet_frozen:
+                    if self.agent and self._replay_writable(cs):
                         tag = cs.get("prev_action_source", "dqn")
                         # Positive training terminal (ported from expert2):
                         # clearing a wave closes the n-step episode for REPLAY
@@ -1901,23 +2551,42 @@ class SocketServer:
                                 cs["last_clear_frame"] = int(cs["frames"])
                         nstep = cs.get("nstep")
                         if nstep is not None:
+                            self._rejected_gaps.event("nstep_before", _gap_ticket, nstep=nstep, actor=tag, done=bool(training_done))
                             joint = combine_action(mv_i, fr_i)
                             matured = nstep.add(cs["last_state"], joint, total_r,
                                                 model_state, bool(training_done),
                                                 actor=tag, priority_reward=total_r,
                                                 interest=interest)
+                            self._rejected_gaps.event("nstep_after", _gap_ticket, count=len(matured))
                             for s0, a, Rn, pR, sn, dn, h, act, intr in matured:
                                 mv_n, fr_n = split_joint_action(a)
+                                self._rejected_gaps.event("enqueue_called", _gap_ticket)
+                                if _response_trace is not None:
+                                    _response_trace.observe_queue(self.async_buffer)
+                                    _response_trace.start("enqueue_wait")
                                 self.async_buffer.step_async(
                                     s0, (mv_n, fr_n), Rn, sn, bool(dn),
                                     client_id=cid, actor=act, horizon=int(h), priority_reward=pR,
                                     interest=intr)
+                                if _response_trace is not None:
+                                    _response_trace.stop("enqueue_wait")
+                                    _response_trace.observe_queue(self.async_buffer)
+                                self._rejected_gaps.event("enqueue_returned", _gap_ticket)
                         else:
+                            self._rejected_gaps.event("one_step", _gap_ticket, actor=tag, done=bool(training_done))
+                            self._rejected_gaps.event("enqueue_called", _gap_ticket)
+                            if _response_trace is not None:
+                                _response_trace.observe_queue(self.async_buffer)
+                                _response_trace.start("enqueue_wait")
                             self.async_buffer.step_async(
                                 cs["last_state"], (mv_i, fr_i), total_r,
                                 model_state, bool(training_done), client_id=cid,
                                 actor=tag, horizon=1, priority_reward=total_r,
                                 interest=interest)
+                            if _response_trace is not None:
+                                _response_trace.stop("enqueue_wait")
+                                _response_trace.observe_queue(self.async_buffer)
+                            self._rejected_gaps.event("enqueue_returned", _gap_ticket)
 
                     cs["total_reward"] += total_r
                     cs["ep_subj_reward"] = cs.get("ep_subj_reward", 0.0) + subj_r
@@ -1937,14 +2606,17 @@ class SocketServer:
                 # ── Terminal ────────────────────────────────────────────
                 if frame.done:
                     eval_only = bool(cs.get("eval_only", False))
-                    if self.async_buffer is not None and not metrics.ratchet_frozen:
+                    if self.async_buffer is not None and self._replay_writable(cs):
                         self.async_buffer.boost_pre_death(cid)
                     if not cs.get("was_done", False):
                         ep_len = cs.get("ep_frames", 0)
-                        if eval_only:
+                        record_episode = (not getattr(metrics, "measurement_active", False)
+                                          and cs.get("prev_action_source") != "measurement"
+                                          and not cs.get("replay_episode_partial", False))
+                        if eval_only and record_episode:
                             metrics.add_eval_episode_reward(
                                 cs["total_reward"], frame.game_score, frame.level_number, length=ep_len)
-                        else:
+                        elif record_episode:
                             metrics.add_episode_reward(
                                 cs["total_reward"], cs["ep_dqn_reward"], cs["ep_expert_reward"],
                                 cs.get("ep_subj_reward", 0.0), cs.get("ep_obj_reward", 0.0),
@@ -1955,7 +2627,7 @@ class SocketServer:
                             # rates "elite" against noisy play) and admit
                             # measurement games to the HOF; their scores are
                             # already captured via ratchet_note_eval_episode.
-                            if self.async_buffer is not None and not metrics.ratchet_frozen:
+                            if self.async_buffer is not None and self._replay_writable(cs):
                                 self.async_buffer.boost_elite_episode(
                                     cid, frame.game_score, frame.level_number,
                                     cs["total_reward"], ep_len,
@@ -1973,15 +2645,17 @@ class SocketServer:
                                 add_episode_to_eplen_window(ep_len)
                             except Exception:
                                 pass
+                        cs["replay_episode_partial"] = False
                     cs["was_done"] = True
                     try:
-                        _pv = self._preview_enabled_for_client(cid)
-                        _hd = self._hud_enabled_for_client(cid)
+                        _pv, _hd = self._preview_flags_for_client(cid)
+                        if _response_trace is not None: _response_trace.mark("action_write")
                         sock.sendall(self._pack_action(
                             -1, -1, _SRC_NONE, cid,
                             preview_enabled=_pv,
                             hud_enabled=_hd,
                         ))
+                        if _response_trace is not None: _response_trace.finish("done", response_sent=True)
                     except Exception:
                         break
                     cs["last_state"] = cs["last_action"] = None
@@ -1997,6 +2671,7 @@ class SocketServer:
                     hist = cs.get("frame_history")
                     if hist is not None:
                         hist.clear()
+                    self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_done_neutral_write_completed")
                     continue
 
                 if cs.get("was_done"):
@@ -2027,18 +2702,21 @@ class SocketServer:
                     if (cs.get("nstep") is not None):
                         cs["nstep"].reset()
                     try:
-                        _pv = self._preview_enabled_for_client(cid)
-                        _hd = self._hud_enabled_for_client(cid)
+                        _pv, _hd = self._preview_flags_for_client(cid)
+                        if _response_trace is not None: _response_trace.mark("action_write")
                         sock.sendall(self._pack_action(
                             -1, -1, _SRC_NONE, cid,
                             preview_enabled=_pv,
                             hud_enabled=_hd,
                         ))
+                        if _response_trace is not None: _response_trace.finish("inactive", response_sent=True)
                     except Exception:
                         break
+                    self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_inactive_neutral_write_completed")
                     continue
 
                 # ── Choose action ───────────────────────────────────────
+                if _response_trace is not None: _response_trace.mark("choose_action")
                 metrics.increment_total_controls()
                 mv_idx, fr_idx = 8, 8           # idle defaults
                 action_source = "none"
@@ -2054,7 +2732,7 @@ class SocketServer:
 
                 if self.agent:
                     eval_only = bool(cs.get("eval_only", False))
-                    expert_ratio = 0.0 if eval_only else metrics.get_expert_ratio()
+                    epsilon, expert_ratio, policy_source = self._actor_controls(cs)
                     use_expert = (random.random() < expert_ratio) and not metrics.override_expert and not eval_only
 
                     if use_expert and get_expert_action is not None:
@@ -2065,18 +2743,19 @@ class SocketServer:
                                                            locked_fire=locked_fire)
                         action_source = "expert"
                     else:
-                        epsilon = float(getattr(RL_CONFIG, "eval_epsilon", 0.0)) if eval_only else metrics.get_effective_epsilon()
+                        if _response_trace is not None: _response_trace.mark("inference")
                         t0 = time.perf_counter()
                         if self.inference_batcher is not None:
                             mv_idx, fr_idx, is_eps = self.inference_batcher.infer(model_state, epsilon, locked_fire=locked_fire)
                         else:
                             mv_idx, fr_idx, is_eps = self.agent.act(model_state, epsilon, locked_fire=locked_fire)
                         metrics.add_inference_time(time.perf_counter() - t0)
-                        action_source = "eval" if eval_only else ("epsilon" if is_eps else "dqn")
+                        if _response_trace is not None: _response_trace.mark("choose_action")
+                        action_source = policy_source or ("epsilon" if is_eps else "dqn")
                     if locked_fire is not None:
                         fr_idx = locked_fire
 
-                if action_source in ("dqn", "epsilon"):
+                if action_source in ("dqn", "epsilon") and not getattr(metrics, "measurement_active", False):
                     metrics.update_learner_frame_count()
 
                 # Apply fire hold → the effective fire is what we send AND store.
@@ -2087,11 +2766,13 @@ class SocketServer:
                 cs["last_game_score"] = int(frame.game_score)
                 cs["last_level_number"] = int(frame.level_number)
                 cs["prev_action_source"] = action_source
+                self._rejected_gaps.event("next_action", _gap_ticket, cs=cs)
 
                 move_cmd = action_index_to_wire_dir(int(mv_idx))
                 fire_cmd = action_index_to_wire_dir(int(effective_fire))
                 src_code = {"dqn": _SRC_DQN, "epsilon": _SRC_EPSILON,
-                            "expert": _SRC_EXPERT, "eval": _SRC_EVAL}.get(action_source, _SRC_NONE)
+                            "expert": _SRC_EXPERT, "eval": _SRC_EVAL,
+                            "measurement": _SRC_EVAL}.get(action_source, _SRC_NONE)
 
                 if _DBG_ACTIONS:
                     dn = cs.get("dbg_n", 0) + 1
@@ -2122,30 +2803,44 @@ class SocketServer:
                             f"{qinfo}", flush=True)
 
                 try:
-                    _pv = self._preview_enabled_for_client(cid)
-                    _hd = self._hud_enabled_for_client(cid)
+                    _pv, _hd = self._preview_flags_for_client(cid)
+                    if _response_trace is not None: _response_trace.mark("action_write")
                     sock.sendall(self._pack_action(
                         move_cmd, fire_cmd, src_code, cid,
                         preview_enabled=_pv,
                         hud_enabled=_hd,
                     ))
+                    if _response_trace is not None: _response_trace.finish("accepted", response_sent=True)
                 except Exception:
                     break
+                self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_action_write_completed")
+                if self.replay_enabled:
+                    last_payload_time = time.time()  # Client-idle budget excludes Main's own completed RPC work.
 
         except ConnectionError as e:
+            if not self.shutdown_event.is_set():
+                self._fail_inference_only(f"Client {cid} disconnected: {e}")
             print(f"Client {cid} disconnected: {e}")
         except Exception as e:
-            print(f"Client {cid} error: {e}")
-            traceback.print_exc()
+            if not self.shutdown_event.is_set():
+                self._fail_inference_only(f"Client {cid} error: {e}")
+            # One stream write keeps concurrent client exception records intact.
+            error_record = f"Client {cid} error: {e}\n{traceback.format_exc()}"
+            with self._exception_log_lock:
+                sys.stderr.write(error_record)
+                sys.stderr.flush()
         finally:
+            if _response_trace is not None: _response_trace.finish("disconnected")
+            self._rejected_gaps.event("disconnect", _gap_connection)
             # Flush frames accumulated since the last batch so decay schedules
             # (epsilon / expert ratio) don't lag when a client disconnects.
             if local_accum > 0:
                 try:
-                    metrics.update_frame_count(delta=local_accum)
+                    self._account_frame_batch(local_accum, local_measurement_accum)
                 except Exception:
                     pass
                 local_accum = 0
+                local_measurement_accum = 0
             try:
                 sock.shutdown(socket.SHUT_RDWR)
             except Exception:
@@ -2155,6 +2850,9 @@ class SocketServer:
             except Exception:
                 pass
             with self.client_lock:
+                if (self._cleanup_receipts is not None
+                        and self.clients.get(cid) is not threading.current_thread()):
+                    raise RuntimeError("Original cleanup handler no longer owns its CID reservation")
                 _dead_cs = self.client_states.pop(cid, None)
                 if _dead_cs is not None and _dead_cs.get("raw_score_prev") is not None:
                     self._unwrap_stash[cid] = {
@@ -2163,13 +2861,54 @@ class SocketServer:
                                   "wave_offset", "deaths_this_game", "game_uid")}
                     self._unwrap_stash[cid]["t"] = time.time()
                 self._eval_override.pop(cid, None)
-                self.clients[cid] = None
+                # Keep this handler as the CID reservation until journal and
+                # FIFO replay cleanup finish; a new connection must not race it.
                 _, preview_changed = self._ensure_preview_client_selected_locked()
                 self._sync_client_count_locked()
+            _cid_cleanup_ok = True
+            _cleanup_terminal = None
+            _cleanup_journal_ok = False
+            if self.game_journal is not None and _dead_cs is not None:
+                try:
+                    # Preserve the OLD natural terminal before disconnect
+                    # removes the retirement flag and finishes the next partial.
+                    if _cleanup_token is not None:
+                        _cleanup_terminal = self.game_journal.retirement_for_client(cid)
+                    self.game_journal.disconnect(cid, lambda: self._journal_context(_dead_cs))
+                    _cleanup_journal_ok = True
+                except Exception as exc:
+                    _cid_cleanup_ok = False
+                    self._fail_inference_only(f"Disconnect journal failed: {exc}")
+                    print(f"[JOURNAL] disconnect record failed: {exc}")
+            if not self.shutdown_event.is_set():
+                self._fail_inference_only(f"Client {cid} handler ended before intentional shutdown")
             if preview_changed:
                 self._clear_preview_cache()
+            _cid_reset_ack = None
             if self.async_buffer is not None:
-                self.async_buffer.remove_client(cid)
+                _cleanup_ack_started = time.monotonic()
+                _cleanup_ack_phase = "enqueue"
+                try:
+                    _cid_reset_ack = self.async_buffer.remove_client(cid)
+                    _cleanup_ack_phase = "ack_wait"
+                    _cleanup_ack_outcome = wait_for_fifo_reset_ack(_cid_reset_ack)
+                    if _cleanup_ack_outcome["grace_used"]:
+                        try:
+                            print(f"[REPLAY] disconnect cleanup ACK completed in grace "
+                                  f"cid={cid} token={_cleanup_token} "
+                                  f"ack_elapsed_s={_cleanup_ack_outcome['elapsed_s']:.6f} "
+                                  f"total_elapsed_s={time.monotonic()-_cleanup_ack_started:.6f}", flush=True)
+                        except Exception:
+                            pass  # Diagnostic output never changes the actual cleanup result.
+                except Exception as exc:
+                    _cid_cleanup_ok = False
+                    self._fail_inference_only(f"Disconnect replay cleanup failed: {exc}")
+                    try:
+                        print(f"[REPLAY] disconnect cleanup failed: {exc} "
+                              f"cid={cid} token={_cleanup_token} phase={_cleanup_ack_phase} "
+                              f"elapsed_s={time.monotonic()-_cleanup_ack_started:.6f}", flush=True)
+                    except Exception:
+                        pass  # The original failure remains sticky if logging is unavailable.
             # Ratchet cohort accounting: if this client died mid-game and that
             # game was in the measurement cohort, un-count it so the epoch
             # doesn't wait for a score that can never arrive.
@@ -2178,7 +2917,30 @@ class SocketServer:
                     metrics.ratchet_note_eval_abandoned(float(_dead_cs.get("game_t0", 0.0)))
             except Exception:
                 pass
-            threading.Timer(1.0, self._cleanup).start()
+            if _cleanup_token is None:
+                threading.Timer(1.0, self._cleanup).start()
+            else:
+                _cleanup_timer_done = threading.Event()
+                def _owned_cleanup():
+                    self._cleanup()
+                    _cleanup_timer_done.set()  # Only after the actual callback succeeds.
+                _cleanup_timer = threading.Timer(1.0, _owned_cleanup)
+                _cleanup_timer.start()
+                try:
+                    self._cleanup_receipts.finish(_cleanup_token,
+                        journal_ok=_cleanup_journal_ok, reset_ack=_cid_reset_ack,
+                        timer=_cleanup_timer, timer_done=_cleanup_timer_done,
+                        terminal_receipt=_cleanup_terminal,
+                        error=None if _cid_cleanup_ok else "Original connection cleanup failed")
+                except Exception as exc:
+                    _cid_cleanup_ok = False
+                    print(f"[CLEANUP] receipt publication failed; CID remains reserved: {exc}")
+            # Last per-CID write. Failure leaves the original Thread reserved;
+            # a cleanup timeout never authorizes reuse or a successful handoff.
+            with self.client_lock:
+                if (_cid_cleanup_ok
+                        and self.clients.get(cid) is threading.current_thread()):
+                    self.clients[cid] = None
 
     def _cleanup(self):
         with self.client_lock:
@@ -2188,8 +2950,19 @@ class SocketServer:
             self._sync_client_count_locked()
 
     def _calc_avg_game_state(self):
+        if getattr(metrics, "measurement_active", False):
+            return
+        # One deadline per server, shared by every handler. The outer check
+        # avoids client_lock on almost all calls; the locked check closes races.
+        if time.monotonic() < getattr(self, "_avg_game_state_next_monotonic", 0.0):
+            return
         try:
             with self.client_lock:
+                now = time.monotonic()
+                if (now < getattr(self, "_avg_game_state_next_monotonic", 0.0)
+                        or getattr(metrics, "measurement_active", False)):
+                    return
+                self._avg_game_state_next_monotonic = now + 0.250
                 lvls = [
                     s.get("level_number", 0)
                     for s in self.client_states.values()
@@ -2208,8 +2981,9 @@ class SocketServer:
                 peak_level = max(lvls) if lvls else None
             metrics.note_game_state_averages(avg_level, avg_score, peak_level)
             with metrics.lock:
-                metrics.eval_now_level = (
-                    sum(eval_lvls) / len(eval_lvls) if eval_lvls else 0.0)
+                if not getattr(metrics, "measurement_active", False):
+                    metrics.eval_now_level = (
+                        sum(eval_lvls) / len(eval_lvls) if eval_lvls else 0.0)
         except Exception:
             pass
 
@@ -2260,6 +3034,7 @@ class SocketServer:
                     t.start()
         except Exception as e:
             if not self.shutdown_event.is_set():
+                self._fail_inference_only(f"Socket server failed: {e}")
                 print(f"Server error: {e}")
                 traceback.print_exc()
         finally:

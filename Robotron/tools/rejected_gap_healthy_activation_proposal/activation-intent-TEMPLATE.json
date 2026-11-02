@@ -1,0 +1,19 @@
+{
+  "schema": "robotron-rejected-gap-healthy-activation-intent-v1",
+  "owner": null,
+  "running_phase": null,
+  "phase_id": null,
+  "sources": null,
+  "quality_release": null,
+  "regression_result": null,
+  "combined_manifest": null,
+  "boot_newest_only": true,
+  "no_weight_or_optimizer_rollback": true,
+  "retain_original_fleet": true,
+  "target_batch_size": 4096,
+  "target_lr_scale": 0.5,
+  "telemetry_environment": {
+    "ROBOTRON_REJECTED_GAP_TELEMETRY": "1"
+  },
+  "fleet_actions_forbidden": true
+}

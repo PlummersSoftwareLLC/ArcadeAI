@@ -1,0 +1,21 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/launch-KL-trial02-root-20261017.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/launch-CE2048-trial01-root-20261017.py
+@@ -1,4 +1,4 @@
+-"""Root-only retained-unit scheduling for the one immutable KL trial."""
++"""Root-only retained-unit scheduling for the one immutable CE2048 trial."""
+ import hashlib
+ import json
+ import os
+@@ -10,9 +10,9 @@
+ 
+ REPO=Path('/home/dave/source/repos/ArcadeAI')
+ RUN=REPO/'Robotron/logs/managed-learning-20261015/run-26'
+-PREP=RUN/'rawKL-trial02-final-root-preparation-20261017'
+-EXEC=RUN/'rawKL-trial02-root-execution-20261017'
+-UNITS=dict(deadline='robotron-rawkl-trial02-deadline-20261017.service',controller='robotron-rawkl-trial02-controller-20261017.service')
++PREP=RUN/'CE2048-trial01-final-root-preparation-20261017'
++EXEC=RUN/'CE2048-trial01-root-execution-20261017'
++UNITS=dict(deadline='robotron-ce2048-trial01-deadline-20261017.service',controller='robotron-ce2048-trial01-controller-20261017.service')
+ 
+ def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
+ def save(path,value):

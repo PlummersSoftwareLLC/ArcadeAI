@@ -1,0 +1,130 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/stop-sources/current227_stop_recovery_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/preview-flags-preserveRAM-trainer-restart-original01/stop-sources/current192_stop_recovery_v1.py
+@@ -31,11 +31,12 @@
+     return module
+ 
+ 
+-def owned_control_variants(base_bytes, case):
++def owned_control_variants(base_bytes, case, *, validated_base_measurement=None):
+     require(type(case) is str and case.startswith('scorecarry-') and '/' not in case,
+             'Exact case label required')
+     base = json.loads(base_bytes)
+-    require(base.get('measurement') is None, 'Original control already owned a measurement')
++    require(base.get('measurement') is None or base['measurement'] == validated_base_measurement,
++            'A nonempty base control requires its source-bound closed authority')
+     result = {base_bytes}
+     for purpose in ('drain','final'):
+         value = dict(base,measurement=dict(label=case+'-'+purpose,checkpoint=None,cohort_s=3600,timeout_s=7200))
+@@ -43,10 +44,11 @@
+     return result
+ 
+ 
+-def validate_state(live_job, state, prepared, base, fleet, listener, dashboard):
++def validate_state(live_job, state, prepared, base, fleet, supplemental0, listener, dashboard):
+     require(state['schema'] == 'robotron-owned-handoff-recovery-state-v1'
+             and state['case'] == live_job['case'] and state['original_owner'] == base['owner']
+             and state['original_fleet'] == prepared['original_fleet']
++            and state['original_supplemental0'] == prepared['original_supplemental0']
+             and state['original_listener'] == prepared['original_listener'], 'Foreign recovery state')
+     require(state['control_path'] == str(live_job['control_path'])
+             and state['control_path'].endswith('/Robotron/models_dqn/learning_control.json'), 'Control scope differs')
+@@ -59,9 +61,21 @@
+     require(state['original_dashboard_accept'] == prepared['original_dashboard_accept']
+             and dashboard['owner'] == base['owner']
+             and (dashboard['tid'], dashboard['starttime_ticks'], dashboard['comm']) ==
+-                (3617548, 78860910, 'Thread-1 (serve')
++                (1062559, 117472924, 'Thread-1 (serve')
+             and state['dashboard_child'] == '/sys/fs/cgroup'+base['owner']['cgroup']+'/dashboard-'+live_job['case']
+             and type(state['dashboard_accept_held']) is bool, 'Foreign HTTP recovery scope')
++    require(base['schema'] == 'robotron-current-fresh192-continuation-registry-v1'
++            and (base['owner']['pid'],base['owner']['starttime_ticks']) == (1062324,117468652)
++            and set(state['producer_holds']) == set(state['producer_roots']) == {'fleet','supplemental0'}
++            and all(type(v) is bool for v in state['producer_holds'].values()),
++            'Exact original192 split-owner recovery context required')
++    for key, producer in (('fleet',fleet),('supplemental0',supplemental0)):
++        require(all(producer[k] == base['actual_owners'][key][k] for k in
++                    ('pid','starttime_ticks','unit','invocation_id','cgroup'))
++                and state['producer_roots'][key] == '/sys/fs/cgroup'+producer['cgroup']
++                and producer['original_actors'] == [a for a in base['actors']
++                    if base['actor_ownership'][str(a['slot'])] == key],
++                'Foreign original input producer recovery scope')
+     return expected_child
+ 
+ 
+@@ -155,11 +169,13 @@
+     return result
+ 
+ 
+-def restore_original_control(linux, live_job, state, base_bytes):
++def restore_original_control(linux, live_job, state, base_bytes, base_binding):
+     path = Path(state['control_path'])
+     current = linux.full_pin(path)
+     raw = path.read_bytes()
+-    require(raw in owned_control_variants(base_bytes,live_job['case']),
++    closed = linux.validate_base_control(base_binding,base_bytes,
++        closed_base_measurement=live_job['closed_base_measurement'])
++    require(raw in owned_control_variants(base_bytes,live_job['case'],validated_base_measurement=closed),
+             'A foreign control update must not be overwritten')
+     if raw == base_bytes:
+         return dict(status='original_control_already_restored',pin=current)
+@@ -167,16 +183,20 @@
+     return dict(status='exact_original_control_restored',pin=pin)
+ 
+ 
+-def thaw_original_fleet(linux, fleet):
++def thaw_original_fleet(linux, fleet, *, hold_owned):
+     linux.live_owner(fleet)
+-    for actor in fleet['original192_actors']:
++    for actor in fleet['original_actors']:
+         require(linux.process_start(actor['pid']) == actor['starttime_ticks']
+                 and sorted(os.sched_getaffinity(actor['pid'])) == actor['mask'],
+                 'An original emulator identity/affinity changed')
+     root = Path('/sys/fs/cgroup'+fleet['cgroup'])
+     require(root.resolve(strict=True) == root and root.stat().st_uid == os.getuid(), 'Foreign fleet cgroup')
++    if not hold_owned:
++        require((root/'cgroup.freeze').read_text().strip() == '0',
++                'Do not release a producer hold not recorded by this controller')
++        return dict(status='original_input_group_already_unheld_no_write', actors=len(fleet['original_actors']))
+     (root/'cgroup.freeze').write_text('0\n')
+-    return dict(status='original192_fleet_thawed_without_process_restart')
++    return dict(status='original_owned_input_group_thawed_without_process_restart', actors=len(fleet['original_actors']))
+ 
+ 
+ def recover(live_job, state_path, *, observation_pending):
+@@ -184,13 +204,14 @@
+     prepared = json.loads(linux.checked(live_job['prepared']))
+     base = json.loads(linux.checked(prepared['original_main']))
+     fleet = json.loads(linux.checked(prepared['original_fleet']))
++    supplemental0 = json.loads(linux.checked(prepared['original_supplemental0']))
+     listener = json.loads(linux.checked(prepared['original_listener']))
+     dashboard = json.loads(linux.checked(prepared['original_dashboard_accept']))
+     base_bytes = linux.checked(live_job['base_control_archive'])
+     require(hashlib.sha256(base_bytes).hexdigest() == live_job['base_control_sha256'], 'Original control archive differs')
+     state_pin = linux.full_pin(state_path)
+     state = json.loads(linux.checked(state_pin))
+-    validate_state(live_job,state,prepared,base,fleet,listener,dashboard)
++    validate_state(live_job,state,prepared,base,fleet,supplemental0,listener,dashboard)
+     if state['original_stop_sent']:
+         adapter = load(live_job['poststop_adapter'],'_owned_poststop_recovery')
+         require(callable(getattr(adapter,'recover_committed',None)), 'Complete committed recovery adapter required')
+@@ -204,8 +225,9 @@
+     for name, function in (
+         ('dashboard',lambda: release_original_dashboard(linux,state,dashboard)),
+         ('listener',lambda: release_original_listener(linux,state,listener)),
+-        ('control',lambda: restore_original_control(linux,live_job,state,base_bytes)),
+-        ('fleet',lambda: thaw_original_fleet(linux,fleet))):
++        ('control',lambda: restore_original_control(linux,live_job,state,base_bytes,base)),
++        ('fleet',lambda: thaw_original_fleet(linux,fleet,hold_owned=state['producer_holds']['fleet'])),
++        ('supplemental0',lambda: thaw_original_fleet(linux,supplemental0,hold_owned=state['producer_holds']['supplemental0']))):
+         try:
+             result[name] = function()
+         except BaseException as error:
+@@ -263,7 +285,7 @@
+     linux = load(job['backend_source'],'_rescue_linux_primitives')
+     for entry in (job['prepared'],job['controller_source'],job['recovery_source']):
+         linux.checked(entry)
+-    require(job['schema'] == 'robotron-current-continuation-stop-only-rescue-job-v1'
++    require(job['schema'] == 'robotron-current-fresh192-preserveRAM-stop-rescue-job-v1'
+             and job['case'].startswith('scorecarry-'), 'Explicit independent rescue job required')
+     value = linux.show(job['unit'])
+     owner = dict(pid=os.getpid(),starttime_ticks=linux.process_start(os.getpid()),unit=job['unit'],

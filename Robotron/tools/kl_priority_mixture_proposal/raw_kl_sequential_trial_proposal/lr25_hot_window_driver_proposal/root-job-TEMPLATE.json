@@ -1,0 +1,28 @@
+{
+  "schema": "robotron-root-lr25-hot-window-driver-job-v1",
+  "activation_authorized": false,
+  "precommit": null,
+  "runtime_baseline": null,
+  "readiness": null,
+  "control_before": null,
+  "completed_slot": null,
+  "startup_tag": null,
+  "tags": {
+    "barrier": null,
+    "endpoint": null
+  },
+  "window": {
+    "policy": {
+      "learner_frames": 8000000,
+      "learner_accepted": 6000000,
+      "poll_s": 1,
+      "API_age_s": 5,
+      "pipeline_age_s": 5,
+      "unobservable_s": 30,
+      "no_applied_s": 60,
+      "cutoff_s": null
+    },
+    "preparation_timeout_s": null
+  },
+  "output_directory": null
+}

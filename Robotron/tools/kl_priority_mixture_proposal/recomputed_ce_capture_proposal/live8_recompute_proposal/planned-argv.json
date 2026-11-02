@@ -1,0 +1,16 @@
+{
+  "status": "SOURCE_PREPARED_PENDING_FINAL_PEERS_AND_ROOT_TESTS",
+  "test_argv": ["python3", "-B", "-m", "unittest", "Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_recompute_proposal.test_process_scan", "Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_recompute_proposal.test_storage_watcher", "Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_recompute_proposal.test_reconstruction_contract"],
+  "authored_stdlib_methods": 59,
+  "parent_argv": ["ABS_REPO/.venv-gb300/bin/python", "-Xgil=0", "-I", "-B", "ABS_NEW_BUNDLE/cuda_trace_parent.py", "--directory", "ABS_NEW_RUN26_CONDITIONAL8_OUTPUT", "--launch"],
+  "worker_argv": ["ABS_REPO/.venv-gb300/bin/python", "-Xgil=0", "-I", "-B", "ABS_NEW_BUNDLE/cuda_trace_worker.py", "--manifest", "ABS_NEW_OUTPUT/launch-manifest.json", "--variant", "recompute8"],
+  "default": "Literal PLAN_ONLY; no reads/imported helpers/queries/output/Popen",
+  "service": {"prefix": "robotron-snapshot-smoke-", "Type": "exec", "RemainAfterExit": "yes", "Delegate": "cpu memory pids", "DelegateSubgroup": "snapshot-supervisor", "CPUQuota": "200%", "MemoryMax": "16G", "MemorySwapMax": "0", "TasksMax": 128, "RuntimeMaxSec": 660, "KillSignal": "SIGINT", "TimeoutStopSec": 90, "SendSIGKILL": "no"},
+  "inner_bounds": {"cpu_threads": 2, "memory_bytes": 17179869184, "vram_allocator_bytes": 12884901888, "vram_process_bytes": 13958643712, "artifact_bytes": 6442450944, "tmpfs_bytes": 134217728, "tasks": 128, "phase_timeout_s": 180, "total_timeout_s": 600},
+  "scheduling": "Root-owned detached3s timer, carrier reaped before trigger; retain original terminal unit until archive+cleanup, no --wait/--collect",
+  "tolerance": {"rtol": 0.0002, "atol": 0.00002, "predicate": "native dtype torch.isclose, equal_nan=False"},
+  "actual_attempts": 0,
+  "conditional_forwards": 8,
+  "qualification_pass": false,
+  "author_execution": false
+}

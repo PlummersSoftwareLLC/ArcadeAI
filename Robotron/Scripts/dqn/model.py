@@ -125,7 +125,7 @@ class LaneSelfAttentionEncoder(nn.Module):
     def forward(self, lane_tokens: torch.Tensor) -> torch.Tensor:
         """lane_tokens: (B, 8, lane_features) → (B, embed_dim)."""
         x = self.norm(self.embed(lane_tokens))          # (B, 8, D)
-        attn_out, _ = self.attn(x, x, x)                # (B, 8, D)
+        attn_out, _ = self.attn(x, x, x, need_weights=False)  # (B, 8, D)
         enriched = self.attn_norm(x + attn_out)         # residual + norm
         return enriched.mean(dim=1)                     # (B, D)
 
@@ -197,7 +197,8 @@ class ObjectSelfAttentionEncoder(nn.Module):
         unmask_first[:, 0] = True
         key_padding_mask = key_padding_mask & ~(all_empty & unmask_first)
         x = self.norm(self.embed(tokens))
-        attn_out, _ = self.attn(x, x, x, key_padding_mask=key_padding_mask)
+        attn_out, _ = self.attn(x, x, x, key_padding_mask=key_padding_mask,
+                                need_weights=False)
         enriched = self.attn_norm(x + attn_out)
         return enriched, present
 
@@ -469,8 +470,14 @@ class RainbowNet(nn.Module):
         # Action-context attention operates on the enriched TOKENS (embed_dim
         # wide), not on the pooled digest, so its dim is the raw embed dim.
         self.action_context_dim = int(cfg.object_attn_dim) if self.use_action_context else 0
-        self.joint_move_ids = torch.arange(NUM_JOINT, dtype=torch.long) // NUM_FIRE
-        self.joint_fire_ids = torch.arange(NUM_JOINT, dtype=torch.long) % NUM_FIRE
+        # Non-persistent buffers follow model.to(device) without adding keys to
+        # existing checkpoints or uploading the same indices every forward.
+        self.register_buffer("joint_move_ids",
+                             torch.arange(NUM_JOINT, dtype=torch.long) // NUM_FIRE,
+                             persistent=False)
+        self.register_buffer("joint_fire_ids",
+                             torch.arange(NUM_JOINT, dtype=torch.long) % NUM_FIRE,
+                             persistent=False)
         if self.use_action_context:
             heads = int(getattr(cfg, "action_context_heads", cfg.object_attn_heads))
             self.move_context_attn = DirectionalObjectAttention(
@@ -738,8 +745,8 @@ class RainbowNet(nn.Module):
 
     def _score_joint_advantage(self, h: torch.Tensor, move_ctx: torch.Tensor, fire_ctx: torch.Tensor) -> torch.Tensor:
         B = h.shape[0]
-        move_ids = self.joint_move_ids.to(device=h.device)
-        fire_ids = self.joint_fire_ids.to(device=h.device)
+        move_ids = self.joint_move_ids
+        fire_ids = self.joint_fire_ids
         joint_ctx = torch.cat([move_ctx[:, move_ids], fire_ctx[:, fire_ids]], dim=-1)
         action_ids = torch.arange(NUM_JOINT, device=h.device)
         emb = self.joint_action_embedding(action_ids)          # (81, De)
@@ -796,8 +803,13 @@ class RainbowNet(nn.Module):
 
     def joint_dist(self, state: torch.Tensor, log: bool = False) -> torch.Tensor:
         """Return joint move×fire action distributions, shape ``(B, 81, atoms)``."""
-        B = state.shape[0]
         h, move_ctx, fire_ctx = self._encode_state(state)
+        return self._joint_from_encoded(h, move_ctx, fire_ctx, log=log)
+
+    def _joint_from_encoded(self, h: torch.Tensor, move_ctx: torch.Tensor | None,
+                            fire_ctx: torch.Tensor | None, log: bool = False) -> torch.Tensor:
+        """Evaluate the joint head using an existing shared state encoding."""
+        B = h.shape[0]
         if self.use_dueling:
             val = F.relu(self.joint_val_fc(h))
             val = self.joint_val_out(val).view(B, 1, self.num_atoms)
@@ -813,6 +825,21 @@ class RainbowNet(nn.Module):
         if self.use_dist:
             return F.log_softmax(atoms, dim=2) if log else F.softmax(atoms, dim=2)
         return atoms
+
+    def training_outputs(self, state: torch.Tensor):
+        """Return joint log probabilities and BC logits in one encoder pass.
+
+        The deployed model has no dropout. Sharing its deterministic encoding
+        preserves the separate joint/BC loss and gradient while avoiding a
+        second object/lane attention, tactical grid, and trunk computation.
+        """
+        h, move_ctx, fire_ctx = self._encode_state(state)
+        return (
+            self._joint_from_encoded(h, move_ctx, fire_ctx, log=True),
+            self.bc_joint_head(h),
+            self.bc_move_head(h),
+            self.bc_fire_head(h),
+        )
 
     def q_values_joint(self, state: torch.Tensor) -> torch.Tensor:
         """Expected joint Q-values, shape ``(B, 81)``."""

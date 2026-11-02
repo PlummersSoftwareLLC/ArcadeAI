@@ -1,0 +1,22 @@
+{
+  "schema": "robotron-parallel-state-fill-unapplied-v1",
+  "utc": "2026-10-16T22:13:37.158499+00:00",
+  "proposal_revision": 2,
+  "worker_model": "explicit-two-thread-owner-with-parent-owned-tickets",
+  "daemon_for_early_process_exit": true,
+  "normal_shutdown": "cancel-pending-drain-claimed-join-owned-workers",
+  "applied": false,
+  "default_enabled": false,
+  "env_gate": "DQN_PARALLEL_STATE_FILL",
+  "files": {
+    "Robotron/Scripts/dqn/replay_buffer.py": {
+      "original_sha256": "28556797d15e0acf9387030b87f9ccce0b18e1e3cfa629b63c2d7239a4206238",
+      "proposed_sha256": "e2b45eb6feb9a742d7a24ffad3044a8ee201aa60ddb73c9662117a72a9fb874f"
+    },
+    "Robotron/Scripts/dqn/agent.py": {
+      "original_sha256": "28977d6b925a4606a61b76438595f45ae054fc81aaaad989ab93e00d98a05668",
+      "proposed_sha256": "c73878f53a37f5d151cfc7a4d1bed69517c9c4fb59a2ba1f1c9cc31670c0be64"
+    }
+  },
+  "patch_sha256": "031d0317f4bd07828ac6df9a61a20c13c02103026b1e2f310a9da9cb8a2540a1"
+}

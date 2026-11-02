@@ -1,0 +1,306 @@
+{
+  "author_executed": false,
+  "author_imported_AST_parsed_or_compiled_target": false,
+  "closed_metadata_context_not_future_runtime_inputs": {
+    "actual_six_fixture_tests_closed_peer": {
+      "bytes": 15665,
+      "identity": {
+        "bytes": 15665,
+        "ctime_ns": 1792324257457402469,
+        "device": 2304,
+        "inode": 81288100,
+        "mode": "0o444",
+        "mtime_ns": 1792324257456402465,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-none-ticket-full-handler-six-tests-independent-saved-review-20261018/review-receipt.json",
+      "sha256": "35e508179a2f2bb68d806ac68f2ee5760678a9a24a04e2eb3466982c6025a3e5"
+    },
+    "calibration_B": {
+      "bytes": 2167,
+      "identity": {
+        "bytes": 2167,
+        "ctime_ns": 1792324476250954893,
+        "device": 2304,
+        "inode": 81288107,
+        "mode": "0o444",
+        "mtime_ns": 1792324476250954893,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-none-ticket-current-main-pacing-calibration-20261018/B.json",
+      "sha256": "89248efb027fd0f01738393d590729757cf0e2e9e6c408c7176aef73528c80e0"
+    },
+    "calibration_E": {
+      "bytes": 2167,
+      "identity": {
+        "bytes": 2167,
+        "ctime_ns": 1792324534175035552,
+        "device": 2304,
+        "inode": 81288108,
+        "mode": "0o444",
+        "mtime_ns": 1792324534175035552,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-none-ticket-current-main-pacing-calibration-20261018/E.json",
+      "sha256": "066c3525eb2fa2649f5476e1d4a377d04af5b6247012514cd96f84b1af38384d"
+    },
+    "fixture_scope_note": {
+      "bytes": 10039,
+      "identity": {
+        "bytes": 10039,
+        "ctime_ns": 1792314581954796598,
+        "device": 2304,
+        "inode": 80642736,
+        "mode": "0o444",
+        "mtime_ns": 1792314581954594741,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_none_ticket_fastpath_proposal/full-handler-deferred-fixture-note-reviewed3.json",
+      "sha256": "48774a2905bf6a78ae13fcead88dc5ae81f909d3432cee364808de3076464841"
+    },
+    "fixture_source_peer": {
+      "bytes": 8668,
+      "identity": {
+        "bytes": 8668,
+        "ctime_ns": 1792314644924532891,
+        "device": 2304,
+        "inode": 81280898,
+        "mode": "0o444",
+        "mtime_ns": 1792314644924532891,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-none-ticket-full-handler-fixture-independent-source-review-20261018/source-review-receipt.json",
+      "sha256": "9c28e2edabc48785acbae1fa2dbbb1cb5430f9b204783ef94c45be0b37c74029"
+    },
+    "root_passive_workload_calibration": {
+      "bytes": 1485,
+      "identity": {
+        "bytes": 1485,
+        "ctime_ns": 1792324534177049479,
+        "device": 2304,
+        "inode": 81288109,
+        "mode": "0o444",
+        "mtime_ns": 1792324534177049479,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-none-ticket-current-main-pacing-calibration-20261018/root-passive-pacing-calibration.json",
+      "sha256": "97a954a374c7ad6361862d9968d32901c84aff75e6b38eeea653c017a431d8fd"
+    }
+  },
+  "fake_boundaries_and_limits": {
+    "clock": "Deterministic per-client virtual time for handler time.time/perf_counter; actual real monotonic pacing and telemetry-origin clock remain separate. No real policy wall-clock equivalence claim.",
+    "cost": "ProcessCPU includes pacing, common fakes, frozen hashing/counters, real shared locks and coordinator. Net getallocatedblocks is NOT allocations/count/bytes/peak; maxrss is cumulative, not arm-local. Fake/hashing contention may dominate.",
+    "interpretation": "Paced wall/frame is NOT throughput. Valid result can support only this synthetic complete-handler differential. NO live producer improvement, 6percent attribution, AI efficacy, state/replay restoration or source adoption claim.",
+    "isolation": "Future extraction uses only authenticated source bytes; imports/module startup excluded, target imports/open/input forbidden, strict unknown dependencies record failures. Benchmark process itself uses only stdlib/source reads/new output and threads.",
+    "journal": "Stub records only score/wave/new_game/done/alive scalars, boundary kwargs and dispatch order. Does NOT compare cid/full frame/client-state at journal dispatch or actual GameJournal rows/I/O.",
+    "metrics": "Real handler calls and real measurement/client locks; per-thread fake metrics sinks/counts instead of actual MetricsData method internals/shared counters. Actual aggregate metrics implementation and average-game-state computation are NOT benchmarked.",
+    "numerics": "Exact fixture Vector(list) scalar stand-in; NO NumPy/Torch/GPU kernels or actual inference/reward calculations. Agent action deterministic(1,2,False), reward deterministic(1,1,0,0,1), interest.25.",
+    "parser": "Two synthetic wire bytes become scalar Vector[slot*100000+tick] and monotonically increasing score at wave2/alive/doneFalse; NO binary/RAM parser validation.",
+    "replay": "Real held nstep dataclass/buffer bodies and reset routine. Async replay step/reset/elite/remove are strict bounded sinks; no physical consumer/ring/banks, sampling or learner implementation.",
+    "wire_cleanup": "No real sockets/network/select/OS receive. EOF is a synthetic ConnectionError after the declared frame budget; source intentional-shutdown/finally executes, socket methods are sinks and Timer records intent without launching a timer callback."
+  },
+  "future_actual_execution": null,
+  "future_argv_template": [
+    "<ROOT_SELECTED_FT314_PYTHON>",
+    "-X",
+    "gil=0",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_none_ticket_paced_full_handler_proposal/benchmark_paced_full_handler.py",
+    "--execute",
+    "--hz",
+    "<ROOT_PRECOMMITTED_ACCEPTED_WIRE_HZ_PER_CONNECTION>",
+    "--ticks",
+    "<ROOT_PRECOMMITTED_DATA_TICKS>",
+    "--max-lateness-ms",
+    "<ROOT_PRECOMMITTED_TOLERANCE>",
+    "--output",
+    "<NEW_DIRECT_RUN26_OUTPUT>",
+    "--expected-source-sha256",
+    "c02e0a7093a3989611534db7b01d8bb1e4c2218da7b8e6d76ee542e3c67882a4"
+  ],
+  "future_root_selection_gates": [
+    "Read/independently review exact sealed source and manifest; no author execution means source inspection is not PASS execution.",
+    "Choose and bind actual FT3.14/GIL0 interpreter; revalidate six source pins and own source hash.",
+    "Verify current release/resources and select one owned original runner with RuntimeMaxSec>=120, adequate192-thread Tasks bound, CPU/memory caps, CUDAhidden. No60s reuse.",
+    "Precommit Hz/ticks/lateness and NEW directrun26 output before launch; one same-process owned launch/observe. No guessing future identity.",
+    "Preserve original actual exit/all archives/owned release and every invalid arm; no retry/extension/selective discard.",
+    "Any production benefit or activation requires separate future decision; benchmark changes no selected source."
+  ],
+  "owned_files": [
+    {
+      "bytes": 37517,
+      "identity": {
+        "bytes": 37517,
+        "ctime_ns": 1792325256835971145,
+        "device": 2304,
+        "inode": 81288117,
+        "mode": "0o444",
+        "mtime_ns": 1792325229044868051,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_none_ticket_paced_full_handler_proposal/benchmark_paced_full_handler.py",
+      "sha256": "c02e0a7093a3989611534db7b01d8bb1e4c2218da7b8e6d76ee542e3c67882a4"
+    }
+  ],
+  "protocol": {
+    "bounded_attempt": "110s internal total including setup/drain; ready gate<=8s/arm; synthetic cleanup<=2s shared arm budget; future outer RuntimeMaxSec>=120 and enough Tasks for192 threads. Never use old60s runner.",
+    "census": "Each connection exactly warmup+data admitted/completed/metric/learner frames; data replay producer calls and full-body completions exactly data ticks. Helper counters connections192, payloads_complete==accepted_frames==192*(warm+data), ALL other counters0, no pending/closing/witness/client states after drain.",
+    "exact_comparison": "Per-client sink counts and SHA256 over frozen arguments/kwargs/order for all4 phases, full deterministic client/stash state hashes, all frame/exposure counts and exact drained helper counter census. No tolerance for action/replay-producer/metrics or selected journal scalar changes.",
+    "fixed_completion_allowance": "Exactly one period, declared before start for EVERY arm, after the final scheduled tick interval. Adds ZERO ticks; all allowance processCPU and wall included. Final full body through next receive entry must finish before the fixed cutoff. Never extended.",
+    "future_runtime_attestation": "Require actual CPython3.14, sysconfig Py_GIL_DISABLED==1 and sys._is_gil_enabled()False; record version/executable before setup, after setup and after arm/attempt. Flags alone are insufficient.",
+    "input_bounds": "Explicit10<=Hz<=120; ticks/Hz7.9..8.1s; positive declared lateness<=one period. Hz has no code default; warmup ticks=round(Hz).",
+    "narrow_nondeterminism": "Raw actual helper instance monotonic origin is recorded but excluded from equivalent-state hashes. No gap witnesses occur. Client UID is deterministically seeded cid+1 before ordinary frames, avoiding unrelated initial UID allocation-order differences.",
+    "order": [
+      "A",
+      "B",
+      "B",
+      "A",
+      "B",
+      "A",
+      "A",
+      "B"
+    ],
+    "outputs": "Create-only intent.json/result.json under a root-supplied NEW directrun26 directory; immutable444/fsynced; compact JSON<=4MiB each, bounded first32 unexpected-operation messages, no per-tick files or unbounded traces.",
+    "pacing": "All192 connect before first frame; common origin250ms after ready; evenly stagger each slot over one period. Each next scheduled receive must remain in the future. One absolute sleep, never overdue catch-up. A late or overdue actor stops admission and invalidates the arm.",
+    "pairing": "AB / BA / BA / AB; all8 required for ratios. Stop at first invalid arm, preserve completed and partial arm, no retry/extension/discard.",
+    "partial_failure": "Return bounded partial arm/error after bounded synthetic shutdown/drain/join. Unfinished threads make rows unstable and helper snapshot is skipped; no subsequent arm. External owned runner still required for actualhost deadlines.",
+    "primary_profile": "Ordinary accepted playable DQN n3, no rejects/terminals/new games/measurement; all accepted callbacks return None tickets because exact helper has no pending gap. Non-null ticket cost is unsupported here; earlier6-method fake correctness suite is distinct evidence.",
+    "root_inputs": {
+      "data_ticks": null,
+      "external_runner_config": null,
+      "fresh_output_directory": null,
+      "hz_per_connection": null,
+      "max_lateness_ms": null,
+      "selected_FT314_python": null
+    },
+    "server": "One shared server and one real enabled d586 helper per arm;192 native threads, real client/metrics/helper locks. Sequential deterministic client initialization, concurrent actual complete handler bodies.",
+    "timing_output": "Per-thread waits/lateness/max/deadline misses/overdue/body-or-send-after-cutoff, actual admitted/completed/data samples and service elapsed; actual coordinator CPU/wall timestamps and boundary error checks. Any miss means INVALID, no paired cost inference.",
+    "versions": {
+      "A": "Exact held socket f44 bytes, actual complete handle_client and actual13 selected socket methods plus3 globals extracted through the exact540 Driver.load method.",
+      "B": "Strict baf unified patch reconstruction in memory; all context/old bytes required; exact candidate SHA2669dc6cb1dc9965dd8e8e5ceac9ffcb44091d0c119a96ddef86b11d4d27e0db. No application."
+    },
+    "workers": 192
+  },
+  "root_activation_authorized": false,
+  "schema": "robotron-dormant-paced-full-held-handler-guard-benchmark-source-preparation-v1",
+  "source_inputs": {
+    "fixture": {
+      "bytes": 29164,
+      "identity": {
+        "bytes": 29164,
+        "ctime_ns": 1792314164957299686,
+        "device": 2304,
+        "inode": 80642733,
+        "mode": "0o444",
+        "mtime_ns": 1792314078305995707,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_none_ticket_fastpath_proposal/test_full_handler_fastpath_deferred.py",
+      "sha256": "5405888c4f13e3d52f16f8f2470861eca0c7a028c934e6ddfe1437e99bebd75a"
+    },
+    "helper": {
+      "bytes": 12216,
+      "identity": {
+        "bytes": 12216,
+        "ctime_ns": 1792301353397526560,
+        "device": 2304,
+        "inode": 81529014,
+        "mode": "0o444",
+        "mtime_ns": 1792301353397526560,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_proposal/rejected_gap_telemetry_reviewed3.py",
+      "sha256": "d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd"
+    },
+    "nstep": {
+      "bytes": 3592,
+      "identity": {
+        "bytes": 3592,
+        "ctime_ns": 1791907574326289547,
+        "device": 2304,
+        "inode": 79696089,
+        "mode": "0o664",
+        "mtime_ns": 1791907574326289547,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/nstep_buffer.py",
+      "sha256": "e46f03e9a626b3a24dea702344b0bbf050f1fdc5af672fc8fc9d18e6afef74c1"
+    },
+    "patch": {
+      "bytes": 6958,
+      "identity": {
+        "bytes": 6958,
+        "ctime_ns": 1792309832985733061,
+        "device": 2304,
+        "inode": 80638036,
+        "mode": "0o444",
+        "mtime_ns": 1792309832985733061,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_none_ticket_fastpath_proposal/unapplied.patch",
+      "sha256": "bafc74d09e0d305a10f26a65fccbfd0b09915d91e0641dcf45ebfe415ed6feb0"
+    },
+    "reset": {
+      "bytes": 4647,
+      "identity": {
+        "bytes": 4647,
+        "ctime_ns": 1792110421814865106,
+        "device": 2304,
+        "inode": 79695971,
+        "mode": "0o664",
+        "mtime_ns": 1792110421814865106,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/frozen_evaluation.py",
+      "sha256": "65430d472231e3a1bf0f794cc65603bf5e41c495c446d9a4bab59ad0d3a3a669"
+    },
+    "socket": {
+      "bytes": 140517,
+      "identity": {
+        "bytes": 140517,
+        "ctime_ns": 1792306967928089640,
+        "device": 2304,
+        "inode": 79696030,
+        "mode": "0o664",
+        "mtime_ns": 1792306967914113042,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py",
+      "sha256": "f44ddfe31408b77b6d622e1d4ec4cda60a03999dc984d9e11b5aeac38911a9ed"
+    }
+  },
+  "status": "SOURCE_ONLY_UNSELECTED_UNEXECUTED",
+  "workload_calibration": {
+    "accepted_delta": 451439,
+    "accepted_per_connection_hz": 40.592696317649676,
+    "closed_only": true,
+    "difference_scope": "Non-atomic cumulative endpoints; unresolved/inflight compatible. No equality, loss or delivery assertion.",
+    "elapsed_midpoint_s": 57.922853246,
+    "illustration_is_not_selected_runtime_arguments": true,
+    "illustrative_only": {
+      "completion_allowance_s": 0.024636610002463658,
+      "data_tick_span_s": 8.006898250800688,
+      "data_ticks": 325,
+      "eight_arm_nominal_warm_data_allowance_s": 72.3330869672333,
+      "warmup_span_s": 1.01010101010101,
+      "warmup_ticks": 41
+    },
+    "ordinary_profile_context": "Saved B/E same owner/helper and192 tracked clients, no gaps/rejects/faults/overflow/witnesses. Accepted callback rate, not learner frames. Does not establish stationarity or speed.",
+    "payload_accepted_delta_difference": -8,
+    "proposed_root_input_hz": 40.59
+  }
+}

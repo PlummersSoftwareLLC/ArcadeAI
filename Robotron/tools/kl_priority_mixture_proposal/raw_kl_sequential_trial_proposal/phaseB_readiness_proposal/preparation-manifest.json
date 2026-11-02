@@ -1,0 +1,37 @@
+{
+  "CPU_fixture_close": {
+    "CUDA_or_trial_readiness_claim": false,
+    "actual_corrected21_original_exit": 0,
+    "corrected_manifest": "2f083c4327540380498f10f7e3274b7cd1c9a1c2d4c54d9f5f8262cfbb2afd9a",
+    "original_failed21_preserved": true,
+    "peer_receipt": "ddb4157f86c6a4a57cd85ee897d6675541afd638014c8a96974bfbf260ac97b6"
+  },
+  "author_actions": {
+    "implementation_tests_imports_compile_tensor_reads_runtime_actions": false,
+    "new_design_lock_manifest_only": true,
+    "source_and_saved_small_JSON_only": true
+  },
+  "created_utc": "2026-10-17T09:48:36.852271+00:00",
+  "files": {
+    "DESIGN.txt": {
+      "bytes": 10474,
+      "mode": "0o444",
+      "sha256": "ec8b7f0ec78e85b270eeafe6a2bdfcedb1fc49c84c643a823e9bcc6a8bcd8fe5"
+    },
+    "source-lock.json": {
+      "bytes": 6695,
+      "mode": "0o444",
+      "sha256": "308894b955622b8dd40ba53c01627b7e9e8dd04666c89bc1651e6b04b565827e"
+    }
+  },
+  "future_trial_confirmation": "End KL and explicit CE restart before preparing future fresh RCRC; no current448 actions. Earlier60min suggestion inactive; actual budget/deadline/stops need precommit.",
+  "peer_review": "Pending separate source-only feasibility peer.",
+  "resource_feasibility": "UNKNOWN; saved graph9.0GB and isolated learner5.2GB are scoped evidence, not a measured additive requirement/OOM proof. Existing caps must remain.",
+  "schema": "robotron-optional-raw-KL-stageB-readiness-design-v1",
+  "scientific_bundle_manifest": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/preparation-manifest.json",
+    "sha256": "1144139f168292b7c0648fcc76d24a945d7d7f295ec14d5f304f70d5ca5dfe11"
+  },
+  "scope": "Proposed actual constructor/load proof plus isolated actual train_step on a named small native-tree/fixed-input adapter; fresh phase-resume and CE-return limbs. No simultaneous serving/full replay/evolving sample population proof.",
+  "status": "SOURCE_ONLY_DESIGN_NOT_IMPLEMENTED"
+}

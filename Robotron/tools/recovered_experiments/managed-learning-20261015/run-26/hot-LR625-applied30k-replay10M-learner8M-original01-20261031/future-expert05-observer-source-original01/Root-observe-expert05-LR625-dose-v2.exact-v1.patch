@@ -1,0 +1,37 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/hot-LR625-applied30k-replay10M-learner8M-original01-20261031/future-expert05-observer-source-original01/Root-observe-expert05-LR625-dose-v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/hot-LR625-applied30k-replay10M-learner8M-original01-20261031/future-expert05-observer-source-original01/Root-observe-expert05-LR625-dose-v2.py
+@@ -1,4 +1,4 @@
+-"""Prospective expert5% dose observation and CONTROL report; never changes learning controls. Run only after Root owns CONTROL following the prior outer closure."""
++"""Observe a prospective trial of expert assistance at 5% and report progress to CONTROL; never changes learning controls. Run only after Root owns CONTROL following the prior outer closure."""
+ import csv
+ import hashlib
+ import importlib.util
+@@ -107,13 +107,13 @@
+         d, left = result['deltas'], result['remaining']
+         if result['all_reached']:
+             work.update(state='expert05_dose_reached_waiting_policy_publication',
+-                current_stage='Expert assistance5% dose reached · preparing the policy checkpoint',
++                current_stage='Expert assistance at 5% dose reached · preparing the policy checkpoint',
+                 waiting_for='A published checkpoint saved after the completed dose, then CPU verification.',
+-                eta='All60,000 applied updates,20M replay additions and16M learner frames are reached. Checkpoint publication and CPU verification follow; two fresh frozen score tests then take about two hours plus setup. No score-test cutoff is asserted before actual admission.')
++                eta='All 60,000 applied updates, 20M replay additions and 16M learner frames are reached. Checkpoint publication and CPU verification follow; two fresh frozen score tests then take about two hours plus setup. No score-test cutoff is asserted before actual admission.')
+         else:
+             estimate = result['estimated_remaining_s']
+             work.update(state='expert05_training_dose_running',
+-                current_stage=f"Expert assistance5% trial · {d['applied_updates']:,}/60,000 updates · {d['replay_additions']/1e6:.2f}/20M replay · {d['learner_frames']/1e6:.2f}/16M learner frames",
++                current_stage=f"Expert assistance at 5% trial · {d['applied_updates']:,}/60,000 updates · {d['replay_additions']/1e6:.2f}/20M replay · {d['learner_frames']/1e6:.2f}/16M learner frames",
+                 waiting_for=f"{left['applied_updates']:,} more applied updates, {left['replay_additions']/1e6:.2f}M fresh replay additions and {left['learner_frames']/1e6:.2f}M learner frames; all three thresholds are required.",
+                 eta=('Waiting for enough measured progress to estimate the dose.' if estimate is None else
+                      f'About {math.ceil(estimate/60)} minutes remaining in the training dose at the observed rate. Checkpoint publication, CPU verification and two fresh frozen score tests follow (about two hours plus setup after the dose); this estimate excludes those later steps.'))
+@@ -121,9 +121,9 @@
+             estimated_dose_remaining_s=result['estimated_remaining_s'])
+     else:
+         work.update(state='expert05_counter_observation_pending' if result['status'] == 'PENDING' else 'expert05_trial_needs_review',
+-            current_stage='Expert assistance5% trial · ' + ('waiting for a fresh counter observation' if result['status'] == 'PENDING' else 'observation requires review'),
++            current_stage='Expert assistance at 5% trial · ' + ('waiting for a fresh counter observation' if result['status'] == 'PENDING' else 'observation requires review'),
+             waiting_for=result['reason'], eta='Counter observation is being checked; no current completion estimate is asserted.')
+-    work.update(detail='Test more independent DQN decisions with expert assistance5%, holding LR6.25e-6 and epsilon10% fixed. All60,000 applied updates,20M fresh replay additions and16M learner frames are required before the next frozen policy check.',
++    work.update(detail='Test more independent DQN decisions with expert assistance at 5%, holding LR 6.25e-6 and epsilon 10% fixed. All 60,000 applied updates, 20M replay additions and 16M learner frames are required before the next frozen policy check.',
+         next_stage='Publish and independently copy a policy after the dose, CPU-verify it, then compare two fresh frozen S2/candidate cohorts (about two hours plus setup after the dose).',
+         updated_unix_s=sample['observed_unix_s'], observation_unix_s=sample['observed_unix_s'],
+         estimated_completion_unix_s=None, deadline_unix_s=None, main_training_continues=True,

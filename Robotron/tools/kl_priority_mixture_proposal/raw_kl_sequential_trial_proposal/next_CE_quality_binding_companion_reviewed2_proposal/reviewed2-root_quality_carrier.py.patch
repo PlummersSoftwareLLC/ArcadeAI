@@ -1,0 +1,11 @@
+--- frozen-a073/root_quality_carrier.py
++++ unconsumed-reviewed2/root_quality_carrier.py
+@@ -228,7 +228,7 @@
+             and review['actual_inputs']==bound, 'Plan review does not identify exact actual plan/inputs')
+     readiness_contract(ready,bound)
+     require(not OUT.exists() and not J.exists(),'Fresh campaign/execution directory required')
+-    for unit in [U+'.service',U+'.timer',*[entry['owner']['unit'] for entry in CFG['original_executions'].values()]]:
++    for unit in [U+'.service',U+'.timer']:
+         require(show(unit)[1]['LoadState']=='not-found','Owned quality/capture unit still retained or live: '+unit)
+     current=fast_runtime(ready)
+     # GPU ownership/free margin, no competing helpers/private resources, full

@@ -1,0 +1,37 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/managed_driver.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/managed_driver_continuous_guard_candidate_v1.py
+@@ -3,6 +3,13 @@
+ import os
+ from pathlib import Path
+ import time
++
++
++def _continuous_training_mode_enabled():
++    raw = os.getenv("ROBOTRON_CONTINUOUS_TRAINING_MODE", "0")
++    if raw not in ("0", "1"):
++        raise ValueError("Explicit continuous training mode0/1 required")
++    return raw == "1"
+ 
+ 
+ def _atomic_json(path, value):
+@@ -82,6 +89,20 @@
+         print(f"[MANAGED MEASUREMENT] finished {request['label']}: valid={result.get('valid')}", flush=True)
+ 
+     def update(self, request):
++        if (_continuous_training_mode_enabled()
++                or bool(getattr(self.metrics, "continuous_training_mode", False))):
++            if (self.request is not None
++                    or bool(getattr(self.metrics, "measurement_active", False))
++                    or bool(getattr(self.metrics, "ratchet_frozen", False))):
++                raise RuntimeError("Continuous mode must be selected before any active main measurement")
++            # Refusal is observation only: no enter/tick/restore/checkpoint save,
++            # control mutation or synthetic terminal quality result.
++            self._publish(dict(active=False, phase="disabled_continuous_training",
++                complete=False, valid=None, measurement_requests_disabled=True,
++                request_denied=request is not None,
++                label=request.get("label") if isinstance(request, dict) else None,
++                reason="Main managed measurements are disabled in continuous training mode; use a separate private evaluator"))
++            return
+         if self.request is not None:
+             if request is None or request['label'] != self.request['label']:
+                 self._finish(dict(complete=True, valid=False, reason='cancelled'))

@@ -1,0 +1,29 @@
+--- metrics_dashboard_cleanup_getter_candidate_v1.py
++++ metrics_dashboard_continuous_policy_candidate_v1.py
+@@ -5295,6 +5295,26 @@
+             if path == "/api/rejected_gaps":
+                 self._send(state.rejected_gap_body(), "application/json")
+                 return
++            if path in ("/api/continuous_training_policy", "/api/connection_cleanup_token"):
++                try:
++                    server=getattr(state.metrics,"global_server",None)
++                    if path == "/api/continuous_training_policy":
++                        if query:
++                            raise ValueError("Policy getter has no query actions")
++                        value=server.continuous_training_policy_snapshot()
++                    else:
++                        if (set(query)!={"token"} or len(query["token"])!=1
++                                or not 1<=len(query["token"][0])<=128 or len(parsed.query)>512):
++                            raise ValueError("Exact bounded original token required")
++                        value=server.connection_cleanup_by_token(query["token"][0])
++                    body=json.dumps(value,allow_nan=False,separators=(",",":")).encode()
++                    if len(body)>70000:
++                        raise ValueError("Continuous evidence exceeds response bound")
++                except (ValueError,KeyError,AttributeError):
++                    self._send(b'{"available":false}',"application/json",status=404)
++                    return
++                self._send(body,"application/json")
++                return
+             if path == "/api/connection_cleanup":
+                 # Read-only, uncached server-local connection evidence. This
+                 # never admits a replacement actor or proves its Popen identity.

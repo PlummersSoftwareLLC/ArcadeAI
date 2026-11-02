@@ -47,16 +47,29 @@ default wave.
 
 ## Startup Diagnostics
 
-- Run the Python v3 server from `Robotron/Scripts`:
-  - `python3 run_v3.py`
+- Run the Dell DQN trainer from `Robotron`:
+  - `./starttrainer.sh`
 - Run foreground diagnostics:
   - `cd Robotron`
   - `./startmame.sh --fg`
+- Choose the starting level for each game in this launch:
+  - `./startmame.sh --fg --level 20`
+  - Levels `1..81` are supported; `--level=20` also works in foreground,
+    background and supervised launches. This overrides the trainer's starting
+    level for those clients. Omit it to use the trainer's normal settings.
+- For manual practice while a controlled training fleet is running:
+  - `./startmame.sh --socket-port 9997 --level 29`
+  - The separate practice listener uses a frozen recent policy on CPU, with no
+    optimizer, replay writes or preview image capture. Training uses port `9998`.
+    Practice requires the Robotron practice service to be running on the host.
 - Point MAME at a remote Python host:
-  - `ROBOTRON_SOCKET_ADDRESS=ubvmdell:9998 ./startmame.sh --fg`
-  - or `./startmame.sh --fg --socket-address ubvmdell:9998`
+  - `ROBOTRON_SOCKET_ADDRESS=dell:9998 ./startmame.sh --fg`
+  - or `./startmame.sh --fg --socket-address dell:9998`
 - Background mode now reports explicit process liveness:
   - `./startmame.sh`
+- On Linux, manual launcher reconciliation and `-kill` leave tagged fleets and
+  Robotron systemd jobs running. Set `ROBOTRON_FLEET_ID` to manage a specific
+  tagged fleet; manage a service-owned fleet through its service.
 - Startup trace output is written to:
   - terminal
   - `Robotron/logs/startup_trace.log`

@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original05-retired-API-preparation/review_fullgame_rounds_v7.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original06-fresh-study-namespaces-preparation/source-family-original02-unit-authority/review_fullgame_rounds_v7.py
+@@ -77,7 +77,7 @@
+ 
+ def round_contract():
+     path=Path(__file__).with_name('fullgame_round_contract_v7.py')
+-    require(hashlib.sha256(path.read_bytes()).hexdigest()=='3a43c8fae780f6e13994eab61dbad1c8e95cb59af033f7f7c17b86521f2ca1fd','Exact recovered fullgame contract required')
++    require(hashlib.sha256(path.read_bytes()).hexdigest()=='fda05b7360cc612cf517e333a2159e0b7eea3d0a9e7f3b6eea3d1faedeefa141','Exact recovered fullgame contract required')
+     return load('_recovered_fullgame_round_contract',path)
+ 
+ 

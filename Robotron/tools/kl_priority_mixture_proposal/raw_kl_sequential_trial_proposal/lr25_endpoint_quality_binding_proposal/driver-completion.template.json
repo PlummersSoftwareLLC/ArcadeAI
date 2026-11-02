@@ -1,0 +1,23 @@
+{
+  "schema": "robotron-root-original-direct-driver-completion-v1",
+  "original_identity": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/lr25-hot-window-root-preparation-20261017/actual-hot-driver-execution/root-observed-original-driver-identity.json",
+    "sha256": "862b792abd5610ce4dd09ab4320a12395798a2b2cfc46b7045e1acdbe47e9254",
+    "bytes": 886,
+    "identity": {
+      "device": 2304,
+      "inode": 81790107,
+      "bytes": 886,
+      "mtime_ns": 1792281627265649380,
+      "ctime_ns": 1792281627265649380,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "original_return": null,
+  "returncode": null,
+  "result": null,
+  "one_attempt": null,
+  "argv": null
+}

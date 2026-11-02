@@ -1,0 +1,82 @@
+"""Prepare one distinct captured-policy study in an original CPU-only scope.
+
+This writes frozen metadata only. Every native leg still needs its own exact
+CPU guard and final resource checks before the one original launch.
+"""
+import argparse
+import hashlib
+import importlib.util
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
+
+HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
+LOCAL=Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07')
+ROOT=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+
+
+def load(name,path):
+    spec=importlib.util.spec_from_file_location(name,path);module=importlib.util.module_from_spec(spec)
+    sys.modules[name]=module;spec.loader.exec_module(module);return module
+
+
+def execute(a):
+    assert hashlib.sha256(Path(__file__).read_bytes()).hexdigest()==a.source_sha256
+    raw=a.job.read_bytes();assert hashlib.sha256(raw).hexdigest()==a.job_sha256;job=json.loads(raw)
+    assert job['schema']=='robotron-selected-admission-study-CPU-preparation-v1'
+    assert job['original_attempt']==1 and job['no_retry']is True
+    assert os.environ['CUDA_VISIBLE_DEVICES']==''and 'torch'not in sys.modules
+    fields=dict(x.split('=',1)for x in subprocess.check_output(['systemctl','--user','show',job['unit']],text=True,timeout=10).splitlines()if'='in x)
+    expected=dict(MainPID=str(os.getpid()),InvocationID=os.environ['INVOCATION_ID'],CPUQuotaPerSecUSec='2s',
+        MemoryMax=str(4<<30),MemorySwapMax='0',TasksMax='128',RuntimeMaxUSec='10min',NRestarts='0',Restart='no')
+    assert all(fields.get(k)==v for k,v in expected.items())
+    h=load('_selected_admission_CPU_helpers',ROOT/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py')
+    for pin in job['inputs']:h.checked(pin)
+    capture=json.loads(h.checked(job['capture_result']).read_bytes())
+    assert capture['state']=='captured_CPU_verified'and capture['endpoint']['sha256']==job['candidate_sha256']
+    output=Path(job['output']);output.mkdir(mode=0o700);started=time.monotonic()
+    guard_source=job['metadata_guard_preparer'];assert guard_source in job['inputs']
+    guard=load('_selected_admission_actual_guard_preparer',h.checked(guard_source))
+    held_input_classification=guard.preflight_held_inputs(job['inputs'])
+    print(json.dumps(dict(phase='HELD_INPUT_CLASSIFICATION_PREFLIGHT_COMPLETE_BEFORE_RAW_REPLAY',classification=held_input_classification)),flush=True)
+    preparer=load('_selected_admission_actual_preparer',LOCAL/'prepare_round_study_v10.py')
+    reuse_source=job['metadata_readiness_reuse_cache'];assert reuse_source in job['inputs']
+    reuse_module=load('_metadata_single_proof_reuse',h.checked(reuse_source))
+    def phase(name,**values):
+        print(json.dumps(dict(schema='robotron-metadata-single-proof-phase-v1',phase=name,monotonic_s=time.monotonic(),**values)),flush=True)
+    reuse=reuse_module.SameInvocationReadiness(job,h,phase)
+    reuse.bind_preparer(preparer)
+    prepared=preparer.prepare(Path(job['study_directory']),job['reference_profile'],job['candidate_profile'],
+        main_domain_proof=job['deadline_readiness'],lease_recovery=job['lease_recovery'],selection_pin=job['comparison_selection'],engineering=False)
+    manifest=json.loads(h.checked(prepared).read_bytes());assert manifest['engineering_only']is False
+    reuse_manifest=h.put(output/'same-invocation-readiness-reuse.json',reuse.manifest())
+    study=json.loads(h.checked(manifest['study_precommit']).read_bytes())
+    assert study['policies']['candidate']['checkpoint']['sha256']==job['candidate_sha256']
+    cpu=guard.prepare(Path(prepared['path']),Path(job['study_directory'])/'four-exact-contexts-CPU-original01')
+    for case in manifest['cases']:
+        subject=json.loads(h.checked(case['native_job']).read_bytes())
+        assert not Path(subject['output']).exists()and not Path(subject['prelaunch_family_guard_closeout']).exists()
+    for pin in job['inputs']:h.checked(pin)
+    assert 'torch'not in sys.modules
+    report=h.put(output/'report.json',dict(schema='robotron-selected-admission-study-original-CPU-preparation-result-v1',
+        status='PASS',original_job=h.pin(a.job),actual_PID=os.getpid(),actual_scope=fields,
+        native_prepared=prepared,exact_CPU_packet=cpu,selected_sha256=job['candidate_sha256'],
+        same_invocation_readiness_reuse=reuse_manifest,metadata_readiness_reuse_cache=reuse_source,
+        metadata_guard_preparer=guard_source,held_input_classification_preflight=held_input_classification,
+        first_full_unchanged_validate_launch_count=1,unchanged_contract_validate_launch_calls=4,
+        readiness_raw_semantic_verifier_calls=1,readiness_reviewer_semantics_reused_within_metadata=3,
+        readiness_raw_full_integrity_passes=4,readiness_integrity_legs=['R1','C1','R2','C2'],
+        elapsed_s=time.monotonic()-started,all_four_native_outputs_and_future_guards_absent=True,
+        Torch_imported=False,GPU_or_MAME_launched=False,scientific_payload_launched=False,
+        exact_selected_context_CPU_qualified=False,quality_qualified=False,promotion=False))
+    print(json.dumps(dict(status='PASS_METADATA_ONLY',report=report)),flush=True)
+
+
+if __name__=='__main__':
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--execute',action='store_true')
+    p.add_argument('--job',type=Path);p.add_argument('--job-sha256');p.add_argument('--source-sha256');a=p.parse_args()
+    if a.execute:execute(a)
+    else:print('PLAN_ONLY_NO_READS_OR_ACTIONS')

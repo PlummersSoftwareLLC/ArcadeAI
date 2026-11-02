@@ -18,6 +18,18 @@ try:
 except ImportError:
     from config import metrics, IS_INTERACTIVE, RL_CONFIG, game_settings
 
+try:
+    from .run_telemetry import pipeline_console_columns
+except ImportError:
+    from run_telemetry import pipeline_console_columns
+
+try:
+    from .response_telemetry import interval_summary, format_interval_row, report_fields
+except ImportError:
+    from response_telemetry import interval_summary, format_interval_row, report_fields
+
+_response_previous = None
+_run_report = None
 row_counter = 0
 
 # Rolling DQN reward-per-DQN-frame windows. Eviction is keyed by total episode
@@ -255,13 +267,15 @@ def display_metrics_header():
         f"{'Frame':>11} {'Steps':>10} {'FPS':>7} {'Epsi':>7} {'Xprt':>7} "
         f"{'Scr1M':>9} {'RScr1M':>7} {'RScr5M':>7} {'Lvl1M':>6} "
         f"{'Rwrd':>9} {'Score':>9} {'Shape':>9} {'DQN1M/F':>9} {'DQN5M/F':>9} {'DQN10M/F':>9} "
-        f"{'EvalR':>8} {'EScr1M':>8} {'ELvl1M':>7} {'EScrF':>6} {'ELvNow':>7} {'S/Wave':>7} "
+        f"{'EvalR':>8} {'ELife1M':>8} {'ELvl1M':>7} {'EScrF':>6} {'ELvNow':>7} {'S/Wave':>7} "
         f"{'Loss':>10} {'AgrM%':>6} {'AgrF%':>6} "
         f"{'EpLen':>8} {'FtlPct':>7} {'SubjW':>6} {'DqnB%':>6} {'EpsB%':>6} "
         f"{'Clnt':>4} {'Web':>4} "
-        f"{'AvgInf':>7} {'Steps/s':>8} {'Rpl/F':>7} {'GrNorm':>8} {'Q-Range':>14} {'OvEst':>7} {'Mem':>10} {'HOF':>13} {'LR':>9} {'Drop':>7} {'Tms S/X/C/P':>17}"
+        f"{'AvgInf':>7} {'Steps/s':>8} {'Rpl/F':>7} {'GrNorm':>8} {'Q-Range':>14} {'OvEst':>7} {'Mem':>10} {'HOF':>13} {'LR':>9} {'Drop':>7} {'Tms S/X/C/P':>17} {'Samples/s':>9} {'GPU%':>5} {'GPU W':>6} {'GPU MiB':>8} {'Samp/J':>7} {'GPUms':>7} {'EGames':>6} {'EGameScr':>9} {'EGameSE':>8} {'Mode':>7} {'LearnFrame':>11} "
+        f"{'IBat':>5} {'IHost L/S/R':>20} {'RefHost A/T':>15} {'BankLk':>7}"
     )
     _print_line(hdr, is_header=True)
+    _print_line('[RESPONSE]   Nsel  RespW  RespC  Cache   CLw    CLh    Jnl    Met   Prev    Enq    Inf    Out  RQnow RQmax* (ms; nested spans; *cumulative)', is_header=True)
     try:
         now = time.time()
         with metrics.lock:
@@ -396,7 +410,7 @@ def display_metrics_row(agent, kb_handler):
         except Exception:
             q_range = "err"
 
-    mem_k = metrics.memory_buffer_size // 1000
+    mem_k = (len(agent.memory) if agent is not None else metrics.memory_buffer_size) // 1000
 
     # HOF column: the bank's current admission bar (static floor while
     # filling, worst enshrined score once full — watch it ratchet upward).
@@ -454,7 +468,12 @@ def display_metrics_row(agent, kb_handler):
             ftl_pct_str = f"{100.0 * sum(_t) / len(_t):.1f}%"
     except Exception:
         pass
-    replay_ratio = (steps_per_sec * float(RL_CONFIG.batch_size)) / max(1e-6, float(metrics.fps))
+    measuring = bool(getattr(metrics, 'measurement_active', False))
+    run_mode = ('MEASURE' if measuring else
+                'WARMUP' if len(agent.memory) < max(RL_CONFIG.min_replay_to_train, RL_CONFIG.batch_size)
+                else 'TRAIN')
+    replay_ratio = (f"{steps_per_sec * float(RL_CONFIG.batch_size) / float(metrics.fps):7.2f}"
+                    if float(metrics.fps) > 0 and not measuring else f"{'NA':>7}")
     train_ms = (
         f"{metrics.last_train_sample_ms:.0f}/"
         f"{metrics.last_train_transfer_ms:.0f}/"
@@ -474,6 +493,88 @@ def display_metrics_row(agent, kb_handler):
         f"{metrics.last_sample_dqn_frac*100:>5.1f}% {metrics.last_sample_epsilon_frac*100:>5.1f}% "
         f"{metrics.client_count:>4} {metrics.web_client_count:>4} "
         f"{avg_inf_ms:>7.2f} {steps_per_sec:>8.1f} "
-        f"{replay_ratio:>7.2f} {metrics.last_grad_norm:>8.3f} {q_range:>14} {ovest_str:>7} {mem_k:>8}k {hof_bar_str:>13} {lr_str:>9} {metrics.replay_dropped_steps:>7,} {train_ms:>17}"
+        f"{replay_ratio} {metrics.last_grad_norm:>8.3f} {q_range:>14} {ovest_str:>7} {mem_k:>8}k {hof_bar_str:>13} {lr_str:>9} {metrics.replay_dropped_steps:>7,} {train_ms:>17}"
     )
+    global _run_report, _response_previous
+    response_snapshot = dict(schema='robotron-socket-response-pipeline-v1', available=False)
+    try:
+        server = getattr(metrics, 'global_server', None)
+        getter = getattr(server, 'response_timing_snapshot', None)
+        if callable(getter): response_snapshot = getter()
+    except Exception as exc:
+        response_snapshot['observer_error'] = str(exc)[:256]
+    response_summary = interval_summary(response_snapshot, _response_previous)
+    _response_previous = response_snapshot
+    response_fields = report_fields(response_snapshot, response_summary)
+    try:
+        if _run_report is None:
+            from .run_telemetry import create_report
+            from .config import MODEL_DIR
+            _run_report = create_report(RL_CONFIG, MODEL_DIR)
+        journal = getattr(metrics, 'game_journal', None)
+        report_experiment = (getattr(metrics, 'measurement_label', '') if getattr(metrics, 'measurement_active', False)
+                             else getattr(metrics, 'managed_experiment', 'natural-schedule'))
+        game_summary = journal.summary(experiment=report_experiment) if journal is not None else {}
+        extra = _run_report.write(dict(
+            frames=int(metrics.frame_count), steps=int(metrics.total_training_steps),
+            learner_frames=int(getattr(metrics, 'learner_frame_count', 0)),
+            experiment=str(report_experiment),
+            mode=run_mode,
+            measurement_active=bool(getattr(metrics, 'measurement_active', False)),
+            measurement_frames=int(getattr(metrics, 'measurement_frame_count', 0)),
+            optimized_samples=int(getattr(agent, 'optimized_samples', 0)),
+            batch_size=RL_CONFIG.batch_size, fps=float(metrics.fps), steps_per_s=steps_per_sec,
+            epsilon_pct=eps_val, expert_pct=xprt_val, loss=loss_avg,
+            grad_norm=float(metrics.last_grad_norm), learning_rate=agent.get_lr(),
+            eval_score=eval_score, eval_level=eval_level,
+            eval_games_count=int(game_summary.get('count', 0)),
+            eval_games_mean=float(game_summary.get('mean', 0)),
+            eval_games_median=float(game_summary.get('median', 0)),
+            eval_games_se=float(game_summary.get('se', 0)),
+            eval_episodes=int(getattr(metrics, 'eval_score_1m_count', 0)),
+            score=average_game_score, level=display_level, episode_frames=avg_ep_len,
+            dqn_reward_per_frame=dqn_pf, reward=mean_reward,
+            objective_reward=mean_obj, shaping_reward=mean_subj,
+            agreement_move=agree_move_avg, agreement_fire=agree_fire_avg,
+            replay_size=len(agent.memory), replay_dropped=int(metrics.replay_dropped_steps),
+            replay_sample_cap=RL_CONFIG.max_samples_per_frame,
+            replay_pressure_waits=int(getattr(metrics, 'replay_pressure_waits', 0)),
+            pressure_anchor_frames=int(getattr(agent, '_replay_pressure_anchor',
+                (getattr(metrics, 'loaded_frame_count', 0), 0, 0))[0]),
+            pressure_anchor_samples=int(getattr(agent, '_replay_pressure_anchor',
+                (0, 0, getattr(metrics, 'loaded_optimized_samples', 0)))[2]),
+            prefetched_batches=int(getattr(getattr(agent, '_prefetcher', None), 'produced_batches', 0)),
+            direct_state_batches=int(getattr(getattr(agent, '_prefetcher', None), 'direct_state_batches', 0)),
+            replay_direct_state_fill=bool(getattr(getattr(agent, '_prefetcher', None), 'direct_state_fill', False)),
+            batch_expert_frac=float(metrics.last_sample_expert_frac),
+            batch_dqn_frac=float(metrics.last_sample_dqn_frac),
+            batch_epsilon_frac=float(metrics.last_sample_epsilon_frac),
+            bc_loss=float(metrics.last_bc_loss), bc_weight=float(metrics.last_bc_weight),
+            c51_below_support_mass=float(getattr(metrics, 'c51_below_support_mass', 0)),
+            c51_above_support_mass=float(getattr(metrics, 'c51_above_support_mass', 0)),
+            c51_edge_atom_mass=float(getattr(metrics, 'c51_edge_atom_mass', 0)),
+            c51_target_entropy=float(getattr(metrics, 'c51_target_entropy', 0)),
+            c51_action_q_gap=float(getattr(metrics, 'c51_action_q_gap', 0)),
+            c51_categorical_kl=float(getattr(metrics, 'c51_categorical_kl', 0)),
+            q_min=float(metrics.q_pred_min_ema), q_max=float(metrics.q_pred_max_ema),
+            q_overestimate=float(metrics.q_overest_ema),
+            slice_td_ring=getattr(metrics, 'slice_td_ring', None),
+            slice_td_hof=getattr(metrics, 'slice_td_hof', None),
+            slice_td_ephof=getattr(metrics, 'slice_td_ephof', None),
+            inference_ms=avg_inf_ms, clients=int(metrics.client_count),
+            train_step_wall_ms=float(metrics.last_train_step_ms),
+            sample_wall_ms=float(metrics.last_train_sample_ms),
+            stage_host_ms=float(getattr(metrics, 'last_train_stage_host_ms', 0)),
+            transfer_host_ms=float(metrics.last_train_transfer_ms),
+            compute_host_ms=float(metrics.last_train_compute_ms),
+            priority_and_readback_ms=float(metrics.last_train_priority_ms),
+            gpu_compute_ms=float(getattr(metrics, 'last_train_gpu_compute_ms', 0)),
+            **response_fields), agent=agent)
+        row += ' ' + extra + f" {getattr(metrics, 'last_train_gpu_compute_ms', 0):>7.1f}"
+        row += f" {game_summary.get('count', 0):>6} {game_summary.get('mean', 0):>9,.0f} {game_summary.get('se', 0):>8,.0f}"
+    except Exception as exc:
+        print(f'[REPORT ERROR] {exc}', flush=True)
+    row += f" {run_mode:>7} {getattr(metrics, 'learner_frame_count', 0):>11,}"
+    row += ' ' + pipeline_console_columns(getattr(_run_report, 'last_pipeline_fields', {}))
     _print_line(row)
+    _print_line(format_interval_row(response_summary))

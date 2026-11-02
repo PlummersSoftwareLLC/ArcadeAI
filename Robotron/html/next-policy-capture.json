@@ -1,0 +1,41 @@
+{
+  "schema": "robotron-replay-progress-candidate-window-status-v1",
+  "state": "captured_CPU_verified",
+  "updated_unix_s": 1793311547.827078,
+  "owner": {
+    "birth_ticks": 16564768,
+    "invocation_id": "c9a7ad073c8043af8b9499acb4ae4372",
+    "pid": 654315
+  },
+  "added": {
+    "applied_updates": 65175,
+    "replay_inserts": 24493303,
+    "elapsed_s": 3797.1784458420007,
+    "by_source": {
+      "dqn": 18363501,
+      "epsilon": 2041327,
+      "expert": 2269162,
+      "eval": 1819313,
+      "unattributed": 0
+    }
+  },
+  "thresholds": {
+    "applied_updates": 5000,
+    "replay_inserts": 1000000,
+    "elapsed_s": 3600
+  },
+  "original_DQN_window_unchanged": true,
+  "quality_qualified": false,
+  "causal_learning_speed_qualified": false,
+  "promotion": false,
+  "endpoint": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-continuous-fresh-candidate-20261029-original04/endpoint.pt",
+    "sha256": "c0acc8ad3aa411a00928b6f242b2e4a6299780b5a2991c75225d334c21af60f0",
+    "bytes": 275186008
+  },
+  "CPU_verification": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-continuous-fresh-candidate-20261029-original04/endpoint-CPU.json",
+    "sha256": "67d3b16bece9fc103f9e0ae0d207d99a1b7aba2775452753582e99fc66512e2d",
+    "bytes": 2099
+  }
+}

@@ -1,0 +1,82 @@
+--- frozen/run_CE_batch_transition.py
++++ execution_release/run_CE_batch_transition.py
+@@ -51,10 +51,7 @@
+ BOUNDARY_SHA = '1953eb12dcb20bfafdbed2986026e20b8c25d0bd89e2c26820b8cd841946d1af'
+ ORIGINAL_STRICT_SHA = '7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead'
+ CPU2048_BINDING = {'script': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/verify_phase_snapshot_2048.py', 'sha256': 'a331b550191a48ab219cf92f2e1c42fc394e038c93609ecac4fb9a722b75e5cd', 'bytes': 37695}, 'strict_base': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/strict_phase_base_2048.py', 'sha256': '47677509f170c4c3b6a1c03918e02ab13996af1ceafffac29b7536c2fad61f80', 'bytes': 33727}}  # Exact frozen reviewed2 source triples.
+-DRAFT_BLOCKERS = (
+-    'actual2048 numerical readiness and future root precommit are unbound',
+-    'new typed producer/phase-insurance proof transport awaits complete source review',
+-)
++DRAFT_BLOCKERS = ()  # Explicit actual CE2048 prerequisites are validated before any lifecycle work.
+ PHASE_EARLY = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_early_phase_insurance_proposal/early_phase_insurance.py')
+ PHASE_EARLY_SHA = '2565f59040051a34d676bfa1aeb0eb028ecb758249152784fcb244a5180ea980'
+ PHASE_EARLY_MANIFEST_SHA = '58df4a4a395cd84445718a9030577dace400ed600912f2f81fc20f387fcbd22d6'
+@@ -73,10 +70,28 @@
+     return _BOUNDARY
+ 
+ 
+-def require_execution_ready():
+-    require(not DRAFT_BLOCKERS,
+-        'UNCONSUMED DRAFT: ' + '; '.join(DRAFT_BLOCKERS))
+-
++def require_execution_ready(job):
++    return execution_readiness().validate_job(job)
++
++
++
++RELEASE_VALIDATOR = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_proposal/execution_readiness.py')
++RELEASE_VALIDATOR_SHA = 'c01e71f00345f64996b469ff7b7a257a2e73e7d8e016914bc8225d3647df321f'
++
++def execution_readiness():
++    require(RELEASE_VALIDATOR==RELEASE_VALIDATOR.resolve(strict=True) and not RELEASE_VALIDATOR.is_symlink(),
++        'Noncanonical execution prerequisite helper')
++    before=RELEASE_VALIDATOR.stat()
++    require(before.st_uid==os.getuid() and before.st_nlink==1 and before.st_mode&0o777==0o444
++        and 0<before.st_size<=1<<20,'Execution prerequisite helper must be owned readonly source')
++    data=RELEASE_VALIDATOR.read_bytes()
++    stamp=lambda value:(value.st_dev,value.st_ino,value.st_size,value.st_mtime_ns,value.st_ctime_ns,value.st_uid,value.st_nlink,value.st_mode)
++    require(stamp(RELEASE_VALIDATOR.stat())==stamp(before) and hashlib.sha256(data).hexdigest()==RELEASE_VALIDATOR_SHA,
++        'Execution prerequisite validator source differs')
++    spec=importlib.util.spec_from_file_location('_CE2048_actual_execution_readiness',RELEASE_VALIDATOR)
++    module=importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(module)
++    return module
+ 
+ def require(value, message):
+     if not value: raise RuntimeError(message)
+@@ -389,12 +404,7 @@
+     require(re.fullmatch(r'[A-Za-z0-9_-]{1,100}',job['phase_id'] or '') and
+         re.fullmatch(r'[A-Za-z0-9_-]{1,120}',job['request_id'] or '') and
+         re.fullmatch(r'[A-Za-z0-9_-]{1,80}',job['startup_tag'] or ''),'Invalid unique phase/request/save names')
+-    for name,key,schema,lock in (('stage_A','comparison_pass','robotron-raw-kl-stage-a-numeric-validation-v1','bcc1c696ed1ddbd18879e64cee01d55909b99c8401d908f636228d4c83b36551'),
+-            ('stage_B','readiness_pass','robotron-raw-kl-stage-b-private-v1','8edbe0082cb93939ebc9bfe6be922058f9c821addf72567f57d2c7a83b53b5fc')):
+-        proof = base.read_json(job['prerequisites'][name])
+-        require(proof['schema']==schema and proof['source_lock_sha256']==lock and proof['status'] == 'OBSERVATIONS_COMPLETE' and
+-            proof[key] is True and proof['owned_cleanup_complete'] is True,
+-            'Actual Stage A/B readiness prerequisite absent')
++    require_execution_ready(job)  # Actual CE2048 proof; historical StageA/B are not substitutes.
+     release = base.read_json(job['prerequisites']['quality_release'])
+     require(release['source_freeze_released'] is True and release['owned_cleanup_complete'] is True,
+         'Quality finalization/resource release not established')
+@@ -431,7 +441,6 @@
+     require(job['helper_pins']['phase_early']['path']==str(PHASE_EARLY) and
+         job['helper_pins']['phase_early']['sha256']==PHASE_EARLY_SHA, 'Recurring typed phase helper differs')
+     phase_early_module(base).load_collector(base,job['producer_collector'])
+-    require_execution_ready()  # Actual numeric/root precommit and full transport remain fatal.
+     validate_installed_phase(job,base,game,env)
+     capture = env.get(FLAGS[0])
+     require(not env.get(FLAGS[1]),'Unknown old trace session forbidden')
+@@ -1016,9 +1025,10 @@
+     parser.add_argument('--expected-job-sha256');parser.add_argument('--expected-controller-sha256')
+     args=parser.parse_args(argv)
+     if not args.launch:
+-        print('PLAN_ONLY_UNCONSUMED_CE_BATCH_DRAFT: no reads/imported helpers/runtime/actions; blockers='+repr(DRAFT_BLOCKERS))
++        print('PLAN_ONLY_CE_BATCH: no reads/imported helpers/runtime/actions; actual prerequisites required; blockers='+repr(DRAFT_BLOCKERS))
+         return 0
+-    require_execution_ready()  # Before job/source/helper/runtime reads or output creation.
++    require(args.job and args.expected_job_sha256 and args.expected_controller_sha256, 'Explicit actual root bindings required')
++    execution_readiness().preflight_transition(args.job,args.expected_job_sha256,__file__,args.expected_controller_sha256)
+     runtime=None;output=None
+     try:
+         require(not any(n=='torch' or n.startswith(('torch.','numpy','dqn')) for n in sys.modules),'Fresh stdlib-only parent required')

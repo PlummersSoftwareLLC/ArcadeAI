@@ -1,0 +1,15 @@
+--- a/Robotron/tools/run_quality_campaign.py
++++ b/Robotron/tools/run_quality_campaign.py
+@@ -206,6 +206,12 @@
+     report = dict(outcome="incomplete", qualified_improvement=False,
+                   reason="All four planned legs must complete", legs=[],
+                   limitations=plan["limitations"], gate=plan["precommit"]["candidate_gate"])
++    if ([spec.get("index") for spec in plan["legs"]] != [1, 2, 3, 4]
++            or [spec.get("role") for spec in plan["legs"]] != list(ORDER)):
++        report.update(outcome="invalid",
++                      reason="Actual planned legs must follow reference/candidate/reference/candidate")
++        return report
++
+     validated, identifiers = [], set()
+     invalid, missing = [], []
+     anchor = None

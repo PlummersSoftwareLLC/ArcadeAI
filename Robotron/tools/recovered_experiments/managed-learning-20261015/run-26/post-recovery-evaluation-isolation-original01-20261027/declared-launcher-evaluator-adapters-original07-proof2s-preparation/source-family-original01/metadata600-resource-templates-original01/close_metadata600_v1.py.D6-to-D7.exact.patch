@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original06-fresh-study-namespaces-preparation/source-family-original02-unit-authority/metadata600-resource-templates-original01/close_metadata600_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original07-proof2s-preparation/source-family-original01/metadata600-resource-templates-original01/close_metadata600_v1.py
+@@ -21,7 +21,7 @@
+     h=load('_metadata_scope_helpers',ROOT/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py')
+     directory=directory.resolve();cfg_pin=h.pin(directory/'controller-config.json');cfg=json.loads(h.checked(cfg_pin).read_bytes())
+     job_pin=h.pin(directory/'job.json');job=json.loads(h.checked(job_pin).read_bytes())
+-    control=load('_metadata_scope_control',Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original06-fresh-study-namespaces-preparation/source-family-original02-unit-authority/metadata600-resource-templates-original01/control_metadata600_v1.py'))
++    control=load('_metadata_scope_control',Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original07-proof2s-preparation/source-family-original01/metadata600-resource-templates-original01/control_metadata600_v1.py'))
+     require(control.checked_config(cfg_pin['path'])==cfg,'Actual selected CPU configuration differs')
+     require(cfg['properties']==['CPUQuota=200%','MemoryMax=4G','MemorySwapMax=0','RuntimeMaxSec=600','TasksMax=128','TimeoutStopSec=5','SendSIGKILL=no']
+             and cfg['observation_s']==660,'Exact bounded CPU declaration required')

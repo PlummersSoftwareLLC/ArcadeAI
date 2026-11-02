@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original06/control_deadline32_rounds_v11.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/control_deadline32_rounds_v11.py
+@@ -68,7 +68,7 @@
+     props = dict((x.split('=', 1) for x in c['properties']))
+     require(len(props) == len(c['properties']) and props == dict(CPUQuota='1200%', MemoryMax='24G', MemorySwapMax='0', RuntimeMaxSec='4260', TasksMax='512', TimeoutStopSec='30', KillMode='mixed', SendSIGKILL='no'), 'Exact bounded compiled32 resources required')
+     require(type(c['observation_s']) is int and c['observation_s'] == 4320, 'Fixed original runtime/shutdown observation required')
+-    expected = ['/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python', '-Xgil=0', '-I', '-B', '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original06/run_deadline32_rounds_v11.py']
++    expected = ['/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python', '-Xgil=0', '-I', '-B', '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/run_deadline32_rounds_v11.py']
+     argv = c['argv']
+     require(type(argv) is list and len(argv) == 12 and (argv[:5] == expected) and (argv[5:7] == ['--execute', '--job']) and (argv[8] == '--job-sha256') and (argv[10] == '--source-sha256') and all((type(v) is str for v in argv)) and all((re.fullmatch('[0-9a-f]{64}', argv[i]) for i in (9, 11))), 'Exact compiled32 original runtime argv required')
+     job = Path(argv[7])

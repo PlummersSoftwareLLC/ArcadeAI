@@ -1,0 +1,30 @@
+{
+  "actual_execution": null,
+  "actual_trial_invocation": null,
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-c",
+    "import importlib.util, unittest; s=importlib.util.spec_from_file_location('early_phase_guards', '/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_early_phase_insurance_proposal/test_early_phase_insurance.py'); t=importlib.util.module_from_spec(s); s.loader.exec_module(t); suite=unittest.defaultTestLoader.loadTestsFromTestCase(t.EarlyPhaseContracts); result=unittest.TextTestRunner(verbosity=2).run(suite); raise SystemExit(0 if result.wasSuccessful() else 1)"
+  ],
+  "expected_methods": 14,
+  "future_numeric_limits": {
+    "CPUQuota": "200%",
+    "CUDA_VISIBLE_DEVICES": "",
+    "MemoryMax": "3G",
+    "MemorySwapMax": "0",
+    "RuntimeMaxSec": 120,
+    "TasksMax": 64
+  },
+  "status": "UNEXECUTED_FUTURE_ROOT_STDLIB_GUARDS_ONLY",
+  "suggested_limits": {
+    "CPUQuota": "200%",
+    "CUDA_VISIBLE_DEVICES": "",
+    "MemoryMax": "512M",
+    "MemorySwapMax": "0",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "RuntimeMaxSec": 60,
+    "TasksMax": 64
+  }
+}

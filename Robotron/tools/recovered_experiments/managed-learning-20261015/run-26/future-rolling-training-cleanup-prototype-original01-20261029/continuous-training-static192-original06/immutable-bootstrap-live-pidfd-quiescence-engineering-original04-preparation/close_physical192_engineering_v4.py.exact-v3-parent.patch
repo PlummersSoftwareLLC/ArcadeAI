@@ -1,0 +1,80 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/immutable-bootstrap-live-pidfd-engineering-original03-preparation/close_physical192_engineering_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/immutable-bootstrap-live-pidfd-quiescence-engineering-original04-preparation/close_physical192_engineering_v4.py
+@@ -41,11 +41,11 @@
+     require(ip['sha256']==expected_sha,'Exact original engineering launch index required')
+     immutable=load('_reconnect_engineering_close_reader',ROOT/'tools/confirmed_game_boundary_proposal/protect_confirmed_winner_reviewed4.py')
+     def read(pin):return immutable.read_pin(pin)
+-    packet=read(ip);require(packet['schema']=='robotron-original192-immutable-bootstrap-live-pidfd-three-original-launches-v3','Original launch index schema differs')
++    packet=read(ip);require(packet['schema']=='robotron-original192-immutable-bootstrap-live-pidfd-three-original-launches-v4','Original launch index schema differs')
+     records=[row for row in packet['records']if row['kind']==kind and row['mode']==mode]
+     require(len(records)==1,'One exact original engineering scope required')
+     record=records[0];out=Path(record['output']);owner=read(record['original_live_owner']);intent=read(record['intent'])
+-    require(owner['unit']==record['unit']==intent['unit']and intent['schema']=='robotron-original192-immutable-bootstrap-live-pidfd-engineering-intent-v3'and mode in('warmup','long','abort')and intent['attempt']==1 and intent['no_retry']is True
++    require(owner['unit']==record['unit']==intent['unit']and intent['schema']=='robotron-original192-immutable-bootstrap-live-pidfd-engineering-intent-v4'and mode in('warmup','long','abort')and intent['attempt']==1 and intent['no_retry']is True
+             and intent['engineering_only']is True,'Original parent/source ownership differs')
+     require(not(out/'independent-original-engineering-closeout.json').exists(),'Original engineering closeout already consumed')
+     for pin in intent['sources'].values():h.checked(pin)
+@@ -59,12 +59,12 @@
+     require(' '.join(argv[start:])+' ; ignore_errors=no ;'in fields['ExecStart'],'Actual original parent runtime argv differs')
+     terminal=h.put(out/'original-terminal-properties.json',fields)
+     reportpin=h.pin(out/'runtime/result.json');report=read(reportpin)
+-    require(report['schema']=='robotron-original192-immutable-bootstrap-live-pidfd-health-interface-probe-v3'and report['status']=='PASS_ENGINEERING_INTERFACE_ONLY'and report['mode']==mode
++    require(report['schema']=='robotron-original192-immutable-bootstrap-live-pidfd-health-interface-probe-v4'and report['status']=='PASS_ENGINEERING_INTERFACE_ONLY'and report['mode']==mode
+             and report['private_policy_or_GPU_loaded']is report['main_runtime_changed']is report['quality_qualified']is False,
+             'Actual engineering result/domain differs')
+     require(report['scientific_launch_qualified']is False,'Engineering cannot qualify a scientific launch')
+     require(report['proof_gap_contract']=='robotron-main-proof-gap-2s-v1'and report['maximum_gap_s']==2.0
+-            and report['main_health_profile']=='PHYSICAL_ORIGINAL192_IMMUTABLE_BOOTSTRAP_LIVE_PIDFD_V4'
++            and report['main_health_profile']=='PHYSICAL_ORIGINAL192_LIVE_PIDFD_CURRENT_EVAL_QUIESCENCE_V5'
+             and report['simultaneous192_actors_claimed']is False,'Exact prospective static2s report required')
+     if mode=='long':
+         require(report['long_work_contract']=='MINIMUM600S_AND_VALIDATED3000_SAMPLES_HARD1200S'
+@@ -76,10 +76,11 @@
+     native=read(report['original_job']);require(native['main_binding']==intent['case'],'Original case binding differs')
+     lifecycle=read(report['observer_lifecycle']);worker=read(lifecycle['worker_job']);outcome=read(lifecycle['outcome'])
+     actual_worker=read(outcome['owner']);worker_terminal=read(lifecycle['terminal_properties'])
+-    require(worker['schema']=='robotron-original192-immutable-bootstrap-live-pidfd-observer-proof2s-job-v4'and worker['maximum_gap_s']==2.0
++    require(worker['schema']=='robotron-original192-live-pidfd-current-eval-quiescence-observer-proof2s-job-v5'and worker['maximum_gap_s']==2.0
+             and worker['interval_s']==.2 and worker['initial_samples']==100
+             and worker['immutable_original192_bootstrap_certificate']is True
+-            and worker['fresh_original_keeper_pidfd_census']is True,'Exact prospective2s worker bounds required')
++            and worker['fresh_original_keeper_pidfd_census']is True
++            and worker['source_bound_current_once_only_EVAL_quiescence_after_recorded_disconnect_exception']is True,'Exact prospective2s worker bounds required')
+     require(lifecycle['all_original_processes_reaped']is lifecycle['original_scope_released']is lifecycle['launcher_birth_absent']is True,
+             'Original worker/launcher did not positively close')
+     require(birth(actual_worker['pid'])!=actual_worker['birth']
+@@ -98,13 +99,14 @@
+                 and reviewed['queued_publication_byte_joins_verified']is reviewed['fresh_final_sample_verified']
+                 is reviewed['accepted_evidence_and_projection_gaps_verified']is True
+                 and reviewed['proof_gap_contract']=='robotron-main-proof-gap-2s-v1'and reviewed['verified_maximum_gap_s']==2.0
+-                and reviewed['main_health_profile']=='PHYSICAL_ORIGINAL192_IMMUTABLE_BOOTSTRAP_LIVE_PIDFD_V4'
++                and reviewed['main_health_profile']=='PHYSICAL_ORIGINAL192_LIVE_PIDFD_CURRENT_EVAL_QUIESCENCE_V5'
+                 and all(reviewed[k]is True for k in ('source_bound_original192_physical_bootstrap_verified',
+                     'TRAIN155_original_physical_and_current_TCP_verified','EVAL37_original_connection_and_strict_retirement_evidence_verified',
+                     'EVAL_closed_slots_have_positive_normal0_reap_and_cleanup_verified',
+                     'prior_completed_EVAL_prefix_and_current_suffix_verified',
+                     'immutable_original192_bootstrap_certificate_verified','fresh_original_keeper_pidfd_census_verified',
+-                    'authentic_published_normal0_exit_facts_and_monotone_coverage_verified'))
++                    'authentic_published_normal0_exit_facts_and_monotone_coverage_verified','current_once_only_EVAL_quiescence_with_historical_error_and_ready_false_preserved_verified'))
++                and reviewed['original_cleanup_deadline_handoff_CID_reuse_or_refill_success_from_exception_claimed']is False
+                 and outcome['success']is True and outcome['error']is None
+                 and worker_terminal['ExecMainCode']=='1'and worker_terminal['ExecMainStatus']=='0',
+                 'Original long probe/raw replay did not pass')
+@@ -123,7 +125,7 @@
+     try:os.fchmod(fd,0o444);os.fsync(fd)
+     finally:os.close(fd)
+     return h.put(out/'independent-original-engineering-closeout.json',dict(
+-        schema='robotron-original192-immutable-bootstrap-live-pidfd-original-engineering-closeout-v3',status='PASS_ENGINEERING_ONLY',
++        schema='robotron-original192-immutable-bootstrap-live-pidfd-original-engineering-closeout-v4',status='PASS_ENGINEERING_ONLY',
+         kind=kind,mode=mode,launch_index=ip,original_live_owner=record['original_live_owner'],parent_terminal=terminal,
+         owned_stop=stop,released_properties=after,actual_probe_result=reportpin,worker_lifecycle=report['observer_lifecycle'],
+         accepted_samples=len(outcome['samples']),unaccepted_samples=len(outcome['unaccepted']),worker_actual_exit=0 if mode in ('warmup','long')else 1,
+@@ -136,7 +138,7 @@
+ 
+ if __name__=='__main__':
+     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--execute',action='store_true')
+-    parser.add_argument('--index',type=Path);parser.add_argument('--index-sha256');parser.add_argument('--kind',choices=('main-immutable-bootstrap-live-pidfd192',))
++    parser.add_argument('--index',type=Path);parser.add_argument('--index-sha256');parser.add_argument('--kind',choices=('main-current-once-EVAL-quiescence192',))
+     parser.add_argument('--mode',choices=('warmup','long','abort'));args=parser.parse_args()
+     if args.execute:print(json.dumps(close(args.index,args.index_sha256,args.kind,args.mode)),flush=True)
+     else:print('PLAN_ONLY_NO_READS_OR_ACTIONS')

@@ -1,0 +1,59 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/prepare_round_study_namespace_v11.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/prepare_round_study_typed_capture_v12.py
+@@ -26,6 +26,8 @@
+ PROTECTED_SHA = 'b23152ece3bb614831a278fe0572c07433f1bee59c5accef5a1ab7d3007af883'
+ LEGS = ('R1', 'C1', 'R2', 'C2')
+ 
++
++ORIGINAL05_CAPTURE_VERIFIER = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/fresh-original05-typed-Adam-cap8-profile-preparation-original05/verify_closed_original05_typed_capture_v1.py', 'sha256': '111eb202f73c3457ccf589576c1c97de01a5adb18d55419108285d5f1ed02507', 'bytes': 26611, 'identity': {'device': 2304, 'inode': 85459427, 'bytes': 26611, 'mtime_ns': 1793333815369822958, 'ctime_ns': 1793334151617301345, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+ 
+ def require(value, message):
+     if not value:
+@@ -107,7 +109,13 @@
+     CAPTURE = Path(selected['capture_root'])
+     result_pin = h.pin(CAPTURE/'result.json')
+     result = read(result_pin, h)
+-    plan_pin = h.pin(CAPTURE/'window-plan.json')
++    typed_source = selected.get('capture_eligibility_overlay')
++    if typed_source is not None:
++        require(typed_source == h.pin(Path(__file__).resolve())
++                and selected['candidate_selection_mode'] == 'FRESH_POST_MODE_CAPTURE'
++                and Path(selected['capture_plan']['path']) == CAPTURE/'window-plan-typed-Adam-adopted-v1.json',
++                'Explicit exact typed original05 plan/source selection required')
++    plan_pin = h.pin(Path(selected['capture_plan']['path']) if typed_source is not None else CAPTURE/'window-plan.json')
+     require(plan_pin == selected['capture_plan'] and result_pin == selected['capture_result'],
+             'Actual selected capture plan/result pins required')
+     plan = read(plan_pin, h)
+@@ -160,11 +168,22 @@
+     # measurement attempt. No SHA here is a quality-rejection blacklist.
+     authority = subset_pin(result['CPU_verification'], h)
+     cpu = read(authority, h)
++    ordinary_Adam_advance = cpu['Adam_step_min'] == cpu['Adam_step_max'] and cpu['Adam_step_min'] > plan['entry_Adam_step']
++    typed_progress_evidence = []
++    if not ordinary_Adam_advance:
++        require(typed_source is not None, 'Saturated Adam counters require explicit new eligibility selection')
++        proof = load('_prepare_exact_original05_typed_capture', h.checked(ORIGINAL05_CAPTURE_VERIFIER))
++        closed = proof.verify_closed_capture(h)
++        require(closed['capture_plan'] == plan_pin and closed['capture_result'] == result_pin
++                and closed['CPU'] == cpu and closed['result'] == result,
++                'Typed progress classification cannot transfer to another capture/endpoint')
++        typed_progress_evidence = [ORIGINAL05_CAPTURE_VERIFIER, *proof.FIXED.values(), typed_source]
+     require(subset_pin(cpu['checkpoint'], h) == checkpoint
+             and cpu['online_target_shapes_and_finiteness_verified'] is True
+             and cpu['priority_phase_valid'] is True and cpu['priority_phase']['metric'] == 'ce'
+             and cpu['optimizer_lrs'] == [3.125e-6] and cpu['Adam_parameters'] == 81
+-            and cpu['Adam_step_min'] == cpu['Adam_step_max'] > plan['entry_Adam_step']
++            and cpu['Adam_step_min'] == cpu['Adam_step_max']
++            and (ordinary_Adam_advance or bool(typed_progress_evidence))
+             and cpu['CUDA_initialized'] is False, 'Actual CPU checkpoint verification differs')
+     threshold = read(h.pin(CAPTURE/'first-threshold.raw.json'), h)
+     require(all(cpu['clocks'][key] >= threshold[key] for key in cpu['clocks']), 'Captured state predates the threshold')
+@@ -190,7 +209,7 @@
+         training_experiment='CE4096-LR125-survival32M-original01-20261023',
+         immutable_numerical_or_protection_authority=authority), [result_pin, plan_pin, authority,
+         h.pin(CAPTURE/'CPU-original-owner.json'), h.pin(CAPTURE/'CPU-original-terminal.json'),
+-        h.pin(CAPTURE/'CPU-owned-release.json'), *capture_inputs, *reuse_evidence]
++        h.pin(CAPTURE/'CPU-owned-release.json'), *capture_inputs, *reuse_evidence, *typed_progress_evidence]
+ 
+ 
+ def capture_binding(template_pin, h):

@@ -1,0 +1,123 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/collect-CE543M-quality-R1-startup-root-reviewed3-20261017.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/collect-CE543M-quality-later-leg-startup-root-reviewed1-20261017.py
+@@ -1,4 +1,9 @@
+-"""Root read-only startup evidence for the genuine CE543M quality incarnation."""
++"""Root read-only startup evidence for a genuine later CE543M quality leg.
++
++Invoke only when that original campaign leg is collecting and all16 are ready.
++No campaign launch/retry, trainer/control mutation or checkpoint/model-body read.
++"""
++import argparse
+ import hashlib
+ import importlib.util
+ import json
+@@ -11,7 +16,17 @@
+ CAMPAIGN = RUN.parent/'quality-448M-vs-CE543M-20261017'
+ LAUNCH = RUN/'CE543M-quality-durable-launch-20261017'
+ UNIT = 'robotron-quality-448M-vs-CE543M-20261017.service'
+-OUT = RUN/'CE543M-quality-launch-and-R1-startup-root-reviewed3-20261017'
++parser = argparse.ArgumentParser(description=__doc__)
++parser.add_argument('--leg', type=int, choices=(2, 3, 4), required=True)
++ARGS = parser.parse_args()
++LEG = ARGS.leg
++NAME, ROLE, EXPECTED_CHECKPOINT_SHA256, EXPECTED_LEARNER_FRAMES = {
++    2: ('C1', 'candidate', '8b86546355ade166937a8287a008c7854276ed773a103eb815287dde00d6fb7e', 543235763),
++    3: ('R2', 'reference', '1e085a128e237c2bb0636b073e5053dd8bf5be932bcbd8249543b3af20e23021', 452630871),
++    4: ('C2', 'candidate', '8b86546355ade166937a8287a008c7854276ed773a103eb815287dde00d6fb7e', 543235763),
++}[LEG]
++OUT = RUN/f'CE543M-quality-launch-and-{NAME}-startup-root-reviewed1-20261017'
++assert not OUT.exists()
+ HELPER = RUN/'rawKL-trial02-terminal-release-root-preparation-20261017/archive_and_release_trial02.py'
+ assert hashlib.sha256(HELPER.read_bytes()).hexdigest() == 'd525f6a0910354023dec54bc6f54b45651912942cdc5a5eb51dc2de814361f65'
+ spec = importlib.util.spec_from_file_location('_root_CE543_startup_files', HELPER)
+@@ -50,19 +65,34 @@
+ plan = json.loads(plan_raw)
+ preview = json.loads((RUN/'CE543M-quality-default-plan-root-20261017/default-plan.json').read_bytes())
+ assert {key for key in plan if plan[key] != preview[key]} <= {'created_unix_s'}
+-state = json.loads((CAMPAIGN/'status.json').read_bytes())
+-status_raw = (CAMPAIGN/'01-reference/status.json').read_bytes()
++state_raw = (CAMPAIGN/'status.json').read_bytes()
++state = json.loads(state_raw)
++leg = plan['legs'][LEG-1]
++assert leg['index'] == LEG and leg['role'] == ROLE
++assert leg['job']['directory'] == str(CAMPAIGN/f'{LEG:02d}-{ROLE}')
++assert leg['job']['game_boundary_diagnostics'] is True
++status_raw = Path(leg['evaluator_status_path']).read_bytes()
+ status = json.loads(status_raw)
+-assert state['state'] == 'running' and state['current_leg'] == 1 and state['plan_sha256'] == plan_pin['sha256']
+-assert state['legs'][0]['pid'] == 894298
++assert state['state'] == 'running' and state['current_leg'] == LEG and state['plan_sha256'] == plan_pin['sha256']
++records = [record for record in state['legs'] if record['index'] == LEG]
++assert len(records) == 1
++record = records[0]
++assert record['state'] == 'running' and record['role'] == ROLE
++assert all(record[key] == leg[key] for key in ('receipt_path', 'evaluator_status_path', 'console_log'))
++assert isinstance(record['pid'], int) and not isinstance(record['pid'], bool) and record['pid'] > 0
+ assert status['active'] and status['phase'] == 'collecting' and not status['complete']
++assert status['job'] == leg['job'] and status['label'] == leg['job']['label']
+ assert status['boundary']['acknowledged'] == 16 and status['boundary']['ready']
+ assert status['boundary']['actor_slots'] == list(range(4096, 4112))
+-assert status['checkpoint_sha256'] == '1e085a128e237c2bb0636b073e5053dd8bf5be932bcbd8249543b3af20e23021'
+-assert status['clocks']['learner_frame_count'] == 452630871
+-evaluator = process(894298)
+-assert evaluator['starttime_ticks'] == 34316739 and evaluator['ppid'] == identity['pid']
++assert status['checkpoint_sha256'] == EXPECTED_CHECKPOINT_SHA256
++assert status['clocks']['learner_frame_count'] == EXPECTED_LEARNER_FRAMES
++# run_campaign records the actual PID, not /proc start ticks. The latter are
++# observed/bracketed here and joined to the original parent's exact child.
++evaluator = process(record['pid'])
++assert evaluator['starttime_ticks'] > identity['starttime_ticks'] and evaluator['ppid'] == identity['pid']
+ assert evaluator['cgroup'] == '0::'+quality['ControlGroup']
++assert evaluator['cmdline'] == leg['command']
++assert evaluator['cwd'] == str(REPO) and evaluator['exe'] == quality_process['exe']
+ actors = [dict(process(pid), slot=int(slot)) for slot, pid in status['actor_pids'].items()]
+ assert len(actors) == len({actor['pid'] for actor in actors}) == 16
+ assert {actor['slot'] for actor in actors} == set(range(4096, 4112))
+@@ -71,7 +101,7 @@
+     assert Path(actor['exe']).name == 'mame' and 'robotron' in actor['cmdline']
+     assert '-cfg_directory' in actor['cmdline']
+     private_cfg = actor['cmdline'][actor['cmdline'].index('-cfg_directory')+1]
+-    assert private_cfg == str(CAMPAIGN/'01-reference/actors'/str(actor['slot'])/'cfg')
++    assert private_cfg == str(CAMPAIGN/f'{LEG:02d}-{ROLE}'/'actors'/str(actor['slot'])/'cfg')
+ 
+ binding_raw, binding_pin = ops.read_file(RUN/'CE543M-quality-binding-root-preparation-20261017/root-quality-binding-job.json')
+ assert binding_pin['sha256'] == 'f43719ed4dc60a4c275a7414995aa79d0f40062c76964200cf8700a8abe50dc3'
+@@ -124,22 +154,32 @@
+ assert graphs['fallback_count'] == graphs['runtime_capture_count'] == 0 and graphs['fatal_error'] is None
+ assert all(api['host_pipeline'][key]['errors'] == 0 for key in ('inference','actor_refresh','target_refresh','learner_priority'))
+ assert ops.process_start(identity['pid']) == identity['starttime_ticks']
++assert ops.process_start(evaluator['pid']) == evaluator['starttime_ticks']
++# Refuse a cross-leg snapshot if the original campaign advanced during checks.
++closing_state = json.loads((CAMPAIGN/'status.json').read_bytes())
++assert closing_state['state'] == 'running' and closing_state['current_leg'] == LEG
++assert closing_state['plan_sha256'] == plan_pin['sha256']
++closing_records = [item for item in closing_state['legs'] if item['index'] == LEG]
++assert len(closing_records) == 1 and closing_records[0] == record
+ OUT.mkdir()
+ api_pin = ops.write_bytes(OUT/'actual-main-API.json', raw_api)
+-status_pin = ops.write_bytes(OUT/'actual-original-R1-status.json', status_raw)
++status_pin = ops.write_bytes(OUT/f'actual-original-{NAME}-status.json', status_raw)
++state_pin = ops.write_bytes(OUT/'actual-campaign-status-at-startup.json', state_raw)
+ ops.publish(OUT/'actual-quality-service-show-all-command.json',raw_quality)
+ ops.publish(OUT/'actual-quality-timer-show-all-command.json',raw_timer)
+ ops.publish(OUT/'actual-GPU-owner-command.json',gpu)
+-proof = dict(status='PASS_ORIGINAL_PARENT_R1_ALL16_MAIN192_FROZEN_SOURCE_AND_GPU_STARTUP',
++proof = dict(status=f'PASS_ORIGINAL_PARENT_{NAME}_ALL16_MAIN192_FROZEN_SOURCE_AND_GPU_STARTUP',
++    leg=LEG, role=ROLE, label=NAME, actual_campaign_status=state_pin, original_leg_record=record,
+     observed_unix_s=time.time(), actual_plan=plan_pin, preview_only_created_unix_s_diff=True,
+     quality_owner=identity, quality_unit=quality, quality_timer=timer,
+-    quality_process=quality_process, evaluator=evaluator, R1_actors=actors,
++    quality_process=quality_process, evaluator=evaluator, **{f'{NAME}_actors': actors},
+     held_main_anchor=anchor, main_process=main, main_actors=main_actors,
+     selected_main_environment_sha256=anchor['environment_sha256'],
+-    actual_main_API=api_pin, actual_R1_status=status_pin,
+-    R1_admission_start_unix_s=status['start_ts'], R1_admission_close_unix_s=status['close_ts'],
++    actual_main_API=api_pin, **{f'actual_{NAME}_status': status_pin,
++        f'{NAME}_admission_start_unix_s': status['start_ts'],
++        f'{NAME}_admission_close_unix_s': status['close_ts']},
+     source_freeze_held=True, actual_qualification_pass=False,
+     scope='Original running identities and isolation only; no incomplete cohort score inference.')
+-pin = ops.publish(OUT/'actual-parent-R1-all16-main192-source-GPU-and-API.json',proof)
++pin = ops.publish(OUT/f'actual-parent-{NAME}-all16-main192-source-GPU-and-API.json',proof)
+ print(json.dumps(dict(status=proof['status'],proof=pin,evaluator=evaluator['pid'],
+     all16_slots=True,main192=True,main_learner_frames=api['learner_frame_count'])))

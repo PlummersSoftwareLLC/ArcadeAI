@@ -1,0 +1,45 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-two-second-main-proof-contract-original01-preparation/source-family-original01/round_observer_proof2s_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/observe_continuous_static192_v1.py
+@@ -17,7 +17,7 @@
+ import time
+ import urllib.request
+ 
+-SCHEMA = 'robotron-round-observer-declared-launcher-proof2s-job-v1'
++SCHEMA = 'robotron-continuous-static192-observer-proof2s-job-v1'
+ 
+ 
+ def require(value, message):
+@@ -125,7 +125,7 @@
+     require(len(raw) <= 1 << 20 and hashlib.sha256(raw).hexdigest() == sample['api_wire_sha256']
+             and json.loads(raw) == sample['api'], 'Original raw API census differs')
+     require(health.base().stable_round_status(read(Path(case['round_root']) / 'status.json'))
+-            == health.base().stable_round_status(sample['status']), 'Round publication raced raw API capture')
++            == health.base().stable_round_status(sample['status']), 'Static original192 publication raced raw API capture')
+     sample['unix_s'] = time.time()
+     sample['monotonic_s'] = time.monotonic()
+     require(sample['monotonic_s'] - started <= 5, 'Raw API/TCP capture exceeded5s')
+@@ -136,16 +136,14 @@
+     require(job['schema'] == SCHEMA and job['attempt'] == 1 and job['no_retry'] is True, 'One original observer required')
+     require(job['interval_s'] == .2 and job['initial_samples'] == 100 and job['maximum_gap_s'] == 2.0
+             and job['work_s'] == 4200 and job['runtime_s'] == 4260, 'Exact deadline observer bounds required')
+-    require(job.get('source_bound_API_reconnect_projection') is True
+-            and job.get('source_bound_natural_round_admission') is True
+-            and job.get('source_bound_declared_launcher_census') is True
+-            and set(job['sources']) == {'client','worker','health','health_base','API_projection','round_admission','launcher_census','durability','control','interpreter'}
+-            and job['sources']['health_base'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_main_health_retired_API_v4.py'))
+-            and job['sources']['API_projection'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/api_cached_projections_v3.py'))
+-            and job['sources']['round_admission'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/round_admission_proof_v2.py')),
+-            'Exact source-bound reconnect observer dependencies required')
+-    require(job['sources']['launcher_census'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/launcher_census_v1.py')),
+-            'Exact new launcher evidence source required')
++    require(job.get('source_bound_retired_API_projection') is True
++            and job.get('source_bound_completed_original192_bootstrap') is True
++            and job.get('source_bound_static_original192_partition') is True
++            and set(job['sources']) == {'client','worker','health','health_base','registry','durability','control','interpreter'}
++            and job['sources']['health_base'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_health_v1.py'))
++            and job['sources']['registry'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_registry_v1.py'))
++            and job['sources']['health'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_transport_v1.py')),
++            'Exact source-bound static original192 observer dependencies required')
+     require(len(job['nonce']) == 32 and all(c in '0123456789abcdef' for c in job['nonce']), 'Fresh nonce required')
+     require(pin(Path(__file__).resolve()) == job['sources']['worker'], 'Actual worker source differs')
+     for value in job['sources'].values():

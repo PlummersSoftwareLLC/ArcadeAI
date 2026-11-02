@@ -1,0 +1,22 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-physical-original04/postguard-owned-operations-original01/finalize_physical_study_readiness_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-physical-original04/postguard-owned-operations-generic-original02/finalize_physical_study_readiness_v2.py
+@@ -10,7 +10,7 @@
+ import time
+ 
+ ROOT=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+-HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-physical-original04')
++REVIEW_PREPARER_SHA='d0955c345dd46d08d261cf6c20c8dff87e1335c4977d55d75a8ed895fac99be0'
+ 
+ 
+ def load(name,path):
+@@ -22,6 +22,10 @@
+     def read(pin):return json.loads(h.checked(pin).read_bytes())
+     bp,pp,cp=[h.pin(p.resolve())for p in (base,precommit,cpu)]
+     previous,packet,closed=read(bp),read(pp),read(cp);manifest=read(previous['prepared_manifest'])
++    selected_preparer=packet['source'];h.checked(selected_preparer)
++    assert selected_preparer['sha256']==REVIEW_PREPARER_SHA and selected_preparer['identity']['mode']=='0o444'
++    assert Path(selected_preparer['path']).name=='prepare_deadline_independent_review_v4.py'
++    HERE=Path(selected_preparer['path']).parent
+     assert previous['schema']=='robotron-round-study-resource-readiness-v1'
+     assert previous['CPU_qualifications_closed']is previous['original_attempts_unused']is True
+     assert packet['native_prepared']==previous['prepared_manifest']and packet['engineering_only']is False

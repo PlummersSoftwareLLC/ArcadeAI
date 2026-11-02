@@ -1,0 +1,45 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/run_continuous_static192_health_focused_CPU_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/run_continuous_supervisor_focused_CPU_v1.py
+@@ -1,4 +1,4 @@
+-"""Default inert; one original Root-operated pure predicate CPU qualification."""
++"""Default inert; one original Root-operated actual-method CPU qualification."""
+ import argparse
+ import hashlib
+ import importlib.util
+@@ -34,7 +34,7 @@
+     source=pin(Path(__file__).resolve());require(source['sha256']==args.source_sha256,'Exact CPU driver required')
+     jp=pin(Path(args.job).resolve());require(jp['sha256']==args.job_sha256,'Exact original CPU job required')
+     job=json.loads(Path(jp['path']).read_bytes())
+-    require(job['schema']=='robotron-continuous-static192-focused-original-CPU-job-v1'
++    require(job['schema']=='robotron-continuous-supervisor-focused-original-CPU-job-v1'
+         and job['source']==source and job['original_attempt']==1 and job['no_retry']is True,
+         'One exact original prospective CPU fixture job required')
+     for value in job['inputs']:
+@@ -52,21 +52,22 @@
+                 raise RuntimeError('No model/ROM/MAME body access in focused fixture')
+     sys.addaudithook(audit)
+     fixture=job['fixture'];require(pin(fixture['path'])==fixture,'Exact fixture file required')
+-    spec=importlib.util.spec_from_file_location('_continuous_static192_health_fixture',fixture['path'])
++    spec=importlib.util.spec_from_file_location('_continuous_supervisor_fixture',fixture['path'])
+     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+     suite=unittest.defaultTestLoader.loadTestsFromTestCase(module.Tests)
+     require(suite.countTestCases()==6,'Six focused methods required; no inherited suite rerun')
+-    print(json.dumps(dict(phase='FOCUSED_CONTINUOUS_STATIC192_HEALTH_PREDICATES',methods=6)),flush=True)
++    print(json.dumps(dict(phase='FOCUSED_CONTINUOUS_SUPERVISOR_ACTUAL_METHODS',methods=6)),flush=True)
+     result=unittest.TextTestRunner(stream=sys.stdout,verbosity=2).run(suite)
+     for value in job['inputs']:
+         require(pin(value['path'])==value,'Fixture source changed during original CPU run')
+     require('torch'not in sys.modules,'Torch unexpectedly imported')
+-    report=dict(schema='robotron-continuous-static192-focused-original-CPU-report-v1',status='PASS'if result.wasSuccessful()else'FAIL',
++    report=dict(schema='robotron-continuous-supervisor-focused-original-CPU-report-v1',status='PASS'if result.wasSuccessful()else'FAIL',
+         original_job=jp,actual_PID=os.getpid(),source=source,fixture=fixture,
+         tests_run=result.testsRun,failures=[str(t)for t,_ in result.failures],errors=[str(t)for t,_ in result.errors],
+         elapsed_s=time.monotonic()-started,Torch_imported=False,GPU_or_MAME_launched=False,
+-        pure_SHA_bound_actual_registry_health_and_transport_functions=True,
+-        temporary_immutable_synthetic_events_and_TCP_API_evidence=True,
++        SHA_bound_actual_supervisor_methods_and_loop=True,
++        temporary_real_immutable_events_and_journal_tail=True,
++        all_Popen_proc_API_and_clock_collaborators_synthetic=True,
+         live_collectors_or_proc_API_units_called=False,
+         actual_MAME_model_or_score_bodies_read=False,
+         actual_startup_authority_or_192_runtime_qualified=False,

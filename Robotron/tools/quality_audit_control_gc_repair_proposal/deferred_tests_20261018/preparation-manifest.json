@@ -1,0 +1,110 @@
+{
+  "schema": "robotron-deferred-quality-audit-GC-control-regression-source-preparation-v1",
+  "utc": "2026-10-18T05:53:34.836512+00:00",
+  "status": "SOURCE_ONLY_TESTS_AUTHORED_UNEXECUTED_DEFERRED_UNTIL_FREEZE_RELEASE",
+  "files": {
+    "test_control_gc.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/deferred_tests_20261018/test_control_gc.py",
+      "sha256": "44fad36d3fe593ebbeadf79150a3d76062315e4a0d65613af4a14a3fa6183432",
+      "bytes": 24566,
+      "identity": {
+        "device": 2304,
+        "inode": 81531235,
+        "bytes": 24566,
+        "mtime_ns": 1792302744771359198,
+        "ctime_ns": 1792302814833633357,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "README.txt": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/deferred_tests_20261018/README.txt",
+      "sha256": "10ced7bd6a73892b46fc997b6768f8fba40f5706dc4b306991ad4e71a12528b2",
+      "bytes": 2982,
+      "identity": {
+        "device": 2304,
+        "inode": 81531231,
+        "bytes": 2982,
+        "mtime_ns": 1792302814835290931,
+        "ctime_ns": 1792302814835290931,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "upstream_pins": {
+    "control_audit_reviewed2.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/control_audit_reviewed2.py",
+      "sha256": "3c600a37d6502de5b82a1ab04c12901ee6e693c1c5272e0a92b46af87e8f452d",
+      "bytes": 16717,
+      "identity": {
+        "device": 2304,
+        "inode": 81529004,
+        "bytes": 16717,
+        "mtime_ns": 1792300493497560614,
+        "ctime_ns": 1792300493497560614,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "source-note-reviewed2.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/source-note-reviewed2.json",
+      "sha256": "3dd51efa598eb9093b76c8df867160bb360b135b76e072746a9c61b9254f9c52",
+      "bytes": 5065,
+      "identity": {
+        "device": 2304,
+        "inode": 81529005,
+        "bytes": 5065,
+        "mtime_ns": 1792300530983890697,
+        "ctime_ns": 1792300530983890697,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "source-note.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/source-note.json",
+      "sha256": "241811a5c8f1827be14efbe2d1918423acc2fe5382a55fa8d6c447ae24256854",
+      "bytes": 11611,
+      "identity": {
+        "device": 2304,
+        "inode": 81529003,
+        "bytes": 11611,
+        "mtime_ns": 1792300412289352220,
+        "ctime_ns": 1792300412289352220,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "authored_test_methods": 19,
+  "tests_executed": 0,
+  "imports_or_default_execution_by_author": 0,
+  "runtime_or_model_access_by_author": false,
+  "selected_source_changes": false,
+  "future_command": [
+    "/usr/bin/python3",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/deferred_tests_20261018",
+    "-p",
+    "test_control_gc.py",
+    "-v"
+  ],
+  "actual_runner": null,
+  "actual_outcomes": null,
+  "source_verification": "Stdlib AST parse/read/hash only; no test discovery/import/execution. Exact target launch/observe/main are exercised only at a later explicitly authorized root test run.",
+  "safety_scope": [
+    "Target subprocess and proc operations are strict scripted fakes with no real fallback.",
+    "Only private temp fixtures and the pinned source are accessible through target Path.",
+    "Unexpected API calls are retained and make cleanup fail even if observed code catches the initial exception.",
+    "Raw command exits/streams and payload-vs-lifecycle results are checked separately; no real host timing or identity atomicity proof."
+  ]
+}

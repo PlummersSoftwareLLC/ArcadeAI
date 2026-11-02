@@ -1,0 +1,39 @@
+{
+  "actual_argv": null,
+  "actual_job_PIN": null,
+  "argv_elements_template": [
+    "<ROOT_VERIFIED_VENV_ARGV_PRESERVE_SYMLINK>",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/verify_phase_snapshot.py",
+    "--execute",
+    "--job",
+    "<NEW_0444_JOB_PATH>",
+    "--expected-job-sha256",
+    "<ACTUAL_JOB_SHA256>",
+    "--expected-verifier-sha256",
+    "b2e732dc731b2b601f7499d2cafd5841896daf2b0713d496b98cb6b8d7279519"
+  ],
+  "bounds": {
+    "MemoryMax_bytes": 3221225472,
+    "MemorySwapMax_bytes": 0,
+    "TasksMax": 128,
+    "cpu_count": 2,
+    "cpu_deadline_s": 120,
+    "managed_save_deadline_s": 60,
+    "model_source_max_bytes": 536870912
+  },
+  "completion_if_inline": "Keep the genuine {argv,exit_code} completion and captured stdout/stderr; archive output report independently0444 without changing the original report. Do not invent a retained CPU unit or childPID.",
+  "completion_if_root_chooses_retained_unit": "Bind its actual original PID/start/invocation and show/cat/journal before exact release instead; not assumed by this template.",
+  "environment": {
+    "CUDA_VISIBLE_DEVICES": "",
+    "LD_PRELOAD": "UNSET",
+    "MKL_NUM_THREADS": "2",
+    "OMP_NUM_THREADS": "2",
+    "OPENBLAS_NUM_THREADS": "2",
+    "PYTHONPATH": "UNSET"
+  },
+  "schema": "robotron-future-phase-candidate-cpu-argv-template-v1",
+  "status": "INERT_NOT_INVOKED"
+}

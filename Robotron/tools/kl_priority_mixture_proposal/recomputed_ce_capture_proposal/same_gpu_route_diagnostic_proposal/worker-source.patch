@@ -1,0 +1,499 @@
+--- Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_recompute_proposal/cuda_trace_worker.py
++++ Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/same_gpu_route_diagnostic_proposal/cuda_trace_worker.py
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env python3
+-"""Owned fresh-process conditional reconstruction of eight retained live PREs.
++"""Owned fixed attempt01 same-GPU original4/conditional5 route diagnostic.
+ 
+ Numerical imports are forbidden until exact parent identity, token, delegated
+ cgroup, private paths/environment/source bundle and resource guards pass.
+@@ -113,273 +113,235 @@
+         layout=layout,variant=variant,paths=layout.phase(variant))
+ 
+ 
++ROUTES = ('original4', 'conditional5')
++SELECTED_INDEX = 1
++
++
+ def setup(ctx):
+-    import numpy as np
+-    import torch
+-    ctx.np,ctx.torch=np,torch
+-    torch.set_num_threads(2);torch.set_num_interop_threads(2)
+-    require(torch.cuda.device_count()==1 and ctx.old.canonical_uuid(torch.cuda.get_device_properties(0).uuid)
+-            ==ctx.old.canonical_uuid(ctx.base.GPU0_UUID),'Visible GPU UUID/count differs')
+-    free,total=torch.cuda.mem_get_info(0)
+-    require(free>=13*ctx.base.GIB,'Post-context GPU free margin insufficient')
+-    torch.cuda.set_per_process_memory_fraction(ctx.parent.BOUNDS['vram_allocator_bytes']/total,0)
+-    require(getattr(sys,'_is_gil_enabled',lambda:None)() is False,'Effective GIL must remain disabled')
+-    for key,name in (('frozen_science_helpers','_live8_science'),('conditional_helpers','_live8_conditional')):
+-        item=ctx.lock[key]
+-        setattr(ctx,'science' if key=='frozen_science_helpers' else 'conditional',
+-            ctx.parent.checked_module(item['source'],item['sha256'],name))
+-    sys.path[:]=[value for value in sys.path if value not in ('',str(ctx.base.REPO),str(ctx.base.GAME/'Scripts'))]
+-    sys.path.insert(0,str(ctx.layout.scripts))
+-    ctx.config=importlib.import_module('dqn.config')
+-    require(Path(ctx.config.MODEL_DIR)==ctx.paths['models'] and ctx.config.learning_control.path==ctx.paths['control'],
+-            'Model/control import escaped owned private paths')
+-    context_pin=ctx.manifest['retained_inputs']['metadata']['context']
+-    ctx.context,_=ctx.parent.bounded_json(context_pin,read_only=True)
+-    ctx.cfg=ctx.config.RL_CONFIG
+-    primitive=lambda cfg:{name:value for name,value in vars(cfg).items() if value is None or type(value) in (bool,int,float,str)}
+-    captured=ctx.context['config']
+-    require(set(captured)==set(primitive(ctx.cfg)),'Captured scientific config keyset differs')
+-    for name,value in captured.items():
+-        require(value is None or type(value) in (bool,int,float,str),'Nonprimitive captured configuration')
+-        setattr(ctx.cfg,name,value)
+-    require(primitive(ctx.cfg)==captured and ctx.cfg.batch_size==4096 and ctx.cfg.state_size==11128
+-            and ctx.cfg.num_atoms==51 and ctx.cfg.num_joint_actions==81
+-            and ctx.cfg.torch_compile_mode=='default' and ctx.cfg.c51_target_smoothing==0
+-            and ctx.cfg.use_torch_compile and ctx.cfg.compile_full_loss and ctx.cfg.enable_amp,
+-            'Held PRE geometry/profile differs')
+-    require(str(torch.__version__)==ctx.context['runtime']['torch']
+-            and torch.version.cuda==ctx.context['runtime']['cuda'],'Captured Torch/CUDA runtime version differs')
+-    # replay_tmpfs_dir is retained as an opaque scientific config string. No
+-    # replay/agent/training is imported or constructed, and this path is not used.
+-    model=importlib.import_module('dqn.model')
+-    ctx.offline=importlib.import_module('dqn.offline_loss_kernel')
+-    require(ctx.parent.digest(model.__file__)==ctx.lock['source_files']['model.py']['sha256']
+-            and ctx.parent.digest(ctx.offline.__file__)==ctx.lock['offline_loss_sha256'],'Private model/loss source differs')
+-    online,target=model.RainbowNet(11128).cuda(),model.RainbowNet(11128).cuda()
+-    device=torch.device('cuda:0')
+-    require(model.device==device and all(parameter.requires_grad for net in (online,target) for parameter in net.parameters()),
+-            'Source-default model/device/requires_grad differs')
+-    # Inert OWNED optimizer/scaler exist only for actual forbidden-call hooks.
+-    # Their empty state is not the captured live Adam/scaler and is never loaded.
+-    ctx.agent=SimpleNamespace(online_net=online,target_net=target,device=device,
+-        optimizer=torch.optim.AdamW(online.parameters(),lr=1e-4),grad_scaler=torch.amp.GradScaler('cuda'))
+-    ctx.kernels={};ctx.rows=[];ctx.attempted_forward_indices=[]
+-    ctx.science.modules_private(ctx)
+-    require(getattr(sys,'_is_gil_enabled',lambda:None)() is False,'Private model/loss import changed effective GIL')
+-
+-
+-def draw_contract(payload,row,capture_id):
+-    draw=payload['draw']
+-    require(draw['capture_id']==payload['capture_id']==row['draw_capture_id']==capture_id
+-            and draw['schema']=='robotron-replay-draw-observation-v1','Raw draw/session identity differs')
+-    outcome=payload['outcome']
+-    require(payload['attempt']==row['index']==outcome['index'] and all(outcome[key]==row[key] for key in
+-            ('before','at_loss','after','optimizer_outcome','actual_exposure_delta','draw_capture_id',
+-             'prefetch','prefetch_begin','prefetch_pre_loss','prefetch_exit')),
+-            'Raw outcome does not join original compact receipt')
+-    return draw
+-
+-
+-def payload_contract(ctx,payload,row,index):
+-    torch=ctx.torch
+-    require(payload['attempt']==index and payload['capture_id']==ctx.context['capture_id']==row['draw_capture_id']
+-            and payload['nonfinite_copies']==0 and ctx.science.finite(ctx,payload),'Malformed/nonfinite captured PRE')
+-    draw=draw_contract(payload,row,ctx.context['capture_id'])
+-    pre=payload['pre_context']
+-    require(pre['config']==ctx.context['config'] and pre['loss_sha256']==ctx.lock['original_loss_sha256']
+-            and pre['use_amp'] is True and pre['modes']==dict(online=True,target=False)
+-            and pre['clocks']==row['at_loss'],'Captured PRE config/clocks/modes/original4 differs')
+-    require(pre['learner_device']==pre['schedule_device']=='cuda:0' and pre['input_devices']==['cuda:0']*8,
+-            'Actual capture did not use its owned logical CUDA device')
+-    require(pre['kernel_constants']['diagnostics'] is (index==7),'Captured actual diagnostic route differs')
+-    require(torch.get_float32_matmul_precision()==pre['matmul_precision']
+-            and bool(torch.backends.cuda.matmul.allow_tf32)==pre['tf32_matmul']
+-            and bool(torch.backends.cudnn.allow_tf32)==pre['tf32_cudnn']
+-            and bool(torch.backends.cudnn.benchmark)==pre['cudnn_benchmark'],'Offline numeric policy differs')
+-    require(set(payload['inputs'])==set(INPUT_NAMES),'Actual8 input names differ')
+-    dtypes=(torch.float32,torch.long,torch.float32,torch.float32,torch.float32,torch.float32,torch.bool,torch.float32)
+-    for name,dtype in zip(INPUT_NAMES,dtypes):
+-        value=payload['inputs'][name]
+-        require(isinstance(value,torch.Tensor) and value.device.type=='cpu' and value.dtype==dtype
+-                and tuple(value.shape)==((4096,11128) if name in ('states','next_states') else (4096,)),
+-                'Actual FP32 batch/input ABI differs: '+name)
+-    require(payload['schedule'].shape==(3,) and payload['schedule'].dtype==torch.float32
+-            and payload['actual']['ce'].shape==(4096,) and payload['actual']['ce'].dtype==torch.float32,
+-            'Actual schedule/CE ABI differs')
+-    require(isinstance(draw['supplied_weights_float32'],torch.Tensor)
+-            and draw['supplied_weights_float32'].dtype==torch.float32
+-            and torch.equal(payload['inputs']['weights'],draw['supplied_weights_float32']),
+-            'Consumed weights do not join exact original draw')
+-    for name in ('actions','rewards','dones','horizons','is_expert'):
+-        require(torch.equal(payload['inputs'][name],torch.as_tensor(draw['small_batch_fields'][name],dtype=payload['inputs'][name].dtype,device='cpu')),
+-                'Consumed small field differs from original draw: '+name)
+-    # Actual model features include signed offsets/velocities and passthrough
+-    # globals. Finite/shape/dtype+exact captured bytes are the state contract;
+-    # the synthetic fixture's0..1 range is deliberately inapplicable here.
+-    require(torch.all((payload['inputs']['actions']>=0)&(payload['inputs']['actions']<81)),'Captured action range differs')
+-
+-
+-def snapshot(ctx):
+-    a,s=ctx.agent,ctx.science
+-    return dict(online=s.digest_tree(ctx,a.online_net.state_dict()),target=s.digest_tree(ctx,a.target_net.state_dict()),
+-        optimizer=s.digest_tree(ctx,a.optimizer.state_dict()),scaler=copy.deepcopy(a.grad_scaler.state_dict()))
+-
+-
+-def retain_readout_inputs(ctx,actual,payload,row,directory):
+-    torch=ctx.torch
+-    projected=actual['conditional']['projected'].detach().float().cpu()
+-    ce=actual['ce'].detach().float().cpu()
+-    entropy=-(projected*projected.clamp_min(1e-12).log()).sum(dim=1)
+-    signed_kl=ce-entropy
+-    values=dict(emitted_weights=payload['inputs']['weights'],actual_ce=payload['actual']['ce'],
+-        recomputed_ce=ce,recomputed_entropy=entropy,recomputed_kl_signed=signed_kl,
+-        recomputed_kl_nonnegative=signed_kl.clamp_min(0),draw=payload['draw'])
+-    record=ctx.conditional.save_payload(ctx,directory/'conditional-readout-inputs.pt',dict(
+-        scope='FP32 CPU arithmetic on retained conditional target/CE; not actual executed entropy/KL',**values))
+-    require(projected.shape==(4096,51) and ctx.science.finite(ctx,values),'Conditional readout shape/finite interpretation differs')
+-    return dict(payload=record,scope='Emitted weights and actual/recomputed CE plus conditional H/signed+clamped KL retained',
+-        formula='H=-(projected*log(clamp_min(projected,1e-12))).sum(1); KLsigned=recomputedCE-H; KLnonnegative=clamp_min(KLsigned,0)',
+-        reduction_device='cpu',dtype='torch.float32',
+-        priority_readout_policy='Separate pinned CPU analysis: actual emitted versus freshactualCE versus freshrecomputedCE versus freshsameforwardKL; selected-row sensitivity only, no new whole-tree IS claim')
+-
+-
+-def forward_and_retain(ctx,kernel,inputs,schedule,payload,item,row,index,pre_rng,directory):
+-    torch,s,a=ctx.torch,ctx.science,ctx.agent
+-    require(index not in ctx.attempted_forward_indices,'Duplicate conditional forward; no retry')
+-    ctx.attempted_forward_indices.append(index)
++    item = ctx.lock['reconstruction_helpers']
++    ctx.reconstruction = ctx.parent.checked_module(item['source'], item['sha256'], '_original_live8_reconstruction')
++    # Reuse only the reviewed setup, payload and snapshot FUNCTIONS. Never its
++    # bootstrap, reconstruct_one, recompute8, or main entry points.
++    ctx.reconstruction.setup(ctx)
++    ctx.original_loss = importlib.import_module('dqn.loss_kernel')
++    require(ctx.parent.digest(ctx.original_loss.__file__) == ctx.lock['original_loss_sha256'],
++            'Private original four-output source differs')
++    ctx.attempted_forward_routes = []
++    ctx.route_results = []
++
++
++def selected_item(ctx):
++    items = ctx.manifest['retained_inputs']['attempts']
++    require([item['index'] for item in items] == list(range(1, 9)), 'Original acquisition binding differs')
++    require(ctx.lock['reconstruction_policy']['attempt_indices'] == [SELECTED_INDEX]
++            and ctx.lock['reconstruction_policy']['forward_routes'] == list(ROUTES),
++            'Predeclared index/order differs')
++    return items[0]
++
++
++def load_selected(ctx, item):
++    require(item['index'] == SELECTED_INDEX, 'A substitute original index is forbidden')
++    row, row_pin = ctx.parent.bounded_json(item['receipt'], read_only=True)
++    require(row_pin == item['receipt'], 'Original selected row identity changed')
++    source = item['payload']
++    require(ctx.parent.stable_file(source['path'], source['sha256'], source['bytes']) == source,
++            'Original PRE identity changed before load')
++    payload = ctx.torch.load(source['path'], map_location='cpu', weights_only=True)
++    require(ctx.parent.stable_file(source['path'], source['sha256'], source['bytes']) == source,
++            'Original PRE changed during weights_only load')
++    ctx.reconstruction.payload_contract(ctx, payload, row, SELECTED_INDEX)
++    require(row['backend'] == 'original_compiled4'
++            and payload['pre_context']['kernel_constants']['diagnostics'] is False,
++            'The predeclared first attempt must use the ordinary original route')
++    return payload, row
++
++
++def restore_pre(ctx, payload):
++    """Independently reload the same captured PRE before EACH fixed route."""
++    torch, science, agent = ctx.torch, ctx.science, ctx.agent
++    pre = payload['pre_context']
++    for name, net in (('online', agent.online_net), ('target', agent.target_net)):
++        expected = net.state_dict()
++        require(set(payload[name]) == set(expected) and all(isinstance(payload[name][key], torch.Tensor)
++                and payload[name][key].device.type == 'cpu' and payload[name][key].dtype == value.dtype
++                and payload[name][key].shape == value.shape for key, value in expected.items()),
++                'Captured PRE state ABI/dtype differs: ' + name)
++        net.load_state_dict(payload[name], strict=True)
++        net.train(pre['modes'][name])
++    inputs = [payload['inputs'][name].to(device=agent.device) for name in INPUT_NAMES]
++    schedule = payload['schedule'].to(device=agent.device)
++    before = ctx.reconstruction.snapshot(ctx)
++    require(before['online'] == science.digest_tree(ctx, payload['online'])
++            and before['target'] == science.digest_tree(ctx, payload['target']),
++            'Loaded models do not match exact original PRE fingerprints')
++    require(torch.is_grad_enabled() and all(parameter.requires_grad and parameter.grad is None
++            for net in (agent.online_net, agent.target_net) for parameter in net.parameters()),
++            'Source-default grad flags or no-backward state differs')
++    return inputs, schedule, before
++
++
++def make_kernel(ctx, payload, route):
++    require(route in ROUTES, 'Unknown fixed route')
++    pre = payload['pre_context']
++    cfg = SimpleNamespace(**pre['config'])
++    if route == 'original4':
++        # This constructor has no trace_rows argument and the source is byte
++        # exact production de962..., not an OFF call to the five-output class.
++        module = ctx.original_loss.TrainingLoss(ctx.agent.online_net, ctx.agent.target_net, cfg, diagnostics=False)
++    else:
++        module = ctx.offline.TrainingLoss(ctx.agent.online_net, ctx.agent.target_net, cfg,
++                                          diagnostics=False, trace_rows=True)
++    require({name: getattr(module, name) for name in CONSTANT_NAMES} == pre['kernel_constants'],
++            'Original captured loss constants differ in route: ' + route)
++    return ctx.conditional.compile_loss(ctx, module)
++
++
++def forward_and_retain(ctx, kernel, inputs, schedule, payload, item, route, pre_rng, directory):
++    """Exactly one forward per route; all raw values precede interpretation."""
++    require(len(ctx.attempted_forward_routes) < len(ROUTES)
++            and route == ROUTES[len(ctx.attempted_forward_routes)], 'Duplicate/out-of-order forward; no retry')
++    ctx.attempted_forward_routes.append(route)  # Register before possible call.
++    torch, science, agent = ctx.torch, ctx.science, ctx.agent
+     with ctx.conditional.forbidden_offline_updates(ctx) as calls:
+-        with torch.autocast(device_type='cuda',dtype=torch.float16):
+-            outputs=kernel(*inputs,schedule)
+-    torch.cuda.synchronize(a.device)
+-    after_rng=s.rng_state(ctx)
+-    record=ctx.conditional.save_payload(ctx,directory/'conditional-recomputed.pt',dict(
+-        scope='CONDITIONAL RECOMPUTED; not actual executed target',raw_outputs=outputs,
+-        expected_actual_capture=payload['actual'],rng_before=pre_rng,rng_after=after_rng,
+-        source_capture_payload=item['payload'],source_capture_receipt=item['receipt'],
+-        four_readout_inputs=dict(emitted_weights=payload['inputs']['weights'],actual_ce=payload['actual']['ce'])))
+-    # Scientific tensors and RNG are durable before ABI, finite or tolerance
+-    # interpretation. A fault retains them and never substitutes another row.
+-    require(isinstance(outputs,tuple) and len(outputs)==5 and isinstance(outputs[4],tuple) and len(outputs[4])==10,
+-            'Conditional five-output ABI differs')
+-    actual=dict(weighted_loss=outputs[0],ce=outputs[1],bc_loss=outputs[2],diagnostic_values=outputs[3],
+-        conditional={name:value for name,value in zip(TRACE_NAMES,outputs[4])})
+-    require(s.finite(ctx,actual),'Nonfinite conditional forward; retained raw interpretation invalid')
+-    return actual,record,after_rng,dict(calls)
+-
+-
+-def reconstruct_one(ctx,item):
+-    torch,s,a=ctx.torch,ctx.science,ctx.agent
+-    index=item['index'];directory=ctx.paths['root']/('attempt-%02d'%index)
++        with torch.autocast(device_type='cuda', dtype=torch.float16):
++            outputs = kernel(*inputs, schedule)
++    torch.cuda.synchronize(agent.device)
++    post_rng = science.rng_state(ctx)
++    raw_pin = ctx.conditional.save_payload(ctx, directory/'raw-outputs.pt', dict(
++        route=route, selected_original_index=SELECTED_INDEX,
++        scope='Fresh same-GPU route observation; conditional target is never actual executed target',
++        raw_outputs=outputs, expected_actual_capture=payload['actual'],
++        rng_before=pre_rng, rng_after=post_rng,
++        source_capture_payload=item['payload'], source_capture_receipt=item['receipt']))
++    arity = 4 if route == 'original4' else 5
++    require(isinstance(outputs, tuple) and len(outputs) == arity, 'Route output ABI differs: ' + route)
++    if route == 'conditional5':
++        require(isinstance(outputs[4], tuple) and len(outputs[4]) == len(TRACE_NAMES),
++                'Conditional auxiliary ABI differs')
++    actual = dict(weighted_loss=outputs[0], ce=outputs[1], bc_loss=outputs[2], diagnostic_values=outputs[3])
++    if route == 'conditional5':
++        actual['conditional'] = {name: value for name, value in zip(TRACE_NAMES, outputs[4])}
++    require(science.finite(ctx, actual), 'Nonfinite route output; raw values retained: ' + route)
++    # Detach independently to CPU before the other route runs. This does not
++    # retain the first forward's autograd graph or device output references.
++    return science.cpu(ctx, actual), raw_pin, post_rng, dict(calls)
++
++
++def run_route(ctx, payload, row, item, route):
++    directory = ctx.paths['root']/route
+     directory.mkdir(mode=0o700)
+-    write_json(directory/'entered.json',dict(index=index,source_payload=item['payload'],source_receipt=item['receipt']))
+-    row,row_pin=ctx.parent.bounded_json(item['receipt'],read_only=True)
+-    require(row_pin==item['receipt'],'Original row identity changed')
+-    source=item['payload']
+-    require(ctx.parent.stable_file(source['path'],source['sha256'],source['bytes'])==source,'Original PRE identity changed before load')
+-    payload=torch.load(source['path'],map_location='cpu',weights_only=True)
+-    require(ctx.parent.stable_file(source['path'],source['sha256'],source['bytes'])==source,'Original PRE changed during weights_only load')
+-    payload_contract(ctx,payload,row,index)
+-    pre=payload['pre_context']
+-    for name,net in (('online',a.online_net),('target',a.target_net)):
+-        expected=net.state_dict()
+-        require(set(payload[name])==set(expected) and all(isinstance(payload[name][key],torch.Tensor)
+-                and payload[name][key].device.type=='cpu' and payload[name][key].dtype==value.dtype
+-                and payload[name][key].shape==value.shape for key,value in expected.items()),
+-                'Captured PRE state ABI/dtype differs: '+name)
+-    a.online_net.load_state_dict(payload['online'],strict=True);a.target_net.load_state_dict(payload['target'],strict=True)
+-    a.online_net.train(pre['modes']['online']);a.target_net.train(pre['modes']['target'])
+-    inputs=[payload['inputs'][name].to(device=a.device) for name in INPUT_NAMES]
+-    schedule=payload['schedule'].to(device=a.device)
+-    diagnostic=pre['kernel_constants']['diagnostics']
+-    if diagnostic not in ctx.kernels:
+-        module=ctx.offline.TrainingLoss(a.online_net,a.target_net,SimpleNamespace(**pre['config']),diagnostics=diagnostic,trace_rows=True)
+-        require({name:getattr(module,name) for name in CONSTANT_NAMES}==pre['kernel_constants'],'Offline loss constants differ')
+-        ctx.kernels[diagnostic]=(ctx.conditional.compile_loss(ctx,module),pre['kernel_constants'])
+-    kernel,constants=ctx.kernels[diagnostic]
+-    require(constants==pre['kernel_constants'] and torch.is_grad_enabled(),'Cached constants/grad-enabled lowering differs')
+-    before=snapshot(ctx)
+-    require(before['online']==s.digest_tree(ctx,payload['online']) and before['target']==s.digest_tree(ctx,payload['target']),
+-            'Fresh loaded models do not match exact captured PRE tensor fingerprints')
+-    s.restore_rng(ctx,payload['rng']);pre_rng=s.rng_state(ctx)
+-    require(s.digest_tree(ctx,pre_rng)==s.digest_tree(ctx,payload['rng']),'PRE RNG did not restore exactly')
+-    actual,retained,after_rng,calls=forward_and_retain(ctx,kernel,inputs,schedule,payload,item,row,index,pre_rng,directory)
+-    comparison,mask=ctx.conditional.compare_ce(ctx,actual['ce'],payload['actual']['ce'])
+-    mask_pin=ctx.conditional.save_payload(ctx,directory/'ce-mismatch-mask.pt',dict(ce=mask))
+-    readouts=retain_readout_inputs(ctx,actual,payload,row,directory)
+-    after=snapshot(ctx)
+-    require(before==after and calls==dict(optimizer_step=0,scaler_step=0,scaler_update=0)
+-            and all(parameter.grad is None for net in (a.online_net,a.target_net) for parameter in net.parameters()),
+-            'Offline forward changed model/owned inert optimizer/scaler or gradients')
+-    require(getattr(sys,'_is_gil_enabled',lambda:None)() is False,'Offline compile/forward changed effective GIL')
+-    require(ctx.parent.stable_file(source['path'],source['sha256'],source['bytes'])==source,'Original PRE changed after forward')
+-    rng_changed=s.digest_tree(ctx,pre_rng)!=s.digest_tree(ctx,after_rng)
+-    result=dict(index=index,status='OBSERVATIONS_COMPLETE',backend=row['backend'],diagnostics=diagnostic,
+-        qualification_pass=False,comparison_pass=comparison['passed'],interpretation_requires_review=not comparison['passed'] or rng_changed,
+-        comparison_scope='Only original-tolerance4096 conditional CE; weighted loss/BC/diagnostics retained, not compared',
+-        source_receipt=item['receipt'],source_payload=source,original_optimizer_outcome=row['optimizer_outcome'],
+-        retained_conditional_payload=retained,ce_mismatch_mask=mask_pin,ce_comparison=comparison,
+-        pre_context=pre,model_before=before,model_after=after,update_guard_counts=calls,
+-        input_state_ranges={name:dict(minimum=float(payload['inputs'][name].min()),maximum=float(payload['inputs'][name].max()))
+-            for name in ('states','next_states')},
+-        parameter_grad_flags_scope='Source-inferred defaults from pinned model/agent/training; not an independently captured requires_grad field',
+-        inherited_sampler_unknown_scope='Original draw.unknown optimizer_outcome/full_states labels concern standalone sampler metadata only; outer receipt/exposure and payload provide actual outcome/full PRE',
+-        rng_observations=dict(pre=s.digest_tree(ctx,pre_rng),post=s.digest_tree(ctx,after_rng),post_changed=rng_changed,
+-            scope='Sequential observations, not coherent all-thread live anchor'),
+-        four_readout_inputs=readouts,
+-        logical_device_mapping=dict(captured=pre['learner_device'],offline=str(a.device),offline_uuid=ctx.base.GPU0_UUID,
+-            limitation='Logical cuda:0 equality does not imply same physical live training GPU'))
+-    write_json(directory/'attempt-result.json',result)
+-    # No tensor references survive this call: raw payload, device batch and
+-    # grad-enabled output graph drain before the next independent PRE is loaded.
+-    return result
+-
+-
+-def recompute8(ctx):
+-    for item in ctx.manifest['retained_inputs']['attempts']:
+-        ctx.rows.append(reconstruct_one(ctx,item))
+-    require(ctx.attempted_forward_indices==list(range(1,9)) and len(ctx.rows)==8,'All original8 conditional forwards required')
+-    require(ctx.parent.bind_inputs(ctx.lock)==ctx.manifest['retained_inputs'],'Final input identity/provenance changed')
+-    return dict(status='OBSERVATIONS_COMPLETE',variant=ctx.variant,qualification_pass=False,
+-        comparison_pass=all(row['comparison_pass'] for row in ctx.rows),
+-        interpretation_requires_review=any(row['interpretation_requires_review'] for row in ctx.rows),attempts=ctx.rows,
+-        comparison_scope='CONDITIONAL CE ONLY at original tolerances; no four-output parity or learning qualification',
+-        conditional_recomputed=True,executed_target_observed=False,grad_enabled=True,optimizer_steps=0,
+-        update_guard_counts=dict(optimizer_step=0,scaler_step=0,scaler_update=0),explicit_worker_backward_calls=0,
+-        backward_evidence_scope='Source-level explicit worker calls plus all gradsNone; not AOT/autograd-engine counting',
+-        actual_attempts_in_this_process=0,source_lock_sha256=ctx.parent.SOURCE_LOCK_SHA256,
+-        peak_cuda_allocated=ctx.torch.cuda.max_memory_allocated(0),peak_cuda_reserved=ctx.torch.cuda.max_memory_reserved(0),
+-        limitations=['Conditional projected targets/entropy/KL are not actual executed observations',
+-            'CE agreement cannot bound missing actual entropy/KL or replay priority ranks',
+-            'Private inert optimizer/scaler are forbidden-call sentinels, not original captured Adam/scaler state',
+-            'Eight observed batches do not establish replay-population, learning-quality or throughput conclusions'])
++    write_json(directory/'entered.json', dict(selected_original_index=SELECTED_INDEX,
++        route=route, fixed_route_order=list(ROUTES), source_payload=item['payload'], source_receipt=item['receipt']))
++    inputs, schedule, before = restore_pre(ctx, payload)
++    kernel = make_kernel(ctx, payload, route)
++    # Lazy compilation is inside the sole forward, never an extra warmup.
++    ctx.science.restore_rng(ctx, payload['rng'])
++    pre_rng = ctx.science.rng_state(ctx)
++    require(ctx.science.digest_tree(ctx, pre_rng) == ctx.science.digest_tree(ctx, payload['rng']),
++            'PRE RNG did not independently restore exactly: ' + route)
++    actual, raw_pin, post_rng, calls = forward_and_retain(
++        ctx, kernel, inputs, schedule, payload, item, route, pre_rng, directory)
++    after = ctx.reconstruction.snapshot(ctx)
++    grads_none = all(parameter.grad is None for net in (ctx.agent.online_net, ctx.agent.target_net)
++                     for parameter in net.parameters())
++    require(before == after and calls == dict(optimizer_step=0, scaler_step=0, scaler_update=0) and grads_none,
++            'Forward changed model/owned inert optimizer/scaler or gradients: ' + route)
++    require(getattr(sys, '_is_gil_enabled', lambda: None)() is False, 'Effective GIL changed after route forward')
++    source = item['payload']
++    require(ctx.parent.stable_file(source['path'], source['sha256'], source['bytes']) == source,
++            'Original PRE changed after route forward')
++    rng_changed = ctx.science.digest_tree(ctx, pre_rng) != ctx.science.digest_tree(ctx, post_rng)
++    result = dict(index=SELECTED_INDEX, route=route, status='OBSERVATIONS_COMPLETE', diagnostics=False,
++        output_arity=4 if route == 'original4' else 5, raw_payload=raw_pin,
++        source_receipt=item['receipt'], source_payload=source, model_before=before, model_after=after,
++        all_grads_none=grads_none, update_guard_counts=calls, actual_optimizer_outcome=row['optimizer_outcome'],
++        pre_context=payload['pre_context'],
++        rng_observations=dict(pre=ctx.science.digest_tree(ctx, pre_rng),
++            post=ctx.science.digest_tree(ctx, post_rng), post_changed=rng_changed,
++            scope='Restored recorded PRE components; not a coherent all-thread live RNG anchor'),
++        logical_device_mapping=dict(captured=payload['pre_context']['learner_device'],
++            offline=str(ctx.agent.device), offline_uuid=ctx.base.GPU0_UUID),
++        grad_flags_scope='Source-default requires_grad=True; flags were not recorded independently in the live payload')
++    write_json(directory/'route-result.json', result)
++    ctx.route_results.append(result)
++    return actual
++
++
++def route_diagnostic(ctx):
++    item = selected_item(ctx)
++    payload, row = load_selected(ctx, item)
++    # Order is fixed in advance. Finite numeric mismatches cannot select a
++    # different batch/route or trigger an additional forward.
++    original4 = run_route(ctx, payload, row, item, 'original4')
++    conditional5 = run_route(ctx, payload, row, item, 'conditional5')
++    require(ctx.attempted_forward_routes == list(ROUTES), 'Exactly two fixed forwards required')
++    comparisons = {}
++    for name, actual, expected in (
++            ('original4_vs_captured_actual', original4['ce'], payload['actual']['ce']),
++            ('conditional5_vs_local_original4', conditional5['ce'], original4['ce'])):
++        values, mask = ctx.conditional.compare_ce(ctx, actual, expected)
++        values['mismatch_mask'] = ctx.conditional.save_payload(
++            ctx, ctx.paths['root']/(name+'-mismatch-mask.pt'), dict(ce=mask))
++        comparisons[name] = values
++    require(ctx.parent.bind_inputs(ctx.lock) == ctx.manifest['retained_inputs'], 'Final original input provenance changed')
++    passed = all(value['passed'] for value in comparisons.values())
++    return dict(status='OBSERVATIONS_COMPLETE', variant=ctx.variant, selected_original_index=SELECTED_INDEX,
++        forward_routes=list(ROUTES), attempted_forward_routes=ctx.attempted_forward_routes,
++        routes=ctx.route_results, comparisons=comparisons, comparison_pass=passed,
++        qualification_pass=False, interpretation_requires_review=not passed or any(
++            value['rng_observations']['post_changed'] for value in ctx.route_results),
++        comparison_scope='CE-only original4 vs captured actual, separately conditional5 vs same-GPU original4; original rtol2e-4/atol2e-5',
++        grad_enabled=True, explicit_worker_backward_calls=0, actual_attempts_in_this_process=0,
++        executed_target_observed=False, source_lock_sha256=ctx.parent.SOURCE_LOCK_SHA256,
++        backward_evidence_scope='No explicit worker backward plus all gradsNone; not an AOT/autograd-engine counter',
++        peak_cuda_allocated=ctx.torch.cuda.max_memory_allocated(0),
++        peak_cuda_reserved=ctx.torch.cuda.max_memory_reserved(0),
++        inherited_sampler_unknown_scope='Original draw.unknown strings concern standalone sampler metadata; original outcomes/full PRE remain available through receipts and payload',
++        limitations=['Two fixed same-GPU forwards do not exclude nondeterminism or uniquely prove an ABI/lowering cause',
++            'The first comparison includes the original capture/device/profile residual; the second is a local route contrast',
++            'Any index1 result does not rescue or requalify the prior all8 comparison failure',
++            'Conditional5 projected target/entropy/KL are not actual executed target observations',
++            'Only CE is compared; weighted loss, BC, diagnostics and conditional auxiliaries are retained',
++            'Owned inert optimizer/scaler are forbidden-call sentinels, not reconstructed live Adam/scaler',
++            'No extra warmup, calibration forward, backward, sampler draw, live source adoption or learning claim'])
+ 
+ 
+ def main(argv=None):
+-    parser=argparse.ArgumentParser(description=__doc__)
+-    parser.add_argument('--manifest',required=True,type=Path)
+-    parser.add_argument('--variant',required=True,choices=('recompute8',))
+-    args=parser.parse_args(argv);ctx=None
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--manifest', required=True, type=Path)
++    parser.add_argument('--variant', required=True, choices=('route1',))
++    args = parser.parse_args(argv)
++    ctx = None
+     try:
+-        ctx=bootstrap(args.manifest,args.variant);setup(ctx);result=recompute8(ctx)
+-        ctx.science.modules_private(ctx);ctx.base.verify_source_copies(ctx.layout,ctx.manifest['sources'])
+-        require(ctx.parent.read_lock()==ctx.lock,'Final source lock changed')
+-        ctx.base.guard_live_resources(allowed_pids={os.getpid(),os.getppid()},expected_main=ctx.manifest['main_owners'])
+-        write_json(ctx.paths['root']/'phase-result.json',result)
++        ctx = bootstrap(args.manifest, args.variant)
++        setup(ctx)
++        result = route_diagnostic(ctx)
++        ctx.science.modules_private(ctx)
++        ctx.base.verify_source_copies(ctx.layout, ctx.manifest['sources'])
++        require(ctx.parent.read_lock() == ctx.lock, 'Final source lock changed')
++        ctx.base.guard_live_resources(allowed_pids={os.getpid(), os.getppid()}, expected_main=ctx.manifest['main_owners'])
++        write_json(ctx.paths['root']/'phase-result.json', result)
+         return 0
+     except BaseException as error:
+         if ctx is not None:
+             try:
+-                write_json(ctx.paths['root']/'phase-failure.json',dict(status='INVALID_OR_INCOMPLETE',variant=ctx.variant,
+-                    error=repr(error),traceback=traceback.format_exc(),completed_indices=[row['index'] for row in getattr(ctx,'rows',[])],
+-                    attempted_forward_indices=getattr(ctx,'attempted_forward_indices',[]),
+-                    offline_update_guard_counts=getattr(ctx,'offline_update_guard_counts',None)))
++                write_json(ctx.paths['root']/'phase-failure.json', dict(status='INVALID_OR_INCOMPLETE',
++                    variant=ctx.variant, error=repr(error), traceback=traceback.format_exc(),
++                    completed_routes=[value['route'] for value in getattr(ctx, 'route_results', [])],
++                    attempted_forward_routes=getattr(ctx, 'attempted_forward_routes', []),
++                    offline_update_guard_counts=getattr(ctx, 'offline_update_guard_counts', None)))
+             except BaseException as persistence:
+-                try:print('Failure-evidence error: '+repr(persistence),file=sys.stderr,flush=True)
+-                except BaseException:pass
+-        try:traceback.print_exc()
+-        except BaseException:pass
++                try:
++                    print('Failure-evidence error: '+repr(persistence), file=sys.stderr, flush=True)
++                except BaseException:
++                    pass
++        try:
++            traceback.print_exc()
++        except BaseException:
++            pass
+         return 1
+ 
+ 
+-if __name__=='__main__':
++if __name__ == '__main__':
+     raise SystemExit(main())
++

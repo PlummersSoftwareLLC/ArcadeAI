@@ -1,0 +1,216 @@
+--- a/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_transition_adapter_proposal/run_raw_kl_transition.py
++++ b/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_transition_post_stop_floor_companion/run_raw_kl_transition.py
+@@ -23,8 +23,8 @@
+ import time
+ import traceback
+ 
+-SCHEMA = 'robotron-raw-kl-owned-transition-job-v1'
+-RESULT_SCHEMA = 'robotron-raw-kl-owned-transition-result-v1'
++SCHEMA = 'robotron-raw-kl-owned-transition-job-v2'
++RESULT_SCHEMA = 'robotron-raw-kl-owned-transition-result-v2'
+ V4 = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision4/run_live8_maintenance.py')
+ V4_SHA = 'fdf7c8bfb123b494252acf83d724a51acda95bb7f00877eace28b60d0377ed18'
+ PHASE = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/verify_phase_snapshot.py')
+@@ -39,6 +39,10 @@
+ FLAGS = ('DQN_RECOMPUTED_CE_CAPTURE_DIR','DQN_EXECUTED_CE_TRACE_DIR')
+ SOURCE_NAMES = ('__init__.py','model.py','config.py','learning_control.py',*('agent.py','training.py','loss_kernel.py','priority_phase.py'))
+ MAX_JSON = 2 << 20
++ANCESTOR = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_transition_adapter_proposal/run_raw_kl_transition.py')
++ANCESTOR_SHA = '8a606d4c152e85c867f5517555ce80fb05cc883decad1f84da0784e4d32bdd3c'
++HORIZON = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/horizon_observer_proposal/horizon_observer.py')
++HORIZON_SHA = '25d70b4a3888dcba83ea9020c333cba32cfbd19c93b6e69037d6299b161fd7ec'
+ 
+ 
+ def require(value, message):
+@@ -149,6 +153,131 @@
+         replay['accepted_learner_total']==categories['dqn']+categories['epsilon']==0 and replay['available'],
+         'Fresh before-resume ring exposure must be actual physical zero')
+     return copy.deepcopy(exposure)
++
++
++def clock_max(*values):
++    return {key:max(four(value)[key] for value in values) for key in CLOCKS}
++
++
++def validate_ending(job,base):
++    """Read small pinned observations only; never open candidate/model bytes.
++
++    A return floor is an explicit observation bound, not a fabricated insurance
++    result. The original owner-bound insurance remains separately unchanged.
++    """
++    for name,path,sha in (('ancestor_adapter',ANCESTOR,ANCESTOR_SHA),('horizon',HORIZON,HORIZON_SHA)):
++        item=job['helper_pins'][name]
++        require(item['path']==str(path) and item['sha256']==sha,'Wrong consumed companion source: '+name)
++        base.pin(item,base.MAX_SOURCE)
++    ending=job['ending_proof']
++    if job['mode']=='activate_kl':
++        require(ending is None,'Activation cannot invent an ending decision')
++        return None
++    require(isinstance(ending,dict) and set(ending)=={'observer_job','activation_receipt','decision','candidate'},
++        'Return requires actual ending observation bindings')
++    horizon=base.load_module(str(HORIZON),'raw_kl_ending_horizon_contract')
++    observer=base.read_json(ending['observer_job']);_,baseline=horizon.validate_job(observer)
++    activation=base.read_json(ending['activation_receipt']);decision=base.read_json(ending['decision'])
++    insurance=base.read_json(job['insurance_verification']);insured=insurance['root_job']['insurance']['trainer']
++    start=base.read_json(activation['start_request'])
++    before_resume=base.read_json(activation['before_resume_api_PIN'])
++    require(ending['activation_receipt']['sha256']==observer['activation_receipt_sha256'] and
++        activation['status']=='READY' and activation['manual_recovery_required'] is False and
++        activation['qualification_pass'] is False and activation['owner']==observer['owner']==insured and
++        activation['trial_core']['sha256']==observer['trial_core_sha256']==job['running_phase']['expected']['root_precommit_sha256'] and
++        activation['boot_four_clocks']==observer['boot_four_clocks'] and
++        activation['healthy192_monotonic_s']==observer['healthy192_monotonic_s'] and
++        before_resume==observer['before_resume_api'] and
++        start['boot_id']==observer['start_request']['boot_id'] and
++        start['monotonic_s']==observer['start_request']['monotonic_s'],
++        'Ending belongs to a different activation/owner/original clock origin')
++    require(decision['schema']=='robotron-raw-kl-horizon-observation-v1' and
++        decision['state'] in ('LATCH','INCOMPLETE') and decision['qualification_pass'] is False and
++        decision['boot_id']==observer['start_request']['boot_id'], 'Only first latched/incomplete ending is supported')
++    observed=horizon.number(decision['observed_monotonic_s'],'ending observation')
++    require(observed-observer['start_request']['monotonic_s']==decision['elapsed_s'] and
++        observed>=observer['healthy192_monotonic_s'], 'Ending time was reanchored')
++    latched=decision['state']=='LATCH'
++    raw=decision['first_eligible_observation'] if latched else (
++        decision.get('terminal_observation') or decision.get('last_valid_observation'))
++    clocks=four(insurance['clocks'])
++    if raw is not None:
++        current=horizon.normalise(raw)
++        require(current['optimizer_identity']==baseline['optimizer_identity'] and
++            current['replay_identity']==baseline['replay_identity'] and
++            all(current['clocks'][key]>=observer['boot_four_clocks'][key] for key in CLOCKS),
++            'Ending API owner/epoch/clock lineage changed')
++        clocks=four(raw)
++    if latched:
++        progress=decision['progress']
++        require(0<=decision['elapsed_s']<=horizon.POLICY['cutoff_s'] and
++            decision['candidate_requests_allowed']==1 and
++            progress['learner_frames']==clocks['learner_frame_count']-observer['boot_four_clocks']['learner_frame_count']>=horizon.POLICY['learner_frames'] and
++            progress['physical_accepted']==current['accepted']-baseline['accepted']>=horizon.POLICY['physical_adds'] and
++            progress['optimizer_total']==current['optimizer'], 'LATCH identity/horizons differ from its actual API')
++        candidate=ending['candidate']
++        require(isinstance(candidate,dict) and set(candidate)=={'source','verification_copy','acquisition'},
++            'First LATCH requires its one frozen candidate')
++        source,copied=candidate['source'],candidate['verification_copy']
++        for pin in (source,copied):
++            require(set(pin)=={'path','sha256','bytes','identity'} and
++                re.fullmatch('[0-9a-f]{64}',pin['sha256'] or '') and type(pin['bytes']) is int and pin['bytes']>0,
++                'Explicit candidate source/copy PIN required')
++            require(set(pin['identity'])=={'device','inode','bytes','mtime_ns','ctime_ns','mode','uid','nlink'} and
++                pin['identity']['bytes']==pin['bytes'],'Complete candidate identity required')
++        require(triple(source)['sha256']==copied['sha256'] and source['bytes']==copied['bytes'] and
++            source['path']!=copied['path'] and
++            (source['identity']['device'],source['identity']['inode'])!=(copied['identity']['device'],copied['identity']['inode']) and
++            copied['identity']['mode']=='0o444' and copied['identity']['uid']==os.getuid() and copied['identity']['nlink']==1,
++            'Candidate must have an independent owned0444copy')
++        acquisition=base.read_json(candidate['acquisition'])
++        tag=acquisition['tag'];require(re.fullmatch(r'[A-Za-z0-9_-]{1,80}',tag or '') and
++            source['path']==str(Path(job['model_dir'])/'managed-checkpoints'/(tag+'.pt')) and
++            tag!=insurance['root_job']['insurance']['tag'] and tag!=job['startup_tag'],
++            'Candidate tag is not unique/distinct from insurance/startup')
++        require(acquisition['schema']=='robotron-owned-phase-snapshot-acquisition-v1' and
++            acquisition['purpose']=='candidate' and acquisition['owner_before']==acquisition['owner_after']==insured and
++            acquisition['model_dir']==job['model_dir'] and acquisition['experiment']==job['experiment'] and
++            acquisition['source_checkpoint']==triple(source) and
++            type(acquisition.get('client_count')) is int and acquisition['client_count'] in (0,192) and
++            acquisition.get('stopped_absence','missing') is None and
++            acquisition['phase_record_sha256']==job['running_phase']['record']['sha256'] and
++            acquisition['boot_checkpoint']==job['running_phase']['boot_checkpoint'] and
++            acquisition['clock_floor']==clock_max(insurance['clocks'],clocks),
++            'Historical candidate acquisition/first-LATCH floor differs')
++        transition=acquisition.get('completed_slot_transition')
++        require(isinstance(transition,dict) and set(transition)=={
++            'before','request','after','before_unix_s','request_unix_s','after_unix_s'},
++            'Actual candidate request/completion transition required')
++        times=[horizon.number(transition[key],key) for key in ('before_unix_s','request_unix_s','after_unix_s')]
++        require(0<times[0]<=times[1]<=times[2],'Candidate request/completion chronology differs')
++        def historical(pair,path):
++            require(isinstance(pair,dict) and set(pair)=={'actual_pin','archive'},'Historical slot/archive pair required')
++            actual,archive=pair['actual_pin'],pair['archive']
++            require(set(actual)=={'path','sha256','bytes','identity'} and actual['path']==str(path) and
++                re.fullmatch('[0-9a-f]{64}',actual['sha256'] or '') and
++                type(actual['bytes']) is int and actual['bytes']>0 and
++                set(actual['identity'])=={'device','inode','bytes','mtime_ns','ctime_ns','mode','uid','nlink'} and
++                actual['identity']['bytes']==actual['bytes'] and archive['path']!=actual['path'] and
++                archive['sha256']==actual['sha256'] and archive['bytes']==actual['bytes'] and
++                archive['identity']['mode']=='0o444' and archive['identity']['uid']==os.getuid() and
++                archive['identity']['nlink']==1,
++                'Historical candidate slot/archive identity differs')
++            return base.read_json(archive)
++        slot=Path(job['model_dir'])/'managed_save.request.json.completed'
++        if transition['before'] is not None:
++            require(historical(transition['before'],slot)!={'tag':tag},'Candidate tag was already completed')
++        requested=historical(transition['request'],Path(job['model_dir'])/'managed_save.request.json')
++        completed=historical(transition['after'],slot)
++        require(requested==completed=={'tag':tag},'Candidate historical request/completed tag differs')
++    else:
++        require(ending['candidate'] is None and 'candidate_requests_allowed' not in decision,
++            'Incomplete ending cannot acquire a replacement candidate')
++        require(horizon.POLICY['cutoff_s']<=decision['elapsed_s']<horizon.POLICY['ceiling_s'],
++            'Incomplete ending must be at actual cutoff before owner ceiling')
++    return dict(state=decision['state'],decision=ending['decision'],observer_job=ending['observer_job'],
++        observation_floor=clocks,floor=clock_max(insurance['clocks'],clocks),
++        candidate=copy.deepcopy(ending['candidate']),owner=copy.deepcopy(insured))
+ 
+ 
+ def load_v4():
+@@ -242,6 +371,7 @@
+     require(job['current_completed_request']['path']==str(Path(job['model_dir'])/'managed_save.request.json.completed'),
+         'Current completion must bind the actual mutable model slot')
+     base.pin(job['current_completed_request'],MAX_JSON)
++    validate_ending(job,base)
+     base.validate_python_binding(job['verifier'],job['insurance_verification'],hash_executable=True)
+     return job,job_pin
+ 
+@@ -277,6 +407,7 @@
+             require(self.host._dropin_bytes()==self.original_dropin,'Owned phase override drift')
+             self.host.dropin_expected=self.original_dropin;self.record=None;self.record_pin=None;self.start_request=None
+             self.recovery_dropin=None;self.dropin=None
++            self.ending=validate_ending(job,base)
+ 
+         def request_guard(self):
+             path=Path(self.job['model_dir'])/'managed_save.request.json'
+@@ -403,6 +534,34 @@
+             except BaseException:self.verification_failed=True;raise
+             self.cpu_attempts[ledger_key]='passed'
+             return pin,proof
++
++        def post_stop_ending(self,retired):
++            # Every numeric check is AFTER exact known KL retirement. Nothing in
++            # this limb can extend the pre-start3600s owner-presence ceiling.
++            self.static();self.absence()
++            require(self.job['mode']=='return_ce' and retired==self.retired_owner==self.insured==self.ending['owner'],
++                'Post-stop candidate belongs to another retired owner')
++            self.floor=clock_max(self.floor,self.ending['floor'])
++            result=dict(state=self.ending['state'],decision=self.ending['decision'],
++                floor_before_candidate=copy.deepcopy(self.floor),candidate_CPU=None,
++                scope='Historical observation floor; no pre-stop CPU or exact optimizer-cutoff claim')
++            candidate=self.ending['candidate']
++            if candidate is not None:
++                acquisition=read_json(candidate['acquisition'])
++                require(acquisition['clock_floor']==self.floor,'Candidate floor changed after first ending validation')
++                pin,proof=self.cpu_phase('ending-candidate-CPU','candidate',retired,
++                    candidate['source'],candidate['verification_copy'],self.job['running_phase'],acquisition,
++                    'ending-candidate:'+acquisition['tag'])
++                saved=four(proof['clocks'])
++                require(all(saved[key]>=self.floor[key] for key in CLOCKS),
++                    'Candidate CPU clocks predate actual first-LATCH/insurance floor')
++                self.floor=clock_max(self.floor,saved)
++                result.update(candidate_CPU=pin,candidate_saved_clocks=saved)
++            self.absence()
++            result['required_newest_stopped_floor']=copy.deepcopy(self.floor)
++            # Existing stopped_checkpoint passes this stronger floor to the
++            # unchanged strict wrapper BEFORE any CE start is requested.
++            return result
+ 
+         def stopped_checkpoint(self,retired,label):
+             if self.job['mode']=='activate_kl':return super().stopped_checkpoint(retired,label)
+@@ -558,6 +717,8 @@
+         r.host.begin_transition_logs(before['bindings']['logs'],before['trainer_stdout'])
+         r.host.pause(dict(initial=r.job['before']))
+         retired=r.stop_owned(before);event('stopped',owner=retired)
++        if r.job['mode']=='return_ce':
++            ending=r.post_stop_ending(retired);event('ending_candidate_CPU_and_floor',proof=ending)
+         boot=r.stopped_checkpoint(retired,'newest-stopped');event('newest_CPU',checkpoint=boot)
+         banks=r.banks.stopped_state(r.job['bank_spec']);event('stopped_disk_state',banks=banks)
+         sources.reconcile('after',r.absence,r.metrics.block_restore_signals)

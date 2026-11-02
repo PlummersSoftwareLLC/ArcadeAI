@@ -1,0 +1,127 @@
+{
+  "author_actions": {
+    "imports_tests_numerical_execution": false,
+    "model_replay_data_reads": false,
+    "production_mutations": false,
+    "runtime_gpu_queries": false,
+    "source_only": true
+  },
+  "cases_per_role": 4,
+  "files": {
+    "PARENT_NOTES.txt": {
+      "bytes": 6726,
+      "sha256": "02fd935176e6ee224e107658ca07ee9cf46d3c241a57db43e75d9fd7277e8149"
+    },
+    "PROTOCOL.txt": {
+      "bytes": 9487,
+      "sha256": "785b29b333e0196f269c1d16f3e1b27d0d44d951bf2d5a19eda58238661fc67b"
+    },
+    "cuda_trace_parent.py": {
+      "bytes": 36555,
+      "sha256": "f06355d1a84770124ab8798c2a6ff234a4a204b687ac3667446087790077c4f1"
+    },
+    "cuda_trace_worker.py": {
+      "bytes": 25473,
+      "sha256": "59b3e81dead476bae25637b848b8c880043ca1b7f9b817e1d1b7c83846e4320c"
+    },
+    "source-lock.json": {
+      "bytes": 8968,
+      "sha256": "20057c290b1a9f121a03dfb5e81d33c67170a2d51807c0c149e295f393fa359e"
+    },
+    "test_process_scan.py": {
+      "bytes": 18984,
+      "sha256": "f478c37876f04398f06c2c96ee9fd57402d3e4c2afb9e199195fe0cd19956b06"
+    },
+    "test_storage_watcher.py": {
+      "bytes": 23551,
+      "sha256": "7dc6fd2b8b9f18daaf55ef6a0c0551388add771b27c0b4b159de117a31930d8d"
+    },
+    "test_warmup_diagnostic.py": {
+      "bytes": 28203,
+      "sha256": "64ae8083eca4382d34f0472d21bde7c5553c410768104a736d3c8eccb92d1845"
+    }
+  },
+  "full_training_attempts": 0,
+  "optimizer_steps": 0,
+  "original_bundles_unchanged": true,
+  "pinned_sources_verified_sha256": {
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/__init__.py": "a2b3412fc502b7631295d639092e320d73f848895b994edc16bf9eebf8b5054c",
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/actor_tags.py": "fc5b868a7fb68d4ab7ba65ba872ea0e845759af6143edfe648239d57cb7f1591",
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/bank_output.py": "85a161a445dc44e8bb0ef225a5630b485ff0c4d4874f9d04367544ab744caa9d",
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/config.py": "f2794754a14e9f13c82b613aa131698246a08dc9021c18f1b78fda7c4b484498",
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/learning_control.py": "29a74b25be391290b07373cdce4680ae7513db31596929f0bc9972aaf0ab220d",
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/learning_exposure.py": "30d9191e9fc845d80e52a7a891244fcf0c7041cf60529f6559b15e6d47ac5c7f",
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/loss_kernel.py": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a",
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/model.py": "bcd174f05610c6f773ca8c53f9155206eba4f7b6a11383516ddd71f3b513eeb4",
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/native_sumtree.py": "de0900aecd09668dc0551d4ecec118351a1228e2a664bc183c5c06b865e52250",
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/sumtree.c": "352badec2ee64b7c42852e743bf930c565a2e4279137df12ca859d2c396d8e5e",
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/training.py": "194081120faae4228b0af0d6127c1e12c6d6180acdfe7d7a6a8c7cbcf24b963f",
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-harness-reviewed2-analysis/whole_agent_smoke.py": "dbdb86f37e7158876262949eaf37c0c6d8954bd136f6c5187bcc6c3fe04f37bf",
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-harness-reviewed2-analysis/whole_agent_smoke_worker.py": "c652ff7fcf5242ffcd6921d06301ad23c1ae5b088d920ca3d312e90ae492e038",
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality320M-checkpoint-verification-20261017/verify_saved_checkpoint.py": "e21268a5e8ee076bbcd89437d895a8e24e850977acd1d12ce9b8e91760ce9192",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/cuda_trace_validation_proposal/process_scan_revision/cuda_trace_worker.py": "ba0039d406676f092309c6bf2248ddcf169af8960f60ed18b698ece1ea602f93",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/cuda_trace_validation_proposal/process_scan_revision/source-lock.json": "d6ffdaae63d97bce24a18d1b11ed165b9e12484d17d65365415aab3c08beb13b",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/executed_trace_proposal/executed_ce_trace.py": "d9b02b3108cdb7aa9cf895ce585810287ca5cde6ddc6b1b872721731e49648eb",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/executed_trace_proposal/loss_kernel.py": "ce527c840f1b0cce3f77fece52923c7023519605db92d7c5e691b1b573ee6d2f",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/executed_trace_proposal/prefetch.py": "02871bc515ba23f8d353131e9b6b6b4e390692803578febee7c8d643dd308a27",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/executed_trace_proposal/replay_buffer.py": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/executed_trace_proposal/training.py": "c10cf8deaea99c9c74edbebf82d1f1c1badfdc4d33186f3874d6bc80c1e6a938"
+  },
+  "policy": {
+    "default_plan_no_queries_or_outputs": true,
+    "fatal": [
+      "structure",
+      "nonfinite",
+      "runtime",
+      "persistence",
+      "PRE RNG",
+      "scientific state",
+      "ownership"
+    ],
+    "finite_numeric_mismatch": "retain complete payload/stat/masks then continue fixedcases/roles",
+    "fixture_algorithm_seed_geometry_unchanged": true,
+    "new_rng_control": "reset sealed RNG before each case; exact PRE; full POST differences nonfatal review",
+    "original_tolerances": true,
+    "prior_partial_baseline_reused": false,
+    "scientific_state_identity": "Exclude only optimizer-exposure process_id/instance_monotonic_ns acrossroles; retain full own process snapshots and require equality"
+  },
+  "qualification_pass": false,
+  "remaining": [
+    "Fresh root-owned resource/identity/gate preflight",
+    "Actual three-role CUDA execution within unchanged180/600s and resource bounds",
+    "Independent terminal artifact/tensor/comparison and owned cleanup audit",
+    "No live rollout or OFF/ON/full-training qualification follows from this diagnostic"
+  ],
+  "roles": [
+    "base_a",
+    "base_repeat",
+    "off"
+  ],
+  "schema": "robotron-cuda-warmup-repeatability-source-preparation-v1",
+  "source_reviews": {
+    "audit_quality_result": "Numerical schema/control/source review;25focusedtests authored source-only",
+    "learning_review": "Worker/protocol source author; parent and43testsource peer read; no candidate execution",
+    "root": "Source reviewed parent/worker/protocol/test revisions; actual CPU units owned by root",
+    "runtime_review": "Ownership/bootstrap/lifecycle/source roles reviewed; parent and43copiedtests authored source-only"
+  },
+  "status": "REVIEWED_SOURCE_ROOT_CPU_TESTS_PASSED_GPU_UNEXECUTED",
+  "trace_on": false,
+  "validation": {
+    "focused25": {
+      "elapsed_s": 3.0,
+      "methods": 25,
+      "receipt": "run-26/warmup-repeatability-focused25-tests-reviewed1-20261017/root-result-review-and-release.json",
+      "scope": "Tiny CPU Torch tensor/autograd/Adam plus explicit CUDA/compiler adapters; no real CUDA/Rainbow4096/compile claim",
+      "sha256": "7b8ee5d6694f95f53af67072c783764487a419a6b16176153da9c06ddd3681d6",
+      "status": "ROOT_REPORTED_PASS"
+    },
+    "parent43": {
+      "elapsed_s": 0.104,
+      "methods": 43,
+      "receipt": "run-26/warmup-repeatability-parent43-tests-reviewed2-20261017/root-result-review-and-release.json",
+      "scope": "Stdlib private process/storage mocks; initial ported AST fixture failure preserved separately; corrected new test only",
+      "sha256": "cdde87fb77c6e8ac4106bfe51c6ad4875699a454c1948a05923014e4f56f35a9",
+      "status": "ROOT_REPORTED_PASS"
+    }
+  }
+}

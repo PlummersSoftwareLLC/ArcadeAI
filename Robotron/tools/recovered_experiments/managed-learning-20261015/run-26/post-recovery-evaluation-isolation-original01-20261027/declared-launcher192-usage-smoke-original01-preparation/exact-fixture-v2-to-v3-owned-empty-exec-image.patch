@@ -1,0 +1,137 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher192-usage-smoke-original01-preparation/run_owned192_usage_smoke_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher192-usage-smoke-original01-preparation/run_owned192_usage_smoke_v3.py
+@@ -18,17 +18,18 @@
+ RUN=ROOT/'logs/managed-learning-20261015/run-26'
+ I=RUN/'post-recovery-evaluation-isolation-original01-20261027'
+ HERE=Path(__file__).resolve().parent
+-UNIT='robotron-declared-launcher192-usage-smoke-original02-20261029.service'
++UNIT='robotron-declared-launcher192-usage-smoke-original03-20261029.service'
+ CASE=RUN/'post-natural-turnover-durable-next-candidate-20261029-original01/fresh-main-case.json'
+ P=I/'declared-launcher-census-original34-preparation'
+ PROBE=I/'declared-launcher-rolebranch-one-smoke-original01-20261029/result.json'
+ HEALTH=P/'round_main_health_launcher_v1.py'
+ HELPER=P/'launcher_census_v1.py'
+-GATE=HERE/'gate_original_usage_child_v2.py'
+-SCHEMA='robotron-owned192-rolebranch-usage-smoke-job-v2'
+-PRIOR_CLOSURE=HERE/'prepared-original01/ROOT-failed-original-parent-owned-release.json'
+-PRIOR_CLOSURE_SHA='3066d31b9a68a8b5ed71bfe959fc2876b54c972150a0ae9c4871fe1fc46af8c5'
++GATE=HERE/'gate_original_usage_child_v3.py'
++SCHEMA='robotron-owned192-rolebranch-usage-smoke-job-v3'
++PRIOR_CLOSURE=HERE/'prepared-original02/ROOT-failed-original-parent-owned-release.json'
++PRIOR_CLOSURE_SHA='33083590c106dd6488bb6cf224e8cf7264144a6758c78e1be2b34a880dd0a215'
+ DISAPPEARED='Process vanished or is no longer live'
++EXEC_GAP='OWNED_KNOWN_EXECUTABLE_EMPTY_CMD_ENV_IMAGE_GAP'
+ STATIC=('parent_pid','cgroup','command','environment','affinity','uids','executable')
+ LIMITS=dict(CPUQuotaPerSecUSec='2s',MemoryMax=str(4<<30),MemorySwapMax='0',TasksMax='512',RuntimeMaxUSec='3min',Restart='no',NRestarts='0')
+ 
+@@ -119,6 +120,7 @@
+     return dict(raw=raw,started_monotonic_s=started,ended_monotonic_s=ended,stable_stage_counts=stages,
+         archiving_ended_monotonic_s=time.monotonic(),actual_stable_MAME_slots=[r['slot']for r in rows if r.get('stage')=='mame'],
+         pending_disappearances=[dict(slot=r['slot'],pid=r['pid'],birth=r['birth'],reason=r['unaccepted_capture_disappearance'])for r in rows if'unaccepted_capture_disappearance'in r],
++        pending_exec_image_gaps=[dict(slot=r['slot'],pid=r['pid'],birth=r['birth'],reason=r['unaccepted_exec_image_gap'],executable=r['record']['executable'])for r in rows if'unaccepted_exec_image_gap'in r],
+         within5s_birth_age=sum(r.get('within_original5s_birth_age')is True for r in rows),outside5s_birth_age=sum(r.get('within_original5s_birth_age')is False for r in rows))
+ 
+ 
+@@ -133,11 +135,11 @@
+ 
+ 
+ def verify_prior_closure(value):
+-    require(value['path']==str(PRIOR_CLOSURE)and value['sha256']==PRIOR_CLOSURE_SHA,'Exact preserved V1 failed closure required')
++    require(value['path']==str(PRIOR_CLOSURE)and value['sha256']==PRIOR_CLOSURE_SHA,'Exact preserved V2 failed closure required')
+     closed=read(value)
+     require(closed['schema']=='robotron-failed-original-engineering-parent-owned-release-v1'and closed['actual_original_exit']==1
+         and closed['original_parent_birth_and_unit_and_cgroup_absent']is True and closed['original192children_all_reaped_and_absent']is True
+-        and closed['original_fixture_failed']is True and closed['scientific_qualified']is False,'V1 must remain failed and positively closed')
++        and closed['original_fixture_failed']is True and closed['scientific_qualified']is False,'V2 must remain failed and positively closed')
+ 
+ 
+ def resolve_disappearances(attempts,terminal,usage):
+@@ -154,6 +156,32 @@
+             resolved.append(dict(original_unaccepted_raw_capture=capture['raw'],slot=slot,pid=row['pid'],birth=row['birth'],
+                 original_exception=row['reason'],actual_terminal=actual,positive_usage=positive,
+                 disposition='UNACCEPTED_CAPTURE_RESOLVED_BY_ORIGINAL_NORMAL_USAGE_EXIT'))
++    return resolved
++
++
++def empty_exec_image_gap(fixture,first,second,prior_gate):
++    known=[*fixture['launcher_contract']['stage_executables'].values(),fixture['actor_executable']]
++    return (all((row['pid'],row['starttime_ticks'])==(prior_gate['pid'],prior_gate['starttime_ticks'])for row in (first,second))
++        and all(first[k]==second[k]==prior_gate[k]for k in ('parent_pid','cgroup','uids','affinity'))
++        and first['executable']==second['executable']and first['executable']in known
++        and all(row['command']in ([],[''])and row['environment']=={}and row['state']not in ('T','t','Z','X','x')for row in (first,second)))
++
++
++def resolve_exec_image_gaps(attempts,terminal,usage,all_gates,fixture):
++    resolved=[];known=[*fixture['launcher_contract']['stage_executables'].values(),fixture['actor_executable']]
++    for capture in attempts:
++        for row in capture.get('pending_exec_image_gaps',[]):
++            slot=row['slot'];actual=terminal[slot];positive=usage[slot];prior=all_gates['records'][slot]['record']
++            require(row['reason']==EXEC_GAP and row['executable']in known
++                and row['pid']==actual['pid']==prior['pid']and row['birth']==actual['birth']==prior['starttime_ticks']
++                and type(actual['actual_Popen_exit'])is int and actual['actual_Popen_exit']==0 and actual['original_birth_absent']is True
++                and positive['positive_installed_usage_output']is True and positive['stdout']['bytes']>1000,
++                'Unaccepted exec-image gap lacks exact prior-gate/normal0/usage/reap proof')
++            stdout=checked(positive['stdout']).read_bytes()
++            require(len(stdout)>1000 and b'showusage'in stdout.lower(),'Resolved exec-image gap lacks actual pinned positive usage bytes')
++            resolved.append(dict(original_unaccepted_raw_capture=capture['raw'],slot=slot,pid=row['pid'],birth=row['birth'],
++                original_gap_reason=row['reason'],known_executable=row['executable'],prior_gate_birth=prior['starttime_ticks'],
++                actual_terminal=actual,positive_usage=positive,disposition='UNACCEPTED_EXEC_IMAGE_GAP_RESOLVED_BY_ORIGINAL_NORMAL_USAGE_EXIT'))
+     return resolved
+ 
+ 
+@@ -268,14 +296,17 @@
+                     clock=launch.sample_clock();entry['clock']=clock
+                     entry['actual_birth_age_s']=clock['boottime_s']-a['starttime_ticks']/clock['ticks_per_second']
+                     entry['within_original5s_birth_age']=0<=entry['actual_birth_age_s']<=5
+-                    if a['command']==gate_commands[slot]:stage='gate_releasing'
+-                    else:stage=launch.phase(fixture,a)
+-                    entry['stage']=stage
+-                    if stage!='mame':require(a['environment']==launch.expected_input(fixture,slot,before['training_round']['round']),'Actual unchanged launcher INPUT differs')
+-                    if stage=='mame':
+-                        expected=dict(case['actor_environment'],ROBOTRON_CLIENT_SLOT=slot,ROBOTRON_ACTOR_ROUND=str(before['training_round']['round']),ROBOTRON_EVAL_MODE='1'if case['slot_eval'][slot]else'2',ROBOTRON_PREVIEW_CLIENT='1'if slot=='0'else'0')
+-                        require(a['environment']==expected and a['executable']==case['actor_executable'],'Actual MAME forced role/environment differs')
+-                    stages[stage]=stages.get(stage,0)+1
++                    if empty_exec_image_gap(fixture,a,b,all_gates['records'][slot]['record']):
++                        entry['unaccepted_exec_image_gap']=EXEC_GAP
++                    else:
++                        if a['command']==gate_commands[slot]:stage='gate_releasing'
++                        else:stage=launch.phase(fixture,a)
++                        entry['stage']=stage
++                        if stage!='mame':require(a['environment']==launch.expected_input(fixture,slot,before['training_round']['round']),'Actual unchanged launcher INPUT differs')
++                        if stage=='mame':
++                            expected=dict(case['actor_environment'],ROBOTRON_CLIENT_SLOT=slot,ROBOTRON_ACTOR_ROUND=str(before['training_round']['round']),ROBOTRON_EVAL_MODE='1'if case['slot_eval'][slot]else'2',ROBOTRON_PREVIEW_CLIENT='1'if slot=='0'else'0')
++                            require(a['environment']==expected and a['executable']==case['actor_executable'],'Actual MAME forced role/environment differs')
++                        stages[stage]=stages.get(stage,0)+1
+                 except(OSError,KeyError)as failure:entry['unaccepted_capture']=repr(failure)
+                 except ValueError as failure:
+                     if str(failure)=='Original child exec raced pair':entry['unaccepted_capture']=repr(failure)
+@@ -297,7 +328,7 @@
+     terminal={slot:dict(pid=c.pid,birth=births.get(slot),actual_Popen_exit=c.poll(),original_birth_absent=birth(c.pid)!=births.get(slot))for slot,c in children.items()}
+     put(output/'original-children-terminal-and-reap.json',dict(children=terminal,cleanup_actions=cleanup_actions,signals_received=signals));put(output/'original-process-attempts.json',attempts)
+     after=api();put(output/'after-main.raw.json',after);main_after=verify_main_owners(case,health,reader);put(output/'after-main-owners.json',main_after)
+-    usage={};resolved_disappearances=[]
++    usage={};resolved_disappearances=[];resolved_exec_gaps=[]
+     try:
+         require(not error and len(children)==192 and all_gates is not None and not cleanup_actions and not signals,'Original cohort failed or required forced cleanup')
+         require(all(v['actual_Popen_exit']==0 and v['original_birth_absent']for v in terminal.values()),'Every original usage child must exit0 and be reaped')
+@@ -306,6 +337,7 @@
+             usage[slot]=dict(positive_installed_usage_output=True,stdout=pin(path))
+         put(output/'positive-original-usage-output-proofs.json',usage)
+         resolved_disappearances=resolve_disappearances(attempts,terminal,usage)
++        resolved_exec_gaps=resolve_exec_image_gaps(attempts,terminal,usage,all_gates,fixture)
+         require(before['host_pipeline']['learning_exposure']['optimizer']['process_id']==after['host_pipeline']['learning_exposure']['optimizer']['process_id']==case['owners']['trainer']['process']['pid']
+             and birth(main_fleet['pid'])==main_fleet['starttime_ticks'],'Actual original training owner changed')
+         main_API_projection(case,before,after)
+@@ -313,9 +345,11 @@
+     except BaseException as failure:error=(error+'; 'if error else'')+repr(failure)
+     peaks={stage:max((row['stable_stage_counts'].get(stage,0)for row in attempts),default=0)for stage in ('gate_releasing','env','bash','python','mame')}
+     observed={slot for sweep in attempts for slot in sweep['actual_stable_MAME_slots']}
+-    result=dict(schema='robotron-owned192-rolebranch-usage-smoke-result-v2',
++    result=dict(schema='robotron-owned192-rolebranch-usage-smoke-result-v3',
+         pending_capture_disappearance_count=sum(len(row.get('pending_disappearances',[]))for row in attempts),
+         resolved_capture_disappearances=resolved_disappearances,
++        pending_unaccepted_exec_image_gap_count=sum(len(row.get('pending_exec_image_gaps',[]))for row in attempts),resolved_unaccepted_exec_image_gaps=resolved_exec_gaps,
++        exec_image_gap_scope='Only paired empty cmd/env under a pinned known executable and exact prior own gate identity remains UNACCEPTED. Exact original normal0/usage/reap resolves it; no accepted executable or role observation is fabricated.',
+         capture_disappearance_scope='Every exact disappearance remains an unaccepted raw capture; resolution is only exact original PID/birth, natural Popen0, positive usage stdout and completed reap. No synthetic accepted record is created.',
+         prior_failed_fixture_closure=job['prior_failed_fixture_closure'],status='OWNED192_USAGE_COHORT_CLOSED'if error is None else'ORIGINAL_FIXTURE_FAILED',error=error,
+         job=jp,owner=own,original_children=terminal,gate192_paired_capture_s=all_gates['paired_capture_s']if all_gates else None,

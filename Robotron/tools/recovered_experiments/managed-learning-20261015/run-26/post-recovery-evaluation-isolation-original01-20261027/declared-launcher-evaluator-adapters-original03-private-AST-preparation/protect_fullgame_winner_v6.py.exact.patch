@@ -1,0 +1,67 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/protect_fullgame_winner_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original03-private-AST-preparation/protect_fullgame_winner_v6.py
+@@ -14,12 +14,13 @@
+ import sys
+ import time
+ 
+-HERE=Path(__file__).resolve().parent
++HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
++LOCAL=Path(__file__).resolve().parent
+ PUBLISHER_SHA='1dca577cf4a09da0c9f4cf90e103335fc8259498eb7f98b8b65bfdf328f425c5'
+ 
+ 
+ def pipeline():
+-    spec=importlib.util.spec_from_file_location('_fullgame_protection_pipeline',HERE/'fullgame_review_pipeline_v7.py')
++    spec=importlib.util.spec_from_file_location('_fullgame_protection_pipeline',LOCAL/'fullgame_review_pipeline_v7.py')
+     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
+ 
+ 
+@@ -60,9 +61,9 @@
+         previous_reference_epoch=prepared['reference_epoch'],prior_protected_files=prior,destination=str(destination),label=label,
+         output=str(output/'runtime'),unit='robotron-fullgame-winner-protection-'+rp['sha256'][:12]+'-original01.service',
+         original_attempt=1,no_retry=True,engineering_only=False,source=h.pin(Path(__file__).resolve()))
+-    job['inputs']=[rp,cp,prior,*p.read(prior)['files'],job['source'],h.pin(HERE/'fullgame_review_pipeline_v7.py'),
+-        h.pin(HERE/'assess_fullgame_study_v8.py'),h.pin(HERE/'sequence_fullgame_study_v8.py'),
+-        h.pin(HERE/'fullgame_review_entry_v6.py'),job['previous_reference_epoch']]
++    job['inputs']=[rp,cp,prior,*p.read(prior)['files'],job['source'],h.pin(LOCAL/'fullgame_review_pipeline_v7.py'),
++        h.pin(LOCAL/'assess_fullgame_study_v8.py'),h.pin(LOCAL/'sequence_fullgame_study_v8.py'),
++        h.pin(LOCAL/'fullgame_review_entry_v6.py'),job['previous_reference_epoch']]
+     jp=h.put(output/'job.json',job);verify(job,jp)
+     return jp
+ 
+@@ -81,14 +82,14 @@
+     p.require(close['schema']=='robotron-recovered-fullgame-final-assessment-original-closeout-v1'and close['status']=='PASS'
+         and close['assessment']==job['assessment_report']and close['actual_exit']==0
+         and close['all_six_descriptors_resources_argv_birth_unit_timer_cgroup_and_release_verified']is True
+-        and close['source']==h.pin(HERE/'sequence_fullgame_study_v8.py'), 'Actual original successful final-assessment scope required')
++        and close['source']==h.pin(LOCAL/'sequence_fullgame_study_v8.py'), 'Actual original successful final-assessment scope required')
+     preparation=read(close['assessment_preparation']);commit=read(preparation['review_precommit']);prepared=read(commit['native_prepared'])
+     p.require(commit['engineering_only']is prepared['engineering_only']is False
+         and report['review_precommit']==preparation['review_precommit']and report['native_prepared']==commit['native_prepared']
+-        and report['source']==commit['assessor']==h.pin(HERE/'assess_fullgame_study_v8.py')
+-        and report['pipeline']==commit['pipeline']==h.pin(HERE/'fullgame_review_pipeline_v7.py')
+-        and commit['review_entry']==h.pin(HERE/'fullgame_review_entry_v6.py')
+-        and commit['leg_reviewer']==h.pin(HERE/'review_fullgame_rounds_v7.py'), 'Exact original production assessment/review source joins required')
++        and report['source']==commit['assessor']==h.pin(LOCAL/'assess_fullgame_study_v8.py')
++        and report['pipeline']==commit['pipeline']==h.pin(LOCAL/'fullgame_review_pipeline_v7.py')
++        and commit['review_entry']==h.pin(LOCAL/'fullgame_review_entry_v6.py')
++        and commit['leg_reviewer']==h.pin(LOCAL/'review_fullgame_rounds_v7.py'), 'Exact original production assessment/review source joins required')
+     cfg_pin=preparation['config'];cfg=read(cfg_pin)
+     expected=['/usr/bin/python3.12','-I','-B',report['source']['path'],'--assess','--precommit',preparation['review_precommit']['path'],
+         '--precommit-sha256',preparation['review_precommit']['sha256'],'--output',preparation['prospective_assessment_output']]
+@@ -108,13 +109,13 @@
+     p.require(pair['protected_reference_epoch']==prepared['reference_epoch']==job['previous_reference_epoch']
+         ==state['optimization_goal']['next_fixed_reference_epoch'],'Protected fixed reference changed before winner publication')
+     epoch=read(job['previous_reference_epoch']);p.require(epoch['reference_policy']==pair['reference']['policy'],'Fixed protected reference differs')
+-    producer=p.load('_fullgame_protection_actual_screen_eligibility',HERE/'prepare_fullgame_study_v6.py')
++    producer=p.load('_fullgame_protection_actual_screen_eligibility',LOCAL/'prepare_fullgame_study_v6.py')
+     producer.eligible_screen(prepared['screen_assessment'],prepared['reference_epoch'],h)
+     p.require(pair['screen_assessment']==prepared['screen_assessment'],'Original passing screen differs')
+     p.require([row['leg']for row in report['original_scopes']]==p.ORDER
+         and [case['leg']for case in prepared['cases']]==[case['leg']for case in commit['cases']]==p.ORDER,
+         'Exact original four-leg assessment membership/order required')
+-    reviewer=p.load('_fullgame_protection_original_leg_predicates',HERE/'review_fullgame_rounds_v7.py');legs=[];previous_end=0
++    reviewer=p.load('_fullgame_protection_original_leg_predicates',LOCAL/'review_fullgame_rounds_v7.py');legs=[];previous_end=0
+     for case,rc,proof in zip(prepared['cases'],commit['cases'],report['original_scopes']):
+         role=case['leg'];subject=read(case['native_job']);review_job=read(rc['review_job']);review_cfg=read(rc['review_config'])
+         p.require(rc['native_job']==case['native_job']and rc['leg']==proof['leg']==role,'Exact original native/review membership differs')

@@ -1,0 +1,41 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/prepare_current_EVAL_quiescence_eight_CPU_v5.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-quiescence-readiness120-overlay-original06/prepare_readiness120_start_two_CPU_v1.py
+@@ -6,8 +6,8 @@
+ from pathlib import Path
+ import stat
+ 
+-SELECTION = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/current-EVAL-quiescence-eight-CPU-source-selection-v5.json', 'sha256': '43f264af13a21946b3ac775cef33eb9e120623d73c1ebb2a61d86be078c64daf', 'bytes': 24037, 'identity': {'device': 2304, 'inode': 85354572, 'bytes': 24037, 'mtime_ns': 1793309957134303205, 'ctime_ns': 1793309957134303205, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+-ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05')
++SELECTION = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-quiescence-readiness120-overlay-original06/readiness120-start-two-CPU-source-selection-v1.json', 'sha256': '5e3229eef60d8c2183064b39e5e1ef27ea88d6b1d9a66b4b20c570ffe032dbf4', 'bytes': 18299, 'identity': {'device': 2304, 'inode': 85356171, 'bytes': 18299, 'mtime_ns': 1793311178489654699, 'ctime_ns': 1793311178489654699, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
++ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-quiescence-readiness120-overlay-original06')
+ 
+ def require(value,message):
+     if not value:raise ValueError(message)
+@@ -38,20 +38,20 @@
+ def prepare(directory,expected_source_sha256):
+     own=pin(Path(__file__).resolve());require(own['sha256']==expected_source_sha256,'Exact metadata preparer required')
+     selected=json.loads(checked(SELECTION).read_bytes())
+-    require(selected['schema']=='robotron-current-EVAL-quiescence-eight-CPU-source-selection-v5'
+-            and selected['expected_test_count']==8,'Exact eight predicate source selection required')
++    require(selected['schema']=='robotron-readiness120-start-two-CPU-source-selection-v1'
++            and selected['expected_test_count']==2,'Exact two predicate source selection required')
+     for value in selected['inputs']:checked(value)
+     require(Path('/usr/bin/python3').resolve()==Path(selected['interpreter']['path']),'Selected interpreter alias differs')
+     directory=directory.resolve()
+-    require(directory.parent==ROOT and directory.name=='focused-eight-CPU-original01-NOT-LAUNCHED'
++    require(directory.parent==ROOT and directory.name=='focused-start-two-CPU-original01-NOT-LAUNCHED'
+             and not directory.exists(),'Only fresh original01 metadata namespace allowed')
+     directory.mkdir(mode=0o700)
+-    unit='robotron-current-EVAL-quiescence-health-eight-CPU-original01-20261029.service'
++    unit='robotron-readiness120-start-two-CPU-original01-20261029.service'
+     inputs=[*selected['inputs'],SELECTION,own]
+-    job=dict(schema='robotron-current-EVAL-quiescence-focused-original-CPU-job-v5',unit=unit,
++    job=dict(schema='robotron-readiness120-start-focused-original-CPU-job-v1',unit=unit,
+         output=str(directory/'runtime'),source=selected['driver'],fixture=selected['fixture'],
+-        original_attempt=1,no_retry=True,inputs=inputs,expected_test_count=8,
+-        expected_report_schema='robotron-current-EVAL-quiescence-focused-original-CPU-report-v5',
++        original_attempt=1,no_retry=True,inputs=inputs,expected_test_count=2,
++        expected_report_schema='robotron-readiness120-start-focused-original-CPU-report-v1',
+         resources=dict(CPU_cores=2,memory_bytes=4<<30,runtime_s=180,tasks=128),
+         actual_startup_or_fleet_runtime_qualified=False,scientific_launch_qualified=False,
+         quality_qualified=False,promotion=False)

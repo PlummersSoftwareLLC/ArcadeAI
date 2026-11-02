@@ -1,0 +1,61 @@
+DIAGNOSTIC FIRST; EXPLICIT SCOPE CORRECTION TO THE EARLIER SEALED DECISION.
+
+No current bank underweight bug, gradient starvation or retention failure has
+been demonstrated. Keep the0.5floor solely as an unvalidated research hypothesis,
+not a selected deployment or a high-confidence beneficial change. This addendum
+supersedes any stronger reading of DECISION.txt's treatment recommendation.
+The original sealed files remain unchanged. All current quality/source freeze
+and unknown future calibration/winner/owner/decision fields remain in force.
+
+MeanPER is the deliberate average-vote policy. With3072PER+1024banks and no other
+quotas, giving each bank row the PERmean preserves25% weighted rowmass exactly.
+The historical ACTUAL4096mixture was901PER,737interesting,1434recent,410HOF,614EpHOF.
+Interesting/recent coefficients1 are intentionally different. Bank/PER average
+coefficients match; bankshare withinPER+banks equals1024/(901+1024), approximately
+53.19%, before tinyFP32cast differences. The wholebatch bank coefficient mass is
+lower than raw25% because the other quotas have weight1. Bellman scalar mass
+also includes rowCE. None of these quantities is an actual parameter-gradient
+vote or a proof that banks deserve privilege. weighted_row_mass_clarification.json
+separately reports coefficient rowmass,weightedCE and scalar shares from saved
+JSON, so their different meanings are explicit. Entropy/easier examples can
+change scalarCE without a proportional change in corrective gradient.
+
+The remaining causal possibilities include intentional useful suppression of
+old bank behavior, insufficient retention, and changes in global objective/
+gradient scale/BC balance. Prior fixed1 overpull and stale-bank quota relief
+are real source-history cautions; there is no local counterevidence proving the
+0.5floor improves them. A KLpolicy pass/fail does not disambiguate bank weight
+from the many simultaneous consequences of changing priorities.
+
+The cheapest useful next step is calibration, not floor activation. After full
+current quality/audits/cleanup/freeze release, authenticate any already-available
+current-phase consumed4096batch's origin/weights/CE metadata and compute these
+same coefficient/CE identities. If no genuine current-phase batch is retained,
+record that gap and defer activation; do not relabel historicalCE8 or conditional
+KL rows as current. A separate small observation proposal could later record
+this readout without extra liveforward/RNG/backward/compiledloss outputs.
+
+If a bank-retention concern remains, a single isolated same-profile per-origin
+gradient decomposition is more discriminating than another guessed weightfloor:
+use one authentic PRE+4096batch for that phase, originalsameforwardCE objective,
+retain gradients of weighted PER/recent/interesting/HOF/EpHOF Bellman components
+and BC with respect to the usedC51/trunk parameters, record norms and directional
+innerproducts, and verify theirsum equals total gradient under existing numeric
+controls. No optimizer/update/extra liveforward. Sourcepin and fixed loss/profile
+controls must be reviewed first. This is private gradient geometry on one batch,
+not executedlivegradient identity, populationgradient, causal retention proof or
+a new policy gate. If only a named-parameter subset fits, label the subset.
+Do not tune a new floor or invent pass thresholds from its result.
+
+Reuse an existing eligible current-phase capture when available. Otherwise a
+fresh PRE acquisition needs its own bounded source review; the old8capture4GB
+contract is not silently reduced/reused. A proposed single private GPU probe can
+use the existing600s/900s/12GiBallocated/13GiBprocess/6GiBdisk guards after quality,
+with no267GB replaycopy. Actual capture availability/fit/execution remainunknown.
+If geometry suggests conflicting/dominant banks, privilege is questionable; if
+it suggests weak bank influence, that still does not prove a retention benefit.
+Only a later separately-precommitted one-knob sequential policy screen and the
+unchanged fresh frozen quality gates may justify adoption.
+
+No implementation, source installation, tests/imports/modelbytes/runtimequeries,
+extra capture or treatment is authorized/executed by this preparation.

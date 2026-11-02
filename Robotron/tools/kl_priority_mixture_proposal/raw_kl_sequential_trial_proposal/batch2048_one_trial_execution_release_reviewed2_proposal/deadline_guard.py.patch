@@ -1,0 +1,11 @@
+--- preserved6a/deadline_guard.py
++++ reviewed2/deadline_guard.py
+@@ -30,7 +30,7 @@
+ 
+ 
+ 
+-RELEASE_VALIDATOR = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_proposal/execution_readiness.py')
++RELEASE_VALIDATOR = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_reviewed2_proposal/execution_readiness.py')
+ RELEASE_VALIDATOR_SHA = 'c01e71f00345f64996b469ff7b7a257a2e73e7d8e016914bc8225d3647df321f'
+ 
+ def execution_readiness():

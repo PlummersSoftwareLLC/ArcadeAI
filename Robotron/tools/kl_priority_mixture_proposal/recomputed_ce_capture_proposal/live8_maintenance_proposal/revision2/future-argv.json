@@ -1,0 +1,9 @@
+{
+  "status": "SOURCE_PREPARATION_ONLY_NOT_EXECUTED",
+  "default_argv": ["python3", "-B", "ABS_THIS_BUNDLE/run_live8_maintenance.py"],
+  "test_argv": ["python3", "-B", "-m", "unittest", "Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_maintenance_proposal.revision2.test_live8_maintenance", "Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_maintenance_proposal.revision2.test_bank_state_revision2"],
+  "explicit_argv": ["ABS_ROOT_SELECTED_PYTHON", "-B", "ABS_THIS_BUNDLE/run_live8_maintenance.py", "--launch", "--job", "ABS_NEW_REVIEWED2_ROOT_JOB", "--expected-job-sha256", "ROOT_JOB_SHA256", "--expected-controller-sha256", "02f4fa028d4885fb59cad47eacf607d36df86b0b7ef41fddf5bd176cfb0891ea"],
+  "service_properties_proposed_by_root": ["Type=exec", "CPUQuota=200%", "MemoryMax=4G", "TasksMax=128", "RuntimeMaxSec=4800", "KillSignal=SIGINT", "TimeoutStopSec=900", "SendSIGKILL=no", "RemainAfterExit=yes"],
+  "lifecycle": "Separate fresh unit/output; detached3s timer; scheduling carrier gone before trigger; no --wait or --collect; original invocation/exit archived before release",
+  "scope": "Narrow source-default model path correction only; original35PASS and safe preflight refusal preserved; new38 CPU methods unexecuted by authors; no live maintenance or held environment/source change"
+}

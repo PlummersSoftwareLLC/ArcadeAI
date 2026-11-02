@@ -1,0 +1,491 @@
+--- a/Robotron/Scripts/dqn/config.py
++++ b/Robotron/Scripts/dqn/config.py
+@@ -686,6 +686,14 @@
+     priority_beta_start: float = 0.4
+     priority_beta_frames: int = 10_000_000
+     priority_eps: float = 1e-6
++    # Static startup choice: changing metric requires an explicit phase and restart.
++    per_priority_metric: str = os.getenv("DQN_PER_PRIORITY_METRIC", "ce").strip().lower()
++    # Fixed proposal validity bounds, NOT old CE-comparison tolerances. Changing
++    # either requires a new reviewed protocol; no post-failure tuning.
++    per_kl_target_mass_atol: float = 1e-5
++    per_kl_signed_negative_atol: float = 1e-5
++    if per_priority_metric not in ("ce", "kl"):
++        raise ValueError("DQN_PER_PRIORITY_METRIC must be ce or kl")
+     per_new_priority_cap_multiplier: float = 3.0
+     # 10K -> 500K (2026-07-17): training on a ~90-second buffer after a ring
+     # wipe (thousands of updates on correlated data with fresh Adam) deformed
+--- a/Robotron/Scripts/dqn/loss_kernel.py
++++ b/Robotron/Scripts/dqn/loss_kernel.py
+@@ -25,7 +25,7 @@
+     measured before projection and before target smoothing.
+     """
+ 
+-    def __init__(self, online_net, target_net, cfg, diagnostics=True):
++    def __init__(self, online_net, target_net, cfg, diagnostics=True, return_priorities=False):
+         super().__init__()
+         self.online_net = online_net
+         self.target_net = target_net
+@@ -41,6 +41,7 @@
+         self.q_temperature = max(1e-3, float(getattr(cfg, "expert_q_policy_temperature", 10.0)))
+         self.q_margin = float(getattr(cfg, "expert_q_margin", 0.5))
+         self.diagnostics = bool(diagnostics)
++        self.return_priorities = bool(return_priorities)
+ 
+     def forward(self, states, actions, rewards, next_states, dones, horizons,
+                 is_expert, weights, schedule_weights):
+@@ -148,4 +149,28 @@
+                 ))
+             else:
+                 diagnostic_values = torch.zeros(12, device=states.device, dtype=torch.float32)
++        # False is a constructor constant: default CE retains four outputs and
++        # all original objective/projection expressions. KL changes replay only.
++        if self.return_priorities:
++            priorities, priority_diagnostics = categorical_kl_priorities(ce_loss, projected)
++            diagnostic_values = torch.cat((diagnostic_values, priority_diagnostics))
++            return weighted_loss, ce_loss, bc_loss, diagnostic_values, priorities
+         return weighted_loss, ce_loss, bc_loss, diagnostic_values
++
++
++def categorical_kl_priorities(ce_loss, projected):
++    """Same executed CE and projected/smoothed m; no forward or renormalization.
++
++    Entropy log floor1e-12 matches the existing compiled diagnostic. Negative
++    signed CE-H is retained diagnostically before clamp_min(0); tree epsilon
++    1e-6, alpha and sampling-leaf floor remain the replay implementation's job.
++    """
++    with torch.no_grad():
++        target = projected.detach().float()
++        entropy = -(target * target.clamp_min(1e-12).log()).sum(dim=1)
++        signed = ce_loss.detach().float() - entropy
++        mass_error = (target.sum(dim=1) - 1.0).abs()
++        diagnostics = torch.stack((signed.min(), signed.max(),
++            (signed < 0).float().sum(), (signed.abs() <= 1e-6).float().sum(),
++            target.min(), mass_error.max(), mass_error.mean()))
++        return signed.clamp_min(0.0), diagnostics
+--- a/Robotron/Scripts/dqn/training.py
++++ b/Robotron/Scripts/dqn/training.py
+@@ -182,6 +182,17 @@
+     if replay_pressure_reached(agent):
+         return None
+ 
++    priority_metric = str(getattr(RL_CONFIG, "per_priority_metric", "ce"))
++    if priority_metric not in ("ce", "kl") or priority_metric != getattr(agent, "_priority_metric", "ce") \
++            or priority_metric != getattr(agent, "_loss_priority_metric", "ce"):
++        raise RuntimeError("Priority metric requires restart/rebuild agreement")
++    priority_phase = getattr(agent, "_priority_phase", None)
++    if priority_metric == "kl" and priority_phase is None:
++        raise RuntimeError("KL requires an explicit mixed-tree phase")
++    if priority_phase is not None:
++        priority_phase.require_ready(priority_metric)
++    kl_priority = priority_metric == "kl"
++    priority_diagnostics = None
+     step_t0 = time.perf_counter()
+ 
+     # ── Sample ──────────────────────────────────────────────────────────
+@@ -279,9 +290,15 @@
+                  horizons_t, is_expert_t, weights_t), schedule=schedule_t,
+                 kernel=kernel, diagnostic_due=diagnostic_due, use_amp=use_amp, staged=staged)
+         with amp_ctx:
+-            weighted_loss, ce_loss, bc_loss, kernel_diag = kernel(
+-                states_t, actions_t, rewards_t, next_states_t, dones_t,
+-                horizons_t, is_expert_t, weights_t, schedule_t)
++            if kl_priority:
++                weighted_loss, ce_loss, bc_loss, kernel_diag, priority_values = kernel(
++                    states_t, actions_t, rewards_t, next_states_t, dones_t,
++                    horizons_t, is_expert_t, weights_t, schedule_t)
++                priority_diagnostics, kernel_diag = kernel_diag[12:], kernel_diag[:12]
++            else:
++                weighted_loss, ce_loss, bc_loss, kernel_diag = kernel(
++                    states_t, actions_t, rewards_t, next_states_t, dones_t,
++                    horizons_t, is_expert_t, weights_t, schedule_t)
+     else:
+         if capture is not None:
+             _capture_observe(capture, "unsupported_backend", "eager fallback; PRE snapshot requires original compiled4 route")
+@@ -372,15 +389,42 @@
+                         per_row = (joint_q + margin).max(dim=1).values - expert_q
+                         weighted_loss = weighted_loss + margin_w * (per_row * expert_mask).sum() / B
+ 
++    if kl_priority:
++        if not kernel_active:
++            try:
++                from .loss_kernel import categorical_kl_priorities
++            except ImportError:
++                from loss_kernel import categorical_kl_priorities
++            priority_values, priority_diagnostics = categorical_kl_priorities(ce_loss, m_joint)
++        if priority_values.shape != ce_loss.shape or priority_diagnostics.shape != (7,):
++            raise RuntimeError("Invalid same-forward KL priorities/projected-target shape")
++        # One added host predicate for KL, including its objective finite check.
++        # Signed/mass bounds are frozen proposal validity gates, not a relaxed
++        # comparison tolerance or a renormalization of the executed target.
++        valid_priority = (torch.isfinite(priority_values).all()
++            & torch.isfinite(priority_diagnostics).all() & torch.isfinite(weighted_loss)
++            & (priority_values >= 0).all() & (priority_diagnostics[4] >= 0)
++            & (priority_diagnostics[5] <= float(getattr(cfg, "per_kl_target_mass_atol", 1e-5)))
++            & (priority_diagnostics[0] >= -float(getattr(cfg, "per_kl_signed_negative_atol", 1e-5))))
++        if not bool(valid_priority):
++            # Preserve signed/mass failure evidence; no retry or ninth batch.
++            if priority_phase is not None:
++                try:
++                    priority_phase.reject_diagnostics(priority_diagnostics.detach().float().cpu().tolist())
++                except Exception:
++                    pass  # A diagnostic fault cannot replace the learner failure.
++            raise RuntimeError("Invalid same-forward KL objective/priorities/signed-or-mass diagnostics")
++
+     if capture is not None:
+         _capture_observe(capture, "loss", agent, ce_loss,
+             weighted_loss=weighted_loss, bc_loss=bc_loss,
+             diagnostic_values=kernel_diag if kernel_active else None)
+ 
+     # ── NaN / Inf guard ───────────────────────────────────────────────────
+-    if not torch.isfinite(weighted_loss):
+-        print(f"[WARN] Non-finite loss detected ({weighted_loss.item():.4g}), skipping step")
+-        return None
++    if not kl_priority:
++        if not torch.isfinite(weighted_loss):
++            print(f"[WARN] Non-finite loss detected ({weighted_loss.item():.4g}), skipping step")
++            return None
+ 
+     # ── Optimise ────────────────────────────────────────────────────────
+     try:
+@@ -455,10 +499,18 @@
+                 (action_p[:, 0] + action_p[:, -1]).mean(),
+                 entropy_rows.mean(), (top_q[:, 0] - top_q[:, 1]).mean(),
+                 (ce_loss.detach().float() - entropy_rows).mean()])
+-        if optimizer_exposure is not None and outcome_tensor is not None:
+-            outcome_host_index = B + len(scalars)
+-            scalars.append(outcome_tensor)
+-        packed = torch.cat((ce_loss.detach().float(), torch.stack(scalars)))
++        if kl_priority:
++            priority_diagnostic_offset = 2 * B + len(scalars)
++            scalars.extend(priority_diagnostics.detach().float().unbind())
++            if optimizer_exposure is not None and outcome_tensor is not None:
++                outcome_host_index = 2 * B + len(scalars)
++                scalars.append(outcome_tensor)
++            packed = torch.cat((ce_loss.detach().float(), priority_values.detach().float(), torch.stack(scalars)))
++        else:
++            if optimizer_exposure is not None and outcome_tensor is not None:
++                outcome_host_index = B + len(scalars)
++                scalars.append(outcome_tensor)
++            packed = torch.cat((ce_loss.detach().float(), torch.stack(scalars)))
+     priority_telemetry = getattr(agent, "_pipeline_telemetry", None) if diagnostic_due else None
+     priority_timings = {} if priority_telemetry is not None else None
+     priority_t0 = time.perf_counter()
+@@ -479,18 +531,24 @@
+     if gpu_timing is not None:
+         # The packed CPU readback above already waits for these events.
+         metrics.last_train_gpu_compute_ms = gpu_timing[0].elapsed_time(gpu_timing[1])
+-    td_errors = host[:B]
+-    loss_val, gn, bc_loss_val = map(float, host[B:B+3])
++    td_errors = host[:B]  # Existing CE diagnostics remain CE in both modes.
++    priority_errors = host[B:2*B] if kl_priority else td_errors
++    scalar_offset = 2 * B if kl_priority else B
++    loss_val, gn, bc_loss_val = map(float, host[scalar_offset:scalar_offset+3])
+     if diagnostic_due:
+-        _q_pred_min, _q_pred_max, _q_overest, q_mean, agree_move, agree_fire = map(float, host[B+3:B+9])
++        _q_pred_min, _q_pred_max, _q_overest, q_mean, agree_move, agree_fire = map(float, host[scalar_offset+3:scalar_offset+9])
+         for name, value in zip(('below_support_mass', 'above_support_mass', 'edge_atom_mass',
+-                                'target_entropy', 'action_q_gap', 'categorical_kl'), host[B+9:B+15]):
++                                'target_entropy', 'action_q_gap', 'categorical_kl'), host[scalar_offset+9:scalar_offset+15]):
+             setattr(metrics, 'c51_' + name, float(value))
+     if priority_timings is None:
+-        agent.memory.update_priorities(indices, td_errors)
++        agent.memory.update_priorities(indices, priority_errors)
+     else:
+         priority_update_started = time.perf_counter()
+-        agent.memory.update_priorities(indices, td_errors, timing_out=priority_timings)
++        agent.memory.update_priorities(indices, priority_errors, timing_out=priority_timings)
++    if priority_phase is not None:
++        priority_phase.note_update(priority_metric,
++            int(np.count_nonzero((np.asarray(indices) >= 0) & (np.asarray(indices) < agent.memory.capacity))),
++            host[priority_diagnostic_offset:priority_diagnostic_offset+7] if kl_priority else ())
+     priority_ms = (time.perf_counter() - priority_t0) * 1000.0
+     if priority_timings is not None:
+         priority_timings.update(
+@@ -547,7 +605,7 @@
+         metrics.last_sample_epsilon_frac = sample_epsilon_frac
+         metrics.last_sample_expert_frac = sample_expert_frac
+         metrics.last_inference_sync_age = int(max(0, int(agent.training_steps) - int(getattr(agent, "last_inference_sync", 0))))
+-        metrics.last_priority_mean = float(np.mean(td_errors))
++        metrics.last_priority_mean = float(np.mean(priority_errors))
+ 
+         if diagnostic_due:
+             # Smoothed Q diagnostics: seed on first sample, then EMA.
+--- a/Robotron/Scripts/dqn/agent.py
++++ b/Robotron/Scripts/dqn/agent.py
+@@ -138,6 +138,19 @@
+             if not required or not os.path.isfile(required) or os.path.realpath(required) != os.path.realpath(boot_path):
+                 raise ExactInferenceGraphError("Graph resume requires an existing DQN_EXACT_GRAPH_CHECKPOINT matching main's boot path")
+             self._exact_graph_checkpoint = os.path.realpath(required)
++
++        self._priority_metric = str(getattr(cfg, "per_priority_metric", "ce"))
++        self._loss_priority_metric = self._priority_metric
++        self._priority_phase = None
++        if self._priority_metric == "kl" or os.getenv("DQN_PRIORITY_PHASE_RECORD", "").strip():
++            try:
++                from .priority_phase import PriorityPhase
++            except ImportError:
++                from priority_phase import PriorityPhase
++            if (not self._exact_graph_requested or not bool(getattr(cfg, "compile_full_loss", True))
++                    or not bool(getattr(cfg, "use_torch_compile", False))):
++                raise RuntimeError("Priority trial requires held resume-only full-loss compile profile")
++            self._priority_phase = PriorityPhase(self._priority_metric, self._exact_graph_checkpoint, MODEL_DIR)
+ 
+         # Counters and locks (must be created before _sync_inference)
+         self.training_steps = 0
+@@ -461,12 +474,20 @@
+                 # dispatch through Python/GIL while the MAME fleet serves.
+                 # Diagnostic mode is a static module flag, never a runtime
+                 # Python branch inside the optimized graph.
+-                self.compiled_training_loss = torch.compile(
+-                    TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=False),
+-                    dynamic=False, options=compile_options)
+-                self.compiled_training_loss_diagnostics = torch.compile(
+-                    TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=True),
+-                    dynamic=False, options=compile_options)
++                if self._priority_metric == "kl":
++                    self.compiled_training_loss = torch.compile(
++                        TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=False, return_priorities=True),
++                        dynamic=False, options=compile_options)
++                    self.compiled_training_loss_diagnostics = torch.compile(
++                        TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=True, return_priorities=True),
++                        dynamic=False, options=compile_options)
++                else:
++                    self.compiled_training_loss = torch.compile(
++                        TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=False),
++                        dynamic=False, options=compile_options)
++                    self.compiled_training_loss_diagnostics = torch.compile(
++                        TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=True),
++                        dynamic=False, options=compile_options)
+                 actions = torch.zeros(bsz, device=self.device, dtype=torch.long)
+                 rewards = torch.zeros(bsz, device=self.device, dtype=torch.float32)
+                 dones = torch.zeros_like(rewards)
+@@ -478,9 +499,14 @@
+                     for train_states in _variants(bsz, self.device, torch.float32):
+                         next_states = train_states.clone()
+                         with torch.autocast("cuda", dtype=torch.float16, enabled=amp_on):
+-                            warm_loss, _, _, _ = loss_fn(
+-                                train_states, actions, rewards, next_states,
+-                                dones, horizons, expert, weights, schedule)
++                            if self._priority_metric == "kl":
++                                warm_loss, _, _, _, _ = loss_fn(
++                                    train_states, actions, rewards, next_states,
++                                    dones, horizons, expert, weights, schedule)
++                            else:
++                                warm_loss, _, _, _ = loss_fn(
++                                    train_states, actions, rewards, next_states,
++                                    dones, horizons, expert, weights, schedule)
+                         warm_loss.backward()
+                         self.online_net.zero_grad(set_to_none=True)
+             else:
+@@ -523,6 +549,8 @@
+                 torch.cuda.synchronize(self.inference_device)
+             print(f"torch.compile: all graphs warm in {time.time() - t0:.0f}s")
+         except Exception as e:
++            if self._priority_phase is not None:
++                raise  # Explicit phase cannot silently change the compiled recipe.
+             print(f"torch.compile unavailable ({type(e).__name__}: {e}) — running eager")
+             self.compiled_online_joint_dist = None
+             self.compiled_online_q_joint = None
+@@ -1106,6 +1134,11 @@
+                 if pending_batch is not None and hasattr(pending_batch, "release"):
+                     pending_batch.release()
+                 print(f"Training error: {e}")
++                if self._priority_phase is not None:
++                    self._priority_phase.invalidate(e)
++                    self.training_enabled = False
++                    traceback.print_exc()
++                    continue  # Retain compiler/outcome failure; no fallback/rescue.
+                 traceback.print_exc()
+                 if (self.compiled_online_joint_dist is not None
+                         or self.compiled_training_outputs is not None
+@@ -1368,6 +1401,8 @@
+             "single_frame_state_size": int(getattr(RL_CONFIG, "single_frame_state_size", self.state_size)),
+             "frame_stack": int(getattr(RL_CONFIG, "frame_stack", 1)),
+         }
++        if self._priority_phase is not None:
++            ckpt["priority_metric_phase"] = self._priority_phase.snapshot()
+         if hasattr(self, "grad_scaler") and self.grad_scaler is not None:
+             ckpt["grad_scaler_state_dict"] = self.grad_scaler.state_dict()
+         if show_status:
+@@ -1406,6 +1441,7 @@
+ 
+     @_with_training_paused
+     def load(self, filepath, show_status=True) -> bool:
++        priority_checkpoint_present = False
+         graph_requested = bool(getattr(self, "_exact_graph_requested", False))
+         if graph_requested:
+             self._exact_graph_loaded = False
+@@ -1418,6 +1454,15 @@
+             if show_status:
+                 self._text_progress("  Model load", 0.0)
+             ckpt = torch.load(filepath, map_location=self.device, weights_only=False)
++            priority_checkpoint_present = ckpt.get("priority_metric_phase") is not None
++            if self._priority_phase is not None or priority_checkpoint_present:
++                try:
++                    from .priority_phase import require_checkpoint_phase
++                except ImportError:
++                    from priority_phase import require_checkpoint_phase
++                require_checkpoint_phase(ckpt, self._priority_metric, self._priority_phase)
++                if self._priority_phase is not None:
++                    self._priority_phase.before_load(filepath, ckpt)
+             if show_status:
+                 self._text_progress("  Model load", 1.0)
+ 
+@@ -1546,8 +1591,14 @@
+                 if arch_changed:
+                     raise ExactInferenceGraphError("Graph resume refuses changed checkpoint geometry")
+                 self._validate_exact_inference_graphs()
++            if self._priority_phase is not None:
++                self._priority_phase.finish_load(filepath)
+             return True
+         except Exception as e:
++            if self._priority_phase is not None or priority_checkpoint_present:
++                if self._priority_phase is not None:
++                    self._priority_phase.invalidate(e)
++                raise
+             if graph_requested:
+                 graphs = getattr(self, "_exact_inference_graphs", None)
+                 error = graphs.fail(e) if graphs is not None else ExactInferenceGraphError(str(e))
+--- /dev/null
++++ b/Robotron/Scripts/dqn/priority_phase.py
+@@ -0,0 +1,139 @@
++"""Explicit restart-only priority phase; no replay migration or leaf-age claim.
++
++Imported only for an explicit phase or a checkpoint carrying phase metadata.
++The root's immutable startup record and checkpoint retain observational lineage;
++they do not make an ordinary restart a coherent replay/learning anchor.
++"""
++import hashlib
++import json
++import math
++import os
++from pathlib import Path
++import re
++
++SCHEMA = "robotron-priority-metric-phase-v1"
++START_SCHEMA = "robotron-priority-metric-start-v1"
++CLOCKS = ("training_steps", "optimized_samples", "learner_frame_count", "frame_count")
++DIAGNOSTICS = ("signed_min", "signed_max", "negative_rows", "near_zero_rows",
++               "target_min", "target_mass_error_max", "target_mass_error_mean")
++
++
++def require(value, message):
++    if not value:
++        raise RuntimeError("Priority phase: " + message)
++
++
++def file_pin(path):
++    path = Path(path)
++    before = path.stat()
++    require(path.is_file() and not path.is_symlink(), "regular checkpoint required")
++    with path.open("rb") as stream:
++        digest = hashlib.file_digest(stream, "sha256").hexdigest()
++    after = path.stat()
++    keys = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
++    require(all(getattr(before, key) == getattr(after, key) for key in keys), "checkpoint moved")
++    return {"path": str(path), "sha256": digest, "bytes": after.st_size}
++
++
++class PriorityPhase:
++    def __init__(self, metric, checkpoint, model_dir):
++        require(metric in ("ce", "kl"), "unknown metric")
++        require(checkpoint is not None, "held resume-only graph profile required")
++        for name in ("DQN_RECOMPUTED_CE_CAPTURE_DIR", "DQN_EXECUTED_CE_TRACE_DIR"):
++            require(not os.getenv(name, "").strip(), "capture flags must be absent for this trial")
++        path = Path(os.environ.get("DQN_PRIORITY_PHASE_RECORD", ""))
++        expected = os.environ.get("DQN_PRIORITY_PHASE_RECORD_SHA256", "")
++        require(path.is_absolute() and re.fullmatch(r"[0-9a-f]{64}", expected), "explicit phase record/hash required")
++        require(path == path.resolve(strict=True) and not path.is_symlink(), "canonical phase record required")
++        info = path.stat()
++        require(info.st_uid == os.getuid() and info.st_nlink == 1
++                and info.st_mode & 0o777 == 0o444 and 0 < info.st_size <= 65536, "owned immutable small phase record required")
++        raw = path.read_bytes()
++        require(hashlib.sha256(raw).hexdigest() == expected, "phase record changed")
++        spec = json.loads(raw)
++        fields = {"schema", "phase_id", "metric", "action", "previous_metric", "checkpoint",
++                  "model_dir", "root_precommit_sha256"}
++        require(isinstance(spec, dict) and set(spec) == fields and spec["schema"] == START_SCHEMA, "startup schema")
++        require(re.fullmatch(r"[A-Za-z0-9_-]{1,100}", spec["phase_id"] or "")
++                and spec["metric"] == metric and spec["action"] in ("start", "resume")
++                and spec["previous_metric"] in ("ce", "kl", "unknown")
++                and re.fullmatch(r"[0-9a-f]{64}", spec["root_precommit_sha256"] or ""), "startup identity/metric")
++        source = spec["checkpoint"]
++        require(set(source) == {"path", "sha256", "bytes"}
++                and source["path"] == os.path.realpath(checkpoint)
++                and spec["model_dir"] == os.path.realpath(model_dir)
++                and re.fullmatch(r"[0-9a-f]{64}", source["sha256"] or "")
++                and type(source["bytes"]) is int and source["bytes"] > 0, "startup checkpoint/branch")
++        self.spec, self.record_sha256 = spec, expected
++        self.loaded, self.state = False, None
++
++    def before_load(self, path, checkpoint):
++        require(os.path.realpath(path) == self.spec["checkpoint"]["path"]
++                and file_pin(path) == self.spec["checkpoint"], "wrong actual newest startup bytes")
++        previous = checkpoint.get("priority_metric_phase")
++        if previous is not None:
++            require(isinstance(previous, dict) and previous.get("schema") == SCHEMA
++                    and previous.get("metric") in ("ce", "kl"), "unknown saved phase metadata")
++        previous_metric = previous["metric"] if previous is not None else "unknown"
++        require(self.spec["previous_metric"] == previous_metric, "predecessor metric differs; untagged tree is unknown")
++        if self.spec["action"] == "resume":
++            require(previous is not None and previous.get("phase_id") == self.spec["phase_id"]
++                    and previous["metric"] == self.spec["metric"] and previous.get("valid") is True
++                    and previous.get("root_precommit_sha256") == self.spec["root_precommit_sha256"],
++                    "resume must match a valid persisted phase")
++            require(all(type(previous.get(key)) is int and previous[key] >= 0
++                        for key in ("priority_update_calls", "ring_rows_submitted")), "saved phase counters")
++            self.state = dict(previous)
++            self.state["last_resume_record_sha256"] = self.record_sha256
++        else:
++            require(previous is None or previous.get("phase_id") != self.spec["phase_id"], "new phase ID required")
++            clocks = {key: checkpoint[key] for key in CLOCKS}
++            require(all(type(value) is int and value > 0 for value in clocks.values()), "positive saved clocks required")
++            self.state = dict(schema=SCHEMA, phase_id=self.spec["phase_id"], metric=self.spec["metric"],
++                root_precommit_sha256=self.spec["root_precommit_sha256"], phase_record_sha256=self.record_sha256,
++                last_resume_record_sha256=None,
++                started_from=dict(self.spec["checkpoint"], clocks=clocks),
++                predecessor=None if previous is None else {key: previous.get(key) for key in ("phase_id", "metric", "valid")},
++                initial_tree="mixed/unknown historical leaves, insertion hints and boosts; no per-leaf metric or generation tag",
++                priority_update_calls=0, ring_rows_submitted=0, last_diagnostics=None,
++                last_rejected_diagnostics=None, valid=True, invalid_reason=None)
++
++    def finish_load(self, path):
++        require(file_pin(path) == self.spec["checkpoint"], "startup checkpoint changed during restore")
++        self.loaded = True
++
++    def require_ready(self, metric):
++        require(self.loaded and self.state is not None and self.state.get("valid") is True
++                and metric == self.spec["metric"], "restart/rebuild/load agreement required")
++
++    def note_update(self, metric, ring_rows, diagnostics):
++        self.require_ready(metric)
++        require(type(ring_rows) is int and ring_rows >= 0, "invalid submitted ring-row count")
++        if metric == "kl":
++            require(len(diagnostics) == len(DIAGNOSTICS)
++                    and all(math.isfinite(float(value)) for value in diagnostics), "invalid signed/mass diagnostics")
++            self.state["last_diagnostics"] = dict(zip(DIAGNOSTICS, map(float, diagnostics)))
++        self.state["priority_update_calls"] += 1
++        self.state["ring_rows_submitted"] += ring_rows
++
++    def invalidate(self, error):
++        if self.state is not None:
++            self.state["valid"] = False
++            self.state["invalid_reason"] = str(error)[:1024]
++
++    def reject_diagnostics(self, values):
++        # Failure-only CPU readback, never fabricate finite values for NaN/Inf.
++        if self.state is not None:
++            self.state["last_rejected_diagnostics"] = {
++                key: float(value) if math.isfinite(float(value)) else str(float(value))
++                for key, value in zip(DIAGNOSTICS, values)}
++
++    def snapshot(self):
++        require(self.loaded and self.state is not None, "cannot save an un-restored phase")
++        return dict(self.state)
++
++
++def require_checkpoint_phase(checkpoint, metric, phase):
++    if phase is None:
++        require(metric == "ce" and checkpoint.get("priority_metric_phase") is None,
++                "saved tagged phase requires an explicit restart record, including return-to-CE")

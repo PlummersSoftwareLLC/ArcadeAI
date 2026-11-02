@@ -1,0 +1,18 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original04-mmap-preparation/close_round_study_cpu_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-selected-context600-original01-preparation/guard247-closedmetadata-reuse-original03/close_round_study_cpu_v7.py
+@@ -67,9 +67,13 @@
+         and report['actual_ControlGroup']==cgroup and report['original_CPU_job']==packet['CPU_job']
+         and report['all_native_outputs_absent']is True and report['Torch_imported']is report['checkpoint_body_opened']is False,
+         'Actual new CPU guard result differs')
+-    require(report['identical_readiness_proof_replays']==dict(fresh=1,reused=3)
++    require(report['readiness_semantics_reused_from_closed_metadata']==4
++        and report['readiness_raw_full_integrity_passes']==4
++        and report['closed_metadata_readiness_authority']==job['closed_metadata_readiness_authority']
++        and packet['closed_metadata_readiness_authority']==job['closed_metadata_readiness_authority']
++        and packet['readiness_reuse_shim']==job['readiness_reuse_shim']
+         and report['every_job_raw_hash_slot_and_owner_epoch_checks_unchanged']is True,
+-        'Bounded exact immutable proof reuse differs')
++        'Exact closed metadata semantics and four fresh full raw integrity passes required')
+     cases=study['cases'];contexts=report['actual_prebody_contexts']
+     require([c['leg']for c in cases]==[c['leg']for c in contexts]==['R1','C1','R2','C2']
+         and report['native_jobs']==[c['native_job']for c in cases],'CPU result does not bind allfour actual jobs')

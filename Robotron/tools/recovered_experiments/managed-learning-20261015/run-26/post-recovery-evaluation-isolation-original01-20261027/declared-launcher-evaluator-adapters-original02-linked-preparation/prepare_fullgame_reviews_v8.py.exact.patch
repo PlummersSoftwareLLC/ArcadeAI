@@ -1,0 +1,62 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/prepare_fullgame_reviews_v8.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original02-linked-preparation/prepare_fullgame_reviews_v8.py
+@@ -9,11 +9,12 @@
+ from pathlib import Path
+ import time
+ 
+-HERE=Path(__file__).resolve().parent
++HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
++LOCAL=Path(__file__).resolve().parent
+ 
+ 
+ def pipeline():
+-    spec=importlib.util.spec_from_file_location('_fullgame_review_prepare_pipeline',HERE/'fullgame_review_pipeline_v7.py')
++    spec=importlib.util.spec_from_file_location('_fullgame_review_prepare_pipeline',LOCAL/'fullgame_review_pipeline_v7.py')
+     m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
+ 
+ 
+@@ -24,7 +25,7 @@
+         and prepared['engineering_only']is engineering,'Exact four-job/domain manifest required')
+     guard_pin=None;guards={}
+     if not engineering:
+-        eligibility=p.load('_fullgame_review_production_eligibility',HERE/'prepare_fullgame_study_v6.py')
++        eligibility=p.load('_fullgame_review_production_eligibility',LOCAL/'prepare_fullgame_study_v6.py')
+         eligibility.eligible_screen(prepared['screen_assessment'],prepared['reference_epoch'],h)
+         guard_pin=h.pin(guard_publication.resolve());publication=p.read(guard_pin)
+         p.require(publication['schema']=='robotron-four-exact-fullgame-CPU-guard-publication-v1'
+@@ -36,7 +37,7 @@
+         root=Path(case['native_job']['path']).parent
+         p.require(all(not(root/name).exists()for name in ('independent-review-job.json','independent-review-controller-config.json',
+             'independent-review-execution-original01','independent-quality-leg-review-original01')),'Original review paths must be unused')
+-    output.mkdir(mode=0o700);sources=p.sources(h);control=p.cpu_controller(h);reviewer=h.pin(HERE/'fullgame_review_entry_v6.py')
++    output.mkdir(mode=0o700);sources=p.sources(h);control=p.cpu_controller(h);reviewer=h.pin(LOCAL/'fullgame_review_entry_v6.py')
+     records=[]
+     for case in prepared['cases']:
+         root=Path(case['native_job']['path']).parent;subject=p.read(case['native_job'])
+@@ -44,13 +45,13 @@
+         native_config=case['unqualified_controller_config']if engineering else guards[case['leg']]['qualified_controller_config']
+         if not engineering:
+             p.require(guards[case['leg']]['native_job']==case['native_job'],'CPU publication belongs to another exact job')
+-            native=p.load('_fullgame_review_exact_native',HERE/'run_fullgame_rounds_v7.py')
++            native=p.load('_fullgame_review_exact_native',LOCAL/'run_fullgame_rounds_v7.py')
+             native.round_contract().validate_launch(subject,case['native_job'],native.validate_completed_context(subject,h),h)
+         packet=dict(schema='robotron-original-quota64-independent-leg-review-job-v1',
+             output=str(root/'independent-quality-leg-review-original01'),native_job=case['native_job'],acceptance=case['acceptance'],
+             controller_config=native_config,sources=sources)
+         jp=h.put(root/'independent-review-job.json',packet)
+-        pins=[h.pin(HERE/'review_fullgame_rounds_v7.py'),h.pin(HERE/'fullgame_review_pipeline_v7.py'),jp,case['native_job'],case['acceptance'],native_config,reviewer,*sources.values(),h.pin(HERE/'fullgame_review_pipeline_v7.py'),h.pin(Path(__file__).resolve())]
++        pins=[h.pin(LOCAL/'review_fullgame_rounds_v7.py'),h.pin(LOCAL/'fullgame_review_pipeline_v7.py'),jp,case['native_job'],case['acceptance'],native_config,reviewer,*sources.values(),h.pin(LOCAL/'fullgame_review_pipeline_v7.py'),h.pin(Path(__file__).resolve())]
+         config=dict(unit='robotron-round-fullgame-review-'+case['native_job']['sha256'][:12]+'-'+case['leg'].lower()+'-original01.service',
+             output=str(root/'independent-review-execution-original01'),argv=['/usr/bin/python3.12','-I','-B',reviewer['path'],
+                 '--observe','--job',jp['path'],'--job-sha256',jp['sha256'],'--expected-source-sha256',reviewer['sha256']],
+@@ -62,8 +63,8 @@
+             controller=h.pin(p.CPU_CONTROLLER),engineering_only=engineering))
+     return h.put(output/'precommitted-four-reviews.json',dict(schema='robotron-four-fullgame-independent-review-precommit-v1',
+         native_prepared=mp,CPU_guard_publication=guard_pin,cases=records,ordered_legs=p.ORDER,
+-        leg_reviewer=h.pin(HERE/'review_fullgame_rounds_v7.py'),review_entry=reviewer,pipeline=h.pin(HERE/'fullgame_review_pipeline_v7.py'),source=h.pin(Path(__file__).resolve()),
+-        assessor=h.pin(HERE/'assess_fullgame_study_v8.py'),created_monotonic_s=time.monotonic(),
++        leg_reviewer=h.pin(LOCAL/'review_fullgame_rounds_v7.py'),review_entry=reviewer,pipeline=h.pin(LOCAL/'fullgame_review_pipeline_v7.py'),source=h.pin(Path(__file__).resolve()),
++        assessor=h.pin(LOCAL/'assess_fullgame_study_v8.py'),created_monotonic_s=time.monotonic(),
+         current_boot_id=Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
+         engineering_only=engineering,scientific_payload_launched=False,full_game_quality_qualified=False,promotion=False))
+ 

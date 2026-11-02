@@ -1,0 +1,102 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-natural-turnover-durable-next-candidate-20261029-original02-preparation/prepare_durable_original_window_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-natural-turnover-durable-next-candidate-20261029-original03-preparation/prepare_durable_original_window_v4.py
+@@ -15,20 +15,26 @@
+ 
+ G = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ B = G/'logs/managed-learning-20261015/run-26'
+-OLD = B/'post-natural-turnover-durable-next-candidate-20261029-original01'
+-OUT = B/'post-natural-turnover-durable-next-candidate-20261029-original02'
++OLD = B/'post-natural-turnover-durable-next-candidate-20261029-original02'
++OUT = B/'post-natural-turnover-durable-next-candidate-20261029-original03'
+ WATCH = G/'tools/power_recovery/watch_replay_progress_candidate.py'
+ WATCH_SHA = '303a6cd4096b42477df60c4631aa76d3df234a1ccb88cc7a69d5a6ab0e88f962'
+ LIB = G/'tools/power_recovery/watch_learning_window_v2.py'
+ LIB_SHA = 'f7398454d3985b05d653b54a4dd7b13299a50866d8e5dbbd98100e786c9ce186'
+-OLD_PLAN_SHA = '97206a8e82ff4f43f8d74b8ab564c682ef2504d2f3ec13195154f52888baee6a'
+-LOSS = B/'post-recovery-evaluation-isolation-original01-20261027/durable-e078b0da-launcher-mmap-study-original01/R1/read-only-startup-observation-original01/independent-original-R1-anchor-then-failure-small-observation.json'
+-LOSS_SHA = '59fb3487cf82e1121c85f28c4ca6dbaa394b44e861b2ea6581561906b73d41bf'
++OLD_PLAN_SHA = '0e12974bac193fc75e7d55b9746564d0e7d6d0ec7db98082b54b90d412f7c170'
++LOSS = B/'post-recovery-evaluation-isolation-original01-20261027/durable-window02-D6-fixed-RCRC-study-original01/R1/deadline-output-original01/result.json'
++LOSS_SHA = 'd24f720443bb2bae6cd1efdd6f4ec35e1ca593865cebc1b422313d594ea10884'
++WRAPPER_TERMINAL = B/'post-recovery-evaluation-isolation-original01-20261027/durable-window02-D6-R1-owned-launch-original01-preparation/original-R1-wrapper-terminal.json'
++WRAPPER_TERMINAL_SHA = 'd819a96883157174ce0a0aba34870bd929ed59e8f5b544b673744457bc88f721'
++PRIOR_ENDPOINT_CPU = OLD/'endpoint-CPU.json'
++PRIOR_ENDPOINT_CPU_SHA = '1f088c4a1749718911e1364c174e14ef288dc685c63c72cef86777df9c43a8db'
++EXCLUDED_POLICIES = ['862fb4cde4ecb146b5b23a83b77ccbf1675a980bc310f6c2a6a8806d87b7c81e',
++    'e078b0da4ce4e25146fab7484f8489f590e1086370746cb392afcd7f5f8adef5']
+ FAMILY = B/'post-recovery-evaluation-isolation-original01-20261027/distincta6e17a3c-single-journal-family11-study-original01/R1/source-family.json'
+ FAMILY_SHA = 'dca06ef8a24d99839a396ce478780520c9338c4e1f6d6c8c57606cbb9bc33df4'
+-ENTRY_UNIT = 'robotron-durable-entry-CPU-original02-20261029.service'
+-ENDPOINT_UNIT = 'robotron-durable-endpoint-CPU-original02-20261029.service'
+-OBSERVER_UNIT = 'robotron-durable-candidate-window-original02-20261029.service'
++ENTRY_UNIT = 'robotron-durable-entry-CPU-original03-20261029.service'
++ENDPOINT_UNIT = 'robotron-durable-endpoint-CPU-original03-20261029.service'
++OBSERVER_UNIT = 'robotron-durable-candidate-window-original03-20261029.service'
+ THRESHOLDS = dict(applied_updates=5000,replay_inserts=1000000,elapsed_s=3600)
+ CANONICAL_SOURCE_MODES = {WATCH:0o664, LIB:0o664,
+     G/'tools/post_recovery_evaluation/round_observer_v10.py':0o664,
+@@ -60,11 +66,17 @@
+     observer=load('_durable_original_observer',LIB,LIB_SHA)
+     plan=json.loads(checked(OLD/'window-plan.json',OLD_PLAN_SHA))
+     loss=json.loads(checked(LOSS,LOSS_SHA))
+-    require(loss['schema']=='robotron-readonly-original-R1-anchor-then-failure-small-observation-v1'
+-            and loss['status']=='ORIGINAL_ANCHORED_THEN_FAILED_NO_QUALITY'
+-            and loss['scientific_quality_or_improvement_qualified'] is False
+-            and loss['private_scores_or_quality_comparisons_read'] is False,
+-            'Original E078 evaluation failure must remain invalid without a quality claim')
++    terminal=json.loads(checked(WRAPPER_TERMINAL,WRAPPER_TERMINAL_SHA))
++    require(loss['schema']=='robotron-deadline32-original-leg-result-v1'
++            and loss['status']=='ORIGINAL_DEADLINE32_FAILED_NO_RETRY'
++            and loss['complete'] is False and loss['deadline_score_seal'] is None
++            and loss['attempt']==1 and loss['no_retry'] is True
++            and loss['original_job']['sha256']=='025b074295321f787465cee66242af20e1dbce214888c0b6ee037f809a63d7ff'
++            and terminal['schema']=='robotron-owned-durable-R1-wrapper-terminal-v1'
++            and terminal['status']=='ORIGINAL_NONZERO_OR_REGISTRATION_FAILURE_NO_RETRY'
++            and terminal['actual_controller_exit']==1 and terminal['original_attempt']==1
++            and terminal['no_retry'] is True,
++            'Original candidate862 evaluation remains invalid; no cutoff score or quality claim')
+     require(plan['thresholds']==THRESHOLDS and plan['maximum_wait_s']==14400, 'Original selection rules differ')
+     require(observer.owner()==plan['owner'], 'Original live trainer incarnation changed')
+     for value in plan['inputs']: observer.check_pin(value)
+@@ -102,6 +114,11 @@
+     for key in ('actual_CPU_verification','original_CPU_owner','original_CPU_terminal','original_CPU_release'):
+         observer.check_pin(authority[key])
+     require(verification['checkpoint']==authority['endpoint'] and verification['CUDA_initialized'] is False, 'Own entry CPU differs')
++    prior_endpoint=json.loads(checked(PRIOR_ENDPOINT_CPU,PRIOR_ENDPOINT_CPU_SHA))
++    require(prior_endpoint['checkpoint']['sha256']==EXCLUDED_POLICIES[0]
++            and prior_endpoint['CUDA_initialized'] is False
++            and all(verification['clocks'][key]>=prior_endpoint['clocks'][key] for key in observer.CLOCKS),
++            'Fresh entry must not precede the already captured862 policy clocks')
+     family=json.loads(checked(FAMILY,FAMILY_SHA)); components=family['main_observer']
+     worker=load('_durable_entry_worker',Path(components['worker']['path']),components['worker']['sha256'])
+     health=load('_durable_entry_health',Path(components['health']['path']),components['health']['sha256'])
+@@ -122,14 +139,18 @@
+     new=copy.deepcopy(plan)
+     for key in ('interrupted_observer_case','interrupted_observer_exit_known','interrupted_observer_disposition'):
+         new.pop(key,None)
+-    new.update(purpose='New independent durable original02 exposure window after invalid E078 screening; no old elapsed time, progress counts, reference games or scores reused.',
++    new.update(purpose='New independent durable original03 exposure window after invalid candidate862 screening; no old elapsed time, progress counts, reference games or scores reused.',
+         entry_Adam_step=verification['Adam_step_min'],entry_verification=authority['actual_CPU_verification'],
+         CPU_unit=ENDPOINT_UNIT,clean_roster_case=observer.pin(OUT/'fresh-main-case.json'),
+         clean_roster_snapshot=observer.pin(OUT/'fresh-main-entry.raw.json'),
+         original_partial_counts_reused=False,original_failed_case_restarted=False,
+-        prior_completed_candidate_case=str(OLD),prior_completed_candidate_policy_sha256='e078b0da4ce4e25146fab7484f8489f590e1086370746cb392afcd7f5f8adef5',
++        prior_completed_candidate_case=str(OLD),prior_completed_candidate_policy_sha256='862fb4cde4ecb146b5b23a83b77ccbf1675a980bc310f6c2a6a8806d87b7c81e',
+         prior_candidate_screening_failed_without_quality=True,prior_scientific_case_retried=False,
+         prior_failed_screening_disposition=observer.pin(LOSS),
++        prior_failed_screening_wrapper_terminal=observer.pin(WRAPPER_TERMINAL),
++        excluded_prior_candidate_policy_sha256s=EXCLUDED_POLICIES,
++        excluded_policy_clock_authority=observer.pin(PRIOR_ENDPOINT_CPU),
++        excluded_policy_clock_proof='Own entry CPU clocks>=862 CPU clocks; own anchor>=entry; unchanged watcher requires captured training_steps>own anchor and>=own threshold clocks, so neither prior endpoint can qualify.',
+         clean_roster_entry_scope='Entry sanity for this exposure-only window; no500ms scientific observer qualification or evaluator source-family selection is conferred.',
+         observer_process_lifetime='Root-launched durable systemd service, Restart=no, RemainAfterExit=yes; original terminal must be archived.',
+         entry_snapshot_authority_is_historical_same_process=False)
+@@ -138,7 +159,7 @@
+     new['inputs']=[value for value in plan['inputs'] if '/run-26/post-' not in value['path']]
+     new['inputs'] += [observer.pin(OUT/'fresh-main-case.json'),observer.pin(OUT/'fresh-main-entry.raw.json'),
+         *[authority[key] for key in ('actual_CPU_verification','original_CPU_owner','original_CPU_terminal','original_CPU_release')],
+-        observer.pin(LOSS),
++        observer.pin(LOSS),observer.pin(WRAPPER_TERMINAL),observer.pin(PRIOR_ENDPOINT_CPU),
+         observer.pin(Path(__file__))]
+     new['inputs']=list({value['path']:value for value in new['inputs']}.values())
+     for value in new['inputs']: observer.check_pin(value)

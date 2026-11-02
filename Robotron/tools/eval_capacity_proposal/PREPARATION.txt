@@ -1,0 +1,46 @@
+Private evaluation-capacity proposal, 2026-10-19
+
+The selected CPU-validated prototype is profile02/Robotron. It is an independent
+copy of the corrected evaluator package. Production and the current R/C/R/C
+campaign retain their original sources and16 actors.
+
+The standalone Job has an explicit actors=16 default or actors=32 opt-in. Slots
+are exactly4096..4111 or4096..4127. Every declared slot must acknowledge the
+boundary; missing/duplicate/extra slots or a latched disconnect fail admission.
+Private boot copies, actor-owned cleanup and timeout/backend evidence cover the
+declared fleet. Compiled inference remains limited to the existing prewarmed
+batches1..16. No numerical/model/parser/Lua source changed. The default16 plan
+matches the parent package's plan exactly for the same inputs.
+
+Evidence: the live16-actor evaluator used4.724 CPU cores over54.686 seconds,
+with zero additional quota-throttled periods under its8-core quota. This does
+not prove a capacity or learning-speed gain. profile02 passed82 CPU tests:
+the existing73-case integration suite plus nine capacity cases. The first
+profile01 execution retains its81 passes and one fixture error: a timeout-file
+fixture lacked an explicit actor-slot declaration. profile02 changes only that
+fixture relative to profile01; runtime code is identical. Original outcomes,
+six native descriptor archives and owned releases are preserved under:
+
+logs/managed-learning-20261015/run-26/
+  eval-capacity-profile01-CPU-original01-preparation-20261019/execution/
+  eval-capacity-profile02-CPU-original01-preparation-20261019/execution/
+
+No32-actor GPU/MAME job or performance comparison has run. No policy is newly
+qualified. Neither prototype is installed or selected for the active campaign.
+
+Next work: prepare an isolated32-actor runtime/capacity validation, then compare
+capacity with16 actors using the same immutable policy and precommitted windows.
+Any real run must wait for the current four-leg campaign AND its independent
+observer to finish, be archived and release their exact owned GPU0 lease and
+processes. Keep main192 training and learning controls unchanged. Retain the
+existing original-outcome, cleanup, full-tail and timeout checks. A valid frozen
+full-game receipt still requires min50 games, all declared slots and mandatory
+original terminal/successor journal readback. No deadline extension or retry
+may rescue a failed original cohort. Higher FPS alone cannot qualify a policy.
+
+The campaign and independent auditor in the current selected package are fixed
+to16 slots. Do not use them to certify a32-actor quality campaign. If capacity
+evidence justifies selecting a future32-actor quality profile, first generalize
+and validate its native plan and original-byte/ROM auditors, bind the new source
+package, and run fresh matching R/C/R/C references and candidates. Preserve the
+separate5%-mean/preserved-median gates, min50 and all-slot/full-tail requirements.

@@ -1,0 +1,56 @@
+{
+  "schema": "robotron-kl-sampler-boundary-preparation-v1",
+  "status": "SOURCE_ONLY_IMPLEMENTED_UNEXECUTED_UNAPPLIED",
+  "authorization": "Root authorized only new unbound source preparation during live320M quality; no application, imports, compilation, tests, helper/default execution, sampling, numerical workloads or live actions.",
+  "original_design": {
+    "DESIGN.txt": "2c14712ebbdf85b5c2f6d00b5ea6cadddd6d378bc0bb480d02f1755a7bd63378",
+    "source-lock.json": "f5b5c1e8ee3a2726775b2189c9619c1d68cd095d19fe739584b797b3cd2c8962"
+  },
+  "new_preparation_files": {
+    "replay_buffer_candidate.py": "b659cd7bba656adb1c313d6805f0499d23dcb2a60f1cb779da11e2696f2dd17c",
+    "sampler-metadata-unapplied.patch": "999008582161d6bd87977b67c8032ba62ee300a01bb73a9509a1c5e70764820e",
+    "sampler_fixture.py": "10872d08f11556bff08031b0265fc488347be717e5e2a91ff84fcf461ce298e8",
+    "test_sampler_fixture.py": "a45463128359f22014a6802b11f72c8f66a7abe64067d383e3bcba55a6b1dc67",
+    "PREPARATION.txt": "799eae7b6dac769b9cd18d43804c64ddfcf149daf8c7172707b0ded02307fc5e"
+  },
+  "pinned_original_package_files": {
+    "Robotron/Scripts/dqn/__init__.py": "a2b3412fc502b7631295d639092e320d73f848895b994edc16bf9eebf8b5054c",
+    "Robotron/Scripts/dqn/replay_buffer.py": "28556797d15e0acf9387030b87f9ccce0b18e1e3cfa629b63c2d7239a4206238",
+    "Robotron/Scripts/dqn/config.py": "f2794754a14e9f13c82b613aa131698246a08dc9021c18f1b78fda7c4b484498",
+    "Robotron/Scripts/dqn/learning_control.py": "29a74b25be391290b07373cdce4680ae7513db31596929f0bc9972aaf0ab220d",
+    "Robotron/Scripts/dqn/learning_exposure.py": "30d9191e9fc845d80e52a7a891244fcf0c7041cf60529f6559b15e6d47ac5c7f",
+    "Robotron/Scripts/dqn/actor_tags.py": "fc5b868a7fb68d4ab7ba65ba872ea0e845759af6143edfe648239d57cb7f1591",
+    "Robotron/Scripts/dqn/bank_output.py": "85a161a445dc44e8bb0ef225a5630b485ff0c4d4874f9d04367544ab744caa9d",
+    "Robotron/Scripts/dqn/native_sumtree.py": "de0900aecd09668dc0551d4ecec118351a1228e2a664bc183c5c06b865e52250",
+    "Robotron/Scripts/dqn/sumtree.c": "352badec2ee64b7c42852e743bf930c565a2e4279137df12ca859d2c396d8e5e"
+  },
+  "unchanged_compiled_loss_boundary": {
+    "Robotron/Scripts/dqn/loss_kernel.py": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a",
+    "Robotron/Scripts/dqn/training.py": "194081120faae4228b0af0d6127c1e12c6d6180acdfe7d7a6a8c7cbcf24b963f",
+    "Robotron/Scripts/dqn/prefetch.py": "a07cc84b6d411fd2536b1a17fa56c6b8b0f5ac9861740e44ea94878894a8d217"
+  },
+  "prospective_fixture": {
+    "batch_rows": 4096,
+    "capacity": 8192,
+    "state_width": 8,
+    "seed": 20261017,
+    "test_methods_authored": 12,
+    "test_methods_executed": 0,
+    "address_space_gib": 2,
+    "cpu_seconds_limit": 90,
+    "per_file_limit_mib": 64,
+    "numerical_library_threads": 2,
+    "checkpoint_or_live_replay_access": false,
+    "production_patch_applied": false,
+    "kl_metric_switch": false
+  },
+  "readiness_limits": [
+    "No syntax/import/test/numerical/native/private-path validation has executed.",
+    "Default-OFF bytes/RNG parity is a proposed test contract, not an observed PASS.",
+    "Actual production sampler functions are used in copied pinned modules; fixture storage and bank tables are synthetic and compact width8.",
+    "No actual prefetch ticket/epoch, same-executed projected-target/CE/log-prob/auxiliary capture or optimizer outcome joining is implemented.",
+    "Eight consecutive actual executed CE attempts remain NOT IMPLEMENTED and NOT ACQUIRED.",
+    "Tree/priority metric identity, global tree minimum, slot insertion/conversion age and persisted ring/bank identity not tracked at this boundary remain explicitly unknown.",
+    "No production CUDA4096, rawKL sampler population, learning efficacy or quality claim is supported; future execution/deployment requires a separate root decision after release."
+  ]
+}

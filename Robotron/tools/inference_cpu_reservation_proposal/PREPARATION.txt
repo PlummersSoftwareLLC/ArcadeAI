@@ -1,0 +1,74 @@
+SOURCE-ONLY IMPLEMENTATION PREPARATION — 2026-10-17
+
+Root explicitly authorized new controller/test authoring during the passive
+320M frozen quality campaign, superseding the earlier scheduling statement
+in the preserved DESIGN.txt and its immutable peer review. That authorization
+permits only new unbound proposal files. It does not authorize imports, tests,
+runtime queries, numerical work, affinity calls, a live trial or adoption.
+DESIGN.txt0c726f69... and peer receipta17e6ed0... remain byte-identical.
+
+cpu_reservation_trial.py is a concrete stdlib controller draft. The default
+prints only a static plan, with no helper import, live inventory/query,
+candidate/artifact read or output mutation (module-path resolution does read
+file-system metadata).
+Only --launch imports the unchanged identity/observation helpers and prepares
+one fresh90s settle+300s primary A/B/A trial. Both original control windows are
+fresh; no failed pin-only v2 data is reused. B excludes71 from other exact
+Robotron trainer/192actor tasks and pins the original inference TID71. This
+does not reserve CPU71 against system tasks, IRQs, supervisors or other users.
+
+The draft adds immutable all-task originals and precommit with file/directory
+fsync, a bounded append-only raw/intent journal, immediate expected-mask and
+PID/TID/start checks, possibly-mutated registration before syscall, ordinary
+non-inference exit records, and unexpected-newborn invalidation without repair.
+Emergency undo enumerates/inspects tasks individually and attempts known tasks
+even if enumeration or one peer task fails. It cannot depend on API/global
+health or fresh log durability. Unexpected external masks are skipped/manual;
+same-owner newborn masks71/0..70 can be widened only during invalidating undo
+when a known possibly-mutated task in THAT owner could have supplied that mask,
+using the sealed original leader72-CPU fallback. A newborn71 before any possible
+write is preserved as external/manual, as is an actor newborn71 when only that
+actor's0..70 masks were intended. Valid prefix intents reconstruct inheritance
+eligibility in restore-only; missing/torn records never invent that authority.
+B never resumes after invalidating undo.
+--restore-only ORIGINALS --launch uses sealed provenance and valid journal
+prefix intents; missing/torn/unwritable logs remain explicit manual limitations.
+
+The future precommit source manifest includes all new controller/test/design/
+preparation files, immutable design-peer receipt, unchanged reused helper
+hashes and the live production source/control/environment/log bindings. No
+separate executable manifest or launch receipt has yet been generated.
+
+Proposed future commands ONLY AFTER root's quality-release and peer review:
+
+  python3 -B -m unittest Robotron.tools.inference_cpu_reservation_proposal.test_cpu_reservation_trial -v
+  python3 -B Robotron/tools/inference_cpu_reservation_proposal/cpu_reservation_trial.py
+
+The second command is static plan-only. No live command is authorized here.
+A future explicit launch additionally needs exact --trainer-pid, --fleet-unit,
+--output-dir and --launch. It must have an exclusive root-scheduled window
+after320M quality and source-bound runtime preflight. A foreground service
+carrier retaining the controller script among its argv will intentionally
+match the exclusion guard. Use a DETACHED short timer, never --wait, for any
+eventually authorized service carrier; verify its scheduling client has exited
+before the trigger. Template only, NOT an execution instruction:
+
+  systemd-run --user --collect --on-active=3s --timer-property=AccuracySec=100ms \
+    --unit=robotron-reservation-UNIQUE python3 -B ABSOLUTE_CONTROLLER \
+    --trainer-pid PID --fleet-unit EXACT_UNIT --output-dir NEW_DIR --launch
+
+Retain the actual service PID/start, invocation and original terminal journal/
+exit proof; a collected unit's default fields do not prove original execution.
+The existing waiting384M checkpoint gate is deliberately blocked by the guard.
+Before any future exclusive reservation window, root must explicitly resolve
+that owned gate or review a different binding design; do not silently allow it.
+
+NOT EXECUTED: no syntax compilation/import, unittest, helper invocation, process/
+API/service/GPU query, numerical workload or affinity syscall was performed.
+The prepared tests use stdlib fake identities/masks/telemetry and private temp
+files; they are unexecuted source, not passing evidence. Actual Linux affinity,
+thread-birth timing, all193-process capture/rollback, journal I/O overhead and
+the fixed1s scan budget are unvalidated. Numeric-TID reuse and short-lived tasks
+between scans cannot be eliminated. SIGKILL/power loss cannot run finally.
+This is a reviewable draft, not a ready or authorized live experiment, and
+neither host throughput nor scheduler telemetry proves learning-quality gains.

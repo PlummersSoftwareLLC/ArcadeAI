@@ -1,0 +1,363 @@
+{
+  "schema": "robotron-same-LR25-914M-parent-closure-finite-source-preservation-v1",
+  "status": "SOURCE_ONLY_UNSELECTED_UNEXECUTED",
+  "base": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/lr25_845M_native_parent_closure_proposal/close_original_parent.py",
+    "sha256": "4eabe292436da86d46e0576a68395a2fbb4c3204b88b34aba506314e34cabaaa",
+    "bytes": 21060,
+    "identity": {
+      "device": 2304,
+      "inode": 81295402,
+      "bytes": 21060,
+      "mtime_ns": 1792331370824160983,
+      "ctime_ns": 1792331464192523415,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "selected": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/same_lr25_914M_native_parent_closure_proposal/close_original_parent.py",
+    "sha256": "05d4e7782904c1afdc37ccbfa255b9fcbd61a0fbd2801454cb2684ca2fb6d323",
+    "bytes": 21090,
+    "identity": {
+      "device": 2304,
+      "inode": 81543056,
+      "bytes": 21090,
+      "mtime_ns": 1792347699869598949,
+      "ctime_ns": 1792347699869598949,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "base_guards": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/lr25_845M_native_parent_closure_proposal/test_closed_metadata_deferred.py",
+    "sha256": "5ba71a6d83fd702c56b66e2f64668a8514a3aa98f6ce73a70f5e3adb5a65354b",
+    "bytes": 17871,
+    "identity": {
+      "device": 2304,
+      "inode": 81295403,
+      "bytes": 17871,
+      "mtime_ns": 1792331683713366624,
+      "ctime_ns": 1792331779512731597,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "selected_guards": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/same_lr25_914M_native_parent_closure_proposal/test_closed_metadata_deferred.py",
+    "sha256": "bea3afe04a9cdd7c12b1f427cce8edfe77476afefd58f48cdc0ae90837de204a",
+    "bytes": 17865,
+    "identity": {
+      "device": 2304,
+      "inode": 81543057,
+      "bytes": 17865,
+      "mtime_ns": 1792347699871683694,
+      "ctime_ns": 1792347699871683694,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "source_literal_substitutions": [
+    {
+      "original": "LR25-continuation-original01-root-preparation-20261018",
+      "selected": "same-LR25-continuation-original01-root-preparation-20261018",
+      "count": 1
+    },
+    {
+      "original": "tools/live_lr_recipe_cpu_metadata_review_binding_proposal",
+      "selected": "tools/same_lr25_prospective_continuation_proposal",
+      "count": 1
+    },
+    {
+      "original": "robotron-quality-LR25-845M-vs-CE704-original01-20261018.service",
+      "selected": "robotron-quality-same-LR25-vs-CE845-original01-20261018.service",
+      "count": 1
+    },
+    {
+      "original": "3673741",
+      "selected": "67638",
+      "count": 1
+    },
+    {
+      "original": "42153995",
+      "selected": "43813785",
+      "count": 1
+    },
+    {
+      "original": "b4a91157d71a4462a96ad1deaf232815",
+      "selected": "a85440fb223f498d86dace1e32496911",
+      "count": 1
+    },
+    {
+      "original": "2bd5c6d664a945e490912ed3b43d74ca",
+      "selected": "599130c809cd4cef97b774041bfabfb3",
+      "count": 1
+    },
+    {
+      "original": "quality-CE704M-vs-LR25-845M-trial01-20261018",
+      "selected": "quality-CE845M-vs-same-LR25-first8M-trial01-20261018",
+      "count": 1
+    },
+    {
+      "original": "8ac7c5729ca5d53edcbf02ddd61e9e8377b8b1d7f4d43648c2fda7ab263b0c7d",
+      "selected": "b61ef2cbdd1779e6491d1a181f60260e8474aa633a1a3da9c9a117c3744c7324",
+      "count": 1
+    },
+    {
+      "original": "b98dd3f00ef3961f36a2e9748b55c96751411e3945f740cee2b74d8c2bdd16c3",
+      "selected": "fde2f3b3a23f407f6473bb75594d326229da22cef15290ef2186c74e2680c232",
+      "count": 1
+    },
+    {
+      "original": "fd137b8ee95e2b74c7a9fd41574c98401060673b197b6ea25b5062e13abc37ec",
+      "selected": "cd1299f033dfc7b93addca5192ff3c95ee48639f4f6193ff34f7885c634ded80",
+      "count": 1
+    },
+    {
+      "original": "c1f841c653d6b19883f0a9dc62af476fd8bf11eea847cfcc8e481765feeb8686",
+      "selected": "c4b46380646df1b4cef07c4720d7cd91c52f89002c61fb7288913b34ff9a3a70",
+      "count": 1
+    },
+    {
+      "original": "383d44f5487a543da8c48da865469f6b0730d8d93283fb7871366392e95bc93a",
+      "selected": "2c09db3030dd577cd7f00d835fbf3cb3a7f1543f14f22e4bb115c1604766246f",
+      "count": 1
+    },
+    {
+      "original": "3de4ee34f5f6d55a096cc3c4cd9d4f40068ea3b020933d1e6494c892c4483d0f",
+      "selected": "f853568cc8e32d1d12ad4112670062acdf87d21801dfc6a32fd9ca43e84fcd90",
+      "count": 1
+    },
+    {
+      "original": "6b7d5b672585698c7bb578484116f2f3ac5dd52fc1a24fe6a0c3b3291a820154",
+      "selected": "50ba9726d063590ec41d15a9de907702ade9c7e3a7de2fd57c080e4b55366f80",
+      "count": 1
+    },
+    {
+      "original": "LR25-845M-quality-native-parent-owned-closure-original01-20261018",
+      "selected": "same-LR25-914M-quality-native-parent-owned-closure-original01-20261018",
+      "count": 1
+    },
+    {
+      "original": "robotron-root-LR25-845M-original-parent-closure-case-v1",
+      "selected": "robotron-root-same-LR25-914M-original-parent-closure-case-v1",
+      "count": 1
+    },
+    {
+      "original": "root-original-LR25-quality-timer-launch-identity-and-live-parent.json",
+      "selected": "root-original914M-quality-timer-launch-identity-and-live-parent.json",
+      "count": 1
+    },
+    {
+      "original": "0e5a5da6231bb46bfb4dce06409465bf2b2be4f7ac2e5997226b7d1407ed3b59",
+      "selected": "d74c5500efc2b57eadecac18e4551cc77ab39f405a7b4508d0f8a5413adafcd6",
+      "count": 1
+    },
+    {
+      "original": "actual-LR25-845M-native-plan-readonly-copy.json",
+      "selected": "actual914M-native-plan-readonly-copy.json",
+      "count": 1
+    },
+    {
+      "original": "actual-LR25-845M-quality-binding.json",
+      "selected": "actual914M-quality-binding.json",
+      "count": 1
+    },
+    {
+      "original": "d21e5a95c1659a82b0a3fa93c6b4f0e960ad70b81d217959a8a74d6e95b81859",
+      "selected": "89832dd70397ecc8812e18754f45448454fc6ff76aa2c4a846a379bb09d01a0d",
+      "count": 1
+    },
+    {
+      "original": "robotron-LR25-845M-quality-leg%02d-audit-original01-20261018.service",
+      "selected": "robotron-same-LR25-914M-quality-leg%02d-audit-original01-20261018.service",
+      "count": 1
+    },
+    {
+      "original": "LR25-845M-quality-leg%02d-audit-original01-root-execution-20261018",
+      "selected": "same-LR25-914M-quality-leg%02d-audit-original01-root-execution-20261018",
+      "count": 1
+    },
+    {
+      "original": "LR25-845M-quality-leg%02d-audit-original01-config.json",
+      "selected": "same-LR25-914M-quality-leg%02d-audit-original01-config.json",
+      "count": 1
+    },
+    {
+      "original": "robotron-root-LR25-845M-original-native-parent-owned-closure-v1",
+      "selected": "robotron-root-same-LR25-914M-original-native-parent-owned-closure-v1",
+      "count": 1
+    }
+  ],
+  "docstring_substitution": {
+    "original": "one already observed original LR25 quality parent.",
+    "selected": "one already observed original same-LR25 914M quality parent."
+  },
+  "fixture_literal_substitutions": [
+    {
+      "original": "LR25-continuation-original01-root-preparation-20261018",
+      "selected": "same-LR25-continuation-original01-root-preparation-20261018",
+      "count": 1
+    },
+    {
+      "original": "tools/live_lr_recipe_cpu_metadata_review_binding_proposal",
+      "selected": "tools/same_lr25_prospective_continuation_proposal",
+      "count": 1
+    },
+    {
+      "original": "8ac7c5729ca5d53edcbf02ddd61e9e8377b8b1d7f4d43648c2fda7ab263b0c7d",
+      "selected": "b61ef2cbdd1779e6491d1a181f60260e8474aa633a1a3da9c9a117c3744c7324",
+      "count": 1
+    },
+    {
+      "original": "b98dd3f00ef3961f36a2e9748b55c96751411e3945f740cee2b74d8c2bdd16c3",
+      "selected": "fde2f3b3a23f407f6473bb75594d326229da22cef15290ef2186c74e2680c232",
+      "count": 1
+    },
+    {
+      "original": "c1f841c653d6b19883f0a9dc62af476fd8bf11eea847cfcc8e481765feeb8686",
+      "selected": "c4b46380646df1b4cef07c4720d7cd91c52f89002c61fb7288913b34ff9a3a70",
+      "count": 1
+    },
+    {
+      "original": "383d44f5487a543da8c48da865469f6b0730d8d93283fb7871366392e95bc93a",
+      "selected": "2c09db3030dd577cd7f00d835fbf3cb3a7f1543f14f22e4bb115c1604766246f",
+      "count": 1
+    },
+    {
+      "original": "3de4ee34f5f6d55a096cc3c4cd9d4f40068ea3b020933d1e6494c892c4483d0f",
+      "selected": "f853568cc8e32d1d12ad4112670062acdf87d21801dfc6a32fd9ca43e84fcd90",
+      "count": 1
+    },
+    {
+      "original": "6b7d5b672585698c7bb578484116f2f3ac5dd52fc1a24fe6a0c3b3291a820154",
+      "selected": "50ba9726d063590ec41d15a9de907702ade9c7e3a7de2fd57c080e4b55366f80",
+      "count": 1
+    },
+    {
+      "original": "root-original-LR25-quality-timer-launch-identity-and-live-parent.json",
+      "selected": "root-original914M-quality-timer-launch-identity-and-live-parent.json",
+      "count": 1
+    },
+    {
+      "original": "0e5a5da6231bb46bfb4dce06409465bf2b2be4f7ac2e5997226b7d1407ed3b59",
+      "selected": "d74c5500efc2b57eadecac18e4551cc77ab39f405a7b4508d0f8a5413adafcd6",
+      "count": 1
+    },
+    {
+      "original": "actual-LR25-845M-native-plan-readonly-copy.json",
+      "selected": "actual914M-native-plan-readonly-copy.json",
+      "count": 1
+    },
+    {
+      "original": "actual-LR25-845M-quality-binding.json",
+      "selected": "actual914M-quality-binding.json",
+      "count": 1
+    },
+    {
+      "original": "d21e5a95c1659a82b0a3fa93c6b4f0e960ad70b81d217959a8a74d6e95b81859",
+      "selected": "89832dd70397ecc8812e18754f45448454fc6ff76aa2c4a846a379bb09d01a0d",
+      "count": 1
+    },
+    {
+      "original": "LR25-845M-quality-leg%02d-audit-original01-config.json",
+      "selected": "same-LR25-914M-quality-leg%02d-audit-original01-config.json",
+      "count": 2
+    },
+    {
+      "original": "4eabe292436da86d46e0576a68395a2fbb4c3204b88b34aba506314e34cabaaa",
+      "selected": "05d4e7782904c1afdc37ccbfa255b9fcbd61a0fbd2801454cb2684ca2fb6d323",
+      "count": 1
+    }
+  ],
+  "full_source_reverse_exact": true,
+  "full_fixture_reverse_exact": true,
+  "source_functions_total": 18,
+  "unchanged_whole_functions": {
+    "require": {
+      "sha256": "50ec46f62bae613a2bb2ed94edc4cadbfe9950e2839082c7464e0ae1b316b839",
+      "bytes": 91
+    },
+    "identity": {
+      "sha256": "fcae22f86dbb0358ce31636b9012f2a34fcbdc24f916d1790d53e192a35b2ba9",
+      "bytes": 216
+    },
+    "bounded_bytes": {
+      "sha256": "94625477db4a4ba30066e34e7881663c53250df16feaa3666cd47d12b500b68e",
+      "bytes": 744
+    },
+    "read_pin": {
+      "sha256": "7421974bdd38db6c6e7744b38ada27cef70b99dea4a4c2c8110113b4ee00113d",
+      "bytes": 667
+    },
+    "known": {
+      "sha256": "4ba5d85fe7e7643a1516666aa30ffc56a078a16d60c6a3d89257053e4e77a960",
+      "bytes": 249
+    },
+    "properties": {
+      "sha256": "822264c824ca91e1e896045c2f8688db849e206908248fb4c81fcf185f1836c1",
+      "bytes": 105
+    },
+    "original_terminal": {
+      "sha256": "c7ddfa075b71a9fcf26ee9e973d00d0c0a1ddcc8c5e437e1a216fbd2fdaffd4c",
+      "bytes": 386
+    },
+    "original_timer": {
+      "sha256": "771a5e7eb21a01962a11c5b09cdf9255716d6f64cb62fdae56e1823c1b2e3081",
+      "bytes": 243
+    },
+    "held_sources": {
+      "sha256": "17f83d7c6919b5fa801f38fddce3f69baad5a4fd83328972ddbd19d9711879a4",
+      "bytes": 728
+    },
+    "empty_original_cgroup": {
+      "sha256": "9e3e4c55a4fa15638674ba29e58550a833c4ecd2911e50735e12e4a2320f1e34",
+      "bytes": 510
+    },
+    "sync_directory": {
+      "sha256": "37491bc8d948d83e07acfdfae55abbb9ba0752bae11c9608578ea7b1206e3a16",
+      "bytes": 169
+    },
+    "pin": {
+      "sha256": "c3a7ff8ecf6d47b63b5cf3e36f7f5a19b57bc3d492fc3630d1dabe9c4edbed81",
+      "bytes": 245
+    },
+    "publish": {
+      "sha256": "41f1c83a0debd8dbdfdb0524314a9696a00c85601ac9be910d2d5af883947714",
+      "bytes": 215
+    },
+    "command": {
+      "sha256": "e13023ecca8490fdff589d92cee201e838266f58b413dbb494b9f58efc34dd9f",
+      "bytes": 873
+    },
+    "fields": {
+      "sha256": "d59b3807ea4f2cb6855dd094e3d3c5c1bd979a56013e349e402f3433bf2a0bf0",
+      "bytes": 235
+    },
+    "main": {
+      "sha256": "beb17f457582b4b1719af2763cc37e83de63f21ddc749206717d475040ddf0be",
+      "bytes": 1108
+    }
+  },
+  "finite_changed_functions": {
+    "close": {
+      "base_sha256": "5f0c6ccd32484b711b73acd55197e95805fbd18e22bc770bb7c26f4efb918519",
+      "selected_sha256": "16eb1b40905c3952e86df1d292f193659153873ff49dab10325cf8ea8772be5d",
+      "reverse_exact": true,
+      "scope": "One result schema string only; lifecycle/control/acceptance unchanged"
+    },
+    "validate_case": {
+      "base_sha256": "af47e60b7650ebb4c76c2dae16418c4bc70ae92337bca743e4cd0ed85233ae26",
+      "selected_sha256": "4aa90396f397dc5a998fef71b0442519b9226456c2feaf1ec28dfc0c3549d3a8",
+      "reverse_exact": true,
+      "scope": "Campaign-specific audit path/unit-prefix bindings only"
+    }
+  },
+  "four_guard_methods_unchanged_under_literal_reversal": true,
+  "syntax_AST_compile_import_or_target_execution": false,
+  "production_or_original_file_writes": false
+}

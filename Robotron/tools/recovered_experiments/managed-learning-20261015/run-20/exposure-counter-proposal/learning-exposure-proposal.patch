@@ -1,0 +1,471 @@
+--- a/Robotron/Scripts/dqn/agent.py
++++ b/Robotron/Scripts/dqn/agent.py
+@@ -43,6 +43,7 @@
+     from .replay_buffer import PrioritizedReplayBuffer
+     from .native_sumtree import batch_update_status
+     from .prefetch import ReplayPrefetcher
++    from .learning_exposure import OptimizerExposure, exposure_enabled, disabled_snapshot as exposure_disabled_snapshot
+     from .pipeline_telemetry import PipelineTelemetry, unavailable_snapshot
+     from .exact_inference_graphs import ExactInferenceGraphs, ExactInferenceGraphError, disabled_snapshot
+ except ImportError:
+@@ -56,6 +57,7 @@
+     from replay_buffer import PrioritizedReplayBuffer
+     from native_sumtree import batch_update_status
+     from prefetch import ReplayPrefetcher
++    from learning_exposure import OptimizerExposure, exposure_enabled, disabled_snapshot as exposure_disabled_snapshot
+     from pipeline_telemetry import PipelineTelemetry, unavailable_snapshot
+     from exact_inference_graphs import ExactInferenceGraphs, ExactInferenceGraphError, disabled_snapshot
+ 
+@@ -149,6 +151,7 @@
+         self._sync_lock = threading.RLock()
+         self._training_lock = threading.RLock()
+         self._pipeline_telemetry = PipelineTelemetry(sample_every=20)
++        self._learning_optimizer_exposure = OptimizerExposure() if exposure_enabled() else None
+         self._prefetch_paused = False
+         self.training_enabled = True
+         self.behavior_locked = False   # ratchet: pin the fleet to the incumbent
+@@ -375,6 +378,9 @@
+         again; on accept the freshly-adapted moments ride along with the new
+         incumbent snapshot."""
+         with self._sync_lock:
++            exposure = getattr(self, "_learning_optimizer_exposure", None)
++            if exposure is not None:
++                exposure.new_epoch("ratchet_optimizer_clear_begin")
+             self.optimizer.state.clear()
+         self.ratchet_warmup_start_step = self.schedule_steps
+         self.ratchet_warmup_steps = int(max(0, warmup_steps))
+@@ -628,6 +634,12 @@
+         graphs = getattr(self, "_exact_inference_graphs", None)
+         snapshot["inference_graphs"] = graphs.snapshot() if graphs is not None else disabled_snapshot()
+         snapshot["native_batch_update"] = batch_update_status()
++        exposure = getattr(self, "_learning_optimizer_exposure", None)
++        optimizer_exposure = exposure.snapshot() if exposure is not None else exposure_disabled_snapshot()
++        memory = getattr(self, "memory", None)
++        getter = getattr(memory, "get_learning_exposure_snapshot", None)
++        replay_exposure = getter() if callable(getter) else exposure_disabled_snapshot()
++        snapshot["learning_exposure"] = dict(optimizer=optimizer_exposure, replay=replay_exposure)
+         return snapshot
+ 
+     def _validate_measurement_policy(self, state_dict):
+@@ -1017,8 +1029,12 @@
+             boost = float(getattr(RL_CONFIG, "death_priority_boost", 0.0))
+             if boost > 0:
+                 pri = max(abs(pri), boost) * (-1.0 if pri < 0 else 1.0)
+-        self.memory.add(state, action_idx, float(reward), next_state, bool(done), int(horizon), is_expert,
+-                priority_hint=pri, interest=interest, actor_kind=actor_kind)
++        if getattr(self.memory, "_insert_exposure", None) is None:
++            self.memory.add(state, action_idx, float(reward), next_state, bool(done), int(horizon), is_expert,
++                    priority_hint=pri, interest=interest, actor_kind=actor_kind)
++        else:
++            self.memory.add(state, action_idx, float(reward), next_state, bool(done), int(horizon), is_expert,
++                    priority_hint=pri, interest=interest, actor_kind=actor_kind, source_actor=actor)
+         # Return the index of the just-written transition for pre-death tracking
+         try:
+             return int(self.memory.tree.data_ptr - 1) % self.memory.capacity
+@@ -1226,6 +1242,9 @@
+             dict(group, fused=fused, foreach=foreach)
+             for group in state_dict.get("param_groups", [])
+         ]
++        exposure = getattr(self, "_learning_optimizer_exposure", None)
++        if exposure is not None:
++            exposure.new_epoch("optimizer_restore_begin")
+         self.optimizer.load_state_dict(restored)
+ 
+     @_with_training_lock
+@@ -1556,6 +1575,9 @@
+         if not modules:
+             print("No attention layer to reset.")
+             return
++        exposure = getattr(self, "_learning_optimizer_exposure", None)
++        if exposure is not None:
++            exposure.new_epoch("attention_reset_begin")
+         for net in (self.online_net, self.target_net):
+             for root in attention_modules(net):
+                 for m in root.modules():
+--- a/Robotron/Scripts/dqn/replay_buffer.py
++++ b/Robotron/Scripts/dqn/replay_buffer.py
+@@ -8,6 +8,11 @@
+ import os, sys, time, shutil, json, uuid
+ import numpy as np
+ import threading
++
++try:
++    from .learning_exposure import ReplayInsertExposure, exposure_enabled, disabled_snapshot as exposure_disabled_snapshot
++except ImportError:
++    from learning_exposure import ReplayInsertExposure, exposure_enabled, disabled_snapshot as exposure_disabled_snapshot
+ from collections import deque
+ 
+ try:
+@@ -194,6 +199,7 @@
+         self.state_size = int(state_size)
+         self.alpha = float(alpha)
+         self.lock = threading.Lock()
++        self._insert_exposure = ReplayInsertExposure() if exposure_enabled() else None
+ 
+         # Storage arrays
+         # fp16 ring states (2026-07-18): halves state memory so the ring can
+@@ -411,7 +417,7 @@
+ 
+     def add(self, state, action: int, reward: float, next_state, done: bool,
+             horizon: int = 1, expert: int = 0, priority_hint: float = 0.0,
+-            interest: float = 0.0, actor_kind: int | None = None):
++            interest: float = 0.0, actor_kind: int | None = None, source_actor: str | None = None):
+         with self.lock:
+             self._adds_total += 1   # bank starvation/staleness clock
+             kind = int(actor_kind) if actor_kind is not None else self.actor_kind_from_name(None, expert)
+@@ -470,6 +476,9 @@
+                 self._interesting_bank_ptr = (self._interesting_bank_ptr + 1) % len(self._interesting_bank)
+                 self._interesting_bank_count = min(self._interesting_bank_count + 1, len(self._interesting_bank))
+             self.size = self.tree.size
++            exposure = getattr(self, "_insert_exposure", None)
++            if exposure is not None:
++                exposure.accepted(source_actor, expert, kind)
+ 
+     def clear(self):
+         """Wipe all transitions in place (collapse-watchdog recovery).
+@@ -486,6 +495,9 @@
+         permanence is its entire reason to exist.
+         """
+         with self.lock:
++            exposure = getattr(self, "_insert_exposure", None)
++            if exposure is not None:
++                exposure.new_epoch("clear_begin")
+             self.tree.tree[:] = 0.0
+             self.tree.data_ptr = 0
+             self.tree.size = 0
+@@ -1120,6 +1132,12 @@
+     def __len__(self):
+         return self.size
+ 
++    def get_learning_exposure_snapshot(self):
++        """Call outside model/telemetry locks; no import/restore of counters."""
++        with self.lock:
++            exposure = getattr(self, "_insert_exposure", None)
++            return exposure.snapshot() if exposure is not None else exposure_disabled_snapshot()
++
+     def get_partition_stats(self):
+         """Return buffer statistics (O(1) via tracked counter)."""
+         with self.lock:
+@@ -1827,6 +1845,9 @@
+             self._progress_bar("  Replay load", 0.40)
+ 
+         with self.lock:
++            exposure = getattr(self, "_insert_exposure", None)
++            if exposure is not None:
++                exposure.new_epoch("directory_adopt_begin")
+             for name, (attr, _, _) in specs.items():
+                 setattr(self, attr, mapped[name])
+ 
+@@ -1910,6 +1931,9 @@
+             self._progress_bar("  Replay load", 0.40)
+ 
+         with self.lock:
++            exposure = getattr(self, "_insert_exposure", None)
++            if exposure is not None:
++                exposure.new_epoch("array_restore_begin")
+             if verbose:
+                 self._progress_bar("  Replay load", 0.45)
+ 
+@@ -2082,6 +2106,9 @@
+     def flush(self):
+         """Clear the entire replay buffer."""
+         with self.lock:
++            exposure = getattr(self, "_insert_exposure", None)
++            if exposure is not None:
++                exposure.new_epoch("flush_begin")
+             self.tree = SumTree(self.capacity)
+             self.size = 0
+             self._n_expert = 0
+--- a/Robotron/Scripts/dqn/training.py
++++ b/Robotron/Scripts/dqn/training.py
+@@ -15,6 +15,11 @@
+ import numpy as np
+ import torch
+ import torch.nn.functional as F
++
++try:
++    from .learning_exposure import capture_amp_found_inf
++except ImportError:
++    from learning_exposure import capture_amp_found_inf
+ 
+ try:
+     from .config import RL_CONFIG, metrics
+@@ -341,6 +346,8 @@
+     except TypeError:
+         agent.optimizer.zero_grad()
+ 
++    optimizer_exposure = getattr(agent, "_learning_optimizer_exposure", None)
++    outcome_tensor, outcome_mode, outcome_ticket = None, "unscaled", None
+     clip_norm = cfg.grad_clip_norm
+     if use_amp and scaler is not None:
+         scaler.scale(weighted_loss).backward()
+@@ -348,16 +355,35 @@
+             for head in (agent.online_net.bc_joint_head, agent.online_net.bc_move_head, agent.online_net.bc_fire_head):
+                 for parameter in head.parameters(): parameter.grad = None
+         scaler.unscale_(agent.optimizer)
++        if optimizer_exposure is not None:
++            outcome_tensor, outcome_mode = capture_amp_found_inf(
++                scaler, agent.optimizer, device, is_tensor=torch.is_tensor,
++                adam_type=torch.optim.Adam, scaler_type=torch.amp.GradScaler,
++                torch_version=str(torch.__version__))
+         grad_norm = torch.nn.utils.clip_grad_norm_(agent.online_net.parameters(), clip_norm)
+-        scaler.step(agent.optimizer)
+-        scaler.update()
++        if optimizer_exposure is not None:
++            outcome_ticket = optimizer_exposure.begin()
++        try:
++            scaler.step(agent.optimizer)
++            scaler.update()
++        except BaseException:
++            if optimizer_exposure is not None:
++                optimizer_exposure.finish(outcome_ticket, "optimizer_exception")
++            raise
+     else:
+         weighted_loss.backward()
+         if kernel_active and (not expert_count or bc_w <= 0):
+             for head in (agent.online_net.bc_joint_head, agent.online_net.bc_move_head, agent.online_net.bc_fire_head):
+                 for parameter in head.parameters(): parameter.grad = None
+         grad_norm = torch.nn.utils.clip_grad_norm_(agent.online_net.parameters(), clip_norm)
+-        agent.optimizer.step()
++        if optimizer_exposure is not None:
++            outcome_ticket = optimizer_exposure.begin()
++        try:
++            agent.optimizer.step()
++        except BaseException:
++            if optimizer_exposure is not None:
++                optimizer_exposure.finish(outcome_ticket, "optimizer_exception")
++            raise
+ 
+     if gpu_timing is not None:
+         gpu_timing[1].record()
+@@ -366,6 +392,7 @@
+     # One CPU readback for priorities + loss/gradient metrics. Diagnostics are
+     # decimated and packed into the same readback, avoiding repeated barriers.
+     diagnostic_due = agent.training_steps % int(getattr(cfg, "diagnostic_interval", 20)) == 0
++    outcome_host_index = None
+     with torch.no_grad():
+         scalars = [weighted_loss.detach().float(), grad_norm.detach().float(), bc_loss.detach().float()]
+         if diagnostic_due and kernel_active:
+@@ -386,11 +413,22 @@
+                 (action_p[:, 0] + action_p[:, -1]).mean(),
+                 entropy_rows.mean(), (top_q[:, 0] - top_q[:, 1]).mean(),
+                 (ce_loss.detach().float() - entropy_rows).mean()])
++        if optimizer_exposure is not None and outcome_tensor is not None:
++            outcome_host_index = B + len(scalars)
++            scalars.append(outcome_tensor)
+         packed = torch.cat((ce_loss.detach().float(), torch.stack(scalars)))
+     priority_telemetry = getattr(agent, "_pipeline_telemetry", None) if diagnostic_due else None
+     priority_timings = {} if priority_telemetry is not None else None
+     priority_t0 = time.perf_counter()
+-    host = packed.cpu().numpy()
++    try:
++        host = packed.cpu().numpy()
++    except BaseException:
++        if optimizer_exposure is not None:
++            optimizer_exposure.finish(outcome_ticket, "readback_exception")
++        raise
++    if optimizer_exposure is not None:
++        optimizer_exposure.finish(outcome_ticket, outcome_mode,
++            host[outcome_host_index] if outcome_host_index is not None else None)
+     if priority_timings is not None:
+         priority_readback_done = time.perf_counter()
+     if gpu_timing is not None:
+--- /dev/null
++++ b/Robotron/Scripts/dqn/learning_exposure.py
+@@ -0,0 +1,196 @@
++"""Default-off bounded exposure telemetry; imports no NumPy/Torch/device code.
++
++ReplayInsertExposure has NO lock: replay owns its existing lock for every method.
++OptimizerExposure owns only its scalar lock, never a model/replay/device lock.
++Counters are process-local, never checkpoint-restored or used by schedules.
++"""
++from collections.abc import Mapping
++from dataclasses import dataclass
++import math
++from numbers import Real
++import os
++import threading
++import time
++
++SUPPORTED_TORCH = "2.13.0+cu130"
++
++
++def exposure_enabled(environ=None):
++    return (os.environ if environ is None else environ).get(
++        "DQN_LEARNING_EXPOSURE_COUNTERS", "0").strip().lower() in ("1", "true", "yes", "on")
++
++
++def disabled_snapshot():
++    return dict(schema="robotron-learning-exposure-v1", enabled=False, available=False,
++                reason="DQN_LEARNING_EXPOSURE_COUNTERS disabled")
++
++
++class ReplayInsertExposure:
++    """Count only normally completed ring adds; the caller holds replay.lock."""
++    categories = ("dqn", "epsilon", "expert", "eval", "unattributed")
++
++    def __init__(self):
++        self.process_id = os.getpid()
++        self.instance_monotonic_ns = time.monotonic_ns()
++        self.epoch = 0
++        self.epoch_reason = "created_empty"
++        self.counts = dict.fromkeys(self.categories, 0)
++        self.base = dict(self.counts)
++
++    def new_epoch(self, reason):
++        # Invalidate the previous ring lineage BEFORE destructive mutation.
++        # A failed partial load therefore cannot preserve a stale burn-in proof.
++        self.epoch += 1
++        self.epoch_reason = str(reason)[:80]
++        self.base = dict(self.counts)
++
++    def accepted(self, source_actor, expert, actor_kind):
++        if expert:
++            category = "expert"
++        elif source_actor == "eval":
++            category = "eval"
++        elif source_actor == "dqn" and actor_kind == 0:
++            category = "dqn"
++        elif source_actor == "epsilon" and actor_kind == 1:
++            category = "epsilon"
++        else:
++            category = "unattributed"
++        self.counts[category] += 1
++
++    def snapshot(self):
++        total = dict(self.counts)
++        epoch = {key: total[key] - self.base[key] for key in self.categories}
++        return dict(schema="robotron-replay-insert-exposure-v1", enabled=True,
++            available=True, process_id=self.process_id, instance_monotonic_ns=self.instance_monotonic_ns,
++            epoch=self.epoch, epoch_reason=self.epoch_reason,
++            accepted_total=sum(total.values()), accepted_learner_total=total["dqn"] + total["epsilon"],
++            accepted_by_source_total=total,
++            accepted_since_epoch=sum(epoch.values()), accepted_learner_since_epoch=epoch["dqn"] + epoch["epsilon"],
++            accepted_by_source_since_epoch=epoch,
++            scope="New normally completed ring.add calls only; imported rows/banks/wire frames excluded. Process-local, not persisted.")
++
++
++def capture_amp_found_inf(scaler, optimizer, device, *, is_tensor, adam_type, scaler_type, torch_version):
++    """Retain ONE existing scalar tensor by identity after unscale, before step.
++
++    Read metadata only. No item/cpu/to/clone/detach/reduction/synchronization.
++    Unsupported/private-state drift yields an unavailable outcome, not a fallback
++    optimizer implementation. The optimizer/scaler themselves remain untouched.
++    """
++    try:
++        if torch_version != SUPPORTED_TORCH:
++            return None, "unsupported_torch"
++        if type(optimizer) is not adam_type or getattr(optimizer.step, "__func__", None) is not adam_type.step:
++            return None, "unsupported_optimizer"
++        if getattr(optimizer, "_step_supports_amp_scaling", None) is not True:
++            return None, "unsupported_optimizer"
++        groups = optimizer.param_groups
++        if not groups or not all(group.get("fused") is True for group in groups):
++            return None, "unsupported_optimizer"
++        if type(scaler) is not scaler_type:
++            return None, "unsupported_scaler"
++        if scaler._enabled is False:
++            return None, "scaler_disabled"
++        if scaler._enabled is not True:
++            return None, "missing_scaler_state"
++        states = scaler._per_optimizer_states
++        # update() adds later device states in-place into the first tensor.
++        # Prohibit that case instead of creating a reduction/copy ourselves.
++        if not isinstance(states, Mapping) or len(states) != 1 or id(optimizer) not in states:
++            return None, "nonunique_optimizer_state"
++        state = states.get(id(optimizer))
++        if not isinstance(state, Mapping) or getattr(state.get("stage"), "name", None) != "UNSCALED":
++            return None, "bad_scaler_stage"
++        found = state.get("found_inf_per_device")
++        if not isinstance(found, Mapping) or len(found) != 1:
++            return None, "nonunique_inf_device"
++        owner, tensor = next(iter(found.items()))
++        if (not is_tensor(tensor) or tensor.ndim != 0 or str(tensor.dtype) != "torch.float32"
++                or tensor.requires_grad or tensor.device.type != "cuda"
++                or tensor.device != device or owner != tensor.device):
++            return None, "malformed_inf_tensor"
++        return tensor, "single_cuda_found_inf"
++    except Exception:
++        return None, "missing_scaler_state"
++
++
++@dataclass(slots=True)
++class _Ticket:
++    owner: object
++    epoch: int
++    finished: bool = False
++
++
++class OptimizerExposure:
++    """Completed call outcomes after the REQUIRED packed readback, plus starts.
++
++    All APIs are scalar-only. A ticket makes exceptional/straddled outcomes
++    explicit without retaining an unbounded per-step registry.
++    """
++    fields = ("attempts_started", "outcomes_recorded", "applied", "amp_skipped", "unavailable")
++
++    def __init__(self):
++        self.lock = threading.Lock()
++        self.process_id = os.getpid()
++        self.instance_monotonic_ns = time.monotonic_ns()
++        self.epoch, self.epoch_reason = 0, "optimizer_created"
++        self.total = dict.fromkeys(self.fields, 0)
++        self.current = dict(self.total)
++        self.straddled_outcomes = 0
++        self.last_reason = None
++
++    def new_epoch(self, reason):
++        with self.lock:
++            self.epoch += 1
++            self.epoch_reason = str(reason)[:80]
++            self.current = dict.fromkeys(self.fields, 0)
++
++    def begin(self):
++        with self.lock:
++            self.total["attempts_started"] += 1
++            self.current["attempts_started"] += 1
++            return _Ticket(self, self.epoch)
++
++    def finish(self, ticket, mode, found_inf=None):
++        if mode in ("unscaled", "scaler_disabled"):
++            outcome, reason = "applied", mode
++        elif mode == "single_cuda_found_inf":
++            # This is an already-read HOST scalar, not a Tensor.item call.
++            try:
++                if not isinstance(found_inf, Real) or isinstance(found_inf, bool):
++                    raise TypeError("outcome must already be a real HOST scalar")
++                value = float(found_inf)
++                if not math.isfinite(value) or value not in (0.0, 1.0):
++                    raise ValueError("not binary found_inf")
++                outcome, reason = ("amp_skipped" if value == 1.0 else "applied"), mode
++            except (TypeError, ValueError, OverflowError):
++                outcome, reason = "unavailable", "invalid_found_inf_readback"
++        else:
++            outcome, reason = "unavailable", str(mode)[:80]
++        with self.lock:
++            if not isinstance(ticket, _Ticket) or ticket.owner is not self or ticket.finished:
++                # Telemetry misuse cannot advance optimizer or double count.
++                self.last_reason = "invalid_or_duplicate_ticket"
++                return
++            ticket.finished = True
++            self.total["outcomes_recorded"] += 1
++            self.total[outcome] += 1
++            if ticket.epoch == self.epoch:
++                self.current["outcomes_recorded"] += 1
++                self.current[outcome] += 1
++            else:
++                self.straddled_outcomes += 1
++            self.last_reason = reason
++
++    def snapshot(self):
++        with self.lock:
++            return dict(schema="robotron-optimizer-exposure-v1", enabled=True,
++                available=(self.current["unavailable"] == 0 and self.current["outcomes_recorded"] > 0
++                    and self.total["attempts_started"] == self.total["outcomes_recorded"]),
++                process_id=self.process_id, instance_monotonic_ns=self.instance_monotonic_ns,
++                epoch=self.epoch, epoch_reason=self.epoch_reason,
++                total=dict(self.total), since_epoch=dict(self.current),
++                unclassified_started_total=self.total["attempts_started"]-self.total["outcomes_recorded"],
++                prior_epoch_outcomes_total=self.straddled_outcomes, last_reason=self.last_reason,
++                supported_torch=SUPPORTED_TORCH,
++                scope="Applied=optimizer call admitted, not proof every parameter moved/Adam step advanced. Step/scaler attempts; exceptions/missing state unavailable. Process-local, not a schedule/checkpoint counter.")

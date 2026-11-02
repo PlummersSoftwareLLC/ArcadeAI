@@ -1,0 +1,15 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-namespace1200-guard-original02/unselected-prebind-source-snapshots/select_closed_metadata_guard_namespace1200_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-namespace1200-guard-original02/select_closed_metadata_guard_namespace1200_v6.py
+@@ -10,9 +10,9 @@
+ from pathlib import Path
+ 
+ LOCAL = Path(__file__).resolve().parent
+-GENERATOR_SHA = None
+-PREPARER_SHA = None
+-CLOSER_SHA = None
++GENERATOR_SHA = '5fd5022128297332f5c720a8804e41d678400e077a370a43ed5ad6e30f9d9098'
++PREPARER_SHA = 'a4e4c013394135ddc4c0de7b581fa56c2f3cfe2c32cb9fca3406d73ed262c9c3'
++CLOSER_SHA = '2afa743774550aa613703aab64f82ec0da6f539509978e82744c7b9a7d99110a'
+ 
+ 
+ def require(value, reason):

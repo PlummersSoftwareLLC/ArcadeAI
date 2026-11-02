@@ -1,0 +1,112 @@
+{
+  "schema": "robotron-rawKL-trial02-quality-binding-preparation-v1",
+  "status": "SOURCE_ONLY_FROZEN_TESTS_UNEXECUTED",
+  "files": {
+    "PREPARATION.txt": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/fresh_quality_trial02_binding_companions_proposal/PREPARATION.txt",
+      "sha256": "f9e071dd96ecc10f0953fe72037005ce5afc4e972d48b3c360db732224a920d1",
+      "bytes": 1969,
+      "mode": "0o444"
+    },
+    "README.txt": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/fresh_quality_trial02_binding_companions_proposal/README.txt",
+      "sha256": "4ee6518c70f90c4d97e61a6db044cd31bd68b4b01aa1919c67bd6f61f17411a1",
+      "bytes": 1888,
+      "mode": "0o444"
+    },
+    "ROOT_BINDING_API.txt": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/fresh_quality_trial02_binding_companions_proposal/ROOT_BINDING_API.txt",
+      "sha256": "a8506dd7badd7883b3acc31fd4610f7b1800d094fb4d0b594d9478afab38eb40",
+      "bytes": 3733,
+      "mode": "0o444"
+    },
+    "audit_completed_leg.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/fresh_quality_trial02_binding_companions_proposal/audit_completed_leg.py",
+      "sha256": "fad4437bfde6ad123c631e439b0f90b58e1cd5e5d05f7aaafabfcea728376d88",
+      "bytes": 33976,
+      "mode": "0o444"
+    },
+    "binding-job.template.json": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/fresh_quality_trial02_binding_companions_proposal/binding-job.template.json",
+      "sha256": "ebaea1b48b77b9e8255b2e443ecd2ac6b6a6eed7e2e30870527a316c78d0ac1f",
+      "bytes": 3329,
+      "mode": "0o444"
+    },
+    "future-argv.json": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/fresh_quality_trial02_binding_companions_proposal/future-argv.json",
+      "sha256": "dbf3de01283cab378fd1692e2b39e1d65d375837ae84083580d42b84e8bd3e71",
+      "bytes": 3015,
+      "mode": "0o444"
+    },
+    "quality_bindings.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/fresh_quality_trial02_binding_companions_proposal/quality_bindings.py",
+      "sha256": "34fc09683176ddb1ef9182e30d3cfb2f980fac744407bc818a706cfc92ca57b5",
+      "bytes": 25314,
+      "mode": "0o444"
+    },
+    "root_quality_carrier.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/fresh_quality_trial02_binding_companions_proposal/root_quality_carrier.py",
+      "sha256": "7c1e1978dea7565d682cf3d7cdc31fbbf27aedfb8542ceb7a17fef302e46ab86",
+      "bytes": 23609,
+      "mode": "0o444"
+    },
+    "runtime-baseline.template.json": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/fresh_quality_trial02_binding_companions_proposal/runtime-baseline.template.json",
+      "sha256": "bca1a4fe958d29abc40c8c7333a3808a5c3557343e3f02010cc7209d77ac284a",
+      "bytes": 1283,
+      "mode": "0o444"
+    },
+    "source-lock.json": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/fresh_quality_trial02_binding_companions_proposal/source-lock.json",
+      "sha256": "7aebb7abd5f54eb3c3b34c47d1fb00da92e0845cc5f1815f6c7ce3e705d1e07c",
+      "bytes": 5602,
+      "mode": "0o444"
+    },
+    "template-audit-source.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/fresh_quality_trial02_binding_companions_proposal/template-audit-source.py",
+      "sha256": "2576d4449b12d6b4a3b17898ab9938c6ff8c762829f61a29e3d510f73d585c21",
+      "bytes": 37008,
+      "mode": "0o444"
+    },
+    "test_quality_bindings.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/fresh_quality_trial02_binding_companions_proposal/test_quality_bindings.py",
+      "sha256": "baad136fbcda4f217021c4ca5bcdc477a66ddbceab8462ab95a33530cdecd103",
+      "bytes": 20890,
+      "mode": "0o444"
+    }
+  },
+  "authored_guard_methods": 13,
+  "exact_selection": "test_quality_bindings.QualityBindingContracts",
+  "method_names": [
+    "test_default_carrier_and_auditor_do_not_import_helpers_read_or_act",
+    "test_authentic_inline_phase_report_and_readonly_copy_shape",
+    "test_early_startup_wrong_tag_or_generic_CPU_never_substitutes_candidate",
+    "test_inline_CPU_exact_flags_digest_and_no_duplicate_or_foreign_args",
+    "test_both_horizons_use_physical_all_five_including_eval_not_learner_only",
+    "test_each_horizon_cutoff_epoch_and_authentic_early192_are_required",
+    "test_real_return_shape_without_invented_phase_record_fields",
+    "test_stale_latest_wrong_CE_owner_phase_or_failed_undo_refuses",
+    "test_empty_journal_only_is_pinned_and_valid_original_terminal",
+    "test_readonly_PIN_rejects_writable_or_mutated_metadata_without_PT",
+    "test_whole_shared_binding_joins_real_shapes_and_rejects_foreign_parent_or_reanchor",
+    "test_original_auditor_row_tail_and_stats_body_is_unchanged",
+    "test_no_null_or_extra_evidence_template_can_execute"
+  ],
+  "source_peer": {
+    "agent": "runtime_review",
+    "status": "SOURCE_ONLY_PASS before final digest literals; separate exact receipt pending",
+    "reviewed_helper_sha256": "34fc09683176ddb1ef9182e30d3cfb2f980fac744407bc818a706cfc92ca57b5",
+    "post_review_executable_delta": "Only carrier/auditor embedded helper SHA placeholder replaced by exact helper SHA"
+  },
+  "preserved_original_row_core": {
+    "bytes": 16072,
+    "byte_equal_after_one_factual_CPU_label": true
+  },
+  "actual_test_execution": null,
+  "actual_candidate": null,
+  "actual_CPU_proof": null,
+  "actual_CE_return": null,
+  "actual_runtime_baseline": null,
+  "actual_quality_execution": null,
+  "qualification_pass": false
+}

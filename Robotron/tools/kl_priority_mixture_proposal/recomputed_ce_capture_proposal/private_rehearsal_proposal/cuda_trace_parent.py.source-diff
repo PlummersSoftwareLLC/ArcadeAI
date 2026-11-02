@@ -1,0 +1,133 @@
+--- reviewed-warmup/cuda_trace_parent.py
++++ private-rehearsal/cuda_trace_parent.py
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env python3
+-"""SOURCE-ONLY GPU0 same-source warmup diagnostic; never auto-launches.
++"""SOURCE-ONLY one-attempt capture and conditional offline recomputation.
+ 
+ Default prints a literal plan without helper/source/data reads or live queries.
+ Future --launch requires a separately reviewed exclusive resource window and a
+@@ -28,14 +28,14 @@
+ HERE = Path(__file__).parent
+ GAME = HERE.parents[3]
+ REPO = GAME.parent
+-SCHEMA = 'robotron-cuda-warmup-repeatability-v1'
++SCHEMA = 'robotron-recomputed-ce-private-rehearsal-v1'
+ SEED = 20261017
+-VARIANTS = ('base_a', 'base_repeat', 'off')
++VARIANTS = ('capture', 'recompute')
+ GIB, MIB = 1 << 30, 1 << 20
+ BOUNDS = dict(cpu_threads=2, memory_bytes=16*GIB, vram_allocator_bytes=12*GIB,
+               vram_process_bytes=13*GIB, artifact_bytes=6*GIB, tmpfs_bytes=128*MIB,
+               tasks=128, phase_timeout_s=180, total_timeout_s=600)
+-SOURCE_LOCK_SHA256 = '20057c290b1a9f121a03dfb5e81d33c67170a2d51807c0c149e295f393fa359e'
++SOURCE_LOCK_SHA256 = '28870c3cf7594cc0ac8f73eb3760e3665d5d4448668f4bf9010268427ec80dd3'
+ LOCK_SHA = SOURCE_LOCK_SHA256
+ CHECKPOINT_SHA256 = '1225731cb8e976aacee925cb7bbac76a31ea6f81e404fedb5a909019a4373688'
+ CPU_RECEIPT_SHA256 = '0f1cf4820804971b7b13f02604a6d0f73e5579f34a68a45312d212d4a1a51068'
+@@ -265,9 +265,8 @@
+     require(hashlib.sha256(data).hexdigest() == SOURCE_LOCK_SHA256, 'Reviewed source lock changed')
+     lock = json.loads(data)
+     require(lock['schema'] == SCHEMA and lock['seed'] == SEED and lock['variants'] == list(VARIANTS)
+-            and lock['attempts'] == 0 and lock['warmup_cases'] == [
+-                dict(index=1, diagnostics=False, empty=False), dict(index=2, diagnostics=False, empty=True),
+-                dict(index=3, diagnostics=True, empty=False), dict(index=4, diagnostics=True, empty=True)]
++            and lock['attempts'] == 1 and lock['compiled_loss_outputs'] == 4
++            and lock['offline_outputs'] == 5 and lock['qualification_pass'] is False
+             and lock['batch_rows'] == 4096
+             and lock['state_width'] == 11128 and lock['joint_actions'] == 81 and lock['atoms'] == 51,
+             'Fixed trace validation protocol changed')
+@@ -289,6 +288,16 @@
+         require(item['sha256'] == expected and source.is_absolute() and source == source.resolve()
+                 and not source.is_symlink() and source.is_file() and digest(source) == expected,
+                 'Pinned science helper/numeric lock changed: ' + name)
++    review = lock['observer_review']
++    source = Path(review['source'])
++    require(source.is_absolute() and source == source.resolve() and not source.is_symlink()
++            and digest(source) == review['sha256'], 'Reviewed observer manifest changed')
++    for name, item in json.loads(source.read_text())['files'].items():
++        require(name == Path(name).name and digest(source.parent/name) == item['sha256'],
++                'Reviewed observer source/test changed: ' + name)
++    require(lock['original_loss_sha256'] == 'de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a'
++            and lock['offline_loss_sha256'] == 'ce527c840f1b0cce3f77fece52923c7023519605db92d7c5e691b1b573ee6d2f',
++            'Original4 or conditional offline5 source differs')
+     return lock
+ 
+ 
+@@ -358,8 +367,12 @@
+                        DQN_NATIVE_BATCH_UPDATE='1', DQN_DIRECT_REPLAY_FILL='1',
+                        DQN_COMPILE_MODE='default', DQN_DIAGNOSTIC_INTERVAL='20',
+                        PYTHONDONTWRITEBYTECODE='1')
+-    # Every diagnostic role uses the four-output route; no observer is armed.
++    # Only CAPTURE arms the new observer. RECOMPUTE imports its five-output
++    # conditional loss only after bootstrap, never in the actual training call.
+     environment.pop('DQN_EXECUTED_CE_TRACE_DIR', None)
++    environment.pop('DQN_RECOMPUTED_CE_CAPTURE_DIR', None)
++    if variant == 'capture':
++        environment['DQN_RECOMPUTED_CE_CAPTURE_DIR'] = str(paths['root']/'ce-recomputed-capture-private-one')
+     return environment
+ 
+ 
+@@ -514,11 +527,19 @@
+     result = json.loads((paths['root']/'phase-result.json').read_text())
+     require(result.get('status') == 'OBSERVATIONS_COMPLETE' and result.get('variant') == variant
+             and result.get('qualification_pass') is False and isinstance(result.get('comparison_pass'), bool)
+-            and isinstance(result.get('interpretation_requires_review'), bool)
+-            and isinstance(result.get('cases'), list) and len(result['cases']) == 4,
++            and isinstance(result.get('interpretation_requires_review'), bool),
+             'Role did not certify its fixed diagnostic scope/identity')
+-    require(variant != 'base_a' or result.get('comparison_scope') == 'baseline_reference_only',
+-            'BASE_A must be labelled a reference, never an independent comparison')
++    if variant == 'capture':
++        require(result.get('consumed_attempts') == 1 and result.get('capture_complete') is True
++                and result.get('loss_abi') == 4 and result.get('optimizer_outcome') in ('applied_admission', 'amp_skipped')
++                and result.get('lease_released') is True and result.get('producer_closed') is True,
++                'Exactly one complete original4 consumed attempt required')
++    else:
++        require(result.get('optimizer_steps') == 0 and result.get('explicit_worker_backward_calls') == 0
++                and result.get('update_guard_counts') == dict(optimizer_step=0,scaler_step=0,scaler_update=0)
++                and result.get('grad_enabled') is True and result.get('conditional_recomputed') is True
++                and result.get('executed_target_observed') is False,
++                'Offline phase exceeded conditional grad-enabled forward scope')
+     return result
+ 
+ 
+@@ -570,10 +591,10 @@
+                     paths[name].mkdir(parents=True, mode=0o700)
+                 for name in ('inductor', 'triton', 'cuda', 'torch', 'extensions', 'tmp'):
+                     (paths['cache']/name).mkdir(mode=0o700)
+-                publish(base, paths['control'], dict(experiment='isolated-cuda-warmup-repeatability', lr_scale=.5))
++                publish(base, paths['control'], dict(experiment='isolated-one-attempt-recomputed-ce', lr_scale=.5))
+             cgroup = base.OwnedCgroup(delegated, nonce)
+             manifest = dict(schema=SCHEMA, explicit_launch=True, seed=SEED, variants=list(VARIANTS),
+-                attempts=0, warmup_cases=lock['warmup_cases'], qualification_pass=False,
++                attempts=1, compiled_loss_outputs=4, offline_outputs=5, qualification_pass=False,
+                 source_lock_sha256=SOURCE_LOCK_SHA256,
+                 parent_sha256=digest(__file__), worker_sha256=digest(HERE/'cuda_trace_worker.py'),
+                 launch_token=uuid.uuid4().hex, nonce=nonce, parent=base.identity(), output=str(directory),
+@@ -635,11 +656,14 @@
+             interpretation_requires_review=any(result['interpretation_requires_review'] for result in results),
+             comparison_summary=[dict(variant=result['variant'], comparison_pass=result['comparison_pass'],
+                 interpretation_requires_review=result['interpretation_requires_review'],
+-                baseline_reference_only=result['variant'] == 'base_a') for result in results],
++                actual_training_capture=result['variant'] == 'capture') for result in results],
+             source_lock_sha256=SOURCE_LOCK_SHA256, owned_cleanup_complete=True,
+             parent_process_scan_observations=dict(base.process_scan_observations),
+             limitations=['Completed diagnostic may include original-tolerance mismatches; exit0 is not parity qualification',
+-                         'Four original warmups in each fresh role, no optimizer steps and no ON instrumentation',
++                         'One captured original4 training attempt; AMP skip retained without replacement',
++                         'Fresh offline grad-enabled five-output forward has no backward or optimizer step',
++                         'Offline target/entropy/KL are conditional RECOMPUTED quantities, not the executed target',
++                         'Matching CE does not bound unobserved target entropy, KL, or replay priority ranking',
+                          'Fixed synthetic batch at trained checkpoint; no live replay-population or learning-quality claim',
+                          'No actual live Rainbow agent/server lifecycle or throughput comparison',
+                          'Storage watcher is cooperative, not a filesystem quota',
+@@ -655,7 +679,7 @@
+     args = parser.parse_args(argv)
+     if not args.launch:
+         print(json.dumps(dict(status='PLAN_ONLY_UNEXECUTED', schema=SCHEMA, launch=False,
+-            variants=list(VARIANTS), batch_rows=4096, attempts=0, warmup_cases=4,
++            variants=list(VARIANTS), batch_rows=4096, attempts=1, compiled_loss_outputs=4, offline_outputs=5,
+             qualification_pass=False, bounds=BOUNDS,
+             source_lock_sha256=SOURCE_LOCK_SHA256, numerical_imports=False,
+             runtime_queries=False, outputs_created=False, automatic_retry=False), indent=2))

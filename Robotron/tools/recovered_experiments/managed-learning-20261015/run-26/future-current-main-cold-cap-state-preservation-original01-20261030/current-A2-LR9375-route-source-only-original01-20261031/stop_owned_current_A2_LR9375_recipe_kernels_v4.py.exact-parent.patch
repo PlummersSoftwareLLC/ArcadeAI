@@ -1,0 +1,22 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/stop-sources/stop_owned_current_round_training_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/current-A2-LR9375-route-source-only-original01-20261031/stop_owned_current_A2_LR9375_recipe_kernels_v4.py
+@@ -97,8 +97,8 @@
+         self.base = self.u.checked(job['base_control'])
+         require(self.control.read_bytes() == self.base, 'Current control changed')
+         base = json.loads(self.base)
+-        require(base['lr_scale'] == .0625 and base.get('measurement') is None,
+-                'Current .0625 recipe without a foreign measurement required')
++        require(base['lr_scale'] == .1875 and base.get('measurement') is None,
++                'Current .1875 recipe without a foreign measurement required')
+         self.case = job['case']
+         self.probe = None
+         self.probe_tid = None
+@@ -158,7 +158,7 @@
+                 and 0 <= value['pipeline_snapshot_age_s'] <= 5
+                 and value['pipeline_read_error'] == value['bank_persistence_read_error'] == ''
+                 and value['managed_experiment'] == self.job['experiment']
+-                and value['lr'] == 3.125e-6, 'Original recipe/fresh API required')
++                and value['lr'] == 5e-5*.1875, 'Original recipe/fresh API required')
+         pipe = value['host_pipeline']
+         require(pipe['available'] is True and pipe['generation'] == 0, 'Original pipeline generation')
+         for key in ('inference', 'actor_refresh', 'target_refresh', 'learner_priority'):

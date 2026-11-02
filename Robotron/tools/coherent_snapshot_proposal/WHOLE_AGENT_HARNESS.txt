@@ -1,0 +1,164 @@
+Executable isolated whole-agent smoke — CPU REVIEW ONLY; GPU NOT LAUNCHED
+
+whole_agent_smoke.py is the standard-library parent. Its default prints a static
+plan/source manifest and creates no files, process, numerical import or CUDA
+context. whole_agent_smoke_worker.py is an internal, token-gated child; invoke
+only the parent. The production snapshot patch and earlier sealed CPU receipts
+are unchanged. No production patch, live model/control/replay or cgroup was
+modified while preparing this harness.
+
+Safe default command (already exercised):
+
+  .venv-gb300/bin/python -I -B Robotron/tools/coherent_snapshot_proposal/whole_agent_smoke.py \
+    --directory /home/dave/source/repos/ArcadeAI/Robotron/logs/NEW-snapshot-smoke
+
+--launch is required for any execution. Launch is not authorized by this file;
+the parent must first finish frozen quality/protection, reserve the display GPU
+and a host performance window, review current source hashes and approve a run.
+Run snapshot-only before applying the parallel replay proposal, or prepare and
+review a new merged private candidate afterwards. A changed production proposal
+base or staged hash fails closed; no patch is applied to the live checkout.
+
+Required service topology on this host
+
+The current session-841.scope contains session processes and has empty
+cgroup.subtree_control. The harness rejects that topology without changing it.
+It requires an owned, dedicated robotron-snapshot-smoke-*.service with delegation
+of cpu/memory/pids and its launcher in snapshot-supervisor. The service root must
+be empty of processes. Only that verified root's delegated subtree is enabled;
+the bounded worker cgroup is a sibling of snapshot-supervisor. Existing session,
+training and evaluation cgroups are never edited.
+
+Installed systemd is 255; its local systemd.resource-control(5) documentation
+confirms DelegateSubgroup was added in 254 and places ExecStart in the named
+subgroup. The following is the exact FUTURE launch shape, not executed here:
+
+  systemd-run --user --wait --collect \
+    --unit=robotron-snapshot-smoke-UNIQUE \
+    --property='Delegate=cpu memory pids' \
+    --property=DelegateSubgroup=snapshot-supervisor \
+    --property=RuntimeMaxSec=330 \
+    --property=KillMode=control-group \
+    --property=MemoryMax=14G --property=TasksMax=128 \
+    /home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python -I -B \
+    /home/dave/source/repos/ArcadeAI/Robotron/tools/coherent_snapshot_proposal/whole_agent_smoke.py \
+    --directory /home/dave/source/repos/ArcadeAI/Robotron/logs/NEW-snapshot-smoke \
+    --launch
+
+The reviewed1 launch reached the bounded CUDA worker through this delegation
+topology. If it cannot provide the exact topology/controllers, launch fails;
+there is no unbounded/session fallback.
+The transient unit's RuntimeMaxSec/KillMode provide outer lifetime protection.
+
+Execution contract
+
+Only display GPU0 UUID GPU-b549355c-78bb-53d8-04a6-da34d45e1dd0 is visible. The
+main GPU UUID GPU-c0c5d295-6f07-aab5-bbde-b592ea426ec1 is excluded. The parent
+requires exactly one existing main-GPU owner and preserves its PID/start identity;
+it refuses quality/sidecar/benchmark/affinity windows, IPv4/IPv6 port9999 listeners,
+or foreign GPU0 compute owners. Linux /proc socket inspection avoids making a
+probe connection to a live evaluator. Guards are rechecked between phases with
+one-second polling while a child runs; each NVIDIA query has a five-second
+timeout. The smoke lease does not serialize uncooperative
+external launchers; parent scheduling ownership remains required.
+
+The parent verifies snapshot patch/base/staged hashes, copies the complete dqn
+package/C source into private output, and checks child imports stay there. Each
+phase has distinct private MODEL_DIR/control/settings/journal/cache paths and
+an existing nonce tmpfs directory assigned to cfg.replay_tmpfs_dir BEFORE actual
+agent construction. MODEL_DIR alone would share the live tmpfs basename.
+No production checkpoint, replay mapping, runtime control or state sample is read.
+
+The child waits for its parent token BEFORE inspecting cgroup membership; the
+parent attaches it before releasing the token. All ownership/source/environment,
+cgroup and live guards precede numerical imports. Worker parent-death SIGKILL is
+armed with Linux prctl; handled INT/TERM/HUP in the parent drain only its owned
+process group/cgroup, with signals blocked through cleanup. The child
+unblocks the inherited launch signal mask after verifying its parent, so normal
+TERM handling remains available in the worker. A pre-identity acquisition
+failure closes its token pipe and terminates/reaps that exact unreaped Popen
+child. SIGKILL, kernel failure or machine loss can leave private files/cgroup
+bookkeeping; no aggregate PASS is published before owned cleanup completes.
+
+Bounds: worker cgroup 12GiB RAM/no swap, 2 CPU cores, 96 tasks; CUDA allocator
+10GiB plus a monitored 11GiB process allowance; total300s/phase140s; output4GiB
+and private tmpfs128MiB. Storage bounds use fixed tiny geometry and a cooperative
+byte watcher, not a filesystem quota. The outer unit is bounded separately.
+
+The capture child constructs actual full 11128-state Rainbow networks, enabled
+CUDA AMP/scaler and fused Adam (fallback rejected), real prefetch and an actual
+SocketServer on an ephemeral loopback port with no clients. The constructor's
+learner is joined before manually bounded updates. A wrapped128-row synthetic
+ring and both64-row elite episodes pass through real FIFO/admission/save paths.
+At most3 pre-capture attempts must produce an actual Adam step/nonzero moments
+and changed, finite weights. Only a positively classified AMP skip may consume
+a retry. It requires one supported immediate optimizer-exposure skip, zero
+applied/unavailable outcomes, every Adam parameter step unchanged, online state
+and nonzero Adam moments unchanged, a finite decreased scale, and finite
+online/target/inference/optimizer/scaler state. Missing lazy Adam slots and newly
+allocated all-zero step0/moments are equivalent. Applied updates require finite
+gradients/reported norm, nonregressing per-parameter Adam step advancement and
+changed online state. Unavailable outcomes, train exceptions, missing/nonfinite
+losses or other nonfinite state fail. The restore phase still requires its
+single further update to apply.
+
+Each attempt fsyncs optimizer-attempts.jsonl before training, after immediate
+observations and BEFORE classification, and after classification/rejection.
+Nonfinite values are retained as explicit strings. Diagnostics include all
+per-parameter Adam steps, online/nonzero-moment hashes, scale, actual process-local
+exposure identity/counters, finite checks, loss/norm/clocks and effective runtime
+Python/Torch/CUDA/GIL/expert availability. These checks do not change scaler
+initialization, learning settings, training sources or the attempt limit.
+
+Snapshot capture must certify the real device barrier, parked
+accept gate, unchanged guards/files and restored paused flags.
+
+After capture child exit, a fresh restore child uses copied archive/ring/banks
+at constructor-correct private paths. Actual load must restore all saved tensors,
+Adam/scaler, clocks/policy controls, replay metadata/fields/priorities and bank
+contents/ages. Runtime/manual LR/settings are applied explicitly. One further
+real fused/AMP update must apply and archive hashes must remain unchanged.
+Process-local replay counters/epochs reset; RNG and actor/game state are not
+restored. The harness makes no deterministic continuation or performance claim.
+
+CPU verification
+
+  CUDA_VISIBLE_DEVICES='' .venv-gb300/bin/python -B -m unittest \
+    Robotron.tools.coherent_snapshot_proposal.test_whole_agent_smoke \
+    Robotron.tools.coherent_snapshot_proposal.test_whole_agent_smoke_contract \
+    Robotron.tools.coherent_snapshot_proposal.test_amp_attempt_classification \
+    Robotron.tools.coherent_snapshot_proposal.test_optimizer_attempt_recording -v
+
+61 tests pass with only standard-library mocks/temporary paths: static dry run,
+explicit launch, source/path/environment/UUID/quality/port guards, PID reuse,
+pre-identity failure, owned interruption/cleanup and pending signals, fail-closed
+recovery, capture-to-fresh-restore orchestration, delegated supervisor topology,
+actual config/API AST contracts, parent-death/token ordering, module containment
+and archive hash/path drift, positive skip/applied classification, per-slot/moment
+evidence, unsupported/error rejection and durable diagnostics before failure.
+These tests do not construct a trainer, invoke
+nvidia-smi, alter real cgroups, deliver real process signals or initialize CUDA.
+
+Reviewed1 outcome and remaining limits
+
+The actual reviewed1 isolated launch reached Rainbow construction, CUDA AMP,
+fused Adam, private wrapped replay/banks and its first training call. It failed
+the original unconditional finite-gradient assertion BEFORE snapshot capture.
+Its logs did not record immediate exposure/Adam/weight/scale changes, so its AMP
+skip status is UNKNOWN. The original output and exact old harness are hash-sealed
+separately in run-26/coherent-snapshot-reviewed1-failure-analysis. No snapshot,
+restore or end-to-end CUDA success is claimed from that failed run.
+
+The worker warned that loading Triton enabled the GIL; this differs from the
+intended production free-thread runtime. Reviewed2 records effective GIL state,
+and does not force a GIL setting or replace installed packages. The optional
+v3 expert was unavailable in the isolated dqn copy. This remains visible and
+synthetic updates do not exercise expert guidance; no external v3 package is
+added to hide that limitation.
+
+The revised classifier/diagnostics have CPU evidence only until a separately
+authorized GPU rerun. Full-agent snapshot capture/reload, real MAME/TCP action
+deadlines, whole trainer boot, full-size storage I/O, compiled/graph paths and
+the combined parallel proposal remain unvalidated by this harness. The separate
+FRAME_HTTP_INTEGRATION.txt documents actual private CPU wire/HTTP boundary
+coverage with fake inference; it does not turn this failed GPU run into a pass.

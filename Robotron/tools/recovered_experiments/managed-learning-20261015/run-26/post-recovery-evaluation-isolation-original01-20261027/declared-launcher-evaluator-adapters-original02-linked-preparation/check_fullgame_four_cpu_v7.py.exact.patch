@@ -1,0 +1,22 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/check_fullgame_four_cpu_v7.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original02-linked-preparation/check_fullgame_four_cpu_v7.py
+@@ -6,6 +6,7 @@
+ import json
+ import os
+ from pathlib import Path
++LOCAL=Path(__file__).resolve().parent
+ import subprocess
+ import sys
+ import tempfile
+@@ -37,9 +38,9 @@
+     engineering=prepared['engineering_only']
+     require(engineering is job['engineering_only'],'CPU/native engineering domain differs')
+     if not engineering:
+-        producer=load('_fullgame_exact_production_eligibility',Path(__file__).with_name('prepare_fullgame_study_v6.py'))
++        producer=load('_fullgame_exact_production_eligibility',LOCAL/'prepare_fullgame_study_v6.py')
+         producer.eligible_screen(prepared['screen_assessment'],prepared['reference_epoch'],h)
+-    controller=load('_fullgame_exact_controller',Path(__file__).with_name('control_fullgame_rounds_v6.py'))
++    controller=load('_fullgame_exact_controller',LOCAL/'control_fullgame_rounds_v6.py')
+     native=load('_fullgame_actual_native',h.checked(cases[0]['runtime']))
+     reviewer=load('_fullgame_actual_reviewer',h.checked(job['reviewer']))
+     contract=native.round_contract()

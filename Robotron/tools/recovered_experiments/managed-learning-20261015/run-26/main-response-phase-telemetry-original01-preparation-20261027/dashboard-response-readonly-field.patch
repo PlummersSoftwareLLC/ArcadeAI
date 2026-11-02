@@ -1,0 +1,20 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/metrics_dashboard.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/main-response-phase-telemetry-original01-preparation-20261027/sources/metrics_dashboard.py
+@@ -758,9 +758,17 @@
+         # The shared low-rate read is cumulative and never drains producer
+         # counters. Keep it outside metrics.lock and model/inference locks.
+         pipeline = pipeline_snapshot(self.agent)
++        response_pipeline = dict(schema='robotron-socket-response-pipeline-v1', available=False)
++        try:
++            response_server = getattr(self.metrics, 'global_server', None)
++            response_getter = getattr(response_server, 'response_timing_snapshot', None)
++            if callable(response_getter): response_pipeline = response_getter()
++        except Exception as exc:
++            response_pipeline['observer_error'] = str(exc)[:256]
+         return {
+             "ts": now,
+             "host_pipeline": pipeline['pipeline'],
++            "socket_response_pipeline": response_pipeline,
+             "bank_persistence": pipeline['bank'],
+             "pipeline_snapshot_age_s": pipeline['age_s'],
+             "pipeline_read_error": pipeline['pipeline_read_error'],

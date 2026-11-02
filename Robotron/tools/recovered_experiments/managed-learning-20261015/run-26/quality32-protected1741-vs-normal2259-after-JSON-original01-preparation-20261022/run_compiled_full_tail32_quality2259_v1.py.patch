@@ -1,0 +1,24 @@
+--- run_compiled_full_tail32_quality_v1.py
++++ run_compiled_full_tail32_quality2259_v1.py
+@@ -1,4 +1,4 @@
+-"""One original certified-start quality32 cohort for the precommitted1741/2202 pair.
++"""One original certified-start quality32 cohort for the precommitted1741/2259 pair.
+ 
+ Fixed5400s admission/9000s timeout-from-enter, unchanged float32 compiled backend,
+ all32 original startup certificates and every admitted full tail. At least50
+@@ -28,12 +28,12 @@
+ SLOTS=tuple(range(4096,4128))
+ PORTS={slot:20000+slot-4096 for slot in SLOTS}
+ LEASE=Path('/dev/shm/robotron-snapshot-smoke-gpu0.lock')
+-PAIR_SHA='79ae0a32e8d924d36517dbd76e6b97bb34309f695d0b913a28da514b3a269b90'
++PAIR_SHA='ad0ff9558602611227651bdf472ca4d2685d7038711c934dbe123142f6639d6e'
+ POLICIES={
+     'reference':dict(sha256='e19557810df3e2c18a6f64660bde6cb300eb597967f9074dc4aff6e42a1f0b83',
+         clocks=dict(learner_frame_count=1741229950,training_steps=7128160,optimized_samples=27621148672,frame_count=3434514217)),
+-    'candidate':dict(sha256='7dc8b12238ae8969eb5e66d3c6ff9769338496db697f49e826f71dfab1d2a744',
+-        clocks=dict(learner_frame_count=2202676281,training_steps=8863417,optimized_samples=34728761344,frame_count=4322965788)),
++    'candidate':dict(sha256='c97f7d82118c6d743d3ce9649a709ef49f93946e349f55c5e9ab47339a27af9b',
++        clocks=dict(learner_frame_count=2259572926,training_steps=9077049,optimized_samples=35603798016,frame_count=4432345420)),
+ }
+ ROLES={'R1':'reference','C1':'candidate','R2':'reference','C2':'candidate'}
+ 

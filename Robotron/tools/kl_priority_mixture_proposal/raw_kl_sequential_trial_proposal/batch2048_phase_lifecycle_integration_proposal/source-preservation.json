@@ -1,0 +1,34 @@
+{
+  "adapter_AST_identical_functions": [
+    "require",
+    "four",
+    "triple",
+    "expected_start",
+    "request_identity",
+    "publish_request",
+    "zero_replay",
+    "clock_max",
+    "load_v4",
+    "archive_metadata",
+    "phase_metadata",
+    "source_state"
+  ],
+  "before_founder_expected_start_preserved": true,
+  "original_adapter": {
+    "bytes": 62575,
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_one_trial_installed_ce_revision2_proposal/run_raw_kl_transition.py",
+    "sha256": "fd4e9d7b9b562c2bd6c663b9651d02b4167a3f552fcacb71cb8571440f3e9bf5"
+  },
+  "original_owned": {
+    "bytes": 62971,
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision4/run_live8_maintenance.py",
+    "sha256": "fdf7c8bfb123b494252acf83d724a51acda95bb7f00877eace28b60d0377ed18"
+  },
+  "owned_changed_functions": [
+    "Runtime.initial",
+    "main"
+  ],
+  "production_sources_edited": false,
+  "scope": "Standalone source and callsite comparison, not proof of actual runtime method outcomes.",
+  "status": "SOURCE_AST_AND_BYTES_ONLY_NOT_EXECUTION"
+}

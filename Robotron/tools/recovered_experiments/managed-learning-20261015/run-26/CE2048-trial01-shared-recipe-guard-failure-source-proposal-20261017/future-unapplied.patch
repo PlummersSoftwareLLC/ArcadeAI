@@ -1,0 +1,58 @@
+--- a/Robotron/tools/inference_worker_affinity.py
++++ b/Robotron/tools/inference_worker_affinity.py
+@@ -317,7 +317,9 @@
+         require(self.thread_identity(binding["thread"]["tid"]) == binding, "Trainer/thread identity changed")
+         return sorted(os.sched_getaffinity(binding["thread"]["tid"]))
+ 
+-    def bindings(self):
++    def bindings(self, *, expected_batch_size=4096):
++        require(type(expected_batch_size) is int and expected_batch_size in (2048, 4096),
++                "Expected recipe batch must be explicitly 2048 or 4096")
+         self.no_sidecars()
+         worker = self.thread_identity()
+         self.worker = worker
+@@ -325,7 +327,8 @@
+         environment = dict(item.split("=", 1) for item in (proc / "environ").read_bytes().decode().split("\0") if "=" in item)
+         selected = {key: value for key, value in environment.items()
+                     if key.startswith(("DQN_", "ROBOTRON_")) or key == "CUDA_VISIBLE_DEVICES"}
+-        require(all(selected.get(key) == value for key, value in ENV_RECIPE.items()), "Trainer environment differs from selected recipe")
++        expected_recipe = dict(ENV_RECIPE, DQN_BATCH_SIZE=str(expected_batch_size))
++        require(all(selected.get(key) == value for key, value in expected_recipe.items()), "Trainer environment differs from selected recipe")
+         self.csv_path = Path(selected["ROBOTRON_RUN_DIR"]) / "training.csv"
+         require(re.fullmatch(r"robotron-managed-[A-Za-z0-9_.-]+-fleet\.service", self.fleet_unit), "Unexpected fleet unit name")
+         cgroup = subprocess.run(["systemctl", "--user", "show", self.fleet_unit, "--value", "-p", "ControlGroup"],
+--- a/Robotron/tools/parallel_state_fill_trial.py
++++ b/Robotron/tools/parallel_state_fill_trial.py
+@@ -94,6 +94,10 @@
+         self.restart_in_progress = False
+         self.trainer_cgroup = None
+         self.owned_fleet_cgroup = None
++
++    def recipe_batch_size(self):
++        """Existing callers keep the selected 4096 baseline."""
++        return 4096
+ 
+     def no_sidecars(self):
+         metrics.Host(0, self.fleet_unit).no_sidecars()
+@@ -164,7 +168,7 @@
+         require(all(self.trainer_unit not in fleet[key].split() for key in ("Requires", "BindsTo", "PartOf")), "Fleet would stop/restart with trainer")
+         require(trainer["ControlGroup"].endswith("/" + self.trainer_unit), "Unexpected trainer cgroup")
+         mh = metrics.Host(int(trainer["MainPID"]), self.fleet_unit)
+-        binding = mh.bindings()
++        binding = mh.bindings(expected_batch_size=self.recipe_batch_size())
+         for actor in binding["actors"]:
+             if self.actor_stopped(actor):
+                 require(actor in self.paused,"An actor was already stopped outside this trial")
+--- a/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_reviewed2_proposal/run_CE_batch_transition.py
++++ b/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_reviewed2_proposal/run_CE_batch_transition.py
+@@ -541,6 +541,10 @@
+             self.banks=base.load_module(job['helper_pins']['bank_state']['path'],'raw_kl_bank_state')
+             outer=self
+             class Host(self.primitives.LiveHost):
++                def recipe_batch_size(self):
++                    require(outer.phase in ('before', 'after'), 'Unknown owned recipe phase')
++                    key = 'before_batch_size' if outer.phase == 'before' else 'after_batch_size'
++                    return job['batch_boundary'][key]
+                 def runtime_dropin(self):return Path(job['original_dropin']['path'])
+                 def no_sidecars(self):super().no_sidecars();outer.exclusive()
+             self.host=Host(job['trainer_unit'],job['fleet_unit']);self.phase='before'

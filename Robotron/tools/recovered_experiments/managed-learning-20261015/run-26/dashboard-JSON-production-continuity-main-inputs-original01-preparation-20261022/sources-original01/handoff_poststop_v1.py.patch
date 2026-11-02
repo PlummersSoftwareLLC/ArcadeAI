@@ -1,0 +1,19 @@
+--- deployed/handoff_poststop_v1.py
++++ proposed/handoff_poststop_v1.py
+@@ -512,14 +512,14 @@
+         self.absent_original()
+         self.fleet_held()
+         l.checked(saved['checkpoint'])
+-        source = l.GAME/'Scripts/dqn/socket_server.py'
++        source = l.GAME/'Scripts/dqn/metrics_dashboard.py'
+         source_pin = l.full_pin(source)
+         require(source_pin['sha256'] == l.OLD_SOCKET_SHA,'Original parser changed before installation')
+         changed = {str(source),str(l.CONTROL),str(l.MODEL/'game_settings.json')}
+         for path,sha in b.main['held_hashes'].items():
+             if path not in changed:
+                 require(l.full_pin(path)['sha256'] == sha,'An unselected held input changed: '+path)
+-        installed = l.atomic_owned_replace(source,source_pin,l.checked(b.prepared['proposed_socket']),suffix=b.job['case'])
++        installed = l.atomic_owned_replace(source,source_pin,l.checked(b.prepared['proposed_source']),suffix=b.job['case'])
+         require(installed['sha256'] == l.NEW_SOCKET_SHA,'Selected parser bytes were not installed')
+         settings = l.MODEL/'game_settings.json'
+         l.atomic_owned_replace(settings,l.full_pin(settings),l.checked(self.config['settings_archive']),suffix=b.job['case'])

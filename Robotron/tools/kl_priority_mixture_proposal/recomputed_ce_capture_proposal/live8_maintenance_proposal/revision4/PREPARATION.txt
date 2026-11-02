@@ -1,0 +1,129 @@
+LIVE8 MAINTENANCE REVISION4 — SOURCE ONLY, NOT EXECUTED BY AUTHORS
+
+This NEW sibling preserves all v1/v2/v3 source bundles, their real CPU-test
+results/refusals, the actual reviewed3 maintenance failure, and the separate
+successful manual forward recovery. Revision3's original failed result remains
+FAILED with zero captures and zero installed overlays. No experimental retry,
+live8 adoption, checkpoint rewind or numerical success is claimed here.
+
+The reviewed3 operation stopped its exact owned trainer normally, then failed
+at the first post-stop static check because game_settings.json had a new inode,
+mtime and ctime. Its 141 bytes and SHA35ad2fd7cf6a0126ce267e8835620ed21eb8cbe1ccbbaa63cb78cce5f3eae69c
+were unchanged. Pinned config.py f2794754 save writes a sibling .tmp and
+os.replace; pinned main.py61fa053e calls game_settings.save during normal
+shutdown. This is a source-supported expected same-byte identity replacement,
+not evidence of changed difficulty/recipe. Recovery previously had no retired
+owner until a stopped-latest CPU check passed, so this earlier failure required
+manual recovery. Root later restored only the newest independently CPU-verified
+stopped latest under original source-before; its healthy normal boot is separate
+from this proposal and proves no capture/first-PRE/coherent-anchor result.
+
+Only two related boundaries change from5059f557 revision3:
+ 1. A separate settings lifecycle, never a blanket relaxed immutable PIN.
+ 2. Explicit retirement and CPU-attempt tracking before post-stop observations.
+Original capture/learning/graph/bank/lease/source transaction/actor/CPU verifier/
+boot resolver/venv validation/timeout/outcome predicates remain in force.
+
+EXACT ROOTJOB ADDITION
+ settings_lifecycle = {
+   initial: PIN for the actual fresh model_dir/game_settings.json,
+   parsed_values: {
+     start_advanced:false,start_level_min:1,epsilon_pct:-1,expert_pct:-1,
+     auto_curriculum:false,difficulty:5
+   },
+   policy:"same_bytes_after_owned_stop_only"
+ }
+PIN format is unchanged: path,sha256,bytes,identity with device/inode/bytes/
+mtime_ns/ctime_ns/mode/uid/nlink (no atime). Capture the ACTUAL current mode;
+initial mode must be owned single-link0644 or0664. Exact actual JSON key set and
+types are required: integer0 does not substitute for booleanfalse.
+
+EXCLUDE ONLY game_settings.json from static_pins. Keep every unrelated source,
+helper, unit, control, completed-save slot, library and provenance PIN exact.
+The lifecycle.initial full PIN is independently checked at read_job and Runtime
+construction and its SHA must join before.bindings.control_hashes. Runtime.static
+separately checks lifecycle.current's full PIN on every pass. Existing content
+bindings still require the same settings SHA; no boot environment/source/control
+hash is weakened. Verifier context continues to use unchanged model-package files
+and ARCHIVED provenance/control, not a mutable live settings inode.
+
+OWNED STOP AND SETTINGS TRANSITION
+stop_owned registers its full trainer ID before calling the reviewed LiveHost
+stop. confirm_retired requires the registered candidate to match known_trainer
+and an identity already registered by LiveHost in retired_trainers. It then
+requires all retired PIDs absent, exact unit inactive/MainPID0 and empty owned
+cgroup. Only then is retired_owner recorded, BEFORE settings adoption/checks or
+the first CPU job. Unknown/replaced processes are never adopted or stopped.
+
+Settings adoption brackets its file observation with those absence checks.
+Bytes/SHA/parsed values/device/mode/uid/nlink must equal the precommit; the new
+full identity is published in create-only settings-after-stop-PID-TICKS.json
+before becoming trusted in memory. The receipt binds retired_trainer,
+source_phase before|after, original/previous/replacement PINs and parsed values.
+Handled signals are blocked through publication and in-memory transition.
+At most one transition per registered PID/start is permitted; later verification
+cannot adopt another unknown same-byte writer for that retirement. Any changed
+bytes, formatting, values, mode, owner/link policy, symlink, lost file or failed
+durable publication fails closed. Other static files never inherit this rule.
+
+FIRST CPU CHECK VS NO RETRY
+A confirmed retired_owner is distinct from last_retired (which still means a
+checkpoint actually passed verification). A post-stop error BEFORE any possible
+CPU launch may forward-recover by performing that owner's FIRST stopped-latest
+copy/CPU verification. stdout/stderr must open before the in-memory CPU ledger
+is marked started immediately before subprocess.run. Any possible-start record,
+nonzero/timeout, missing/invalid result or interrupted attempt forbids another
+CPU check for that retirement. A successful immutable proof may be reused only
+if the newest latest source PIN is unchanged. Recovery still boots only whole
+known source-before, capture OFF, Restart=no through normal bank/graph readiness;
+it never retries capture or automatically boots insurance/protected checkpoints.
+Inactive PID0 after a known requested failed start can reuse an unchanged proven
+latest; ActiveState=failed remains explicitly manual. All exact possibly paused
+actors still receive independent SIGCONT attempts through every error.
+
+FRESH WINDOW PREREQUISITES — NOT ACTUAL VALUES IN THIS ARTIFACT
+Root must first release any exclusive competing window and stop ONLY its exact
+owned waiting448 helper at the future boundary, retaining its cancelled-wait
+provenance and original target452629023/deadline. Never rearm completed384.
+The actual original insured3032848 is now retired after root's manual normal
+restart. Current root-reported owner4098959 is NOT adopted through this proposal.
+Acquire NEW unique current-owner model-only insurance, independently CPU-verify
+it and retain its exact successful execution/terminal/result context. Build a
+NEW rootjob, output, capture directory and service with fresh actual identities,
+settings initial PIN, recipe/source/control/actor/worker masks and current held
+completed request. No old rootjob/insurance/session is resumed. Initial
+insurance trainer equality remains strict; only the already-reviewed narrow
+controller-requested adopted restart lineage is permitted during later recovery.
+An explicit alternative manual-restart-lineage design would require separate
+source review and is not implemented here.
+
+The five OVERLAY inputs remain frozen recomputed_ce_capture_proposal/revision2
+(manifest356b8b...), not this maintenance revision4 folder. The original loss/
+four-output compile/math remain unchanged. Ring helpere0c69 and its11 tests20f43
+are byte-identical copies; nine storage extents retain their exact source-backed
+preallocation rule. Actual settings transitions give no replay RAM equality,
+coherent stop-tail/RNG/actor anchor or learning-quality claim.
+
+ROOT-OWNED TEST AND OPERATION HANDOFF (NOT AUTHOR EXECUTION)
+Selected51 stdlib methods: previous43 plus8 new lifecycle/retirement contracts.
+Meaningful additions cover atomic same-byte replacement, initial full identity,
+typed values and bytes/mode/link failures, durable-publication failure, one
+transition only, unrelated immutable files, actual Runtime.confirm_retired with
+known/registered/absent proof and owner retention on publication fault, preCPU
+failure followed by a FIRST CPU forward recovery, and invalid started proof with
+no retry even if no nonzero-exit failure flag was set. No NumPy/Torch imports or
+real service/process/signal operations are in these test paths.
+
+Root future bounded stdlib argv from REPO:
+ python3 -B -m unittest \
+ Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_maintenance_proposal.revision4.test_live8_maintenance \
+ Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_maintenance_proposal.revision4.test_bank_state_revision2
+
+Root future maintenance retains Type=exec/RemainAfterExit=yes, CPUQuota200%,
+MemoryMax4G/TasksMax128, RuntimeMaxSec4800, KillSignalSIGINT/TimeoutStopSec900/
+SendSIGKILL=no; detached3s timer and carrier gone before trigger. Inner stop240,
+CPU120, readiness600 and capture600 bounds are unchanged. Preserve SAME original
+invocation/fullshow/cat/journal/actual exit BEFORE explicitly releasing owned
+terminal units. Root controls any watcher rearm with original target/deadline.
+Literal default remains read-free PLAN_ONLY. No source artifact authorizes
+execution or changes any running trainer, actors, checkpoint, source or recipe.

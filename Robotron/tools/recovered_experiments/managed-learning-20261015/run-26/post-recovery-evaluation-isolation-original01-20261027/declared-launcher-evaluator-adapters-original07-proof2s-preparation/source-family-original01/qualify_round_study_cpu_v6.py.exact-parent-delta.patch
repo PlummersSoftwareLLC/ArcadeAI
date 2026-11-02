@@ -1,0 +1,13 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original06-fresh-study-namespaces-preparation/source-family-original02-unit-authority/qualify_round_study_cpu_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original07-proof2s-preparation/source-family-original01/qualify_round_study_cpu_v6.py
+@@ -208,7 +208,9 @@
+                 else:
+                     proof=native.round_contract().validate_launch(subject,ctx,h)
+                 self.assertTrue(proof['raw_API_and_TCP_and_retirement_snapshots_replayed'])
+-                self.assertTrue(proof['legacy_500ms_evidence_and_projection_gaps_verified'])
++                self.assertTrue(proof['accepted_evidence_and_projection_gaps_verified'])
++                self.assertEqual(proof['verified_maximum_gap_s'],2.0)
++                self.assertEqual(proof['proof_gap_contract'],'robotron-main-proof-gap-2s-v1')
+                 self.assertEqual(proof['full_main_input_count'],247)
+             self.assertEqual(proof_counts,dict(fresh=1,reused=3))
+     tests=load('_deadline_actual_CPU_NEW_native_chain_tests',h.checked(job['new_native_chain_tests']))

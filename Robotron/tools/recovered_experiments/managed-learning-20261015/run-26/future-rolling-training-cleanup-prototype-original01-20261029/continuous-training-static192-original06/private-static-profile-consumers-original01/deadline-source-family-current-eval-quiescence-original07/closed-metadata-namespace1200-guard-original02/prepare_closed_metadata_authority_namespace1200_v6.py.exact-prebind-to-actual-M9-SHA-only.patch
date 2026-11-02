@@ -1,0 +1,13 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-namespace1200-guard-original02/unselected-prebind-source-snapshots/prepare_closed_metadata_authority_namespace1200_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-namespace1200-guard-original02/prepare_closed_metadata_authority_namespace1200_v6.py
+@@ -12,8 +12,8 @@
+ 
+ ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ LOCAL = Path(__file__).resolve().parent
+-SOURCE_CONTRACT_SHA = None
+-SHIM_SHA = None
++SOURCE_CONTRACT_SHA = '33397c4b09c79fcfd4bfec1249105f4ff3d841c86a5e5d73f19d0a5edc44df9a'
++SHIM_SHA = 'b1787eda4fac993693c2abe0c410faefef03b3ca833d9f08fc0a21b3362a779f'
+ HELPERS_SHA = '2b6902933b502ac20dacbd444fbf786315d6c960fcad1d5b5bf223dd569708c1'
+ 
+ 

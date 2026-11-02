@@ -1,0 +1,129 @@
+{
+  "status": "SOURCE_ONLY_UNSELECTED_UNAPPLIED_UNEXECUTED",
+  "base_sources": {
+    "replay_buffer.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/replay_buffer.py",
+      "sha256": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f",
+      "bytes": 113613,
+      "identity": {
+        "device": 2304,
+        "inode": 79724825,
+        "bytes": 113613,
+        "mtime_ns": 1792224696813330592,
+        "ctime_ns": 1792224696813836930,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "agent.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/agent.py",
+      "sha256": "865a0df717b39951b7f7c516e4a962e3d48cf4d3dc11295ff266e58653e6c74b",
+      "bytes": 98429,
+      "identity": {
+        "device": 2304,
+        "inode": 79724997,
+        "bytes": 98429,
+        "mtime_ns": 1792239930859030766,
+        "ctime_ns": 1792239930859896369,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "socket_server.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py",
+      "sha256": "f44ddfe31408b77b6d622e1d4ec4cda60a03999dc984d9e11b5aeac38911a9ed",
+      "bytes": 140517,
+      "identity": {
+        "device": 2304,
+        "inode": 79696030,
+        "bytes": 140517,
+        "mtime_ns": 1792306967914113042,
+        "ctime_ns": 1792306967928089640,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "patch": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/unapplied.patch",
+    "sha256": "98059a284d3ce053c4064665f4d278c107e68bfbca491529195cf50a2e5e1197",
+    "bytes": 51573,
+    "identity": {
+      "device": 2304,
+      "inode": 81297752,
+      "bytes": 51573,
+      "mtime_ns": 1792334662634453355,
+      "ctime_ns": 1792334662635214285,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "candidates": {
+    "replay_buffer.py": {
+      "sha256": "6eb646a86c37cd033ea177d4644d333341eb8c60e43fdb91f44242adf885af6e",
+      "bytes": 119748
+    },
+    "agent.py": {
+      "sha256": "eaf7f9f8454b87fb4e27b766f227b142118af9154d8680efe0d6921237ea53a5",
+      "bytes": 99107
+    },
+    "socket_server.py": {
+      "sha256": "7566648003f5458e2980c9049b129549d03adf3c06b9f14a6f63bda4621d625b",
+      "bytes": 142426
+    }
+  },
+  "forward_exact": true,
+  "reverse_exact": true,
+  "source_paths_changed": [
+    "replay_buffer.py",
+    "agent.py",
+    "socket_server.py"
+  ],
+  "no_new_runtime_source": true,
+  "unrelated_delayed_PER_path_unchanged": true,
+  "author_AST": false,
+  "author_compile": false,
+  "author_imports": false,
+  "author_tests": false,
+  "author_runtime": false,
+  "draft_history": {
+    "unapplied.patch": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/draft-history-stop-serialization-20261018/unapplied.patch",
+      "sha256": "69215e64f8f482173f6640a913835f1792d0eb93962a7d952104ae00088aa71c",
+      "bytes": 50204,
+      "identity": {
+        "device": 2304,
+        "inode": 81297750,
+        "bytes": 50204,
+        "mtime_ns": 1792334662620767239,
+        "ctime_ns": 1792334662620767239,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "source-preservation.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/draft-history-stop-serialization-20261018/source-preservation.json",
+      "sha256": "712b4ff16ffa5baf435ade1fb22875973179e9fc12d17552a685888abb85be49",
+      "bytes": 2764,
+      "identity": {
+        "device": 2304,
+        "inode": 81297751,
+        "bytes": 2764,
+        "mtime_ns": 1792334662623332941,
+        "ctime_ns": 1792334662623332941,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "additional_finite_source_corrections": [
+    "Serialize concurrent stop callers using stop-only lock; join prefetched consumer before caller drain; no hot-path lock added.",
+    "Unknown/non-receipted episode history still clears after refusal without assigning unsupported complete attribute."
+  ]
+}

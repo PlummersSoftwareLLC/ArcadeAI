@@ -1,0 +1,46 @@
+{
+  "schema": "robotron-firstCE-coefficient-future-plan-v1",
+  "actual_test_execution": null,
+  "actual_root_record": null,
+  "actual_resume_owner": null,
+  "actual_observation": null,
+  "guards": {
+    "argv": [
+      "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+      "-Xgil=0",
+      "-I",
+      "-B",
+      "-c",
+      "import sys,unittest;sys.path.insert(0,'/home/dave/source/repos/ArcadeAI/Robotron');m=__import__('tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.coefficient_observation_proposal.test_coefficient_observation',fromlist=['CoefficientContracts']);s=unittest.defaultTestLoader.loadTestsFromTestCase(m.CoefficientContracts);assert s.countTestCases()==15;raise SystemExit(not unittest.TextTestRunner(verbosity=2).run(s).wasSuccessful())"
+    ],
+    "environ": {
+      "CUDA_VISIBLE_DEVICES": "",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "OMP_NUM_THREADS": "2",
+      "OPENBLAS_NUM_THREADS": "2",
+      "MKL_NUM_THREADS": "2"
+    },
+    "unset_environment": [
+      "LD_PRELOAD",
+      "PYTHONPATH"
+    ],
+    "resource_proposal": {
+      "CPUQuota": "200%",
+      "MemoryMax": "1G",
+      "MemorySwapMax": 0,
+      "TasksMax": 64,
+      "RuntimeMaxSec": 120
+    },
+    "requires": "Root fresh source-pin preflight and retained original-unit archive/release. No broad discover/import of learner."
+  },
+  "future_opt_in": {
+    "DQN_COEFFICIENT_OBSERVATION_DIR": "<NEW_ABSOLUTE_ce-coefficients_DIRECTORY>",
+    "DQN_COEFFICIENT_OBSERVATION_RECORD": "<ACTUAL_OWNED_READONLY_ROOT_RECORD_JSON>",
+    "DQN_COEFFICIENT_OBSERVATION_RECORD_SHA256": "<ACTUAL_ROOT_RECORD_SHA256>",
+    "unset": [
+      "DQN_RECOMPUTED_CE_CAPTURE_DIR",
+      "DQN_EXECUTED_CE_TRACE_DIR"
+    ],
+    "requires": "FULL currentquality/audits/cleanup/sourcefreeze release; separate root-owned controlled resume/newowner with authentic phase+newestload proof. This is not a trainer invocation or live authorization."
+  }
+}

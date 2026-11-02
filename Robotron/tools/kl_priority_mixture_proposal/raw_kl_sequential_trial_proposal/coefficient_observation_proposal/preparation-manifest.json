@@ -1,0 +1,139 @@
+{
+  "schema": "robotron-firstCE-coefficient-observation-preparation-v1",
+  "status": "FROZEN_SOURCE_ONLY_UNAPPLIED_TESTS_UNEXECUTED",
+  "files": {
+    "DESIGN.txt": {
+      "sha256": "a4222bd1cca1a03b50eefbfa092e9d0c07484ba8b1b3b1ff77acc3a8ce7ba43d",
+      "bytes": 5054,
+      "mode": "0o444"
+    },
+    "PREPARATION.txt": {
+      "sha256": "5cd6f0b7ca5e0ed59e7f208b0314ac6b4ae75663d3d57fda4bfcd56476ac9553",
+      "bytes": 1917,
+      "mode": "0o444"
+    },
+    "agent.py": {
+      "sha256": "256d3403956bbe0395f891f97227cef56cd9554f306d6d9290e92cdd58d60fce",
+      "bytes": 99471,
+      "mode": "0o444"
+    },
+    "coefficient_observation.py": {
+      "sha256": "961dd31e32c359e8eebfc2656ce905191099c635f2d21884de532dbdd495c44d",
+      "bytes": 21175,
+      "mode": "0o444"
+    },
+    "future-argv.json": {
+      "sha256": "ab6e5c906c561b7c919ac443c11968198934227a634bc927f4cc338fd94c54ff",
+      "bytes": 1943,
+      "mode": "0o444"
+    },
+    "root-record.template.json": {
+      "sha256": "d1c39aa48a3a6485c48c0a737c9589113e5c77100a528e7580b48887dfd1e5e6",
+      "bytes": 1145,
+      "mode": "0o444"
+    },
+    "source-lock.json": {
+      "sha256": "54ce56b49efded658af7e3a0bdacb5f7fbec907c8157d7d6c5cfb4892f81580b",
+      "bytes": 3193,
+      "mode": "0o444"
+    },
+    "test_coefficient_observation.py": {
+      "sha256": "14cc8d5dc4a84519cd698ba721719159ddb74f9b049e2ba06ac5bf4bca338335",
+      "bytes": 17510,
+      "mode": "0o444"
+    },
+    "training.py": {
+      "sha256": "9347d095235a1aed1c1e0ea3eb6bf22ba5aff5c5c6e9bdc13e3a736d06e4a063",
+      "bytes": 35243,
+      "mode": "0o444"
+    },
+    "unapplied.patch": {
+      "sha256": "a8e726bcfdd42f6ba7f8171355f812781f43784cda64fff02420691ba8241785",
+      "bytes": 24392,
+      "mode": "0o444"
+    }
+  },
+  "base_sources": {
+    "agent.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/agent.py",
+      "sha256": "865a0df717b39951b7f7c516e4a962e3d48cf4d3dc11295ff266e58653e6c74b",
+      "bytes": 98429
+    },
+    "training.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/training.py",
+      "sha256": "90b847856f810cb4f52513a4bd0625b2d15d4801107bff398060faae25bc4be4",
+      "bytes": 35009
+    },
+    "loss_kernel.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/loss_kernel.py",
+      "sha256": "23eb8fc0d8409c9f31ef26ec4596da9c2257e3985abbbfa7d5fbdcb337e21f67",
+      "bytes": 9373
+    },
+    "config.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/config.py",
+      "sha256": "19abcbde4d08cf8465b82185ac6dd52eb8965adb8611584e0677c4c7ff21d1fd",
+      "bytes": 117528
+    },
+    "priority_phase.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/priority_phase.py",
+      "sha256": "ee3c0d02bc1eab55e92ffd605c3736fe5a0ef905a8a8ee242c687301ea2b7c5b",
+      "bytes": 8049
+    },
+    "replay_buffer.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/replay_buffer.py",
+      "sha256": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f",
+      "bytes": 113613
+    },
+    "prefetch.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/prefetch.py",
+      "sha256": "02871bc515ba23f8d353131e9b6b6b4e390692803578febee7c8d643dd308a27",
+      "bytes": 15674
+    },
+    "model.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/model.py",
+      "sha256": "bcd174f05610c6f773ca8c53f9155206eba4f7b6a11383516ddd71f3b513eeb4",
+      "bytes": 42429
+    },
+    "learning_exposure.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/learning_exposure.py",
+      "sha256": "30d9191e9fc845d80e52a7a891244fcf0c7041cf60529f6559b15e6d47ac5c7f",
+      "bytes": 9123
+    }
+  },
+  "changed_source_paths": [
+    "agent.py",
+    "training.py",
+    "coefficient_observation.py"
+  ],
+  "authored_methods": 15,
+  "exact_guard_selection": "test_coefficient_observation.CoefficientContracts",
+  "guard_names": [
+    "test_actual_CPU_owned_coefficients_CE_phase_clocks_and_genuine_admission",
+    "test_natural_AMPskip_retained_complete_nonfinite_gradnorm_no_replacement",
+    "test_real_pre_loss_positional_tuple_and_device_loss_arguments_are_never_accessed",
+    "test_actual_existing_host_bridge_finishes_ticket_then_records_packed_CPU_only",
+    "test_wrong_draw_weights_small_fields_origins_or_bank_sentinels_reserve_first_then_refuse",
+    "test_stale_released_foreign_prefetch_owner_and_phase_mismatch_refuse",
+    "test_exit_epoch_or_unfinished_ticket_and_unsupported_mode_invalidate",
+    "test_CPU_arrays_are_copied_and_no_slot_alias_survives_end",
+    "test_original_sampler_error_is_not_replaced_or_resampled",
+    "test_original_wrapper_failure_releases_lease_even_if_all_observer_IO_fails",
+    "test_missing_packed_vector_or_nonfinite_CE_is_invalid_not_replaced",
+    "test_total_and_row_byte_bounds_refuse_before_file_publication",
+    "test_root_record_requires_readonly_exact_digest",
+    "test_default_loss_optimization_packing_and_native_update_body_is_byte_unchanged",
+    "test_defaultOFF_startup_has_no_observer_import_or_creation_and_flags_conflict_first"
+  ],
+  "source_peer": {
+    "agent": "runtime_review",
+    "essential_draft_status": "SOURCE_ONLY_PASS",
+    "final_exact_receipt": null
+  },
+  "actual_test_execution": null,
+  "actual_installation": null,
+  "actual_resume_owner": null,
+  "actual_root_record": null,
+  "actual_observation": null,
+  "no_floor_selected": true,
+  "qualification_pass": false
+}

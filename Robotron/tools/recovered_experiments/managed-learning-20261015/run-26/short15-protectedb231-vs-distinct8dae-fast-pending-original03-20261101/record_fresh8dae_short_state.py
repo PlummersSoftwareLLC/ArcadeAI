@@ -1,0 +1,36 @@
+from pathlib import Path
+import importlib.util,json,os,sys,time
+G=Path('/home/dave/source/repos/ArcadeAI/Robotron');B=G/'logs/managed-learning-20261015/run-26';F=B/'short15-protectedb231-vs-distinct8dae-fast-pending-original03-20261101';P=B.parent/'state.json';D=G/'DELL_SETUP.md';U=G/'html/next-policy-evaluation.json'
+spec=importlib.util.spec_from_file_location('_recFreshShort8',B/'fleet-cleanup-queue8192-fullstate-maintenance-original01-20261101/sources/prepare_current_continuous_preservation_header_v3.py');h=importlib.util.module_from_spec(spec);spec.loader.exec_module(h)
+phase=sys.argv[1];num={'prepared':182,'running':183}[phase];old=P.read_bytes();db=D.read_bytes();ub=U.read_bytes();s=json.loads(old);g=s['optimization_goal'];prior=s['current_optimization_recovery_index'];assert prior['sha256']=='47140985c0f93b107d0b982f90395f75f5f1f577cc0ed951b266bdad12740e64'if num==182 else'original182.json'in prior['path']
+pre={k:h.put(F/(f'{k}-before-index{num}.exact'+suffix),raw)for k,suffix,raw in [('canonical','.json',old),('DELL','.md',db),('public','.json',ub)]};small=lambda p:{k:p[k]for k in ['path','sha256','bytes']}
+prepared=h.metadata(F/'prepared-with-review.json')[0];cpu=h.metadata(F/'CPU-preflight-and-additional-cadence-contracts-original01.json')[0];live=h.metadata(F/'positive-live-preflight-original01.json')[0];policy=h.metadata(F/'prospective-monitor-readiness-and-actual-branch-review-policy.json')[0]
+assert json.loads(Path(cpu['path']).read_text())['checks_total']==33 and json.loads(Path(live['path']).read_text())['bind_only_ports']['status']=='PORTS_FREE_BEFORE_LAUNCH'
+wait=None;owner=None
+if phase=='running':
+ o=json.loads((F/'Root-controller-runtime-original01/owner.json').read_text());birth=lambda pid:int(Path('/proc',str(pid),'stat').read_text().rsplit(')',1)[1].split()[19]);assert birth(o['pid'])==o['birth'];owner=o;np=F/'R1/controller-execution-original01/root-original-identity.json'
+ if np.exists():
+  n=json.loads(np.read_text());assert birth(n['pid'])==n['starttime_ticks'];owner=dict(outer=o,native=n)
+ wait=dict(kind='FRESH_ORIGINAL_SHORT15_B231_VS_DISTINCT8DAE',tool_session=int(sys.argv[2]),outer_pid=o['pid'],outer_birth=o['birth'],directory=str(F),original_attempt=1,no_retry=True)
+summary=('Prepared fresh distinct8dae vs protectedb231 15minute32game-per-arm screen;33CPU preflight checks and2 current Main physical/TCP samples independently replayed, all33privateports free, GPU0idle, exactfutureunitsabsent. Native differs only pendingwait0.2s vs5; controller onlynewnamespace/nativepath; all health/score/cleanup kernels exact. Added independent <5s next-observation gate on any actual pending sample; no pending means no livebranchclaim, not missing actual score validation. Originalengineering87673 closed0/49stable0pending criteriaunchanged; failed77f9R1 remainsinvalid. Earlier unstarted drafts preserved. Start new originalR1/C1 once; no promotion/statisticalconfidence/fullgameverdict fromshortendpoint.'if phase=='prepared'else'Original fresh b231-vs-distinct8dae 15minute-per-arm32firstgame screen isrunning. Follow same actual outer/native process and tool handle; no retry on observationtimeout. Independent original reviews include every existing startup/score/Mainphysical/cleanup predicate plus extra actualpendingcadence. Main155TRAIN/remainingEVAL continues; GPU0isolated. No historical scores, promotion, or fullgameconfidence claim. After actualoriginal closes inspect separate15minute endpoint and ownedclosure, then select fresh fullgames/nextlearning step. SavedLFC5309060592 research milestone requires rebind before capture.')
+ip=h.put(F/f'fresh-distinct8dae-short15-{phase}-index-original{num}.json',dict(schema='robotron-current-optimization-recovery-index-v1',status='FRESH_DISTINCT8DAE_SHORT15_'+phase.upper(),observed_unix_s=time.time(),prior_index=prior,preimages=pre,prepared=small(prepared),CPU33=small(cpu),actual_physical_preflight=small(live),prospective_readiness_policy=small(policy),original_owner=owner,actual_running_wait=wait,main_training_running=True,scientific_job_running=phase=='running',engineering_job_running=False,next_action=summary,promotion=False))
+job=dict(directory=str(F),preparation=small(prepared),state=phase,endpoint='Fixed900s wall-time first-game score,32perarm',screen_only=True,promotion=False)
+for target in [s,g]:target.update(current_optimization_recovery_index=small(ip),actual_running_wait=wait,main_training_running=True,scientific_job_running=phase=='running',engineering_job_running=False,active_engineering_job=None,active_screen_job=job)
+if phase=='running':
+ if s.get('active_quality_job'):
+  historical=h.put(F/'previous-invalid-fullgame-display-projection-historical.json',s['active_quality_job'])
+  g['previous_invalid_fullgame_display_projection']=small(historical)
+ s['active_quality_job']=None;g['active_quality_job']=None
+ s['performance_job_running']=False
+ g['current_campaign_phase']='FRESH_FIXED15MIN_SCORE_SCREEN_NOT_FULLGAME_CONFIRMATION'
+g.update(next_action=summary,updated_unix_s=time.time(),latest_goal_turn_classification=dict(classification='progress',evidence='Closed/replayed original49-sample engineering case; prospective conditional actual-branch review retains strict guards; fresh distinct8dae original screen prepared with33CPU and actual physical/ports/GPU preflight.',observed_unix_s=time.time()));s['updated_unix_s']=time.time();raw=(json.dumps(s,separators=(',',':'),allow_nan=False)+'\n').encode();assert len(raw)<1<<20
+public=json.loads(ub);public.update(study_directory=str(F),state='running'if phase=='running'else'prepared',stage='score_screen_'+phase,current_leg='R1'if phase=='running'else None,mode='manual',quality_qualified=False,promotion=False,updated_unix_s=time.time(),observation_unix_s=time.time());public['next_work'].update(state='score_screen_'+phase,current_stage='Preparing the fresh15-minute reference arm'if phase=='running'else'Fresh candidate screen ready',detail='Compare the protected champion with the later saved candidate using32 first games per arm and the same15-minute cutoff. Original failed full-game comparison is preserved. Training continues; no automatic promotion.',waiting_for='Original reference startup and fixed cutoff'if phase=='running'else'Original screen launch',next_stage='Candidate arm after the reference and its independent review close successfully',eta='Each admitted arm runs15 minutes; startup and independent review take additional time.',updated_unix_s=time.time(),observation_unix_s=time.time())
+def cas(path,before,after):
+ assert path.read_bytes()==before;t=path.with_name(path.name+f'.index{num}.tmp')
+ with t.open('xb')as out:out.write(after);out.flush();os.fsync(out.fileno())
+ assert path.read_bytes()==before;os.replace(t,path);fd=os.open(path.parent,os.O_DIRECTORY);os.fsync(fd);os.close(fd)
+cas(P,old,raw);cas(D,db,(f'Robotron recovery index{num}: {ip["path"]}\n{summary}\n\n'.encode()+db))
+# The running outer owns public progress updates; its initial pre-launch public
+# state is recorded here, then its authenticated publisher supplies live detail.
+if phase=='prepared':cas(U,ub,(json.dumps(public,indent=2,allow_nan=False)+'\n').encode())
+print(json.dumps(dict(index=small(ip),phase=phase,state_bytes=len(raw),actual_running_wait=wait)))

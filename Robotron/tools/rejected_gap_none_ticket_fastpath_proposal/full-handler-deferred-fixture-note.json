@@ -1,0 +1,193 @@
+{
+  "activation_authorized": false,
+  "actual_performance_result": null,
+  "actual_source_application": null,
+  "actual_test_result": null,
+  "author_actions": {
+    "AST_or_compile": 0,
+    "model_or_replay_reads": 0,
+    "patch_application": 0,
+    "project_imports": 0,
+    "runtime_queries": 0,
+    "target_execution": 0,
+    "target_imports": 0,
+    "tests": 0
+  },
+  "authored_methods": 6,
+  "boundaries_and_unsupported": [
+    "The actual whole handler and listed helpers run, but parser outputs are scripted FrameData-shaped scalars/Vector lists; binary parsing and NumPy semantics are not tested.",
+    "Agent/expert inference and reward/interest kernels are deterministic injected stand-ins; this does not validate GPU/model behavior, reward-kernel mathematics or policy outcomes.",
+    "Replay producer calls and FIFO reset ACK intent are compared; no asynchronous consumer, physical replay insertion, sampling/banks or concurrency are modeled.",
+    "Journal dispatch is a recording sink; full GameJournal row/provenance implementation is outside this test. Preview/HUD/debug branches stay disabled.",
+    "Socket read/write and intentional EOF/errors are scripted; TCP partial framing, actual timeout scheduling and OS I/O atomicity are unsupported.",
+    "No concurrency, lock cost, wall-clock efficiency, production performance gain, live gap occurrence or causal attribution is claimed.",
+    "Tests are dormant; source authorship/hash pinning is not syntax/compile/test PASS. Root may discover a fixture issue when first selected."
+  ],
+  "comparison": {
+    "exact": [
+      "raw action bytes and send called/returned ordering",
+      "replay step arguments/state vectors/reward values/done/horizon/actor/interest and enqueue returns",
+      "FIFO reset/elite/death/remove calls",
+      "metric method calls and fleet/learner/measurement counters",
+      "journal-dispatch arguments",
+      "accepted client/history/nstep/fire/episode state and reconnect stash",
+      "common operation/telemetry ordering",
+      "helper counters, witnesses, availability and diagnostic clocks",
+      "error/latch/write and socket cleanup intent"
+    ],
+    "normal_path_expected": "11 accepted frames => 11 replies/inferences/learner/fleet frames and eight actual n3 replay rows, with eight horizons3; pending final frame batch is flushed.",
+    "only_tolerance": "Remove old hook records at the 13 authenticated sites when connection/ticket is exactly None. Non-None hook data/order and every compared application/helper output remain exact. No numerical tolerance is used."
+  },
+  "current_quality_source_or_control_changes": false,
+  "extraction": {
+    "candidate_in_memory_sha256": "2669dc6cb1dc9965dd8e8e5ceac9ffcb44091d0c119a96ddef86b11d4d27e0db",
+    "complete_handle_client_body": true,
+    "module_initializers_and_project_imports_excluded": true,
+    "old_socket_sha256": "f44ddfe31408b77b6d622e1d4ec4cda60a03999dc984d9e11b5aeac38911a9ed",
+    "patch_applied_only_in_memory": true,
+    "patch_headers_context_candidate_hash_checked": true,
+    "real_d586_telemetry_body": true,
+    "real_nstep_class": true,
+    "real_pending_step_dataclass": true,
+    "real_reset_client_replay_segment": true,
+    "whole_socket_global_helpers": 3,
+    "whole_socket_methods": 14
+  },
+  "fixture": {
+    "bytes": 29164,
+    "identity": {
+      "bytes": 29164,
+      "ctime_ns": 1792314164957299686,
+      "device": 2304,
+      "inode": 80642733,
+      "mode": "0o444",
+      "mtime_ns": 1792314078305995707,
+      "nlink": 1,
+      "uid": 1001
+    },
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_none_ticket_fastpath_proposal/test_full_handler_fastpath_deferred.py",
+    "sha256": "5405888c4f13e3d52f16f8f2470861eca0c7a028c934e6ddfe1437e99bebd75a"
+  },
+  "future_execution_gate": "Only root after current full RCRC scientific disposition, explicit source/control/owner/workload freeze release, source review and selection. No current execution authorization is inferred.",
+  "future_root_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_none_ticket_fastpath_proposal",
+    "-p",
+    "test_full_handler_fastpath_deferred.py",
+    "-v"
+  ],
+  "scenarios": [
+    "Ordinary enabled no-gap n3 with None ticket and final non-BATCH-aligned frame flush.",
+    "parse_none/crash_jump/crash_drop gaps, accepted real-ticket closure, next normal frame, accepted inactive new-game reset.",
+    "Natural done n3 tails3/2/1, real expert-group flush before current input, n_step1, wave-advance inactive boundary.",
+    "Helper disabled; genuine measurement-generation changes with reset/ACK intent; private frozen inference-only replay gate.",
+    "Actual injected neutral/action/terminal send failure, enqueue failure, inference failure, and EOF with pending gap; declared injection must be reached, unexpected dependencies fail outside production catches.",
+    "Old/proposed function maps differ only in handle_client; in-memory candidate exact hash and13guard count; complete original handler extraction size checked."
+  ],
+  "schema": "robotron-rejected-gap-none-ticket-full-handler-deferred-fixture-v1",
+  "status": "SOURCE_AUTHORED_ONLY_UNEXECUTED_UNSELECTED",
+  "strict_isolation": [
+    "Only explicitly named authenticated socket/patch/helper/nstep/reset source bytes are read by future fixture setup. No receipt/campaign/model/replay paths are followed.",
+    "No socket/subprocess/numerical/project module imports; extracted modules have forbidden __import__/open/input/breakpoint and injected socket/sys/os/time/threading stand-ins.",
+    "Unknown fake namespace operations record a violation and raise BaseException; violations checked outside target catches. There is no host fallback.",
+    "Fake timer records scheduling intent without starting any thread. Fake helper PID is7001 and both clocks are deterministic."
+  ],
+  "upstreams": [
+    {
+      "bytes": 140517,
+      "identity": {
+        "bytes": 140517,
+        "ctime_ns": 1792306967928089640,
+        "device": 2304,
+        "inode": 79696030,
+        "mode": "0o664",
+        "mtime_ns": 1792306967914113042,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py",
+      "sha256": "f44ddfe31408b77b6d622e1d4ec4cda60a03999dc984d9e11b5aeac38911a9ed"
+    },
+    {
+      "bytes": 6958,
+      "identity": {
+        "bytes": 6958,
+        "ctime_ns": 1792309832985733061,
+        "device": 2304,
+        "inode": 80638036,
+        "mode": "0o444",
+        "mtime_ns": 1792309832985733061,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_none_ticket_fastpath_proposal/unapplied.patch",
+      "sha256": "bafc74d09e0d305a10f26a65fccbfd0b09915d91e0641dcf45ebfe415ed6feb0"
+    },
+    {
+      "bytes": 12216,
+      "identity": {
+        "bytes": 12216,
+        "ctime_ns": 1792301353397526560,
+        "device": 2304,
+        "inode": 81529014,
+        "mode": "0o444",
+        "mtime_ns": 1792301353397526560,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_proposal/rejected_gap_telemetry_reviewed3.py",
+      "sha256": "d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd"
+    },
+    {
+      "bytes": 3592,
+      "identity": {
+        "bytes": 3592,
+        "ctime_ns": 1791907574326289547,
+        "device": 2304,
+        "inode": 79696089,
+        "mode": "0o664",
+        "mtime_ns": 1791907574326289547,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/nstep_buffer.py",
+      "sha256": "e46f03e9a626b3a24dea702344b0bbf050f1fdc5af672fc8fc9d18e6afef74c1"
+    },
+    {
+      "bytes": 4647,
+      "identity": {
+        "bytes": 4647,
+        "ctime_ns": 1792110421814865106,
+        "device": 2304,
+        "inode": 79695971,
+        "mode": "0o664",
+        "mtime_ns": 1792110421814865106,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/frozen_evaluation.py",
+      "sha256": "65430d472231e3a1bf0f794cc65603bf5e41c495c446d9a4bab59ad0d3a3a669"
+    },
+    {
+      "bytes": 6280,
+      "identity": {
+        "bytes": 6280,
+        "ctime_ns": 1792309832986707465,
+        "device": 2304,
+        "inode": 80642725,
+        "mode": "0o444",
+        "mtime_ns": 1792309832986707465,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_none_ticket_fastpath_proposal/source-note.json",
+      "sha256": "02acbfbd1a238ad539c3520d46f1d3d734a3b86030cd20380df75e7fc2b631b5"
+    }
+  ]
+}

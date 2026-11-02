@@ -1,0 +1,237 @@
+{
+  "schema": "robotron-continuous-guard-947M-parent-closure-reviewed2-source-note-v1",
+  "status": "SOURCE_AUTHORED_ONLY_UNSELECTED_UNEXECUTED",
+  "closure_authorized": false,
+  "selected_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_947M_native_parent_closure_proposal/close_original_parent_reviewed2.py",
+    "sha256": "4bff3e25ea84435936e8b3656138c27b757739cc8a1fb42f961630d783517576",
+    "bytes": 32523,
+    "identity": {
+      "device": 2304,
+      "inode": 82579888,
+      "bytes": 32523,
+      "mtime_ns": 1792357206299317965,
+      "ctime_ns": 1792357206299317965,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "superseded_unexecuted_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_947M_native_parent_closure_proposal/close_original_parent.py",
+    "sha256": "5f75c947fc1e68a88ffcea3d6ce074b1dd423b832291c66845d1c898777ee29e",
+    "bytes": 32504,
+    "identity": {
+      "device": 2304,
+      "inode": 82579882,
+      "bytes": 32504,
+      "mtime_ns": 1792356793438427303,
+      "ctime_ns": 1792356874288739536,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "superseded_source_status": "BLOCKED_MISSING_LEARNER_PRIORITY_ERROR_CHECK_NOT_EXECUTED",
+  "original_packet_preserved": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_947M_native_parent_closure_proposal/preparation-manifest.json",
+    "sha256": "76a26fac49ee277c5d947fc76d06c411e5d01c5b750a6e4fecf004b0f46b98a6",
+    "bytes": 12577,
+    "identity": {
+      "device": 2304,
+      "inode": 82579887,
+      "bytes": 12577,
+      "mtime_ns": 1792356978367141747,
+      "ctime_ns": 1792356978367141747,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "reason": "Peer/root found the fourth existing host_pipeline error stage learner_priority was absent from the original health-stage tuple. The actual closed startup API has this field as integer0. A future positive learner_priority.errors must refuse release.",
+  "production_delta": {
+    "original_text": "for k in ('inference','actor_refresh','target_refresh'))",
+    "selected_text": "for k in ('inference','actor_refresh','target_refresh','learner_priority'))",
+    "added_bytes": 19,
+    "replacement_count": 1,
+    "raw_reverse_byte_exact": true,
+    "all_other_bytes_preserved": true,
+    "source_AST_compilation_import_or_execution_performed": false
+  },
+  "declared_real_stages": [
+    "inference",
+    "actor_refresh",
+    "target_refresh",
+    "learner_priority"
+  ],
+  "actual_closed_input_pins": {
+    "baseline": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/continuous-guard-same-LR25-quality-runtime-original01-20261018/runtime-baseline.json",
+      "sha256": "c7666e3bc86c04aa05ba3a4938f215816c7190b1c6e4279070bde67c60c0dfb6",
+      "bytes": 200098,
+      "identity": {
+        "device": 2304,
+        "inode": 82706734,
+        "bytes": 200098,
+        "mtime_ns": 1792355090967883426,
+        "ctime_ns": 1792355090967883426,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "baseline_API": {
+      "bytes": 68212,
+      "identity": {
+        "bytes": 68212,
+        "ctime_ns": 1792355090962966385,
+        "device": 2304,
+        "inode": 82706733,
+        "mode": "0o444",
+        "mtime_ns": 1792355090962966385,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/continuous-guard-same-LR25-quality-runtime-original01-20261018/actual-main-API.raw.json",
+      "sha256": "edfad951d4ae137594f9e831b78c42128d3d091153a603245b90f643865a3f86"
+    },
+    "startup_API": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/continuous-guard-same-LR25-continuation-original01-root-preparation-20261018/root-original947M-startup-main-api-readonly-copy.json",
+      "sha256": "311803c5ffbf211d076ed6eebae1f437ba3baa394263e8c1022b752160ba1daa",
+      "bytes": 93804,
+      "identity": {
+        "device": 2304,
+        "inode": 82579872,
+        "bytes": 93804,
+        "mtime_ns": 1792355750983867390,
+        "ctime_ns": 1792355750983867390,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "fixture_data": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_947M_native_parent_closure_proposal/closed-health-fixture-inputs-reviewed2.json",
+    "sha256": "371ebcf970dd786e8d7665e759969d3f44f7b143cecd508dc463b4d8529e96f0",
+    "bytes": 433946,
+    "identity": {
+      "device": 2304,
+      "inode": 82579889,
+      "bytes": 433946,
+      "mtime_ns": 1792357206311212512,
+      "ctime_ns": 1792357206311212512,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "fixture_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_947M_native_parent_closure_proposal/test_fresh_terminal_health_reviewed2_deferred.py",
+    "sha256": "3f761c7b324caf649ba3ba9a4ccf51af2b802f6b0575e1b63aa92e1217401fc7",
+    "bytes": 15294,
+    "identity": {
+      "device": 2304,
+      "inode": 82579891,
+      "bytes": 15294,
+      "mtime_ns": 1792357359843726533,
+      "ctime_ns": 1792357376438796138,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "fixture_method_names": [
+    "test_actual_closed_projection_accepts_archived_clock_and_exact_census",
+    "test_optimizer_pending_zero_or_one_and_available_partition",
+    "test_each_of_four_pipeline_error_stages_is_fatal",
+    "test_health_pin_and_observation_are_typed_fresh_closed_metadata",
+    "test_main_fleet_worker_actor_and_frozen_inventory_must_match",
+    "test_resource_and_exact_owned_terminal_identity_are_mandatory",
+    "test_exposure_reset_unavailable_regression_and_source_partitions_refuse"
+  ],
+  "fixture_input_scope": "Exact nine-field projection of the archived baseline (eight anchor fields plus actual_API PIN) and full decoded baseline/startup APIs. JSON NaN values outside checked finite fields are retained. The fixture copies are local sealed metadata only; no embedded path is followed at future test execution.",
+  "synthetic_envelope_scope": "The test explicitly invents only an in-memory terminal health envelope, fake PINs, terminal-native0/cgroup/resource assertions and archived observation/checked clocks. These are test inputs, never actual root observations, current liveness, terminal proof or release authority.",
+  "actual_code_exercised": "Future test execution compiles the complete authenticated selected source bytes in a private module, with a non-main name. It calls only actual fresh_terminal_health and full8_metadata_pin with an injected reader. No AST extraction, mirrored validator or alternate implementation.",
+  "reader_action_isolation": "Only selected source and local data file are opened by the bootstrap allowlist. Target Path becomes PurePosixPath, UID is a fixture constant, implicit wall clock and every file/lifecycle/action helper are fail-fast forbidden callbacks. Only three exact in-memory PIN values are accepted by strict_reader. An unexpected-access ledger is checked outside expected ValueError catches. close/main/command are never invoked.",
+  "fixture_coverage": [
+    "actual archived projection positive; actor/mask order-independent exact192 census",
+    "optimizer pending0/availableTrue and pending1/availableFalse accepted; incorrect flags/partition refused",
+    "all four error stages including learner_priority reject nonzero and non-int values",
+    "stale/future/wrong schema or status/ill-typed FULL8 PIN and stale API refused",
+    "foreign main/fleet/worker/actor/mask/environment/source-control-unit identity refused",
+    "false resources and unknown or nonterminal native unit/cgroup identity refused",
+    "optimizer/replay identity/epoch/generation resets, unavailable with otherwise consistent partition, regressions and replay source partition mismatch refused"
+  ],
+  "fixture_exclusions": [
+    "No full validate_case, close, root command/archive/release execution or main192 current health is tested.",
+    "No host/systemd/proc/GPU/port/lease/cgroup observation or ownership atomicity proof.",
+    "No future terminal/audit outputs, counts, result hashes, quality qualification, promotion or source-freeze release.",
+    "No actual test/syntax/AST/compile/import execution has occurred by the author."
+  ],
+  "future_test_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_947M_native_parent_closure_proposal",
+    "-p",
+    "test_fresh_terminal_health_reviewed2_deferred.py",
+    "-v"
+  ],
+  "future_test_bounds": {
+    "CPUQuota": "100%",
+    "MemoryMax": "512M",
+    "MemorySwapMax": "0",
+    "TasksMax": "128",
+    "RuntimeMaxSec": "60",
+    "TimeoutStopSec": "5"
+  },
+  "future_test_selection": "Root only, after independent fixed-source peer and exact pin revalidation; one bounded original with truthful native/lifecycle evidence. No test execution authorized or performed by this packet.",
+  "future_closure_case": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_947M_native_parent_closure_proposal/root-case-TEMPLATE.json",
+    "sha256": "1221a383b7d5cb155daf7794674caacd4c5f851650f18c421ca7ba845d412740",
+    "bytes": 460,
+    "identity": {
+      "device": 2304,
+      "inode": 82579883,
+      "bytes": 460,
+      "mtime_ns": 1792356726410852969,
+      "ctime_ns": 1792356978364204871,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "future_closure_cli": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_947M_native_parent_closure_proposal/close_original_parent_reviewed2.py",
+    "--execute",
+    "--case",
+    "<actual-root-sealed-seven-field-case.json>",
+    "--expected-case-sha256",
+    "<actual-case-sha256>",
+    "--expected-source-sha256",
+    "4bff3e25ea84435936e8b3656138c27b757739cc8a1fb42f961630d783517576"
+  ],
+  "closure_limits": "All original guards and stop/archive behavior are byte-preserved. Root must later provide genuine all4 terminal valid native0 and audit0 evidence plus a genuinely fresh <180s health PIN. Pending0 or1 is accepted for active main. Existing main62/control2/unit3/192 actor identity checks remain. No old914 descriptor cleanup, retry/reset/adoption, quality or unfreeze decision is implemented.",
+  "future_native_status": null,
+  "future_native_summary": null,
+  "future_audit_releases": [
+    null,
+    null,
+    null,
+    null
+  ],
+  "future_terminal_health": null,
+  "future_case": null,
+  "future_closure_result": null,
+  "tests_executed": 0,
+  "production_source_applied": false,
+  "canonical_or_held_sources_modified": false
+}

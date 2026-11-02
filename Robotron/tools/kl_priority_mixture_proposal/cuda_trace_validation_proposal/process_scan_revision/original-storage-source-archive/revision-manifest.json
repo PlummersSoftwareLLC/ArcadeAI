@@ -1,0 +1,67 @@
+{
+  "schema": "robotron-cuda-ce-trace-storage-watcher-revision-v1",
+  "author_status": "SOURCE_ONLY_AUTHORING_COMPLETE",
+  "new_files_sha256": {
+    "cuda_trace_parent.py": "077420acc0d643f345225c66b0e8430d7f30f49b45a80c136153be57916ea470",
+    "test_storage_watcher.py": "ca16a7f31dcb17d7fe24d8be7fb6658389b7676d2234e2f359f575513181f5d2",
+    "unapplied-parent.patch": "6cd361ed61abba34f7510c5a554cbf06adc5936568c967ea749cbd922c3e89b4",
+    "PREPARATION.txt": "fc35788a7ee00f93ef05f4390b5df8aefbbb18238fa4bd6c4cd2b8f4e68ab599",
+    "cuda_trace_worker.py": "ba0039d406676f092309c6bf2248ddcf169af8960f60ed18b698ece1ea602f93",
+    "source-lock.json": "d6ffdaae63d97bce24a18d1b11ed165b9e12484d17d65365415aab3c08beb13b"
+  },
+  "immutable_original_archive_sha256": {
+    "original-source-archive/cuda_trace_parent.py": "34b9144f4b04ef121179d12befb1cd477189be662ceeb0bb59020448a4e7339e",
+    "original-source-archive/cuda_trace_worker.py": "ba0039d406676f092309c6bf2248ddcf169af8960f60ed18b698ece1ea602f93",
+    "original-source-archive/source-lock.json": "d6ffdaae63d97bce24a18d1b11ed165b9e12484d17d65365415aab3c08beb13b",
+    "original-source-archive/RUNBOOK.txt": "65cd671f013415e2c8200721af3377096072bde1a249ac140dc8d91543326b6d",
+    "original-source-archive/preparation-manifest.json": "ccbe6713f3589f20a146914d215ba265f4f0f13893e8559b28855c4a65967b16"
+  },
+  "source_proof_sha256": {
+    "installed-triton-cache.py": "4e130852ee5ed85350fa6298ba14e24faf97ee6e8c61045e4206f1fc7c124149",
+    "native_sumtree.py": "de0900aecd09668dc0551d4ecec118351a1228e2a664bc183c5c06b865e52250",
+    "executed_ce_trace.py": "d9b02b3108cdb7aa9cf895ce585810287ca5cde6ddc6b1b872721731e49648eb"
+  },
+  "policy": {
+    "original_bundle_modified": false,
+    "worker_and_numerical_lock_byte_identical": true,
+    "inline_watcher_bound_by_parent_hash": true,
+    "active_compiler_roots": [
+      "current variant cache directory, identity pinned before Popen",
+      "private package dqn/__pycache__, created empty after source copy and identity pinned in manifest"
+    ],
+    "compiler_exceptions": ["descendant ENOENT", "regular-to-regular atomic publication using max observed size"],
+    "on_observer_only": {
+      "directory": "on/ce-executed-trace-cuda-validation",
+      "identity": "pinned at first observed creation; all subsequent loss or replacement fatal",
+      "direct_regular_temporary_enoent": [
+        "context.json.tmp", "status.json.tmp", "attempt-01.json.tmp", "attempt-02.json.tmp",
+        "attempt-03.json.tmp", "attempt-04.json.tmp", "attempt-05.json.tmp", "attempt-06.json.tmp",
+        "attempt-07.json.tmp", "attempt-08.json.tmp"
+      ],
+      "direct_regular_replacement_only": ["status.json", "status.json.tmp"],
+      "persistent_context_attempt_npz_or_tensor_loss_allowed": false
+    },
+    "symlinks_other_errors_unknown_replacement_and_directory_boundaries_strict": true,
+    "post_reap_storage_scan_has_no_exceptions": true,
+    "cache_and_observer_event_counts_separate": true,
+    "scientific_inputs_recipe_budgets_tolerances_deadlines_unchanged": true,
+    "storage_scope": "cooperative non-atomic watcher; no filesystem quota or whole-tree snapshot claim"
+  },
+  "validation": {
+    "prepared_stdlib_test_methods": 25,
+    "author_test_or_import_compile_default_execution": false,
+    "source_peer_learning_review": "SOURCE-ONLY PASS exact parent/test/diff and notes; no execution or runtime/data query",
+    "source_peer_audit_quality_result": "Independent SOURCE-ONLY PASS exact parent/test/diff and unchanged sibling worker/lock; no execution or runtime/data query",
+    "root_cpu_test_execution": {
+      "status": "ROOT_REPORTED_PASS",
+      "methods": 25,
+      "unittest_elapsed_s": 0.051,
+      "original_owned_exit": 0,
+      "receipt": "run-26/cuda-storage-watcher-private-tests-reviewed2-20261017/root-result-review-and-release.json",
+      "receipt_sha256": "6b90eca60ebe71a5ed8ba2196cf8eb80d48b1ad4345f11b1c46d474156045d06",
+      "scope": "Root-provided observation; no author rerun or independent runtime/GPU validation"
+    },
+    "new_gpu_run_authorized_by_this_manifest": false,
+    "old_reviewed1_result_rescued_or_retried": false
+  }
+}

@@ -1,0 +1,77 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-reviewed-continuation-original01-preparation/project_owned_W03_continuation_status_v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-reviewed-continuation-original01-preparation/project_owned_W03_continuation_status_v5.py
+@@ -18,7 +18,7 @@
+ A=I/'durable-window03-D7-R1-owned-launch-original01-preparation'
+ S=I/'durable-window03-D7-fixed-RCRC-study-original01'
+ ORDER=['R1','C1','R2','C2']
+-UNIT='robotron-window03-proof2s-70fa162610bdfd8c-continuation-public-status-original01-20261029.service'
++UNIT='robotron-window03-proof2s-70fa162610bdfd8c-continuation-public-status-original02-20261029.service'
+ PUBLIC=G/'html/next-policy-evaluation.json'
+ 
+ def require(ok,message):
+@@ -35,7 +35,7 @@
+     spec=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
+ 
+ def atomic(path,value):
+-    temporary=path.with_name(path.name+'.W03-public-next')
++    temporary=path.with_name(path.name+'.W03-public02-next')
+     with temporary.open('x')as f:
+         json.dump(value,f,separators=(',',':'),allow_nan=False);f.write('\n');f.flush();os.fchmod(f.fileno(),0o664);os.fsync(f.fileno())
+     os.replace(temporary,path)
+@@ -89,7 +89,7 @@
+         safe=display.display(S,leg)
+         require(safe['independently_qualified']is True,'Qualified display guard refused')
+         row.update(safe,state='qualified',phase='complete',n_completed=safe.get('completed'));return row
+-    result=read(native/'result.json')
++    native_result_exists=(native/'result.json').is_file()  # Never open the large native body.
+     review_result,review_live=controller_facts(folder,'independent-review-')
+     native_result,native_live=controller_facts(folder,'')
+     first_terminal=read(O/'first-R1-review-wrapper-terminal.json')if leg=='R1'else None
+@@ -104,9 +104,7 @@
+     native_process=live(native_owner)
+     row.update(native_owner_live=native_process['live'],native_controller_live=native_live['live'],review_owner_live=reviewer_live['live'],review_controller_live=review_live['live'])
+     raw=read(native/'status.json')
+-    if result and (result.get('complete')is not True or result.get('errors')or result.get('status')!='ORIGINAL_DEADLINE32_SEALED_AND_CLOSED'):
+-        row.update(phase='original_native_failed_no_retry',state='failed')
+-    elif native_result and native_result.get('actual_exit')!=0:
++    if native_result and native_result.get('actual_exit')!=0:
+         row.update(phase='original_native_outcome_unresolved'if native_result.get('actual_exit')is None else'original_native_failed_no_retry',state='unresolved'if native_result.get('actual_exit')is None else'failed')
+     elif first_terminal and first_terminal.get('status')=='ORIGINAL_REVIEW_UNQUALIFIED_PRESERVED_NO_RETRY':
+         row.update(phase='original_review_unqualified_no_retry',state='failed')
+@@ -127,7 +125,7 @@
+         row.update(phase='original_review_outcome_unresolved',state='unresolved')
+     elif native_result and native_result.get('actual_exit')==0:
+         row.update(phase='closed_pending_independent_review',state='waiting')
+-    elif result:
++    elif native_result_exists:
+         row.update(phase='native_closed_waiting_original_controller',state='waiting')
+     elif native_live['live']is False:
+         row.update(phase='original_native_outcome_unresolved',state='unresolved')
+@@ -158,13 +156,17 @@
+     require(old['unit']==selection['projector_unit']and live(old)['live']is False,'Old display birth still live')
+     oldfields=dict(v.split('=',1)for v in subprocess.check_output(['systemctl','--user','show',old['unit']],text=True,timeout=5).splitlines()if'='in v)
+     require(oldfields.get('LoadState')=='not-found','Old display unit not released; one public writer only')
++    prior_unit='robotron-window03-proof2s-70fa162610bdfd8c-continuation-public-status-original01-20261029.service'
++    require(live(dict(pid=506361,starttime_ticks=14870220))['live']is False,'Failed original01 bridge birth remains')
++    prior_fields=dict(v.split('=',1)for v in subprocess.check_output(['systemctl','--user','show',prior_unit],text=True,timeout=5).splitlines()if'='in v)
++    require(prior_fields.get('LoadState')=='not-found','Failed original01 bridge unit must be released before a new writer')
+     fields=dict(v.split('=',1)for v in subprocess.check_output(['systemctl','--user','show',UNIT],text=True,timeout=5).splitlines()if'='in v)
+     require(fields.get('MainPID')==str(os.getpid())and fields.get('InvocationID')==os.environ.get('INVOCATION_ID')and fields.get('NRestarts')=='0'and fields.get('Restart')=='no','Original owned bridge unit required')
+     expected=dict(Type='exec',ActiveState='active',SubState='running',RemainAfterExit='yes',CPUQuotaPerSecUSec='200ms',MemoryMax=str(128<<20),MemorySwapMax='0',TasksMax='32',RuntimeMaxUSec='8h',TimeoutStopUSec='10s',SendSIGKILL='no')
+     require(all(fields.get(k)==v for k,v in expected.items()),'Exact bounded passive scope required')
+     for case in manifest['cases']:h.checked(case['native_job'])
+     display=load(G/'tools/post_recovery_evaluation/project_deadline_study_v3.py','5e2732552e58b5f081159525ad1470844f0ba965a8388b7c8b512c5d8abff7db','_W03_guarded_display')
+-    backup=O/'public-status-before-continuation-original01.exact.json'
++    backup=O/'public-status-before-continuation-original02.exact.json'
+     with backup.open('xb')as f:f.write(PUBLIC.read_bytes());f.flush();os.fchmod(f.fileno(),0o444);os.fsync(f.fileno())
+     while True:
+         active=(read(G/'logs/managed-learning-20261015/state.json')or{}).get('active_quality_job')or{}
+@@ -188,7 +190,7 @@
+             value['deadline_timing']=chosen['deadline_timing']
+             value['deadline_anchor']=dict(anchor=chosen['deadline_timing']['anchor'],policy=dict(policy_sha256=chosen['deadline_timing']['policy_sha256']))
+         # Never write canonical state or ST3/status/display-status: sequence owns them.
+-        atomic(PUBLIC,value);atomic(O/'continuation-public-status-last-projection.json',value)
++        atomic(PUBLIC,value);atomic(O/'continuation-public-status-last-projection-original02.json',value)
+         if state in('closed','failed','stopped','unresolved')and not original_scope_live:return 0
+         time.sleep(2)
+ 

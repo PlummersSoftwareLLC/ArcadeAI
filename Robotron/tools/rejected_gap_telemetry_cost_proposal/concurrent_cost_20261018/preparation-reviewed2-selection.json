@@ -1,0 +1,93 @@
+{
+  "activation_authorized": false,
+  "actual_execution": null,
+  "author_verification": {
+    "compile_or_AST": 0,
+    "executions": 0,
+    "imports": 0,
+    "reverse_text_exact": true,
+    "runtime_or_model_reads": 0,
+    "tests": 0
+  },
+  "exact_delta": [
+    "Worker initializes local_count=0, increments it instead of writing shared completed_frames each frame, then publishes completed_frames[index]=local_count once immediately before the worker endstamp.",
+    "No per-frame shared list write remains in either arm path. Other source bytes reverse exactly to original0abf."
+  ],
+  "future_root_argv": [
+    "/usr/bin/env",
+    "-u",
+    "LD_PRELOAD",
+    "-u",
+    "PYTHONPATH",
+    "CUDA_VISIBLE_DEVICES=",
+    "PYTHONDONTWRITEBYTECODE=1",
+    "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_cost_proposal/concurrent_cost_20261018/benchmark_concurrent_cost_reviewed2.py",
+    "--execute",
+    "--expected-source-sha256",
+    "eb9f914447d268d6c154e73a5cd269c1bfa3e35a92c29233205e102144858aae",
+    "--output",
+    "<FRESH_ABSOLUTE_ROOT_OUTPUT.json>"
+  ],
+  "future_root_bounds": {
+    "CPUQuota": "400%",
+    "MemoryMax": "512M",
+    "MemorySwapMax": 0,
+    "Restart": "no",
+    "RuntimeMaxSec": 60,
+    "TasksMax": 512,
+    "TimeoutStopSec": 5
+  },
+  "original_manifest": {
+    "bytes": 7709,
+    "identity": {
+      "bytes": 7709,
+      "ctime_ns": 1792308771861700608,
+      "device": 2304,
+      "inode": 81531274,
+      "mode": "0o444",
+      "mtime_ns": 1792308771861700608,
+      "nlink": 1,
+      "uid": 1001
+    },
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_cost_proposal/concurrent_cost_20261018/preparation-manifest.json",
+    "sha256": "7e1a5ef5483f6e6275731eae4090b0ea4321795138b1b5d29a5cbfa323b3d42d"
+  },
+  "preserved_source": {
+    "bytes": 20806,
+    "identity": {
+      "bytes": 20806,
+      "ctime_ns": 1792308745266138949,
+      "device": 2304,
+      "inode": 81531273,
+      "mode": "0o444",
+      "mtime_ns": 1792308745266138949,
+      "nlink": 1,
+      "uid": 1001
+    },
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_cost_proposal/concurrent_cost_20261018/benchmark_concurrent_cost.py",
+    "sha256": "0abfdb550c32b141c9711fe71b3b213753953fdced5c650a4cfc512b5565ce03"
+  },
+  "reason": "Prevent shared Python list bookkeeping contention across192 FT workers from confounding helper lock contention.",
+  "schema": "robotron-rejected-gap-concurrent-cost-reviewed2-selection-v1",
+  "selected_source": {
+    "bytes": 20856,
+    "identity": {
+      "bytes": 20856,
+      "ctime_ns": 1792308849313515303,
+      "device": 2304,
+      "inode": 81531275,
+      "mode": "0o444",
+      "mtime_ns": 1792308849313515303,
+      "nlink": 1,
+      "uid": 1001
+    },
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_cost_proposal/concurrent_cost_20261018/benchmark_concurrent_cost_reviewed2.py",
+    "sha256": "eb9f914447d268d6c154e73a5cd269c1bfa3e35a92c29233205e102144858aae"
+  },
+  "status": "SOURCE_ONLY_FIXED_UNSELECTED_UNEXECUTED",
+  "unchanged": "192threads/128frames/three partial-counterbalanced orders, exact helpers/counters, timing/source guards,45s internal and all original manifest scope/caps/closed-context caveats remain."
+}

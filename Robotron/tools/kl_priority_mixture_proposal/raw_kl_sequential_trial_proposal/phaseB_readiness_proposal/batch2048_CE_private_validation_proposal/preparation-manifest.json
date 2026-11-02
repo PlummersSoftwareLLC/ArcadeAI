@@ -1,0 +1,68 @@
+{
+  "schema": "robotron-private-CE2048-readiness-source-preparation-v1",
+  "status": "SOURCE_ONLY_UNEXECUTED_PENDING_PEER_AND_GUARDS",
+  "files": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/batch2048_CE_private_validation_proposal/source-lock.json",
+      "sha256": "d7b2365efafc637bb094895b92fccd0e7d10a5af7564535cb006006b73079639",
+      "bytes": 14754
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/batch2048_CE_private_validation_proposal/cuda_trace_parent.py",
+      "sha256": "1327fb04709e211faaf5b26587ba7c83389b8f0542105abf18d042d33c877eb4",
+      "bytes": 57929
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/batch2048_CE_private_validation_proposal/cuda_trace_worker.py",
+      "sha256": "d83aa9b778925d13520c762cfe5807b0af177183aa0950a4c07b7e4ea2878b8f",
+      "bytes": 46009
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/batch2048_CE_private_validation_proposal/parent.patch",
+      "sha256": "a56f7c677dc70e4f41958e0c3ebb04922a57ac84e3150b2a6f6c28d3304a489f",
+      "bytes": 17522
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/batch2048_CE_private_validation_proposal/worker.patch",
+      "sha256": "01706ffa17289e7deae26be661f085e823227f26030e48a63c06041877e89dd9",
+      "bytes": 10183
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/batch2048_CE_private_validation_proposal/source-preservation.json",
+      "sha256": "6147577bc6462dd89104970684cc5a690fbc2abeb8def72ba0c90aec39bedec7",
+      "bytes": 1681
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/batch2048_CE_private_validation_proposal/PREPARATION.txt",
+      "sha256": "93dcc8e9efb94e67c44df71cda139d02d9d0abdfdcb2e41914ccccaa1bb7e1c8",
+      "bytes": 2105
+    }
+  ],
+  "original_parent": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/private_validation_phase_record_permissions_reviewed2_proposal/cuda_trace_parent.py",
+    "sha256": "cad4912213a34da566a6da2b646d3f873d11f305eeadb7aac5359a1494c234e7",
+    "bytes": 57229
+  },
+  "original_worker": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/private_validation_phase_record_permissions_reviewed2_proposal/cuda_trace_worker.py",
+    "sha256": "0e779fd52f1e3807b80720c4de275b13283c1b21e9e3ca9ac9b22397d9732a0b",
+    "bytes": 45048
+  },
+  "original_lock": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/private_validation_phase_record_permissions_reviewed2_proposal/source-lock.json",
+    "sha256": "8edbe0082cb93939ebc9bfe6be922058f9c821addf72567f57d2c7a83b53b5fc",
+    "bytes": 14079
+  },
+  "profile": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json",
+    "sha256": "e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50",
+    "bytes": 764
+  },
+  "source_lock_sha256": "d7b2365efafc637bb094895b92fccd0e7d10a5af7564535cb006006b73079639",
+  "actual_gpu_execution": null,
+  "actual_imports_or_tests": false,
+  "source_freeze_released": false,
+  "qualification": false,
+  "activation": false,
+  "scope": "Future private CE2048 default-four-output whole learner and phase geometry fixture only."
+}

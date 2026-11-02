@@ -1,0 +1,101 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/raw-preview-parameterized-one-use-helper-original01/exec_next_once_raw_preview_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/RAW-phase-timing-diagnostic-one-use-helper-original01/exec_RAW_timing_diagnostic_once_v3.py
+@@ -1,4 +1,4 @@
+-"""One ROOT-selected RAW-preview slot163 OUTPUT; no persistent acceptance or actions.
++"""One ROOT-selected RAW phase-timing diagnostic OUTPUT; no acceptance or actions.
+ 
+ INPUT remains original4947 cached oldLua/env0. NEW owned authority names the
+ ROOT-selected current OUTPUT actor/binding/count, not original2258553. A new one-use directory is consumed
+@@ -11,17 +11,23 @@
+ import stat
+ import sys
+ 
+-MODE = 'NEXT_ONE_USE_PREVIEW_CAPTURE_EXPERIMENT_SLOT163'
++MODE = 'DIAGNOSTICRAW_TIMING_ONE_USE_SLOT163'
+ INPUT_SHA = '494797d8c8e0f6e9511ce93cb295baa03ec796928c7b606ca20f5deecc9c411d'
+ MINIMUM_HELD_INPUT_COUNT = 215
+ RAW_WIRE_POLICY = dict(format=1, name='raw_rgb565be', RLE_enabled=False)
++DIAGNOSTIC_SCOPE = dict(stdout_observation_budget_s=10, aggregation_target_s=5,
++    existing_stdout_only=True, hard_emission_deadline_claimed=False,
++    clock_requirement='host_wall', cpu_scope='process_cpu_all_threads',
++    fallback='header_only_no_timing_no_abort')
++DIAGNOSTIC_PHASES = ['frame_period', 'capture_total', 'snapshot_size', 'snapshot_pixels',
++                     'convert', 'serialize', 'socket_write', 'action_wait']
+ SOURCE_SHAS = dict(
+     fuse='b5fdc64b6777e6db2541f7c535be2fc49e47f5b565dcd714086cdb33d6041723',
+     guards='9a8fe7c08e1e941e2d26a2cc3c65124b27129b9f470a0020453e33010bf32027',
+     collector='1f41d360fa23632cb26d6dee33d3c822bec7f9cf79fdbb75e47f3418059ca5f0')
+ AUTHORITY_KEYS = {'schema', 'mode', 'root_selection', 'current_output_binding', 'base_manifest',
+                   'fresh_parent_snapshot', 'supervisor_owner', 'supervisor_process',
+-                  'prior_actor', 'output_lua', 'claim_directory'}
++                  'prior_actor', 'output_lua', 'claim_directory', 'diagnostic_scope'}
+ 
+ 
+ def require(value, message):
+@@ -31,16 +37,18 @@
+ 
+ def validate_authority(authority, read, base, guards):
+     require(type(authority) is dict and set(authority) == AUTHORITY_KEYS
+-            and authority['schema'] == 'robotron-slot163-next-one-use-capture-authority-v1'
++            and authority['schema'] == 'robotron-slot163-RAW-timing-one-use-authority-v1'
+             and authority['mode'] == MODE and all(v is not None for v in authority.values()),
+             'Actual NEXT experiment facts remain unfilled or unknown')
+     selection = read(authority['root_selection'])
+-    require(selection['schema'] == 'robotron-root-slot163-next-capture-experiment-selection-v1'
++    require(selection['schema'] == 'robotron-root-slot163-RAW-timing-diagnostic-selection-v1'
+             and selection['mode'] == MODE and selection['one_original_exec_only'] is True
+             and selection['persistent_or_rollout_acceptance'] is False
++            and selection.get('diagnostic_only') is True
++            and selection.get('diagnostic_scope') == authority['diagnostic_scope'] == DIAGNOSTIC_SCOPE
+             and all(selection[key] == authority[key] for key in ('current_output_binding', 'base_manifest',
+                 'fresh_parent_snapshot', 'prior_actor', 'output_lua', 'claim_directory')),
+-            'Explicit ROOT experimental target authority required')
++            'Explicit ROOT diagnostic-only one-use target and bounded observation scope required')
+     expected_count = selection.get('expected_held_input_count')
+     require(type(expected_count) is int and MINIMUM_HELD_INPUT_COUNT <= expected_count <= 4096
+             and selection.get('wire_policy') == RAW_WIRE_POLICY,
+@@ -64,20 +72,31 @@
+             'Current OUTPUT source and different ROOT RAW target must be explicit')
+     read(current_output_lua, False)
+     proof = read(selection['capture_equivalence_proof'])
+-    require(proof['schema'] == 'robotron-preview-decoded-RGB565-and-wire-policy-v1'
++    require(current_output_lua['sha256'] ==
++                'cbd8109f8d62f65c26c38ea91c73b3285fda0812895ee5e5fbf4e8565afedbd1'
++            and authority['output_lua']['sha256'] ==
++                'cc32f15cf43f972209554e23dd4438e4f191938e75a98903007729725951305f'
++            and proof['schema'] == 'robotron-preview-RAW-phase-timing-source-and-semantics-v1'
+             and proof['parent'] == current_output_lua and proof['candidate'] == authority['output_lua']
+-            and proof['decoded_RGB565_equality_all_cases'] is True
+-            and proof['encoded_bytes_equality_required'] is False
+-            and proof['wire_policy'] == selection['wire_policy'] == RAW_WIRE_POLICY
+-            and proof['gameplay_tensor_input_transport_timer_source_unchanged'] is True
+-            and proof['exact_single_line_delta_verified'] is True,
+-            'Explicit decoded-RGB565 equality and RAW-wire-policy proof required')
+-    result = read(proof['benchmark'])
+-    require(result['schema'] == 'robotron-preview-actual314t-RLE-vs-RAW-AST-benchmark-v1'
+-            and result['actual_free_threaded'] is True
+-            and result['decoded_RGB565_equality_all_cases'] is True
+-            and len(result['cases']) >= 2,
+-            'Actual free-threaded RAW/RLE decoder-equivalence benchmark required')
++            and proof['diagnostic_only'] is True and proof['wire_policy'] == RAW_WIRE_POLICY
++            and proof['gameplay_protocol_decoded_pixels_unchanged'] is True
++            and proof['encoded_frame_bytes_unchanged'] is True
++            and proof['telemetry_wire_fields_unchanged'] is True
++            and proof['server_source_unchanged'] is True
++            and proof['existing_stdout_only'] is True and proof['selected_slot'] == 163
++            and proof['aggregation_target_s'] == DIAGNOSTIC_SCOPE['aggregation_target_s']
++            and proof['clock_requirement'] == DIAGNOSTIC_SCOPE['clock_requirement']
++            and proof['cpu_scope'] == DIAGNOSTIC_SCOPE['cpu_scope']
++            and proof['fallback'] == DIAGNOSTIC_SCOPE['fallback']
++            and proof['VERSION_header_once'] is True and proof['phase_names'] == DIAGNOSTIC_PHASES
++            and type(proof['actual_CPU_exit']) is int and proof['actual_CPU_exit'] == 0,
++            'Exact unchanged-RAW phase-timing diagnostic source/clock/stdout proof required')
++    result = read(proof['semantic_checks'])
++    require(result['schema'] == 'robotron-RAW-phase-timing-Lua54-semantics-v1'
++            and all(result[key] is True for key in ('actual_Lua_syntax', 'full_source_exact_delta',
++                'decoded_capture_bytes_equality', 'socket_write_bytes_and_reply_semantics_unchanged',
++                'selected_only_bounded_aggregation', 'fallback_header_only_no_abort')),
++            'Actual Lua54 diagnostic semantics proof required')
+     require(len(binding['held_hashes']) == expected_count
+             and binding['preview_actual_roles']['163']['eval'] is True
+             and policy['baseline_actors']['163'] == authority['prior_actor']

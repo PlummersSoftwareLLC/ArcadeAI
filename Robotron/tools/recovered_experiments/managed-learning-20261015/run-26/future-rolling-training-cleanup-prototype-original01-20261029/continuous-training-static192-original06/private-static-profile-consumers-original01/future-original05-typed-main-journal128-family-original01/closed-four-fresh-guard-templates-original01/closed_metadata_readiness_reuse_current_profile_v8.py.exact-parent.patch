@@ -1,0 +1,99 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-current-profile-guard-original04/closed_metadata_readiness_reuse_current_profile_v8.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/future-original05-typed-main-journal128-family-original01/closed-four-fresh-guard-templates-original01/closed_metadata_readiness_reuse_current_profile_v8.py
+@@ -24,7 +24,7 @@
+     return value
+ 
+ 
+-SOURCE_CONTRACT_SHA = '5941d773a16208201dbbe5110b9dc41a5f0b9b1b04ae8df39d7a0b92146865a9'
++SOURCE_CONTRACT_SHA = None
+ 
+ 
+ class ClosedMetadataReadiness:
+@@ -39,7 +39,7 @@
+                 'Exact selected physical source contract required')
+         policy = self.read(policy_pin)
+         require(policy['schema'] == 'robotron-physical192-prospective-closed-metadata-guard-source-contract-v1'
+-                and policy['physical_source_family']['sha256'] == '997ca21fabf6fd2a1edc183ff6857ee60d97119b2ff352580632a609e7260e26'
++                and policy['physical_source_family']['sha256'] == '40dea9736e58f93d709316d683c5716abfc23ef8f2f6b2b4d5660c16efdc514f'
+                 and policy['physical_health_source_family']['sha256'] == '22245530f82299b2a3f634d07ba828a91678dc67a6ad5bd869a780d6d4a62651'
+                 and policy['actual_new_binding_complete'] is True
+                 and type(policy['raw_samples']) is int and policy['raw_samples'] >= 3000 and policy['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1' and policy['maximum_gap_s'] == 2.0 and policy['full_main_input_count'] == 390
+@@ -184,36 +184,17 @@
+                 and policy['metadata_namespace_overlay'] in metadata_job['inputs']
+                 and policy['metadata_preparer_parent'] in metadata_job['inputs'],
+                 'Exact new metadata-only namespace overlay and parent must be held')
+-        overlay = self.read(policy['metadata_namespace_overlay'])
+-        require(overlay['selected_preparer'] == policy['metadata_preparer']
+-                and overlay['parent_preparer'] == policy['metadata_preparer_parent']
+-                and overlay['parent_family'] == policy['physical_source_family']
+-                and overlay['parent_source_peer'] == policy['physical_private_source_peer']
+-                and overlay['unchanged_native_controller'] == policy['native_controller'],
+-                'Selected metadata-only namespace correction differs from unchanged private source graph')
++        composition = self.read(policy['metadata_namespace_overlay'])
++        require(composition['selected_family'] == policy['physical_source_family']
++                and composition['selected_preparer'] == policy['metadata_preparer']
++                and composition['parent_preparer'] == policy['metadata_preparer_parent']
++                and composition['native_controller'] == policy['native_controller'],
++                'Exact new typed/capacity whole-family composition required')
+         namespace = load('_closed_guard_metadata_namespace_preflight', h.checked(policy['metadata_assembler']))
+-        # M9's stored ast.dump is immutable provenance from its successful
+-        # CPython3.12 invocation. It is not an AST wire format: newer Python
+-        # omits empty Call fields. Fresh equivalence uses ONE current parser.
+-        parent_source = h.checked(policy['metadata_preparer_parent']).read_text()
+-        selected_source = h.checked(policy['metadata_preparer']).read_text()
+-        old_prefix = "namespace = 'deadline32-current-eval-quiescence-proof2s-'"
+-        new_prefix = "namespace = 'deadline32-physical192-proof2s-'"
+-        require(parent_source.count(old_prefix) == 1
+-                and selected_source == parent_source.replace(old_prefix, new_prefix)
+-                and Path(policy['metadata_preparer']['path']).parent
+-                    == Path(policy['native_controller']['path']).parent,
+-                'Only the exact one-prefix same-directory metadata overlay is allowed')
+-        require(namespace.namespace_expression(selected_source, 'prepare')
+-                    == namespace.namespace_expression(h.checked(policy['native_controller']).read_text(), 'checked_config'),
+-                'Current-interpreter producer/controller namespace expressions differ')
+-        expected_preflight = dict(schema='robotron-source-only-metadata-namespace-preflight-v1',
+-            overlay=policy['metadata_namespace_overlay'],parent_preparer=policy['metadata_preparer_parent'],
+-            selected_preparer=policy['metadata_preparer'],unchanged_native_controller=policy['native_controller'],
+-            producer_controller_namespace_AST_equal=True,only_one_prefix_changed=True,scientific_payload_executed=False)
++        expected_preflight = namespace.namespace_preflight(h, self.read(policy['physical_source_family']))
+         require(report['metadata_namespace_preparation_preflight']
+                     == metadata_job['metadata_namespace_preparation_preflight'] == expected_preflight,
+-                'Exact successful M9 report/job namespace preflight provenance differs')
++                'Actual same-parser full source/namespace preflight differs')
+         classifier = load('_closed_guard_exact_resume_classifier', h.checked(policy['metadata_guard_preparer']))
+         require(report['held_input_classification_preflight'] == classifier.preflight_held_inputs(metadata_job['inputs']),
+                 'Recorded early preflight must classify the complete unchanged selected held-input domain')
+@@ -256,7 +237,10 @@
+                 and key['joint'] == a['joint_engineering'] and key['lifecycle'] == a['lifecycle']
+                 and key['worker_job'] == a['worker_job'] and key['outcome'] == a['outcome']
+                 and key['original_case'] == policy['physical_main_case']
+-                and key['observer_sources'] == policy['observer_sources'] and key['require_final_sample'] is True,
++                and key['observer_sources'] == policy['observer_sources']
++                and key['live_observer_sources'] == policy['live_observer_sources']
++                and key['main_journal_capacity_overlay'] == policy['main_journal_capacity_overlay']
++                and key['require_final_sample'] is True,
+                 'Recorded metadata proof key must exactly bind current sources, corpus and original physical case')
+         binding_pin = self.subjects[0][1]['main_binding']
+         binding = self.read(binding_pin)
+@@ -305,12 +289,18 @@
+                 'Private frozen sidecar must remain source-mode0 before ownership')
+         family = context['family']
+         require(family['native_launch_qualified'] is True, 'Engineering family is never scientific launch authority')
+-        require(family['main_domain_hot_review'] == self.a['joint_engineering'] and family['round_observer_reviewer'] == self.a['raw_reviewer'], 'Original readiness source binding differs')
++        require(family['main_domain_hot_review'] == self.a['joint_engineering'] and family['main_domain_readiness_reviewer'] == self.a['raw_reviewer'], 'Original readiness source binding differs')
+         proof = self.read(family['main_domain_hot_review'])
+         require(proof['lifecycle'] == self.a['lifecycle'], 'Original readiness proof lifecycle differs')
+-        h.checked(family['round_observer_reviewer'])
++        h.checked(family['main_domain_readiness_reviewer'])
+         verified = copy.deepcopy(self.raw)
+-        require(verified['original_sources'] == family['main_observer'] == self.policy['observer_sources'], 'Main-domain proof uses a different observer source')
++        contract = load('_closed_four_fresh_capacity_contract', h.checked(self.policy['metadata_contract']))
++        readiness_sources, readiness_reviewer = contract.capacity_overlay(family, h)
++        require(readiness_reviewer == self.a['raw_reviewer']
++                and verified['original_sources'] == readiness_sources == self.policy['observer_sources']
++                and family['main_observer'] == self.policy['live_observer_sources']
++                and family['main_journal_capacity_overlay'] == self.policy['main_journal_capacity_overlay'],
++                'Recorded parent readiness and prospective capacity sources must remain distinct and exact')
+         lifecycle = self.read(proof['lifecycle'])
+         worker = self.read(lifecycle['worker_job'])
+         proved = self.read(worker['case'])

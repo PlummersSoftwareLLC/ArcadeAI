@@ -1,0 +1,203 @@
+{
+  "activation_authorized": false,
+  "actual": {
+    "activation": null,
+    "execution": null,
+    "output": null,
+    "result": null
+  },
+  "assertions": [
+    "192 distinct native live threads ready before timer begins; exactly128 accepted frames and scalar state updates each worker.",
+    "Enabled exact complete COUNTERS set: connections192, payloads_complete24576, accepted_frames24576; all other counters0, witnesses0, pending0, no fault/saturation/overflow, availableTrue.",
+    "Disabled helper exact all-zero counters/active0/availableFalse intentional; nohooks/noop have no helper and snapshot=null, not fabricated counter observations.",
+    "Exact owned readonly source bytes/identity plus FT/GIL/env guards before and after every arm; worker errors/partial progress retained without retry."
+  ],
+  "author_verification": {
+    "benchmark_executions": 0,
+    "exact_predecessor_function_text_sha256": {
+      "accepted": "2c2ee4de89e9bd3c00f4cdcf4724ba22170aa57668e8ddcf8c9de66608dca50f",
+      "assert_snapshot": "a9aeed579f397f9af01a747132b53ddeb41f0d7da9246db50029f4a546768960",
+      "noop": "6cb8ff7c70560b3e70e7103ed05ed35cdf4d2430f2e8efca492cbd335c61b018",
+      "require": "644d0deb05180d25cc2fb125728ad1795d5ae02f53e600d2bceb90e9e779f392",
+      "synthetic_states": "6261344b83c7c70a4d2bbd38f59746c83b5fca0198e5656d6c452a37fc70a0c8"
+    },
+    "held_source_edits": 0,
+    "helper_or_project_imports": 0,
+    "model_or_replay_referent_access": 0,
+    "runtime_queries": 0,
+    "source_AST_or_compile": 0,
+    "source_text_review_only": true,
+    "tests": 0
+  },
+  "closed_observation_context": {
+    "before_first_utc": "2026-10-18T06:39:05.557035Z",
+    "interpretation": "Nonrandom separate windows with evolving policy/host; no causal telemetry overhead inference. Separation follows actual timestamps.",
+    "nominal_learner_change_percent": -6.2124,
+    "nominal_learner_ratio": 0.937876,
+    "post_first_utc": "2026-10-18T07:19:41.937155Z",
+    "prebaseline_overlap": "Earlier one-CPU synthetic cost run overlapped approximately final10s of before window.",
+    "source": "Parent-provided closed observation summary; no observation/runtime/model referents read by author."
+  },
+  "files": {
+    "benchmark_concurrent_cost.py": {
+      "bytes": 20806,
+      "identity": {
+        "bytes": 20806,
+        "ctime_ns": 1792308745266138949,
+        "device": 2304,
+        "inode": 81531273,
+        "mode": "0o444",
+        "mtime_ns": 1792308745266138949,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_cost_proposal/concurrent_cost_20261018/benchmark_concurrent_cost.py",
+      "sha256": "0abfdb550c32b141c9711fe71b3b213753953fdced5c650a4cfc512b5565ce03"
+    }
+  },
+  "future_root_argv": [
+    "/usr/bin/env",
+    "-u",
+    "LD_PRELOAD",
+    "-u",
+    "PYTHONPATH",
+    "CUDA_VISIBLE_DEVICES=",
+    "PYTHONDONTWRITEBYTECODE=1",
+    "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_cost_proposal/concurrent_cost_20261018/benchmark_concurrent_cost.py",
+    "--execute",
+    "--expected-source-sha256",
+    "0abfdb550c32b141c9711fe71b3b213753953fdced5c650a4cfc512b5565ce03",
+    "--output",
+    "<FRESH_ABSOLUTE_ROOT_OUTPUT.json>"
+  ],
+  "future_root_bounds": {
+    "CPUQuota": "400%",
+    "CUDA_VISIBLE_DEVICES": "",
+    "MemoryMax": "512M",
+    "MemorySwapMax": 0,
+    "Restart": "no",
+    "RuntimeMaxSec": 60,
+    "TasksMax": 512,
+    "TimeoutStopSec": 5,
+    "internal_total_workload_budget_s": 45
+  },
+  "limitations": [
+    "192 continuously back-to-back synthetic workers differ from actual connection duty cycles; neither live overhead nor a production upper bound.",
+    "No real handler, sockets, parser, nstep/replay operations, enqueue, action application, training, model or GPU access.",
+    "Four-CPU quota/scheduling and synthetic bookkeeping affect timing; paired CPU/wall differences can be negative or noisy and remain reported.",
+    "Only ordinary no-gap accepted path measured. No measured rejection rate, real-world throughput, numerical efficacy, quality or causal speed claim.",
+    "Single-dispatch predecessor did not measure contention. Root alone may execute future pinned FT run; no automatic activation or control decision."
+  ],
+  "schema": "robotron-rejected-gap-concurrent-synthetic-cost-source-preparation-v1",
+  "status": "SOURCE_ONLY_FIXED_UNSELECTED_UNEXECUTED",
+  "timing": {
+    "cpu_endpoint": "Process-wide process_time clock paired with last worker wall endpoint; not thread-local CPU.",
+    "excluded": [
+      "worker creation",
+      "connect calls",
+      "ready barrier",
+      "new helper/state setup",
+      "worker teardown/join",
+      "snapshot",
+      "disconnect"
+    ],
+    "included": [
+      "start gate release/wakeup",
+      "worker scheduling",
+      "same per-worker frame-counter bookkeeping",
+      "earlier-worker completion coordination",
+      "accepted synthetic hook sequence"
+    ],
+    "wall_endpoint": "Last worker frame-loop perf_counter clock, before main completion coordination/join."
+  },
+  "upstream_pins": {
+    "helper": {
+      "bytes": 12216,
+      "identity": {
+        "bytes": 12216,
+        "ctime_ns": 1792301353397526560,
+        "device": 2304,
+        "inode": 81529014,
+        "mode": "0o444",
+        "mtime_ns": 1792301353397526560,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_proposal/rejected_gap_telemetry_reviewed3.py",
+      "sha256": "d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd"
+    },
+    "single_dispatch_benchmark": {
+      "bytes": 14596,
+      "identity": {
+        "bytes": 14596,
+        "ctime_ns": 1792305554625643683,
+        "device": 2304,
+        "inode": 81531255,
+        "mode": "0o444",
+        "mtime_ns": 1792305517578638046,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_cost_proposal/benchmark_cost.py",
+      "sha256": "5ef1db71cdabf8bbca4f560799fe041164757f437d65c64c951e92eba79f0794"
+    },
+    "single_dispatch_manifest": {
+      "bytes": 6731,
+      "identity": {
+        "bytes": 6731,
+        "ctime_ns": 1792305619085936651,
+        "device": 2304,
+        "inode": 81531258,
+        "mode": "0o444",
+        "mtime_ns": 1792305619085936651,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_cost_proposal/preparation-manifest.json",
+      "sha256": "df22aa78b8b1052f5cecd9e13ae39028a0e57cba62df9e822ebdc9cc20d8410a"
+    }
+  },
+  "workload": {
+    "accepted_frames_per_arm": 24576,
+    "accepted_frames_per_worker": 128,
+    "arms": [
+      "nohooks",
+      "noop",
+      "disabled",
+      "enabled"
+    ],
+    "connections_per_worker": 1,
+    "enabled_no_ticket_prelock_returns_per_frame": 8,
+    "enabled_shared_helper_lock_calls_per_frame": 2,
+    "fixed_orders": [
+      [
+        "nohooks",
+        "noop",
+        "enabled",
+        "disabled"
+      ],
+      [
+        "noop",
+        "disabled",
+        "nohooks",
+        "enabled"
+      ],
+      [
+        "disabled",
+        "enabled",
+        "noop",
+        "nohooks"
+      ]
+    ],
+    "fixed_repeats": 3,
+    "gap_bursts": 0,
+    "instance_reset": "Fresh instance and connections each arm; no reset/drain API.",
+    "native_worker_threads": 192,
+    "order_scope": "Three rows of balanced four-arm design; partial counterbalance only, no randomization.",
+    "ordinary_calls_per_frame": 10
+  }
+}

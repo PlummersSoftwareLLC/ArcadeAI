@@ -1,0 +1,183 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/preview-flags-preserveRAM-trainer-restart-original01/current-registry-construction-original01/prepare_current_mixed192_registry_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-preview-LR0625-hot-registry-original01-preparation-20261027/prepare_hot_LR0625_registry_v1.py
+@@ -1,4 +1,4 @@
+-"""Inert by default. ROOT-selected mixed-survivor registry construction/check only."""
++"""Inert by default. Exact owned HOT LR transition metadata rebind/read-only monitor."""
+ import argparse
+ import hashlib
+ import json
+@@ -42,12 +42,12 @@
+     value = json.loads(expected_path.read_text()); require(p.pin(expected_path) == pin, 'Producer changed during parse'); return value
+ 
+ 
+-def api_roles(api, baseline_roles, owner_pid, producer_baseline=None, fresh=False):
++def api_roles(api, baseline_roles, owner_pid, producer_baseline=None, fresh=False, expected_lr=6.25e-6):
+     require(api['client_count'] == 192 and len(api['client_rows']) == 192 and api['training_enabled'] is True
+             and api['measurement_active'] is False and api['managed_measurement'] == {}
+             and api['memory_buffer_size'] == 6000000
+             and api['managed_experiment'] == 'CE4096-LR125-survival32M-original01-20261023'
+-            and api['lr'] == 6.25e-6 and api['pipeline_read_error'] == ''
++            and api['lr'] == expected_lr and api['pipeline_read_error'] == ''
+             and api['bank_persistence_read_error'] == '' and api['host_pipeline']['available'] is True,
+             'Actual192 current recipe/hot replay/healthy unpaused scope required')
+     if fresh:
+@@ -242,6 +242,12 @@
+ 
+ def check_live(p, binding_pin):
+     binding = p.read(binding_pin); policy = p.read(binding['supervision_policy'])
++    require(binding.get('current_lr_scale') == .0625 and binding['current_effective_lr'] == 3.125e-6
++            and policy['current_lr_scale'] == .0625 and policy['current_effective_lr'] == 3.125e-6,
++            'Selected HOT monitor requires the actual new LR binding')
++    hot = validate_hot_transition(p,binding['hot_lr_transition'],binding['prior_binding'])
++    require(policy['source_files'][str(GAME/'models_dqn/learning_control.json')] == hot['after_current_control'],
++            'Current HOT recipe must bind its exact owned transition')
+     require(binding['mixed_physical_game_cohorts'] is True and binding['new_live_game_cohort'] is False,
+             'Explicit actual mixed-cohort registry required')
+     for path,expected in policy['source_files'].items():
+@@ -254,7 +260,8 @@
+         with urllib.request.urlopen('http://127.0.0.1:8771/api/now',timeout=5) as stream: raw = stream.read(2_000_001)
+         require(len(raw) <= 2_000_000, 'Bounded API metadata required'); value = json.loads(raw)
+         roles = api_roles(value,policy['actual_API_roles'],policy['trainer']['pid'],
+-                          capture['api']['host_pipeline']['learning_exposure'],fresh=True)
++                          capture['api']['host_pipeline']['learning_exposure'],fresh=True,
++                          expected_lr=binding.get('current_effective_lr',6.25e-6))
+         require(roles == policy['actual_API_roles'], 'Current CID map changed; ROOT rebind required'); return value
+     def owners():
+         result = {}
+@@ -293,21 +300,127 @@
+         controls_process_or_canonical_writes=0)
+ 
+ 
++HOT_ROOT = Path(__file__).resolve().parent
++HOT_PRIOR = CASE/'actual-current-mixed192-registry-original01/current-mixed192-main-binding.json'
++HOT_PRIOR_SHA = '6bfe2e5ceac0be42fce70f95ee65fbd160b8daff3b4a5e15f691b6586ad131fd'
++
++
++def typed(value):
++    if type(value) is dict: return ('dict',tuple((k,typed(v)) for k,v in sorted(value.items())))
++    if type(value) is list: return ('list',tuple(typed(v) for v in value))
++    return (type(value).__name__,value)
++
++
++def validate_hot_transition(p, transition_pin, prior_pin):
++    proof = p.read(transition_pin)
++    require(set(proof) == {'schema','root_plan','owner','current_registry','before_control','after_control',
++            'writer_receipt','before_API','first_applied_API','anchor_API'}
++            and proof['schema'] == 'robotron-owned-one-field-hot-LR125-to-LR0625-transition-v1'
++            and proof['current_registry'] == prior_pin and prior_pin['path'] == str(HOT_PRIOR)
++            and prior_pin['sha256'] == HOT_PRIOR_SHA, 'Exact current232 HOT transition required')
++    prior = p.read(prior_pin); policy = p.read(prior['supervision_policy'])
++    plan = p.read(proof['root_plan'])
++    require(proof['root_plan']['sha256'] == 'e1518cfd08485f0f74bfd42cc0562fdbc13287af778edca3956a0c5428e91186'
++            and plan['next_knob'] == dict(lr_scale_before=.125,lr_scale_after=.0625,
++                optimizer_lr_before=6.25e-6,optimizer_lr_after=3.125e-6)
++            and proof['owner'] == prior['owner'] and proof['owner']['pid'] == 1369090,
++            'Exact prospective knob/unchanged owner required')
++    before = p.read(proof['before_control']); after = p.read(proof['after_control'])
++    require(type(before['lr_scale']) is float and before['lr_scale'] == .125
++            and type(after['lr_scale']) is float and after['lr_scale'] == .0625
++            and typed(dict(before,lr_scale=.0625)) == typed(after)
++            and before['experiment'] == prior['experiment'], 'Only the one typed LR field may change')
++    writer = p.read(proof['writer_receipt']); control_path = str(GAME/'models_dqn/learning_control.json')
++    require(writer['schema'] == 'robotron-owned-one-field-hot-LR-control-publication-v1'
++            and writer['owner_before'] == writer['owner_after'] == proof['owner']
++            and writer['changed_fields'] == ['lr_scale'] and writer['atomic_replace'] is True
++            and writer['weights_optimizer_scaler_replay_loaded_or_reset'] is False
++            and writer['phase_record_changed'] is False
++            and writer['before_current_control'] == policy['source_files'][control_path]
++            and writer['after_current_control']['path'] == control_path
++            and writer['before_current_control']['sha256'] == proof['before_control']['sha256']
++            and writer['after_current_control']['sha256'] == proof['after_control']['sha256']
++            and p.pin(control_path) == writer['after_current_control'], 'Exact owned control publication differs')
++    require(typed(json.loads(Path(control_path).read_text())) == typed(after)
++            and p.pin(control_path) == writer['after_current_control'], 'Actual normal control differs from its archive')
++    capture = p.read(prior['actual_192_capture']); snapshots = []
++    for label,lr in (('before_API',6.25e-6),('first_applied_API',3.125e-6),('anchor_API',3.125e-6)):
++        witness = proof[label]
++        require(set(witness) == {'raw_API','before_unix_s','after_unix_s'}, 'Exact historical API bracket required')
++        api = p.read(witness['raw_API']); lo,hi = witness['before_unix_s'],witness['after_unix_s']
++        require(all(type(v) in (int,float) and math.isfinite(v) for v in (lo,hi,api['ts']))
++                and 0 < lo <= hi and hi-lo <= 5 and 0 <= hi-api['ts'] <= 5
++                and type(api['pipeline_snapshot_age_s']) in (int,float)
++                and math.isfinite(api['pipeline_snapshot_age_s']) and 0 <= api['pipeline_snapshot_age_s'] <= 5,
++                'Historical applied-LR snapshots must be bounded and fresh')
++        roles = api_roles(api,prior['actual_roles'],prior['owner']['pid'],
++            capture['api']['host_pipeline']['learning_exposure'],expected_lr=lr)
++        require(roles == prior['actual_roles'], 'All192 transport roles/CIDs must remain unchanged')
++        snapshots.append((api,witness))
++    times = [writer['publication_begin_unix_s'],writer['publication_complete_unix_s']]
++    require(all(type(t) in (int,float) and math.isfinite(t) and t > 0 for t in times)
++            and snapshots[0][1]['after_unix_s'] <= times[0] <= times[1] <= snapshots[1][1]['before_unix_s']
++            and snapshots[1][1]['after_unix_s'] <= snapshots[2][1]['before_unix_s'], 'HOT chronology differs')
++    applied = [api['host_pipeline']['learning_exposure']['optimizer']['total']['applied'] for api,_ in snapshots]
++    require(all(type(v) is int and v >= 0 for v in applied) and applied == sorted(applied)
++            and applied[2] > applied[1], 'Anchor requires a later applied update at target LR')
++    for key in ('training_steps','optimized_samples','learner_frame_count','frame_count'):
++        values = [api[key] for api,_ in snapshots]
++        require(all(type(v) is int and v > 0 for v in values) and values == sorted(values), 'HOT clocks regressed')
++    accepted = [api['host_pipeline']['learning_exposure']['replay']['accepted_total'] for api,_ in snapshots]
++    require(all(type(v) is int and v >= 0 for v in accepted) and accepted == sorted(accepted),
++            'Accepted replay count regressed during HOT transition')
++    require(prior['active_resume_phase_record']['sha256'] == 'cb85b936604a0be2f91de45d9b79ee66545643e67b5f4ac143764a81a4cb3432'
++            and p.pin(prior['active_resume_phase_record']['path']) == prior['active_resume_phase_record'], 'Active CE phase changed')
++    return dict(proof=proof,writer=writer,prior=prior,policy=policy,after_current_control=writer['after_current_control'],
++                applied_anchor_API=snapshots[-1][0])
++
++
++def rebind_hot(p, transition_pin, prior_pin, output, preflight=False):
++    hot = validate_hot_transition(p,transition_pin,prior_pin); prior,old_policy = hot['prior'],hot['policy']
++    control_path = str(GAME/'models_dqn/learning_control.json'); source_files = dict(old_policy['source_files'])
++    for path,value in source_files.items():
++        require(p.pin(path) == (hot['after_current_control'] if path == control_path else value),
++                'A source other than the exact owned LR control changed')
++    source_files[control_path] = hot['after_current_control']
++    held = {path:value['sha256'] for path,value in source_files.items()}
++    require(len(held) == len(prior['held_hashes']) == 232, 'HOT change must preserve all232 source paths')
++    output = Path(output); require(output.parent.resolve(strict=True) == HOT_ROOT and not output.exists(), 'NEW HOT metadata output required')
++    if preflight: return dict(status='METADATA_PREFLIGHT_PASS',source_count=232,only_control_source_changed=True,outputs_written=0)
++    output.mkdir(mode=0o700)
++    policy = dict(old_policy,source_files=source_files,held_hashes_sha256=hashlib.sha256(json.dumps(held,sort_keys=True,separators=(',',':')).encode()).hexdigest(),
++        current_lr_scale=.0625,current_effective_lr=3.125e-6,hot_lr_transition=transition_pin)
++    pp = p.publish(output/'current-HOTLR0625-supervision-policy.json',policy)
++    binding = dict(prior,prior_binding=prior_pin,supervision_policy=pp,held_hashes=held,
++        baseline_API=hot['applied_anchor_API'],hot_lr_transition=transition_pin,current_lr_scale=.0625,current_effective_lr=3.125e-6,
++        hot_lr_applied_anchor_clocks={k:hot['applied_anchor_API'][k] for k in ('training_steps','optimized_samples','learner_frame_count','frame_count')},
++        hot_lr_applied_anchor_replay_exposure=hot['applied_anchor_API']['host_pipeline']['learning_exposure']['replay'],
++        historical_startup_CPU_recipe_lr_scale=.125,current_LR0625_checkpoint_CPU_qualified=False,
++        startup_CPU_report_scope='Historical actual.125 boot/startup proof retained; it is not relabeled as a.0625 saved-checkpoint qualification.',
++        current_recipe_scope='Root one-field hot control +later applied API anchor; same owner/192 actors/CE phase/producer epochs, no source install or model/replay load/reset.')
++    bp = p.publish(output/'current-HOTLR0625-main-binding.json',binding)
++    return p.publish(output/'prepared-current-HOTLR0625-registry-NOT-CANONICALLY-ADOPTED.json',dict(
++        schema='robotron-current-HOTLR0625-registry-construction-v1',binding=bp,policy=pp,source=p.pin(__file__),
++        prior_binding=prior_pin,hot_lr_transition=transition_pin,source_count=232,canonical_state_written=False))
++
++
+ def main():
+-    parser = argparse.ArgumentParser(description=__doc__); parser.add_argument('--prepare',action='store_true')
+-    parser.add_argument('--preflight',action='store_true'); parser.add_argument('--selection'); parser.add_argument('--selection-sha256')
+-    parser.add_argument('--check',action='store_true'); parser.add_argument('--binding'); parser.add_argument('--binding-sha256')
+-    parser.add_argument('--output'); parser.add_argument('--expected-source-sha256'); args = parser.parse_args()
+-    require(sum((args.prepare,args.preflight,args.check)) <= 1, 'Select one mode')
+-    if not(args.prepare or args.preflight or args.check): print('PLAN_ONLY: no imports, reads, probes or controls'); return
++    parser = argparse.ArgumentParser(description='Default inert. Metadata-only HOT LR registry rebind or read-only monitor.')
++    parser.add_argument('--rebind-hot',action='store_true'); parser.add_argument('--preflight-hot',action='store_true')
++    parser.add_argument('--check',action='store_true'); parser.add_argument('--transition'); parser.add_argument('--transition-sha256')
++    parser.add_argument('--prior-binding'); parser.add_argument('--prior-binding-sha256')
++    parser.add_argument('--binding'); parser.add_argument('--binding-sha256'); parser.add_argument('--output'); parser.add_argument('--expected-source-sha256')
++    args = parser.parse_args(); require(sum((args.rebind_hot,args.preflight_hot,args.check)) <= 1, 'Select one explicit mode')
++    if not(args.rebind_hot or args.preflight_hot or args.check): print('PLAN_ONLY: no metadata reads, probes or controls'); return
+     p = primitives(); own = p.pin(__file__)
+-    require(own['sha256'] == args.expected_source_sha256 and own['identity']['mode'] == '0o444', 'Frozen selected source required')
++    require(own['sha256'] == args.expected_source_sha256 and own['identity']['mode'] == '0o444', 'Frozen selected HOT monitor source required')
+     if args.check:
+         bp = p.pin(args.binding); require(bp['sha256'] == args.binding_sha256, 'Exact current binding required')
+         result = check_live(p,bp)
+     else:
+-        selection = p.pin(args.selection); require(selection['sha256'] == args.selection_sha256, 'Exact ROOT selection required')
+-        result = prepare(p,selection,args.output,preflight=args.preflight)
++        prior = p.pin(args.prior_binding); transition = p.pin(args.transition)
++        require(prior['sha256'] == args.prior_binding_sha256 and transition['sha256'] == args.transition_sha256, 'Exact ROOT current/HOT pins required')
++        result = rebind_hot(p,transition,prior,args.output,preflight=args.preflight_hot)
+     print(json.dumps(result,indent=2))
+ 
+ 

@@ -1,0 +1,123 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-S2-two-arm-quality-screen-source-original01-20261030/Root-sequence-and-report-S2-screen-port-gate-v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-policy-only-autosave-capture-original01-20261031/Root-sequence-and-report-frozen-policy-screen-v3.py
+@@ -141,6 +141,50 @@
+         pause(min(.25, max(0, deadline-now())))
+ 
+ 
++def screen_display(selection):
++    """Report labels only; selected native/controller remain authoritative."""
++    reference=selection['reference'];candidate=selection['candidate']
++    def sha(value):
++        checkpoint=value.get('checkpoint',value)
++        digest=checkpoint.get('sha256')if type(checkpoint)is dict else None
++        if (type(digest)is not str or len(digest)!=64
++                or any(c not in '0123456789abcdef'for c in digest)
++                or value.get('sha256',digest)!=digest):
++            raise ValueError('Exact selected policy SHA needed for report labels')
++        return digest
++    def label(role,value,digest):
++        name=value.get('display_name')
++        if name is not None and (type(name)is not str or not name.strip()
++                or len(name)>80 or not name.isprintable()):
++            raise ValueError('Bounded printable selected policy display_name required')
++        fallback='Frozen reference'if role=='Reference'else'Candidate'
++        return ((role+' ('+name.strip()+'; '+digest[:12]+')',name.strip())if name is not None
++                else(fallback+' ('+digest[:12]+')',digest[:12]))
++    reference_sha=sha(reference);candidate_sha=sha(candidate)
++    reference_label,reference_name=label('Reference',reference,reference_sha)
++    candidate_label,candidate_name=label('Candidate',candidate,candidate_sha)
++    return dict(candidate_sha256=candidate_sha,reference_sha256=reference_sha,
++        candidate_display_name=candidate_name,reference_display_name=reference_name,
++        leg_labels=dict(R1=reference_label,C1=candidate_label),
++        rationale='Compare the current frozen candidate with '+reference_label+
++            ' using the same one-hour cutoff. Protected incumbent b231 remains unchanged; no automatic promotion.',
++        policy_scope='Selected frozen candidate versus selected frozen reference; exploratory one-hour screen only, no automatic promotion')
++
++
++def screen_progress_counts(status):
++    """First-game progress; playing excludes naturally finished STOP-pending games."""
++    keys=('n_scored','n_completed','n_unfinished','n_emulators_stopped','n_emulators_active')
++    if (any(type(status.get(k))is not int or not 0<=status[k]<=32 for k in keys)
++            or status['n_completed']>status['n_scored']
++            or status['n_completed']+status['n_unfinished']!=32
++            or status['n_emulators_stopped']+status['n_emulators_active']!=32
++            or status['n_emulators_stopped']>status['n_completed']):
++        raise ValueError('Exact typed32 first-game progress counts required')
++    counts={k:status[k]for k in keys}
++    counts.update(tracked=status['n_scored'],finished=status['n_completed'],playing=status['n_unfinished'])
++    return counts
++
++
+ def main():
+     p = argparse.ArgumentParser(description=__doc__)
+     p.add_argument('--execute', action='store_true')
+@@ -160,6 +204,8 @@
+     selected(__file__, args.source_sha256)
+     prepared = json.loads(selected(args.prepared, args.prepared_sha256))
+     configs = json.loads(selected(args.configs, args.configs_sha256))
++    # Authenticate the SAME immutable selection for display, without reading model bytes.
++    display = screen_display(json.loads(selected(prepared['selection']['path'], prepared['selection']['sha256'])))
+     code = selected(args.controller, args.controller_sha256)
+     module = importlib.util.module_from_spec(importlib.util.spec_from_loader('_selected_screen_controller', loader=None))
+     module.__file__ = str(args.controller)
+@@ -180,6 +226,9 @@
+             work = c['next_work']
+             leg, job = phase['leg'], phase['job']
+             stage = phase['detail']
++            role = display['leg_labels'].get(leg, 'Score screen')
++            if leg in display['leg_labels'] and not phase['terminal']:
++                stage = f'{role}: preparing the original score-screen arm'
+             wait = 'The original controller and its verified result'
+             eta = 'No confirmed start time yet; each admitted arm runs for one hour.'
+             if phase['terminal']:
+@@ -189,7 +238,7 @@
+             counts = None
+             port_gate = phase.get('port_gate')
+             if port_gate is not None and not phase['terminal']:
+-                stage = f'Score screen {leg}: waiting for selected local ports'
++                stage = f'{role}: waiting for selected local ports'
+                 wait = f'All33 ports must be free together; {port_gate["tries"]} checks in {port_gate["elapsed_s"]:.1f}s'
+                 eta = 'Port availability is checked for at most90 seconds; the arm has not launched.'
+             elif job is not None and not phase['terminal']:
+@@ -201,26 +250,34 @@
+                     status = read(status_path)
+                     age = now - status['observed_unix_s']
+                     anchor = status.get('anchor')
+-                    counts = {k: status.get(k) for k in ('n_scored', 'n_completed', 'n_emulators_stopped', 'n_emulators_active')}
++                    counts = screen_progress_counts(status)
+                     if owner_live and 0 <= age <= 20 and anchor:
+                         remaining = max(0, (anchor['deadline_monotonic_ns'] - time.monotonic_ns()) / 1e9)
+-                        stage = f'Score screen {leg}: {counts["n_completed"]}/32 first games complete'
++                        stage = (f'{role}: {counts["tracked"]}/32 first-game scores tracked · '
++                                 f'{counts["finished"]} finished · {counts["playing"]} playing')
+                         wait = 'Unfinished first games are playing until the fixed one-hour cutoff; completed emulators stop'
+                         eta = time.strftime('This arm reaches cutoff at %I:%M:%S %p %Z', time.localtime(now + remaining)).replace(' 0', ' ') + f' ({remaining / 60:.1f} minutes remaining).'
+                     elif owner_live and 0 <= age <= 20:
+-                        stage = f'Score screen {leg}: connecting and certifying 32 fresh game clients'
++                        stage = f'{role}: connecting and certifying 32 fresh game clients'
+                         wait = 'All 32 first games must pass startup checks before the one-hour clock starts'
+                     else:
+-                        stage = f'Score screen {leg}: checking the original process and result'
++                        stage = f'{role}: checking the original process and result'
+                         eta = 'Progress is delayed or the arm is closing; no current ETA is available.'
+                 elif owner_live:
+-                    stage = f'Score screen {leg}: loading and compiling the frozen policy'
++                    stage = f'{role}: loading and compiling the frozen policy'
+                     wait = 'Frozen-policy startup, then all 32 fresh first-game clients'
+             work.update(state='score_screen_running' if not phase['terminal'] else 'score_screen_review',
+-                current_stage=stage, waiting_for=wait, next_stage=('Candidate S2 arm after the reference closes successfully' if leg == 'R1' and not phase['terminal'] else 'Review the score comparison and select the next learning change'),
++                current_stage=stage, waiting_for=wait, detail=display['rationale'],
++                next_stage=(display['leg_labels']['C1']+' after the reference closes successfully'
++                    if leg == 'R1' and not phase['terminal'] else
++                    display['leg_labels']['R1']+' first, then '+display['leg_labels']['C1'] if leg is None and not phase['terminal'] else
++                    'Review the score comparison and select the next learning change'),
+                 eta=eta, deadline_unix_s=None, main_training_continues=True,
+                 updated_unix_s=now, observation_unix_s=now, score_screen=dict(leg=leg, counts=counts, port_gate=port_gate,
+-                    policy_scope='Frozen S2 versus protected b231; exploratory screen only, no automatic promotion'))
++                    policy_scope=display['policy_scope'],candidate_sha256=display['candidate_sha256'],
++                    reference_sha256=display['reference_sha256'],candidate_display_name=display['candidate_display_name'],
++                    reference_display_name=display['reference_display_name'],
++                    leg_label=role))
+             c.update(mode='manual', observation_unix_s=now, main_training_continues=True)
+             write(args.control, c)
+             write(args.output / 'heartbeat.json', dict(pid=pid, birth=birth, observed_unix_s=now,

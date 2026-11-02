@@ -1,0 +1,38 @@
+{
+  "actions_taken": [],
+  "actual_capture_job": null,
+  "files": [
+    {
+      "bytes": 5991,
+      "identity": {
+        "ctime_ns": 1792248720546173504,
+        "device": 2304,
+        "inode": 84285356,
+        "mode": "0o444",
+        "mtime_ns": 1792248720545751070,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/post_quality_CE_capture_cadence_note_proposal/NOTE.txt",
+      "sha256": "8470734b5637f632716898273a1892a0505feb1ca84c77f7aa7b97f396b132fb"
+    },
+    {
+      "bytes": 10457,
+      "identity": {
+        "ctime_ns": 1792248720546242433,
+        "device": 2304,
+        "inode": 84285357,
+        "mode": "0o444",
+        "mtime_ns": 1792248720546173504,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/post_quality_CE_capture_cadence_note_proposal/source-and-saved-evidence.json",
+      "sha256": "1683cd6f5e6359cfff2f600f103710b21883c97b5c3b49157c6e5f16cf61bc75"
+    }
+  ],
+  "schema": "robotron-source-preparation-manifest-v1",
+  "source_freeze_held": true,
+  "status": "SOURCE_AND_SAVED_METADATA_NOTE_ONLY",
+  "tests_or_imports_executed": false
+}

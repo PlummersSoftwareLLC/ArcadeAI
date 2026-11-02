@@ -1,0 +1,503 @@
+{
+  "$defs": {
+    "clocks": {
+      "additionalProperties": false,
+      "properties": {
+        "frame_count": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "learner_frame_count": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "optimized_samples": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "training_steps": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "training_steps",
+        "optimized_samples",
+        "learner_frame_count",
+        "frame_count"
+      ],
+      "type": "object"
+    },
+    "expected_phase": {
+      "additionalProperties": false,
+      "properties": {
+        "founder_phase_record_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "last_resume_record_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/sha"
+            }
+          ]
+        },
+        "metric": {
+          "enum": [
+            "ce",
+            "kl"
+          ]
+        },
+        "phase_id": {
+          "pattern": "^[A-Za-z0-9_-]{1,100}$",
+          "type": "string"
+        },
+        "root_precommit_sha256": {
+          "$ref": "#/$defs/sha"
+        },
+        "started_from": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "clocks": {
+              "$ref": "#/$defs/clocks"
+            },
+            "path": {
+              "pattern": "^/",
+              "type": "string"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha"
+            }
+          },
+          "required": [
+            "path",
+            "sha256",
+            "bytes",
+            "clocks"
+          ],
+          "type": "object"
+        },
+        "valid": {
+          "const": true
+        }
+      },
+      "required": [
+        "metric",
+        "phase_id",
+        "root_precommit_sha256",
+        "founder_phase_record_sha256",
+        "last_resume_record_sha256",
+        "started_from",
+        "valid"
+      ],
+      "type": "object"
+    },
+    "owner": {
+      "additionalProperties": false,
+      "properties": {
+        "cgroup": {
+          "pattern": "^/user.slice/",
+          "type": "string"
+        },
+        "invocation_id": {
+          "pattern": "^[0-9a-f]{32}$",
+          "type": "string"
+        },
+        "pid": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "starttime_ticks": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "unit": {
+          "pattern": "^robotron-managed-[A-Za-z0-9_.-]+-trainer\\.service$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pid",
+        "starttime_ticks",
+        "unit",
+        "invocation_id",
+        "cgroup"
+      ],
+      "type": "object"
+    },
+    "pin": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "identity": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "ctime_ns": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "device": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "inode": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "mode": {
+              "pattern": "^0o[0-7]+$",
+              "type": "string"
+            },
+            "mtime_ns": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "nlink": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "uid": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "device",
+            "inode",
+            "bytes",
+            "mtime_ns",
+            "ctime_ns",
+            "mode",
+            "uid",
+            "nlink"
+          ],
+          "type": "object"
+        },
+        "path": {
+          "pattern": "^/",
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "bytes",
+        "identity"
+      ],
+      "type": "object"
+    },
+    "sha": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "triple": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "path": {
+          "pattern": "^/",
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "bytes"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "robotron-batch2048-phase-snapshot-checkpoint-CPU-job-reviewed2-v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "batch2048_context": {
+      "additionalProperties": false,
+      "properties": {
+        "producer_observation": {
+          "$ref": "#/$defs/pin"
+        },
+        "profile": {
+          "$ref": "#/$defs/pin"
+        },
+        "role": {
+          "enum": [
+            "treatment_startup",
+            "early_insurance",
+            "candidate",
+            "newest_stopped"
+          ]
+        }
+      },
+      "required": [
+        "profile",
+        "role",
+        "producer_observation"
+      ],
+      "type": "object"
+    },
+    "clock_floor": {
+      "$ref": "#/$defs/clocks"
+    },
+    "experiment": {
+      "pattern": "^[A-Za-z0-9_-]{1,120}$",
+      "type": "string"
+    },
+    "original_strict_base_sha256": {
+      "const": "7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead"
+    },
+    "output_directory": {
+      "pattern": "^/",
+      "type": "string"
+    },
+    "phase_snapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "acquisition": {
+          "$ref": "#/$defs/pin"
+        },
+        "boot_checkpoint": {
+          "$ref": "#/$defs/triple"
+        },
+        "boot_verification": {
+          "$ref": "#/$defs/pin"
+        },
+        "expected_phase": {
+          "$ref": "#/$defs/expected_phase"
+        },
+        "observed_clients": {
+          "enum": [
+            0,
+            192
+          ]
+        },
+        "owner": {
+          "$ref": "#/$defs/owner"
+        },
+        "phase_record": {
+          "$ref": "#/$defs/pin"
+        },
+        "purpose": {
+          "enum": [
+            "startup",
+            "candidate",
+            "newest_stopped"
+          ]
+        },
+        "sources": {
+          "additionalProperties": false,
+          "properties": {
+            "__init__.py": {
+              "additionalProperties": false,
+              "properties": {
+                "archive": {
+                  "$ref": "#/$defs/pin"
+                },
+                "current": {
+                  "$ref": "#/$defs/pin"
+                }
+              },
+              "required": [
+                "current",
+                "archive"
+              ],
+              "type": "object"
+            },
+            "agent.py": {
+              "additionalProperties": false,
+              "properties": {
+                "archive": {
+                  "$ref": "#/$defs/pin"
+                },
+                "current": {
+                  "$ref": "#/$defs/pin"
+                }
+              },
+              "required": [
+                "current",
+                "archive"
+              ],
+              "type": "object"
+            },
+            "config.py": {
+              "additionalProperties": false,
+              "properties": {
+                "archive": {
+                  "$ref": "#/$defs/pin"
+                },
+                "current": {
+                  "$ref": "#/$defs/pin"
+                }
+              },
+              "required": [
+                "current",
+                "archive"
+              ],
+              "type": "object"
+            },
+            "learning_control.py": {
+              "additionalProperties": false,
+              "properties": {
+                "archive": {
+                  "$ref": "#/$defs/pin"
+                },
+                "current": {
+                  "$ref": "#/$defs/pin"
+                }
+              },
+              "required": [
+                "current",
+                "archive"
+              ],
+              "type": "object"
+            },
+            "loss_kernel.py": {
+              "additionalProperties": false,
+              "properties": {
+                "archive": {
+                  "$ref": "#/$defs/pin"
+                },
+                "current": {
+                  "$ref": "#/$defs/pin"
+                }
+              },
+              "required": [
+                "current",
+                "archive"
+              ],
+              "type": "object"
+            },
+            "model.py": {
+              "additionalProperties": false,
+              "properties": {
+                "archive": {
+                  "$ref": "#/$defs/pin"
+                },
+                "current": {
+                  "$ref": "#/$defs/pin"
+                }
+              },
+              "required": [
+                "current",
+                "archive"
+              ],
+              "type": "object"
+            },
+            "priority_phase.py": {
+              "additionalProperties": false,
+              "properties": {
+                "archive": {
+                  "$ref": "#/$defs/pin"
+                },
+                "current": {
+                  "$ref": "#/$defs/pin"
+                }
+              },
+              "required": [
+                "current",
+                "archive"
+              ],
+              "type": "object"
+            },
+            "training.py": {
+              "additionalProperties": false,
+              "properties": {
+                "archive": {
+                  "$ref": "#/$defs/pin"
+                },
+                "current": {
+                  "$ref": "#/$defs/pin"
+                }
+              },
+              "required": [
+                "current",
+                "archive"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "__init__.py",
+            "model.py",
+            "config.py",
+            "learning_control.py",
+            "agent.py",
+            "training.py",
+            "loss_kernel.py",
+            "priority_phase.py"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "purpose",
+        "owner",
+        "observed_clients",
+        "phase_record",
+        "boot_checkpoint",
+        "boot_verification",
+        "expected_phase",
+        "acquisition",
+        "sources"
+      ],
+      "type": "object"
+    },
+    "schema": {
+      "const": "robotron-batch2048-phase-snapshot-checkpoint-CPU-job-reviewed2-v1"
+    },
+    "source": {
+      "$ref": "#/$defs/pin"
+    },
+    "source_control_context": {
+      "description": "Exact unchanged7d check_context schema; actual installed model/config pins, readonly archived control/unit/provenance. No oldconfigSHA constant.",
+      "type": "object"
+    },
+    "strict_phase_base_sha256": {
+      "const": "47677509f170c4c3b6a1c03918e02ab13996af1ceafffac29b7536c2fad61f80"
+    },
+    "verification_copy": {
+      "$ref": "#/$defs/pin"
+    },
+    "verifier_sha256": {
+      "$ref": "#/$defs/sha"
+    }
+  },
+  "required": [
+    "schema",
+    "verifier_sha256",
+    "strict_phase_base_sha256",
+    "original_strict_base_sha256",
+    "experiment",
+    "source",
+    "verification_copy",
+    "clock_floor",
+    "source_control_context",
+    "output_directory",
+    "phase_snapshot",
+    "batch2048_context"
+  ],
+  "title": "Reviewed2 explicit2048 CE phase snapshot with root CSV origin validation; actual jobs unbound",
+  "type": "object"
+}

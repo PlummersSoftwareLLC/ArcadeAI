@@ -1,0 +1,41 @@
+{
+  "schema": "robotron-LR125-window-source-specialization-v1",
+  "entries": [
+    {
+      "original_path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/capacity-original-full-reviewer-CPU-original01-preparation-20261019/immutable-main-hold-guard.py",
+      "original_sha256": "f44f392188bcc6924baab87b2762d6a80879331078f76495bb4c00686b8b65f3",
+      "effective_path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/lr125_survival_trial_proposal_20261023/window_observer.py",
+      "effective_sha256": "ef7b13fc39493b5986a77718263ee2e6b51147e6361cf40c90e733644c43428a",
+      "replacements": [
+        {
+          "old": "HORIZON = 8_000_000",
+          "new": "HORIZON = 32_000_000"
+        },
+        {
+          "old": "api['lr']==1.25e-5",
+          "new": "api['lr']==6.25e-6"
+        }
+      ],
+      "reverse_exact": true
+    },
+    {
+      "original_path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/control_quality32_review_v1.py",
+      "original_sha256": "218e7f861deb82c340527d218ed9f92ef5c5836c8cb9d32452c0598e61ff9a14",
+      "effective_path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/lr125_survival_trial_proposal_20261023/window_controller.py",
+      "effective_sha256": "d6d02c7f9c8e17a925e5a1f766956b4e5ab0342d95c46f0b6bbd585f57cb5c55",
+      "replacements": [
+        {
+          "old": "props.get('RuntimeMaxSec')=='180'",
+          "new": "props.get('RuntimeMaxSec')=='14520'"
+        },
+        {
+          "old": "180<=c['observation_s']<=300",
+          "new": "14520<=c['observation_s']<=14640"
+        }
+      ],
+      "reverse_exact": true
+    }
+  ],
+  "production_source_changed": false,
+  "checkpoint_capture_and_counter_validation_bodies_changed": false
+}

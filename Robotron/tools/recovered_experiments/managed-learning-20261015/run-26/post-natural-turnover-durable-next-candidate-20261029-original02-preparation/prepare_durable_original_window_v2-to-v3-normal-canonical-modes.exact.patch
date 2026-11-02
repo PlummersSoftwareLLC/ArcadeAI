@@ -1,0 +1,23 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-natural-turnover-durable-next-candidate-20261029-original02-preparation/prepare_durable_original_window_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-natural-turnover-durable-next-candidate-20261029-original02-preparation/prepare_durable_original_window_v3.py
+@@ -30,6 +30,9 @@
+ ENDPOINT_UNIT = 'robotron-durable-endpoint-CPU-original02-20261029.service'
+ OBSERVER_UNIT = 'robotron-durable-candidate-window-original02-20261029.service'
+ THRESHOLDS = dict(applied_updates=5000,replay_inserts=1000000,elapsed_s=3600)
++CANONICAL_SOURCE_MODES = {WATCH:0o664, LIB:0o664,
++    G/'tools/post_recovery_evaluation/round_observer_v10.py':0o664,
++    G/'tools/post_recovery_evaluation/round_health_transport_v7.py':0o664}
+ 
+ 
+ def require(value, message):
+@@ -39,8 +42,8 @@
+ def checked(path, digest):
+     require(path.is_file() and not path.is_symlink(), 'Regular source required: '+str(path))
+     before=path.stat()
+-    require(before.st_uid==os.getuid() and stat.S_IMODE(before.st_mode)==0o444 and before.st_nlink==1,
+-            'Selected source/authority must stay owned, immutable and independently linked')
++    require(before.st_uid==os.getuid() and stat.S_IMODE(before.st_mode)==CANONICAL_SOURCE_MODES.get(path,0o444) and before.st_nlink==1,
++            'Selected source/authority must retain its exact owned mode and independent link')
+     raw=path.read_bytes(); after=path.stat()
+     stable=lambda value:(value.st_dev,value.st_ino,value.st_size,value.st_mtime_ns,value.st_ctime_ns,value.st_mode,value.st_uid,value.st_nlink)
+     require(stable(before)==stable(after) and hashlib.sha256(raw).hexdigest()==digest,

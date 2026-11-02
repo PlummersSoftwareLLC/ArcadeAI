@@ -1,0 +1,53 @@
+{
+  "actual_GPU_or_trial_authorized": false,
+  "base_sources": {
+    "agent.py": {
+      "bytes": 95163,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/agent.py",
+      "sha256": "b885020db1c07e2a736d46f20c295dc71a461242f717bd324e1a3111379b5157"
+    },
+    "config.py": {
+      "bytes": 116996,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/config.py",
+      "sha256": "f2794754a14e9f13c82b613aa131698246a08dc9021c18f1b78fda7c4b484498"
+    },
+    "loss_kernel.py": {
+      "bytes": 7957,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/loss_kernel.py",
+      "sha256": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a"
+    },
+    "training.py": {
+      "bytes": 31175,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/training.py",
+      "sha256": "16a327b08eeb0be829d92e46dd72eab014c5f8b8f5331a7cf043785979e842c5"
+    }
+  },
+  "fixed_KL_validity": {
+    "entropy_log_floor": 1e-12,
+    "preclamp_near_zero_stat_abs_bound": 1e-06,
+    "priority_multiplier_or_LR_rescale": false,
+    "signed_negative_abs_bound": 1e-05,
+    "target_mass_abs_error_max": 1e-05,
+    "target_renormalization": false
+  },
+  "prior_optional_patch": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/priority_metric_proposal/optional-kl-priorities.patch",
+    "sha256": "7d09bec1a2611ece11814d8b241d6af054e3dd9310c30e5009a71c0b2e3838c8"
+  },
+  "schema": "robotron-optional-raw-kl-sequential-source-lock-v1",
+  "status": "SOURCE_ONLY_UNEXECUTED_UNAPPLIED",
+  "unchanged_dependencies": {
+    "learning_exposure.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/learning_exposure.py",
+      "sha256": "30d9191e9fc845d80e52a7a891244fcf0c7041cf60529f6559b15e6d47ac5c7f"
+    },
+    "prefetch.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/prefetch.py",
+      "sha256": "02871bc515ba23f8d353131e9b6b6b4e390692803578febee7c8d643dd308a27"
+    },
+    "replay_buffer.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/replay_buffer.py",
+      "sha256": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f"
+    }
+  }
+}

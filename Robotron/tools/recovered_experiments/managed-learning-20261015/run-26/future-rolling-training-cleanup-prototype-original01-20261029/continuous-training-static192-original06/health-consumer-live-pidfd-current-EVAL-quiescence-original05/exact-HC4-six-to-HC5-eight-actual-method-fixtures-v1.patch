@@ -1,0 +1,166 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/test_immutable_bootstrap_live_pidfd_health_adversarial_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/test_current_EVAL_quiescence_adversarial_v1.py
+@@ -27,9 +27,9 @@
+ 
+ HERE = Path(__file__).resolve().parent
+ SOURCES = {
+-    'registry': ('continuous_physical192_registry_v4.py', '4bd2cd67c68a908a44c984f00f2586cd7116e6fb2ab4cf53ad8037dd2052b8a2'),
+-    'health': ('continuous_physical192_health_v4.py', '42bfa00072a6ad7a0003fa0fea0672c997352c7e9e5f01104aa1463e0eef388a'),
+-    'transport': ('continuous_physical192_transport_v4.py', '2d38c2ac7dfd09b148fa8db228a65a2e07541acbc5c3d4dd06251b9399327b75'),
++    'registry': ('continuous_physical192_registry_v5.py', '8cc5340708a73ffb97b16be4b96e72b3d5560ee0b371b7ffd8d67c4074cf76b4'),
++    'health': ('continuous_physical192_health_v5.py', '3818916a5921cb6b66d50249dd4266aa710b396c6169a6cad5d17257519fdda1'),
++    'transport': ('continuous_physical192_transport_v5.py', '46e2e8c8435bcd644738f819a6cff8605ab68e2fb3b989a3acb9926d11623c83'),
+ }
+ LEGACY_ROOT = HERE.parent/'health-consumer-original01'
+ LEGACY_SOURCES = {
+@@ -39,7 +39,9 @@
+ }
+ PRODUCER = Path('/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/connection_cleanup_receipts.py')
+ PRODUCER_SHA = 'f27e38411238fcf62256e6b317836b757d31d5e0ac962ec8523dd380236d80ee'
+-NEW_PROFILE = 'PHYSICAL_ORIGINAL192_IMMUTABLE_BOOTSTRAP_LIVE_PIDFD_V4'
++SERVER = Path('/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py')
++SERVER_SHA = 'a076501b0601a637b91269a41572be60496754ad1da4b04385d77c51b9f34423'
++NEW_PROFILE = 'PHYSICAL_ORIGINAL192_LIVE_PIDFD_CURRENT_EVAL_QUIESCENCE_V5'
+ KERNEL_SOURCE = HERE.parent/'EVAL-pidfd-exit-witness-original01-preparation/hold_original_EVAL_pidfd_exits_v1.py'
+ KERNEL_SOURCE_SHA = 'fe306753c9cbb20e715b76d60c116ef9ce47a768c1a1afe0b00c03eac02a095c'
+ 
+@@ -125,7 +127,9 @@
+             recipe=dict(lr=3.125e-6,epsilon=.02,expert_ratio=0.0),
+             units=dict(trainer='synthetic-trainer.service', fleet='synthetic-fleet.service'),
+             inputs={}, round_root=str(self.root))
+-        stamp = dict(pid=1000, birth=8000,source_sha256=owner_source['sha256'])
++        server_source=pin(SERVER)
++        assert server_source['sha256']==SERVER_SHA
++        stamp = dict(pid=1000, birth=8000,source_sha256=server_source['sha256'])
+         trainer = dict(pid=1000, birth=8000, unit='synthetic-trainer.service',
+             invocation_id='1'*32, cgroup='/synthetic/trainer', source=owner_source,
+             server_stamp=stamp)
+@@ -150,9 +154,9 @@
+             dict(schema='robotron-root-continuous-main-startup-qualified-v1', trainer=trainer,
+                 all_model_optimizer_replay_banks_clocks_preserved=True,
+                 new_mode_source_and_CPU_qualified=True, actual_CPU_scope_closeouts=[fake_close],
+-                canonical_sources=[pin(HERE/SOURCES[key][0]) for key in SOURCES]+[owner_source],
++                canonical_sources=[pin(HERE/SOURCES[key][0]) for key in SOURCES]+[owner_source,server_source],
+                 SYNTHETIC_NOT_ACTUAL=True))
+-        c['source_pins'] = [pin(HERE/SOURCES[key][0]) for key in SOURCES]+[owner_source]
++        c['source_pins'] = [pin(HERE/SOURCES[key][0]) for key in SOURCES]+[owner_source,server_source]
+         self.case['inputs'] = {p['path']:dict(sha256=p['sha256'], identity=p['identity'])
+                                for p in c['source_pins']}
+         # Literal-path membership only. This is deliberately not a fake full
+@@ -278,7 +282,7 @@
+                     observed_monotonic_ns=int((mono-.1)*1e9),observed_unix_s=unix-.1))
+         connections = capture('robotron-continuous-active-connections-v1')
+         connections['value']['connections'] = copy.deepcopy(list(self.connections.values()))
+-        result = dict(schema='robotron-original192-immutable-bootstrap-live-pidfd-snapshot-v4',unix_s=unix,monotonic_s=mono,
++        result = dict(schema='robotron-original192-live-pidfd-current-eval-quiescence-snapshot-v5',unix_s=unix,monotonic_s=mono,
+             owners=copy.deepcopy(self.case['owners']),status=status,actors=actors,api=api,
+             policy_capture=capture('robotron-continuous-main-policy-v1'),connections_capture=connections,
+             PID_absence={},EVAL_journal_evidence={},EVAL_cleanup_captures={},
+@@ -347,7 +351,7 @@
+             server_stamp=self.case['continuous']['server_stamp'],token=conn['token'],client_id=0,
+             client_slot=0,eval_only=True,connection_ns=conn['connection_ns'],socket_endpoints=conn['socket_endpoints'],
+             original_handler_stopped=True,original_owned_timer_stopped=True,owned_timer_callback_succeeded=True,
+-            journal_disconnect_succeeded=True,FIFO_reset_executed=True,replay_consumer_healthy=True,
++            journal_disconnect_succeeded=True,FIFO_reset_executed=True,replay_consumer_healthy=True,replay_admission_open=True,
+             ready_for_external_join=True,cleanup_error=None,terminal_receipt=result,
+             terminal_line_sha256=raw_line['sha256'],observed_monotonic_ns=999900000000)
+         raw=Path(raw_line['path']).read_text()
+@@ -745,4 +749,98 @@
+                 with self.subTest(case=i),self.assertRaises(ValueError):h.transport.validate(h.case,bad,previous)
+ 
+ 
++    def test_current_once_EVAL_generic_latch_class_preserves_raw_history_and_all_other_proofs(self):
++        with tempfile.TemporaryDirectory()as directory:
++            for score in (0,12345):
++                with self.subTest(score=score):
++                    h=Synthetic192(Path(directory)/('score-%d'%score));previous,sample=h.retired(score=score)
++                    ordinary=copy.deepcopy(sample['EVAL_cleanup_captures']['0']['value'])
++                    normal=h.reg.classify_cleanup_postconditions(ordinary)
++                    self.assertEqual(normal['classification'],'ORDINARY_CLEANUP_COMPLETED')
++                    self.assertTrue(normal['current_postconditions_proved'])
++                    self.assertTrue(normal['original_ready_for_external_join'])
++                    self.assertFalse(normal['original_cleanup_success_or_CID_reuse_claimed'])
++                    incomplete=h.reg.classify_cleanup_postconditions(dict(ordinary,ready_for_external_join=False))
++                    self.assertEqual(incomplete['classification'],'CLEANUP_INCOMPLETE')
++                    self.assertIs(incomplete['current_postconditions_proved'],False)
++                    value=sample['EVAL_cleanup_captures']['0']['value']
++                    value.update(cleanup_error='Original connection cleanup failed',ready_for_external_join=False)
++                    wire,sha=h.wire(value);sample['EVAL_cleanup_captures']['0'].update(raw_wire=wire,sha256=sha)
++                    frozen=copy.deepcopy((h.case,sample))
++                    classification=h.reg.classify_cleanup_postconditions(value)
++                    self.assertEqual(classification['classification'],
++                        'CURRENT_ONCE_ONLY_EVAL_QUIESCENCE_AFTER_RECORDED_DISCONNECT_EXCEPTION')
++                    self.assertTrue(classification['current_postconditions_proved'])
++                    self.assertEqual(classification['historical_cleanup_error'],'Original connection cleanup failed')
++                    self.assertIs(classification['original_ready_for_external_join'],False)
++                    self.assertIs(classification['original_cleanup_success_or_CID_reuse_claimed'],False)
++                    self.assertIs(classification['original_deadline_or_wait_exception_subtype_proved'],False)
++                    self.assertIs(classification['refill_external_handoff_or_reservation_release_authorized'],False)
++                    h.transport.validate(h.case,sample,previous)
++                    self.assertEqual(h.reg.validate_snapshot(h.case,sample,previous)['counts']['closed_eval'],1)
++                    self.assertEqual((h.case,sample),frozen)
++                    self.assertEqual(sample['EVAL_cleanup_captures']['0']['value']['cleanup_error'],
++                        'Original connection cleanup failed')
++                    self.assertIs(sample['EVAL_cleanup_captures']['0']['value']['ready_for_external_join'],False)
++                    self.assertEqual(sample['EVAL_cleanup_captures']['0']['raw_wire'],wire)
++                    self.assertEqual(sample['EVAL_cleanup_captures']['0']['sha256'],sha)
++                    # A cleanup classification alone cannot prove the selected
++                    # original actor exited/reaped or its socket disappeared.
++                    pending=copy.deepcopy(sample);h.holder_capture(pending,{})
++                    with self.assertRaises(ValueError):h.reg.validate_snapshot(h.case,pending,previous)
++                    with self.assertRaises(ValueError):h.reg.kernel_eval_exit(h.case,pending,'0')
++
++    def test_current_once_EVAL_recovery_refuses_false_missing_forged_and_future_evidence(self):
++        with tempfile.TemporaryDirectory()as directory:
++            h=Synthetic192(directory);previous,good=h.retired()
++            base=good['EVAL_cleanup_captures']['0']['value']
++            base.update(cleanup_error='Original connection cleanup failed',ready_for_external_join=False)
++            wire,sha=h.wire(base);good['EVAL_cleanup_captures']['0'].update(raw_wire=wire,sha256=sha)
++            h.transport.validate(h.case,good,previous)
++            primitives=('original_handler_stopped','original_owned_timer_stopped','owned_timer_callback_succeeded',
++                        'journal_disconnect_succeeded','FIFO_reset_executed','replay_consumer_healthy')
++            mutations=[]
++            for flag in primitives:
++                for kind in ('false','missing','nonbool'):
++                    mutations.append((flag,kind))
++            mutations += [('cleanup_error',v)for v in ('different failure','Original connection cleanup failed ',True)]
++            mutations += [('ready_for_external_join',True),('replay_admission_open',False),('replay_admission_open','missing'),
++                ('token','wrong'),('client_id',9999),('client_slot',191),('eval_only',False),('connection_ns',0),
++                ('terminal_line_sha256','0'*64),('terminal_receipt',None)]
++            for field,value in mutations:
++                bad=copy.deepcopy(good);capture=bad['EVAL_cleanup_captures']['0'];record=capture['value']
++                if value=='missing':record.pop(field)
++                elif value=='false':record[field]=False
++                elif value=='nonbool':record[field]=1
++                else:record[field]=value
++                wire,sha=h.wire(record);capture.update(raw_wire=wire,sha256=sha)
++                before=copy.deepcopy((h.case,bad))
++                with self.subTest(field=field,value=value),self.assertRaises((ValueError,KeyError)):
++                    h.transport.validate(h.case,bad,previous)
++                self.assertEqual((h.case,bad),before)
++            # Invalid source, terminal bytes, replay policy and current clocks
++            # cannot be masked by the newly recognized historical error class.
++            changes=[lambda s:s['EVAL_cleanup_captures']['0']['value']['server_stamp'].__setitem__('source_sha256','0'*64),
++                lambda s:s['EVAL_cleanup_captures']['0']['value'].__setitem__('observed_monotonic_ns',1001000000000),
++                lambda s:s['EVAL_cleanup_captures']['0'].__setitem__('before_monotonic_ns',997900000000),
++                lambda s:s['EVAL_journal_evidence']['0'].__setitem__('raw_line_sha256','0'*64),
++                lambda s:s['policy_capture']['value'].__setitem__('replay_admission_open',False),
++                lambda s:s['PID_absence']['0'].update(absent=False,current_birth=9000,state='S'),
++                lambda s:s['api'].__setitem__('ts',h.now-.501)]
++            for i,change in enumerate(changes):
++                bad=copy.deepcopy(good);change(bad);h.refresh(bad)
++                capture=bad['EVAL_cleanup_captures']['0'];wire,sha=h.wire(capture['value']);capture.update(raw_wire=wire,sha256=sha)
++                with self.subTest(strict_gate=i),self.assertRaises(ValueError):h.transport.validate(h.case,bad,previous)
++            bad=copy.deepcopy(good);bad['transport']['raw_tables']['tcp']+='\n'.join(previous['transport']['raw_tables']['tcp'].splitlines()[1:3])+'\n'
++            with self.assertRaises(ValueError):h.transport.validate(h.case,bad,previous)
++            # Exercise actual raw80 decoding under the recovery-positive cleanup.
++            for mask,status in ((0,0),(39,0),(44,15),(44,1792)):
++                h.kernel(good,mask=mask,status=status)
++                with self.subTest(EXIT_mask=mask,raw_status=status),self.assertRaises(ValueError):
++                    h.transport.validate(h.case,good,previous)
++            h.kernel(good)
++            self.assertIs(good['EVAL_cleanup_captures']['0']['value']['ready_for_external_join'],False)
++            self.assertEqual(good['EVAL_cleanup_captures']['0']['value']['cleanup_error'],'Original connection cleanup failed')
++
++
+ if __name__=='__main__':unittest.main()

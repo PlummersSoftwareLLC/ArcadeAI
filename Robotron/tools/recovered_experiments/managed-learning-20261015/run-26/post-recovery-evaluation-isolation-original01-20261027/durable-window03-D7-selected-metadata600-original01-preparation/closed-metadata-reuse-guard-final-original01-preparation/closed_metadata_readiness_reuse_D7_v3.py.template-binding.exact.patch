@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-selected-metadata600-original01-preparation/closed-metadata-reuse-guard-template-original01-preparation/closed_metadata_readiness_reuse_D7_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-selected-metadata600-original01-preparation/closed-metadata-reuse-guard-final-original01-preparation/closed_metadata_readiness_reuse_D7_v3.py
+@@ -22,7 +22,7 @@
+     return value
+ 
+ 
+-SOURCE_CONTRACT_SHA = None  # UNFILLED; this template cannot qualify or prepare a guard.
++SOURCE_CONTRACT_SHA = '5eb7f9b8cdb10be8635b839dbb0eb762ef87cfea8a7e90d6648b5f716b2e090a'
+ 
+ 
+ class ClosedMetadataReadiness:

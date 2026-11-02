@@ -1,0 +1,29 @@
+--- Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-selected-context600-original01-preparation/prepare_e078_selected_workflow_v1.py
++++ Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-selected-context600-original01-preparation/prepare_e078_selected_workflow_v2.py
+@@ -95,6 +95,8 @@
+         and usage['all192_original_Popen_actual_exit0_and_reaped']is True
+         and usage['all_original_births_and_own_unit_cgroup_absent']is True
+         and usage['actual_simultaneous192_MAME_or_full500ms_qualified']is False,'Honest bounded192 usagefixture required')
++    _,joined=sealed(h,CTX/'independent-deadline-main-domain-mmap-engineering-readiness-original02.json',
++        '9f084bb2cc28c568634cb6769517bd6c29971fe35f18ffd1dd34448cbc47788a')
+     _,lease=sealed(h,I/'post-outage-permanent-private-coordinator-restoration-original01.json',
+         '26ccbdd83b17aabc5daeecb77e40278f68329152e8913fde26bc75073ccfe09d')
+     _,peer=sealed(h,D/'independent-declared-launcher-mmap-adapter-D4-source-peer-v1.json',
+@@ -102,7 +104,7 @@
+     driver=h.pin(L/'prepare_selected_metadata600_v1.py');require(driver['sha256']==DRIVER_SHA,'Selected metadata600driver differs')
+     control=module('_E078_metadata600_controller',L/'control_metadata600_v1.py',CONTROL600_SHA)
+     require(not META.exists() and not STUDY.exists(),'Whollyfresh original outputs required')
+-    inputs=metadata_inputs(h)+[rp,cc,fc,cp,ref,hot,lp,ap,up,lease,peer,driver,
++    inputs=metadata_inputs(h)+[rp,cc,fc,cp,ref,hot,lp,ap,up,joined,lease,peer,driver,
+         h.pin(Path(__file__).resolve()),h.pin(L/'control_metadata600_v1.py'),h.pin(L/'close_metadata600_v1.py')]
+     inputs+=list(raw['original_sources'].values())
+     inputs=list({value['path']:value for value in inputs}.values())
+@@ -180,6 +182,8 @@
+         pp,value=guard_packet(h);closer=module('_E078_exact_four_guard_close',D/'close_round_study_cpu_v6.py')
+         out=closer.close(pp['path'],pp['sha256'],h.pin(D/'close_round_study_cpu_v6.py')['sha256'])
+     else:out=prepare_reviews(h)
++    if out is None and a.close_four_guards:
++        out=dict(status='EXACT_FOUR_GUARDS_CLOSED',publication=h.pin(STUDY/'four-exact-contexts-CPU-original01/all-four-exact-native-guard-receipts.json'))
+     print(json.dumps(out),flush=True)
+ 
+ 

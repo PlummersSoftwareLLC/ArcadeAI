@@ -1,0 +1,79 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/continuous_startup_bridge.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-cold-resume-startup-cap-witness-source-only-original01-20261029/continuous_startup_bridge_cap_witness_v3.py
+@@ -221,6 +221,41 @@
+                 all_PER_leaf_priorities_equal=True, banks=result,
+                 ring_states_and_next_states_fully_hashed=False,
+                 derived_indexes_rebuilt_from_persisted_rows_not_bitwise_trajectory=True)
++
++
++def startup_budget_witness(agent, metrics, cfg, expected_cap):
++    """Read-only cold-start check; caller holds original training/memory locks.
++
++    load() already creates the fresh per-boot baseline. Never install/rebase an
++    anchor, change config, reset a clock, or wait for a producer under memory.lock.
++    """
++    require(type(expected_cap) is int and expected_cap in (8, 12), 'Root startup cap must be explicit8 or12')
++    entries = [part.split('=', 1) for part in Path('/proc/self/environ').read_bytes().decode().split('\0') if '=' in part]
++    caps = [value for key, value in entries if key == 'DQN_MAX_SAMPLES_PER_FRAME']
++    require(caps == [str(expected_cap)]
++            and os.environ.get('DQN_MAX_SAMPLES_PER_FRAME') == str(expected_cap)
++            and float(cfg.max_samples_per_frame) == float(expected_cap),
++            'Original process startup environment and runtime cap differ from Root selection')
++    with metrics.lock:
++        loaded = dict(frame_count=int(metrics.loaded_frame_count),
++            measurement_frame_count=int(metrics.loaded_measurement_frame_count),
++            optimized_samples=int(metrics.loaded_optimized_samples))
++        current = dict(frame_count=int(metrics.frame_count),
++            measurement_frame_count=int(metrics.measurement_frame_count),
++            optimized_samples=int(agent.optimized_samples))
++        local = getattr(agent, '_replay_pressure_anchor', None)
++        warmup = getattr(agent, '_replay_warmup_pending', False)
++        require(loaded == current and agent.loaded_optimized_samples == loaded['optimized_samples']
++                and (local is None or tuple(local) == tuple(loaded.values()))
++                and warmup is False, 'Restored fresh budget baseline or warmup state differs')
++    require(len(agent.memory) >= max(int(cfg.batch_size), int(cfg.min_replay_to_train)),
++            'Ready restored replay is required; no later warmup rebase may be assumed')
++    return dict(schema='robotron-cold-start-existing-budget-witness-v1', expected_startup_cap=expected_cap,
++        process_startup_environment_cap=caps[0], runtime_cap=float(cfg.max_samples_per_frame),
++        loaded_baseline=loaded, observed_existing_local_anchor=None if local is None else list(local),
++        replay_warmup_pending=False, samples_since_loaded=0, unmeasured_frames_since_loaded=0,
++        fresh_per_boot_baseline_verified=True, anchor_installed_or_rebased=False,
++        model_optimizer_scaler_replay_or_lifetime_clock_changed=False)
+ 
+ 
+ def verify_restoration_and_wait(agent, metrics, checkpoint_path):
+@@ -293,11 +328,12 @@
+         exposure = no_training_attempts(agent, metrics)
+         scalars = compare_payload(agent, metrics, RL_CONFIG, manifest, tools, torch)
+         replay = compare_loaded_replay(agent.memory, manifest, tools, np)
++        budget = startup_budget_witness(agent, metrics, RL_CONFIG, job['expected_startup_cap'])
+         require(unit_owner(job['unit']) == owner, 'Original startup owner changed during exact verification')
+         held = publish(root/'verified-held-before-first-update.json', dict(
+             schema='robotron-continuous-main-held-exact-restoration-report-v1', status='VERIFIED_HELD_BEFORE_FIRST_UPDATE',
+             original_job=job_pin, owner=owner, checkpoint=job['checkpoint'], restoration_manifest=job['restoration_manifest'],
+-            stopped_CPU_report=job['stopped_CPU_report'], all_online_target_Adam_scaler_payloads_equal=True,
++            stopped_CPU_report=job['stopped_CPU_report'], startup_budget=budget, all_online_target_Adam_scaler_payloads_equal=True,
+             optimizer_implementation_flags_exactly_equal=True, saved_scalars=scalars, replay=replay, exposure=exposure,
+             training_and_memory_locks_held_until_Root_release=True, dashboard_and_GAME_listener_not_created=True,
+             optimizer_attempts_before_release=0, new_replay_inserts_before_release=0,
+@@ -317,14 +353,18 @@
+         require(release['schema'] == 'robotron-root-continuous-startup-one-use-release-v1'
+                 and release['owner'] == owner and release['original_job'] == job_pin
+                 and release['held_report'] == held and release['checkpoint'] == job['checkpoint']
+-                and release['allow_training'] is True, 'Root release does not bind exact verified owner/state')
++                and release['allow_training'] is True
++                and release['expected_startup_cap'] == job['expected_startup_cap']
++                and release['startup_budget'] == budget, 'Root release does not bind exact verified owner/state/cap')
+         require(unit_owner(job['unit']) == owner, 'Original startup owner changed before one-use release')
+         no_training_attempts(agent, metrics)
+         for entry in job['source_pins']:
+             checked_bytes(entry, immutable=False)
++        require(startup_budget_witness(agent, metrics, RL_CONFIG, job['expected_startup_cap']) == budget,
++                'Original startup cap or restored budget changed while held')
+         publish(root/'release-consumed.json', dict(schema='robotron-continuous-startup-release-consumed-v1',
+             owner=owner, original_job=job_pin, held_report=held, Root_release=release_pin,
+-            no_optimizer_or_replay_work_before_release=True))
++            no_optimizer_or_replay_work_before_release=True, startup_budget=budget))
+         with metrics.lock:
+             metrics.training_enabled = True
+         agent._continuous_startup_held = False

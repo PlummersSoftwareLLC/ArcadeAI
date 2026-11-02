@@ -1,0 +1,241 @@
+--- a/Robotron/Scripts/dqn/native_sumtree.py
++++ b/Robotron/Scripts/dqn/native_sumtree.py
+@@ -15,6 +15,7 @@
+ import subprocess
+ import sysconfig
+ import tempfile
++import threading
+ 
+ import numpy as np
+ 
+@@ -25,6 +26,11 @@
+ _LIBRARY = None
+ _FUNCTION = None
+ _GATHER_FUNCTION = None
++_BATCH_FUNCTION = None
++NATIVE_BATCH_ENABLED = os.getenv("DQN_NATIVE_BATCH_UPDATE", "0").strip().lower() in ("1", "true", "yes", "on")
++NATIVE_BATCH_AVAILABLE = False
++_BATCH_STATS_LOCK = threading.Lock()
++_BATCH_COUNTS = {"success": 0, "fallback": 0, "error": 0}
+ NATIVE_AVAILABLE = False
+ NATIVE_GATHER_AVAILABLE = False
+ NATIVE_STATUS = "not initialized"
+@@ -48,7 +54,8 @@
+ 
+ 
+ def _load_native():
+-    global _LIBRARY, _FUNCTION, _GATHER_FUNCTION
++    global _LIBRARY, _FUNCTION, _GATHER_FUNCTION, _BATCH_FUNCTION
++    global NATIVE_BATCH_AVAILABLE
+     global NATIVE_AVAILABLE, NATIVE_GATHER_AVAILABLE, NATIVE_STATUS
+     try:
+         directory = Path(__file__).resolve().parent
+@@ -95,6 +102,13 @@
+         _LIBRARY, _FUNCTION = library, function
+         NATIVE_AVAILABLE = True
+         NATIVE_STATUS = "exact float64 native propagation"
++        batch = getattr(library, "robotron_sumtree_batch_update", None)
++        if batch is not None:
++            batch.argtypes = (ctypes.c_void_p, ctypes.c_int64, ctypes.c_int64,
++                              ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int64)
++            batch.restype = ctypes.c_int
++            _BATCH_FUNCTION = batch
++            NATIVE_BATCH_AVAILABLE = True
+         if grace_v2:
+             gather = library.robotron_gather_fp16_rows
+             gather.argtypes = (ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+@@ -164,4 +178,66 @@
+     return output
+ 
+ 
++def _batch_update_enabled(tree, capacity, indices, priorities):
++    if _BATCH_FUNCTION is None:
++        return False
++    if (not isinstance(tree, np.ndarray) or tree.dtype != np.dtype(np.float64)
++            or tree.ndim != 1 or not tree.flags.c_contiguous
++            or not tree.flags.aligned or not tree.flags.writeable
++            or not isinstance(capacity, (int, np.integer))
++            or capacity < 1 or capacity > (2**63 - 1) // 2
++            or tree.size != 2 * capacity):
++        return False
++    if (not isinstance(indices, np.ndarray) or indices.dtype != np.dtype(np.int64)
++            or indices.ndim != 1 or not indices.flags.c_contiguous
++            or not indices.flags.aligned or not isinstance(priorities, np.ndarray)
++            or priorities.dtype != np.dtype(np.float64) or priorities.ndim != 1
++            or not priorities.flags.c_contiguous or not priorities.flags.aligned
++            or indices.size != priorities.size or indices.size == 0):
++        return False
++    if (np.may_share_memory(tree, indices) or np.may_share_memory(tree, priorities)
++            or int(indices.min()) < 0 or int(indices.max()) >= capacity
++            or not np.isfinite(priorities).all()):
++        return False
++    return bool(_BATCH_FUNCTION(tree.ctypes.data, tree.size, capacity,
++                       indices.ctypes.data, priorities.ctypes.data, indices.size))
++
++
++
++def batch_update(tree, capacity, indices, priorities):
++    """Default-off exact path; count completed enabled calls, never CUDA work.
++
++    The existing replay lock owns validation and the GIL-released C call.
++    Unsupported/unavailable inputs return False for the original NumPy path.
++    Unexpected exceptions are counted and re-raised, never silently retried.
++    """
++    if not NATIVE_BATCH_ENABLED:
++        return False
++    try:
++        used = _batch_update_enabled(tree, capacity, indices, priorities)
++    except Exception:
++        with _BATCH_STATS_LOCK:
++            _BATCH_COUNTS["error"] += 1
++        raise
++    with _BATCH_STATS_LOCK:
++        _BATCH_COUNTS["success" if used else "fallback"] += 1
++    return used
++
++
++def batch_update_status():
++    """Cumulative process-local scalars only; no reset, replay or CUDA lock.
++
++    Each enabled completed call contributes once to success/fallback/error.
++    Disabled calls do no counting. Snapshot never holds another owner lock.
++    """
++    with _BATCH_STATS_LOCK:
++        return {"schema": "robotron-native-batch-update-v1",
++                "enabled": bool(NATIVE_BATCH_ENABLED),
++                "available": bool(NATIVE_BATCH_AVAILABLE and _BATCH_FUNCTION is not None),
++                "completed_count": sum(_BATCH_COUNTS.values()),
++                "success_count": _BATCH_COUNTS["success"],
++                "fallback_count": _BATCH_COUNTS["fallback"],
++                "error_count": _BATCH_COUNTS["error"]}
++
++
+ _load_native()
+--- a/Robotron/Scripts/dqn/replay_buffer.py
++++ b/Robotron/Scripts/dqn/replay_buffer.py
+@@ -20,6 +20,14 @@
+     except ImportError:
+         _native_propagate = None
+         _native_gather_fp16_rows = None
++
++try:
++    from .native_sumtree import batch_update as _native_batch_update
++except ImportError:
++    try:
++        from native_sumtree import batch_update as _native_batch_update
++    except ImportError:
++        _native_batch_update = None
+ 
+ try:
+     from .config import RL_CONFIG, decode_token_types, TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT
+@@ -144,6 +152,12 @@
+         Sets all leaf priorities at once then walks up the tree one level at
+         a time, merging duplicate parents with np.unique at each level.
+         """
++        if (_native_batch_update is not None
++                and _native_batch_update(self.tree, self.capacity, data_indices, priorities)):
++            mx = float(priorities.max())
++            if mx > self.max_priority:
++                self.max_priority = mx
++            return
+         tree_idx = data_indices.astype(np.int64) + self.capacity
+         self.tree[tree_idx] = priorities.astype(np.float64)
+         mx = float(priorities.max())
+--- a/Robotron/Scripts/dqn/sumtree.c
++++ b/Robotron/Scripts/dqn/sumtree.c
+@@ -1,5 +1,7 @@
+ /* Exact scalar float64 parent recomputation. No reassociation or fast math. */
+ #include <stdint.h>
++#include <stddef.h>
++#include <stdlib.h>
+ 
+ void robotron_sumtree_propagate(double *tree, int64_t index)
+ {
+@@ -34,3 +36,61 @@
+     return 0;
+ #endif
+ }
++
++/* Optional exact batch path; existing scalar/gather functions above are unchanged. */
++static int compare_index(const void *a, const void *b)
++{
++    const int64_t left = *(const int64_t *)a;
++    const int64_t right = *(const int64_t *)b;
++    return (left > right) - (left < right);
++}
++
++/* Return zero only before any mutation, so the caller can use its old path. */
++int robotron_sumtree_batch_update(double *tree, int64_t tree_size,
++                                 int64_t capacity, const int64_t *indices,
++                                 const double *priorities, int64_t count)
++{
++    if (!tree || !indices || !priorities || count <= 0 || capacity <= 0
++            || capacity > INT64_MAX / 2 || tree_size != 2 * capacity
++            || (uint64_t)count > SIZE_MAX / sizeof(int64_t)
++            || (uint64_t)count > SIZE_MAX / sizeof(double)) return 0;
++    for (int64_t i = 0; i < count; ++i)
++        if (indices[i] < 0 || indices[i] >= capacity) return 0;
++    int64_t *parents = malloc((size_t)count * sizeof(int64_t));
++    double *sums = malloc((size_t)count * sizeof(double));
++    if (!parents || !sums) {
++        free(parents);
++        free(sums);
++        return 0;
++    }
++    /* Ordered leaf assignment exactly matches the observed NumPy oracle. */
++    for (int64_t i = 0; i < count; ++i) {
++        const int64_t leaf = indices[i] + capacity;
++        tree[leaf] = priorities[i];
++        parents[i] = leaf >> 1;
++    }
++    qsort(parents, (size_t)count, sizeof(int64_t), compare_index);
++    int64_t unique = 0;
++    for (int64_t i = 0; i < count; ++i)
++        if (unique == 0 || parents[i] != parents[unique - 1])
++            parents[unique++] = parents[i];
++    while (unique > 0 && parents[0] >= 1) {
++        /* An odd/non-power capacity can put ancestor+child in one level.
++         * NumPy gathers the complete RHS before assigning ANY parent. */
++        for (int64_t i = 0; i < unique; ++i) {
++            const int64_t parent = parents[i];
++            sums[i] = tree[parent * 2] + tree[parent * 2 + 1];
++        }
++        for (int64_t i = 0; i < unique; ++i) tree[parents[i]] = sums[i];
++        int64_t next = 0;
++        for (int64_t i = 0; i < unique; ++i) {
++            const int64_t parent = parents[i] >> 1;
++            if (parent >= 1 && (next == 0 || parent != parents[next - 1]))
++                parents[next++] = parent;
++        }
++        unique = next;
++    }
++    free(sums);
++    free(parents);
++    return 1;
++}
+--- a/Robotron/Scripts/dqn/agent.py
++++ b/Robotron/Scripts/dqn/agent.py
+@@ -41,6 +41,7 @@
+                         combine_action, split_joint_action)
+     from .training import train_step, _beta_schedule, replay_pressure_reached
+     from .replay_buffer import PrioritizedReplayBuffer
++    from .native_sumtree import batch_update_status
+     from .prefetch import ReplayPrefetcher
+     from .pipeline_telemetry import PipelineTelemetry, unavailable_snapshot
+     from .exact_inference_graphs import ExactInferenceGraphs, ExactInferenceGraphError, disabled_snapshot
+@@ -53,6 +54,7 @@
+                        combine_action, split_joint_action)
+     from training import train_step, _beta_schedule, replay_pressure_reached
+     from replay_buffer import PrioritizedReplayBuffer
++    from native_sumtree import batch_update_status
+     from prefetch import ReplayPrefetcher
+     from pipeline_telemetry import PipelineTelemetry, unavailable_snapshot
+     from exact_inference_graphs import ExactInferenceGraphs, ExactInferenceGraphError, disabled_snapshot
+@@ -625,6 +627,7 @@
+         snapshot = telemetry.snapshot(reset=reset) if telemetry is not None else unavailable_snapshot()
+         graphs = getattr(self, "_exact_inference_graphs", None)
+         snapshot["inference_graphs"] = graphs.snapshot() if graphs is not None else disabled_snapshot()
++        snapshot["native_batch_update"] = batch_update_status()
+         return snapshot
+ 
+     def _validate_measurement_policy(self, state_dict):

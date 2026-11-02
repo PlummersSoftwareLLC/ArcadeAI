@@ -1,0 +1,117 @@
+Optional raw-KL replay-priority rebase — SOURCE ONLY, UNAPPLIED, UNEXECUTED
+
+This proposal follows the actual live8/same-GPU diagnostic, not a repair of it.
+All eight actual-vs-recomputed CE comparisons remain failed at their original
+tolerances. The fixed first-row same-GPU original4-vs-conditional5 comparison
+passed locally while original4-vs-live CE failed. This neither identifies the
+shared capture/device/profile residual nor establishes actual captured entropy.
+The new treatment computes its priority from the SAME newly executed CE and
+projected/smoothed target; it does not use conditional/offline KL as live truth.
+
+Only NEW candidate files exist here. No source installation, import, syntax
+compile, tests, numerical work, tensor/model/replay data read, runtime query,
+checkpoint request, service action or trial is authorized by this preparation.
+The immutable prior optional-kl patch, all capture/reconstruction proposals and
+failed/completed evidence remain unchanged. The actual448 capture/fresh-policy
+quality campaign has priority over any later optional treatment.
+
+Scope
+
+config.py adds a startup-only ce|kl choice (defaultce) and fixed KL validity
+bounds. TrainingLoss gains a constructor-constant return_priorities=False.
+False keeps the original projection/objective/expert expressions, four returns
+and default CE packed tensor construction. True adds a detached fifth vector:
+signed = executedCE - H(executed projected/smoothed m), entropy log floor1e-12,
+priority = clamp_min(signed,0). No target renormalization or second forward.
+The twelve existing diagnostics retain their positions; KL adds seven signed/
+mass statistics. Both normal and diagnostic compiled variants use the same flag.
+Portable eager KL derives from its existing m_joint/CE, not a new projection.
+
+The held trial startup requires exact resume graphs/full-loss compilation and
+an explicit immutable phase record. It will not silently fall back after a
+compile/training error. The loss remains weighted CE plus the existing expert
+terms; LR/schedules, scaler, optimizer, network, banks, mixture quotas, n-step,
+terminal handling, projection, hints, reward/death/elite boosts, historical max,
+new-row caps, replay update order and sampling are unchanged. IS only weights
+Bellman CE; expert auxiliary denominators/weights remain the existing ones.
+Consequent changes in sampling/IS/bank mean weights are part of this treatment,
+not a separate LR factor or a promised benefit.
+
+Readback/outcomes
+
+CE layout remains B CE rows, existing scalars, optional found_inf. KL layout is
+B CE rows, B priorities, existing scalars, seven priority stats, optional
+found_inf. The actual optimizer ticket is finished using its corresponding
+offset before ordered priority updates; reprioritization still occurs on an
+actual AMP skip. Existing CE slice diagnostics remain CE. Priority-mean reports
+the selected metric. The original optimizer/backward/clip/scaler body is intact.
+Seven stats are signed min/max, negative/abs<=1e-6 row counts, target minimum,
+max and mean abs(sum(m)-1). Raw stats precede the clamp.
+
+KL validity is precommitted here: finite objective/priority/stats, nonnegative
+target/priorities, max target-mass error <=1e-5 and signed minimum >=-1e-5.
+These are new same-forward numerical-validity bounds, NOT changed tolerances
+for old CE comparisons. A single combined tensor predicate makes one host
+decision, including the objective finite check. Failure precedes optimization;
+failure-only small readback retains raw diagnostics (NaN/Inf as strings), then
+the phase is invalidated/learner stopped by the existing background owner.
+No renormalization, rescaling, fixture/scaler adjustment or retry is supplied.
+Successful stats ride the existing priority readback. There is still extra
+tensor work and one KL guard synchronization: measure throughput honestly.
+
+Restart/load/provenance
+
+The default untagged CE path needs no phase file/helper import. KL (or explicit
+return-to-CE) requires DQN_PRIORITY_PHASE_RECORD plus its SHA256. The root must
+create the real owned0444 small record, bind the actual newest stopped model
+path/SHA/variable bytes and root trial precommit, and remove both observation
+capture flags. The JSON template contains UNKNOWN placeholders, never a job.
+Untagged historical leaves are previous_metric=unknown, even when held trainer
+source uses CE: no persistent per-leaf tag exists.
+
+The actual loaded bytes and four positive persisted clocks become the phase
+anchor; finish_load checks bytes again after current strict graph validation.
+Phase metadata persists with checkpoints. Resume must match phase ID, metric,
+valid state and root precommit; its current resume-record hash is also retained.
+A tagged checkpoint cannot silently load as untagged default CE. Return to CE
+is a NEW explicit phase from the actual newest stopped model, not an automatic
+rollback to insurance/protected/old starting weights. Compiler metric agreement
+is checked before sampling. Existing pause/load/graph locks keep the learner
+behind load. Ordinary shutdown/FIFO/model-tail and bank/replay persistence limits
+remain; no coherent learning/replay anchor is created here.
+
+priority_update_calls/ring_rows_submitted count successful calls/submitted row
+visits, including duplicates and AMP-skip reprioritization. They are not unique
+converted leaves, optimizer applications or physical insertions. The tree stays
+mixed/unknown during progressive conversion; new rows can inherit historical
+maximum/hint/boost priorities. Even6M physical insertions do not prove all leaves
+are evaluated KL. No267GB replay copy/migration is introduced.
+
+Validation status and next action
+
+All source/tests here are UNEXECUTED. Future root-owned CUDA-hidden CPU tests
+are explicitly tiny-model/control-flow tests, not Rainbow4096/CUDA/native-tree
+qualification. They target CE4 objective/gradient equality, KL5 detached math,
+normal+diagnostic packing, real CPU Adam/GradScaler applied+skipped admissions,
+material/nonfinite guards before optimizer, error/release, and explicit phase
+start/resume/return-to-CE/unknown-metric handling. The device/events/found_inf
+adapter is labelled; it does not validate CUDA support or native replay updates.
+
+After source peer+CPU results, root must precommit and validate the actual
+current4096 CUDA ordinary+diagnostic ABI/priority readback/native update routes,
+CE objective/control behavior, real optimizer outcomes/state progress and saved
+phase/load cycle. Keep actual trained scaler and existing original comparison
+tolerances; preserve any failure. No GPU launcher/protocol is supplied here.
+Current source contracts alone are insufficient for live treatment adoption.
+
+If those checks pass after448 quality, a bounded sequential policy search is a
+truthful option: ordinary verified newest model/ring/banks, protected incumbent
+unchanged, one named mixed-tree phase, both+8M learnerframes and+6M physical
+accepted ring insertions before its first fixed quality comparison, with a
+predeclared wall cap/operational and severe-regression stop policy. Root must
+freeze the actual anchor/counter epochs/clock arithmetic/stops before launch.
+No matched learning-speed or causal algorithm superiority claim follows.
+Candidate acceptance still needs two independent fresh1200s full-tail cohorts
+passing5% mean and nonlower median against both NEW same-length protected
+reference cohorts. No historical pooling, stopped-run salvage or extra horizon
+after seeing a score. Bank-weight changes remain a separate future experiment.

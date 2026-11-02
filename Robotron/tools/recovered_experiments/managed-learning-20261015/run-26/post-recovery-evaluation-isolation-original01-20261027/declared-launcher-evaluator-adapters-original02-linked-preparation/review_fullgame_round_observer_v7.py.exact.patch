@@ -1,0 +1,29 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/review_fullgame_round_observer_v7.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original02-linked-preparation/review_fullgame_round_observer_v7.py
+@@ -36,18 +36,21 @@
+     native = read(lifecycle['native_job'], h)
+     require(job['native_job'] == lifecycle['native_job'] and job['native_runtime'] == native['runtime'],
+             'Original native/worker job or runtime join differs')
+-    require(job['schema'] == ('robotron-fullgame-round-observer-job-v6' if require_final_sample
++    require(job['schema'] == ('robotron-fullgame-round-observer-declared-launcher-job-v1' if require_final_sample
+                              else 'robotron-round-observer-job-v1'), 'Wrong declared observer protocol version')
+     require(job['interval_s'] == .2 and job['initial_samples'] == 100 and job['maximum_gap_s'] == .5
+             and job['work_s'] == 22200 and job['runtime_s'] == 22260 and job['attempt'] == 1
+             and job['no_retry'] is True, 'Observer bounds or original attempt differ')
+     require(job.get('source_bound_API_reconnect_projection') is True
+             and job.get('source_bound_natural_round_admission') is True
+-            and set(job['sources']) == {'client','worker','health','health_base','API_projection','round_admission','durability','control','interpreter'}
+-            and job['sources']['health_base'] == h.pin(Path(__file__).with_name('round_main_health_v7.py'))
+-            and job['sources']['API_projection'] == h.pin(Path(__file__).with_name('api_reconnect_projection_v1.py'))
+-            and job['sources']['round_admission'] == h.pin(Path(__file__).with_name('round_admission_proof_v2.py')),
++            and job.get('source_bound_declared_launcher_census') is True
++            and set(job['sources']) == {'client','worker','health','health_base','API_projection','round_admission','launcher_census','durability','control','interpreter'}
++            and job['sources']['health_base'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/round_main_health_launcher_v1.py'))
++            and job['sources']['API_projection'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/api_reconnect_projection_v1.py'))
++            and job['sources']['round_admission'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/round_admission_proof_v2.py')),
+             'Exact source-bound reconnect observer dependencies required')
++    require(job['sources']['launcher_census'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/launcher_census_v1.py')),
++            'Exact new launcher evidence source required')
+     require(lifecycle['native_deadline_monotonic_s'] == job['deadline_monotonic_s']
+             == lifecycle['native_started_monotonic_s'] + 22200, 'Native time bound differs')
+     for value in [job['native_runtime'], *job['sources'].values()]:

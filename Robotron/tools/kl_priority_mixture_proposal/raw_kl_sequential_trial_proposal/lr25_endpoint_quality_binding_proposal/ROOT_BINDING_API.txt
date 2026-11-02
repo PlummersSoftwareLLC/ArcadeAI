@@ -1,0 +1,84 @@
+UNSELECTED ROOT BINDING API; NO EXECUTION HAS BEEN PERFORMED BY AUTHORS
+
+One folder contains quality_bindings.py, root_quality_carrier.py and
+ audit_completed_leg.py. The carrier and original row auditor both call the
+ SAME validate() before their original protocol/lifecycle/scoring bodies.
+
+Top exact eleven fields:
+ schema robotron-lr25-first-durable-endpoint-quality-bindings-v1;
+ activation_authorized true ONLY in future root actual job (template false);
+ experiment ORIGINAL RESTORED .5 live label;
+ candidate_experiment actual .25 window label;
+ reference {path,sha256,bytes,metadata}; candidate {tag,path,sha256,bytes};
+ evidence exact19 FULLPINs below; runtime_baseline FULLPIN; runtime_anchor object;
+ predecessor_quality_plan FULLPIN; campaign object.
+
+Evidence19:
+ driver_job/precommit/driver_identity: fixed authentic3724/b498/original observed
+ direct-process identity. They contain existing facts, not future success.
+ entry_CPU/prior_release/entry_CPU_release: actual2affe/f43/bb57; entry is fresh
+ .5 b2e/9ef candidate192, not legacy7d or historicalstartup0.
+ driver_result: actual original output/result.json, CAPTURED_PENDING_ROOT_CPU.
+ driver_completion: new transparent root metadata index, schema
+ robotron-root-original-direct-driver-completion-v1, original_identity FULLPIN,
+ original_return FULLPIN, returncode0, result FULLPIN, one_attempt true, argv.
+ original_return MUST be authentic precommit-parent/actual-hot-driver-execution/
+ root-original-driver-return.json, same pid/starttime_ticks/argv as observed
+ identity, returncode0, original_process_untouched true, observation_timeout
+ false. Keep actual raw wrapper result. No service/invocation is invented.
+ window_job/window_result/decision/durability/barrier: original producer outputs.
+ window_result has optional rawAPI NaN; durability is the RECEIPT PIN, while
+ window_result.durability is the enclosing event/durability/completion tuple.
+ endpoint_trigger: exact output_directory/endpoint/trigger-API.json FULLPIN.
+ phase_cpu_job/report/completion: exact genuine d73 job/result and authentic
+ numerical command completion {argv,exit_code:0}, NOT an invented childPID.
+ restored_control: exact control50-restored-receipt.json, not a result key.
+ CPU_execution: new transparent immutable descriptor, owner five-key actual
+ retained numerical owner; timer; show/cat/journal original FULLPINs;
+ archived_before_release/released true; release_receipt FULLPIN; job/report/
+ completion FULLPINs; command exact numerical argv. No success field may be
+ filled before the real original CPU and archive-before-release complete.
+
+CPU release_receipt uses the proven root entry lifecycle fields:
+ status PASS, original_exec_code1/original_exit0/original_result success,
+ original_pid/starttime_ticks/invocation, original_archived_before_release true,
+ unit_released true, CPU_report, cpu_job, original_terminal_archive,
+ owned_release [{unit:TIMER,stop_returncode:0,final_load_state:not-found},
+                {unit:SERVICE,stop_returncode:0,final_load_state:not-found}].
+ Original archive full_original_archives.service_{show,cat,journal}.stdout
+ must equal CPU_execution.show/cat/journal. Original full show must retain exact
+ PID/invocation/NRestarts0/exit0; cat ExecStart is authenticated against exact
+ command and original show argv[]. Proven /usr/bin/env wrapper unsets preload
+ and Python path, sets CUDA_VISIBLE_DEVICES=, PYTHONDONTWRITEBYTECODE=1, four
+ thread caps2 and an absolute TMPDIR. This is the existing entry launch shape.
+ An honestly pinned empty original invocation journal is allowed.
+
+Critical joins:
+ candidate tag == driver_job.tags.endpoint; never entry checkpoint tag/barrier.
+ result.endpoint direct source/copy/acquisition == phase_cpu_job tuple.
+ CPU floor == coordinatewise max(entryCPU4, B4, ORIGINAL firstLATCH4).
+ Fresh endpoint trigger >= floor, intentionally NOT necessarily equal.
+ LATCH event grants0; only matching original timely durability grants1.
+ 8M learner_frame_count AND6M accepted_learner_total(DQN+epsilon), not all5 adds.
+ Original pending1/AMPskip remain, with all accounting deltas from SAME nonzero B.
+ Same original owner, phase9b3 and historical original boot; NO new maintenance
+ boot>=candidate/newowner/CE_return alias. Fresh post-CPU baseline API clocks
+ >=endpoint, same exposure epochs, original .5 label/LR2.5e-5 and restored bytes.
+ .25 endpoint archive differs from live .5 control; restoration via os.replace
+ legitimately changes inode. Match bytes/SHA/path/mode, not old full identity.
+
+runtime_anchor retains genuine baseline main_owner/fleet_owner/inference_worker,
+ actors192/source61+/control2/unit3/environment_sha256. Actual baseline and
+ readiness must be collected after restored control AND original endpoint CPU;
+ no historical startup API may stand in. Current phase is BUNDLE.current_phase.
+
+Scientific protocol remains the original fresh R/C/R/C1200s admission/2400s
+ game timeout/16slots4096..4111/min50/full tails/diagnosticsON/compiledFP32/
+ epsilon0/expert0/replayOFF/one attempt/no admission extension/no retry.
+ Pool ALL fresh R1+R2 scores once after valid audits; EACH candidate separately
+ needs mean>=1.05*fixedRmean ANDmedian>=fixedRmedian; no C-pool rescue.
+ Generic campaign and protector unchanged. No automatic promotion or rollback.
+
+This family refuses FAILED/INVALID/late driver evidence/numerical failure.
+ Any different retained-failure follow-up needs a new prescore root decision,
+ not this success binding or the older FAILED2048-follow-up escape.

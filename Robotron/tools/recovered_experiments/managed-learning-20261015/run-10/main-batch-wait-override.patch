@@ -1,0 +1,33 @@
+--- a/Robotron/Scripts/dqn/main.py
++++ b/Robotron/Scripts/dqn/main.py
+@@ -45,6 +45,22 @@
+     if raw is None:
+         return default
+     return raw.strip().lower() not in {"0", "false", "off", "no"}
++
++
++def _apply_inference_batch_wait_override(cfg):
++    """Apply a main-process-only collector delay before any agent/server exists."""
++    raw = os.getenv("DQN_INFERENCE_BATCH_WAIT_MS")
++    if raw is None:
++        return None
++    try:
++        wait_ms = float(raw)
++    except (TypeError, ValueError) as exc:
++        raise ValueError("DQN_INFERENCE_BATCH_WAIT_MS must be a finite number in [0, 10] ms") from exc
++    if not math.isfinite(wait_ms) or not 0.0 <= wait_ms <= 10.0:
++        raise ValueError("DQN_INFERENCE_BATCH_WAIT_MS must be a finite number in [0, 10] ms")
++    cfg.inference_batch_wait_ms = wait_ms
++    print(f"[INFERENCE] DQN_INFERENCE_BATCH_WAIT_MS={wait_ms:g} ms (main process)")
++    return wait_ms
+ 
+ 
+ def _has_desktop_session() -> bool:
+@@ -899,6 +915,7 @@
+ 
+ 
+ def main():
++    _apply_inference_batch_wait_override(RL_CONFIG)
+     os.makedirs(MODEL_DIR, exist_ok=True)
+ 
+     # Ratchet mode must be known BEFORE the agent exists: the freeze has to be

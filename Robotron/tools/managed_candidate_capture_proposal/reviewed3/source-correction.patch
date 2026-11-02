@@ -1,0 +1,11 @@
+--- Robotron/tools/managed_candidate_capture_proposal/reviewed2/prepare_448_candidate.py
++++ Robotron/tools/managed_candidate_capture_proposal/reviewed3/prepare_448_candidate.py
+@@ -133,7 +133,7 @@
+ 
+ 
+ def terminal_watcher():
+-    text = command(['systemctl', '--user', 'show', UNIT])
++    text = command(['systemctl', '--user', 'show', UNIT, '--all'])
+     value = fields(text)
+     require(value.get('InvocationID') == WATCHER['invocation_id']
+             and value.get('ExecMainPID') == str(WATCHER['pid'])

@@ -1,0 +1,113 @@
+SOURCE PREPARATION ONLY — one root-owned conditional raw-KL trial
+
+No code in this bundle has been imported, tested or executed by its authors.
+No actual job/phase/new owner/candidate/launch is supplied. Root owns all actual
+runtime actions, tests, original exit archives and canonical state writes.
+
+Selected dependencies remain immutable: ea4c transition companion7d0aa20b,
+horizon8426/25d70b4a, V4fdf7c8bf, phaseCPUdf033/b2e732dc and strict7d7d1103da.
+Actual StageA+B PASS/cleanup and completed quality/released source-freeze proofs
+must be the exact activation-job prerequisites. The protected448 reference is
+not a boot fallback. Candidate5 remains the sealed1144/2f083 treatment.
+
+The same immutable outer job is used by TWO separately retained invocations:
+  1. deadline_guard.py --execute --job ABS --expected-job-sha256 SHA
+       --expected-source-sha256 DEADLINE_SHA
+  2. run_one_trial.py --execute --job ABS --expected-job-sha256 SHA
+       --expected-controller-sha256 CONTROLLER_SHA
+       --expected-armed-sha256 ACTUAL_DEADLINE_ARMED_RECEIPT_SHA
+Without --execute each prints a literal PLAN; no helper imports or job reads.
+The deadline process creates the new outer output/0600 action lock and fsyncs
+deadline-armed.json. Root archives its actual unit identity; main independently
+requires its still-live exact PID/start. No activation before arm.
+
+The final core must have activation_authorized=true, mode=activate_kl, the exact
+phase ID, and status=FINAL_PRECOMMITTED_ROOT_AUTHORIZED. A descriptive draft is
+refused by BOTH arm and main. The core precedes its phase record; do not add the
+derived outer job SHA, deadline receipt, new PID, or later result into that core.
+
+The deadline never guesses KL ownership from the previous CE unit. It binds the
+actual create-only start request and actual adopted lineage in activation output
+(legacy lineage field retired_trainer names the newly adopted owner here).
+No lineage: retain the known start clock, do not signal old CE/unknown PID, and
+record UNADOPTED_START_MANUAL at t0+3310. Once adopted, marker/source/log/API
+faults cannot erase that identity or suppress its independent stop deadline.
+
+Normal sequence:
+  * Frozen activation granular transition: original192 pause, exact old stop,
+    newest stopped-latest CPU proof, source5 install, Restart=no/new KL start
+    record, both capture flags explicitly unset, graph/bank/map readiness,
+    unique zero-client startup phase proof, original192 resume and health.
+  * Start frozen1s observer immediately. The ONE live model-only early192
+    insurance request does NOT pause actors/prefetch/training flags. Only its
+    small request/completion lifecycle runs on the polling thread. Independent
+    copy/hash and one retained strict7d CPU run asynchronously. A slow save/API
+    or blind gap remains real exposure and may invalidate the trial.
+  * First BOTH horizon: >=8M learner frames from CPU boot clocks AND >=6M physical
+    accepted ring writes across all five source categories, unchanged epochs.
+    The original event file+directory fsync completion must be <=t0+3240. A late
+    write preserves the first LATCH and fails; no new observer/reanchor/candidate.
+    Observation+durability files have a fixed TOTAL32MiB bound. Reserve4096 bytes
+    of durability metadata before each event; preserve the first write failure.
+  * Early insurance must ALREADY be PASS at first ending. LATCH: pause<=10s,
+    ONE unique save/completion+independent0444 freeze<=60s, then immediate exact
+    KL stop. INCOMPLETE: no candidate, exact stop. Slow job/model hashing and all
+    ending numeric checks occur AFTER known KL absence.
+  * Supervisor independently requests graceful exact-owner stop at t0+3310,
+    leaving240s stop+50s margin. Fresh exact-owner pre-request guard reads may
+    retry; a submitted/uncertain command is never represented as unsubmitted.
+    Same old invocation draining is pending; foreign/replacement/new CE is
+    never a signal target. Actual PID absence+empty cgroup+MainPID0 by3600 is
+    required. Stop return0/timeouts alone are not absence. No hard kill.
+  * Same-process handoff retains the registered retired identity, original
+    lease FD/flock, settings transitions, actor undo list and bound log reader.
+    Final KL log tail is retained after stop before reader offsets reset.
+    New return job selects the genuine early KL-owner insurance and current
+    candidate.completed slot separately. ea4c candidateCPU strengthens the
+    floor to max(early insurance,LATCH,candidate saved4); newest-stopped CPU
+    must meet it before NEW CE phase/startup proof/192 resume. No older boot.
+
+The action lock covers only fresh check->unit mutation, never model save/copy,
+CPU waits, source installation or graceful-stop waiting. The two invocations
+must remain separate retained services so blocked I/O in main cannot stop the
+deadline. New CE start also requires the independent actual KL absence receipt.
+
+INVALID, late durable LATCH, unready early proof, failed candidate freeze, source
+or CPU failure: no relabelling/no second candidate/no hidden retry. Attempt exact
+known-owner retirement and all registered SIGCONT independently of log/source
+health. Retain manual_recovery_required. Root then diagnoses/reviews explicit
+forward-newest repair outside this one-shot; no user approval/Goal pause implied.
+Known invalid saved phase remains fatal; no automatic forensic/older-source path.
+
+Practical local adapters (frozen files unchanged): small copy dispatch permits
+only registered source/request/completion archives into the three owned output
+roots, with strict FD/path/hash/owner/single-link/0444/fsync independent-copy
+checks. EVERY .pt still uses original V4's200..400MiB checkpoint copier. Only the
+registered exact early CPU unit/PID/start/argv/job and direct scheduling carrier
+are allowed through the scanner. Exited child requires original retained unit
+or sealed original archive AND vanished classified PID; reuse grants no scanner
+exemption. Helpers retain actual original exits before any unit release.
+
+Raw API artifacts preserve optional original NaN values only at explicit API
+paths; observational event receipts may contain that raw API. Ordinary jobs,
+scientific/result JSON stay strict. No value is replaced by0. Numeric guards
+and strict finite checkpoint/phase checks remain unchanged.
+
+Proposed outer bounds (valid systemd M/G spellings): main CPU200%/4G/128tasks,
+RuntimeMaxSec7200, SIGINT/TimeoutStop900/SendSIGKILL=no, Restart=no/Type=exec/
+RemainAfterExit=yes. Deadline CPU100%/256M/32tasks, RuntimeMaxSec6000, separate
+retained original terminal. Early CPU2/3G/64tasks/120s/CUDA hidden. Whole-trial
+allowance: pre-KL<=600 +fixed KL3600 +post-KL candidate/latest CPU240 +bank60 +
+CE start10/zero-ready600/startup save60/startup CPU120/final-ready600 +archive60
+=5950s, with7200s finite outer allowance. This NEVER extends3240/3310/3600.
+Root must preserve original show/cat/invocation journal and child exits BEFORE
+release, including failures. No quality launch/promotion is implemented here.
+
+Focused root test selection (47 authored methods, unexecuted by authors):
+python3 -I -B -c <explicit REPO sys.path + unittest argv in future-argv.json>
+Select exactly test_one_trial(32) and test_early_insurance(15), no production
+runtime imports/actions from PLAN, no model/tensor/framework loads in guards.
+
+Scopes: no coherent actor/FIFO/replay/RNG anchor, no bank RAM equality, no full
+replay copy, no KL coverage inference from physical turnover, no learning benefit
+or protected promotion claim. A successful transition is not a quality result.

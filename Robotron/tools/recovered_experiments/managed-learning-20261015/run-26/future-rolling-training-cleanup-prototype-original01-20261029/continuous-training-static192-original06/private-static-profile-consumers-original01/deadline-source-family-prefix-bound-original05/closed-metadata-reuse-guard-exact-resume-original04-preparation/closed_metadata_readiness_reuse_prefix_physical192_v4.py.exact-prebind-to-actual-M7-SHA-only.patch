@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/closed-metadata-reuse-guard-exact-resume-original04-preparation/unselected-prebind-source-snapshots/closed_metadata_readiness_reuse_prefix_physical192_v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/closed-metadata-reuse-guard-exact-resume-original04-preparation/closed_metadata_readiness_reuse_prefix_physical192_v4.py
+@@ -24,7 +24,7 @@
+     return value
+ 
+ 
+-SOURCE_CONTRACT_SHA = None  # Pending actual M7 PASS/close/manifest and final binding.
++SOURCE_CONTRACT_SHA = '128f8db839ddc4cff84887cbe11f2b4d0ea390fe1ccdbc05fc8fed4701671fcc'
+ 
+ 
+ class ClosedMetadataReadiness:

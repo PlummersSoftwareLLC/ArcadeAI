@@ -1,0 +1,50 @@
+{
+  "schema": "robotron-trial02-quality-closure-job-assembly-source-preparation-v1",
+  "status": "SOURCE_ONLY_FROZEN_NO_ASSEMBLY_EXECUTED",
+  "files": {
+    "assemble_closure_job.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/quality_trial02_closure_job_assembly_proposal/assemble_closure_job.py",
+      "sha256": "fb937a565142d22af5fbbde16417fd862c3273a3b385cd4360a53306edf181d0",
+      "bytes": 12133,
+      "mode": "0o444"
+    },
+    "known-inputs.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/quality_trial02_closure_job_assembly_proposal/known-inputs.json",
+      "sha256": "0d2ba78a06cfac54566a05b747b0ca6aa84725fd57dadba11fe350a5dba72e8a",
+      "bytes": 16099,
+      "mode": "0o444"
+    },
+    "late-bindings-TEMPLATE.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/quality_trial02_closure_job_assembly_proposal/late-bindings-TEMPLATE.json",
+      "sha256": "c62d46301f01ca8b13c5cf3f88ef89eddabe6d6b73ea1b7c84009505c4d649d0",
+      "bytes": 5258,
+      "mode": "0o444"
+    },
+    "PREPARATION.txt": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/quality_trial02_closure_job_assembly_proposal/PREPARATION.txt",
+      "sha256": "aad6e5ca270645f6d790a5d5394ec5f508e331cda4bfc36e730cc6d861a64f9a",
+      "bytes": 3784,
+      "mode": "0o444"
+    },
+    "future-CLI.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/quality_trial02_closure_job_assembly_proposal/future-CLI.json",
+      "sha256": "cf9d1a1216a076390d965be31d6ceb5587960120b525fd843302e13569fef43b",
+      "bytes": 1132,
+      "mode": "0o444"
+    }
+  },
+  "actual_closure_job": null,
+  "generated_acceptance": false,
+  "unbound": [
+    "root_acceptance",
+    "preparation_directory",
+    "closure_output_directory"
+  ],
+  "closure_helper_sha256": "6f2f6fb96b84448da085512c4bfd9cef10a08b33bce7278c34af61640d89c6dd",
+  "closure_manifest_sha256": "eb890f858cff5250fd457ac0143d63cd342d47cdde1c36471d9485a0f2c9b1d1",
+  "R2_compatible_index_sha256": "3befb4d3b5887ec75782e985b87742356eb9bcd000275985ab8fbdb8d91d5abb",
+  "R2_full_scientific_review_sha256": "a883f519e621ba679a92ce6d987566a9c8fef930087d3a9d206a7593b92de67d",
+  "C2_independent_review_sha256": "500cf83f65e55d45c7b095e27fd071a4f8ca8e32051ad77aa0a7be82d732f4cf",
+  "author_imports_tests_runtime_PT": false,
+  "qualification_pass": false
+}

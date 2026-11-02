@@ -1,0 +1,62 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/prepare_fullgame_cpu_guard_v7.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original03-private-AST-preparation/prepare_fullgame_cpu_guard_v7.py
+@@ -11,9 +11,10 @@
+ 
+ from importlib.util import spec_from_file_location,module_from_spec
+ 
+-ROOT=Path(__file__).resolve().parents[2]
++ROOT=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ BASE=ROOT/'logs/managed-learning-20261015/run-26'
+-HERE=Path(__file__).resolve().parent
++HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
++LOCAL=Path(__file__).resolve().parent
+ ORDER=['R1','C1','R2','C2']
+ PROPERTIES=['CPUQuota=200%','MemoryMax=4G','MemorySwapMax=0','RuntimeMaxSec=180','TasksMax=128','TimeoutStopSec=5','SendSIGKILL=no']
+ 
+@@ -33,8 +34,8 @@
+     require(original['schema']=='robotron-fullgame-two-context-engineering-v1'and original['engineering_only']is True,
+             'Actual inert two-policy engineering domain required')
+     output=output.resolve();require(output.is_relative_to(BASE),'Run-26 engineering output required');output.mkdir(mode=0o700)
+-    controller=load('_fullgame_four_engineering_controller',HERE/'control_fullgame_rounds_v6.py')
+-    reviewer=load('_fullgame_four_engineering_reviewer',HERE/'review_fullgame_rounds_v7.py')
++    controller=load('_fullgame_four_engineering_controller',LOCAL/'control_fullgame_rounds_v6.py')
++    reviewer=load('_fullgame_four_engineering_reviewer',LOCAL/'review_fullgame_rounds_v7.py')
+     tokens=set();cases=[]
+     for leg in ORDER:
+         before=original['cases'][0 if leg.startswith('R')else 1]
+@@ -62,7 +63,7 @@
+         require(controller.checked_config(cp['path'])==cfg,'Actual fullgame config interface differs')
+         reviewer.validate_scope(subject,jp,json.loads(h.checked(scope).read_bytes()),cfg)
+         cases.append(dict(leg=leg,role='reference'if leg.startswith('R')else'candidate',native_job=jp,runtime=runtime,
+-            controller=h.pin(HERE/'control_fullgame_rounds_v6.py'),acceptance=scope,unqualified_controller_config=cp,native_launch_ready=False))
++            controller=h.pin(LOCAL/'control_fullgame_rounds_v6.py'),acceptance=scope,unqualified_controller_config=cp,native_launch_ready=False))
+     return h.put(output/'ENGINEERING-ONLY-four-contexts.json',dict(schema='robotron-fullgame-rounds-four-job-preparation-v1',
+         ordered_legs=ORDER,cases=cases,pair=original['pair'],source=h.pin(Path(__file__).resolve()),original_two_contexts=source,
+         all256_transports_fresh_and_disjoint=len(tokens)==256,engineering_only=True,
+@@ -78,13 +79,13 @@
+     engineering=prepared['engineering_only']
+     require(type(engineering)is bool,'Exact engineering domain required')
+     if not engineering:
+-        producer=load('_fullgame_exact_guard_production',HERE/'prepare_fullgame_study_v6.py')
++        producer=load('_fullgame_exact_guard_production',LOCAL/'prepare_fullgame_study_v6.py')
+         producer.eligible_screen(prepared['screen_assessment'],prepared['reference_epoch'],h)
+     output=output.resolve();require(output.is_relative_to(BASE),'Fresh run-26 CPU output required');output.mkdir(mode=0o700)
+     control=load('_fullgame_exact_guard_controller',ROOT/'tools/quality_capacity_proposal/control_quality32_review_v1.py')
+-    driver=h.pin(HERE/'check_fullgame_four_cpu_v7.py');helper=h.pin(ROOT/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py')
+-    inputs=[mp,driver,helper,h.pin(Path(__file__).resolve()),h.pin(HERE/'prepare_fullgame_study_v6.py'),
+-        h.pin(HERE/'assess_screen_study.py'),h.pin(HERE/'review_fullgame_rounds_v7.py'),h.pin(HERE/'control_fullgame_rounds_v6.py')]
++    driver=h.pin(LOCAL/'check_fullgame_four_cpu_v7.py');helper=h.pin(ROOT/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py')
++    inputs=[mp,driver,helper,h.pin(Path(__file__).resolve()),h.pin(LOCAL/'prepare_fullgame_study_v6.py'),
++        h.pin(HERE/'assess_screen_study.py'),h.pin(LOCAL/'review_fullgame_rounds_v7.py'),h.pin(LOCAL/'control_fullgame_rounds_v6.py')]
+     for case in prepared['cases']:
+         subject=json.loads(h.checked(case['native_job']).read_bytes())
+         require(subject['engineering_only']is engineering,'Job/domain mismatch')
+@@ -92,7 +93,7 @@
+     inputs=list({p['path']:p for p in inputs}.values())
+     unit='robotron-fullgame-four-exact-CPU-'+mp['sha256'][:16]+'-original01.service'
+     job=dict(schema='robotron-fullgame-four-exact-CPU-job-v1',unit=unit,output=str(output/'runtime'),prepared=mp,
+-        helpers=helper,reviewer=h.pin(HERE/'review_fullgame_rounds_v7.py'),inputs=inputs,source=driver,
++        helpers=helper,reviewer=h.pin(LOCAL/'review_fullgame_rounds_v7.py'),inputs=inputs,source=driver,
+         original_attempt=1,no_retry=True,engineering_only=engineering,scientific_payload=False)
+     jp=h.put(output/'job.json',job)
+     cfg=dict(unit=unit,output=str(output/'execution-original01'),argv=['/usr/bin/python3','-I','-B',driver['path'],

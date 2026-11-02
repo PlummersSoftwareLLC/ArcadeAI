@@ -1,0 +1,107 @@
+{
+  "all_other_interface_recipe_numerical_proof_archival_release_and_failure_contracts": "Exactly inherited from preserved1571 manifest and39c source, except selected entrypoint path/hash and the show status guard. No target execution, tests or current runtime reads.",
+  "finite_delta": {
+    "added_line": "assert r.returncode == 0, 'Read-only show failed rc=%s: %s' % (r.returncode, r.stderr[:4096])",
+    "all_other_bytes_equal": true,
+    "changed_function": "show",
+    "purpose": "A failed read-only show cannot supply ownership/absence properties even if its partial stdout looks plausible. Bounded stderr is retained in the error; no new command or lifecycle action.",
+    "reverse_exact_39c": true
+  },
+  "future_actual_capture_release": null,
+  "future_actual_capture_result": null,
+  "future_actual_endpoint_CPU_job": null,
+  "future_actual_execution": null,
+  "future_argv_template": [
+    "<ROOT_SELECTED_STDLIB_PARENT_PYTHON>",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_cpu_launcher_proposal/run_candidate_cpu_reviewed2.py",
+    "--execute",
+    "--case",
+    "<ACTUAL_AFTER_CAPTURE0_FULL8_CASE>",
+    "--expected-case-sha256",
+    "<ACTUAL_CASE_SHA>",
+    "--expected-source-sha256",
+    "d203f21066af5f090b93d6eab25f9bf40b1c3df119b5ece9b4281b2c305faf77"
+  ],
+  "no_retry": true,
+  "preservation_override": {
+    "all_original_base_sources_and_current_selected_LR_family_unchanged": true,
+    "show_differs_only_in_checked_return_status": true,
+    "whole_functions_still_byte_exact_c2": [
+      "identity",
+      "pin",
+      "read",
+      "publish",
+      "call",
+      "process_start"
+    ]
+  },
+  "preserved_draft_history": {
+    "executed": false,
+    "preserved_at_original_paths_byte_exact": true,
+    "receipt_manifest": {
+      "bytes": 12629,
+      "identity": {
+        "bytes": 12629,
+        "ctime_ns": 1792327692992246096,
+        "device": 2304,
+        "inode": 81290839,
+        "mode": "0o444",
+        "mtime_ns": 1792327692992246096,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_cpu_launcher_proposal/preparation-manifest.json",
+      "sha256": "1571ba33b681922659e05ebcd06abdfd0eaaaae602050cf2ecfb2ea611708e1c"
+    },
+    "source": {
+      "bytes": 22039,
+      "identity": {
+        "bytes": 22039,
+        "ctime_ns": 1792327585635018480,
+        "device": 2304,
+        "inode": 81290468,
+        "mode": "0o444",
+        "mtime_ns": 1792327585607018383,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_cpu_launcher_proposal/run_candidate_cpu.py",
+      "sha256": "39c698ee3bb93b79264738237990ed5d0746d71773c2f13b5d71d397233de183"
+    }
+  },
+  "root_selection_required_after_actual_capture0_and_owned_release": true,
+  "schema": "robotron-current-recipe-CPU-launcher-reviewed2-source-selection-v1",
+  "selected_source": {
+    "bytes": 22137,
+    "identity": {
+      "bytes": 22137,
+      "ctime_ns": 1792327742678807021,
+      "device": 2304,
+      "inode": 81290926,
+      "mode": "0o444",
+      "mtime_ns": 1792327742678807021,
+      "nlink": 1,
+      "uid": 1001
+    },
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_cpu_launcher_proposal/run_candidate_cpu_reviewed2.py",
+    "sha256": "d203f21066af5f090b93d6eab25f9bf40b1c3df119b5ece9b4281b2c305faf77"
+  },
+  "shared_inert_case_template": {
+    "bytes": 403,
+    "identity": {
+      "bytes": 403,
+      "ctime_ns": 1792327692988394274,
+      "device": 2304,
+      "inode": 81290838,
+      "mode": "0o444",
+      "mtime_ns": 1792327692988394274,
+      "nlink": 1,
+      "uid": 1001
+    },
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_cpu_launcher_proposal/root-case-TEMPLATE.json",
+    "sha256": "6a4cc77c0affd25fa026108e6419acfd804f04df0bcc6b35c5a8abbe16cd0431"
+  },
+  "status": "SOURCE_ONLY_UNSELECTED_UNEXECUTED"
+}

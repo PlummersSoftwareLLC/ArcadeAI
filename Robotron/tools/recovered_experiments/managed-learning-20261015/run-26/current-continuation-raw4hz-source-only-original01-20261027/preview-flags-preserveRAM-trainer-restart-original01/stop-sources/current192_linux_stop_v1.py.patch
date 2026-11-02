@@ -1,0 +1,383 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/stop-sources/current227_linux_stop_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/preview-flags-preserveRAM-trainer-restart-original01/stop-sources/current192_linux_stop_v1.py
+@@ -25,9 +25,9 @@
+ MODEL = GAME/'models_dqn'
+ CONTROL = MODEL/'learning_control.json'
+ ROOT_CGROUP = Path('/sys/fs/cgroup')
+-MAIN_UNIT = 'robotron-managed-run-26-d3b365c9-trainer.service'
+-OLD_SOCKET_SHA = '33c9726addb57ea5e8b7b5087c2e75aa179f4035542f5a91bbe3dffdf273d30c'
+-NEW_SOCKET_SHA = '33c9726addb57ea5e8b7b5087c2e75aa179f4035542f5a91bbe3dffdf273d30c'
++MAIN_UNIT = 'robotron-managed-run-26-continuation-raw4hz-original01-20261027-trainer.service'
++OLD_SOCKET_SHA = '97d9a158e32f89d2b1bccb8bee309682cdf7acdfcc33dcb255752466b91d8fa3'
++NEW_SOCKET_SHA = '97d9a158e32f89d2b1bccb8bee309682cdf7acdfcc33dcb255752466b91d8fa3'
+ WIRE_COUNT = 1890
+ WIRE_HEADER = '>HddBIBBBIBBB'
+ 
+@@ -173,6 +173,51 @@
+     return result
+ 
+ 
++def validate_base_control(binding, raw, *, closed_base_measurement=None):
++    """Allow only the recorded already-closed old final label as a base."""
++    base = json.loads(raw)
++    require(base['lr_scale'] == .125, 'Current recipe scale changed')
++    measurement = base.get('measurement')
++    if measurement is None:
++        return None
++    transition = binding.get('owned_final_control_transition')
++    require(type(transition) is dict, 'A nonempty base measurement needs its exact closed authority')
++    original = json.loads(checked(transition['base_control_archive']))
++    event = json.loads(checked(transition['actual_final_pause_event']))
++    label = 'scorecarry-current227-preserve-original01-20261027-final'
++    expected = dict(label=label, checkpoint=None, cohort_s=3600, timeout_s=7200)
++    require(original.get('measurement') is None and event['purpose'] == 'final'
++            and event['label'] == label and event['control'] == transition['current_control']
++            and transition['current_control']['path'] == str(CONTROL)
++            and transition['current_control']['sha256'] == hashlib.sha256(raw).hexdigest()
++            and base == dict(original, measurement=expected)
++            and binding['baseline_API']['measurement_active'] is False
++            and binding['baseline_API']['training_enabled'] is True,
++            'Only the exact previous owned, already-closed final control may be the current base')
++    require(type(closed_base_measurement) is dict
++            and closed_base_measurement['sha256'] ==
++                '489e47f8b0c9ce52a685d0281278e64400334678e161db5fd3acb729571a80cb'
++            and closed_base_measurement['identity']['mode'] == '0o444',
++            'Exact ROOT handled-before-current-boot qualification is required')
++    qualification = json.loads(checked(closed_base_measurement))
++    terminal_pin = qualification['actual_terminal_file']
++    terminal = json.loads(checked(terminal_pin))  # Normal producer mode0664 is preserved.
++    require(qualification['schema'] == 'robotron-root-readonly-closed-original-final-measurement-record-v1'
++            and terminal_pin['path'] == str(MODEL/'managed-measurements'/(label+'.json'))
++            and terminal_pin['sha256'] == 'ef998bcd59b58335179a0edb3b2e0d47a9c3654a84f867e88c2ff4bcdc1b5f9a'
++            and terminal == qualification['actual_terminal_value']
++            and terminal['active'] is False and terminal['phase'] == 'finished'
++            and terminal['complete'] is True and terminal['valid'] is False
++            and terminal['reason'] == 'trainer_shutdown' and terminal['label'] == label
++            and terminal['request'] == expected
++            and qualification['actual_current_api']['measurement_active'] is False
++            and qualification['actual_current_api']['training_enabled'] is True
++            and qualification['actual_current_api']['managed_measurement'] == {}
++            and terminal['ended_unix_s'] < qualification['actual_current_api']['ts'],
++            'The old base label must be a real terminal handled record, never a quality PASS')
++    return measurement
++
++
+ def summarize_restart_censored_live_games(api, original_rows, raw_API_pin, main):
+     """One saved API cutoff; not a completed-game or fixed-policy quality mean."""
+     rows = [dict(row) for row in api['client_rows']
+@@ -204,11 +249,11 @@
+ 
+ 
+ CURRENT_NONINPUT_NATIVE = {
+-    3617548: (78860910, 'Thread-1 (serve'),  # Dashboard serve_forever.
+-    3617549: (78860910, 'Thread-2 (_samp'),  # Dashboard _sampling_loop.
+-    3617550: (78860910, 'Thread-3 (_cons'),  # AsyncReplayBuffer._consume; FIFO-tail gated.
+-    3617552: (78860914, 'Thread-4 (start'), # SocketServer.start; separately held listener.
+-    3617553: (78860914, 'Thread-5 (stats'), # main.stats_reporter.
++    1062559: (117472924, 'Thread-1 (serve'),  # Dashboard serve_forever.
++    1062560: (117472924, 'Thread-2 (_samp'),  # Dashboard _sampling_loop.
++    1062561: (117472925, 'Thread-3 (_cons'),  # AsyncReplayBuffer._consume; FIFO-tail gated.
++    1062563: (117472929, 'Thread-4 (start'), # SocketServer.start; separately held listener.
++    1062564: (117472929, 'Thread-5 (stats'), # main.stats_reporter.
+ }
+ 
+ 
+@@ -223,8 +268,8 @@
+ 
+ 
+ def potential_handlers(pid):
+-    require(pid == 3615927 and process_start(pid) == 78856521,
+-            'Only current227 trainer native tasks may be inspected')
++    require(pid == 1062324 and process_start(pid) == 117468652,
++            'Only the exact current1062324 trainer native tasks may be inspected')
+     result = {}
+     for task in Path('/proc', str(pid), 'task').iterdir():
+         try:
+@@ -243,7 +288,7 @@
+ 
+ class LinuxBackend:
+     def __init__(self, job, *, context_only=False):
+-        require(job['schema'] == 'robotron-current-continuation-stop-only-job-v1'
++        require(job['schema'] == 'robotron-current-fresh192-preserveRAM-stop-job-v1'
+                 and job['authorized'] is True, 'Explicit selected handoff required')
+         require(re.fullmatch(r'scorecarry-[A-Za-z0-9_-]{1,60}', job['case']), 'Unique bounded case label required')
+         require(job.get('poststop_adapter') is not None, 'Complete verified post-stop adapter is required before actions')
+@@ -260,15 +305,13 @@
+         self.bank_intent = module(job['dependencies']['bank_shutdown_intent'], '_handoff_bank_shutdown_intent')
+         self.socket_seal = module(job['dependencies']['socket_seal'], '_handoff_socket_seal')
+         self.prepared = json.loads(checked(job['prepared']))
+-        require(self.prepared['schema'] == 'robotron-current227-continuation-stop-prepared-v1'
+-                and self.prepared['status'] == 'PREPARED_CURRENT227_STOP_ONLY_NOT_LAUNCHED'
+-                and self.prepared['original_main'] == self.prepared['current_binding']
+-                and self.prepared['current_binding']['sha256'] ==
+-                    '8aa6949ed053deb57f8680657a5bd91c2debeacbaf64c53e73b98c6ef167dd0a',
++        require(self.prepared['schema'] == 'robotron-current-fresh192-preserveRAM-stop-prepared-v1'
++                and self.prepared['status'] == 'PREPARED_CURRENT192_PRESERVERAM_STOP_ONLY_NOT_LAUNCHED'
++                and self.prepared['original_main'] == self.prepared['current_binding'],
+                 'Exact current227 stop-only context required')
+         selection = json.loads(checked(job['root_selection']))
+         require(job['root_selection']['identity']['mode'] == '0o444'
+-                and selection['schema'] == 'robotron-root-current227-stop-selection-v1'
++                and selection['schema'] == 'robotron-root-fresh192-preserveRAM-stop-selection-v1'
+                 and selection['prepared_inputs'] == job['prepared']
+                 and selection['one_original_stop_only'] is True
+                 and selection['source_or_replacement_start_not_authorized'] is True
+@@ -277,19 +320,50 @@
+         require(selection['backend_source'] == job['backend_source'] == full_pin(Path(__file__).resolve())
+                 and selection['poststop_adapter'] == job['poststop_adapter']
+                 and selection['recovery_source'] == job['recovery_source'], 'Selected stop source family differs')
++        require(selection['current_binding'] == self.prepared['current_binding'],
++                'ROOT must bind the actual new current192 registry, never a guessed future hash')
++        require(selection['closed_base_measurement'] == job['closed_base_measurement'],
++                'ROOT must bind the same actual handled-label qualification')
+         self.main = json.loads(checked(self.prepared['original_main']))
++        require(self.main['schema'] == 'robotron-current-fresh192-continuation-registry-v1'
++                and type(selection['expected_source_count']) is int
++                and len(self.main['held_hashes']) == selection['expected_source_count']
++                and self.main['eval_count'] == 37 and self.main['training_count'] == 155,
++                'Explicit actual current192 source/role registry required')
+         self.owner = self.main['owner']
+-        require(self.owner['pid'] == 3615927 and self.owner['starttime_ticks'] == 78856521
++        require(self.owner['pid'] == 1062324 and self.owner['starttime_ticks'] == 117468652
+                 and self.owner['unit'] == MAIN_UNIT
+-                and self.owner['invocation_id'] == '8fdf9768e04641a1858114861ccde8aa',
++                and self.owner['invocation_id'] == '429ceaf754ca49b495056180a0350411',
+                 'Only the explicitly prepared original trainer is allowed')
+         self.listener = json.loads(checked(self.prepared['original_listener']))
+         self.dashboard_accept = json.loads(checked(self.prepared['original_dashboard_accept']))
+         require(self.dashboard_accept['owner'] == self.owner
+                 and (self.dashboard_accept['tid'], self.dashboard_accept['starttime_ticks'],
+-                     self.dashboard_accept['comm']) == (3617548, 78860910, 'Thread-1 (serve'),
++                     self.dashboard_accept['comm']) == (1062559, 117472924, 'Thread-1 (serve'),
+                 'Exact current dashboard accept task required')
+         self.fleet = json.loads(checked(self.prepared['original_fleet']))
++        self.supplemental0 = json.loads(checked(self.prepared['original_supplemental0']))
++        self.original_actors = self.main['actors']
++        self.actor_owner_keys = self.main['actor_ownership']
++        self.producer_owners = dict(fleet=self.fleet, supplemental0=self.supplemental0)
++        require(len(self.original_actors) == 192
++                and {a['slot'] for a in self.original_actors} == set(range(192))
++                and set(self.actor_owner_keys) == {str(s) for s in range(192)}
++                and all(self.actor_owner_keys[str(s)] == ('supplemental0' if s == 0 else 'fleet')
++                        for s in range(192)), 'Exact split-owner original192 registry required')
++        for key, producer in self.producer_owners.items():
++            identity = self.main['actual_owners'][key]
++            require(all(producer[k] == identity[k] for k in
++                        ('pid','starttime_ticks','unit','invocation_id','cgroup'))
++                    and producer['original_actors'] == [a for a in self.original_actors
++                        if self.actor_owner_keys[str(a['slot'])] == key],
++                    'An input owner/actor subset is not the real captured original')
++        require((self.fleet['pid'], self.fleet['starttime_ticks'], self.fleet['invocation_id']) ==
++                    (1073404, 117607824, 'f791a854723b4f90ab5fa8a637a13868')
++                and (self.supplemental0['pid'], self.supplemental0['starttime_ticks'],
++                     self.supplemental0['invocation_id']) ==
++                    (1122536, 117687032, 'ccdd44624bd142db8effc98139940e7d'),
++                'Only the current original191 fleet and separate original slot0 may be held')
+         self.anchor = json.loads(checked(self.prepared['component_proofs']['original_boot_anchor']))
+         require(self.anchor['owner'] == self.owner and self.anchor['inferred_replay_pressure_anchor'] is None,
+                 'Original boot-anchor provenance differs')
+@@ -299,14 +373,21 @@
+                 and hashlib.sha256(self.control_bytes).hexdigest() == job['base_control_sha256'],
+                 'Current original control differs')
+         self.base_control = json.loads(self.control_bytes)
+-        require(self.base_control.get('measurement') is None and self.base_control['lr_scale'] == .125,
+-                'An existing measurement or recipe change is not owned')
++        self.base_measurement = validate_base_control(self.main, self.control_bytes,
++            closed_base_measurement=job['closed_base_measurement'])
++        if self.base_measurement is not None:
++            require(self.control_pin == self.main['owned_final_control_transition']['current_control'],
++                    'Actual closed-base control identity changed before preparation')
+         self.probe = None
+         self.probe_id = None
+         self.probe_tid = None
+         self.actor_handlers = {}
+         self.listener_child = ROOT_CGROUP.joinpath(self.owner['cgroup'].lstrip('/'))/('listener-'+job['case'])
+         self.fleet_root = ROOT_CGROUP.joinpath(self.fleet['cgroup'].lstrip('/'))
++        self.producer_roots = {key:ROOT_CGROUP.joinpath(owner['cgroup'].lstrip('/'))
++                               for key,owner in self.producer_owners.items()}
++        require(len(set(self.producer_roots.values())) == 2, 'Two distinct real producer cgroups required')
++        self.producer_holds = dict(fleet=False, supplemental0=False)
+         self.accept_held = self.fleet_frozen = self.original_stop_sent = False
+         self.dashboard_child = self.listener_child.parent/('dashboard-'+job['case'])
+         self.dashboard_accept_held = False
+@@ -348,7 +429,11 @@
+             controller_pid=os.getpid(), controller_starttime_ticks=process_start(os.getpid()),
+             stage=self.stage, stage_started_monotonic_s=self.stage_started,
+             stage_deadline_monotonic_s=self.stage_deadline, original_owner=self.owner,
+-            original_fleet=self.prepared['original_fleet'], original_listener=self.prepared['original_listener'],
++            original_fleet=self.prepared['original_fleet'],
++            original_supplemental0=self.prepared['original_supplemental0'],
++            producer_holds=dict(self.producer_holds),
++            producer_roots={k:str(v) for k,v in self.producer_roots.items()},
++            original_listener=self.prepared['original_listener'],
+             control_path=str(CONTROL), expected_owned_control=self.control_pin,
+             base_control_archive=self.job['base_control_archive'], listener_child=str(self.listener_child),
+             accept_held=self.accept_held, fleet_frozen=self.fleet_frozen,
+@@ -449,12 +534,12 @@
+ 
+     def preflight(self):
+         self.guard.owner_and_files(self.main)
+-        live_owner(self.fleet)
++        self.check_producer_owners_and_actors()
+         api = self.api()
+-        self.guard.healthy(api, self.reader.read_pin(self.main['baseline_API']), self.main['experiment'], time.time())
++        self.guard.healthy(api, self.main['baseline_API'], self.main['experiment'], time.time())
+         require(api['memory_buffer_size'] == 6000000 and not (MODEL/'managed_save.request.json').exists(),
+                 'Original replay/save slot changed')
+-        require(self.anchor['original_boot_saved_clocks']['optimized_samples'] == 35655907328
++        require(self.anchor['original_boot_checkpoint'] == self.poststop.config['boot_checkpoint']
+                 and api['host_pipeline']['inference_graphs']['postload_validations'] == 1
+                 and api['host_pipeline']['learning_exposure']['optimizer']['epoch'] == 1,
+                 'Original replay-budget provenance no longer applies')
+@@ -465,7 +550,8 @@
+         native = potential_handlers(self.owner['pid'])
+         require(len(native) >= 192, 'Native census cannot cover all original clients')
+         self.original_native = native
+-        require(not self.listener_child.exists() and (self.fleet_root/'cgroup.freeze').read_text().strip() == '0',
++        require(not self.listener_child.exists() and all((root/'cgroup.freeze').read_text().strip() == '0'
++                    for root in self.producer_roots.values()),
+                 'A listener/fleet hold already exists')
+         self.rescue_live()
+         return dict(owner=self.owner, original192_rows=self.original_rows,
+@@ -591,18 +677,57 @@
+         return dict(original_listener=self.prepared['original_listener'], child=str(self.listener_child), frozen=True)
+ 
+     def freeze_fleet(self, context):
+-        live_owner(self.fleet)
++        self.check_producer_owners_and_actors()
+         self.guard.owner_and_files({**self.main, 'held_hashes':{p:h for p,h in self.main['held_hashes'].items() if p != str(CONTROL)}})
+         cutoff_api = self.api()
+         cutoff_raw = full_pin(self.out/'API-wires'/f'{self.counter:04}.raw')
+         self.live_game_cutoff = self.event('pre-freeze-live192-restart-censored-score-cutoff.json',
+             summarize_restart_censored_live_games(cutoff_api, self.original_rows, cutoff_raw, self.main))
++        for key in ('fleet', 'supplemental0'):
++            self.check_producer_owners_and_actors()
++            root = self.producer_roots[key]
++            require(root.resolve(strict=True) == root and root.stat().st_uid == os.getuid(),
++                    'Exact owned producer cgroup required')
++            self.producer_holds[key] = True
++            self.state()  # Independent rescue records each intent BEFORE its kernel write.
++            (root/'cgroup.freeze').write_text('1\n')
++            self.wait(lambda: dict(line.split() for line in
++                (root/'cgroup.events').read_text().splitlines()).get('frozen') == '1',
++                5, 'Original producer cgroup did not freeze: '+key)
+         self.fleet_frozen = True
+         self.state()
+-        (self.fleet_root/'cgroup.freeze').write_text('1\n')
+-        self.wait(lambda: dict(line.split() for line in (self.fleet_root/'cgroup.events').read_text().splitlines()).get('frozen') == '1',
+-                  5, 'Original fleet cgroup did not freeze')
+-        return dict(original_fleet=self.prepared['original_fleet'], frozen=True, emulator_processes_terminated=False)
++        self.assert_producers_held()
++        return dict(original_fleet=self.prepared['original_fleet'],
++            original_supplemental0=self.prepared['original_supplemental0'],
++            both_original_producer_cgroups_frozen=True, emulator_processes_terminated=False)
++
++    def check_producer_owners_and_actors(self):
++        for key, producer in self.producer_owners.items():
++            live_owner(producer)
++            root = self.producer_roots[key]
++            for actor in producer['original_actors']:
++                require(process_start(actor['pid']) == actor['starttime_ticks']
++                        and sorted(os.sched_getaffinity(actor['pid'])) == actor['mask']
++                        and Path('/proc',str(actor['pid']),'cgroup').read_text().strip() ==
++                            '0::'+producer['cgroup'], 'Original producer actor identity/affinity/cgroup changed')
++            expected = {a['pid'] for a in producer['original_actors']}
++            actual = set()
++            for raw_pid in (root/'cgroup.procs').read_text().split():
++                try: command = Path('/proc',raw_pid,'cmdline').read_bytes().split(b'\0')
++                except FileNotFoundError: continue
++                if command[:1] == [b'/usr/games/mame']: actual.add(int(raw_pid))
++            require(actual == expected, 'Unexpected/missing original MAME member in '+key)
++        return True
++
++    def assert_producers_held(self):
++        self.check_producer_owners_and_actors()
++        require(self.fleet_frozen and all(self.producer_holds.values()), 'Both original producer holds required')
++        for root in self.producer_roots.values():
++            require((root/'cgroup.freeze').read_text().strip() == '1'
++                    and dict(line.split() for line in (root/'cgroup.events').read_text().splitlines()).get('frozen') == '1',
++                    'An original producer escaped its positive kernel freeze')
++        return True
++
+ 
+     def seal_inputs(self, context, probe, listener, fleet, pause):
+         seal = self.socket_seal.seal(self, context, probe, pause)
+@@ -717,6 +842,7 @@
+         require(not any(Path('/proc',str(self.owner['pid']),'task',str(tid)).exists()
+                         for tid in [*self.actor_handlers,self.probe_tid['tid']]), 'An original handler remains')
+         require(self.accept_held and self.fleet_frozen, 'Input holds were lost')
++        self.assert_producers_held()
+         # Account for truncated-name cleanup timers too. A completed client
+         # count or known-handler subset alone is not a native-thread barrier.
+         # HTTP request threads share bare high-sequence names with Timers.
+@@ -729,6 +855,7 @@
+         """Last API was in seal_banks; no dashboard request below this point."""
+         require(banks['input_sources_sealed'] is True and banks['all_handlers_finished'] is True,
+                 'Game producers must already be closed')
++        self.assert_producers_held()
+         live_owner(self.owner)
+         item = self.dashboard_accept
+         task = Path('/proc', str(self.owner['pid']), 'task', str(item['tid']))
+@@ -821,7 +948,7 @@
+         live_owner(self.owner)
+         require(b'PYTHONUNBUFFERED=1' in Path('/proc', str(self.owner['pid']), 'environ').read_bytes().split(b'\0'),
+                 'Original shutdown marker must reach its bound console before dashboard join')
+-        console = GAME/'logs/managed-learning-20261015/run-26/console.log'
++        console = GAME/'logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/live-original01/trainer-console.log'
+         before = console.lstat()
+         require(console.resolve(strict=True) == console and stat.S_ISREG(before.st_mode)
+                 and before.st_uid == os.getuid() and before.st_nlink == 1,'Actual original console file required')
+@@ -875,15 +1002,16 @@
+         return self.poststop.verify_startup(*args)
+ 
+     def thaw_fleet(self,context,startup):
+-        live_owner(self.fleet)
+-        for actor in self.fleet['original192_actors']:
+-            require(process_start(actor['pid']) == actor['starttime_ticks']
+-                    and sorted(os.sched_getaffinity(actor['pid'])) == actor['mask'],
+-                    'Original actor identity/affinity changed before thaw')
+-        (self.fleet_root/'cgroup.freeze').write_text('0\n')
++        self.assert_producers_held()
++        for key in ('fleet','supplemental0'):
++            self.check_producer_owners_and_actors()
++            (self.producer_roots[key]/'cgroup.freeze').write_text('0\n')
++            self.producer_holds[key] = False
++            self.state()
+         self.fleet_frozen = False
+         self.state()
+-        return dict(original_fleet_thawed=True)
++        return dict(original192_two_owner_fleet_thawed=True, no_actor_restart=True)
++
+ 
+     def verify_progress(self,*args):
+         return self.poststop.verify_progress(*args)
+@@ -908,13 +1036,13 @@
+     """Use the same actual constructor without execution outputs or controls."""
+     backend = LinuxBackend(job, context_only=True)
+     backend.guard.owner_and_files(backend.main)
+-    live_owner(backend.owner); live_owner(backend.fleet); backend.rescue_live()
++    live_owner(backend.owner); backend.check_producer_owners_and_actors(); backend.rescue_live()
+     import urllib.request
+     with urllib.request.urlopen('http://127.0.0.1:8771/api/now', timeout=3) as response:
+         wire = response.read(backend.raw.MAX_WIRE_BYTES+1)
+     require(len(wire) <= backend.raw.MAX_WIRE_BYTES, 'Bound exact-context API read')
+     api = backend.raw.parse_wire(wire)
+-    backend.guard.healthy(api, backend.reader.read_pin(backend.main['baseline_API']),
++    backend.guard.healthy(api, backend.main['baseline_API'],
+                           backend.main['experiment'], time.time())
+     exposure = api['host_pipeline']['learning_exposure']
+     require(exposure['optimizer']['process_id'] == exposure['replay']['process_id'] == backend.owner['pid']
+@@ -922,10 +1050,10 @@
+             and api['memory_buffer_size'] == 6000000, 'Exact current epoch/hot6M context differs')
+     roles = frame_map(api, set(range(192)))
+     require(all(roles[int(slot)]['evaluation'] is role['eval'] for slot, role in
+-                backend.main['preview_actual_roles'].items()), 'Current roles changed')
++                backend.main['actual_roles'].items()), 'Current roles changed')
+     potential_handlers(backend.owner['pid'])
+-    return dict(schema='robotron-current227-stop-completed-context-prebody-v1', status='PASS',
+-                owner=backend.owner, held_inputs=227, actors=192, recipe_scale=.125,
++    return dict(schema='robotron-current192-preserveRAM-stop-completed-context-prebody-v1', status='PASS',
++                owner=backend.owner, held_inputs=len(backend.main['held_hashes']), actors=192, recipe_scale=.125,
+                 optimizer_lr=6.25e-6, complete_constructor_context_verified=True,
+                 execution_outputs_created=False, controls_or_signals=False,
+                 checkpoint_or_tensor_bodies_loaded=False)

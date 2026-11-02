@@ -1,0 +1,23 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/review_continuous_physical192_observer_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-v4-cohort-original03/review_continuous_physical192_observer_v3.py
+@@ -44,9 +44,9 @@
+             and job.get('source_bound_original192_physical_bootstrap') is True
+             and job.get('source_bound_physical_original192_partition') is True
+             and set(job['sources']) == {'client','worker','health','health_base','registry','durability','control','interpreter'}
+-            and job['sources']['health_base'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_health_v2.py'))
+-            and job['sources']['registry'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_registry_v2.py'))
+-            and job['sources']['health'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_transport_v2.py')),
++            and job['sources']['health_base'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-v4-cohort-original03/continuous_physical192_health_v3.py'))
++            and job['sources']['registry'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-v4-cohort-original03/continuous_physical192_registry_v3.py'))
++            and job['sources']['health'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-v4-cohort-original03/continuous_physical192_transport_v3.py')),
+             'Exact source-bound physical original192 observer dependencies required')
+     require(lifecycle['native_deadline_monotonic_s'] == job['deadline_monotonic_s']
+             == lifecycle['native_started_monotonic_s'] + 4200, 'Native time bound differs')
+@@ -220,6 +220,7 @@
+         TRAIN155_original_physical_and_current_TCP_verified=True,
+         EVAL37_original_connection_and_strict_retirement_evidence_verified=True,
+         EVAL_closed_slots_have_positive_normal0_reap_and_cleanup_verified=True,
++        prior_completed_EVAL_prefix_and_current_suffix_verified=True,
+         lifecycle=lifecycle_pin, original_job=job_pin, original_unit=job['unit'],
+         original_sources=job['sources'], accepted_samples=len(records),
+         raw_API_and_TCP_and_retirement_snapshots_replayed=True,

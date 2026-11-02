@@ -1,0 +1,38 @@
+{
+  "actual_candidate_or_phase": null,
+  "actual_execution": null,
+  "actual_owner": null,
+  "actual_request_slot_transition": null,
+  "actual_root_job": null,
+  "actual_source_and_copy": null,
+  "authored_unexecuted_test_methods": 12,
+  "future_CPU_bounds": {
+    "CPU_threads": 2,
+    "CUDA_VISIBLE_DEVICES": "",
+    "MemoryMax": "3G",
+    "MemorySwapMax": 0,
+    "RuntimeMaxSec": 120,
+    "TMPDIR": "<OWNED_PRIVATE>",
+    "TasksMax": 128
+  },
+  "future_argv_template": [
+    "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/verify_phase_snapshot.py",
+    "--execute",
+    "--job",
+    "<ROOT_NEW_IMMUTABLE_ACTUAL_JOB>",
+    "--expected-job-sha256",
+    "<ACTUAL_JOB_SHA256>",
+    "--expected-verifier-sha256",
+    "<FINAL_ENTRYPOINT_SHA256>"
+  ],
+  "schema": "robotron-phase-snapshot-CPU-future-execution-plan-v1",
+  "source_only_test_selection": [
+    "Robotron.tools.phase_snapshot_cpu_verifier_proposal.test_phase_snapshot.PhaseContracts",
+    "Robotron.tools.phase_snapshot_cpu_verifier_proposal.test_phase_snapshot.AcquisitionContracts"
+  ],
+  "status": "SOURCE_ONLY_UNEXECUTED"
+}

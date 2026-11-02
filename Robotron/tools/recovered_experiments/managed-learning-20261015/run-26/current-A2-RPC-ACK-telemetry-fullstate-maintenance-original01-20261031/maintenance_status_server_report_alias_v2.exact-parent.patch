@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/maintenance_status_server.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-A2-RPC-ACK-telemetry-fullstate-maintenance-original01-20261031/maintenance_status_server_report_alias_v2.py
+@@ -112,7 +112,7 @@
+             except (BrokenPipeError, ConnectionResetError): pass
+         def do_GET(self):
+             path = urlsplit(self.path).path
+-            if path == '/': return self.send(200, page, 'text/html; charset=utf-8')
++            if path in ('/', '/api/html/training-live.html'): return self.send(200, page, 'text/html; charset=utf-8')
+             if path == '/api/html/next-policy-evaluation.json':
+                 try:
+                     raw, value = read_json(args.public)

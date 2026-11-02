@@ -1,0 +1,378 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_registry_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_registry_v2.py
+@@ -1,8 +1,8 @@
+ """Prospective static-original192 health predicates. No import-time actions.
+ 
+-The publisher may recover faults for operations. A scientific case here never
+-adopts that replacement: it binds one completed original bootstrap and exactly
+-one original process/connection per slot for its whole lifetime.
++The physical cohort keeps all original process identities. TRAIN may reconnect
++through freshly proved current owned TCP; EVAL retains its original connection
++and strict once-only natural retirement. No replacement actor is adopted.
+ """
+ import hashlib
+ import json
+@@ -10,10 +10,11 @@
+ import os
+ from pathlib import Path
+ import stat
++import struct
+ 
+ MODE = 'CONTINUOUS_TRAIN155_EVAL37_ONCE'
+ SCHEMA = 'robotron-continuous-training-static192-snapshot-v2'
+-CASE_SCHEMA = 'robotron-continuous-static192-health-case-v1'
++CASE_SCHEMA = 'robotron-continuous-physical-original192-health-case-v2'
+ SLOTS = set(map(str, range(192)))
+ STATES = ('starting', 'active_train', 'active_eval', 'retiring_eval',
+           'closed_eval', 'fault_cleanup', 'quarantined')
+@@ -176,7 +177,7 @@
+     require(c['mode'] == MODE and set(c['original_slots']) == SLOTS
+             and set(c['input_environment_by_slot']) == SLOTS
+             and type(c['policy_generation']) is int and c['policy_generation'] >= 0
+-            and c['accepted_profile'] == 'STATIC_ORIGINAL192_NO_FAULT_ADOPTION'
++            and c['accepted_profile'] == 'PHYSICAL_ORIGINAL192_TRAIN_CURRENT_TCP_EVAL_ORIGINAL_ONCE'
+             and c['maximum_proof_gap_s'] == 2.0 and c['narrow_API_exception_TTL_s'] == .5,
+             'Explicit prospective static-original192 profile required')
+     require(Path(c['snapshot_path']).is_absolute()
+@@ -219,6 +220,8 @@
+                 'Continuous source must remain an ordinary fully held case input')
+         read_pin(entry, as_json=False, immutable=False)
+     held = {entry['path']: entry for entry in c['source_pins']}
++    require(all(held.get(entry['path'])==entry for entry in source['canonical_sources']),
++            'Every qualified actual canonical source must remain an exact ordinary held input')
+     require(all(c[key]['source']['path'] in held and held[c[key]['source']['path']] == c[key]['source']
+                 for key in ('supervisor', 'trainer'))
+             and any(entry['sha256'] == c['server_stamp']['source_sha256'] for entry in c['source_pins']),
+@@ -275,6 +278,29 @@
+         require(pair not in births and conn['client_id'] not in cids and conn['token'] not in tokens,
+                 'Duplicate original physical birth/CID/connection token')
+         births.add(pair); cids.add(conn['client_id']); tokens.add(conn['token'])
++    require(Path(c['eval_journal_directory']).is_absolute(), 'Exact ordinary main journal directory required')
++    witness=c.get('eval_exit_witness')
++    if witness is not None:
++        require(set(witness)=={'selection','source','anchors','output','holder'}
++                and witness['source']['sha256']=='fe306753c9cbb20e715b76d60c116ef9ce47a768c1a1afe0b00c03eac02a095c',
++                'Exact prospective retained-kernel witness source required')
++        read_pin(witness['source'],as_json=False)
++        anchors=read_pin(witness['anchors']);selected=read_pin(witness['selection'])
++        require(anchors['schema']=='robotron-original37-EVAL-pidfd-held-anchors-v1'
++                and anchors['source']==witness['source'] and anchors['selection']==witness['selection']
++                and anchors['holder']==witness['holder']
++                and anchors['all37_acquired_while_originals_live'] is True
++                and set(anchors['originals'])=={s for s in SLOTS if case['slot_eval'][s]}
++                and Path(witness['anchors']['path'])==Path(witness['output'])/'held-original37-anchors.json'
++                and selected['output']==witness['output'], 'Actual held-before-exit37 witness authority differs')
++        for slot,anchor in anchors['originals'].items():
++            child=c['original_slots'][slot]['original_child'];value=anchor['original']
++            require(all(value[k]==child[k] for k in ('pid','birth','parent'))
++                    and value['uid']==os.getuid()
++                    and value['initial_connection_binding']==c['original_slots'][slot]['connection_binding'],
++                    'Held pidfd anchor is not an exact original EVAL physical/connection identity')
++        require(case['inputs'].get(witness['source']['path'])==dict(sha256=witness['source']['sha256'],identity=witness['source']['identity']),
++                'Kernel witness source must be an ordinary fully held input')
+     return c
+ 
+ 
+@@ -331,59 +357,254 @@
+     return outer
+ 
+ 
++def original_physical(case, slot, row):
++    """Keep physical/source ownership; operational TRAIN labels are not truth."""
++    anchor = case['continuous']['original_slots'][slot]
++    require(all(row[key] == anchor[key] for key in ORIGINAL_FIELDS),
++            'Runtime compact row no longer names its immutable original physical anchor')
++    child = row['original_child']; c = case['continuous']
++    require(child['parent'] == c['supervisor']['pid'] and child['cgroup'] == c['supervisor']['cgroup']
++            and child['launch_argv'] == c['launch_argv']
++            and child['controlled_env'] == expected_environment(case,slot)
++            and anchor['incarnation'] == 1, 'Original physical/source role changed')
++    return child
++
++
++def current_connections(case, sample):
++    rows = sample['connections_capture']['value']['connections']
++    require(type(rows) is list and len(rows) <= 192, 'Bounded current handler rows required')
++    result = {}; cids = set(); tokens = set(); endpoints = set()
++    for row in rows:
++        require(set(row) == {'token','client_id','client_slot','eval_only','connection_ns','socket_endpoints'}
++                and type(row['client_slot']) is int and 0 <= row['client_slot'] < 192
++                and type(row['client_id']) is int and row['client_id'] >= 0
++                and type(row['eval_only']) is bool
++                and type(row['connection_ns']) is int and 0 < row['connection_ns'] <= sample['connections_capture']['value']['observed_monotonic_ns']
++                and type(row['token']) is str and 1 <= len(row['token']) <= 128,
++                'Strict current handler identity fields required')
++        slot = str(row['client_slot']); pair = row['socket_endpoints']
++        require(row['eval_only'] is case['slot_eval'][slot]
++                and set(pair) == {'peer','server'}
++                and all(type(pair[k]) is list and len(pair[k]) == 2
++                    and type(pair[k][0]) is str and type(pair[k][1]) is int
++                    and 0 < pair[k][1] <= 65535 for k in pair)
++                and pair['server'][1] == 9998, 'Current slot role/socket endpoint differs')
++        endpoint = (tuple(pair['peer']),tuple(pair['server']))
++        require(slot not in result and row['client_id'] not in cids
++                and row['token'] not in tokens and endpoint not in endpoints,
++                'Duplicate current slot/CID/token/socket pair')
++        if case['slot_eval'][slot]:
++            old = case['continuous']['original_slots'][slot]
++            require(row == binding(case,slot,old['connection_binding'],old['original_child']),
++                    'EVAL changed its original one-game connection')
++        result[slot] = row;cids.add(row['client_id']);tokens.add(row['token']);endpoints.add(endpoint)
++    return result
++
++
++def eval_natural(case, sample, slot, row, previous=None):
++    """Independent exact producer lines; never backdate a supervisor event."""
++    evidence = sample.get('EVAL_journal_evidence',{}).get(slot)
++    if evidence is None:
++        require(row['natural_result'] is None, 'Published EVAL natural row lacks independent journal evidence')
++        return None
++    require(case['slot_eval'][slot] is True and evidence['schema'] == 'robotron-independent-original-EVAL-journal-evidence-v1',
++            'Only original EVAL may have independent natural completion evidence')
++    raw = evidence['raw_line'].encode(); result = json.loads(raw)
++    require(raw.endswith(b'\n') and raw.count(b'\n') == 1
++            and hashlib.sha256(raw).hexdigest() == evidence['raw_line_sha256']
++            and raw == (json.dumps(result,allow_nan=False,separators=(',',':'))+'\n').encode()
++            and evidence['main_raw_line'] == evidence['raw_line']
++            and evidence['retirement_raw_line'] == evidence['raw_line']
++            and evidence['main_path'] == str(Path(case['continuous']['eval_journal_directory'])/'games.jsonl')
++            and evidence['retirement_path'] == str(Path(case['continuous']['eval_journal_directory'])/'completed_clients.jsonl'),
++            'Exact fsynced main/retirement canonical journal-line join differs')
++    original = case['continuous']['original_slots'][slot]
++    conn = binding(case,slot,original['connection_binding'],original['original_child'])
++    spawn = event(case,original['spawn_intent'],'spawn-intent',int(slot))
++    require(all(result.get(k) is True for k in ('complete','eligible','known_start'))
++            and result['eval_only'] is True and type(result['client_slot']) is int
++            and result['client_slot'] == int(slot) and type(result['client_id']) is int
++            and result['client_id'] == conn['client_id']
++            and result['boundary_reason'] in ('score_reset','zero_score_restart')
++            and type(result['score']) is int and result['score'] >= 0
++            and type(result['journal_game_id']) is str and result['journal_game_id']
++            and spawn['unix_s'] <= number(result['start_unix_s']) < number(result['end_unix_s'])
++            <= number(evidence['first_observed_unix_s']) <= sample['unix_s']
++            and number(evidence['first_observed_monotonic_s']) <= sample['monotonic_s']
++            and result['start_context']['measurement_generation'] == case['continuous']['policy_generation']
++            and result['start_context']['measurement_active'] is False
++            and result['start_context']['ratchet_frozen'] is False,
++            'Independent row is not this original known-start eligible EVAL/fixed policy')
++    if previous is not None and slot in previous.get('EVAL_journal_evidence',{}):
++        old = previous['EVAL_journal_evidence'][slot]
++        require(evidence == old, 'Original EVAL evidence changed or observation clock renewed')
++    if row['natural_result'] is not None:
++        old_event, old_result = natural(case,slot,row)
++        require(old_result == result and old_event['data']['raw_line']['sha256'] == evidence['raw_line_sha256'],
++                'Legacy natural producer conflicts with exact independent journal')
++    return evidence, result
++
++
++def eval_cleanup(case, sample, slot, result, evidence, *, require_ready=True):
++    capture = sample.get('EVAL_cleanup_captures',{}).get(slot)
++    require(capture is not None, 'Absent/retiring EVAL lacks its actual original cleanup capture')
++    raw = capture['raw_wire'].encode(); value = capture['value']
++    require(hashlib.sha256(raw).hexdigest() == capture['sha256'] and json.loads(raw) == value
++            and capture['before_monotonic_ns'] <= value['observed_monotonic_ns'] <= capture['after_monotonic_ns']
++            and capture['after_monotonic_ns']/1e9 <= sample['monotonic_s']
++            and 0 <= sample['monotonic_s']-capture['before_monotonic_ns']/1e9 <= 2,
++            'Original EVAL cleanup raw capture is future/unbracketed/stale')
++    original=case['continuous']['original_slots'][slot]
++    conn=binding(case,slot,original['connection_binding'],original['original_child'])
++    positive=('original_handler_stopped','original_owned_timer_stopped','owned_timer_callback_succeeded',
++              'journal_disconnect_succeeded','FIFO_reset_executed','replay_consumer_healthy','ready_for_external_join')
++    require(value['schema']=='robotron-prospective-connection-cleanup-receipt-v2'
++            and value['server_stamp']==case['continuous']['server_stamp']
++            and value['token']==conn['token'] and value['client_id']==conn['client_id']
++            and value['client_slot']==int(slot) and value['eval_only'] is True
++            and value['connection_ns']==conn['connection_ns'] and value['socket_endpoints']==conn['socket_endpoints']
++            and all(type(value[k]) is bool for k in positive) and value['cleanup_error'] is None,
++            'Original EVAL cleanup raw identity/role/terminal source differs')
++    if value['terminal_receipt'] is not None:
++        require(value['terminal_receipt']==result and value['terminal_line_sha256']==evidence['raw_line_sha256'],
++                'Original EVAL cleanup terminal conflicts with the exact raw journal line')
++    if require_ready or value['ready_for_external_join']:
++        require(all(value[k] is True for k in positive) and value['terminal_receipt']==result
++                and value['terminal_line_sha256']==evidence['raw_line_sha256'],
++                'Original EVAL natural terminal lacks positive Thread/Timer/FIFO closure')
++    return value
++
++
++def kernel_eval_exit(case, sample, slot):
++    selected=case['continuous'].get('eval_exit_witness')
++    pin=sample.get('EVAL_kernel_exit_receipts',{}).get(slot)
++    require(selected is not None and pin is not None, 'No original positive EVAL exit/reap witness')
++    publication=sample['EVAL_exit_witness_capture']['publication']['value']
++    require(publication['exit_receipts'].get(slot)==pin,
++            'Kernel exit file was not published after its producer fsync returned')
++    anchors=read_pin(selected['anchors']); selection=read_pin(selected['selection']); value=read_pin(pin)
++    require(anchors['schema']=='robotron-original37-EVAL-pidfd-held-anchors-v1'
++            and anchors['selection']==selected['selection'] and anchors['source']==selected['source']
++            and anchors['holder']==selected['holder'] and anchors['all37_acquired_while_originals_live'] is True
++            and value['schema']=='robotron-original-EVAL-retained-pidfd-exit-v1'
++            and value['anchors']==selected['anchors'] and value['selection']==selected['selection']
++            and value['source']==selected['source'] and value['holder']==selected['holder']
++            and value['nonce']==anchors['nonce']==selection['nonce']
++            and value['slot']==int(slot) and value['anchor']==anchors['originals'][slot]
++            and value['original']==selection['originals'][slot]
++            and value['descriptor']==value['anchor']['descriptor']
++            and value['request_ioctl']==0xc050ff0b and value['request_mask']==0x28
++            and value['original_Popen_wait_called_claimed'] is False
++            and value['actor_signals_or_wait_or_reap_performed'] is False,
++            'Source-bound held-before-exit kernel EVAL authority differs')
++    old=case['continuous']['original_slots'][slot]; child=old['original_child']; original=value['original']
++    require(original['pid']==child['pid'] and original['birth']==child['birth']
++            and original['parent']==child['parent'] and original['uid']==os.getuid()
++            and original['initial_connection_binding']==old['connection_binding']
++            and Path(pin['path'])==Path(selected['output'])/('exit-slot-%03d.json'%int(slot)),
++            'Kernel receipt is not the original selected EVAL birth/connection/path')
++    raw=bytes.fromhex(value['returned_raw80_hex']); initial=bytes.fromhex(value['anchor']['initial_info']['raw80_hex'])
++    require(len(raw)==len(initial)==80 and value['returned_info']['raw80_hex']==value['returned_raw80_hex'],
++            'Exact80-byte retained kernel buffers required')
++    returned=struct.unpack_from('=Q',raw,0)[0]; supported=struct.unpack_from('=Q',raw,72)[0]
++    status=struct.unpack_from('=i',raw,60)[0]
++    require(returned & 8 and returned & 32 and supported & 8
++            and not struct.unpack_from('=Q',initial,0)[0] & 8
++            and struct.unpack_from('=Q',initial,0)[0] & 3 == 3
++            and struct.unpack_from('=I',initial,16)[0]==child['pid']
++            and struct.unpack_from('=I',initial,20)[0]==child['pid']
++            and struct.unpack_from('=I',initial,24)[0]==child['parent']
++            and struct.unpack_from('=I',initial,28)[0]==os.getuid()
++            and struct.unpack_from('=I',initial,36)[0]==os.getuid()
++            and value['returned_info']['returned_mask']==returned
++            and value['returned_info']['supported_mask']==supported
++            and value['returned_info']['exit_code_raw']==value['raw_wait_status']==status
++            and os.WIFEXITED(status) and os.WEXITSTATUS(status)==0
++            and value['normal_exit_zero'] is value['normal_exit'] is True
++            and value['normal_exit_status']==0 and value['signal_termination'] is False
++            and value['original_birth_absent'] is True and value['status']=='KERNEL_REAPED_NORMAL0'
++            and value['anchor']['capture_end_monotonic_ns'] <= value['capture_begin_monotonic_ns']
++            <= value['capture_end_monotonic_ns'] <= value['observed_monotonic_ns']
++            <= sample['monotonic_s']*1e9,
++            'No positive retained normal0 waitstatus/reap truth for original EVAL')
++    return value
++
++
+ def validate_snapshot(case, sample, previous=None):
+-    """Typed publisher partition. Every physical predicate is checked separately."""
+-    c = case['continuous']; value = sample['status']
+-    require(value['schema'] == SCHEMA and value['mode'] == MODE and value['epoch'] == c['epoch']
+-            and value['supervisor'] == c['supervisor'] and value['trainer'] == c['trainer']
+-            and value['rolemap'] == c['rolemap'] and value['source_authority'] == c['source_authority']
+-            and value['original_membership'] == c['original_membership']
+-            and value['errors'] == [] and type(value['errors']) is list and set(value['slots']) == SLOTS,
+-            'Wrong/stale/partial/faulted continuous192 publisher authority')
+-    require(0 <= number(sample['unix_s']) - number(value['updated_unix_s']) <= 2
++    """Physical TRAIN truth comes from raw actors/current handlers, never labels."""
++    c=case['continuous'];value=sample['status']
++    require(value['schema']==SCHEMA and value['mode']==MODE and value['epoch']==c['epoch']
++            and value['supervisor']==c['supervisor'] and value['trainer']==c['trainer']
++            and value['rolemap']==c['rolemap'] and value['source_authority']==c['source_authority']
++            and value['original_membership']==c['original_membership'] and set(value['slots'])==SLOTS,
++            'Original publisher physical/source bootstrap authority changed')
++    require(0<=number(sample['unix_s'])-number(value['updated_unix_s'])<=2
+             and type(value['updated_monotonic_ns']) is int
+-            and 0 <= sample['monotonic_s'] - value['updated_monotonic_ns']/1e9 <= 2,
+-            'Continuous publisher is future or stale')
+-    admission = value['initial_admission']
+-    require(admission['complete'] is True and admission['slots_ever_bound'] == list(range(192))
+-            and admission['immutable_all192_barrier'] == c['initial_barrier'],
+-            'Scientific health never precedes the complete original192 barrier')
+-    counts = {state: 0 for state in STATES}; naturals = {}; closed_slots = set(); retiring = set()
+-    slots = {slot: slot_view(case, slot, row) for slot, row in value['slots'].items()}
+-    for slot, row in slots.items():
+-        require(type(row['eval_only']) is bool and row['eval_only'] is case['slot_eval'][slot],
+-                'Fixed slot role changed')
+-        original(case, slot, row)
+-        require(row['state'] in STATES, 'Unknown continuous slot state')
+-        counts[row['state']] += 1
+-        if not row['eval_only']:
+-            require(row['state'] == 'active_train' and row['natural_result'] is row['closure'] is None,
+-                    'TRAIN must stay active in its original process across games')
++            and 0<=sample['monotonic_s']-value['updated_monotonic_ns']/1e9<=2,
++            'Original physical bootstrap publisher is future or stale')
++    admission=value['initial_admission']
++    require(admission['complete'] is True and admission['slots_ever_bound']==list(range(192))
++            and admission['immutable_all192_barrier']==c['initial_barrier'],
++            'No complete immutable original192 physical bootstrap')
++    if previous is not None:
++        require(set(previous.get('EVAL_journal_evidence',{})) <= set(sample.get('EVAL_journal_evidence',{})),
++                'A previously accepted original EVAL natural proof disappeared')
++    validated_kernel={}
++    for slot in sample.get('EVAL_kernel_exit_receipts',{}):
++        require(slot in SLOTS and case['slot_eval'][slot] is True,'Unknown kernel EVAL exit slot')
++        validated_kernel[slot]=kernel_eval_exit(case,sample,slot)
++    current=current_connections(case,sample);actors=sample['actors']
++    counts=dict(active_train=0,active_eval=0,retiring_eval=0,closed_eval=0)
++    naturals={};closed_slots=set();retiring=set();normalized={}
++    for slot,compact in value['slots'].items():
++        row=slot_view(case,slot,compact); original_physical(case,slot,row)
++        require(row['eval_only'] is case['slot_eval'][slot], 'Physical original role changed')
++        if not case['slot_eval'][slot]:
++            require(slot in actors and slot in current, 'Original TRAIN lacks current physical actor/handler/TCP')
++            state='active_train'
+         else:
+-            require(row['state'] in ('active_eval', 'retiring_eval', 'closed_eval'),
+-                    'EVAL cannot restart or enter a fault state within a fixed case')
+-            if row['state'] == 'active_eval':
+-                require(row['natural_result'] is row['closure'] is None, 'Active EVAL already retired')
++            proof=eval_natural(case,sample,slot,row,previous)
++            if proof is None:
++                require(slot in actors and slot in current, 'Original EVAL vanished without exact natural terminal')
++                state='active_eval'
+             else:
+-                outer, result = natural(case, slot, row); naturals[slot] = (outer, result)
+-                if row['state'] == 'retiring_eval':
+-                    require(row['closure'] is None and 0 <= sample['unix_s'] - outer['unix_s'] <= 10,
+-                            'EVAL retirement is stuck or already closed')
+-                    retiring.add(slot)
++                evidence,result=proof;naturals[slot]=proof
++                if slot in actors:
++                    require(0<=sample['unix_s']-result['end_unix_s']<=10,
++                            'Natural EVAL original remained live beyond its bounded retirement')
++                    state='retiring_eval';retiring.add(slot)
+                 else:
+-                    closed(case, slot, row, outer, result); closed_slots.add(slot)
+-        if previous is not None:
+-            old = previous['status']['slots'][slot]
+-            order = {'active_eval': 0, 'retiring_eval': 1, 'closed_eval': 2}
+-            require(not row['eval_only'] or order[row['state']] >= order[old['state']],
+-                    'EVAL retirement state regressed')
+-            for field in ('natural_result', 'closure'):
+-                require(old[field] is None or row[field] == old[field], 'Immutable EVAL evidence changed')
+-    require(value['counts'] == counts and all(type(x) is int for x in value['counts'].values())
+-            and counts['active_train'] == 155
+-            and counts['active_eval'] + counts['retiring_eval'] + counts['closed_eval'] == 37,
+-            'Typed active/retiring/closed partition is not exactly155TRAIN+37EVAL')
+-    return dict(retiring=retiring, closed=closed_slots, naturals=naturals, counts=counts, slots=slots)
++                    cleanup=sample.get('EVAL_cleanup_captures',{}).get(slot)
++                    eval_cleanup(case,sample,slot,result,evidence,require_ready=False)
++                    # Absence alone never supplies normal0/reap. The inherited
++                    # bounded retiring state explicitly retains pending proof.
++                    exit_known=False
++                    if row['closure'] is not None and row['natural_result'] is not None:
++                        old_event,old_result=natural(case,slot,row)
++                        require(old_result==result, 'Original owner closure natural row differs')
++                        closed(case,slot,row,old_event,result);exit_known=True
++                    elif slot in validated_kernel:
++                        exit_known=True
++                    if cleanup['value']['ready_for_external_join'] is True:
++                        eval_cleanup(case,sample,slot,result,evidence)
++                    if exit_known and cleanup['value']['ready_for_external_join'] is True:
++                        state='closed_eval';closed_slots.add(slot)
++                    else:
++                        require(0<=sample['unix_s']-result['end_unix_s']<=10,
++                                'EVAL normal-exit/ThreadTimerFIFO proof remained unresolved beyond10s')
++                        state='retiring_eval';retiring.add(slot)
++        normalized[slot]=dict(state=state,eval_only=case['slot_eval'][slot],
++            original_pid=row['original_child']['pid'],original_birth=row['original_child']['birth'])
++        counts[state]+=1
++    require(counts['active_train']==155 and sum(counts.values())==192
++            and counts['active_eval']+counts['retiring_eval']+counts['closed_eval']==37,
++            'Exact155 original TRAIN /37 once-only original EVAL partition required')
++    if previous is not None:
++        for slot in SLOTS:
++            if case['slot_eval'][slot] and slot not in previous['actors']:
++                require(slot not in actors, 'A retired original EVAL actor reappeared')
++    return dict(counts=counts,naturals=naturals,closed=closed_slots,retiring=retiring,
++                current_connections=current,normalized_slots=normalized)
+ 
+ 
+ if __name__ == '__main__':

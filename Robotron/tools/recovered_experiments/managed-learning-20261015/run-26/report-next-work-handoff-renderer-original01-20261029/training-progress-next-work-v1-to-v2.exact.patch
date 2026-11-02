@@ -1,0 +1,20 @@
+--- training-progress-next-work-candidate-v1.html
++++ training-progress-next-work-candidate-v2.html
+@@ -43,7 +43,7 @@
+  const deadline=Number.isFinite(w.deadline_unix_s)&&w.deadline_unix_s>0?new Date(w.deadline_unix_s*1000):null;
+  return {stage,detail:text(w.detail),waiting:text(w.waiting_for),next:text(w.next_stage),updated,
+   eta:text(w.eta)||(deadline&&Number.isFinite(deadline.getTime())?'Recorded deadline: '+deadline.toLocaleString()+'.':'No completion time has been set.'),
+-  training:w.main_training_continues===true?'Main training continues.':w.main_training_continues===false?'Main training is stopped or held.':'Main training status has not been reported.',
++  training:w.main_training_continues===true?'Main training continues.':w.main_training_continues===false?'Main training is not active.':'Main training status has not been reported.',
+   trainingContinues:w.main_training_continues};
+ }
+ function renderNextWork(view,now){
+@@ -59,7 +59,7 @@
+  $('screeningState').textContent=view.training+' Previous comparison results remain below.';
+  $('eta').textContent='This earlier observation is retained; current work status is shown above.';
+  $('updated').textContent='Work status updated '+view.updated+(now&&Number.isFinite(now.ts)?' · live trainer updated '+new Date(now.ts*1000).toLocaleTimeString():' · live trainer data unavailable');
+- if(typeof view.trainingContinues==='boolean')$('training').textContent=view.trainingContinues?'Main training continues':'Main training stopped or held';
++ if(typeof view.trainingContinues==='boolean')$('training').textContent=view.trainingContinues?'Main training continues':'Main training not active';
+  $('error').textContent=now?'':'Live trainer data is unavailable; the recorded work status remains visible.';
+ }
+ async function update(){

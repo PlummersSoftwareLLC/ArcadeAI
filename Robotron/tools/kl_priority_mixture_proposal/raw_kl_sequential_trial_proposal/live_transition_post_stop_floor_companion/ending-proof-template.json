@@ -1,0 +1,19 @@
+{
+  "activate_kl": "ending_proof=null.",
+  "actual_proof": null,
+  "ending_proof": {
+    "activation_receipt": null,
+    "candidate": {
+      "acquisition": null,
+      "source": null,
+      "verification_copy": null
+    },
+    "decision": null,
+    "observer_job": null
+  },
+  "incomplete": "candidate=null; never a second candidate/rescue.",
+  "required_acquisition_shape": "Original robotron-owned-phase-snapshot-acquisition-v1 purpose=candidate, actual old owner before==after, original phase/boot, exact tag/source/request completion archives, clock_floor=max(earlyinsurance4,firstLATCH4). Full wrapper validates real saved phase/tensors in one load. Exact client_count integer0or192; stopped_absence=null; completed_slot_transition before/request/after historical actual_pin+archive pairs and positive ordered before/request/after_unix_s. Activation authenticates both start_request and before_resume_api_PIN; decoded before_resume API must equal observer baseline.",
+  "schema": "robotron-post-stop-ending-proof-template-v1",
+  "template_only": true,
+  "unknown_actual_fields": "No fabricated hashes, clocks, tags, owner, request, pass or deadline supplied."
+}

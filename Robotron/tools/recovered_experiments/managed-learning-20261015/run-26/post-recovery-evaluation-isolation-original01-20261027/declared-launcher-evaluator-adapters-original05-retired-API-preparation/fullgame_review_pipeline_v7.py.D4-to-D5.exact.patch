@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original04-mmap-preparation/fullgame_review_pipeline_v7.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original05-retired-API-preparation/fullgame_review_pipeline_v7.py
+@@ -53,7 +53,7 @@
+     before=read(h.pin(PARENT/'04-candidate/independent-review-job.json'))['sources']
+     result=dict(before)
+     result.update(runtime=h.pin(LOCAL/'run_fullgame_rounds_v7.py'),control=h.pin(LOCAL/'control_fullgame_rounds_v6.py'),
+-        main_health_engine=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/readonly-mmap-source-validation-original02/round_health_transport_launcher_mmap_v2.py')),main_prefix_validator=h.pin(LOCAL/'fullgame_round_contract_v7.py'),
++        main_health_engine=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_health_transport_retired_API_v4.py')),main_prefix_validator=h.pin(LOCAL/'fullgame_round_contract_v7.py'),
+         main_observer_reviewer=h.pin(LOCAL/'review_fullgame_round_observer_v7.py'))
+     for pin in result.values():h.checked(pin)
+     return result

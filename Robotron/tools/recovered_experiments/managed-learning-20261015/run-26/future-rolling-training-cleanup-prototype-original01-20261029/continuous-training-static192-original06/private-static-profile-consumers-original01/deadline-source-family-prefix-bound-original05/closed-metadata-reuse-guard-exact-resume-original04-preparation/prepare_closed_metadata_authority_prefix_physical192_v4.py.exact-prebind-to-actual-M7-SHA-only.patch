@@ -1,0 +1,13 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/closed-metadata-reuse-guard-exact-resume-original04-preparation/unselected-prebind-source-snapshots/prepare_closed_metadata_authority_prefix_physical192_v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/closed-metadata-reuse-guard-exact-resume-original04-preparation/prepare_closed_metadata_authority_prefix_physical192_v4.py
+@@ -12,8 +12,8 @@
+ 
+ ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ LOCAL = Path(__file__).resolve().parent
+-SOURCE_CONTRACT_SHA = None  # Pending actual M7 PASS/close/manifest and final binding.
+-SHIM_SHA = None  # Pending actual M7 PASS/close/manifest and final binding.
++SOURCE_CONTRACT_SHA = '128f8db839ddc4cff84887cbe11f2b4d0ea390fe1ccdbc05fc8fed4701671fcc'
++SHIM_SHA = '46b55df85a392c080f16e9a3765868205ec17b8c35e5aaf7eaed2dfe11b4cbba'
+ HELPERS_SHA = '2b6902933b502ac20dacbd444fbf786315d6c960fcad1d5b5bf223dd569708c1'
+ 
+ 

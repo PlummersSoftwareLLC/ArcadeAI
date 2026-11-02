@@ -1,0 +1,10 @@
+{
+  "status": "SOURCE_PREPARATION_ONLY_NOT_EXECUTED",
+  "default_argv": ["python3", "-B", "ABS_SOURCE_DIRECTORY/run_live8_maintenance.py"],
+  "test_argv": ["python3", "-B", "-m", "unittest", "Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_maintenance_proposal.test_live8_maintenance", "Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_maintenance_proposal.test_bank_state_revision2"],
+  "explicit_argv": ["ABS_ROOT_SELECTED_PYTHON", "-B", "ABS_SOURCE_DIRECTORY/run_live8_maintenance.py", "--launch", "--job", "ABS_NEW_ROOT_JOB", "--expected-job-sha256", "ROOT_JOB_SHA256", "--expected-controller-sha256", "FROZEN_CONTROLLER_SHA256"],
+  "service_properties_proposed_by_root": ["CPUQuota=200%", "MemoryMax=4G", "TasksMax=128", "RuntimeMaxSec=4800", "KillSignal=SIGINT", "TimeoutStopSec=900", "SendSIGKILL=no", "RemainAfterExit=yes"],
+  "launch_lifecycle": "Fresh named user service; detached3s timer; scheduler carrier reaped before trigger; omit --collect and --wait; preserve exact original invocation/terminal fields before root-owned release",
+  "candidate_and_runtime_values": "No live job or actual launch argv is fabricated by this template; root creates actual pinned job after private tests and fresh independent preflight",
+  "insurance_request": "Consume only completed live8-insurance-20261017T071915Z and CPU proof83c898; never create another request or rearm completed384 gate"
+}

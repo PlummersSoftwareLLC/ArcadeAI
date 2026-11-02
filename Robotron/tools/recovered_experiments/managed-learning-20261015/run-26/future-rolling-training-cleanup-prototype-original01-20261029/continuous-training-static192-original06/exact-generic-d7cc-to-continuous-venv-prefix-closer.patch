@@ -1,0 +1,49 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/close_engineering_cpu_scope_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/close_continuous_focused_CPU_scope_v1.py
+@@ -6,7 +6,7 @@
+ from pathlib import Path
+ import subprocess
+ 
+-ROOT=Path(__file__).resolve().parents[2]
++ROOT=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ 
+ 
+ def require(value,reason):
+@@ -25,11 +25,23 @@
+     require(control.checked_config(cfg_pin['path'])==cfg,'Actual selected CPU configuration differs')
+     require(cfg['properties']==['CPUQuota=200%','MemoryMax=4G','MemorySwapMax=0','RuntimeMaxSec=180','TasksMax=128','TimeoutStopSec=5','SendSIGKILL=no']
+             and cfg['observation_s']==240,'Exact bounded CPU declaration required')
+-    require(cfg['unit']==job['unit']and cfg['argv'][0:3]==['/usr/bin/python3','-I','-B']
+-            and cfg['argv'][4:8]==['--execute','--job',job_pin['path'],'--job-sha256']
+-            and cfg['argv'][8]==job_pin['sha256'],'Actual job/argv differs')
++    witness=json.loads(h.checked(job['interpreter_symlink_binding']).read_bytes())
++    require(witness['schema']=='robotron-exact-known-free314-interpreter-symlink-binding-v1'
++        and witness['path']=='/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python'
++        and h.pin(witness['path'])==witness['source_pin']
++        and str(Path(witness['path']).resolve(strict=True))==witness['resolved_target']
++        and len(witness['links'])==2,'Exact selected interpreter witness required')
++    for row in witness['links']:
++        q=Path(row['path']);v=q.lstat()
++        identity=dict(device=v.st_dev,inode=v.st_ino,bytes=v.st_size,mtime_ns=v.st_mtime_ns,
++            ctime_ns=v.st_ctime_ns,mode=oct(v.st_mode&0o777),uid=v.st_uid,nlink=v.st_nlink)
++        require(q.is_symlink() and os.readlink(q)==row['readlink']
++            and identity==row['lstat_identity'],'Selected interpreter link differs')
++    require(cfg['unit']==job['unit']and cfg['argv']==[witness['path'],'-Xgil=0','-I','-B',
++        job['source']['path'],'--execute','--job',job_pin['path'],'--job-sha256',job_pin['sha256'],
++        '--source-sha256',job['source']['sha256']],'Actual job/argv differs')
+     for pin in job['inputs']:h.checked(pin)
+-    require('--source-sha256'in cfg['argv']and h.pin(cfg['argv'][3])['sha256']==cfg['argv'][-1],'Actual CPU driver source differs')
++    require(h.pin(cfg['argv'][4])==job['source'],'Actual CPU driver source differs')
+     root=Path(cfg['output']);owner_pin=h.pin(root/'root-original-identity.json');closure_pin=h.pin(root/'root-original-result-and-owned-release.json')
+     immutable=load('_metadata_scope_immutable',ROOT/'tools/confirmed_game_boundary_proposal/protect_confirmed_winner_reviewed4.py')
+     def read(pin,as_json=True):
+@@ -49,6 +61,9 @@
+     report_pin=h.pin(Path(job['output'])/'report.json');report=read(report_pin)
+     require(report['status']=='PASS'and report['actual_PID']==owner['pid']and report['original_job']==job_pin
+             and report['Torch_imported']is report['GPU_or_MAME_launched']is False,'Actual engineering outcome differs')
++    require(job['expected_test_count']==6 and report['tests_run']==6
++        and report['schema']==job['expected_report_schema'] and report['failures']==report['errors']==[],
++        'Exact six focused groups/schema/empty errors required')
+     require(report.get('quality_qualified',False)is report.get('promotion',False)is False,'Engineering cannot qualify or promote')
+     return h.put(directory/'independent-original-CPU-scope-closeout.json',dict(schema='robotron-engineering-original-CPU-independent-closeout-v1',status='PASS_ENGINEERING_ONLY',
+         original_job=job_pin,original_config=cfg_pin,original_owner=owner_pin,original_closure=closure_pin,actual_report=report_pin,

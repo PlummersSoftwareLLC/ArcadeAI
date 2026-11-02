@@ -1,0 +1,189 @@
+{
+  "activation_authorized": false,
+  "actual": {
+    "activation": null,
+    "execution": null,
+    "output": null,
+    "result": null
+  },
+  "author_verification": {
+    "accepted_event_call_count": 10,
+    "candidate_compile_or_execution": 0,
+    "held_source_edits": 0,
+    "model_or_replay_referent_access": 0,
+    "project_imports": 0,
+    "runtime_queries": 0,
+    "source_AST_parsed_only": true,
+    "tests": 0
+  },
+  "files": {
+    "benchmark_cost.py": {
+      "bytes": 14596,
+      "identity": {
+        "bytes": 14596,
+        "ctime_ns": 1792305554625643683,
+        "device": 2304,
+        "inode": 81531255,
+        "mode": "0o444",
+        "mtime_ns": 1792305517578638046,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_cost_proposal/benchmark_cost.py",
+      "sha256": "5ef1db71cdabf8bbca4f560799fe041164757f437d65c64c951e92eba79f0794"
+    }
+  },
+  "future_root_argv": [
+    "/usr/bin/env",
+    "-u",
+    "LD_PRELOAD",
+    "-u",
+    "PYTHONPATH",
+    "CUDA_VISIBLE_DEVICES=",
+    "PYTHONDONTWRITEBYTECODE=1",
+    "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_cost_proposal/benchmark_cost.py",
+    "--execute",
+    "--expected-source-sha256",
+    "5ef1db71cdabf8bbca4f560799fe041164757f437d65c64c951e92eba79f0794",
+    "--output",
+    "<FRESH_ABSOLUTE_ROOT_OUTPUT.json>"
+  ],
+  "future_root_bounds": {
+    "CPUQuota": "100%",
+    "CUDA_VISIBLE_DEVICES": "",
+    "MemoryMax": "512M",
+    "MemorySwapMax": 0,
+    "RuntimeMaxSec": 60,
+    "TasksMax": 128,
+    "internal_between_run_wall_budget_s": 45
+  },
+  "limitations": [
+    "No sockets, parsing, real handler or replay/nstep/enqueue/inference/training/model data.",
+    "192 tracked connections are not 192 concurrent threads; no lock contention conclusion.",
+    "Nohooks is a loop/update control, not an identical real handler without instrumentation. Noop/disabled/enabled use the same ten calls and functional arguments.",
+    "Gap burst has only32 closures per fresh instance to retain all witnesses without overflow; it estimates neither observed rejection frequency nor production overhead.",
+    "Elapsed scheduling and paired differences may be noisy. These measurements do not prove training-throughput, numerical efficacy, causal improvement or performance noninterference.",
+    "No automatic activation/enable recommendation or installed change. Root owns actual execution and application decisions."
+  ],
+  "reported_measurements": [
+    "elapsed and process CPU nanoseconds per accepted frame for each repeat",
+    "per-mode medians and paired CPU differences; negatives remain visible",
+    "separate new-instance/connections, snapshot and disconnect timings",
+    "exact enabled counter assertions, closed witnesses, no fault/saturation/tracking overflow",
+    "disabled available=False is intentional; enabled available=True with all gaps closed"
+  ],
+  "runtime_requirements": [
+    "Main free-threaded CPython build: sysconfig Py_GIL_DISABLED==1 and sys._is_gil_enabled()==False before and after helper loading.",
+    "Exact captured helper bytes are SHA-authenticated then compiled/executed only by root future --execute. Helper imports only stdlib copy/os/threading/time.",
+    "Default no-argument PLAN contains no benchmark/source/model/runtime reads.",
+    "Fresh absolute JSON output only; ERROR preserves the original failure and requires no retry."
+  ],
+  "schema": "robotron-rejected-gap-synthetic-cost-source-preparation-v1",
+  "status": "SOURCE_ONLY_FIXED_UNSELECTED_UNEXECUTED_PEER_PENDING",
+  "upstream_pins": {
+    "combined_reviewed2": {
+      "bytes": 32548,
+      "identity": {
+        "bytes": 32548,
+        "ctime_ns": 1792303789686885343,
+        "device": 2304,
+        "inode": 81531246,
+        "mode": "0o444",
+        "mtime_ns": 1792303789686885343,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_observation_combined_proposal/combined-unapplied-reviewed2.patch",
+      "sha256": "ecc2a1fc887e181b08c8fa7fc3df30a39a736277d112f1303dc9f5afb56d046b"
+    },
+    "helper": {
+      "bytes": 12216,
+      "identity": {
+        "bytes": 12216,
+        "ctime_ns": 1792301353397526560,
+        "device": 2304,
+        "inode": 81529014,
+        "mode": "0o444",
+        "mtime_ns": 1792301353397526560,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_proposal/rejected_gap_telemetry_reviewed3.py",
+      "sha256": "d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd"
+    },
+    "insertion": {
+      "bytes": 12729,
+      "identity": {
+        "bytes": 12729,
+        "ctime_ns": 1792301124491096742,
+        "device": 2304,
+        "inode": 81529011,
+        "mode": "0o444",
+        "mtime_ns": 1792301053164358872,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_proposal/socket_server-insertion.patch",
+      "sha256": "b09570b80da4ec94acd7ba1221ce87010aa7a3b45141d09555fde18ae7fca448"
+    }
+  },
+  "workload": {
+    "accepted_frames_per_connection_per_common_run": 256,
+    "accepted_hook_calls": [
+      "received",
+      "accepted",
+      "after_reset",
+      "previous_step",
+      "nstep_before",
+      "nstep_after",
+      "enqueue_called",
+      "enqueue_returned",
+      "next_action",
+      "finish"
+    ],
+    "burst_assumptions": "Synthetic positive unchanged UID, no new game/measurement reset, mature learner n3 one-prefix emission and successful enqueue/action/neutral calls; no real nstep/replay/send operations.",
+    "burst_rejections": {
+      "crash_drop": 10,
+      "crash_jump": 11,
+      "parse_none": 11
+    },
+    "common_accepted_frames_per_run": 49152,
+    "counter_resets": "New observer and connections per run; no reset/drain method exists or is invoked.",
+    "dispatch_threads": 1,
+    "fixed_orders": [
+      [
+        "nohooks",
+        "noop",
+        "disabled",
+        "enabled"
+      ],
+      [
+        "enabled",
+        "disabled",
+        "noop",
+        "nohooks"
+      ],
+      [
+        "enabled",
+        "nohooks",
+        "disabled",
+        "noop"
+      ]
+    ],
+    "fixed_repeats": 3,
+    "gap_burst_per_fresh_observer": 32,
+    "modes": [
+      "nohooks",
+      "noop",
+      "disabled",
+      "enabled"
+    ],
+    "ordinary_no_gap_helper_lock_calls_per_accepted_frame": 2,
+    "ordinary_no_gap_no_ticket_fast_returns_per_accepted_frame": 8,
+    "synthetic_connections_per_instance": 192
+  }
+}

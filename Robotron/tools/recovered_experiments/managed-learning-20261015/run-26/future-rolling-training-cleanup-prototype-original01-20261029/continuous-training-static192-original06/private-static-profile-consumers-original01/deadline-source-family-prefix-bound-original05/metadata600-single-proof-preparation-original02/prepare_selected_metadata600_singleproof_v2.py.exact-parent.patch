@@ -1,0 +1,30 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/metadata600-resource-templates-original01/prepare_selected_metadata600_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/metadata600-single-proof-preparation-original02/prepare_selected_metadata600_singleproof_v2.py
+@@ -39,9 +39,16 @@
+     assert capture['state']=='captured_CPU_verified'and capture['endpoint']['sha256']==job['candidate_sha256']
+     output=Path(job['output']);output.mkdir(mode=0o700);started=time.monotonic()
+     preparer=load('_selected_admission_actual_preparer',LOCAL/'prepare_round_study_v10.py')
++    reuse_source=job['metadata_readiness_reuse_cache'];assert reuse_source in job['inputs']
++    reuse_module=load('_metadata_single_proof_reuse',h.checked(reuse_source))
++    def phase(name,**values):
++        print(json.dumps(dict(schema='robotron-metadata-single-proof-phase-v1',phase=name,monotonic_s=time.monotonic(),**values)),flush=True)
++    reuse=reuse_module.SameInvocationReadiness(job,h,phase)
++    reuse.bind_preparer(preparer)
+     prepared=preparer.prepare(Path(job['study_directory']),job['reference_profile'],job['candidate_profile'],
+         main_domain_proof=job['deadline_readiness'],lease_recovery=job['lease_recovery'],selection_pin=job['comparison_selection'],engineering=False)
+     manifest=json.loads(h.checked(prepared).read_bytes());assert manifest['engineering_only']is False
++    reuse_manifest=h.put(output/'same-invocation-readiness-reuse.json',reuse.manifest())
+     study=json.loads(h.checked(manifest['study_precommit']).read_bytes())
+     assert study['policies']['candidate']['checkpoint']['sha256']==job['candidate_sha256']
+     guard=load('_selected_admission_actual_guard_preparer',LOCAL/'prepare_round_cpu_guard_v9.py')
+@@ -54,6 +61,10 @@
+     report=h.put(output/'report.json',dict(schema='robotron-selected-admission-study-original-CPU-preparation-result-v1',
+         status='PASS',original_job=h.pin(a.job),actual_PID=os.getpid(),actual_scope=fields,
+         native_prepared=prepared,exact_CPU_packet=cpu,selected_sha256=job['candidate_sha256'],
++        same_invocation_readiness_reuse=reuse_manifest,metadata_readiness_reuse_cache=reuse_source,
++        first_full_unchanged_validate_launch_count=1,unchanged_contract_validate_launch_calls=4,
++        readiness_raw_semantic_verifier_calls=1,readiness_reviewer_semantics_reused_within_metadata=3,
++        readiness_raw_full_integrity_passes=4,readiness_integrity_legs=['R1','C1','R2','C2'],
+         elapsed_s=time.monotonic()-started,all_four_native_outputs_and_future_guards_absent=True,
+         Torch_imported=False,GPU_or_MAME_launched=False,scientific_payload_launched=False,
+         exact_selected_context_CPU_qualified=False,quality_qualified=False,promotion=False))

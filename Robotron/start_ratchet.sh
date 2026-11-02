@@ -53,8 +53,8 @@ md5l=$(md5sum models_dqn/robotron_dqn_latest.pt | cut -c1-12)
 echo "staged: latest/best = 415K archive ($md5a == $md5l), ring+HOF wiped, settings reset"
 echo
 if [[ "${1:-}" == "--run" ]]; then
-  exec env DQN_RATCHET=1 python3 -Xgil=0 Scripts/run_dqn.py
+  exec env DQN_RATCHET=1 ./starttrainer.sh
 else
   echo "launch with:"
-  echo "  cd $(pwd) && DQN_RATCHET=1 python3 -Xgil=0 Scripts/run_dqn.py"
+  echo "  cd $(pwd) && DQN_RATCHET=1 ./starttrainer.sh"
 fi

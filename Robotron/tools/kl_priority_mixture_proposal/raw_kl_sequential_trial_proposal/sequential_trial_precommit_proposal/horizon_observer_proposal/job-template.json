@@ -1,0 +1,44 @@
+{
+  "activation_receipt_sha256": null,
+  "actual_execution": null,
+  "actual_job": null,
+  "before_resume_api": null,
+  "boot_four_clocks": {
+    "frame_count": null,
+    "learner_frame_count": null,
+    "optimized_samples": null,
+    "training_steps": null
+  },
+  "bridge_requirements": [
+    "Root independently validates core and activation receipt/PINs, then inserts the exact decoded immutable before_resume_api_PIN JSON, not a reconstructed sample.",
+    "Root adopts exact known owner, actual pre-start boot+monotonic timestamp, actual verified stopped boot clocks and actual192 readiness timestamp.",
+    "Not a valid observer job until all actual fields are supplied under a new immutable root precommit; no fabricated actual owner, deadline or pass."
+  ],
+  "healthy192_monotonic_s": null,
+  "owner": {
+    "cgroup": null,
+    "invocation_id": null,
+    "pid": null,
+    "starttime_ticks": null,
+    "unit": null
+  },
+  "policy": {
+    "API_age_s": 5,
+    "ceiling_s": 3600,
+    "cutoff_s": 3240,
+    "learner_frames": 8000000,
+    "no_applied_s": 60,
+    "physical_adds": 6000000,
+    "pipeline_age_s": 5,
+    "poll_s": 1,
+    "unobservable_s": 30
+  },
+  "schema": "robotron-raw-kl-horizon-job-v1",
+  "start_request": {
+    "boot_id": null,
+    "monotonic_s": null,
+    "unix_s": null
+  },
+  "template_only": true,
+  "trial_core_sha256": null
+}

@@ -1,0 +1,128 @@
+{
+  "schema": "robotron-full-tail-v2-initial-source-deltas-v1",
+  "state": "UNSEALED_WIP_INITIAL_VERSION_DELTAS_ONLY",
+  "files": [
+    {
+      "parent": "wire_codec_v1.py",
+      "parent_sha256": "5a15bdafbfc85c19e281a53f8a28a08263e94d4d31a15e53af0909973c5a37bf",
+      "new": "wire_codec_v2.py",
+      "initial_protocol_version_sha256": "9b17114b35248ff938b4f4d80b1d6924e5482a6a9538bc5f6fa43d625f73417b",
+      "initial_inverse_restores_parent": true,
+      "replacements": [
+        [
+          "b'RSG1'",
+          "b'RSG2'"
+        ],
+        [
+          "b'RSP1'",
+          "b'RSP2'"
+        ],
+        [
+          "robotron-full-startup-envelope-v1",
+          "robotron-full-startup-envelope-v2"
+        ]
+      ]
+    },
+    {
+      "parent": "startup_handoff_v1.py",
+      "parent_sha256": "35e6c6eb0b4ef76bf681b2079b9e954263c7fae3f543ec55a5fcbf31d0fe02e9",
+      "new": "startup_handoff_v2.py",
+      "initial_protocol_version_sha256": "398bd76996f43cc6630c8af0292e0c592e798f9003a97dcd844ebcecc77df95a",
+      "initial_inverse_restores_parent": true,
+      "replacements": [
+        [
+          "b'RSP1'",
+          "b'RSP2'"
+        ],
+        [
+          "robotron-prospective-startup-journal-certificate-v1",
+          "robotron-prospective-startup-journal-certificate-v2"
+        ],
+        [
+          "prospective_certified_first_start_v1",
+          "prospective_certified_first_start_v2"
+        ]
+      ]
+    },
+    {
+      "parent": "boot_readiness_v2.py",
+      "parent_sha256": "0cbe374d6aa57678b5e317564484c68937132e35a143f24fe28ee81b36bb73d0",
+      "new": "boot_readiness_v3.py",
+      "initial_protocol_version_sha256": "2c0687004460746cd1c89338d61994bec45d5549303a669d7b0d88a077893b0b",
+      "initial_inverse_restores_parent": true,
+      "replacements": [
+        [
+          "b'RSP1'",
+          "b'RSP2'"
+        ],
+        [
+          "robotron-raw-boot-coin-readiness-v2",
+          "robotron-raw-boot-coin-readiness-v3"
+        ]
+      ]
+    },
+    {
+      "parent": "full_startup_wire_v1.lua",
+      "parent_sha256": "58edff90c4516765c2348db8c913f5be1a3ed8a7b65515cd7862ce9b360a7b3b",
+      "new": "full_startup_wire_v2.lua",
+      "initial_protocol_version_sha256": "91e056dcd3a218c55bc01a3361f0d0e628db9028f83c912adff792711640c47b",
+      "initial_inverse_restores_parent": true,
+      "replacements": [
+        [
+          "RSG1",
+          "RSG2"
+        ],
+        [
+          "RSP1",
+          "RSP2"
+        ],
+        [
+          "robotron-full-startup-envelope-v1",
+          "robotron-full-startup-envelope-v2"
+        ],
+        [
+          "robotron-full-policy-startup-trace-v1",
+          "robotron-full-policy-startup-trace-v2"
+        ]
+      ]
+    },
+    {
+      "parent": "prepare_full_startup_lua_v1.py",
+      "parent_sha256": "f20e5cadc533eff41bdded127916c89bf59d409b976b5c77265962007e346bb7",
+      "new": "prepare_full_startup_lua_v2.py",
+      "initial_protocol_version_sha256": "800cbb158d495b15601a1c0ccc8302d2ad120bef3d44a8086e5b4ed8a0106360",
+      "initial_inverse_restores_parent": true,
+      "replacements": [
+        [
+          "FULL_POLICY_STARTUP_V1",
+          "FULL_POLICY_STARTUP_V2"
+        ]
+      ]
+    },
+    {
+      "parent": "full_startup_proxy_v3.py",
+      "parent_sha256": "e66d8f94fe3c7ee67ed7aa23887251e99990ed0a7f94cf85d9e51c53de05c8d3",
+      "new": "full_startup_proxy_v4.py",
+      "initial_protocol_version_sha256": "bf87e8555fc647e735ae7337f3ff2c920ed82845d74126ebe3cf7306b4196768",
+      "initial_inverse_restores_parent": true,
+      "replacements": [
+        [
+          "startup_handoff_v1",
+          "startup_handoff_v2"
+        ],
+        [
+          "wire_codec_v1",
+          "wire_codec_v2"
+        ],
+        [
+          "boot_readiness_v2",
+          "boot_readiness_v3"
+        ],
+        [
+          "robotron-full-policy-startup-trace-v1",
+          "robotron-full-policy-startup-trace-v2"
+        ]
+      ]
+    }
+  ]
+}

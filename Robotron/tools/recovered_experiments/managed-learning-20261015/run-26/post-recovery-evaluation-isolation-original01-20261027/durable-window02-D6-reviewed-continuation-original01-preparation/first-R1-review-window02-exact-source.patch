@@ -1,0 +1,46 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-reviewed-continuation-original01-preparation/run_owned_first_R1_review_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window02-D6-reviewed-continuation-original01-preparation/run_owned_first_R1_review_window02_v1.py
+@@ -18,11 +18,11 @@
+ G=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ I=G/'logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027'
+ O=Path(__file__).resolve().parent
+-A=I/'durable-e078-R1-owned-launch-original01-preparation'
+-S=I/'durable-e078b0da-launcher-mmap-study-original01'
+-D=I/'declared-launcher-evaluator-adapters-original04-mmap-preparation'
+-UNIT='robotron-e078-first-R1-independent-review-wrapper-original01-20261029.service'
+-PRECOMMIT_SHA='fdb198ed215a1744212fc420797afb49782ab2759f9ae5ff9d45e07eaa4329ba'
++A=I/'durable-window02-D6-R1-owned-launch-original01-preparation'
++S=I/'durable-window02-D6-fixed-RCRC-study-original01'
++D=I/'declared-launcher-evaluator-adapters-original06-fresh-study-namespaces-preparation/source-family-original02-unit-authority'
++UNIT='robotron-window02-D6-first-R1-independent-review-wrapper-original01-20261029.service'
++PRECOMMIT_SHA='e9f6d5f95b7808e68556cd604a4694e627b2ba300b94fc83bf0c98bc51471159'
+ 
+ 
+ def require(value,message):
+@@ -52,11 +52,22 @@
+     require(expected['InvocationID']and all(fields.get(k)==v for k,v in expected.items()),
+         'Exact durable first independent-review wrapper scope required')
+     precommit=S/'review-precommit-original01/precommitted-four-reviews.json'
+-    pp=h.pin(precommit);require(pp['sha256']==PRECOMMIT_SHA,'Exact precommitted E078 independent review required')
++    pp=h.pin(precommit);require(pp['sha256']==PRECOMMIT_SHA,'Exact precommitted window02 candidate862 independent review required')
+     _,read,selected,packet,case=p.selected(precommit,'R1')
+-    require(selected==pp and packet['CPU_guard_publication']['path']==str(S/'four-exact-contexts-CPU-original03/all-four-exact-native-guard-receipts.json')
+-        and packet['CPU_guard_publication']['sha256']=='0b38b0138d9e67f12cfb3e9e58c839f45ed3c9743acfdb93ed75e97398da9744',
+-        'Actual guard03 independent-review binding required')
++    require(selected==pp and packet['CPU_guard_publication']['path']==str(I/'durable-window02-D6-selected-metadata600-original01-preparation/actual-closed-metadata-guard-original01/all-four-exact-native-guard-receipts.json')
++        and packet['CPU_guard_publication']['sha256']=='1e9ea4d56c0058f71c8999141133fba8b3aa7696cfdfb99435b4224b79c1482d',
++        'Actual closed window02/D6 guard publication required')
++    require(packet['native_prepared']['path']==str(S/'prepared-four-legs-NOT-LAUNCH-QUALIFIED.json')
++        and packet['native_prepared']['sha256']=='133f7e2b741c9c17c6a342e333bae51df75c06e1f4632d28d567a8260af9a131',
++        'Exact original window02/D6 four-job manifest required')
++    manifest=read(packet['native_prepared'])
++    require(manifest['study_precommit']['path']==str(S/'study-precommit.json')
++        and manifest['study_precommit']['sha256']=='eb08578ee06a2f5583c3b1c235489957cf0e7f1594bb5ff5f8af91be4bbe7850',
++        'Exact original fixed RCRC study required')
++    study=read(manifest['study_precommit'])
++    require(study['policies']['candidate']['checkpoint']['sha256']=='862fb4cde4ecb146b5b23a83b77ccbf1675a980bc310f6c2a6a8806d87b7c81e'
++        and study['policies']['reference']['checkpoint']['sha256']=='b23152ece3bb614831a278fe0572c07433f1bee59c5accef5a1ab7d3007af883',
++        'Exact fresh candidate862 versus protected3045 study required')
+     prepared_pin=h.pin(args.prepared.resolve())
+     require(prepared_pin['sha256']==args.prepared_sha256 and prepared_pin['identity']['mode']=='0o444'
+         and prepared_pin['path']==str(S/'R1/independent-review-prepared-original01.json'),

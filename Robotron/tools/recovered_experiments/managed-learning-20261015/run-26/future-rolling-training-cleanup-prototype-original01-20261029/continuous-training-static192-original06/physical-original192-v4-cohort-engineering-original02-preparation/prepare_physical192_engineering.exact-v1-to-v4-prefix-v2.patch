@@ -1,0 +1,73 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/physical-original192-context-engineering-original01-preparation/prepare_physical192_engineering_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/physical-original192-v4-cohort-engineering-original02-preparation/prepare_physical192_engineering_v2.py
+@@ -13,15 +13,15 @@
+ ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ HERE = Path(__file__).resolve().parent
+ MODE_ROOT = HERE.parent
+-HC = MODE_ROOT/'health-consumer-physical-original192-original02'
++HC = MODE_ROOT/'health-consumer-physical-original192-v4-cohort-original03'
+ PROFILE = MODE_ROOT/'health-consumer-physical-original192-original02/prepare_physical_original192_case_v2.py'
+ HELPER = ROOT/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py'
+ HELPER_SHA = '2b6902933b502ac20dacbd444fbf786315d6c960fcad1d5b5bf223dd569708c1'
+-FAMILY_SHA = '0effd7170f23dfac8ecd811c2df4b74435972b330bf74ba61913c530ce7a35b5'
+-MAP_SHA = 'ed8d6356a7ab12ef00824d4cfa25048ada2974d32e61cfc6e57f227c5dc68a80'
++FAMILY_SHA = '5a901e68e16270f7985f907964d46cc0ceb7b6e17dd1834009a5d616b88fcecd'
++MAP_SHA = '5e5c77c2554dacbe86b9ac0cd38eebe09d6eb1cbfe427310482dfdc8fd0b2bf1'
+ PROFILE_SHA = '90067b3cf06a79acee214b42b765eee021dfe567f39e03e0d0757d46a1cf5331'
+-REGISTRY_SHA = '71fc044d7b3bbbfceba5ef23f69a6c741eeff5700176050c6cdbe9e4794bba69'
+-REVIEWER_SHA = '49517cda74226f60f12297c5a106a758d76a3e0e4682a0a2c9058124c4ad433f'
++REGISTRY_SHA = 'c57b0ef9522101c69aa551b1488921c4a97af27fd10f1c52c95387fa873cf204'
++REVIEWER_SHA = '5c43b07c591b2ff65f828f516df240576aa12be94646c78daf954a49560bff0b'
+ 
+ 
+ def require(value, reason):
+@@ -48,14 +48,14 @@
+             'One exclusive original context directory required')
+     case = json.loads(h.checked(selected).read_bytes())
+     require(case['schema'] == 'robotron-continuous-physical-original192-health-case-v2'
+-            and case['source_guard'] == str(HC/'continuous_physical192_health_v2.py'),
++            and case['source_guard'] == str(HC/'continuous_physical192_health_v3.py'),
+             'Old whole-round or unselected source case cannot be adopted')
+-    r = load(HC/'continuous_physical192_registry_v2.py', REGISTRY_SHA, '_static_engineering_registry')
++    r = load(HC/'continuous_physical192_registry_v3.py', REGISTRY_SHA, '_static_engineering_registry')
+     r.validate_case(case)  # Pure held metadata/event joins; no census/proc/API.
+     profile = load(PROFILE, PROFILE_SHA, '_static_engineering_inventory')
+     profile.validate_inventory(case, h)
+-    family_pin = h.pin(HC/'prepared-physical-original192-typed-health-and-observer-SOURCE-ONLY-NOT-QUALIFIED-v2.json')
+-    map_pin = h.pin(HC/'prospective-physical192-eight-role-observer-source-map-v2.json')
++    family_pin = h.pin(HC/'prepared-prefix-bound-physical192-health-and-observer-SOURCE-ONLY-NOT-QUALIFIED-v3.json')
++    map_pin = h.pin(HC/'prospective-prefix-bound-physical192-eight-role-observer-source-map-v3.json')
+     require(family_pin['sha256'] == FAMILY_SHA and map_pin['sha256'] == MAP_SHA,
+             'Exact frozen static source family and eight-role map required')
+     family = json.loads(h.checked(family_pin).read_bytes())
+@@ -65,16 +65,16 @@
+             'Exact static eight-role observer map required')
+     for value in observers.values():
+         h.checked(value)
+-    reviewer = h.pin(HC/'review_continuous_physical192_observer_v2.py')
++    reviewer = h.pin(HC/'review_continuous_physical192_observer_v3.py')
+     require(reviewer['sha256'] == REVIEWER_SHA, 'Exact static raw reviewer required')
+     paths = [Path(value['path']) for value in observers.values()]
+     paths += [Path(value['path']) for value in (family_pin, map_pin, reviewer)]
+     paths += [PROFILE, HELPER,
+-        HC/'independent-physical-original192-health-and-kernel-exit-consumer-source-peer-v1.json',
++        HC/'independent-prefix-bound-physical192-health-six-source-peer-v3.json',
+         ROOT/'tools/training_connection_lifecycle_proposal_20261023/finalize_dedicated_main_health_v1.py']
+-    paths += [HERE/name for name in ('prepare_physical192_engineering_v1.py',
+-                                    'probe_physical192_engineering_v1.py',
+-                                    'close_physical192_engineering_v1.py')]
++    paths += [HERE/name for name in ('prepare_physical192_engineering_v2.py',
++                                    'probe_physical192_engineering_v2.py',
++                                    'close_physical192_engineering_v2.py')]
+     sources = {str(path): h.pin(path) for path in paths}
+     # Basename keys retain the unchanged engineering closer/intents interface.
+     require(len({Path(key).name for key in sources}) == len(sources), 'Duplicate held source basename')
+@@ -96,7 +96,7 @@
+             '-p','StandardError=append:'+str(directory/'console.txt'),
+             '/usr/bin/env','-u','LD_PRELOAD','-u','PYTHONPATH','CUDA_VISIBLE_DEVICES=',
+             'PYTHONDONTWRITEBYTECODE=1','/usr/bin/python3','-I','-B',
+-            str(HERE/'probe_physical192_engineering_v1.py'),'--execute','--mode',mode,
++            str(HERE/'probe_physical192_engineering_v2.py'),'--execute','--mode',mode,
+             '--case',selected['path'],'--case-sha256',selected['sha256'],'--output',str(directory/'runtime')]
+         intent = h.put(directory/'original-launch-intent-NOT-EXECUTED.json', dict(
+             schema='robotron-physical192-observer-original-engineering-intent-v1',

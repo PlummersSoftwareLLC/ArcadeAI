@@ -1,0 +1,16 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/round_main_health_retired_API_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_main_health_retired_API_v4.py
+@@ -315,10 +315,10 @@
+ 
+ 
+ def api_projection():
+-    path=Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/api_cached_projections_v2.py')
+-    require(hashlib.sha256(path.read_bytes()).hexdigest()=='be49dbc23b7477b136eb0bd0bee7a071b35dd07483c54a57e79663ba797884c2','Exact combined cached-API projection verifier required')
++    path=Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/api_cached_projections_v3.py')
++    require(hashlib.sha256(path.read_bytes()).hexdigest()=='db5f06e406bf62128ccaa46ce3155c2a90c76c31daad37d8afb2fcbfa8c36f02','Exact combined cached-API projection verifier required')
+     import sys
+-    name='_round_combined_cached_API_projection_v2'
++    name='_round_combined_cached_API_projection_v3'
+     if name not in sys.modules:
+         spec=importlib.util.spec_from_file_location(name,path)
+         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)

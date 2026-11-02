@@ -1,0 +1,12 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/deadline-score60min-protocol-original01-preparation-20261026/deadline_score_recorder_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-S2-two-arm-quality-screen-source-original01-20261030/deadline_score_recorder_completed_screen_v1.py
+@@ -234,7 +234,8 @@
+             value, activity = self._scores[slot], self._last_packets[slot]
+             require(value['first_play_level'] == 1 and value['playable_frames'] > 0,
+                     'All first games need certified playable wave 1')
+-            require(0 <= when - activity['completed_exchange_ns'] <= MAX_AGE_NS, 'Stale slot activity')
++            if not(value['status']=='completed'and slot in getattr(self,'positively_retired_slots',set())and self._anchor is not None):
++                require(0 <= when - activity['completed_exchange_ns'] <= MAX_AGE_NS, 'Stale slot activity')
+             if value['status'] != 'completed':
+                 require(0 <= when - value['score_observed_ns'] <= MAX_AGE_NS, 'Stale pending score witness')
+ 

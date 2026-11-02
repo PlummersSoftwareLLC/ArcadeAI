@@ -1,0 +1,40 @@
+{
+  "schema": "robotron-managed-training-profile-v1",
+  "description": "Selected 192 actor, batch 4096 production recipe from managed run 25.",
+  "actors": 192,
+  "trainer_environment": {
+    "CUDA_VISIBLE_DEVICES": "GPU-c0c5d295-6f07-aab5-bbde-b592ea426ec1",
+    "ROBOTRON_TRAIN_GPU": "0",
+    "ROBOTRON_INFERENCE_GPU": "0",
+    "ROBOTRON_CPU_THREADS": "8",
+    "ROBOTRON_CPU_INTEROP_THREADS": "2",
+    "ROBOTRON_DQN_DASHBOARD_HOST": "0.0.0.0",
+    "ROBOTRON_DQN_DASHBOARD_PUBLIC_HOST": "dell",
+    "ROBOTRON_DQN_DASHBOARD_BROWSER": "0",
+    "DQN_FULL_LOSS_COMPILE": "1",
+    "DQN_TORCH_COMPILE": "1",
+    "DQN_BATCH_SIZE": "4096",
+    "DQN_REPLAY_PREFETCH": "1",
+    "DQN_DIRECT_REPLAY_FILL": "1",
+    "DQN_N_STEP": "3",
+    "DQN_MAX_SAMPLES_PER_FRAME": "8",
+    "DQN_C51_TARGET_SMOOTHING": "0",
+    "DQN_FUSED_ADAM": "1",
+    "DQN_DIAGNOSTIC_INTERVAL": "20",
+    "DQN_EXACT_INFERENCE_GRAPHS": "1",
+    "DQN_EXACT_GRAPH_BUDGET_BYTES": "17179869184",
+    "DQN_INFERENCE_BATCH_WAIT_MS": "1",
+    "DQN_NATIVE_BATCH_UPDATE": "1",
+    "DQN_STREAM_BANK_OUTPUT": "1",
+    "DQN_COMPILE_MODE": "default",
+    "DQN_LEARNING_EXPOSURE_COUNTERS": "1",
+    "DQN_RATCHET": "0"
+  },
+  "fleet_environment": {
+    "ROBOTRON_SOCKET_WAIT_US": "1000",
+    "ROBOTRON_EVAL_MODE": "0",
+    "ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES": "0",
+    "ROBOTRON_GAME_AUDIO_ENABLED": "0",
+    "SDL_VIDEODRIVER": "dummy"
+  }
+}

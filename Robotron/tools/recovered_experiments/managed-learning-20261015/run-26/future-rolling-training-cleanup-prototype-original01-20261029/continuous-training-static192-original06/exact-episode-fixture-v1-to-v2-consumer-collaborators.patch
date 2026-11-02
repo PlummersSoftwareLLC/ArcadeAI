@@ -1,0 +1,26 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/test_continuous_train_episode_boundaries_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/test_continuous_train_episode_boundaries_v2.py
+@@ -202,6 +202,12 @@
+         self.agent = ReplayAgent()
+         self.buffer = self.ns['ActualReplayMethods']()
+         self.buffer.running = True
++        self.buffer._admission = threading.Condition()
++        self.buffer._consumer_error = None
++        self.buffer._drain_complete = threading.Event()
++        # Synthetic consumer identity: actual _consume is invoked synchronously
++        # on this same alive CPU-test thread; no background actor is claimed.
++        self.buffer._thread = threading.current_thread()
+         self.buffer.batch_size = 1
+         self.buffer._client_indices, self.buffer._episode_indices = {}, {}
+         self.buffer._lookback = 100
+@@ -274,7 +280,10 @@
+ 
+     def drain(self):
+         self.buffer.running = True
++        self.buffer._drain_complete.clear()
+         self.buffer._consume()
++        assert self.buffer._drain_complete.is_set()
++        assert self.buffer._consumer_error is None
+         self.buffer.running = True
+ 
+     def rows(self, name='games.jsonl'):

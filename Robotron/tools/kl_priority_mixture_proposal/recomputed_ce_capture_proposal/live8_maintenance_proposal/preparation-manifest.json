@@ -1,0 +1,43 @@
+{
+  "schema": "robotron-live8-maintenance-source-preparation-v1",
+  "status": "SOURCE_PREPARED_NOT_EXECUTED_BY_AUTHORS",
+  "selected_controller": "run_live8_maintenance.py",
+  "selected_bank_helper": "bank_state_revision2.py",
+  "files": {
+    "run_live8_maintenance.py": {"sha256": "8e61fd698f87c0da9fd09f09bb0452b9f4fb626b5403ecb4ed144f67a0a73e2c", "bytes": 50698},
+    "test_live8_maintenance.py": {"sha256": "afb8eca5d3620b8e76df3885ad69300f18af1830a06abc7fdca4c005e635c304", "bytes": 21339},
+    "bank_state_revision2.py": {"sha256": "e0c69fb38f5fec86e117edf42b4ff1ce2ff44b82b979c5240116121a7a1ce54f", "bytes": 16047},
+    "test_bank_state_revision2.py": {"sha256": "20f43e310d80fabaab7247e9e1e5afdffa9536e9d65f9adf9fbe95f131fc0769", "bytes": 14164},
+    "bank_state.py": {"sha256": "9abe7bd5dd4a92f4d92b444f81d13e276c7c1fa8ba275cd7e26129579e892805", "bytes": 15389, "role": "preserved_original_source_preflight_revision_not_selected"},
+    "test_bank_state.py": {"sha256": "fcd145c823f58e9b23d9dc3049354c5ad1f36cc51c4742ee795193e27fd7d757", "bytes": 12011, "role": "preserved_original_unexecuted_fixture_revision_not_selected"},
+    "PREPARATION.txt": {"sha256": "e0481e2d1e42bff70ee80abebaffeb774b974c118a0c8baf0e574147ac90923b", "bytes": 12229},
+    "job.schema.json": {"sha256": "a784233f88f6b1802b702e2c9c756b037ad18fba7a22f1b34e2c9de7d51cad55", "bytes": 3918},
+    "future-argv.json": {"sha256": "9cc5e8b0e8678a798d09d1f49de783bf02912d442bad126de2751d451b25bdae", "bytes": 1458}
+  },
+  "authored_tests": {"controller_stdlib_mock_contracts": 24, "selected_bank_revision2_stdlib_contracts": 11, "total_selected": 35, "author_executed": false},
+  "root_execution": null,
+  "actual_maintenance": null,
+  "source_review": {
+    "root": "Root reported full controller/test source review; actual bounded tests and launch remain root-owned.",
+    "audit_quality_result": "Independent SOURCE_ONLY PASS controller8e61/test5541 before final test-only failed-unit-PID0 regression; bank revision2e0c69/20f43 PASS. Final all-file receipt follows separately.",
+    "learning_review": "Independent SOURCE_ONLY PASS controller8e61/test5541 before final test-only failed-unit-PID0 regression; owns selected bank helper/tests. No import/test/runtime execution by peers."
+  },
+  "immutable_inputs": {
+    "overlay_manifest_sha256": "356b8b0999b05d3d4cd6e2addfcbee832c7365c9c31f9c08506f8714c0dfeaa2",
+    "verifier_sha256": "7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead",
+    "insurance_receipt_sha256": "26bd3789f971db3c07bad91298bcd940fb964447f819c9bf8b09f73e4bcd166c",
+    "insurance_CPU_verification_sha256": "83c898697675bae6445cbf3ec93c5a8134eb1ded8a13a9ca9e8a4fda34470e39",
+    "insurance_checkpoint_sha256": "7b8f0e569eb3dc30312944327674b489bdcc4d7ccbc0adbea6073b5ebaa26ca7",
+    "insurance_checkpoint_bytes": 275191013,
+    "insurance_saved_four_clock_floor": {"training_steps": 2042467, "optimized_samples": 6918356992, "learner_frame_count": 423154160, "frame_count": 846584430}
+  },
+  "scope": "Source-only root-bound maintenance orchestration, explicit five-overlay before/after transaction, newest stopped-latest CPU verification and both selected bank/ring proofs. No production modification, checkpoint request, imports, compilation, test execution, numerical/model/array reads or runtime action by the authors.",
+  "limitations": [
+    "No actual193-process restart or live8 capture has been validated by this source preparation.",
+    "Stopped ring/bank header/selector evidence and first-attempt PRE clock equality do not establish coherent FIFO/actor/RNG continuation or RAM byte equality.",
+    "Actual parent consumes metadata and producer payload hashes; a later independent byte/tensor audit is separate.",
+    "Only actual CE is observed. Targets/entropy/KL remain offline conditional and no learning or quality improvement is claimed.",
+    "Failed startup with MainPID0 but ActiveStatefailed is explicitly manual; no reset/adoption expansion.",
+    "Unknown replacements, invalid latest, unknown source bytes or unresolved exact actor undo require manual recovery; no insurance/protected rollback or ninth capture."
+  ]
+}

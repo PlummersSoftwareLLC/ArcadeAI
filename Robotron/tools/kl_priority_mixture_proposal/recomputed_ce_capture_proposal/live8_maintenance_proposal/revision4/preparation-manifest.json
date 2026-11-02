@@ -1,0 +1,53 @@
+{
+  "schema": "robotron-live8-maintenance-source-preparation-v4",
+  "status": "SOURCE_PREPARED_NOT_EXECUTED_BY_AUTHORS",
+  "selected_controller": "run_live8_maintenance.py",
+  "selected_bank_helper": "bank_state_revision2.py",
+  "files": {
+    "run_live8_maintenance.py": {"sha256": "fdf7c8bfb123b494252acf83d724a51acda95bb7f00877eace28b60d0377ed18", "bytes": 62971},
+    "test_live8_maintenance.py": {"sha256": "618e683cf886e5e8145c50a66c37568c32f0fcc79ad2f83bafa9b40f4dbc31b3", "bytes": 37344},
+    "bank_state_revision2.py": {"sha256": "e0c69fb38f5fec86e117edf42b4ff1ce2ff44b82b979c5240116121a7a1ce54f", "bytes": 16047},
+    "test_bank_state_revision2.py": {"sha256": "20f43e310d80fabaab7247e9e1e5afdffa9536e9d65f9adf9fbe95f131fc0769", "bytes": 14164},
+    "job.schema.json": {"sha256": "679ea8347fa1af9fb27dec65917c6296829034b427a01e9d1d1301921ce496eb", "bytes": 4553},
+    "PREPARATION.txt": {"sha256": "f98b47102ec2479fb4c39c31205b42f67733884444ed63efae6ae3c0f5287aab", "bytes": 8524},
+    "future-argv.json": {"sha256": "da85008367e5541cd26b12286358027c40454143eb4b0c1d067e465f7725c7bf", "bytes": 1488},
+    "controller-source.patch": {"sha256": "cdbe6744013f79712ca41d49dda9b992041326b5548dcc12b6b74025ef88f6a6", "bytes": 11275},
+    "test-source.patch": {"sha256": "aebdafaaee72d22b6c10a9fd621758c28a07670d8f84d73969e0b77f7a532861", "bytes": 11805}
+  },
+  "revision_scope": "Only separately bound same-byte game_settings identity lifecycle after known owned stop, and earlier explicit retirement/first-CPU-attempt tracking for newest forward recovery. Every unrelated static binding and capture/learning/boot/graph/bank/actor/source/CPU numerical predicate remains held.",
+  "settings_lifecycle": {
+    "job_fields": ["initial", "parsed_values", "policy"],
+    "policy": "same_bytes_after_owned_stop_only",
+    "parsed_values": {"start_advanced": false, "start_level_min": 1, "epsilon_pct": -1, "expert_pct": -1, "auto_curriculum": false, "difficulty": 5},
+    "static_pins": "Exclude ONLY model_dir/game_settings.json; independent lifecycle initial full PIN joins before.control_hashes SHA and current full PIN is checked each runtime static pass",
+    "adoption": "Exact registered trainer stop+absence, unchanged SHA/bytes/typed values/device/mode/uid/nlink, one durable transition receipt per retired PID/start before trusting replacement identity",
+    "retirement": "Candidate recorded before host.stop; exact known retired owner recorded after proven absence and before settings/CPU checks",
+    "CPU_ledger": "Started immediately before possible subprocess launch after log opens. Prelaunch observation failure may perform a FIRST check; any started/missing/invalid/failed outcome forbids retry"
+  },
+  "preserved_originals": {
+    "v3_manifest": {"path": "../revision3/preparation-manifest.json", "sha256": "0e53f52798b3dbd9b451edf0b5880eff0b4df00f686e09cecc0bec7338b9747f"},
+    "v3_controller_sha256": "5059f5572c7e09a6949125fdb3126e0f7cb048e064ff4aafecc513ad72b251c1",
+    "v3_tests_sha256": "120ab4d9da012fe03219a321299f5be3e696e77f52de77f61f1f1fad0b4b28db",
+    "v3_source_receipt_sha256": "3735f53fca26e89354478f93615427aed660081043e708b4c3fa6d2b4cae20a1",
+    "all_v1_v2_sources_and_results": "Unchanged; immutable v3 provenance retains their exact manifests/refusals/source receipts",
+    "root_reported_actual_v3_tests": "43 PASS in original owned Type=exec unit, terminal archived and released; not author execution",
+    "actual_v3_failure": {"path": "Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed3-20261017/result.json", "sha256": "b7e2c50dea2af43a851634fdcd69ffc14530e0f8804ae73cfc050e74ce4e104d", "status": "FAILED", "captures": 0, "installed_overlays": 0, "primary": "Post-owned-stop game_settings full-identity static guard; same bytes/SHA but shutdown atomic replacement changed inode/mtime/ctime", "recovery": "No verified retired owner before first CPU; original manual-recovery result retained"},
+    "manual_forward_recovery": {"health_path": "Robotron/logs/managed-learning-20261015/run-26/live8-owned-manual-forward-recovery-reviewed1-20261017/root-normal-recovery-health-PASS.json", "health_sha256": "f1151e9636bbf05a3193f3e0a17cc141bad7c2e0b4978c7110926034fb47cb24", "independent_saved_review_path": "Robotron/logs/managed-learning-20261015/run-26/live8-manual-forward-recovery-independent-saved-review-20261017/review-receipt.json", "independent_saved_review_sha256": "ac610282de97bf139335066fd8a6dc2d2dd82f34efe9dfb3d0f82d035a2f188e", "interpretation": "Separate healthy normal source-before newest stopped-latest forward recovery; no capture/first-PRE/coherent-anchor claim"}
+  },
+  "future_window": {
+    "requires": "NEW actual current-owner insurance+finite CPU proof+successful interpreter execution provenance, NEW owner-bound job/output/capture/unit, fresh complete bindings and exact waiting448 ownership/window release",
+    "initial_owner": "Strict trainer_id==insured retained; no stale3032848 insurance adoption under manually restarted4098959",
+    "lineage": "Only existing controller-requested/explicitly adopted restart lineage during recovery; no new manual-owner lineage implemented",
+    "completed384": "Must stay gone; future waiting448 root owns exact cancel/rearm original target/deadline",
+    "actual_job": null,
+    "actual_maintenance": null
+  },
+  "authored_tests": {"previous_selected": 43, "new_lifecycle_and_retirement_methods": 8, "controller_methods": 40, "bank_methods": 11, "total_selected": 51, "author_executed": false},
+  "source_review": {
+    "root": "Root controls final review, bounded actual tests, fresh insurance/job and any future operation",
+    "audit_quality_result": "SOURCE_ONLY current narrowdiff/readiness/retirement/CPU ledger/direct Runtime regression reviewed with no remaining substantive finding; final all-file receipt follows separately",
+    "learning_review": "SOURCE_ONLY PASS controllerfdf7c8bf/test618e683c; strict new-owner insurance requirement explicitly retained; no imports/tests/runtime actions"
+  },
+  "root_execution": null,
+  "limitations": ["No author imports/compilation/tests/runtime queries/actions/model or tensor reads", "Source and mocked contracts do not prove actual193-process reload/live8 capture/bank RAM equality", "Ordinary final model save may omit optimizer/FIFO/bank stop tails; no coherent actor/replay/RNG anchor", "No insurance/protected rewind, changed learning math/thresholds, ninth/substitute attempt, automatic capture retry or quality claim"]
+}

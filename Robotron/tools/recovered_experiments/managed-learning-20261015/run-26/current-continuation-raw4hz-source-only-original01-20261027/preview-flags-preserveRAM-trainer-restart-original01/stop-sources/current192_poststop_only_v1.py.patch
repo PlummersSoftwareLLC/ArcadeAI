@@ -1,0 +1,60 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/stop-sources/current227_poststop_only_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/preview-flags-preserveRAM-trainer-restart-original01/stop-sources/current192_poststop_only_v1.py
+@@ -335,7 +335,7 @@
+         self.linux = load_linux(backend.job)
+         self.config = json.loads(self.linux.checked(backend.job['poststop_inputs']))
+         c = self.config
+-        require(c['schema'] == 'robotron-current227-stop-only-poststop-inputs-v1'
++        require(c['schema'] == 'robotron-current-fresh192-preserveRAM-poststop-inputs-v1'
+                 and c['case'] == backend.job['case'] and c['original_owner'] == backend.owner,
+                 'Post-stop inputs belong to another case/owner')
+         for entry in c['pins']:
+@@ -343,21 +343,26 @@
+         require(c['verifier']['sha256'] == VERIFIER_SHA and c['cpu_controller']['sha256'] == CONTROLLER_SHA,
+                 'Use the reviewed strictLR125 verifier08c and C218 lifecycle')
+         for name in ('verifier','cpu_controller','cpu_template','boot_CPU_report','original_phase_record',
+-                     'bank_helper','archive_checker','settings_archive','phase_dropin','boot_replay_snapshot'):
++                     'bank_helper','archive_checker','settings_archive','trainer_environment','boot_replay_snapshot'):
+             self.linux.checked(c[name])
+-        require(c['phase_dropin']['path'] == '/run/user/'+str(os.getuid())+'/systemd/user/'+
+-                backend.owner['unit']+'.d/91-per-priority-phase.conf','Only the original phase dropin is selected')
++        original_environment = json.loads(self.linux.checked(c['trainer_environment']))
++        require(original_environment['owner'] == backend.owner
++                and original_environment['environment']['DQN_PRIORITY_PHASE_RECORD'] == c['original_phase_record']['path']
++                and original_environment['environment']['DQN_PRIORITY_PHASE_RECORD_SHA256'] == c['original_phase_record']['sha256']
++                and original_environment['environment']['ROBOTRON_RUN_DIR'] ==
++                    '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/live-original01',
++                'Actual transient-unit environment must supply the active resume phase; no old dropin authority')
+         self.template = json.loads(self.linux.checked(c['cpu_template']))
+         self.boot_report = json.loads(self.linux.checked(c['boot_CPU_report']))
+         self.boot_replay = json.loads(self.linux.checked(c['boot_replay_snapshot']))
+         self.expected = expected_phase(self.boot_report,c['original_phase_record'])
+         require(c['boot_checkpoint']['sha256'] ==
+-                    'ef618c93edbcea3ab76b173146c6d9eb1004241fc610b52aefbf1d5114a35893'
++                    '39507ee6bbb7ee6d2695d375fdbc25169a0090699e203ebc912ac296f75dcdb9'
+                 and c['original_phase_record']['sha256'] ==
+-                    '1404e95858218d3d443eadab8c8c66e329d027d57f42e51c362568909cdc4782'
++                    '1043c35fcb73f7a1af4472117e150b93cecf9f5f0af252c5c0207e4af1d9b371'
+                 and c['boot_replay_snapshot']['sha256'] ==
+-                    'bba6645baad52d07467e739ae4a0c5612b3ec633b627d198289bd3fbe6e1dfb5',
+-                'Exact current3615927 original boot/phase/6MR3 replay lineage required')
++                    '81c2af38d25f84bab0861ec101f0c52742c12e4d2968738845cd6f005f525bb7',
++                'Exact current1062324 original boot/phase/6MR3 replay lineage required')
+         require(c['boot_checkpoint']['sha256'] == self.boot_report['sha256']
+                 and c['boot_checkpoint']['bytes'] == self.boot_report['bytes'], 'Actual original boot differs')
+         phase = json.loads(self.linux.checked(c['original_phase_record']))
+@@ -440,12 +445,8 @@
+         return value
+ 
+     def fleet_held(self):
+-        b,l = self.b,self.linux
+-        l.live_owner(b.fleet)
+-        require((b.fleet_root/'cgroup.freeze').read_text().strip() == '1', 'Original fleet escaped its hold')
+-        for actor in b.fleet['original192_actors']:
+-            require(l.process_start(actor['pid']) == actor['starttime_ticks']
+-                    and sorted(os.sched_getaffinity(actor['pid'])) == actor['mask'], 'Original emulator changed')
++        require(self.b.assert_producers_held() is True,
++                'Both exact original fleet191 and supplemental0 cgroups/owners/all192 births must remain held')
+ 
+     def cpu(self,purpose,source,owner,phase,boot,boot_proof,expected,acquisition,floor,*,observed_clients=0):
+         b,l = self.b,self.linux

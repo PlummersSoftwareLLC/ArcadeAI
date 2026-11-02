@@ -1,0 +1,32 @@
+{
+  "clock_floor": null,
+  "experiment": null,
+  "original_strict_base_sha256": "7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead",
+  "output_directory": null,
+  "phase_snapshot": null,
+  "schema": "robotron-batch2048-phase-snapshot-checkpoint-CPU-job-v1",
+  "source": null,
+  "source_control_context": null,
+  "strict_phase_base_sha256": "47677509f170c4c3b6a1c03918e02ab13996af1ceafffac29b7536c2fad61f80",
+  "verification_copy": null,
+  "verifier_sha256": "165a1c0c9c7bdee1210c47d06487a48a4fc414b70477522317399882d108c90a",
+  "batch2048_context": {
+    "profile": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json",
+      "sha256": "e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50",
+      "bytes": 764,
+      "identity": {
+        "device": 2304,
+        "inode": 84803605,
+        "bytes": 764,
+        "mtime_ns": 1792254423401979979,
+        "ctime_ns": 1792254423401979979,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "role": null,
+    "producer_observation": null
+  }
+}

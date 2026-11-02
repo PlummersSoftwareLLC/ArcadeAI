@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-S2-two-arm-quality-screen-source-original01-20261030/run_S2_two_arm_screen_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-fleet-df519-vs-frozenS2-two-arm-screen-original01-20261031/selected-source/run_newer_policy_vs_frozenS2_screen_v1.py
+@@ -28,7 +28,7 @@
+ HERE=G/'tools/startup_policy_journal_proposal'
+ PARENT=D.parent/'quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/run_cold_slot64_prefix_v1.py'
+ PARENT_SHA='9f6820ea3633d8e411f4408846d0aaef7a9b9bde1393b16975293315a32ca25d'
+-REFERENCE_SHA='b23152ece3bb614831a278fe0572c07433f1bee59c5accef5a1ab7d3007af883'
++REFERENCE_SHA='06558cbc185b76b2b44229ddfe469d2a92037e70f89de2481e8fb055f2c736ad'
+ SLOTS=tuple(range(4096,4128))
+ PORTS={slot:20000+slot-4096 for slot in SLOTS}
+ GPU='GPU-b549355c-78bb-53d8-04a6-da34d45e1dd0'

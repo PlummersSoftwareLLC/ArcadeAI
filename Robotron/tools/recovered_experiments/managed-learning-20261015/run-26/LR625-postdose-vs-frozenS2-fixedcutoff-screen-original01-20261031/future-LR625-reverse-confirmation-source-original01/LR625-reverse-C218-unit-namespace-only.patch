@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/df519-vs-S2-fixed-cutoff-liveness-screen-original01-20261031/future-reverse-corrected-protocol-source-only-original01/Root-control-fixedcutoff-reverse-C218-v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/LR625-postdose-vs-frozenS2-fixedcutoff-screen-original01-20261031/future-LR625-reverse-confirmation-source-original01/Root-control-LR625-reverse-fixedcutoff-C218-v1.py
+@@ -65,7 +65,7 @@
+ def checked_config(config):
+     c = json.loads(Path(config).read_text())
+     require(set(c) == {'unit', 'output', 'argv', 'properties', 'pins', 'observation_s'}, 'Exact six-field compiled full-tail32 config required')
+-    require(c['unit'] in {'robotron-df519-S2-fixedcutoff-reverse-'+leg+'-original01-20261031.service' for leg in ('r1','c1')}, 'Exact private compiled full-tail32 namespace required')
++    require(c['unit'] in {'robotron-LR625-S2-reverse-fixedcutoff-score-'+leg+'-original01-20261031.service' for leg in ('r1','c1')}, 'Exact private compiled full-tail32 namespace required')
+     props = dict((x.split('=', 1) for x in c['properties']))
+     require(len(props) == len(c['properties']) and props == dict(CPUQuota='1200%', MemoryMax='24G', MemorySwapMax='0', RuntimeMaxSec='4260', TasksMax='512', TimeoutStopSec='30', KillMode='mixed', SendSIGKILL='no'), 'Exact bounded compiled32 resources required')
+     require(type(c['observation_s']) is int and c['observation_s'] == 4320, 'Fixed original runtime/shutdown observation required')

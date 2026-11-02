@@ -1,0 +1,90 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/run_cold_slot64_prefix_v1.before-intentional-cleanup-order.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/run_cold_slot64_prefix_v1.py
+@@ -224,7 +224,7 @@
+ def validate_main_health_contract(job, protocol, family):
+     require(protocol['schema'] == 'robotron-native-quota64-API-epoch-reference600-main-health-protocol-v1' and protocol['health_job']['binding'] == job['main_binding'] and (family['runtime'] == job['runtime']) and (set(protocol['health_job']['sources']) == set(HEALTH_DEPENDENCIES)) and all((protocol['health_job']['sources'][key]['sha256'] == sha for key, sha in HEALTH_DEPENDENCIES.items())) and (family['main_prefix_validator']['sha256'] == PREFIX_VALIDATOR_SHA) and (family['main_health_finalizer']['sha256'] == FINALIZER_SHA) and (set(family['main_observer']) == set(OBSERVER_DEPENDENCIES)) and all((family['main_observer'][key]['sha256'] == sha for key, sha in OBSERVER_DEPENDENCIES.items())), 'Exact prospective main-health engine/dependencies/family/binding required')
+ 
+-def prepare_actor_resources(*, job, output, server, h, seed, bridge, BoundedWitness, bridge_stop, policy_reader, admission, parse_frame_data, drain_reader, actors, streams, errors):
++def prepare_actor_resources(*, job, output, server, h, seed, bridge, BoundedWitness, bridge_stop, policy_reader, admission, parse_frame_data, drain_reader, actors, streams, errors, failure_events=None, intentional_cleanup=None):
+     for slot in SLOTS:
+         private = output / 'actors' / str(slot)
+         private.mkdir(mode=448)
+@@ -255,7 +255,10 @@
+                 with listener.accept()[0] as peer, socket.create_connection(('127.0.0.1', 19998), timeout=5) as origin:
+                     proxy.serve(peer, origin)
+             except Exception as error:
+-                errors.append('Original slot' + str(slot) + ': ' + repr(error))
++                message = 'Original slot' + str(slot) + ': ' + repr(error)
++                if failure_events is not None:
++                    failure_events.append(dict(slot=slot, error=repr(error), message=message, observed_monotonic_ns=time.monotonic_ns(), intentional_cleanup_observed=intentional_cleanup is not None and intentional_cleanup.is_set()))
++                errors.append(message)
+         worker = threading.Thread(target=serve, name='compiled32-proxy-' + str(slot), daemon=True)
+         actors[slot] = dict(private=private, proxy=proxy, listener=listener, worker=worker, child=None, birth=None, boot_restore=restored, trace_identity=trace_identity, lifecycle_identity=lifecycle_identity, witness_writer=witness_writer, worker_started=False)
+         with (private / 'boot.lua').open('x') as stream:
+@@ -298,6 +301,25 @@
+         all64_prefixes_certified=True, no_active600_window=True, quality_qualified=False,
+         throughput_gain_verified=False, learning_speed_gain_verified=False)
+ 
++def begin_intentional_prefix_cleanup(server, marker_pin, errors, cleanup_event):
++    before_ns = time.monotonic_ns()
++    prior_errors = list(errors)
++    prior_inference_error = server.inference_only_error
++    prior_shutdown = server.shutdown_event.is_set()
++    # The original prefix success is already sealed. Announce intentional
++    # teardown before causing any owned actor EOF; never alter the server hook.
++    cleanup_event.set()
++    declared_ns = time.monotonic_ns()
++    server.shutdown_event.set()
++    after_ns = time.monotonic_ns()
++    return dict(schema='robotron-cold-prefix-intentional-cleanup-boundary-v1',
++        original_prefix_marker=marker_pin, begin_monotonic_ns=before_ns,
++        declaration_complete_monotonic_ns=declared_ns,
++        after_flags_monotonic_ns=after_ns, errors_before_intentional_cleanup=prior_errors,
++        inference_error_before_intentional_cleanup=prior_inference_error,
++        shutdown_already_set=prior_shutdown, shutdown_set_before_owned_signals=server.shutdown_event.is_set(),
++        intentional_cleanup_flag_set=cleanup_event.is_set(), before_first_owned_actor_signal=True)
++
+ def run(job, jp, h, *, cpu_initializer=False):
+     output = validate_job(job, cpu_initializer=cpu_initializer)
+     require(not os.environ.get('LD_PRELOAD'), 'Never preload Python')
+@@ -315,6 +337,9 @@
+     stopped = threading.Event()
+     bridge_stop = threading.Event()
+     errors = []
++    private_failure_events = []
++    intentional_cleanup = threading.Event()
++    prefix_cleanup_boundary_pin = None
+     actors = {}
+     streams = []
+     health_stop = threading.Event()
+@@ -495,7 +520,7 @@
+         while not server.running:
+             require(server_worker.is_alive() and time.monotonic() < ready_end, 'Original compiled origin failed to bind')
+             time.sleep(0.01)
+-        prepare_actor_resources(job=job, output=output, server=server, h=h, seed=seed, bridge=bridge, BoundedWitness=BoundedWitness, bridge_stop=bridge_stop, policy_reader=policy_reader, admission=admission, parse_frame_data=parse_frame_data, drain_reader=drain_reader, actors=actors, streams=streams, errors=errors)
++        prepare_actor_resources(job=job, output=output, server=server, h=h, seed=seed, bridge=bridge, BoundedWitness=BoundedWitness, bridge_stop=bridge_stop, policy_reader=policy_reader, admission=admission, parse_frame_data=parse_frame_data, drain_reader=drain_reader, actors=actors, streams=streams, errors=errors, failure_events=private_failure_events, intentional_cleanup=intentional_cleanup)
+         for slot, row in actors.items():
+             require(not stopped.is_set() and time.monotonic() < deadline, 'Interrupted during original fleet launch')
+             row['worker'].start()
+@@ -598,6 +623,12 @@
+     except Exception as error:
+         errors.append(repr(error))
+     finally:
++        if prefix_marker_pin is not None:
++            try:
++                cleanup_boundary = begin_intentional_prefix_cleanup(server, prefix_marker_pin, errors, intentional_cleanup)
++                prefix_cleanup_boundary_pin = h.put(output / 'original-intentional-prefix-cleanup-boundary.json', cleanup_boundary)
++            except Exception as error:
++                errors.append('Original intentional prefix cleanup boundary: ' + repr(error))
+         for slot, row in actors.items():
+             child = row['child']
+             if child is not None and child.poll() is None:
+@@ -708,7 +739,7 @@
+             errors.append('Original private lease cleanup: ' + repr(error))
+     complete = bool(not errors and len(actual_slots) == ACTOR_COUNT and (policy_before == policy_after) and (policy_after is not None) and source_unchanged and released and (main_guard_report is not None) and (main_initial_readiness is not None) and main_guard.scope_complete and (main_guard.lifecycle is not None))
+     require(not complete, 'Startup-only diagnostic must not reach quality-complete branch')
+-    result = h.put(output / 'result.json', dict(schema='robotron-cold-all64-startup-prefix-result-v1', status='ORIGINAL_COLD_ALL64_PREFIX_STOPPED_NO_QUALITY' if prefix_marker_pin is not None else 'ORIGINAL_COLD_ALL64_PREFIX_FAILED_NO_RETRY', complete=complete, errors=errors, original_attempt=1, no_retry=True, original_slots=actual_slots, diagnostic_role=job['diagnostic_role'], diagnostic_precommit=job['diagnostic_precommit'], diagnostic_only=True, quota64_source_pins=job['quota64_source_pins'], cohort_selection=None if policy_before is None else policy_before['cohort_selection'], expected_policy_clocks=job['expected_policy_clocks'], quality_game_count_requirement_not_applicable_to_this_diagnostic=True, policy_before=policy_before, policy_after=policy_after, acquired_checkpoint=acquisition, selector_call_timing=selector_timing_report, active_start=active_start, active_end=active_end, active_frame_rate=active_rate_report, cold_prefix_marker=prefix_marker_pin, engineering_case=job['engineering_case'], engineering_implementation=job['engineering_implementation'], before_intentional_stop=before_stop, after_intentional_stop=after_stop, controller_exit=controller_exit, drain_identifier=drain_identifier, drain_payload=drain_payload, journal=journal, main_samples=main_samples, main_observation_failures=main_failures, main_health_report=main_guard_report, main_health_failure=main_guard_failure, initial_main_readiness=main_initial_readiness, main_health_protocol=job['main_health_protocol'], source_family_manifest=job['source_family_manifest'], main_observer_lifecycle=None if main_guard is None else main_guard.lifecycle, native_started_monotonic_s=started, native_deadline_monotonic_s=deadline, original_unsealed_journal_paths=unsealed_journal, original_post_origin_child_reap=child_reap, all_original_threads_stopped=all_threads_stopped, lease=lease_entry, original_lease_released=released, socket_wait_library=library_entry, immutable_inputs_unchanged=source_unchanged, quality_qualified=False, full_game_score_verified=False, learning_speed_gain_verified=False, main_runtime_changed=False, promotion_gates_changed=False, startup_protocol_changed_from_legacy=True, limitations='One protected-reference-only all64 cold startup prefix diagnostic. All64 original1200-pair ROM/START/nonce/initialized-firstplay prefixes must certify within300s; nativewall360s with separate420s durablewatchdog. Intentionally unfinished games/exit1/cleanup diagnostics retained. No active600, rate, full-tail quality, policy, learning-speed or useful-training-throughput qualification.'))
++    result = h.put(output / 'result.json', dict(schema='robotron-cold-all64-startup-prefix-result-v1', status='ORIGINAL_COLD_ALL64_PREFIX_STOPPED_NO_QUALITY' if prefix_marker_pin is not None else 'ORIGINAL_COLD_ALL64_PREFIX_FAILED_NO_RETRY', complete=complete, errors=errors, original_attempt=1, no_retry=True, original_slots=actual_slots, diagnostic_role=job['diagnostic_role'], diagnostic_precommit=job['diagnostic_precommit'], diagnostic_only=True, quota64_source_pins=job['quota64_source_pins'], cohort_selection=None if policy_before is None else policy_before['cohort_selection'], expected_policy_clocks=job['expected_policy_clocks'], quality_game_count_requirement_not_applicable_to_this_diagnostic=True, policy_before=policy_before, policy_after=policy_after, acquired_checkpoint=acquisition, selector_call_timing=selector_timing_report, active_start=active_start, active_end=active_end, active_frame_rate=active_rate_report, cold_prefix_marker=prefix_marker_pin, prefix_cleanup_boundary=prefix_cleanup_boundary_pin, private_failure_events=private_failure_events, engineering_case=job['engineering_case'], engineering_implementation=job['engineering_implementation'], before_intentional_stop=before_stop, after_intentional_stop=after_stop, controller_exit=controller_exit, drain_identifier=drain_identifier, drain_payload=drain_payload, journal=journal, main_samples=main_samples, main_observation_failures=main_failures, main_health_report=main_guard_report, main_health_failure=main_guard_failure, initial_main_readiness=main_initial_readiness, main_health_protocol=job['main_health_protocol'], source_family_manifest=job['source_family_manifest'], main_observer_lifecycle=None if main_guard is None else main_guard.lifecycle, native_started_monotonic_s=started, native_deadline_monotonic_s=deadline, original_unsealed_journal_paths=unsealed_journal, original_post_origin_child_reap=child_reap, all_original_threads_stopped=all_threads_stopped, lease=lease_entry, original_lease_released=released, socket_wait_library=library_entry, immutable_inputs_unchanged=source_unchanged, quality_qualified=False, full_game_score_verified=False, learning_speed_gain_verified=False, main_runtime_changed=False, promotion_gates_changed=False, startup_protocol_changed_from_legacy=True, limitations='One protected-reference-only all64 cold startup prefix diagnostic. All64 original1200-pair ROM/START/nonce/initialized-firstplay prefixes must certify within300s; nativewall360s with separate420s durablewatchdog. Intentionally unfinished games/exit1/cleanup diagnostics retained. No active600, rate, full-tail quality, policy, learning-speed or useful-training-throughput qualification.'))
+     print(json.dumps(dict(result=result, complete=complete)), flush=True)
+     return 0 if complete else 1
+ 

@@ -1,0 +1,68 @@
+{
+  "schema": "robotron-ce2048-shared-recipe-control-future-argv-v1",
+  "executed": false,
+  "actual_jobs": null,
+  "actual_guard_executions": null,
+  "deferred_until": "Current all4 quality original audits/owned closure/root source-freeze release complete",
+  "new_metadata_guards": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_control_integration_proposal",
+    "-p",
+    "test_shared_recipe_control.py",
+    "-v"
+  ],
+  "new_authored_guard_count": 3,
+  "existing_shared_guard_plan": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/future-argv.json",
+    "sha256": "178b4b5a7a441c29a6282e4e7b02ea49aa0aeb8942072db9abdbdf4d8a6252b7",
+    "bytes": 719
+  },
+  "existing_authored_shared_guard_count": 8,
+  "deadline_default": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_control_integration_proposal/deadline_guard.py"
+  ],
+  "controller_default": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_control_integration_proposal/run_one_trial.py"
+  ],
+  "conditional_deadline": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_control_integration_proposal/deadline_guard.py",
+    "--execute",
+    "--job",
+    "UNBOUND_NEW_TRIAL02_ROOT_JOB",
+    "--expected-job-sha256",
+    "UNBOUND_JOB_SHA256",
+    "--expected-source-sha256",
+    "10d115864c4b058bdd0b9c89aeee1e9572a1e2c50fc3dc55e4e5b5fddd1571bc"
+  ],
+  "conditional_controller": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_control_integration_proposal/run_one_trial.py",
+    "--execute",
+    "--job",
+    "UNBOUND_NEW_TRIAL02_ROOT_JOB",
+    "--expected-job-sha256",
+    "UNBOUND_JOB_SHA256",
+    "--expected-controller-sha256",
+    "849770e0fc31ac7049b8fa8226572478f6c183e4370c952295a49ac5684f252b",
+    "--expected-armed-sha256",
+    "UNBOUND_ACTUAL_INDEPENDENT_ARMED_RECEIPT_SHA256"
+  ],
+  "root_resources_note": "Reuse bounded original main7200s/deadline6000s outer envelope; it does not extend3600s treatment-owner ceiling. Actual new retained unit names/launch timestamps/PIDs/invocations remain root-owned and unknown."
+}

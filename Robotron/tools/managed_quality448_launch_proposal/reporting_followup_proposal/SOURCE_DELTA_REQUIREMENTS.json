@@ -1,0 +1,54 @@
+{
+  "schema": "robotron-future-confirmed-incumbent-reporting-source-delta-v1",
+  "status": "SOURCE_ONLY_REQUIREMENTS_UNAPPLIED",
+  "created_utc": "2026-10-17T10:18:23.698828+00:00",
+  "current_renderer": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/render_learning_progress.py",
+    "sha256": "3074bdef730dfdaff58884eb5360d7984563c1e063ea5a5e70a53acda09bdb4c"
+  },
+  "current_behavior": {
+    "confirmed_stage": "384M",
+    "new_incumbent_rejected": true,
+    "reason": "validate_protected_annotation requires384M at47 and exact state.incumbent equality at55-57. Existing PNG remains a384M artifact after a later promotion until a new successful rendering/adoption.",
+    "hardcoded_bindings": {
+      "stage_guard": 47,
+      "adoption_status": 74,
+      "total_games": 78,
+      "saved_learner_clock": 89,
+      "counts_and_pool": 138,
+      "fresh_reference_count_message": 145,
+      "caption_cohort_gains_and_reference": 430
+    }
+  },
+  "decision": "Do not implement a new generic evidence adapter during the live quality campaign. The exact448 adoption/audit schemas and counts are not yet known; a concise post-promotion delta avoids replacing strict proof with guessed fields.",
+  "minimal_future_delta": [
+    "After an actual qualified publication+managed adoption, create a NEW immutable reporting evidence object bound to that exact incumbent/metadata/adoption/publication/CPU/final-gate/summary/four original-row audits. Until then leave all future fields null.",
+    "Make the current annotation stage, exact adoption status, CPU-saved learner clock, total/reference/candidate counts and descriptive candidate pool derive from those joined actual proof objects. Retain exact current state equality, checkpoint/plan/source/backend identity, every original row/admission join, four-role order/fulltails/min50/oneattempt/diagnosticsTRUE, and separate1.05mean+median gates against ONLY the new fresh reference pair.",
+    "Compute displayed cohort gains/reference stage from the same joined actual rows/protected previous-reference identity; remove the literal+9.81%/+9.06%/fresh256M header only in that separately reviewed revision.",
+    "Preserve all13 historical curve objects, order/guards/throughput and historical192M validation exactly. Keep the1200s diagnostic confirmation as a separate current-incumbent annotation, rather than appending a noncomparable600s historical curve point.",
+    "Retain the384 proof bundle and existing PNG history. Use a new private CPU rendering output; bind corrected interpreter/library argv and original terminal exit evidence before root adoption."
+  ],
+  "meaningful_review_checks": [
+    "The unchanged384 evidence still produces the same accepted proof and displayed values.",
+    "A changed state incumbent without the exact new proof is refused.",
+    "Missing/wrong publication/CPU/four-audit/source or fresh-pool joins, one failed candidate gate and reused prior reference rows are refused.",
+    "Historical13objects and old validation remain byte-equivalent; new title/gains are derived from actual joined evidence only."
+  ],
+  "future_448_values": {
+    "qualified_publication": null,
+    "adoption": null,
+    "four_audits": null,
+    "fresh_reference_count": null,
+    "candidate_counts": null,
+    "cohort_gains": null,
+    "render_execution": null
+  },
+  "actions": {
+    "source_changed": false,
+    "data_changed": false,
+    "rendered": false,
+    "model_bytes_read": false,
+    "runtime_queried": false,
+    "qualification_inferred": false
+  }
+}

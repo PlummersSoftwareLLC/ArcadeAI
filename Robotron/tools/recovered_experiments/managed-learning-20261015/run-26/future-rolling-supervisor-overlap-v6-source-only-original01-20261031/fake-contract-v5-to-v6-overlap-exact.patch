@@ -1,0 +1,128 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-supervisor-softreset-and-refill-v5-original01-20261031/test_continuous_rolling_v5_fake_contracts_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-supervisor-overlap-v6-source-only-original01-20261031/test_continuous_rolling_v6_overlap_fake_contracts_v2.py
+@@ -1,6 +1,6 @@
+ """Root-only actual-method fake contracts. No production imports/processes/network.
+ 
+-Extracts only selected v5 constants, pure predicates and class definitions into
++Extracts only selected v6 constants, pure predicates and class definitions into
+ an isolated namespace. API, proc/TCP helper, Popen, clock, event persistence and
+ paths are FAKE collaborators. This establishes branch contracts, not kernel,
+ Main, fleet, throughput, scoring quality or runtime/deployment qualification.
+@@ -18,7 +18,7 @@
+ import time
+ from types import SimpleNamespace
+ 
+-SELECTED_SOURCE={'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-supervisor-softreset-and-refill-v5-original01-20261031/continuous_training_fleet_v5.py', 'sha256': '5687eb6b4927b3ddd71f251f4f3d042de5513ebcf0ff0cfe537a674dcca69814', 'bytes': 48472, 'identity': {'device': 2304, 'inode': 82604565, 'bytes': 48472, 'mtime_ns': 1793408872157346548, 'ctime_ns': 1793409015434420057, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
++SELECTED_SOURCE={'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-supervisor-overlap-v6-source-only-original01-20261031/continuous_training_fleet_v6.py', 'sha256': '986777d1be4a474bab21f968a1a30bbf79b58623682bad75c23417d140e85a6a', 'bytes': 50452, 'identity': {'device': 2304, 'inode': 80875130, 'bytes': 50452, 'mtime_ns': 1793415180137775030, 'ctime_ns': 1793415400490429976, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+ 
+ 
+ def check(ok,reason):
+@@ -65,14 +65,14 @@
+         self.clock=Clock();self.stored={};self.serial=0;self.spawns=[]
+         tree=ast.parse(raw);names={'MODE','CLEANUP_FLAGS','CONNECTION_FIELDS','ORIGINAL_FIELDS'}
+         body=[n for n in tree.body if (isinstance(n,ast.Assign)and any(isinstance(t,ast.Name)and t.id in names for t in n.targets))
+-            or isinstance(n,ast.FunctionDef)and n.name in ('require','closed_connection','train_refill_eligible','train_journal_binding')
++            or isinstance(n,ast.FunctionDef)and n.name in ('require','closed_connection','train_refill_eligible','train_journal_binding','train_observation_context')
+             or isinstance(n,ast.ClassDef)and n.name=='ContinuousTrainingFleet']
+-        check(len(body)==9,'Exact extracted constants/helpers/class inventory')
++        check(len(body)==10,'Exact extracted constants/helpers/class inventory')
+         self.ns=dict(json=json,hashlib=hashlib,math=math,time=self.clock,
+             os=SimpleNamespace(getuid=lambda:1001,environ={}),read=self.read,
+             exclusive=lambda path,**kw:self.save(dict(raw=kw.get('raw'))),
+             subprocess=SimpleNamespace(Popen=self.popen,STDOUT='FAKE_STDOUT'))
+-        exec(compile(ast.Module(body=body,type_ignores=[]),'<selected-v5-actual-methods>','exec'),self.ns)
++        exec(compile(ast.Module(body=body,type_ignores=[]),'<selected-v6-actual-methods>','exec'),self.ns)
+         self.cls=self.ns['ContinuousTrainingFleet']
+     def save(self,value):
+         self.serial+=1;pin=dict(path='/FAKE/'+str(self.serial),sha256=str(self.serial))
+@@ -165,6 +165,18 @@
+               'Original membership/history mutated')
+         check(f.records[100]['state']=='active_train'and old['token']in f.binding_closures,'Successful rebind state')
+         check(f.errors and not c.spawns,'Unrelated errors erased or a child spawned')
++        overlap,old,new,_=c.make();original=copy.deepcopy(overlap.binding_history)
++        overlap.observe_train(100,[old,new])
++        check(overlap.records[100]['state']=='reconnecting_train'
++            and overlap.children[100]['unbound_candidate_token']==new['token']
++            and overlap.binding_history==original and not overlap.tcp_calls,
++            'Overlap was adopted before unique candidate proof')
++        overlap.cleanup_by_token[old['token']]['FIFO_reset_executed']=False
++        overlap.observe_train(100,[new]);check(overlap.binding_history==original,'Incomplete cleanup adopted overlap candidate')
++        overlap.cleanup_by_token[old['token']]['FIFO_reset_executed']=True
++        c.complete(overlap)
++        check(overlap.children[100]['child'].pid==501 and len(overlap.binding_history[100])==2,
++              'Overlap to unique changed physical process or history')
+     group('01_same_owned_process_rebind_and_immutable_originals',success)
+     def incomplete():
+         for flag in c.ns['CLEANUP_FLAGS']+('ready_for_external_join','replay_admission_open'):
+@@ -197,12 +209,22 @@
+         f.physical.actor=aba;c.reject(lambda:f.observe_train(100,[new]),'Original actor changed')
+     group('04_actual_actor_environment_TCP_and_birth_ABA_refusals',physical)
+     def candidates():
+-        f,old,new,_=c.make();c.reject(lambda:f.observe_train(100,[new,new]),'Ambiguous')
++        f,old,new,_=c.make();c.reject(lambda:f.observe_train(100,[new,new]),'multiple fresh')
+         f,old,new,_=c.make();bad=dict(new,eval_only=True);c.reject(lambda:f.observe_train(100,[bad]),'changed TRAIN role')
+         for patch in [dict(token=old['token']),dict(connection_ns=old['connection_ns']),dict(client_id=True)]:
+-            f,old,new,_=c.make();bad=dict(new,**patch);c.reject(lambda:f.observe_train(100,[bad]),'Fresh never-used')
++            f,old,new,_=c.make();bad=dict(new,**patch);c.reject(lambda:f.observe_train(100,[bad]),
++                'altered old binding'if 'token'in patch else'Fresh never-used')
+         f,old,new,_=c.make();f.children[100]['child'].code=0;c.reject(lambda:f.observe_train(100,[new]),'Live owned TRAIN')
+         f,old,new,_=c.make(role=True);c.reject(lambda:f.observe_train(100,[new]),'Live owned TRAIN')
++        for rows in ('duplicate-old','two-fresh','altered-old','wrongrole'):
++            f,old,new,_=c.make()
++            observed=([old,old]if rows=='duplicate-old'else[new,dict(new,token='third')]if rows=='two-fresh'
++                else[dict(old,client_id=7),new]if rows=='altered-old'else[old,dict(new,eval_only=True)])
++            c.reject(lambda:f.observe_train(100,observed))
++            check(len(f.binding_history[100])==1,'Invalid overlap appended physical binding')
++        f,old,new,_=c.make();f.observe_train(100,[old,new]);changed=dict(new,token='another-pending',connection_ns=30)
++        c.reject(lambda:f.observe_train(100,[changed]),'Another unbound TRAIN token')
++        f.children[100]['child'].code=0;c.reject(lambda:f.close_original(100),'unbound token')
+     group('05_no_duplicate_role_token_PID_or_EVAL_adoption',candidates)
+     def repeat_and_deadline():
+         f,old,new,_=c.make();f.current=dict(new,token='changed-again')
+@@ -219,6 +241,10 @@
+         f,old,new,_=c.make();base=f.physical.tcp_binding
+         def slow(*args):c.clock.mono+=8;return base(*args)
+         f.physical.tcp_binding=slow;c.reject(lambda:f.observe_train(100,[new]),'exceeded declared')
++        c.clock.mono=100
++        f,old,new,_=c.make();f.observe_train(100,[old,new]);c.clock.mono+=15.001
++        c.reject(lambda:f.observe_train(100,[old,new]),'within declared')
++        check(len(f.binding_history[100])==1 and not f.tcp_calls,'Overlap outlived unchanged15s bound')
+         c.clock.mono=100
+     group('06_repeated_API_TCP_and_total_gap_deadline',repeat_and_deadline)
+     def history():
+@@ -322,6 +348,26 @@
+         def error(*args,**kwargs):raise AssertionError('EVAL drain ordering produced a slot error')
+         f.record_error=error;f.run()
+         check(f.completed_eval==1 and f.records[100]['state']=='closed_eval','EVAL natural terminal ordering/closure')
++        # Exercise actual TRAIN-prepass failure logging: bounded API-row evidence
++        # and quarantine must survive, without implying actual kernel ownership.
++        f,old,new,_=c.make();calls=[0];contexts=[];wrong=dict(new,eval_only=True)
++        def api(path,query=None):
++            calls[0]+=1
++            return dict(connections=[]if calls[0]==1 else[wrong]*5,
++                schema='robotron-continuous-active-connections-v1',server_stamp=f.cfg['trainer']['server_stamp'],
++                continuous_training_mode=True,main_measurement_entry_disabled=True,
++                observed_unix_s=1000.,observed_monotonic_ns=100000000000,measurement_generation=0)
++        f.get=api
++        def record(scope,slot,error,context=None):
++            contexts.append(copy.deepcopy(context));f.stopping=True;f.children[100]['child'].code=0
++        f.record_error=record;f.run()
++        check(len(contexts)==1 and contexts[0]['matching_row_count']==5
++            and len(contexts[0]['matching_rows'])==3 and contexts[0]['matching_rows_truncated']is True
++            and contexts[0]['matching_rows'][0]['eval_only']is True
++            and contexts[0]['expected_binding']==f.records[100]['connection_binding']
++            and contexts[0]['actual_kernel_or_exit_proof_claimed']is False
++            and f.records[100]['state']=='quarantined','Failure context omitted or changed quarantine')
++        check(len(json.dumps(contexts[0]).encode())<=8192,'Failure context exceeded declared bound')
+     group('10_fresh_bootstrap_refuses_live_takeover_stable_token_unchanged',bootstrap_and_unchanged)
+     return results
+ 
+@@ -347,7 +393,7 @@
+     sys.addaudithook(audit)
+     cases=run_groups(Contracts(raw))
+     after,_=fullpin(a.source);check(after==selected,'Selected source changed')
+-    report=dict(schema='robotron-rolling-supervisor-v5-fake-contract-report-v1',status='PASS_ENGINEERING_ONLY',
++    report=dict(schema='robotron-rolling-supervisor-v6-fake-contract-report-v1',status='PASS_ENGINEERING_ONLY',
+         tests=len(cases),failures=0,cases=cases,source=selected,elapsed_s=time.monotonic()-started,
+         all_collaborators_fake=True,production_imported=False,proc_API_network_subprocess_model_reads=False,
+         actual_kernel_TCP_or_Main_or_fleet_proved=False,deployment_or_quality_qualified=False)

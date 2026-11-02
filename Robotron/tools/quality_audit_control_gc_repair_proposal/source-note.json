@@ -1,0 +1,197 @@
+{
+  "schema": "robotron-quality-audit-control-GC-repair-source-preparation-v1",
+  "utc": "2026-10-18T05:13:32.288870+00:00",
+  "status": "SOURCE_ONLY_UNSELECTED_UNEXECUTED",
+  "source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/control_audit.py",
+    "sha256": "5790497e003f789373b61ae1e522bb31e8ba47881fa3b26d64430f62b871aba1",
+    "bytes": 16346,
+    "identity": {
+      "device": 2304,
+      "inode": 81529002,
+      "bytes": 16346,
+      "mtime_ns": 1792300294498642413,
+      "ctime_ns": 1792300350422878385,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "upstream_source_pins": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/postaccepted-newgame-quality-R1-audit-wait-source-preparation-20261017/control_audit.py",
+      "sha256": "db6e9399792aecb3fb3e84e255a2e208f6a2981316f6e76c306cca5af049f986",
+      "bytes": 5981,
+      "identity": {
+        "device": 2304,
+        "inode": 83230722,
+        "bytes": 5981,
+        "mtime_ns": 1792294133521694583,
+        "ctime_ns": 1792294572770939189,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/postaccepted-newgame-quality-R1-audit-wait-source-preparation-20261017/wait_then_audit.py",
+      "sha256": "0a1c957afbd1a2877a8217f15458525ab535bd148997956e39d10ea45cf4749a",
+      "bytes": 17335,
+      "identity": {
+        "device": 2304,
+        "inode": 83230723,
+        "bytes": 17335,
+        "mtime_ns": 1792294479012528438,
+        "ctime_ns": 1792294572767939176,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/accepted-newgame-forward-recovery-root-control-20261017/control.py",
+      "sha256": "01a6ef1974503cc838a9e710a6e277ff7796fbe16fba6376cc210f0572a9c9b6",
+      "bytes": 5980,
+      "identity": {
+        "device": 2304,
+        "inode": 81920405,
+        "bytes": 5980,
+        "mtime_ns": 1792289634802873184,
+        "ctime_ns": 1792289650769910479,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  ],
+  "problem": "Old db6 archives a nonzero auditor faithfully, then asserts timer stop0 even when its already-elapsed transient timer has autoGCed. This aborts before failed retained service cleanup and the final owned-release receipt. The original audit nonzero and every failed archive/stop remain facts.",
+  "implementation": [
+    "New separate source; selected db6, waiter0a1 and original01a6 are unchanged.",
+    "Same-process launch\u2192observe only. Successful exact launch timer cat/show plus InvocationID/Unit and sealed archive are required; observe cannot adopt historical output identities.",
+    "All six original command records/raw streams keep actual exit or timeout status. original_archive_status and all_six_original_archive_commands_succeeded expose incomplete commands.",
+    "Already-absent timer is skipped, not represented as stop0. Timer stop5 is accepted only after exact launch evidence, fresh original preflight and subsequent not-found; its actual5 remains in receipt.",
+    "Timer then service actions require exact original invocation/identity or observed absence. Unknown/replaced units are not stopped or reset. Only the authenticated original failed state may be reset.",
+    "Incomplete observation/archive/release emits the new final schema with unit_released=false and lifecycle_complete=false, preserving linked partial release records. Successful cleanup never changes original_exit. CLI returns original nonzero audit exit; exit0 requires complete lifecycle.",
+    "pin and publish function bodies are byte-identical to db6. The systemd retained Type=exec/RemainAfterExit/Restart=no,3s timer, CUDAhidden/unset environment, first-identity .01s poll and direct payload recipe remain; config is constrained to existing bounded audit fields."
+  ],
+  "future_integration": {
+    "call_sequence": [
+      "authenticate selected new source and root-filled closed config",
+      "launch(config_path)",
+      "observe(config_path) in the SAME module/process"
+    ],
+    "config_fields": [
+      "unit",
+      "output",
+      "argv",
+      "properties",
+      "pins",
+      "observation_s"
+    ],
+    "config_pin_identity": "Existing outer path/sha256/bytes plus minimal5 identity {device,inode,mode,uid,nlink}; source-note/source pins here are truthful full8 current fingerprints.",
+    "CLI": [
+      "/usr/bin/python3",
+      "-B",
+      "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/control_audit.py",
+      "--execute",
+      "--expected-source-sha256",
+      "5790497e003f789373b61ae1e522bb31e8ba47881fa3b26d64430f62b871aba1",
+      "--config",
+      null
+    ],
+    "actual_config": null,
+    "actual_unit": null,
+    "actual_output": null,
+    "actual_payload": null,
+    "actual_outcomes": null,
+    "receipt_schema": "robotron-root-audit-original-result-and-GC-aware-owned-release-v1",
+    "integration_limit": "Selected waiter0a1 reverse-proves the old control body and will reject this copy. A future separately reviewed binding/finite waiter change is necessary; do not replace its adjacent selected file. New receipt is distinct. No current campaign adoption."
+  },
+  "source_only_test_cases": [
+    {
+      "name": "default_plan_readfree",
+      "setup": "No --execute; prohibit filesystem reads/subprocesses/publish via stock stdlib fakes.",
+      "required_outcome": "PLAN_ONLY/0; no outputs, queries, imports of project code or actions.",
+      "executed": false
+    },
+    {
+      "name": "audit0_loaded_timer",
+      "setup": "Observed original auditor PID/start/inv/N0; Code1/exit0; six commands all0; timer stays original loaded until owned stop.",
+      "required_outcome": "Six actual exits retained; exact timer-first/service stop then absence; lifecycle_complete/unit_released true; audit_success true; CLI0.",
+      "executed": false
+    },
+    {
+      "name": "audit2_timer_autoGC_before_archive",
+      "setup": "Genuine exact launch cat/show0 and timer invocation; Code1/exit2; terminal six exits [0,0,0,0,1,0]; timer absent in archive and fresh checks.",
+      "required_outcome": "No timer stop fabricated or issued; original audit2 and Result exit-code retained, all-six-success false, both absence confirmations recorded; CLI2 even when lifecycle complete.",
+      "executed": false
+    },
+    {
+      "name": "audit0_timer_autoGC_before_release",
+      "setup": "Exact launch/terminal originals; timer show/cat/journal all0 but fresh before-stop timer shows not-found.",
+      "required_outcome": "Skip timer stop with explicit already-absent classification and launch/terminal evidence; service only authenticated original; CLI0 after both absence checks.",
+      "executed": false
+    },
+    {
+      "name": "timer_GC_between_preflight_and_stop",
+      "setup": "Fresh preflight shows same exact launch invocation and Unit; timer stop returns5 then exact show0 reports not-found.",
+      "required_outcome": "Preserve stop5 and autoGC-race classification; no second timer stop/reset; service can close only after timer absence; original auditor exit unchanged.",
+      "executed": false
+    },
+    {
+      "name": "missing_or_wrong_launch_timer_evidence",
+      "setup": "Missing launch-time show/cat0, absent/invalid timer invocation, wrong Unit, modified sealed archive, or observe from a fresh module without its own launch.",
+      "required_outcome": "Refuse before any cleanup action; no retrospective identity/adoption; launch failure receipt or incomplete observation evidence, never unit_released true.",
+      "executed": false
+    },
+    {
+      "name": "foreign_timer_or_service",
+      "setup": "Replace timer invocation/Unit or service invocation/MainPID/ExecMainPID/NRestarts between original archive and before-action query.",
+      "required_outcome": "No stop/reset of mismatched unit; incomplete final receipt, unit_released/lifecycle_complete false; original outcome remains separate.",
+      "executed": false
+    },
+    {
+      "name": "unexpected_archive_failure",
+      "setup": "Service cat/journal nonzero, timer journal nonzero, show failure/timeout, or timer cat1 while a fresh timer query still finds it loaded.",
+      "required_outcome": "Preserve all actual per-command outcomes/raw streams; no six-success claim; no cleanup until required identity/archive predicates pass; incomplete receipt.",
+      "executed": false
+    },
+    {
+      "name": "stop_or_reset_failure",
+      "setup": "Exact original stop is attempted but returns unaccepted nonzero, or matching failed-state reset/final absence fails.",
+      "required_outcome": "Partial release records retain before/stop/after/reset commands; incomplete result flags remain false and original audit nonzero is preserved.",
+      "executed": false
+    },
+    {
+      "name": "missed_live_identity_or_deadline",
+      "setup": "Original finishes before its actual PID/start was bracketed, an unexpected signal terminal occurs, or observational deadline expires.",
+      "required_outcome": "No invented PID/start or old identity-file adoption; no stop/retry; explicit incomplete observation receipt where launch context was authenticated.",
+      "executed": false
+    },
+    {
+      "name": "command_timeout_truth",
+      "setup": "A command times out with partial stdout/stderr.",
+      "required_outcome": "Archive partial bytes with exit null/timed_out true and actual error; never invent return0; fail closed at identity/release gates.",
+      "executed": false
+    },
+    {
+      "name": "same_process_one_attempt_and_config",
+      "setup": "Call launch twice or observe twice, change config/source PIN, or supply result_path/expected_tests/changed resources.",
+      "required_outcome": "Refuse repeated scheduling/observation or unapproved config; no payload retry; existing six-field CPU100/512M/60s scope and hidden CUDA remain fixed.",
+      "executed": false
+    }
+  ],
+  "tests_executed": 0,
+  "proposal_imported": false,
+  "default_executed": false,
+  "runtime_queries": false,
+  "model_metadata_or_body_access": false,
+  "review_risks": [
+    "No runtime behavior or future test pass is claimed. Root may implement/run these stdlib-faked cases only after campaign release and explicit selection.",
+    "systemctl stop/reset is name-based and has no invocation compare-and-swap. Guards query exact identity immediately before each action; root must retain exclusive ownership of its unique audit names across that check/action interval.",
+    "If original live PID/start is missed, launch timer evidence is missing, a source/config changes, or an identity is ambiguous, this proposal leaves unresolved units untouched for explicit root handling.",
+    "Launch/scheduling failures produce root-launch-error-preserved.json rather than pretending an observed original audit exists. They do not grant owned-release success.",
+    "An unexpected terminal signal does not become an ordinary Code1 audit exit; bounded observation remains incomplete and no cleanup is authorized by an invented exit.",
+    "The pure metadata control launches only the exact root-approved auditor argv; proving that selected argv/plan/binding/source closure is still a future root/waiter obligation. No quality criteria, error classifier, rows, scorer, cohort timing or installed sources are altered."
+  ]
+}

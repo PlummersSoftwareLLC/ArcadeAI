@@ -1,0 +1,31 @@
+ADDITIVE CONDITIONAL8 MOCK FIXTURE CORRECTION — SOURCE ONLY
+
+Original manifest6efd771b862f97b08870c8cdf2ffb2e31f0da8d3f12e4c9bc2111db0ed991701
+and every original13 pinned file remain unchanged/0444. Root's first actual59
+stdlib run FAILED with57 passes and2 errors, original ExecMainCode1/Status1,
+invocation57f18102ae05411584b11880591a967e PID5681. Both errors were the fake
+Torch object missing float16 when the actual forward helper requested autocast.
+No GPU launch or448pause occurred. Preserve that real failed result/logs; it is
+not reclassified as an execution success or a numerical comparison failure.
+
+Original actual archive:
+ run-26/live8-conditional8-guards-root-execution-reviewed1-20261017/root-original-terminal-archive.json
+ SHAcdefd11a86898e22727418d4ad77e0034ea8702eafb6d28a5335d4957d9ca21e
+Original actual release/result:
+ run-26/live8-conditional8-guards-root-execution-reviewed1-20261017/root-result-review-and-release.json
+ SHA36a986b9d5f83271cb59429482192cd117f583149987fbdb583a388c31e38a5b
+
+The NEW same-package test_reconstruction_contract_reviewed2.py is copied from
+the original0fadd77d fixture and adds ONLY float16='float16' to its fake Torch
+SimpleNamespace. Existing assertions, fault injections, datasets, expected59
+count, parent02af5b4a/worker182f008a/lock68327866, tolerances and guards do not
+change. Its relative parent/worker imports retain the same package prefix.
+The sentinel is passed to an already mocked autocast context; no Tensor/Torch
+import or numerical behavior is involved in this fixture correction.
+
+Root selects the NEW final test module, never imports/reruns the old16 alongside
+the corrected16. Existing18process+25storage remain selected, total59. New
+planned-argv-reviewed2.json contains exact3module selection; companion manifest
+pins all original files plus additive source/evidence. Root owns a new unique
+test unit/output and any future GPU launch after source review/actual tests.
+No tests/imports/default/compile/actions or numerical reads by this author.

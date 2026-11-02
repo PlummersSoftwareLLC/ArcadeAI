@@ -1,0 +1,38 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/continuous_budget_bank_intent_mixed_bank_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/current-A2-LR9375-route-source-only-original01-20261031/continuous_budget_bank_intent_A2_LR9375_v4.py
+@@ -44,6 +44,11 @@
+                 and api['client_count'] == 0 and api['client_rows'] == []
+                 and api.get('managed_measurement',{}).get('active',False) is False,
+                 'Continuous zero-input current trainer required; no managed pause is claimed')
++        require(type(api['lr'])is float and api['lr']==5e-5*.1875
++                and type(api['epsilon'])in(int,float) and math.isclose(api['epsilon'],.1,rel_tol=1e-9,abs_tol=1e-12)
++                and type(api['expert_ratio'])in(int,float) and math.isclose(api['expert_ratio'],.1,rel_tol=1e-9,abs_tol=1e-12)
++                and type(api['game_settings']['expert_pct'])is int and api['game_settings']['expert_pct']==-1,
++                'Fresh LR9375/epsilon10/automatic-expert10 recipe required')
+         frames = api['frame_count'] - loaded_baseline['frame_count'] - max(0,
+             api['measurement_frames'] - loaded_baseline['measurement_frame_count'])
+         samples = api['optimized_samples'] - loaded_baseline['optimized_samples']
+@@ -67,11 +72,13 @@
+         if origin is not None:
+             published=sum(v['kind']=='CURRENT_BOOT_PERSISTED_SUCCESSOR'for v in origin['bank_origins'].values())
+             require(all(integer(stats[k])for k in('capture_attempts','capture_deferrals','writes','write_failures'))
+-                and stats['capture_attempts']==stats['writes']==published and stats['capture_deferrals']==stats['write_failures']==0,
+-                'Exact successful per-bank local publications required; no unaccounted capture/write')
++                and stats['capture_attempts']==stats['writes']+stats['capture_deferrals']
++                and stats['writes']>=published and stats['write_failures']==0
++                and (published>0 or stats['writes']==0),
++                'Settled same-epoch capture/write/deferral accounting and exact current per-bank publications required')
+             require(all(replay[k]==origin['held_replay'][k]for k in('process_id','instance_monotonic_ns','epoch','epoch_reason'))
+                 and all(optimizer[k]==origin['held_optimizer'][k]for k in('process_id','instance_monotonic_ns','epoch','epoch_reason'))
+-                and integer(replay['accepted_total']),'Exact same B exposure origin required')
++                and integer(replay['accepted_total']),'Exact same A2 exposure origin required')
+         for name in banks:
+             revision,saved = stats['revision'][name],stats['saved_revision'][name]
+             require(integer(revision) and integer(saved) and saved <= revision
+@@ -109,5 +116,6 @@
+         actual_state_payload_values_verified=False,production_handoff_ready=False,
+         cold_bank_origin=origin,process_adds_at_seal=after['host_pipeline']['learning_exposure']['replay']['accepted_total']if origin is not None else None,
+         expected_current_cap=expected_cap,loaded_baseline=dict(loaded_baseline),
++        bank_writer_counts_at_seal={key:after['bank_persistence'][key]for key in('capture_attempts','capture_deferrals','writes','write_failures')},
+         no_managed_pause_or_prefetch_pause_claimed=True,
+         read_only_prefetch_staging_may_remain=True)

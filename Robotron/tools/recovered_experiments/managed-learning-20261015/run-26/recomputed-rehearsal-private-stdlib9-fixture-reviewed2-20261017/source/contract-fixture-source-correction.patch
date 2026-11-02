@@ -1,0 +1,12 @@
+--- frozen-authored-test_rehearsal_contract.py
++++ test_rehearsal_contract_reviewed2.py
+@@ -155,7 +155,8 @@
+         def train(*args):
+             calls.append('train');raise primary
+         ctx=NS(torch=NS(cuda=NS(synchronize=sync)),science=NS(make_private_replay=lambda ctx:object(),
+-            optimizer_observation=lambda ctx:{}),agent=NS(device='owned',_learning_optimizer_exposure=object(),
++            optimizer_observation=lambda ctx:{}),agent=NS(device='owned',online_net=object(),target_net=object(),
++                _learning_optimizer_exposure=object(),
+                 grad_scaler=NS(get_scale=lambda:1048576.,state_dict=lambda:{'_growth_tracker':27})),
+             paths={'root':directory.parent},cfg=NS(),runtime={},requires_grad={},
+             training=NS(replay_pressure_reached=lambda agent:False,train_step=train,_beta_schedule=lambda frames:1.),

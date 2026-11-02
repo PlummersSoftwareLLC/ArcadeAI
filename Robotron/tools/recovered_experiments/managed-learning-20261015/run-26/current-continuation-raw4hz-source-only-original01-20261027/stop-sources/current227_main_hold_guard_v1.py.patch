@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/capacity-original-full-reviewer-CPU-original01-preparation-20261019/immutable-main-hold-guard.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/stop-sources/current227_main_hold_guard_v1.py
+@@ -77,7 +77,7 @@
+ 
+ def healthy(api, baseline, experiment, now):
+     require(api['client_count']==192 and api['training_enabled'] is True and api['measurement_active'] is False
+-            and api['managed_experiment']==experiment and api['lr']==1.25e-5, 'Held main192 recipe changed')
++            and api['managed_experiment']==experiment and api['lr']==6.25e-6, 'Held main192 recipe changed')
+     require(api['pipeline_read_error']==api['bank_persistence_read_error']=='', 'Pipeline/bank read error')
+     age=now-api['ts'];pipeline_age=api['pipeline_snapshot_age_s']
+     require(type(age) in (int,float) and math.isfinite(age) and 0<=age<=5

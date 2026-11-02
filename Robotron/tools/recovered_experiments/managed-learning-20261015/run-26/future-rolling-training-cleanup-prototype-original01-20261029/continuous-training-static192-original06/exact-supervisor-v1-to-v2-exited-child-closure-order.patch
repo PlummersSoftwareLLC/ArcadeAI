@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/continuous_training_fleet_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/continuous_training_fleet_v2.py
+@@ -391,7 +391,7 @@
+                             except (FileNotFoundError,ProcessLookupError,ValueError):bound=False
+                             require(bound or time.monotonic()-item['started']<=self.cfg['startup_s'],
+                                     'Exact original child did not bind within declared5s bootstrap')
+-                        if row['state']in('active_train','active_eval'):
++                        if row['state']in('active_train','active_eval')and item['child'].poll()is None:
+                             current=[c for c in batch['connections']if c['client_slot']==slot]
+                             require(len(current)==1 and current[0]['token']==item['token'],
+                                     'Original connection changed; preserve actor, require explicit new health binding')

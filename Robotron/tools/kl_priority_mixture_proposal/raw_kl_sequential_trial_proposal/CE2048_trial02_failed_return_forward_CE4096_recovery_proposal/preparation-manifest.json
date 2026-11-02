@@ -1,0 +1,274 @@
+{
+  "schema": "robotron-CE2048-trial02-failed-return-forward-CE4096-repair-source-manifest-v1",
+  "status": "SOURCE_ONLY_ESSENTIAL_PEER_PASS_UNEXECUTED",
+  "prepared_utc": "2026-10-17T21:36:21.791640+00:00",
+  "files": {
+    "run_forward_ce_repair.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_failed_return_forward_CE4096_recovery_proposal/run_forward_ce_repair.py",
+      "sha256": "4df178f5dd0c9a0a3474c94070df5971e68b137e4a14ae139f617fe6de6f444f",
+      "bytes": 22871,
+      "identity": {
+        "device": 2304,
+        "inode": 86245401,
+        "bytes": 22871,
+        "mtime_ns": 1792272901317835715,
+        "ctime_ns": 1792272981777192061,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "test_forward_ce_repair.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_failed_return_forward_CE4096_recovery_proposal/test_forward_ce_repair.py",
+      "sha256": "646f0eef7228c96743511e176c777da25793611ea09dd7e5935609e24baae14e",
+      "bytes": 10888,
+      "identity": {
+        "device": 2304,
+        "inode": 86245402,
+        "bytes": 10888,
+        "mtime_ns": 1792272908104711785,
+        "ctime_ns": 1792272981779192070,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "upstream": {
+    "original_repair": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_failed_startup_forward_CE4096_recovery_proposal/run_forward_ce_repair.py",
+      "sha256": "dbc7946811bcaac0da19fba1169321f5df15b5d271c58c0b7ab1ab977f1616a3",
+      "bytes": 16520,
+      "identity": {
+        "device": 2304,
+        "inode": 85721187,
+        "bytes": 16520,
+        "mtime_ns": 1792261616835864180,
+        "ctime_ns": 1792261851866023545,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "installed_CE_trial": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_one_trial_installed_ce_revision2_proposal/run_one_trial.py",
+      "sha256": "1d007e6407e807575149084aff63ad0df27e677bf6f40f373d5267973893b85f",
+      "bytes": 46164,
+      "identity": {
+        "device": 2304,
+        "inode": 84285275,
+        "bytes": 46164,
+        "mtime_ns": 1792241233710783032,
+        "ctime_ns": 1792241499867150804,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "installed_CE_deadline": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_one_trial_installed_ce_revision2_proposal/deadline_guard.py",
+      "sha256": "8df7491a59025e07387bdf0d392ca2b748511d7adae3cf087abf342a5acfe36a",
+      "bytes": 17865,
+      "identity": {
+        "device": 2304,
+        "inode": 84285276,
+        "bytes": 17865,
+        "mtime_ns": 1792241200659833116,
+        "ctime_ns": 1792241499867150804,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "installed_CE_adapter": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_one_trial_installed_ce_revision2_proposal/run_raw_kl_transition.py",
+      "sha256": "fd4e9d7b9b562c2bd6c663b9651d02b4167a3f552fcacb71cb8571440f3e9bf5",
+      "bytes": 62575,
+      "identity": {
+        "device": 2304,
+        "inode": 84285291,
+        "bytes": 62575,
+        "mtime_ns": 1792241233709314962,
+        "ctime_ns": 1792241499867150804,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "known_historical_inputs": {
+    "activation_job": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-final-root-preparation-20261017/activation-job-FINAL.json",
+      "sha256": "79b572fe448a78d654f4b7b1b8d745e407759fae8c2089815564ccbff03854ee",
+      "bytes": 376510,
+      "identity": {
+        "device": 2304,
+        "inode": 81156702,
+        "bytes": 376510,
+        "mtime_ns": 1792270167862445393,
+        "ctime_ns": 1792270167862445393,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "trial_result": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-controller-20261017/result.json",
+      "sha256": "fbb6b71425bee026aaaa49646fa550fe1b9e8435a7da81c10844eefb9c35b6b0",
+      "bytes": 21794,
+      "identity": {
+        "device": 2304,
+        "inode": 81160189,
+        "bytes": 21794,
+        "mtime_ns": 1792272491003180932,
+        "ctime_ns": 1792272491003180932,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "return_job": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-controller-20261017/return-job.json",
+      "sha256": "2973f3271098a7e8e5cec8aba1f92ad4c22f19a44e28de8d8a5c986ff7531a58",
+      "bytes": 377318,
+      "identity": {
+        "device": 2304,
+        "inode": 81160036,
+        "bytes": 377318,
+        "mtime_ns": 1792272398829472659,
+        "ctime_ns": 1792272398829472659,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "return_result": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-return4096-20261017/result.json",
+      "sha256": "ef8e6cf97a85e61dbc837eccb8b9223732be629b5b47a1d2df7fb78384cb7f97",
+      "bytes": 6643,
+      "identity": {
+        "device": 2304,
+        "inode": 81160187,
+        "bytes": 6643,
+        "mtime_ns": 1792272490975727026,
+        "ctime_ns": 1792272490975727026,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "failed_startup_CPU_report": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-return4096-20261017/startup-phase-CPU/cpu-report-readonly.json",
+      "sha256": "0d58fc5d8bb3805169ab5f0ccacfc70052d3c3a93350e575c945dcb67141d775",
+      "bytes": 68505,
+      "identity": {
+        "device": 2304,
+        "inode": 81160184,
+        "bytes": 68505,
+        "mtime_ns": 1792272452713643049,
+        "ctime_ns": 1792272452713643049,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "failed_return_founder_record": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-return4096-20261017/phase-record.json",
+      "sha256": "7fa4324138e34b89123a34e0b0e3d7ed425d00bcaf9627b38e7f69c3557cb5c9",
+      "bytes": 560,
+      "identity": {
+        "device": 2304,
+        "inode": 81160134,
+        "bytes": 560,
+        "mtime_ns": 1792272405117809411,
+        "ctime_ns": 1792272405117809411,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "independent_essential_peer": "runtime_review SOURCE/API/7guard PASS at source4df178f5 and test646f0eef; final receipt follows manifest",
+  "guard_class": "FailedReturnRepairContracts",
+  "guard_methods": 7,
+  "guard_executed": false,
+  "guard_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_failed_return_forward_CE4096_recovery_proposal",
+    "-p",
+    "test_forward_ce_repair.py",
+    "-v"
+  ],
+  "execute_argv_template": [
+    "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "-u",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_failed_return_forward_CE4096_recovery_proposal/run_forward_ce_repair.py",
+    "--execute",
+    "--job",
+    null,
+    "--expected-job-sha256",
+    null,
+    "--expected-source-sha256",
+    "4df178f5dd0c9a0a3474c94070df5971e68b137e4a14ae139f617fe6de6f444f"
+  ],
+  "job_fields": [
+    "schema",
+    "activation_job",
+    "trial_result",
+    "return_job",
+    "return_result",
+    "failed_startup_CPU_report",
+    "newest_CPU_job",
+    "newest_CPU_report",
+    "newest_CPU_release",
+    "repair_intent",
+    "output_directory",
+    "phase_id",
+    "request_id",
+    "startup_tag",
+    "current_completed_request",
+    "settings_lifecycle",
+    "current_dropin"
+  ],
+  "unchanged_complete_function_bodies": [
+    "require",
+    "load",
+    "archive_report",
+    "runtime_for_repair",
+    "start_repair_CE4096",
+    "main"
+  ],
+  "changed_function_bodies": [
+    "validate",
+    "restore"
+  ],
+  "new_functions": [
+    "ready_with_budget",
+    "wait_current_CSV4096"
+  ],
+  "maintenance_scope": [
+    "Original trial02 and original return remain FAILED; no retroactive COMPLETE or quality eligibility.",
+    "Exactly one NEW CE4096 phase, previous_metricCE, boot from separately verified actual newest of exact retired requested CE4096 owner.",
+    "Actual activation before4096/helper/fleet context is historical only; current owner/founder/floor/latest/dropin/slot come from failed return and fresh root CPU/job.",
+    "Startup0 CPU and independent444 report archive precede actor admission.",
+    "Real post-start CSV4096/cap8/client192 is required within original owned-start+600; mismatched NEW row and nonpending owner/source/API/log/clock errors refuse.",
+    "Log offsets arm once before resume; final inherited configuration uses checked incremental read and restores original methods; compatible transition events retain existing classification.",
+    "Original actor attempt-all undo, exact-owned failure retirement and no-newestCPU-rerun/no-source-rollback behavior retained."
+  ],
+  "future_actual_repair_job": null,
+  "future_actual_recovery_owner": null,
+  "future_actual_recovery_result": null,
+  "actual_execution": null,
+  "author_actions": [
+    "Source/AST/JSON/hash reads and NEW source/test/manifest authoring only; no project/helper imports/tests/runtime/API/process/systemd/GPU/PT-model or canonical/installed/control actions"
+  ]
+}

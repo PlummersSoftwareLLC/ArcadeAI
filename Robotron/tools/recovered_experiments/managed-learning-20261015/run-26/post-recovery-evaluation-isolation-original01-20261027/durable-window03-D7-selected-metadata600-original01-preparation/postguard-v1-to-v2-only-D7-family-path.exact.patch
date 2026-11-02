@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-selected-metadata600-original01-preparation/prepare_window03_D7_postguard_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-selected-metadata600-original01-preparation/prepare_window03_D7_postguard_v2.py
+@@ -15,7 +15,7 @@
+ L=Path(__file__).resolve().parent
+ META=L/'actual-metadata-preparation-original01'
+ ST=I/'durable-window03-D7-fixed-RCRC-study-original01'
+-F=I/'declared-launcher-evaluator-adapters-original06-fresh-study-namespaces-preparation/source-family-original02-unit-authority'
++F=I/'declared-launcher-evaluator-adapters-original07-proof2s-preparation/source-family-original01'
+ Q=L/'closed-metadata-reuse-guard-final-original01-preparation'
+ OVERRIDE=L/'selected-closed-metadata-guard-original01.json'
+ BASE=ST/'ROOT-resource-readiness-original01.json'

@@ -1,0 +1,746 @@
+--- a/Robotron/Scripts/dqn/agent.py
++++ b/Robotron/Scripts/dqn/agent.py
+@@ -276,6 +276,19 @@
+         except Exception:
+             self.grad_scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
+ 
++        # Startup/rebuild-only diagnostic. OFF imports no observer and leaves
++        # the existing sampler and four-output compiled loss contract intact.
++        self._executed_ce_trace = None
++        _trace_directory = os.getenv("DQN_EXECUTED_CE_TRACE_DIR", "").strip()
++        if _trace_directory:
++            from .executed_ce_trace import ExecutedCETrace
++            self._executed_ce_trace = ExecutedCETrace(_trace_directory, cfg,
++                optimizer_exposure=self._learning_optimizer_exposure,
++                runtime=dict(torch=str(torch.__version__), cuda=torch.version.cuda,
++                    device=str(self.device), use_amp=bool(self.use_amp),
++                    fused_adam=bool(self.optimizer.defaults.get("fused", False)),
++                    effective_gil_enabled=(sys._is_gil_enabled() if hasattr(sys, "_is_gil_enabled") else None)))
++
+         # torch.compile: MUST complete before the background train thread or
+         # socket server exist — all dynamo tracing has to happen serially on
+         # this thread (executing a compiled fn while another thread traces
+@@ -301,6 +314,7 @@
+                 and (not self._exact_graph_requested or self._exact_graph_loaded)
+                 and not self._prefetch_paused and getattr(metrics, "training_enabled", True)
+                 and not replay_pressure_reached(self),
++                trace_observer=self._executed_ce_trace,
+             )
+ 
+         # Background training thread
+@@ -447,10 +461,12 @@
+                 # Diagnostic mode is a static module flag, never a runtime
+                 # Python branch inside the optimized graph.
+                 self.compiled_training_loss = torch.compile(
+-                    TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=False),
++                    TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=False,
++                                 trace_rows=self._executed_ce_trace is not None),
+                     dynamic=False, options=compile_options)
+                 self.compiled_training_loss_diagnostics = torch.compile(
+-                    TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=True),
++                    TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=True,
++                                 trace_rows=self._executed_ce_trace is not None),
+                     dynamic=False, options=compile_options)
+                 actions = torch.zeros(bsz, device=self.device, dtype=torch.long)
+                 rewards = torch.zeros(bsz, device=self.device, dtype=torch.float32)
+@@ -463,9 +479,10 @@
+                     for train_states in _variants(bsz, self.device, torch.float32):
+                         next_states = train_states.clone()
+                         with torch.autocast("cuda", dtype=torch.float16, enabled=amp_on):
+-                            warm_loss, _, _, _ = loss_fn(
++                            warm_outputs = loss_fn(
+                                 train_states, actions, rewards, next_states,
+                                 dones, horizons, expert, weights, schedule)
++                            warm_loss = warm_outputs[0]
+                         warm_loss.backward()
+                         self.online_net.zero_grad(set_to_none=True)
+             else:
+@@ -1119,7 +1136,10 @@
+                 return None
+             beta = _beta_schedule(metrics.frame_count)
+             t0 = time.perf_counter()
+-            batch = self.memory.sample(RL_CONFIG.batch_size, beta=beta)
++            if self._executed_ce_trace is None:
++                batch = self.memory.sample(RL_CONFIG.batch_size, beta=beta)
++            else:
++                batch = self._executed_ce_trace.sample(self.memory, RL_CONFIG.batch_size, beta)
+             self._pending_batch_sample_ms = (time.perf_counter() - t0) * 1000.0
+             return batch
+         except Exception:
+--- a/Robotron/Scripts/dqn/prefetch.py
++++ b/Robotron/Scripts/dqn/prefetch.py
+@@ -53,6 +53,7 @@
+     _slot: _Slot = field(repr=False)
+     _epoch: int = field(repr=False)
+     stage_host_ms: float = 0.0
++    draw_metadata: object = field(default=None, repr=False)
+     _consumer_stream: object = field(default=None, repr=False)
+     _released: bool = field(default=False, repr=False)
+     _release_lock: object = field(default_factory=threading.Lock, repr=False)
+@@ -107,12 +108,14 @@
+     """
+ 
+     def __init__(self, memory, batch_size, beta_fn, device, use_amp=False,
+-                 depth=2, enabled_fn=None, min_replay_size=None, direct_state_fill=False):
++                 depth=2, enabled_fn=None, min_replay_size=None, direct_state_fill=False,
++                 trace_observer=None):
+         self.memory = memory
+         self.batch_size = max(1, int(batch_size))
+         self.beta_fn = beta_fn
+         self.device = torch.device(device)
+         self.use_amp = bool(use_amp)
++        self.trace_observer = trace_observer
+         # Default remains the proven allocating sample/stage path. Unrelated
+         # replay implementations without sample_into retain that fallback.
+         self.direct_state_fill = bool(direct_state_fill and callable(getattr(memory, "sample_into", None))
+@@ -229,12 +232,20 @@
+                     sample_t0 = time.perf_counter()
+                     if self.direct_state_fill:
+                         states_out, next_states_out = self._direct_state_outputs(slot)
+-                        batch = self.memory.sample_into(
+-                            self.batch_size, states_out, next_states_out, beta=float(self.beta_fn()),
+-                        )
++                        if self.trace_observer is None:
++                            batch = self.memory.sample_into(
++                                self.batch_size, states_out, next_states_out, beta=float(self.beta_fn()),
++                            )
++                        else:
++                            batch = self.trace_observer.sample(self.memory, self.batch_size,
++                                float(self.beta_fn()), state_out=(states_out, next_states_out))
+                         self.direct_state_batches += int(batch is not None)
+                     else:
+-                        batch = self.memory.sample(self.batch_size, beta=float(self.beta_fn()))
++                        if self.trace_observer is None:
++                            batch = self.memory.sample(self.batch_size, beta=float(self.beta_fn()))
++                        else:
++                            batch = self.trace_observer.sample(self.memory, self.batch_size,
++                                float(self.beta_fn()))
+                     sample_ms = (time.perf_counter() - sample_t0) * 1000.0
+                     if batch is None:
+                         self._recycle(slot)
+@@ -248,6 +259,7 @@
+                     prepared = PreparedBatch(
+                         tuple(batch), slot.device, sample_ms, self, slot, epoch,
+                         stage_host_ms=stage_host_ms,
++                        draw_metadata=getattr(batch, "draw_metadata", None),
+                     )
+                     with self._state:
+                         if epoch != self._epoch or self._stop.is_set():
+--- a/Robotron/Scripts/dqn/loss_kernel.py
++++ b/Robotron/Scripts/dqn/loss_kernel.py
+@@ -25,7 +25,7 @@
+     measured before projection and before target smoothing.
+     """
+ 
+-    def __init__(self, online_net, target_net, cfg, diagnostics=True):
++    def __init__(self, online_net, target_net, cfg, diagnostics=True, trace_rows=False):
+         super().__init__()
+         self.online_net = online_net
+         self.target_net = target_net
+@@ -41,6 +41,7 @@
+         self.q_temperature = max(1e-3, float(getattr(cfg, "expert_q_policy_temperature", 10.0)))
+         self.q_margin = float(getattr(cfg, "expert_q_margin", 0.5))
+         self.diagnostics = bool(diagnostics)
++        self.trace_rows = bool(trace_rows)
+ 
+     def forward(self, states, actions, rewards, next_states, dones, horizons,
+                 is_expert, weights, schedule_weights):
+@@ -58,6 +59,8 @@
+             target_p_a = target_p[rows, best]
+             gamma_n = self.gamma ** horizons
+             target_support = rewards[:, None] + (1.0 - dones[:, None]) * gamma_n[:, None] * support[None, :]
++            if self.trace_rows:
++                unclipped_trace_support = target_support
+             if self.diagnostics:
+                 target_probabilities = target_p_a.float()
+                 below_support_mass = (
+@@ -111,19 +114,31 @@
+         bc_active = (schedule_weights[0] > 0.0) & (expert_count > 0.0)
+         bc_loss = torch.where(bc_active, masked_bc, torch.zeros_like(masked_bc))
+         effective_bc = (schedule_weights[0] * expert_fraction).clamp_min(self.bc_floor)
+-        weighted_loss = weighted_loss + effective_bc * bc_loss
++        if self.trace_rows:
++            trace_bc_contribution = effective_bc * bc_loss
++            weighted_loss = weighted_loss + trace_bc_contribution
++        else:
++            weighted_loss = weighted_loss + effective_bc * bc_loss
+ 
+         # Keep Q loss in the original arithmetic dtype under the caller's
+         # autocast context. Diagnostic reductions below explicitly use fp32.
+         joint_q = (joint_log_p.exp() * support[None, None, :]).sum(dim=2)
+         per_row_q_policy = F.cross_entropy(joint_q / self.q_temperature, actions, reduction="none")
+-        weighted_loss = weighted_loss + schedule_weights[1].clamp_min(0.0) * (per_row_q_policy * expert_mask).sum() / batch_size
++        if self.trace_rows:
++            trace_q_contribution = schedule_weights[1].clamp_min(0.0) * (per_row_q_policy * expert_mask).sum() / batch_size
++            weighted_loss = weighted_loss + trace_q_contribution
++        else:
++            weighted_loss = weighted_loss + schedule_weights[1].clamp_min(0.0) * (per_row_q_policy * expert_mask).sum() / batch_size
+ 
+         expert_q = joint_q.gather(1, actions[:, None]).squeeze(1)
+         margin = torch.full_like(joint_q, self.q_margin)
+         margin.scatter_(1, actions[:, None], 0.0)
+         per_row_margin = (joint_q + margin).max(dim=1).values - expert_q
+-        weighted_loss = weighted_loss + schedule_weights[2].clamp_min(0.0) * (per_row_margin * expert_mask).sum() / batch_size
++        if self.trace_rows:
++            trace_margin_contribution = schedule_weights[2].clamp_min(0.0) * (per_row_margin * expert_mask).sum() / batch_size
++            weighted_loss = weighted_loss + trace_margin_contribution
++        else:
++            weighted_loss = weighted_loss + schedule_weights[2].clamp_min(0.0) * (per_row_margin * expert_mask).sum() / batch_size
+ 
+         with torch.no_grad():
+             if self.diagnostics:
+@@ -148,4 +163,11 @@
+                 ))
+             else:
+                 diagnostic_values = torch.zeros(12, device=states.device, dtype=torch.float32)
++        if self.trace_rows:
++            return weighted_loss, ce_loss, bc_loss, diagnostic_values, (
++                projected.detach(), joint_log_p_a.detach(), per_row_bc.detach(),
++                per_row_q_policy.detach(), per_row_margin.detach(),
++                target_p_a.detach(), unclipped_trace_support.detach(),
++                trace_bc_contribution.detach(), trace_q_contribution.detach(),
++                trace_margin_contribution.detach())
+         return weighted_loss, ce_loss, bc_loss, diagnostic_values
+--- a/Robotron/Scripts/dqn/training.py
++++ b/Robotron/Scripts/dqn/training.py
+@@ -91,13 +91,33 @@
+ 
+ 
+ 
++def _trace_observe(trace, method, *args, **kwargs):
++    """Only observer faults are contained; original learner exceptions escape."""
++    try:
++        getattr(trace, method)(*args, **kwargs)
++    except Exception as error:
++        try:
++            trace.invalidate("observer_entrypoint_" + method, error)
++        except Exception:
++            pass
++
++
+ def train_step(agent, prefetched_batch=None) -> float | None:
+     # Checkpoint/restore and source-weight copies must not race an optimizer update.
+     lock = getattr(agent, "_training_lock", None)
+     context = lock if lock is not None else nullcontext()
+     with context:
++        trace = getattr(agent, "_executed_ce_trace", None)
+         try:
+-            return _train_step_impl(agent, prefetched_batch)
++            result = _train_step_impl(agent, prefetched_batch)
++        except BaseException as error:
++            if trace is not None:
++                _trace_observe(trace, "end", agent, exception=error)
++            raise
++        else:
++            if trace is not None:
++                _trace_observe(trace, "end", agent, result=result)
++            return result
+         finally:
+             if hasattr(prefetched_batch, "release"):
+                 prefetched_batch.release()
+@@ -166,6 +186,7 @@
+     beta = _beta_schedule(metrics.frame_count)
+     sample_ms = 0.0
+     sample_prefetched = prefetched_batch is not None
++    trace = getattr(agent, "_executed_ce_trace", None)
+     staged = None
+     if prefetched_batch is not None:
+         staged = prefetched_batch if hasattr(prefetched_batch, "batch") else None
+@@ -174,7 +195,10 @@
+         agent._pending_batch_sample_ms = 0.0
+     else:
+         sample_t0 = time.perf_counter()
+-        batch = agent.memory.sample(RL_CONFIG.batch_size, beta=beta)
++        if trace is None:
++            batch = agent.memory.sample(RL_CONFIG.batch_size, beta=beta)
++        else:
++            batch = trace.sample(agent.memory, RL_CONFIG.batch_size, beta)
+         sample_ms = (time.perf_counter() - sample_t0) * 1000.0
+     if batch is None:
+         return None
+@@ -185,6 +209,11 @@
+         states, actions, rewards, next_states, dones, horizons, is_expert, indices, weights = batch
+         actor_kind = np.where(is_expert > 0, ACTOR_EXPERT, ACTOR_DQN).astype(np.uint8)
+ 
++    # First8 consumed attempts after eligibility/batch guards. Transfer and
++    # subsequent learner failures retain this ordinal; no ninth replacement.
++    if trace is not None:
++        _trace_observe(trace, "begin", agent, batch, staged, metrics_context=metrics)
++
+     cfg = RL_CONFIG
+     use_amp = agent.use_amp and device.type == "cuda"
+     transfer_t0 = time.perf_counter()
+@@ -241,12 +270,22 @@
+         gpu_timing[0].record()
+     kernel = getattr(agent, "compiled_training_loss_diagnostics" if diagnostic_due else "compiled_training_loss", None)
+     kernel_active = kernel is not None
++    if trace is not None:
++        trace_bc_rows = trace_q_rows = trace_margin_rows = None
++        trace_bc_term = trace_q_term = trace_margin_term = None
+     if kernel_active:
+         schedule_t = torch.tensor([bc_w, q_policy_w, margin_w], device=device, dtype=torch.float32)
+         with amp_ctx:
+-            weighted_loss, ce_loss, bc_loss, kernel_diag = kernel(
++            kernel_outputs = kernel(
+                 states_t, actions_t, rewards_t, next_states_t, dones_t,
+                 horizons_t, is_expert_t, weights_t, schedule_t)
++            if trace is None:
++                weighted_loss, ce_loss, bc_loss, kernel_diag = kernel_outputs
++            else:
++                weighted_loss, ce_loss, bc_loss, kernel_diag = kernel_outputs[:4]
++                # Missing observer-only output invalidates acquisition without
++                # making an otherwise usable CE kernel enter compile fallback.
++                trace_payload = kernel_outputs[4] if len(kernel_outputs) == 5 else ()
+     else:
+         with amp_ctx:
+             # Current joint action distribution (log-probabilities)
+@@ -320,20 +359,48 @@
+                         F.cross_entropy(move_logits, move_actions_t, reduction="none")
+                         + F.cross_entropy(fire_logits, fire_actions_t, reduction="none"))
+                     bc_loss = (per_row * expert_mask).sum() / expert_count
++                    if trace is not None:
++                        trace_bc_rows = per_row
+                     effective_bc = max(float(getattr(cfg, "expert_bc_effective_floor", 0.01)), bc_w * sample_expert_frac)
+-                    weighted_loss = weighted_loss + effective_bc * bc_loss
++                    if trace is not None:
++                        trace_bc_term = effective_bc * bc_loss
++                        weighted_loss = weighted_loss + trace_bc_term
++                    else:
++                        weighted_loss = weighted_loss + effective_bc * bc_loss
+                 if q_policy_w > 0 or margin_w > 0:
+                     joint_q = (joint_log_p.exp() * support.view(1, 1, -1)).sum(dim=2)
+                     if q_policy_w > 0:
+                         temp = max(1e-3, float(getattr(cfg, "expert_q_policy_temperature", 10.0)))
+                         per_row = F.cross_entropy(joint_q / temp, actions_t, reduction="none")
+-                        weighted_loss = weighted_loss + q_policy_w * (per_row * expert_mask).sum() / B
++                        if trace is not None:
++                            trace_q_rows = per_row
++                        if trace is not None:
++                            trace_q_term = q_policy_w * (per_row * expert_mask).sum() / B
++                            weighted_loss = weighted_loss + trace_q_term
++                        else:
++                            weighted_loss = weighted_loss + q_policy_w * (per_row * expert_mask).sum() / B
+                     if margin_w > 0:
+                         expert_q = joint_q.gather(1, actions_t.unsqueeze(1)).squeeze(1)
+                         margin = torch.full_like(joint_q, float(getattr(cfg, "expert_q_margin", 0.5)))
+                         margin.scatter_(1, actions_t.unsqueeze(1), 0.0)
+                         per_row = (joint_q + margin).max(dim=1).values - expert_q
+-                        weighted_loss = weighted_loss + margin_w * (per_row * expert_mask).sum() / B
++                        if trace is not None:
++                            trace_margin_rows = per_row
++                        if trace is not None:
++                            trace_margin_term = margin_w * (per_row * expert_mask).sum() / B
++                            weighted_loss = weighted_loss + trace_margin_term
++                        else:
++                            weighted_loss = weighted_loss + margin_w * (per_row * expert_mask).sum() / B
++
++    if trace is not None:
++        if not kernel_active:
++            trace_payload = (m_joint, joint_log_p_a, trace_bc_rows, trace_q_rows,
++                             trace_margin_rows, joint_tp_a, Tz_raw,
++                             trace_bc_term, trace_q_term, trace_margin_term)
++        _trace_observe(trace, "loss", agent, ce_loss, trace_payload,
++            weighted_loss=weighted_loss, bc_loss=bc_loss,
++            schedule=(bc_w, q_policy_w, margin_w),
++            backend="compiled_full_loss" if kernel_active else "eager_or_individually_compiled")
+ 
+     # ── NaN / Inf guard ───────────────────────────────────────────────────
+     if not torch.isfinite(weighted_loss):
+@@ -429,6 +496,10 @@
+     if optimizer_exposure is not None:
+         optimizer_exposure.finish(outcome_ticket, outcome_mode,
+             host[outcome_host_index] if outcome_host_index is not None else None)
++        if trace is not None:
++            _trace_observe(trace, "outcome", outcome_mode,
++                host[outcome_host_index] if outcome_host_index is not None else None,
++                outcome_ticket)
+     if priority_timings is not None:
+         priority_readback_done = time.perf_counter()
+     if gpu_timing is not None:
+--- a/Robotron/Scripts/dqn/replay_buffer.py
++++ b/Robotron/Scripts/dqn/replay_buffer.py
+@@ -833,6 +833,7 @@
+             raise ValueError("Diagnostic draws are bounded to 1..4096 rows")
+         with self.lock:
+             trace = {"capture_id": capture_id,
++                     "observer_error": None,
+                      "lock_observation_started_monotonic_ns": time.monotonic_ns()}
+             batch = self._sample_locked(batch_size, beta, _state_out, _draw_trace=trace)
+             if batch is None:
+@@ -841,11 +842,16 @@
+             # detached small fields here, and explicitly omit full states.
+             names = ("actions", "rewards", "dones", "horizons", "is_expert", "actor_kind")
+             positions = (1, 2, 4, 5, 6, 7)
+-            trace["small_batch_fields"] = {
+-                name: self._draw_metadata_copy(batch[position])
+-                for name, position in zip(names, positions)
+-            }
+-            trace["lock_observation_finished_monotonic_ns"] = time.monotonic_ns()
++            try:
++                trace["small_batch_fields"] = {
++                    name: self._draw_metadata_copy(batch[position])
++                    for name, position in zip(names, positions)
++                }
++                trace["lock_observation_finished_monotonic_ns"] = time.monotonic_ns()
++            except Exception as error:
++                # Metadata-only fault AFTER this exact draw. Never resample,
++                # catch a sampler/gather error or call a session/file hook here.
++                trace["observer_error"] = type(error).__name__
+             return batch, trace
+ 
+     @staticmethod
+@@ -1015,11 +1021,14 @@
+             banks.append(("ephof", self._ephof_base,
+                           self._ephof_flat[np.random.randint(0, self._ephof_flat.size, ephof_count)]))
+         if _draw_trace is not None:
+-            self._record_draw_metadata_locked(
+-                _draw_trace, beta, total, per_indices, interesting_indices,
+-                recent_indices, indices, weights, banks,
+-                pri if per_indices.size else np.empty(0, dtype=np.float64),
+-                w if per_indices.size else np.empty(0, dtype=np.float64))
++            try:
++                self._record_draw_metadata_locked(
++                    _draw_trace, beta, total, per_indices, interesting_indices,
++                    recent_indices, indices, weights, banks,
++                    pri if per_indices.size else np.empty(0, dtype=np.float64),
++                    w if per_indices.size else np.empty(0, dtype=np.float64))
++            except Exception as error:
++                _draw_trace["observer_error"] = type(error).__name__
+         if banks:
+             all_indices = np.concatenate(
+                 [indices] + [base + slots for _, base, slots in banks])
+--- /dev/null
++++ b/Robotron/Scripts/dqn/executed_ce_trace.py
+@@ -0,0 +1,332 @@
++"""Opt-in eight-consumed-attempt observer; never selects or changes training.
++
++This proposed module is imported only by the startup-enabled agent path.
++Observer entry points contain their own failures so they cannot activate the
++learner's compile-disable/fallback handler. Genuine learner errors still escape.
++"""
++from __future__ import annotations
++
++import json
++import os
++from pathlib import Path
++import threading
++import time
++
++
++ATTEMPTS = 8
++MAX_ARRAY_BYTES = 64 * 1024**2
++MAX_DISK_BYTES = 128 * 1024**2
++MAX_JSON_BYTES = 1024**2
++
++
++class ObservedReplayBatch(tuple):
++    """Same ten fields; diagnostic metadata survives synchronous sampling."""
++    def __new__(cls, batch, metadata):
++        result = super().__new__(cls, batch)
++        result.draw_metadata = metadata
++        return result
++
++
++def error_text(error):
++    try:
++        return (type(error).__name__ + ": " + str(error))[:500]
++    except Exception:
++        return type(error).__name__
++
++
++class ExecutedCETrace:
++    """Bounded observation of first8 consumed train_step attempts after guards.
++
++    A failed attempt stays in the eight. Missing targets/outcomes/observer I/O
++    invalidate acquisition, never cause a replacement ninth numerical success.
++    No optimizer admission is inferred from gradients, loss or logical clocks.
++    """
++    def __init__(self, directory, cfg, *, optimizer_exposure, runtime):
++        if int(cfg.batch_size) != 4096 or int(cfg.num_atoms) != 51:
++            raise ValueError("This calibration is fixed to actual4096 rows/51 atoms")
++        if optimizer_exposure is None:
++            raise ValueError("Actual optimizer exposure counters are required")
++        if not 1 <= int(getattr(cfg, "replay_prefetch_slots", 3)) <= 3:
++            raise ValueError("Trace storage is bounded to the existing1..3 producer slots")
++        if str(getattr(cfg, "per_priority_metric", "ce")) != "ce" or os.getenv("DQN_PER_PRIORITY_METRIC", "ce") != "ce":
++            raise ValueError("Executed calibration observes the unchanged CE recipe only")
++        self.directory = Path(directory)
++        if not self.directory.is_absolute() or not self.directory.name.startswith("ce-executed-trace-"):
++            raise ValueError("Explicit absolute new ce-executed-trace-* directory required")
++        self.directory.mkdir()  # create-only, no existing artifacts are adopted
++        self.lock = threading.RLock()
++        self.rows, self.errors = [], []
++        self.consumed = 0
++        self.current = None
++        self.observer_reporting_failed = False
++        self.array_bytes = self.disk_bytes = 0
++        self.exposure = optimizer_exposure
++        self.capture_id = "observer-" + str(time.monotonic_ns())
++        self.context = dict(schema="robotron-executed-ce-trace-v1", attempts=ATTEMPTS,
++            boundary="first8 consumed train_step attempts after eligibility guards",
++            runtime=dict(runtime),
++            config={name:value for name,value in vars(cfg).items()
++                    if value is None or type(value) in (str, int, float, bool)},
++            config_non_scalar_omitted=[name for name,value in vars(cfg).items()
++                                      if value is not None and type(value) not in (str,int,float,bool)],
++            unknown=dict(model_checkpoint_identity="requires external immutable checkpoint/run binding",
++                         source_identity="requires external reviewed overlay/base manifest",
++                         full_states="not retained; no numerical replay claim",
++                         coherent_anchor="not established by a sequential trace",
++                         optimizer_parameter_progress="admission counters do not prove parameter/Adam movement"))
++        # Startup failure is fatal before producer/learner construction, never
++        # a silent hot toggle to an unobserved training mode.
++        self._write_json("context.json", self.context)
++        self._publish()
++
++    def want_draw(self):
++        try:
++            with self.lock:
++                return self.consumed < ATTEMPTS
++        except Exception as error:
++            self.invalidate("draw_enable_observation", error)
++            return False
++
++    def invalidate(self, where, error):
++        """Best-effort reporting cannot change original training control flow."""
++        try:
++            with self.lock:
++                message = str(where)[:80] + ": " + error_text(error)
++                if len(self.errors) < 64:
++                    self.errors.append(message)
++                if (self.current is not None
++                        and self.current.get("consumer_thread_id") == threading.get_ident()
++                        and len(self.current["observer_errors"]) < 16):
++                    self.current["observer_errors"].append(message)
++                try:
++                    self._publish()
++                except Exception:
++                    pass
++            try:
++                print("[CE TRACE INVALID] " + message, flush=True)
++            except Exception:
++                pass
++        except Exception:
++            # Last-resort state is allocated at startup; severe process-level
++            # failures may prevent durable publication and require log review.
++            self.observer_reporting_failed = True
++
++    def sample(self, memory, batch_size, beta, state_out=None):
++        """Exactly one real draw; never retry after an observation failure."""
++        if not self.want_draw():
++            return memory.sample(batch_size, beta=beta, _state_out=state_out)
++        # Replay overlay catches ONLY its metadata-copy failures internally.
++        # Actual sample/storage errors retain their original propagation.
++        try:
++            batch, metadata = memory.sample_with_metadata(
++                batch_size, beta=beta, capture_id=self.capture_id, _state_out=state_out)
++        except BaseException as error:
++            self.invalidate("actual_sampler_exception_before_consumption", error)
++            raise  # preserve the original sampler/control exception, no retry
++        if batch is None:
++            return None
++        try:
++            if metadata is not None and metadata.get("observer_error"):
++                self.invalidate("draw_metadata", RuntimeError(metadata["observer_error"]))
++            return ObservedReplayBatch(batch, metadata)
++        except Exception as error:
++            self.invalidate("attach_draw_metadata", error)
++            return batch
++
++    def begin(self, agent, batch, staged, metrics_context=None):
++        try:
++            with self.lock:
++                if self.consumed >= ATTEMPTS:
++                    return
++                # Reserve before clocks, exposure, metadata or I/O can fail.
++                # Missing evidence remains a consumed ordinal, never a retry.
++                self.consumed += 1
++                row = dict(index=self.consumed, status="entered", observer_errors=[], arrays={},
++                           consumer_thread_id=threading.get_ident())
++                self.rows.append(row)
++                self.current = row
++                row.update(consumed_monotonic_ns=time.monotonic_ns(),
++                    before=self._clocks(agent), exposure_before=self.exposure.snapshot())
++                if metrics_context is not None:
++                    with metrics_context.lock:
++                        row["frame_context"] = {name:int(getattr(metrics_context,name,0)) for name in
++                            ("frame_count","learner_frame_count","measurement_frame_count")}
++                    row["frame_context_scope"] = "one metrics-lock observation; not a coherent replay/model snapshot"
++                else:
++                    row["frame_context"] = None
++                metadata = (getattr(staged, "draw_metadata", None) if staged is not None
++                            else getattr(batch, "draw_metadata", None))
++                if metadata is None:
++                    raise RuntimeError("Consumed attempt has no draw-time observation")
++                row["draw"] = metadata
++                if metadata.get("observer_error"):
++                    raise RuntimeError("Consumed draw metadata failed: " + metadata["observer_error"])
++                if staged is not None:
++                    row["prefetch"] = dict(lease_epoch=staged._epoch,
++                        owner_epoch_at_consumption=staged._owner._epoch,
++                        is_current_at_consumption=bool(staged.is_current),
++                        sample_ms=float(staged.sample_ms), stage_host_ms=float(staged.stage_host_ms))
++                    if not row["prefetch"]["is_current_at_consumption"]:
++                        raise RuntimeError("Consumed lease was already invalidated")
++                else:
++                    row["prefetch"] = None
++                ended = metadata.get("lock_observation_finished_monotonic_ns")
++                row["draw_to_consume_ns"] = row["consumed_monotonic_ns"]-ended if ended is not None else None
++                self._publish()
++        except Exception as error:
++            self.invalidate("begin", error)
++
++    def loss(self, agent, ce, payload, *, weighted_loss, bc_loss, schedule, backend):
++        try:
++            with self.lock:
++                row = self.current
++                if row is None:
++                    return
++                row["backend"] = backend
++                if len(payload) != 10:
++                    raise ValueError("Trace payload ABI must contain exactly10 same-forward tensors/options")
++                row["schedule"] = [float(value) for value in schedule]
++                row["at_loss"] = self._clocks(agent)
++                names = ("projected_target", "taken_action_log_probabilities",
++                         "per_row_bc", "per_row_q_policy", "per_row_margin",
++                         "target_action_probabilities", "unclipped_target_support",
++                         "bc_contribution", "q_policy_contribution", "margin_contribution")
++                values = dict(zip(names, payload))
++                values.update(ce=ce, weighted_loss=weighted_loss, bc_loss=bc_loss)
++                matrix_names = ("projected_target", "taken_action_log_probabilities",
++                                "target_action_probabilities", "unclipped_target_support")
++                vector_names = ("ce", "per_row_bc", "per_row_q_policy", "per_row_margin")
++                for name, value in values.items():
++                    if value is None:
++                        row.setdefault("unavailable_auxiliary", []).append(name)
++                        continue
++                    expected = (4096,51) if name in matrix_names else (4096,) if name in vector_names else ()
++                    if tuple(value.shape) != expected:
++                        raise ValueError("Unexpected same-forward trace shape: " + name)
++                    row.setdefault("tensor_dtypes", {})[name] = str(value.dtype)
++                    if self.array_bytes + value.numel()*4 > MAX_ARRAY_BYTES:
++                        raise MemoryError("Bounded64MiB trace tensor budget exceeded before copy")
++                    array = value.detach().float().cpu().numpy().copy()
++                    if self.array_bytes + array.nbytes > MAX_ARRAY_BYTES:
++                        raise MemoryError("Bounded64MiB trace tensor budget exceeded")
++                    self.array_bytes += array.nbytes
++                    array.flags.writeable = False
++                    row["arrays"][name] = array
++                row["status"] = "loss_observed"
++        except Exception as error:
++            self.invalidate("loss_observation", error)
++
++    def outcome(self, mode, found_inf, ticket):
++        try:
++            with self.lock:
++                if self.current is None:
++                    return
++                row = self.current
++                row["optimizer_observation"] = dict(mode=str(mode),
++                    found_inf=None if found_inf is None else float(found_inf),
++                    ticket_epoch=None if ticket is None else ticket.epoch,
++                    ticket_finished=bool(ticket is not None and ticket.finished),
++                    ticket_owner_matches=bool(ticket is not None and ticket.owner is self.exposure))
++                row["exposure_after_outcome"] = self.exposure.snapshot()
++        except Exception as error:
++            self.invalidate("outcome_observation", error)
++
++    def end(self, agent, *, result=None, exception=None):
++        try:
++            with self.lock:
++                row = self.current
++                if row is None:
++                    return
++                row["after"] = self._clocks(agent)
++                row["exposure_at_exit"] = self.exposure.snapshot()
++                row["exception"] = None if exception is None else error_text(exception)
++                row["result"] = None if result is None else float(result)
++                row["status"] = "learner_exception" if exception is not None else (
++                    "returned_none" if result is None else "returned_loss")
++                before, after = row["exposure_before"], row["exposure_at_exit"]
++                delta = {key:after["total"][key]-before["total"][key]
++                         for key in ("attempts_started", "outcomes_recorded", "applied", "amp_skipped", "unavailable")}
++                row["actual_exposure_delta"] = delta
++                same = all(before[key] == after[key] for key in
++                           ("process_id", "instance_monotonic_ns", "epoch"))
++                observed = row.get("optimizer_observation", {})
++                row["outcome_available"] = bool(same and after["available"]
++                    and delta["attempts_started"] == delta["outcomes_recorded"] == 1
++                    and delta["unavailable"] == 0 and delta["applied"]+delta["amp_skipped"] == 1
++                    and observed.get("ticket_finished") and observed.get("ticket_owner_matches"))
++                row["optimizer_outcome"] = ("amp_skipped" if delta["amp_skipped"] == 1 else
++                    "applied_admission") if row["outcome_available"] else "unavailable"
++                row["numerical_capture_complete"] = bool(exception is None and result is not None
++                    and not row["observer_errors"] and row["outcome_available"]
++                    and "ce" in row["arrays"] and "projected_target" in row["arrays"]
++                    and "taken_action_log_probabilities" in row["arrays"])
++                self._persist_row(row)
++                self.current = None
++                self._publish()
++        except Exception as error:
++            if self.current is not None:
++                self.current["numerical_capture_complete"] = False
++            self.invalidate("attempt_exit", error)
++            self.current = None
++
++    @staticmethod
++    def _clocks(agent):
++        return dict(training_steps=int(agent.training_steps), optimized_samples=int(agent.optimized_samples),
++            last_target_update_samples=int(getattr(agent, "last_target_update_samples", 0)),
++            last_inference_sync=int(getattr(agent, "last_inference_sync", 0)),
++            learning_rates=[float(group["lr"]) for group in agent.optimizer.param_groups])
++
++    def _persist_row(self, row):
++        import numpy as np  # only enabled observer, already used by learner
++        arrays = dict(row["arrays"])
++        draw = row.get("draw", {})
++        def extract(value, prefix):
++            if isinstance(value, np.ndarray):
++                arrays[prefix] = value
++                return {"array": prefix, "dtype": str(value.dtype), "shape": list(value.shape)}
++            if isinstance(value, dict):
++                return {str(key):extract(item, prefix+"__"+str(key)) for key,item in value.items()}
++            if isinstance(value, (tuple, list)):
++                return [extract(item, prefix+"__"+str(index)) for index,item in enumerate(value)]
++            return value
++        summary = {key:value for key,value in row.items() if key not in ("arrays", "draw")}
++        summary["draw"] = extract(draw, "draw")
++        summary["array_finite"] = {name:bool(np.isfinite(array).all()) for name,array in arrays.items()}
++        if not all(summary["array_finite"].values()):
++            row["numerical_capture_complete"] = summary["numerical_capture_complete"] = False
++            summary["nonfinite_observation"] = True
++        needed = sum(value.nbytes for value in arrays.values()) + 1024**2
++        if self.disk_bytes + needed > MAX_DISK_BYTES:
++            raise OSError("Bounded128MiB trace disk budget exceeded")
++        path = self.directory / ("attempt-%02d.npz" % row["index"])
++        with path.open("xb") as stream:
++            np.savez(stream, **arrays)
++            stream.flush()
++            os.fsync(stream.fileno())
++        self.disk_bytes += path.stat().st_size
++        self._write_json("attempt-%02d.json" % row["index"], summary)
++
++    def _write_json(self, name, data):
++        payload = (json.dumps(data, sort_keys=True, indent=2, allow_nan=False)+"\n").encode()
++        if len(payload) > MAX_JSON_BYTES or self.disk_bytes+len(payload) > MAX_DISK_BYTES:
++            raise OSError("Bounded trace JSON/disk budget exceeded")
++        path = self.directory / name
++        temporary = path.with_name(path.name+".tmp")
++        with temporary.open("wb") as stream:
++            stream.write(payload)
++            stream.flush()
++            os.fsync(stream.fileno())
++        os.replace(temporary, path)
++        self.disk_bytes += len(payload)  # conservative cumulative write accounting
++
++    def _publish(self):
++        summaries = [{key:value for key,value in row.items()
++                      if key not in ("arrays", "draw")} for row in self.rows]
++        complete = (not self.observer_reporting_failed and self.consumed == len(self.rows) == ATTEMPTS
++                    and all(row.get("numerical_capture_complete") for row in self.rows))
++        self._write_json("status.json", dict(schema=self.context["schema"],
++            status="EIGHT_NUMERICAL_CAPTURES_COMPLETE" if complete and not self.errors else "INCOMPLETE_OR_INVALID",
++            attempts_consumed=self.consumed, numerical_captures_complete=complete and not self.errors,
++            observer_errors=list(self.errors), rows=summaries,
++            observer_reporting_failed=self.observer_reporting_failed,
++            tensor_bytes_retained=self.array_bytes, cumulative_disk_bytes=self.disk_bytes))

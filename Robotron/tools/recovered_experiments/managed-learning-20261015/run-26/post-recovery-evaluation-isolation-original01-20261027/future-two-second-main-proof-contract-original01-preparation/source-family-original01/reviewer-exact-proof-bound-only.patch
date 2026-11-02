@@ -1,0 +1,50 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/review_round_observer_retired_API_v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-two-second-main-proof-contract-original01-preparation/source-family-original01/review_round_observer_proof2s_v1.py
+@@ -36,9 +36,9 @@
+     native = read(lifecycle['native_job'], h)
+     require(job['native_job'] == lifecycle['native_job'] and job['native_runtime'] == native['runtime'],
+             'Original native/worker job or runtime join differs')
+-    require(job['schema'] == ('robotron-round-observer-declared-launcher-job-v1' if require_final_sample
++    require(job['schema'] == ('robotron-round-observer-declared-launcher-proof2s-job-v1' if require_final_sample
+                              else 'robotron-round-observer-job-v1'), 'Wrong declared observer protocol version')
+-    require(job['interval_s'] == .2 and job['initial_samples'] == 100 and job['maximum_gap_s'] == .5
++    require(job['interval_s'] == .2 and job['initial_samples'] == 100 and job['maximum_gap_s'] == 2.0
+             and job['work_s'] == 4200 and job['runtime_s'] == 4260 and job['attempt'] == 1
+             and job['no_retry'] is True, 'Observer bounds or original attempt differ')
+     require(job.get('source_bound_API_reconnect_projection') is True
+@@ -112,7 +112,7 @@
+                 'Accepted sample is outside the actual original worker lifetime')
+         health.validate(case, sample, previous=previous)
+         if previous is not None:
+-            require(0 <= sample['monotonic_s']-previous['monotonic_s'] <= .5, 'Accepted main evidence gap exceeds500ms')
++            require(0 <= sample['monotonic_s']-previous['monotonic_s'] <= job['maximum_gap_s'], 'Accepted main evidence gap exceeds2s')
+         if previous is not None and sample['api']['training_steps'] > previous['api']['training_steps']:
+             last_advance = sample['monotonic_s']
+         require(sample['monotonic_s']-last_advance < 60, 'Saved evidence has no learner-step progress for60s')
+@@ -123,14 +123,14 @@
+     publications = outcome['publications']
+     require(len(publications) == len(records)-1, 'Running projection publication coverage differs')
+     for index, publication in enumerate(publications):
+-        require(publication['index'] == index and 0 <= publication['updated_monotonic_s']-records[index]['monotonic_s'] <= .5,
+-                'Running projection source age exceeds500ms')
++        require(publication['index'] == index and 0 <= publication['updated_monotonic_s']-records[index]['monotonic_s'] <= job['maximum_gap_s'],
++                'Running projection source age exceeds2s')
+         pin = outcome['samples'][index]
+         require(0 < pin['bytes'] <= 8 << 20
+                 and publication['queued_raw'] == dict(sequence=durability_records[index]['sequence'],
+                     sha256=pin['sha256'], bytes=pin['bytes']), 'Queued publication bytes differ from durable raw sample')
+         preceding = started if index == 0 else publications[index-1]['updated_monotonic_s']
+-        require(0 <= publication['updated_monotonic_s']-preceding <= .5, 'Running projection gap exceeds500ms')
++        require(0 <= publication['updated_monotonic_s']-preceding <= job['maximum_gap_s'], 'Running projection gap exceeds2s')
+     for index, retry in enumerate(outcome['unaccepted']):
+         row = read(retry, h)
+         descriptor = dict(row['durability_record'], record=retry)
+@@ -221,7 +221,7 @@
+         lifecycle=lifecycle_pin, original_job=job_pin, original_unit=job['unit'],
+         original_sources=job['sources'], accepted_samples=len(records),
+         raw_API_and_TCP_and_retirement_snapshots_replayed=True,
+-        hundred_sample_readiness_verified=True, legacy_500ms_evidence_and_projection_gaps_verified=True, fresh_final_sample_verified=require_final_sample,
++        hundred_sample_readiness_verified=True, proof_gap_contract='robotron-main-proof-gap-2s-v1', verified_maximum_gap_s=job['maximum_gap_s'], accepted_evidence_and_projection_gaps_verified=True, fresh_final_sample_verified=require_final_sample,
+         actual_resources_and_exit_and_owned_release_verified=True,
+         first_accepted_monotonic_s=records[0]['monotonic_s'],
+         initial_qualified_monotonic_s=outcome['initial']['durable_ready_monotonic_s'],

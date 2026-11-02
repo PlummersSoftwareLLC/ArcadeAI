@@ -1,0 +1,74 @@
+--- Robotron/Scripts/dqn/socket_server.py
++++ Robotron/Scripts/dqn/socket_server.py
+@@ -29,6 +29,7 @@
+ 
+ import os, sys, time, socket, select, struct, threading, traceback, random, queue
+ import numpy as np
++import ipaddress
+ try:
+     from .response_telemetry import ResponseTelemetry
+ except ImportError:
+@@ -1096,8 +1097,27 @@
+ 
+ 
+ # ── Socket Server ───────────────────────────────────────────────────────────
++def _parse_allowed_training_peers(raw):
++    """Optional exact IPv4 peers for a managed training listener."""
++    if raw is None or not raw.strip():
++        return None
++    if len(raw) > 512:
++        raise ValueError("Training peer list is too long")
++    parts = raw.split(",")
++    if len(parts) > 16 or any(not part.strip() for part in parts):
++        raise ValueError("Training peers require 1..16 explicit IPv4 addresses")
++    peers = frozenset(ipaddress.ip_address(part.strip()) for part in parts)
++    if any(not isinstance(peer, ipaddress.IPv4Address) or peer.is_unspecified
++           or peer.is_multicast or int(peer) == 0xFFFFFFFF for peer in peers):
++        raise ValueError("Training peers require explicit unicast IPv4 addresses")
++    return peers
++
++
+ class SocketServer:
+     def __init__(self, host, port, agent, metrics_wrapper=None, *, replay_enabled=True):
++        self._allowed_training_peers = (_parse_allowed_training_peers(
++            os.getenv("ROBOTRON_ALLOWED_TRAINING_PEERS")) if replay_enabled else None)
++        self._last_peer_rejection_log = 0.0
+         self.host = host
+         self.port = port
+         self.agent = agent
+@@ -2760,6 +2780,26 @@
+         except Exception:
+             pass
+ 
++    def _admit_training_peer(self, sock, address):
++        """Reject unselected training peers before allocating any client state."""
++        if not self.replay_enabled or self._allowed_training_peers is None:
++            return True
++        try:
++            allowed = ipaddress.ip_address(address[0]) in self._allowed_training_peers
++        except (ValueError, TypeError, IndexError):
++            allowed = False
++        if allowed:
++            return True
++        try:
++            sock.close()
++        except OSError:
++            pass
++        now = time.monotonic()
++        if now - self._last_peer_rejection_log >= 5.0:
++            self._last_peer_rejection_log = now
++            print(f"[ADMISSION] rejected unselected training peer {address[0]}", flush=True)
++        return False
++
+     def start(self):
+         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+@@ -2798,6 +2838,8 @@
+                     try:
+                         cs, addr = self.server_socket.accept()
+                     except OSError:
++                        continue
++                    if not self._admit_training_peer(cs, addr):
+                         continue
+                     cid = self._alloc_id()
+                     self._init_client(cid)

@@ -1,0 +1,33 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/prepare_physical_original192_six_CPU_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-physical-original04/focused-contract-CPU-original01-preparation/prepare_physical_deadline_contract_six_CPU_v1.py
+@@ -6,8 +6,8 @@
+ from pathlib import Path
+ import stat
+ 
+-SELECTION = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/physical-six-CPU-source-selection-v1.json', 'sha256': '5f81c92c777a70accb31e52683e9511fe297f8d2889575174b4a611997bfc6b9', 'bytes': 20429, 'identity': {'device': 2304, 'inode': 85328269, 'bytes': 20429, 'mtime_ns': 1793290841726109112, 'ctime_ns': 1793290841726109112, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+-ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02')
++SELECTION = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-physical-original04/focused-contract-CPU-original01-preparation/physical-deadline-contract-six-CPU-source-selection-v1.json', 'sha256': 'd1a9d42b2fe00c888006931c8e5a38e8ff5faf8b69c94775c4b0f5ea487ca906', 'bytes': 22722, 'identity': {'device': 2304, 'inode': 85331415, 'bytes': 22722, 'mtime_ns': 1793292251762602653, 'ctime_ns': 1793292251762602653, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
++ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-physical-original04/focused-contract-CPU-original01-preparation')
+ 
+ def require(value,message):
+     if not value:raise ValueError(message)
+@@ -43,15 +43,15 @@
+     for value in selected['inputs']:checked(value)
+     require(Path('/usr/bin/python3').resolve()==Path(selected['interpreter']['path']),'Selected interpreter alias differs')
+     directory=directory.resolve()
+-    require(directory.parent==ROOT and directory.name=='focused-six-CPU-original01-NOT-LAUNCHED'
++    require(directory.parent==ROOT and directory.name=='actual-original01'
+             and not directory.exists(),'Only fresh original01 metadata namespace allowed')
+     directory.mkdir(mode=0o700)
+-    unit='robotron-physical192-health-six-CPU-original01-20261029.service'
++    unit='robotron-physical-DL13-contract-six-CPU-original01-20261029.service'
+     inputs=[*selected['inputs'],SELECTION,own]
+-    job=dict(schema='robotron-physical-original192-focused-original-CPU-job-v1',unit=unit,
++    job=dict(schema='robotron-physical-deadline-contract-focused-original-CPU-job-v1',unit=unit,
+         output=str(directory/'runtime'),source=selected['driver'],fixture=selected['fixture'],
+         original_attempt=1,no_retry=True,inputs=inputs,expected_test_count=6,
+-        expected_report_schema='robotron-physical-original192-focused-original-CPU-report-v1',
++        expected_report_schema='robotron-physical-deadline-contract-focused-original-CPU-report-v1',
+         resources=dict(CPU_cores=2,memory_bytes=4<<30,runtime_s=180,tasks=128),
+         actual_startup_or_fleet_runtime_qualified=False,scientific_launch_qualified=False,
+         quality_qualified=False,promotion=False)

@@ -1,0 +1,26 @@
+SOURCE-ONLY CONTRACT MOCK FIXTURE CORRECTION, NO EXECUTION
+
+Frozen preparation-manifest.json c37e504b0b67366368468b7e3c1fc82c13937140c4e7a13d62687b6a44f0557f
+and all15 files it binds remain byte-exact. The authored original contract test
+had an incomplete fake agent: capture constructs its original TrainingLoss
+with agent.online_net/target_net BEFORE invoking mocked compile_loss. Those
+two opaque objects were absent, so it would raise AttributeError before the
+intended primary-training/secondary-cleanup assertions. This is a source-read
+fixture finding, not an actual test/controller/GPU failure. Parent and worker
+remain90e31926/53ab4831 and original scientific guards are unchanged.
+
+NEW test_rehearsal_contract_reviewed2.py adds ONLY those two opaque fake-agent
+attributes. No assertion, failure injection, expected outcome or protocol is
+removed/changed. Original9-test source62a668f5 remains preserved/unexecuted.
+Use the explicit three-module command below, NOT test discovery over both
+old and corrected copies. Corrected52 methods are authored/unexecuted.
+
+  env -u LD_PRELOAD -u PYTHONPATH CUDA_VISIBLE_DEVICES='' python3 -B -m unittest \
+    Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.private_rehearsal_proposal.test_process_scan \
+    Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.private_rehearsal_proposal.test_storage_watcher \
+    Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.private_rehearsal_proposal.test_rehearsal_contract_reviewed2
+
+Root owns any actual bounded CPU execution and must save separate actual
+exit/source/evidence receipt. No author import/compile/test/default, runtime,
+model/numerical/GPU or service action occurred. Prior preparation limitations,
+resource caps, checkpoint/quality priority and no automatic adoption remain.

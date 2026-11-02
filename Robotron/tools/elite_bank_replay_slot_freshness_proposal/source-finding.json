@@ -1,0 +1,148 @@
+{
+  "schema": "robotron-elite-bank-stale-ring-slot-source-finding-v1",
+  "status": "SOURCE_ONLY_CONDITIONAL_CORRECTNESS_FINDING",
+  "sources": {
+    "socket_server.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py",
+      "sha256": "f44ddfe31408b77b6d622e1d4ec4cda60a03999dc984d9e11b5aeac38911a9ed",
+      "bytes": 140517,
+      "identity": {
+        "device": 2304,
+        "inode": 79696030,
+        "bytes": 140517,
+        "mtime_ns": 1792306967914113042,
+        "ctime_ns": 1792306967928089640,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "agent.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/agent.py",
+      "sha256": "865a0df717b39951b7f7c516e4a962e3d48cf4d3dc11295ff266e58653e6c74b",
+      "bytes": 98429,
+      "identity": {
+        "device": 2304,
+        "inode": 79724997,
+        "bytes": 98429,
+        "mtime_ns": 1792239930859030766,
+        "ctime_ns": 1792239930859896369,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "replay_buffer.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/replay_buffer.py",
+      "sha256": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f",
+      "bytes": 113613,
+      "identity": {
+        "device": 2304,
+        "inode": 79724825,
+        "bytes": 113613,
+        "mtime_ns": 1792224696813330592,
+        "ctime_ns": 1792224696813836930,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "actor_tags.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/actor_tags.py",
+      "sha256": "fc5b868a7fb68d4ab7ba65ba872ea0e845759af6143edfe648239d57cb7f1591",
+      "bytes": 153,
+      "identity": {
+        "device": 2304,
+        "inode": 79725280,
+        "bytes": 153,
+        "mtime_ns": 1792119887012144236,
+        "ctime_ns": 1792119887012144236,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "config.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/config.py",
+      "sha256": "19abcbde4d08cf8465b82185ac6dd52eb8965adb8611584e0677c4c7ff21d1fd",
+      "bytes": 117528,
+      "identity": {
+        "device": 2304,
+        "inode": 79724998,
+        "bytes": 117528,
+        "mtime_ns": 1792239930881775881,
+        "ctime_ns": 1792239930882587724,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "test_bank_persistence.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/test_bank_persistence.py",
+      "sha256": "773bfdc8a73118258830c85498a4f6f0d7d6a9a2514ce58aad853a49dc38fdc6",
+      "bytes": 17063,
+      "identity": {
+        "device": 2304,
+        "inode": 79725286,
+        "bytes": 17063,
+        "mtime_ns": 1792124209174862449,
+        "ctime_ns": 1792124209174862449,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "test_measurement_actor.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/test_measurement_actor.py",
+      "sha256": "c1d2c2270aaf90c6fce61968bd9b4bffa7bc1a48f61ca8c752e5f29cd5e2abc9",
+      "bytes": 12793,
+      "identity": {
+        "device": 2304,
+        "inode": 79725114,
+        "bytes": 12793,
+        "mtime_ns": 1792206496253318378,
+        "ctime_ns": 1792206496253318378,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "source_locations": {
+    "bare_index_return": "agent.py1075-1085",
+    "bare_indices_retained": "socket_server.py773-786",
+    "bank_callbacks": "socket_server.py842-867",
+    "range_only_filter": "replay_buffer.py585-594",
+    "bank_copy_and_episode_label": "replay_buffer.py635-648",
+    "connected_foreign_write_callbacks": "socket_server.py799-819,909-922; replay_buffer.py1116-1191,1212-1245"
+  },
+  "counterexample": {
+    "capacity": 64,
+    "events": [
+      "A32 successful rows at indices0..31",
+      "B64 successful rows overwrite every retained A slot",
+      "A terminal successful row at index32",
+      "A qualifying elite callback holds33 indices0..32, satisfying bank minimum32"
+    ],
+    "expected_original_behavior": "Both HOF and EpHOF can copy32 current B rows plus A terminal under A score/game_uid if their ordinary score/admission gates pass. No fields within an individual B transition are recombined.",
+    "proof_kind": "Deterministic source argument; future regression authored separately, not executed."
+  },
+  "applicability": {
+    "held_capacity": 6000000,
+    "fleet192_equal_share_nominal_own_rows_per_turnover": 31250,
+    "fleet128_equal_share_nominal_own_rows_per_turnover": 46875,
+    "per_client_deque_limit": 65536,
+    "equations": "For C global slots and K equal-rate clients, C/K own inserts consume one global turnover. Actual safety depends on global successful insert age, not client count or elapsed time. Retaining <=65536 own indices cannot ensure global age<C at K128 or192.",
+    "equal_share_is_assumption_not_observation": true
+  },
+  "impact": "Wrong episode selection/provenance can permanently weight unrelated valid transitions as elite; related delayed callbacks can modify foreign slot priorities/rewards/interesting flags. Occurrence and learning impact are unmeasured.",
+  "limits": {
+    "observed_occurrence": false,
+    "plateau_cause": false,
+    "benefit_proven": false,
+    "existing_banks_retrospectively_certified": false,
+    "author_executed": false,
+    "selected_changes": false
+  },
+  "future_scope": "Dormant regression/design only. Root may run after full current quality disposition/owned closure/freeze release. No scientific switch or production fix selected."
+}

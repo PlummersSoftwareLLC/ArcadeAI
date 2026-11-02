@@ -1,0 +1,128 @@
+--- frozen6b/run-trial02-quality-leg-audit-root-preparation-20261017.py
++++ unconsumed-CE543M/run_original_leg_audit.py
+@@ -1,16 +1,20 @@
+-"""Root-only retained CPU execution of one sealed trial02 original-row audit."""
++"""Root-only retained CPU execution of one sealed next-CE original-row audit."""
+ import argparse, datetime, hashlib, json, os, re, subprocess, time
+ from pathlib import Path
+ 
+ REPO = Path('/home/dave/source/repos/ArcadeAI')
+ RUN = REPO/'Robotron/logs/managed-learning-20261015/run-26'
+-FUTURE = RUN/'rawKL-trial02-quality-launch-and-startup-root-20261017/future-original-leg-audit-argv.json'
+-FUTURE_SHA = '1a305e4988fd494abf97f11f968352c2a24caae242bf8d55566fd1e165bc833b'
+-PLAN_SHA = 'b502625ed8e39f01fa57af1c9f9cc8283794aa14e351e2b9bc9ec1268b267ecf'
+-BINDING_SHA = '3b16c36da91c63fd4fb218f1fed3c1c5a5fe8caff73534d880aeaeccfe4c81fe'
+-AUDITOR_SHA = 'fad4437bfde6ad123c631e439b0f90b58e1cd5e5d05f7aaafabfcea728376d88'
+-QUALITY = 'robotron-quality-448M-vs-rawkl-trial02-first8M-20261017.service'
+-QUALITY_INV = '325ea02d8cde47869eb8340b3de73f69'
++FUTURE = FUTURE_SHA = PLAN_SHA = QUALITY_INV = QUALITY_PID = QUALITY_START = R1_EVALUATOR = None
++BINDING = RUN/'CE543M-quality-binding-root-preparation-20261017/root-quality-binding-job.json'
++BINDING_SHA = 'f43719ed4dc60a4c275a7414995aa79d0f40062c76964200cf8700a8abe50dc3'
++BUNDLE = REPO/'Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_reviewed2_proposal'
++BUNDLE_SHA = '7b5738fa857301278bd571f19b72eb3f775003d25f1821b9485346ea9e12fd39'
++AUDITOR = BUNDLE/'audit_completed_leg.py'
++AUDITOR_SHA = '734999b906973d8742e28c734bf3f2d704cc3fa1765c0e30a906caaeb5eb176d'
++BINDINGS_SHA = 'ecbe6ae896172ae7d44130de0004df7f25f33544b421106cdc325daa78f8cc59'
++CAMPAIGN = REPO/'Robotron/logs/managed-learning-20261015/quality-448M-vs-CE543M-20261017'
++QUALITY = 'robotron-quality-448M-vs-CE543M-20261017.service'
++QUALITY_OWNER = None
+ 
+ def require(value, message):
+     if not value: raise RuntimeError(message)
+@@ -53,18 +57,52 @@
+     except FileNotFoundError: return None
+ 
+ def names(leg):
+-    out=RUN/f'rawKL-trial02-quality-leg{leg:02d}-audit-root-execution-reviewed1-20261017'
+-    unit=f'robotron-rawkl-trial02-quality-leg{leg:02d}-audit-reviewed1-20261017.service'
++    out=RUN/f'CE543M-quality-original-row-leg{leg:02d}-audit-root-execution-reviewed1-20261017'
++    unit=f'robotron-CE543M-quality-original-row-leg{leg:02d}-audit-reviewed1-20261017.service'
+     return out,unit,unit.removesuffix('.service')+'.timer'
++
++def audit_argv(leg,plan_sha):
++    return ['/usr/bin/python3.12','-I','-B',str(AUDITOR),'--execute',
++        '--game',str(REPO/'Robotron'),'--campaign',str(CAMPAIGN),'--plan-sha256',plan_sha,
++        '--source-sha256',AUDITOR_SHA,'--binding-job',str(BINDING),'--binding-job-sha256',BINDING_SHA,
++        '--leg',str(leg),'--output',str(RUN/f'CE543M-quality-original-row-leg{leg:02d}-audit')]
++
++def configure_future(args):
++    global FUTURE,FUTURE_SHA,PLAN_SHA,QUALITY_INV,QUALITY_PID,QUALITY_START,R1_EVALUATOR,QUALITY_OWNER
++    require(args.future_commands is not None and re.fullmatch('[0-9a-f]{64}',args.expected_future_sha256 or ''),
++        'Explicit observed actual four-command file and SHA required; template is UNBOUND')
++    FUTURE=args.future_commands.resolve(strict=True);FUTURE_SHA=args.expected_future_sha256
++    info=FUTURE.lstat()
++    require(info.st_uid==os.getuid() and info.st_nlink==1 and info.st_mode&0o777==0o444 and 0<info.st_size<=4<<20
++        and sha(FUTURE)==FUTURE_SHA,'Exact owned readonly actual commands required')
++    value=load(FUTURE)
++    require(set(value)=={'schema','actual_plan','quality_owner','R1_evaluator','commands'}
++        and value['schema']=='robotron-CE543M-observed-original-leg-audit-commands-v1', 'Wrong actual command/owner schema')
++    require(value['actual_plan']['path']==str(CAMPAIGN/'plan.json')
++        and re.fullmatch('[0-9a-f]{64}',value['actual_plan']['sha256'] or ''), 'Actual materialized plan still UNBOUND')
++    QUALITY_OWNER=value['quality_owner'];R1_EVALUATOR=value['R1_evaluator']
++    require(set(QUALITY_OWNER)=={'pid','starttime_ticks','unit','invocation_id','cgroup'}
++        and QUALITY_OWNER['unit']==QUALITY and type(QUALITY_OWNER['pid']) is int and QUALITY_OWNER['pid']>0
++        and type(QUALITY_OWNER['starttime_ticks']) is int and QUALITY_OWNER['starttime_ticks']>0
++        and re.fullmatch('[0-9a-f]{32}',QUALITY_OWNER['invocation_id'] or '')
++        and isinstance(QUALITY_OWNER['cgroup'],str) and QUALITY_OWNER['cgroup'].startswith('/'),
++        'Actual original campaign owner is still UNBOUND')
++    require(set(R1_EVALUATOR)=={'pid','starttime_ticks'} and all(type(v) is int and v>0 for v in R1_EVALUATOR.values()),
++        'Actual original R1 evaluator is still UNBOUND')
++    PLAN_SHA=value['actual_plan']['sha256'];QUALITY_INV=QUALITY_OWNER['invocation_id']
++    QUALITY_PID=QUALITY_OWNER['pid'];QUALITY_START=QUALITY_OWNER['starttime_ticks']
++    require([x['leg'] for x in value['commands']]==[1,2,3,4]
++        and all(x['argv']==audit_argv(x['leg'],PLAN_SHA) for x in value['commands']), 'Exact four original audit commands required')
++    require(sha(FUTURE)==FUTURE_SHA,'Actual command file changed during parse')
+ 
+ def setup(leg):
+     require(sha(FUTURE)==FUTURE_SHA,'Sealed four-command file changed'); future=load(FUTURE)
+     require([x['leg'] for x in future['commands']]==[1,2,3,4],'Wrong leg command set')
+     argv=future['commands'][leg-1]['argv']; planpath=Path(future['actual_plan']['path'])
+-    require(argv[:3]==['/usr/bin/python3.12','-I','-B'] and argv[argv.index('--leg')+1]==str(leg),'Wrong sealed command')
++    require(argv==audit_argv(leg,PLAN_SHA),'Wrong exact sealed CE audit command')
+     require(argv[argv.index('--plan-sha256')+1]==PLAN_SHA and sha(planpath)==PLAN_SHA,'Actual materialized plan changed')
+     require(argv[argv.index('--binding-job-sha256')+1]==BINDING_SHA and argv[argv.index('--source-sha256')+1]==AUDITOR_SHA,'Binding/source argument mismatch')
+-    binding=Path(argv[argv.index('--binding-job')+1]); require(sha(binding)==BINDING_SHA and sha(argv[3])==AUDITOR_SHA,'Binding/auditor changed')
++    binding=Path(argv[argv.index('--binding-job')+1]); require(binding==BINDING and sha(binding)==BINDING_SHA and sha(argv[3])==AUDITOR_SHA,'Binding/auditor changed')
+     plan=load(planpath); cfg=load(binding); out,unit,timer=names(leg)
+     require(plan['output_directory']==argv[argv.index('--campaign')+1]==cfg['campaign']['output_directory'],'Campaign mismatch')
+     return argv,plan,cfg,out,unit,timer
+@@ -74,17 +112,24 @@
+     statusraw=(campaign/'status.json').read_bytes(); state=json.loads(statusraw); rows=[x for x in state['legs'] if x['index']==leg]
+     require(state['plan_sha256']==PLAN_SHA and len(rows)==1,'Original status/plan differs'); record=rows[0]
+     require(record['state']=='finished' and record['returncode']==0 and record['pid']>0 and record['role']==spec['role'],'Original selected evaluator not finished0')
+-    if leg==1: require(record['pid']==638126,'Original R1 evaluator replaced')
++    if leg==1: require(record['pid']==R1_EVALUATOR['pid'],'Original R1 evaluator replaced')
+     quality,qualityraw=show(QUALITY)
+-    require(quality['ExecMainPID']=='638119' and quality['InvocationID']==QUALITY_INV and quality['NRestarts']=='0','Original campaign owner changed')
++    require(quality['ExecMainPID']==str(QUALITY_PID) and quality['InvocationID']==QUALITY_INV and quality['NRestarts']=='0'
++        and quality['ControlGroup'] in ('',QUALITY_OWNER['cgroup']),'Original campaign owner changed')
++    require(quality['MainPID']=='0' or quality['MainPID']==str(QUALITY_PID) and start(QUALITY_PID)==QUALITY_START,
++        'Live original campaign PID/start changed')
+     receiptpath=Path(spec['receipt_path']); receipt=load(receiptpath); cohort=receipt.get('cohort',{})
+     require(receipt['complete'] is True and receipt['active'] is False and receipt['valid'] is True and cohort.get('complete',True) is True,'Original full-tail receipt not complete/inactive/valid')
+     require(receipt['pending']==receipt['abandoned']==0 and receipt['started']==receipt['count']==len(receipt['rows'])>=50 and {x['client_slot'] for x in receipt['rows']}==set(range(4096,4112)),'Missing original tails/slots')
+     require(receipt['job']==spec['job'] and receipt['checkpoint_sha256']==plan['checkpoints'][spec['role']]['sha256'],'Original receipt job/checkpoint differs')
+     pins={str(FUTURE):FUTURE_SHA,str(Path(__file__)):sha(__file__),argv[3]:AUDITOR_SHA}
+-    manifest=Path(argv[3]).with_name('preparation-manifest.json'); manifest_sha='c29dd888a0f8da751fc637290b77c441a549c6c320e2981a81e37782dbd6cf5b'
++    manifest=Path(argv[3]).with_name('preparation-manifest.json'); manifest_sha=BUNDLE_SHA
+     require(sha(manifest)==manifest_sha,'Pinned auditor bundle manifest changed'); pins[str(manifest)]=manifest_sha
+-    for name,x in load(manifest)['files'].items(): pins[x['source']]=x['sha256']
++    for name,x in load(manifest)['files'].items():
++        require(set(x)=={'path','sha256','bytes','mode'} and x['path']==str(BUNDLE/name) and x['mode']=='0o444',
++            'Actual reviewed2 bundle entry shape/path differs')
++        pins[x['path']]=x['sha256']
++    require(sha(BUNDLE/'quality_bindings.py')==BINDINGS_SHA,'Sealed CE bindings changed')
+     pins[argv[argv.index('--binding-job')+1]]=BINDING_SHA
+     for group in ('evaluator_source_hashes','execution_source_hashes'):
+         for path,digest in plan[group].items(): pins[str(Path(path) if Path(path).is_absolute() else REPO/'Robotron'/path)]=digest
+@@ -160,8 +205,9 @@
+     save(out/'root-result-review-and-release.json',result); print(json.dumps(dict(status=result['status'],original_exit=original['original_exit'],directory=str(out))))
+ 
+ if __name__=='__main__':
+-    parser=argparse.ArgumentParser(description=__doc__); parser.add_argument('--execute',action='store_true'); parser.add_argument('--action',choices=('launch','archive')); parser.add_argument('--leg',type=int,choices=(1,2,3,4)); parser.add_argument('--expected-source-sha256'); args=parser.parse_args()
++    parser=argparse.ArgumentParser(description=__doc__); parser.add_argument('--execute',action='store_true'); parser.add_argument('--action',choices=('launch','archive')); parser.add_argument('--leg',type=int,choices=(1,2,3,4)); parser.add_argument('--expected-source-sha256'); parser.add_argument('--future-commands',type=Path); parser.add_argument('--expected-future-sha256'); args=parser.parse_args()
+     if not args.execute: print('PLAN_ONLY: no input reads, queries, audit invocation or unit actions')
+     else:
+         require(args.action and args.leg and args.expected_source_sha256 and sha(__file__)==args.expected_source_sha256,'Explicit exact root runner source/action/leg required')
++        if args.action=='launch': configure_future(args)
+         {'launch':launch,'archive':archive}[args.action](args.leg)

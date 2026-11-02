@@ -1,0 +1,16 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/training.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-learner-CUDA-diagnostic-timing-API-source-only-original01-20261031/selected-source/training.py
+@@ -531,6 +531,13 @@
+     if gpu_timing is not None:
+         # The packed CPU readback above already waits for these events.
+         metrics.last_train_gpu_compute_ms = gpu_timing[0].elapsed_time(gpu_timing[1])
++        # Replace one complete metadata record; readers never mutate it.
++        previous_gpu_sample = getattr(metrics, 'last_train_gpu_compute_diagnostic', None)
++        metrics.last_train_gpu_compute_diagnostic = dict(
++            elapsed_ms=float(metrics.last_train_gpu_compute_ms),
++            sample_count=1 if previous_gpu_sample is None else previous_gpu_sample['sample_count'] + 1,
++            logical_training_step=int(agent.training_steps),
++            observed_unix_s=time.time(), device=str(device))
+     td_errors = host[:B]  # Existing CE diagnostics remain CE in both modes.
+     priority_errors = host[B:2*B] if kl_priority else td_errors
+     scalar_offset = 2 * B if kl_priority else B

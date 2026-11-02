@@ -1,0 +1,102 @@
+--- original-storage-source-archive/cuda_trace_parent.py
++++ cuda_trace_parent.py
+@@ -209,6 +209,41 @@
+         os.close(descriptor)
+ 
+ 
++def scan_quality_processes(base, *, proc_root=Path('/proc'), allowed_pids=(), observations):
++    """Preserve the pinned classifier; skip only vanished UNCLASSIFIED reads.
++
++    Once argv matches a blocked name, any identity-read failure is fatal. A
++    permission or other I/O failure never becomes evidence that a PID vanished.
++    """
++    blocked = []
++    allowed = set(allowed_pids)
++    for entry in Path(proc_root).iterdir():
++        if not entry.name.isdigit() or int(entry.name) in allowed:
++            continue
++        try:
++            raw = (entry/'cmdline').read_bytes()
++        except OSError as error:
++            if error.errno in (errno.ENOENT, errno.ESRCH):
++                observations['unclassified_cmdline_disappearances'] += 1
++                observations['last_pid'] = int(entry.name)
++                observations['last_errno'] = error.errno
++                continue
++            if isinstance(error, PermissionError):
++                raise RuntimeError('Cannot establish process ownership: ' + entry.name) from error
++            raise
++        words = [part.decode(errors='replace') for part in raw.split(b'\0') if part]
++        names = [Path(word).name for word in words]
++        if any(name in base.QUALITY_NAMES or name.startswith('benchmark_') or
++               word.rsplit('.',1)[-1]+'.py' in base.QUALITY_NAMES or
++               word.rsplit('.',1)[-1].startswith('benchmark_') for name, word in zip(names, words)):
++            try:
++                identity = base.identity(int(entry.name), proc_root)
++            except OSError as error:
++                raise RuntimeError('Classified blocked process identity failed PID' + entry.name) from error
++            blocked.append(dict(identity=identity, command=words))
++    return blocked
++
++
+ def checked_module(path, expected, name):
+     """Execute only verified helper bytes, exclusively on the explicit path."""
+     path = Path(path)
+@@ -256,10 +291,22 @@
+     # or old snapshot numerical policy is called.
+     base.GAME, base.REPO, base.BOUNDS = GAME, REPO, dict(BOUNDS)
+     base.QUALITY_NAMES = set(base.QUALITY_NAMES) | BLOCKED_NAMES
++    base.process_scan_observations = dict(unclassified_cmdline_disappearances=0, last_pid=None, last_errno=None)
++    base.scan_quality_processes = lambda **kwargs: scan_quality_processes(
++        base, observations=base.process_scan_observations, **kwargs)
+     original_guard = base.guard_live_resources
++    last_logged = 0
+ 
+     def resource_guard(**kwargs):
+-        result = original_guard(**kwargs)
++        nonlocal last_logged
++        try:
++            result = original_guard(**kwargs)
++        finally:
++            count = base.process_scan_observations['unclassified_cmdline_disappearances']
++            if count != last_logged:
++                print('[PROCESS SCAN] ' + json.dumps(dict(scope='initial unclassified cmdline only',
++                    process_id=os.getpid(), **base.process_scan_observations)), file=sys.stderr, flush=True)
++                last_logged = count
+         if kwargs.get('initial', False):
+             require(result['gpu']['devices'][base.GPU0_UUID]['free_bytes'] >= 14*GIB,
+                     'GPU0 requires at least14GiB free before numerical import')
+@@ -453,6 +500,7 @@
+                             compiler_cache_identity=cache_identity, compiler_cache_observations=cache_events,
+                             native_compiler_cache=native_cache,
+                             observer_storage_observations=observer,
++                            parent_process_scan_observations=dict(base.process_scan_observations),
+                             scope='Direct owned Popen result; parent service exit retained separately by root'))
+     require(time.monotonic() <= overall_deadline, 'Overall deadline exceeded at variant completion')
+     result = json.loads((paths['root']/'phase-result.json').read_text())
+@@ -521,6 +569,7 @@
+                 gpu_uuid=base.GPU0_UUID, forbidden_gpu_uuid=base.MAIN_GPU_UUID,
+                 bounds=dict(BOUNDS), sources=lock['source_files'], trained_fixture=fixture,
+                 native_compiler_cache=native_cache,
++                parent_process_scan_observations=dict(base.process_scan_observations),
+                 numerical_protocol=lock, service_exit_provenance='Root must retain original invocation and terminal fields before owned unit release')
+             path = directory/'launch-manifest.json'
+             publish(base, path, manifest)
+@@ -544,7 +593,8 @@
+         except BaseException as error:
+             if root_identity is not None:
+                 base.check_directory(directory, root_identity)
+-                publish(base, directory/'failure.json', dict(status='VALIDATION_ERROR', error=repr(error)))
++                publish(base, directory/'failure.json', dict(status='VALIDATION_ERROR', error=repr(error),
++                        parent_process_scan_observations=dict(base.process_scan_observations)))
+             raise
+         finally:
+             with base.blocked_handled_signals():
+@@ -569,6 +619,7 @@
+                     raise RuntimeError('Owned cleanup requires recovery: ' + repr(errors))
+         aggregate = dict(status='PARITY_COMPLETE', schema=SCHEMA, variants=results,
+             source_lock_sha256=SOURCE_LOCK_SHA256, owned_cleanup_complete=True,
++            parent_process_scan_observations=dict(base.process_scan_observations),
+             limitations=['Fixed synthetic batch at trained checkpoint; no live replay-population or learning-quality claim',
+                          'No actual live Rainbow agent/server lifecycle or throughput comparison',
+                          'Storage watcher is cooperative, not a filesystem quota',

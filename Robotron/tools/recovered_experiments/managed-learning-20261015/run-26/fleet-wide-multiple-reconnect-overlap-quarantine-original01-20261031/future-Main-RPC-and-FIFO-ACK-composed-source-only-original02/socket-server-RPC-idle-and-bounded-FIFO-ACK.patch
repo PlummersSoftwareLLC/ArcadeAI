@@ -1,0 +1,56 @@
+--- a/Robotron/Scripts/dqn/socket_server.py
++++ b/Robotron/Scripts/dqn/socket_server.py
+@@ -32,9 +32,11 @@
+ try:
+     from .response_telemetry import ResponseTelemetry
+     from .connection_cleanup_receipts import ConnectionCleanupReceipts, current_server_stamp
++    from .bounded_fifo_cleanup_ack_v1 import wait_for_fifo_reset_ack
+ except ImportError:
+     from response_telemetry import ResponseTelemetry
+     from connection_cleanup_receipts import ConnectionCleanupReceipts, current_server_stamp
++    from bounded_fifo_cleanup_ack_v1 import wait_for_fifo_reset_ack
+ from collections import deque
+ from dataclasses import dataclass
+ from typing import Optional
+@@ -2812,6 +2814,8 @@
+                 except Exception:
+                     break
+                 self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_action_write_completed")
++                if self.replay_enabled:
++                    last_payload_time = time.time()  # Client-idle budget excludes Main's own completed RPC work.
+ 
+         except ConnectionError as e:
+             if not self.shutdown_event.is_set():
+@@ -2882,14 +2886,29 @@
+                 self._clear_preview_cache()
+             _cid_reset_ack = None
+             if self.async_buffer is not None:
++                _cleanup_ack_started = time.monotonic()
++                _cleanup_ack_phase = "enqueue"
+                 try:
+                     _cid_reset_ack = self.async_buffer.remove_client(cid)
+-                    if not _cid_reset_ack.wait(timeout=5.0):
+-                        raise RuntimeError("FIFO replay cleanup acknowledgment timed out")
++                    _cleanup_ack_phase = "ack_wait"
++                    _cleanup_ack_outcome = wait_for_fifo_reset_ack(_cid_reset_ack)
++                    if _cleanup_ack_outcome["grace_used"]:
++                        try:
++                            print(f"[REPLAY] disconnect cleanup ACK completed in grace "
++                                  f"cid={cid} token={_cleanup_token} "
++                                  f"ack_elapsed_s={_cleanup_ack_outcome['elapsed_s']:.6f} "
++                                  f"total_elapsed_s={time.monotonic()-_cleanup_ack_started:.6f}", flush=True)
++                        except Exception:
++                            pass  # Diagnostic output never changes the actual cleanup result.
+                 except Exception as exc:
+                     _cid_cleanup_ok = False
+                     self._fail_inference_only(f"Disconnect replay cleanup failed: {exc}")
+-                    print(f"[REPLAY] disconnect cleanup failed: {exc}")
++                    try:
++                        print(f"[REPLAY] disconnect cleanup failed: {exc} "
++                              f"cid={cid} token={_cleanup_token} phase={_cleanup_ack_phase} "
++                              f"elapsed_s={time.monotonic()-_cleanup_ack_started:.6f}", flush=True)
++                    except Exception:
++                        pass  # The original failure remains sticky if logging is unavailable.
+             # Ratchet cohort accounting: if this client died mid-game and that
+             # game was in the measurement cohort, un-count it so the epoch
+             # doesn't wait for a score that can never arrive.

@@ -1,0 +1,10 @@
+--- test_actual_cleanup_integration_v1.py
++++ test_actual_cleanup_integration_v2.py
+@@ -226,6 +226,7 @@
+     def server(self, enabled=True):
+         s = server_class()()
+         s.client_lock = threading.Lock()
++        s._eval_override = {}
+         s.clients = {7:threading.current_thread()}
+         cs = dict(client_slot=3, eval_only=False, measurement_generation=0, measurement_active=False)
+         s.client_states = {7:cs}

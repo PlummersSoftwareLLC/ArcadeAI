@@ -1,0 +1,22 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/startup_policy_journal_proposal/full_startup_wire_v2.lua
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/full_startup_wire_slot64_v2.lua
+@@ -291,7 +291,7 @@
+         handles={},nonce=ZERO,mode="gated",last_start=0,last_coin=0,last_apply_ok=false,last_socket_ok=false,
+         gate_sequence=-1,setup_sequence=-1,initialized_sequence=-1,latched_sequence=-1,first_play_sequence=-1,
+         installed=false,failed=false,closed=false,trace_closed=false,stop_received=false,connected_once=false},Adapter)
+-    integer(a.slot,4096,4127)
++    integer(a.slot,4096,4159)
+     for _,v in ipairs({a.session,a.connection})do
+         assert(#v==32 and v:match("^[a-f0-9]+$")and v~=string.rep("0",32),"fresh bound identity required")
+     end
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/full-tail-wire-v2-contract-original01-preparation-20261022/full-tail-observation-main.lua
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/full-tail-observation-slot64-main.lua
+@@ -4081,7 +4081,7 @@
+     return
+ end
+ -- FULL_POLICY_STARTUP_V2_BEGIN
+- _startup = assert(loadfile("/home/dave/source/repos/ArcadeAI/Robotron/tools/startup_policy_journal_proposal/full_startup_wire_v2.lua"))().attach(controls, {eval_mode=EVAL_MODE, debug_bypass_frames=DEBUG_BYPASS_SOCKET_FOR_FRAMES, force_action_frames=DEBUG_FORCE_ACTION_FRAMES})
++ _startup = assert(loadfile("/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/full_startup_wire_slot64_v2.lua"))().attach(controls, {eval_mode=EVAL_MODE, debug_bypass_frames=DEBUG_BYPASS_SOCKET_FOR_FRAMES, force_action_frames=DEBUG_FORCE_ACTION_FRAMES})
+ -- FULL_POLICY_STARTUP_V2_END
+ open_socket()
+ 

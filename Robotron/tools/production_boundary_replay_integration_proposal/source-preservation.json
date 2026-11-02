@@ -1,0 +1,92 @@
+{
+  "N_Q_modified": false,
+  "base_source": {
+    "bytes": 140517,
+    "identity": {
+      "bytes": 140517,
+      "ctime_ns": 1792306967928089640,
+      "device": 2304,
+      "inode": 79696030,
+      "mode": "0o664",
+      "mtime_ns": 1792306967914113042,
+      "nlink": 1,
+      "uid": 1001
+    },
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py",
+    "sha256": "f44ddfe31408b77b6d622e1d4ec4cda60a03999dc984d9e11b5aeac38911a9ed"
+  },
+  "candidate_source_bytes": 140562,
+  "candidate_source_sha256": "5314c4fc70449b2f94520ce27d0f08374a68aba23175fcb49fa2e55ad4522408",
+  "cases": [
+    "zero_recovery",
+    "inactive_wave1_reset",
+    "current_start",
+    "wave_reset",
+    "natural_death"
+  ],
+  "helper_body_pin": {
+    "bytes": 973,
+    "identity": {
+      "bytes": 973,
+      "ctime_ns": 1792349968250763055,
+      "device": 2304,
+      "inode": 82575413,
+      "mode": "0o444",
+      "mtime_ns": 1792349863506339981,
+      "nlink": 1,
+      "uid": 1001
+    },
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_zero_dip_wave2_proposal/effective_guard_body.py",
+    "sha256": "f7a4d367162bafb87f4bc94ddad54573a76ab9159ae11e07540b2690c2c6eba4"
+  },
+  "only_literal_after": "        and (int(frame.game_score) > 0 or not recent_start\n             or int(frame.level_number) >= 2)\n",
+  "only_literal_before": "        and (int(frame.game_score) > 0 or not recent_start)\n",
+  "patch": {
+    "bytes": 606,
+    "identity": {
+      "bytes": 606,
+      "ctime_ns": 1792354939886489311,
+      "device": 2304,
+      "inode": 82579835,
+      "mode": "0o444",
+      "mtime_ns": 1792354939884489303,
+      "nlink": 1,
+      "uid": 1001
+    },
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/production_boundary_replay_integration_proposal/unapplied.patch",
+    "sha256": "cb4784e6b2c3fabeba3b0e7284be9df2c94466d35195ac616c38b41767f76878"
+  },
+  "patch_byte_equal_original_cb478": true,
+  "portable_boundary": "Native SumTree callbacks explicitly None; no whole replay_buffer/native_sumtree/agent/training import. Existing portable fallback and actual bank methods execute. No persistence/load/sample API is exposed.",
+  "private_package_ancestry": {
+    "bytes": 43567,
+    "identity": {
+      "bytes": 43567,
+      "ctime_ns": 1792349968255924515,
+      "device": 2304,
+      "inode": 82575417,
+      "mode": "0o444",
+      "mtime_ns": 1792349968255924515,
+      "nlink": 1,
+      "uid": 1001
+    },
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_zero_dip_wave2_proposal/preparation-reviewed2-manifest.json",
+    "sha256": "947981d64af6c3cfce1d7191f1a02ce40f8ca79b5273aaee0dcc7a43b1760fd4"
+  },
+  "private_source_file_count": 31,
+  "production_sources_modified": false,
+  "real_targets": "Private original or inline-patched socket module parser/full handler; actual imported nstep/history/reset/journal and AsyncReplayBuffer. Exact held SumTree,15 replay methods including constructor/add/bank admission/copies/predeath/elite mutations, and RainbowAgent.step extracted only during future root execution.",
+  "reverse_exact": true,
+  "schema": "robotron-production-boundary-private-replay-source-preservation-v1",
+  "source_import_AST_compile_tests_by_author": false,
+  "status": "SOURCE_ONLY_UNAPPLIED_UNEXECUTED",
+  "strict_fake_boundaries": [
+    "Descriptor-free actual ancestral MemoryWire; select and socket construction blocked; delayed cleanup Timer inert.",
+    "Dummy act returns idle DQN; no model/optimizer/learning instance. Agent.step is actual extracted body.",
+    "Private RAM ring256/banks2x64; only storage capacities, inference batching and test gamesettings override. HOF50K/EpHOF25K floors, rewards and actual bank logic held.",
+    "Actual FIFO consumer thread; per-frame barriers make observations deterministic. Handler has returned, cleanup reset barrier completed, no late producer, then original stop and join. This is not general shutdown race proof."
+  ],
+  "tests_authored": 2,
+  "tests_executed": false,
+  "trajectory": "Seeded existing connection UID70/raw991500/wave35/acceptedclock204028,lastSTART203799,measurementFalse/generation0. First genuine inactive wave1 zero starts UID71.40 wave1 frames then4 wave2 frames reach9900. Zero is acceptedclock204073/STARTage274.35 synthetic recovery frames10K..98.4K then101K natural death exceed held bank floors and32-row minimum.82 wire frames, capacity256, no turnover. This short seeded trajectory is not historical RAM/wire replay."
+}

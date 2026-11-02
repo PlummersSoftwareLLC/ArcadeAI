@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Root-bound live8 maintenance job; actual values supplied after fresh root preflight",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "game_root", "model_dir", "experiment", "output_directory", "capture_directory", "trainer_unit", "fleet_unit", "before", "actor_masks", "worker_mask", "baseline_csv", "sources", "helper_pins", "static_pins", "original_dropin", "bank_spec", "insurance_receipt", "insurance_verification", "verifier", "readiness_timeout_s", "capture_timeout_s"],
+  "properties": {
+    "schema": {"const": "robotron-live8-maintenance-job-v1"},
+    "game_root": {"type": "string"}, "model_dir": {"type": "string"},
+    "experiment": {"type": "string"}, "output_directory": {"type": "string"},
+    "capture_directory": {"type": "string"}, "trainer_unit": {"type": "string"},
+    "fleet_unit": {"type": "string"}, "before": {"type": "object"},
+    "actor_masks": {"type": "object", "minProperties": 192, "maxProperties": 192,
+      "additionalProperties": {"$ref": "#/$defs/mask"}},
+    "worker_mask": {"$ref": "#/$defs/mask"},
+    "baseline_csv": {"type": "object", "required": ["replay_dropped", "batch_size", "replay_sample_cap"]},
+    "sources": {"type": "array", "minItems": 5, "maxItems": 5,
+      "items": {"type": "object", "additionalProperties": false,
+        "required": ["destination", "before", "after"],
+        "properties": {"destination": {"type": "string"},
+          "before": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/pin"}]}, "after": {"$ref": "#/$defs/pin"}}}},
+    "helper_pins": {"type": "object", "required": ["controller", "live_host", "metrics", "identity", "protection", "bank_state"], "additionalProperties": {"$ref": "#/$defs/pin"}},
+    "static_pins": {"type": "array", "items": {"$ref": "#/$defs/pin"}},
+    "insurance_receipt": {"$ref": "#/$defs/pin"}, "insurance_verification": {"$ref": "#/$defs/pin"},
+    "original_dropin": {"type": "object", "additionalProperties": false,
+      "required": ["path", "content_base64", "mode"], "properties": {"path": {"type": "string"}, "content_base64": {"type": "null"}, "mode": {"type": "null"}}},
+    "bank_spec": {"type": "object", "additionalProperties": false,
+      "required": ["ring", "model_dir", "capacity", "state_size", "episode_capacity", "bank_strides"],
+      "properties": {"ring": {"type": "string"}, "model_dir": {"type": "string"}, "capacity": {"const": 6000000}, "state_size": {"const": 11128}, "episode_capacity": {"const": 192}, "bank_strides": {"const": {"hof": 1536, "ephof": 2048}}}},
+    "verifier": {"type": "object", "additionalProperties": false,
+      "required": ["script", "python", "python_binding", "timeout_s", "context"], "properties": {"script": {"$ref": "#/$defs/pin"}, "python": {"type": "string"}, "python_binding": {"type": "object"}, "timeout_s": {"const": 120}, "context": {"type": "object"}}},
+    "readiness_timeout_s": {"const": 600}, "capture_timeout_s": {"const": 600}
+  },
+  "$defs": {
+    "mask": {"const": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71]},
+    "pin": {"type": "object", "additionalProperties": false, "required": ["path", "sha256", "bytes", "identity"],
+      "properties": {"path": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "bytes": {"type": "integer", "minimum": 0},
+        "identity": {"type": "object", "additionalProperties": false,
+          "required": ["device", "inode", "bytes", "mtime_ns", "ctime_ns", "mode", "uid", "nlink"],
+          "properties": {"device": {"type": "integer"}, "inode": {"type": "integer"}, "bytes": {"type": "integer"}, "mtime_ns": {"type": "integer"}, "ctime_ns": {"type": "integer"}, "mode": {"type": "string"}, "uid": {"type": "integer"}, "nlink": {"type": "integer"}}}}}
+  }
+}

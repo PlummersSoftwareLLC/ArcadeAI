@@ -1,0 +1,293 @@
+Isolated whole-agent snapshot smoke — PREPARATORY PLAN, NOT EXECUTED
+
+This is a concrete launch contract for a later reviewed harness. No GPU runner
+or --launch entry point is installed by this plan. No numerical/GPU module was
+imported to prepare it. The sealed CPU evidence and production patch are unchanged.
+Implementing and reviewing the harness is still required before a launch decision.
+
+Purpose
+
+Exercise the actual proposed RainbowAgent constructor, full-size RainbowNet,
+actual C51 train_step, fused CUDA Adam, enabled CUDA GradScaler, real prefetch,
+private replay/bank persistence, proposed owned-device barrier, real asynchronous
+replay FIFO and capture/load paths. Use only synthetic private data/checkpoints.
+The first smoke does not need a production checkpoint, replay mapping, control,
+game client, dashboard or main.main(). A self-produced full Rainbow checkpoint
+is sufficient to exercise the real loader without reading production state.
+
+Current evidence is 20 CPU/mocked tests plus 2 strengthened real CPU round-trip
+tests; those use toy Linear models. This future smoke closes the full-network,
+fused-CUDA/AMP and actual-agent wiring gap. It cannot validate playing quality,
+full-size archive I/O, real MAME frame flow, or exact continuation.
+
+Launch interface and guards, before importing NumPy, Torch or dqn
+
+The future parent launcher must use only the standard library. Without --launch
+it prints the candidate source manifest, proposed private paths, bounds, required
+guard checklist and remaining coverage gaps; live GPU/process guards are marked
+unqueried. It creates no files/processes/CUDA context.
+--launch is explicit and has no environment-variable equivalent. Fail closed
+if torch/numpy/dqn is already in sys.modules or the invocation requests another
+GPU, a reused directory, an external checkpoint, or an arbitrary port.
+
+The sole permitted GPU UUID is display GPU0:
+  GPU-b549355c-78bb-53d8-04a6-da34d45e1dd0
+The main training GPU is forbidden:
+  GPU-c0c5d295-6f07-aab5-bbde-b592ea426ec1
+Do not infer device ownership from CUDA ordinal or a GPU name. Require one
+visible device and an exact CUDA-reported UUID match again inside the child.
+
+Only --launch may run read-only nvidia-smi query helpers. Before allocating
+private smoke directories or starting the worker child, require all of:
+* Parent confirms the frozen campaign and its launcher/sidecar children exited.
+  Inspect /proc PID/start-tick identities for run_quality_campaign.py,
+  run_frozen_sidecar.py and the evaluator module names from that campaign's
+  launch manifest. Unknown/unreadable identities fail closed.
+* No IPv4 or IPv6 LISTEN socket on port 9999, and no successful connection to
+  127.0.0.1:9999 or [::1]:9999. Do not bind, close or otherwise take over 9999.
+* nvidia-smi reports the exact approved GPU0 UUID and no competing compute PID
+  on it. Existing display ownership is recorded, not killed. The main GPU may
+  continue training; it is never made visible to the smoke.
+* Acquire an exclusive, nonblocking GPU0-smoke lease file with flock. This only
+  serializes cooperating smoke launches; the existing quality launcher does not
+  honor it. A parent-owned post-campaign scheduling window is therefore required.
+* At least 12 GiB reported free on GPU0, 16 GiB MemAvailable, 8 GiB free in the
+  selected artifact filesystem and 256 MiB free in /dev/shm. Bounds below are
+  limits, not a prediction that every GPU/software version will fit or pass.
+
+A standard-library parent watchdog rechecks competing GPU0 owners, quality
+processes and port 9999 before CUDA import, before each phase, and at <=1s while
+the child runs. A new competitor causes failure and termination of only the
+owned smoke process group. Sampling cannot prevent an uncooperative external
+job from starting between checks; the exclusive scheduling window is essential.
+Do not change GPU compute mode or stop an existing job to obtain ownership.
+
+Private identity and resource layout
+
+Choose a UUID nonce in the parent; create an exclusive output directory under a
+new post-campaign log directory and a separate exclusive directory:
+  /dev/shm/robotron-snapshot-smoke-NONCE/
+Use mkdir(mode=0700), reject symlinks and pre-existing paths, and record directory
+device/inode plus parent/child PID and /proc start ticks. Keep an ownership JSON
+in each root; never accept caller-selected replay/bank paths. No production
+model/control/settings directory or /dev/shm/robotron_dqn_latest_replay is opened.
+
+Proposed bounds: CPU threads 2, cgroup memory.max 12 GiB, tasks.max 96,
+CUDA allocator cap 10 GiB, artifact bytes <=4 GiB, private tmpfs <=128 MiB,
+whole owned process group <=300s, each producer/barrier/join <=10s,
+snapshot cooperative timeout 90s, at most 3 pre-capture optimizer attempts and
+1 post-load optimizer attempt. Require a working delegated cgroup; do not
+substitute RLIMIT_AS, because CUDA virtual reservations are not RSS. If a hard
+artifact/tmpfs quota is unavailable, the fixed tiny geometry plus a byte watcher
+is only a cooperative bound: state that explicitly in the launch report.
+
+The parent owns the child process group/cgroup from creation (start_new_session),
+captures stdout/stderr, and records the exact command/env allowlist. It sends
+TERM then KILL only to that still-owned group after verifying PID/start identity.
+No pgrep/killall/broad kill, no signals to training/evaluation/MAME processes.
+
+Source preparation, still before numerical imports
+
+Copy all regular, nonsymlink .py files and sumtree.c from Scripts/dqn into:
+  OUTPUT/private/Robotron/Scripts/dqn/
+Do not copy production caches, data, models, logs or existing __pycache__ files.
+Overlay the five complete proposed files from coherent_snapshot_proposal/staged/,
+verifying each proposed hash against proposal-manifest.json and patch SHA256:
+  31dd8553f505f383c21b3df5631efb5a8064dab73c4503b30176940f15f70717
+Require every modified production base hash still matches the manifest first.
+Do not rebuild or apply a patch in the production checkout. Native sum-tree
+builds write a sibling __pycache__, so its C source/cache must also be private.
+Record a complete private source manifest and recheck it after the smoke.
+
+Use a fresh child interpreter with cwd inside OUTPUT/private, a sanitized
+environment and no repository root in PYTHONPATH/sys.path. Before importing dqn,
+explicitly insert only OUTPUT/private/Robotron/Scripts for that package. Fail if
+any loaded dqn module's __file__ resolves outside this copied tree. The optional
+expert import uses dqn.expert_fast and must also resolve inside the private tree.
+
+The parallel replay proposal is not included in this first smoke. Set its gate
+off explicitly. If later deploying both proposals, first produce a new merged
+private candidate, re-review merged agent/replay shutdown code and hash it, rerun
+both CPU suites, then repeat this smoke; snapshot-only success does not certify
+that combination.
+
+Private environment, set before config/model imports
+
+  CUDA_VISIBLE_DEVICES=GPU-b549355c-78bb-53d8-04a6-da34d45e1dd0
+  ROBOTRON_TRAIN_GPU=0
+  ROBOTRON_INFERENCE_GPU=0
+  ROBOTRON_DQN_MODEL_DIR=OUTPUT/private-models
+  ROBOTRON_DQN_CONTROL_PATH=OUTPUT/private-control.json
+  ROBOTRON_RUN_DIR=OUTPUT/private-journal
+  OMP_NUM_THREADS=2, MKL_NUM_THREADS=2, OPENBLAS_NUM_THREADS=2
+  DQN_FRAME_STACK=4, DQN_BATCH_SIZE=8, DQN_FUSED_ADAM=1
+  DQN_REPLAY_PREFETCH=1, DQN_TORCH_COMPILE=0, DQN_FULL_LOSS_COMPILE=0
+  DQN_EXACT_INFERENCE_GRAPHS=0, DQN_PARALLEL_STATE_FILL=0
+  DQN_COHERENT_SNAPSHOT=1, DQN_C51_TARGET_SMOOTHING=0
+  DQN_N_STEP=3, DQN_MAX_SAMPLES_PER_FRAME=8
+
+Set Torch/Inductor/Triton/CUDA/native extension/TMP caches to distinct OUTPUT
+subdirectories, unset inherited LD_PRELOAD/socket-wait hooks and inherited DQN/
+ROBOTRON knobs not in the reviewed allowlist. Do not mutate HOME/CODEX_HOME.
+Create only a fresh private control fixture:
+  {"experiment":"isolated-snapshot-smoke","lr_scale":0.5}
+Config imports LearningControl and game_settings.load immediately; these paths
+must already be private. After importing private config, save its default
+game_settings to the private settings path and pass the actual settings/control
+objects to capture so RAM/disk equality is exercised.
+
+Before importing private model/agent or constructing anything, set cfg fields:
+  memory_size=128, batch_size=8, min_replay_to_train=32
+  replay_tmpfs_dir=the EXISTING /dev/shm/robotron-snapshot-smoke-NONCE directory
+  hof/ephof_max_episodes=2, hof/ephof_episode_stride=64
+  hof/ephof_min_transitions=1, bank admission floors=0
+  replay_live_mmap=True, replay_flush_msync=True
+  replay_prefetch=True, replay_prefetch_slots=2
+  use_torch_compile=False, optimizer_fused=True, enable_amp=True
+  inference_batching_enabled=False, ratchet_enabled=False
+  training_steps_per_cycle=1
+Keep state_size=11128, frame_stack=4 and the actual network widths/heads.
+Do not shrink RainbowNet into a toy network to make this smoke pass.
+Set metrics.training_enabled=False BEFORE RainbowAgent(...) construction.
+The harness never creates a KeyboardHandler/thread; record that startup guarantee
+as metrics.coherent_snapshot_keyboard_disabled=True so capture validates it.
+Set/reset metrics measurement/ratchet flags to their inactive private defaults.
+
+MODEL_DIR alone is insufficient: agent.py computes its tmpfs path using the
+constant basename robotron_dqn_latest_replay. There is currently no tmpfs env
+override. Compute and validate the expected ring/bank paths before construction:
+  TMPFS-NONCE/robotron_dqn_latest_replay
+  OUTPUT/private-models/robotron_dqn_latest_replay_hof
+  OUTPUT/private-models/robotron_dqn_latest_replay_ephof
+Require all lie below the owned roots and none already exist. Assert the actual
+agent _ring_dir, memory _mmap_dir and bank paths match immediately afterwards.
+
+Actual-agent and update sequence
+
+1. After all guards, import Torch; set its intra-op/inter-op threads to 2/1.
+   Verify device_count==1 and CUDA UUID==approved GPU0 before model allocation;
+   enforce allocator fraction min(10 GiB/total, allowed fraction). Recheck free
+   memory. Import only the copied config/model/agent modules and construct the
+   actual RainbowAgent(cfg.state_size). Assert online/target/inference are actual
+   RainbowNet, train/inference devices both cuda:0, Adam defaults and every group
+   have fused=True, GradScaler.is_enabled(), AMP enabled, no compiled/graph path.
+   Constructor's fused fallback is a smoke failure, never an accepted downgrade.
+
+2. Keep metrics.training_enabled=False. Enqueue None to this agent's actual
+   _train_queue and join its _train_thread with <=10s; fail if it survives.
+   Do not call agent.stop here: that would close prefetch before its snapshot
+   invalidation is exercised. Keep agent.running=True for the real prefetcher's
+   enabled_fn; the background learner thread remains permanently joined.
+   This avoids uncontrolled updates while retaining the real producer.
+
+3. Construct actual copied SocketServer('127.0.0.1', 0, agent), with inference
+   batching disabled. Start only its accept loop in an owned thread; record the
+   OS-selected port from getsockname(), require it is neither 9999 nor a known
+   training/dashboard port, and require no clients ever connect. It creates the
+   real AsyncReplayBuffer and the real proposed accept-loop gate. All journal
+   paths must be private. Never call main.main or create KeyboardHandler.
+   No synthetic network client/MAME/HTTP server is needed for this first smoke.
+
+4. Feed 160 finite deterministic synthetic stacked states through actual
+   server.async_buffer.step_async (distinct actions/rewards/horizons/actor tags),
+   then wait for its real bounded FIFO barrier. Verify size=128, pointer=32,
+   adds=160 and no replay command failures/drops. Admit private 32- or 64-row
+   HOF and EpHOF episodes through actual admission methods; require both nonempty.
+   Populate a mixture of empty object bags and valid small object/lane/grid
+   fixtures using the copied geometry constants. No production state sample.
+
+5. Set explicit private metrics clocks/epsilon/expert and LR gear/anchor/manual
+   scale. With replay ready, call actual replay_pressure_reached once to seal
+   any empty-buffer warmup anchor, then advance only the private frame/learner
+   counters to credit the known synthetic accepted rows. Earn enough budget for
+   <=3 updates under the real cap8 guard; do not disable replay_pressure_reached.
+   Set both training
+   flags true only around each bounded manual _prefetch_batch/train_step call.
+   Release leased batches exactly once (train_step already releases in finally).
+   Restore both flags false before releasing the learner lock. Require finite
+   loss/gradients/parameters and actual Adam step progress/nonzero moments, not
+   only training_steps (AMP skips may still advance logical counters). After at
+   most 3 attempts fail if no actual fused update applied or scaler is invalid.
+
+6. Take the actual proposed capture_snapshot on the child main thread, passing
+   actual agent/metrics/server/cfg/control/game_settings and private model_dir.
+   Request PID/start ticks and ring realpath/device/inode from owned identities;
+   timeout=90s. Preserve prior flags False/False. Require COMPLETE.json, valid
+   hashes, before==after guards, current bank generation metadata/revisions,
+   owned_cuda_device_synchronized and the accept worker in parked_workers.
+   The real AsyncReplayBuffer remains alive through the barrier; do not stop it
+   to substitute for draining. This no-client smoke covers actual accept/FIFO
+   wiring, not handle_client frame-counter/n-step/game continuation behavior.
+
+7. Immediately verify both flags are still false, prefetch prior state restored,
+   gate reopened, no active/recovery_required status, unchanged frozen clocks,
+   all finite online/target/infer tensors and optimizer/scaler state. Stop this
+   owned server, join accept/consumer threads, then stop/join this owned agent,
+   prefetcher and bank writer with explicit bounded joins and liveness assertions.
+   No background thread may survive into branch restoration.
+   Keep only one full agent resident at a time; release CUDA tensors and reclaim
+   its cache before constructing the reload agent. Do not rely on deleting a
+   variable if a worker still owns the agent. The capture child must finish its
+   cleanup/report and exit before the parent starts the restore child.
+
+8. Restore in a fresh subprocess; never change config.MODEL_DIR in an already
+   imported interpreter (agent imports those paths by value). Never load/mmap
+   the certified archive writable. Before constructing the restore agent, copy:
+     archive/model.pt -> NEW_MODEL_DIR/robotron_dqn_latest.pt
+     archive/ring/ -> NEW_TMPFS_NONCE/robotron_dqn_latest_replay/
+     archive/banks/hof/ -> NEW_MODEL_DIR/robotron_dqn_latest_replay_hof/
+     archive/banks/ephof/ -> NEW_MODEL_DIR/robotron_dqn_latest_replay_ephof/
+   Both roots are new, private and identity checked. On the same approved GPU,
+   repeat import/constructor isolation with these distinct model/control/
+   journal/tmpfs roots. Seed settings/clocks/gear/anchor/target/optimizer LR with
+   different sentinels. The actual constructor should see the saved nonempty
+   ring metadata and defer adoption until load; do not mask its behavior by
+   assigning agent._ring_dir/memory bank paths after construction.
+   Call actual agent.load(NEW_MODEL_DIR/robotron_dqn_latest.pt); assert real
+   replay.load succeeded (load can return True
+   while swallowing replay/optimizer failures). Explicitly compare every saved
+   tensor and Adam/scaler field, model/target params, saved clocks/controls,
+   pointer/size/priority leaves, all ring fields and both bank contents/ages.
+   Require _ring_dir/_mmap_dir, every memmap filename and both bank directories
+   resolve to their exact expected private paths after load.
+   Apply runtime.json/manual LR scale/config via explicit reviewed launcher
+   assignments and assert them; those fields are not all restored by agent.load.
+   No cold-optimizer warmup fallback, shape skip, missing-state or warning is
+   accepted. C51 support is intentionally rebuilt from matching config; compare
+   it to the recorded runtime support instead of treating it as a saved tensor.
+
+9. With the new background learner joined as above, apply one further real
+   bounded fused/AMP C51 update using the private restored replay; prove actual
+   optimizer step/moment/tensor progress, finite values and unchanged archive
+   hashes. Report update loss and logical/applied clocks separately. Do not
+   require bit-identical next trajectories/updates: RNG is not restored.
+
+10. Save result.json only after all acceptance checks and owned thread/process
+    cleanup succeed. On any failure write failure.json with the last phase,
+    identity and recovery status; never report a passing smoke after fallback.
+
+Cleanup and negative tests required before implementing --launch
+
+Unit-test launcher guards with mocked process tables, IPv4/IPv6 listeners,
+nvidia-smi text, replaced/symlink roots, missing cgroup/resource authority, source
+drift and unexpected inherited environment. Prove default dry run imports no
+numerical/GPU modules and creates no process/context/files. It cannot select
+the main GPU. For a launched invocation, failed guards must
+start no numerical worker/CUDA context and leave production paths untouched;
+only read-only query helpers and explicitly owned guard/lease cleanup may occur.
+Prove --launch is required and exact source
+hashes/UUID/path ownership cannot be bypassed by CLI/env input.
+
+Mock child failure/timeout/competitor arrival/PID reuse. Cleanup must terminate
+only the recorded child/group, close only its sockets/locks, join its workers,
+and remove only nonce directories whose ownership/device/inode still match.
+On ownership mismatch leave artifacts and report coordinated cleanup required.
+Preserve result/source/log evidence; never delete a certified archive as generic
+cleanup. Tests must not launch CUDA to validate guard behavior.
+
+After the isolated smoke passes, separately review remaining deployment work:
+real MAME/frame-handler/n-step and settings HTTP lifecycle, merged parallel
+worker/prefetch shutdown, failure recovery with real CUDA, whole trainer boot
+from runtime/config, full-size ring/bank copying and timing under disk pressure.
+Passing this smoke alone authorizes no live snapshot, learning-rate experiment,
+production patch application, or quality/performance claim.

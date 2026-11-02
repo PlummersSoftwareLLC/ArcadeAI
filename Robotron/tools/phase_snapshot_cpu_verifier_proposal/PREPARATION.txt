@@ -1,0 +1,134 @@
+Phase-aware checkpoint CPU verifier — SOURCE ONLY, 2026-10-17
+
+This is an additive, unexecuted phase_snapshot verifier. No actual future job,
+checkpoint, owner, request, metric phase or execution is materialized. All
+actual bindings in future-plan.json remain null. Root alone performs any later
+guard tests, fresh acquisition, CPU verification or lifecycle action.
+
+Minimal numerical delta
+
+strict_phase_base.py is the complete pinned7d verifier with ONLY an optional
+metadata_callback keyword on validate_checkpoint and a two-line callback at
+its end. Reversing those exact changes reproduces the original7d bytes.
+strict-body-metadata-only.patch exposes the entire delta. The body still has
+exactly ONE torch.load(map_location='cpu',weights_only=True). All finite-tree,
+strict online/target model/geometry/support, one-group81initialized Adam slots,
+actual equal positive slot clocks, fusedAdam/LR/eps/betas, scaler, four-clock
+floor and private source checks are unchanged. The callback inspects that same
+already loaded dictionary after those checks; it never loads another model.
+The old7d and ea6 sources/results remain untouched. The copied legacy main is
+not called; verify_phase_snapshot.py is the only new entrypoint.
+
+Literal default prints PLAN_ONLY before helper/source/job reads or imports.
+Explicit --execute requires exact own source/job hashes, a NEW owned output,
+CUDA hidden, preload/PYTHONPATH absent and a fresh interpreter. Root supplies
+an independent owned0444/nlink1 verification copy; unchanged7d root-copy and
+source/identity brackets remain. CPU2/3GiB/Swap0/tasks128/120s is a future outer
+unit proposal, not an actual execution or fit result. The unchanged4MiB metadata,
+1MiB job and64bound-file limits remain; keep root provenance lists compact.
+
+Actual installed source context, not an old config constant
+
+Reuse unchanged7d source_control_context keys and held numerical recipe. Its
+model_package pins name the ACTUAL then-installed __init__/model/config/control
+sources. There is no f279 config SHA requirement. phase_snapshot.sources binds
+the union of those4 and candidate5: eight files __init__.py, model.py, config.py,
+learning_control.py, agent.py, training.py, loss_kernel.py, priority_phase.py.
+Each pair contains a current fullPIN and an independent matching0444 archive.
+Archived control/unit/provenance files must also be owned0444/nlink1. Root
+includes its actual phase source/activation/start-request context and any needed
+main writer source proof as compact archived provenance. No old quality source
+closure is revalidated against new live phase code: historical quality evidence
+stays bound to its own immutable copies and as-of-capture reviews.
+
+Root-job contract
+
+job.schema.json describes only the future explicit job. Common fields retain
+7d experiment/source/verification_copy/clock_floor/source_control_context/
+output_directory and fullPIN shape. Additional source hashes identify the
+entrypoint, adapted strict helper and immutable original7d. phase_snapshot has:
+  purpose: startup | candidate | newest_stopped
+  owner: exact pid/starttime_ticks/unit/invocation_id/cgroup
+  observed_clients: the actual0 or192 root observed, never fabricated insurance
+  phase_record: immutable actual current startup/resume record PIN
+  boot_checkpoint: historical path/SHA/bytes actually loaded for this process
+  boot_verification: archived immutable actual PASS CPU proof of those bytes
+  expected_phase: metric/id/rootprecommit/founder_record/last_resume/origin/valid
+  acquisition: immutable root acquisition-proof PIN (schema below)
+  sources: the eight actual-current/archive pairs above
+
+PIN means {path,sha256,bytes,identity}; identity uses device/inode/bytes/mtime_ns/
+ctime_ns/mode/uid/nlink, exactly7d. No atime guard. Actual historical boot/origin
+paths may now hold newer bytes: they are metadata literals matched to the
+archived CPU proof, NOT reopened as though old bytes still occupied that path.
+
+Acquisition-proof contract
+
+schema robotron-owned-phase-snapshot-acquisition-v1; fields used by the verifier:
+purpose, experiment, model_dir, owner_before, owner_after, source_checkpoint,
+clock_floor, phase_record_sha256, boot_checkpoint, client_count, tag,
+completed_slot_transition, stopped_absence. Both root-observed owner identities
+must equal the explicit owner; source_checkpoint is the exact new source triple.
+This is historical root-owned evidence, not a new live owner/API query by CPU.
+
+startup/candidate use a unique actual tag and source managed-checkpoints/TAG.pt.
+stopped_absence is null. completed_slot_transition carries:
+  before: null for observed absence, otherwise {actual_pin,archive}
+  request: {actual_pin,archive} for managed_save.request.json
+  after: {actual_pin,archive} for managed_save.request.json.completed
+  before_unix_s <= request_unix_s <= after_unix_s, actual positive finite times
+Historical actual_pin retains the original fullPIN from that source path; archive
+is an independent immutable byte-identical JSON copy. Request/after contents must
+both be exactly {tag:TAG}; any prior completed tag must differ. The actual mutable
+request/completed paths are NEVER reread or required to retain their old bytes.
+Root must capture this genuine before/request/after transition; a stale completed
+slot or an archive with no original transition is insufficient. Later saves may
+reuse that slot without invalidating the archived proof.
+
+newest_stopped uses actual model_dir/robotron_dqn_latest.pt, tag and transition
+null, and a readonly stopped_absence PIN with the established known-owner
+inactive/MainPID0/old-process-absent/cgroup-empty/latest-path fields. Only this
+role calls unchanged7d exact_absence before copying and after validation. It
+does not forge insurance192 or substitute an old policy. Live startup/client0
+is phase_snapshot, not stopped_latest or insurance.
+
+Phase metadata and honest clocks
+
+priority_metric_phase must be valid schema robotron-priority-metric-phase-v1,
+with exact expected metric/id/rootprecommit/origin/founder-record/resume-record.
+There is NO invented persisted loaded flag. Source PriorityPhase.snapshot()
+requires finish_load; the saved metadata plus root-bound actual source and
+owned acquisition is meaningful loaded-phase evidence. It does not independently
+observe runtime memory, serving readiness, restored clocks or replay coherence.
+
+action=start: founder_record equals current startup record, last_resume null,
+started_from equals THIS actual boot triple plus its CPU-proven four clocks.
+The previous phase, when recorded by the boot CPU report, must have a different
+ID and the declared predecessor metric. Legacy7d boot proofs have no extracted
+phase field; that is explicitly unobserved metadata, with previous_metric unknown
+still enforced by the actual owned phase loader before it can save a valid phase.
+
+action=resume: require a prior phase-aware boot CPU proof. Preserve its ORIGINAL
+founder-record, started_from, ID/rootprecommit and predecessor; only current
+last_resume_record names the NEW resume record. Counters cannot regress, but
+may advance after startup. Never relabel latest resume boot as phase origin.
+
+Current saved four clocks must cover both the authentic acquisition floor and
+actual boot/origin clocks. Overshoot from floor and actual boot is recorded.
+There is NO exact startup restoration or zero-update claim: background learning
+may have advanced before the model-only save. Positive phase update counters
+do not certify unique leaf conversion, tree metric identity, learning benefit,
+GPU behavior, coherent full restart or quality qualification.
+
+Tests and future scheduling
+
+Twelve authored stdlib-only methods remain UNEXECUTED. They cover literal PLAN,
+exact strict-body reversal/one load, phase/core/origin/floor/resume guards, tiny
+actual metadata files and source/archive identities, missing/wrong loss source,
+historical completed-slot reuse, wrong owner/request and honest stopped-only
+absence. No numerical body/model construction/framework fixture is repeated.
+Root may run those once in an owned bounded unit after source review. A later
+actual CPU verifier run is a single explicit job; a failure is retained, with
+no automatic second load/retry. Preserve actual argv/source/job/original exit,
+terminal archive and output before root unit release. No action is authorized
+by this document, and no new user approval flow is introduced.

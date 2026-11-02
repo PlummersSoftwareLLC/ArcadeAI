@@ -1,0 +1,99 @@
+ONE CONDITIONAL NEXT HYPOTHESIS; SOURCE/SAVED EVIDENCE ONLY; NOT ACTIVATED.
+
+After the current fresh R/C/R/C campaign, all original audits/owned cleanup and
+explicit source-freeze release, test a bank Bellman coefficient floor of0.5:
+  w_bank = max(mean(selected normalized PER weights),0.5)
+for existing HOF and EpHOF rows only. Keep ring weights, draw quotas/indices/RNG,
+alpha0.7/beta schedule, native leaf updates, targets/projection, model, n3,4096,
+cap8,LR2.5e-5,Adam/scaler and eps/expert0.1 fixed. No second knob is selected.
+
+The decision waits for the actual campaign. If both candidate cohorts qualify
+and root adopts it, protected reference becomes that actual winner; use KL as
+the selected metric background only after a fresh reviewed startup precommit.
+If the candidate fails a valid campaign, preserve protected448 and use CE as
+background. Invalid/incomplete quality provides no evidence favoring KL. In all
+cases start from an ordinary verified newest state, record its actual policy and
+mixed-tree history; do not roll back to an old protected model to imply a match.
+The weight floor is the sole new treatment relative to that chosen background.
+No future winner/owner/checkpoint/phase/deadline/pass is filled in here.
+
+Why this knob: replay_buffer.py998-1010 computes PER IS only on tree-drawn rows,
+keeps recent/interesting coefficients1, and assigns BOTH banks the selected PER
+mean. Thus a priority metric/rank change also changes bank coefficient strength.
+In the HISTORICAL eight actual CE captures, banks were25% of sampled rows but
+weight0.2260-0.4714 and8.63-15.13% of Bellman scalar. On those SAME rows only, a
+0.5 floor gives15.87-17.29% bank scalar and total Bellman scalar+0.92-10.46%.
+This is explicit coefficient arithmetic, not currentCE620749 calibration.
+
+The old conditional KL sensitivity was still weaker: bank coefficient
+0.0505-0.0966 and2.20-4.07% of Bellman scalar, with selected PER coefficient
+effective count263-339/901 versus historical emitted813-828/901. Those are
+CE-selected hypothetical weights, not an observed KL-selected population or
+population IS ESS. All11433 originalCE comparison failures remain unchanged;
+recomputed entropy/KL cannot be called the live executed target. Actual trial02
+phase diagnostics prove valid same-forward updates, not per-origin bank weights.
+Fresh current-phase coefficient calibration is therefore required before choice.
+
+A bank floor changes GLOBAL Bellman objective/gradient scale as well as relative
+bank emphasis. It also changes Bellman-to-fixed-BC balance. Do not compensate LR
+or renormalize the batch: that would add another knob. A quality gain would
+support this combined weight policy, not isolated bank-exposure causality or an
+effective-LR explanation. The chosen0.5 is a predeclared moderate alternative to
+fixed1, not a learned optimum or threshold tuned from a failed run.
+
+The main counterargument is local historical source context: prior fixed1 banks
+were considered overprivileged, and quota staleness relief was introduced after
+long-lived banks crowded current play. A floor can overfit/retain old behavior
+and weaken useful adaptation. Keep that relief, quotas and admissions unchanged.
+No claim that the original bank correction was wrong or that0.5 helps is made.
+
+Smallest next validation after freeze release:
+1. Obtain one authentic current-phase consumed-batch readout of emitted weights,
+   origin/sentinel indices, selectedPER positions/alpha/beta, actualCE and actual
+   optimizer outcome. A compact first-consumed-row metadata capture can avoid
+   PRE models/recomputed targets; source-review that observation separately.
+   It must not add a live forward/RNG/backward or compiled loss output. Existing
+   eight historical batches cannot substitute. If coefficients already exceed
+   the floor or provenance is absent, defer this trial rather than fabricate it.
+2. Author a minimal default0 source proposal later. Demonstrate default0 exact
+   weights/shape/dtype/backend/draw RNG/indices/native priorities and fourth-output
+   route. Enable0.5 changes only bank sentinel positions; PER/recent/interesting
+   weights, CE/target/projection and native priority vectors remain unchanged.
+   Cover noPER/no-bank cases, both banks and duplicates with meaningful tiny
+   source/CPU guards. No tree rebuild, priority metric migration or267GB copy.
+3. One bounded private genuine4096 whole-step rehearsal on spareGPU0 using the
+   proven graph-release/native adapter scope: retain actual input/weights/origin
+   joins, expected weighted scalar change, finite preclip gradients, natural
+   AMP/fusedAdam admission and native leaves. CE and all default outputs must
+   meet existing tolerances; enabled weighted loss/gradient need not equal the
+   old objective because that is the treatment. Require an actual applied step
+   before readiness; a natural skip is retained, never scale-rescued/replaced.
+   Proposed bound:2CPU/3GiB CPU checks120s; GPU worker600s/total900s, unchanged
+   existing12GiB allocation/13GiB process/6GiB disk ownership guards. Actual fit
+   remains unknown until root runs it. There are no new model layers or forwards
+   in the eventual live recipe; max/assignment cost isCPU coefficient bookkeeping.
+
+Only after those proofs, root may freeze one explicit sequential screen using
+the already-reviewed8M learner AND6M acceptedphysical-all5 horizon,3240s observed
+cutoff/3600s owner ceiling, first immutable latch, ONE candidate and natural tails.
+Use genuine early current-owner192 insurance; candidate freeze ->exact ownerstop
+->candidateCPU->newestCPU>=max(early,LATCH,candidate4)->explicit newest-state CE
+return before fresh R/C/R/C. Return to the original bank-weight policy as well
+as CE before that campaign; freeze all source/control throughout confirmation.
+Invalid owner/epoch/phase/nonfinite/native/health or missing horizon remains
+invalid/incomplete without retry/threshold/scale rescue. Existing severe-regression
+policy must be frozen in the actual precommit, not improvised from this note.
+
+Select only if each separate fresh candidate cohort passes the established
+mean>=1.05 pooledfreshreference mean AND median>=pooledreference median, with
+unchanged1200/2400/all16/min50/fulltails/diagnosticsTRUE and all independent audits.
+Keep protected best on failure. No pooled candidate rescue or old score reuse.
+This asks whether a bounded sequential change produces a better frozen policy.
+It is not matched replay A/B, proof of causal sample efficiency, or a speed claim.
+
+Defer a second architecture/LR/n-step/batch knob: saved KL latch sample/fleetframe
+ratio8.00016 is consistent with held cap8 at one-batch/observational granularity.
+Faster raw updates alone need not produce more useful samples per frame. Rare
+14skips/30900 classified interval outcomes do not justify scaler adjustment.
+The18 no-Adam legacy scalarQ parameters are unused underC51, not a demonstrated
+missing-gradient bug; pruning them is not proposed as learning improvement.

@@ -1,0 +1,22 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-continuous-fresh-candidate-20261029-original04-preparation/prepare_fresh_continuous_candidate_window_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-continuous-fresh-candidate-20261029-original05-preparation/prepare_fresh_continuous_candidate_window_v1.py
+@@ -15,15 +15,15 @@
+ G=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ B=G/'logs/managed-learning-20261015/run-26'
+ HERE=Path(__file__).resolve().parent
+-OUT=B/'post-continuous-fresh-candidate-20261029-original04'
++OUT=B/'post-continuous-fresh-candidate-20261029-original05'
+ EXPECTED_OWNER=dict(pid=654315,birth_ticks=16564768,invocation_id='c9a7ad073c8043af8b9499acb4ae4372')
+ EXPECTED_SERVER=dict(pid=654315,birth=16564768,source_sha256='a076501b0601a637b91269a41572be60496754ad1da4b04385d77c51b9f34423')
+ ENVIRONMENT={'DQN_BATCH_SIZE':'4096','DQN_N_STEP':'3','DQN_MAX_SAMPLES_PER_FRAME':'8',
+  'DQN_PER_PRIORITY_METRIC':'ce','ROBOTRON_CONTINUOUS_TRAINING_MODE':'1'}
+ THRESHOLDS=dict(applied_updates=5000,replay_inserts=1000000,elapsed_s=3600)
+-ENTRY_UNIT='robotron-continuous-fresh-entry-CPU-original04-20261029.service'
+-ENDPOINT_UNIT='robotron-continuous-fresh-endpoint-CPU-original04-20261029.service'
+-OBSERVER_UNIT='robotron-continuous-fresh-candidate-window-original04-20261029.service'
++ENTRY_UNIT='robotron-continuous-fresh-entry-CPU-original05-20261029.service'
++ENDPOINT_UNIT='robotron-continuous-fresh-endpoint-CPU-original05-20261029.service'
++OBSERVER_UNIT='robotron-continuous-fresh-candidate-window-original05-20261029.service'
+ PYTHON='/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python'
+ VERIFIER=G/'tools/power_recovery/verify_snapshot.py'
+ CHECKPOINT=G/'models_dqn/robotron_dqn_latest.pt'

@@ -1,0 +1,12 @@
+--- a/Robotron/Scripts/dqn/socket_server.py
++++ b/Robotron/Scripts/dqn/socket_server.py
+@@ -204,7 +204,8 @@
+         and bool(client.get("player_alive", False))
+         and not bool(frame.start_pressed)
+         and previous_wave is not None and int(frame.level_number) == int(previous_wave)
+-        and (int(frame.game_score) > 0 or not recent_start)
++        and (int(frame.game_score) > 0 or not recent_start
++             or int(frame.level_number) >= 2)
+         and 0 < int(previous_score)-int(frame.game_score) <= int(
+             getattr(RL_CONFIG, "score_torn_read_tolerance", 100_000))
+     )

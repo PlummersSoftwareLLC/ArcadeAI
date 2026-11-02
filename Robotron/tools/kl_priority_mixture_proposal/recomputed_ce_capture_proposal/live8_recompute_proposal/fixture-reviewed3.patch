@@ -1,0 +1,11 @@
+--- Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_recompute_proposal/test_reconstruction_contract_reviewed2.py	2026-10-17 03:38:35.164165050 -0500
++++ Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_recompute_proposal/test_reconstruction_contract_reviewed3.py	2026-10-17 03:40:51.199590938 -0500
+@@ -157,7 +157,7 @@
+             torch=SimpleNamespace(float16='float16',autocast=lambda **_:nullcontext(),cuda=SimpleNamespace(synchronize=lambda _:events.append('sync'))),
+             science=SimpleNamespace(rng_state=lambda _:dict(state='after'),finite=lambda *_:finite),
+             conditional=SimpleNamespace(forbidden_offline_updates=forbidden,save_payload=save))
+-        payload=dict(actual=dict(ce='original'))
++        payload=dict(actual=dict(ce='original'),inputs=dict(weights='original-emitted-weights'))
+         item=dict(payload=dict(path='original-payload'),receipt=dict(path='original-row'))
+         return ctx,root,events,payload,item
+ 

@@ -1,0 +1,49 @@
+{
+  "schema": "robotron-prepared-policy-screening-status-v1",
+  "study_directory": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protectedb231-vs-distinct8dae-fullgame-original01-20261101",
+  "state": "failed",
+  "stage": "invalid_original",
+  "current_leg": "R1",
+  "updated_unix_s": 1793585121.940491,
+  "observation_unix_s": 1793585121.940491,
+  "quality_qualified": false,
+  "promotion": false,
+  "main_training_continues": true,
+  "legs": [
+    {
+      "index": 1,
+      "role": "reference",
+      "state": "running",
+      "evaluator_status_path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protectedb231-vs-distinct8dae-fullgame-original01-20261101/01-reference/display-live.json",
+      "started_unix_s": 1793583063.652591
+    },
+    {
+      "index": 2,
+      "role": "candidate",
+      "state": "pending"
+    },
+    {
+      "index": 3,
+      "role": "reference",
+      "state": "pending"
+    },
+    {
+      "index": 4,
+      "role": "candidate",
+      "state": "pending"
+    }
+  ],
+  "next_work": {
+    "state": "invalid_original",
+    "current_stage": "Confirmation stopped: original records need review",
+    "detail": "The original invalid result is preserved. No policy promotion.",
+    "waiting_for": "Final result processing",
+    "next_stage": "Apply the independently assessed promotion gates",
+    "eta": "Game completion has no fixed estimate; each cohort has a six-hour safety limit. No unfinished game is treated as completed.",
+    "main_training_continues": true,
+    "mode_installed": true,
+    "main_mode": "CONTINUOUS_TRAIN155_EVAL37_ONCE",
+    "updated_unix_s": 1793585121.940491,
+    "observation_unix_s": 1793585121.940491
+  }
+}

@@ -1,0 +1,2 @@
+local ok,err=pcall(function() assert(loadfile("/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-fleet-df519-vs-frozenS2-two-arm-screen-original01-20261031/future-fixed-cutoff-score-stall-policy-source-original01/full-tail-observation-fixed-cutoff-watchdog4260_v1.lua"))() end)
+if not ok then print("DEADLINE32_LUA_FATAL "..tostring(err));manager.machine:exit() end

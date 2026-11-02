@@ -1,0 +1,11 @@
+--- control_compiled_full_tail32_quality_v1.py
++++ control_compiled_full_tail32_quality2259_v1.py
+@@ -63,7 +63,7 @@
+     require(type(c['observation_s'])is int and c['observation_s']==9720,
+             'Fixed original runtime/shutdown observation required')
+     expected=['/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python','-Xgil=0','-I','-B',
+-        '/home/dave/source/repos/ArcadeAI/Robotron/tools/startup_policy_journal_proposal/run_compiled_full_tail32_quality_v1.py']
++        '/home/dave/source/repos/ArcadeAI/Robotron/tools/startup_policy_journal_proposal/run_compiled_full_tail32_quality2259_v1.py']
+     argv=c['argv']
+     require(type(argv)is list and len(argv)==12 and argv[:5]==expected
+         and argv[5:7]==['--execute','--job']and argv[8]=='--job-sha256'and argv[10]=='--source-sha256'

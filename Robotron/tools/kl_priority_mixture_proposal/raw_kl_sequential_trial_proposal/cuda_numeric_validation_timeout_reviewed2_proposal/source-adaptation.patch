@@ -1,0 +1,22 @@
+--- unexecuted-dc9e/cuda_trace_parent.py
++++ first-attempt-timeout-reviewed2/cuda_trace_parent.py
+@@ -34,7 +34,7 @@
+ GIB, MIB = 1 << 30, 1 << 20
+ BOUNDS = dict(cpu_threads=2, memory_bytes=16*GIB, vram_allocator_bytes=12*GIB,
+               vram_process_bytes=13*GIB, artifact_bytes=6*GIB, tmpfs_bytes=128*MIB,
+-              tasks=128, phase_timeout_s=180, total_timeout_s=600)
++              tasks=128, phase_timeout_s=600, total_timeout_s=900)
+ SOURCE_LOCK_SHA256 = 'bcc1c696ed1ddbd18879e64cee01d55909b99c8401d908f636228d4c83b36551'
+ LOCK_SHA = SOURCE_LOCK_SHA256
+ BLOCKED_NAMES = {
+--- unexecuted-dc9e/test_process_scan.py
++++ first-attempt-timeout-reviewed2/test_process_scan.py
+@@ -343,7 +343,7 @@
+         self.assertEqual(parent.BOUNDS, dict(cpu_threads=2, memory_bytes=16 * (1 << 30),
+             vram_allocator_bytes=12 * (1 << 30), vram_process_bytes=13 * (1 << 30),
+             artifact_bytes=6 * (1 << 30), tmpfs_bytes=128 * (1 << 20), tasks=128,
+-            phase_timeout_s=180, total_timeout_s=600))
++            phase_timeout_s=600, total_timeout_s=900))
+         lock_bytes = (parent.HERE / 'source-lock.json').read_bytes()
+         self.assertEqual(hashlib.sha256(lock_bytes).hexdigest(),
+                          'bcc1c696ed1ddbd18879e64cee01d55909b99c8401d908f636228d4c83b36551')

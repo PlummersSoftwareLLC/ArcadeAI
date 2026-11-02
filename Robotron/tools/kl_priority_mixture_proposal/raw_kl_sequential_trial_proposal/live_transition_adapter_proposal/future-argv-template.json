@@ -1,0 +1,44 @@
+{
+  "status": "SOURCE_ONLY_UNEXECUTED",
+  "actual_job": null,
+  "actual_execution": null,
+  "CPU_tests": [
+    "<ROOT_REVIEWED_VENV>",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "-c",
+    "import sys,unittest;sys.path.insert(0,'/home/dave/source/repos/ArcadeAI/Robotron');suite=unittest.defaultTestLoader.loadTestsFromName('tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.live_transition_adapter_proposal.test_transition_adapter');r=unittest.TextTestRunner(verbosity=2).run(suite);sys.exit(not r.wasSuccessful())"
+  ],
+  "transition": [
+    "<ROOT_REVIEWED_VENV>",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_transition_adapter_proposal/run_raw_kl_transition.py",
+    "--launch",
+    "--job",
+    "<ACTUAL_JOB>",
+    "--expected-job-sha256",
+    "<ACTUAL_SHA>",
+    "--expected-controller-sha256",
+    "<FINAL_SOURCE_SHA>"
+  ],
+  "parent_environment": {
+    "CUDA_VISIBLE_DEVICES": ""
+  },
+  "authored_test_count": 19,
+  "root_parent_unit": {
+    "Type": "exec",
+    "RemainAfterExit": "yes",
+    "CPUQuota": "200%",
+    "MemoryMax": "4G",
+    "MemorySwapMax": "0",
+    "TasksMax": 128,
+    "RuntimeMaxSec": 4800,
+    "KillSignal": "SIGINT",
+    "TimeoutStopSec": 900,
+    "SendSIGKILL": "no"
+  },
+  "ending_order": "ONE early same-KL-owner insurance; candidate freeze then immediate return_ce owned stop; CPU checks only after old KL absence. Root enforces immutable3600s owner ceiling separately."
+}

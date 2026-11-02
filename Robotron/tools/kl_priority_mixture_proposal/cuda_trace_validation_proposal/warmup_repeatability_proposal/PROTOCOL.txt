@@ -1,0 +1,146 @@
+CUDA WARMUP REPEATABILITY — NEW SOURCE-ONLY DIAGNOSTIC, UNEXECUTED
+2026-10-17
+
+Why this diagnostic exists
+--------------------------
+The original proc-reviewed3 run remains failed. BASE completed eight training
+attempts (three applied/five skips); OFF failed an unscaled warmup comparison
+before any optimizer attempt and ON never ran. Its retained assertion says one
+of128 elements differed, absolute3.24249267578125e-05 and relative0.007849248,
+outside original gradient rtol0.002/atol0.000002. Its worker did not retain the
+failing parameter/case/native payload, so that run cannot identify the cause.
+The independent JSON/hash audit is d22e381498ab9ef86005259ad394c9a8cf80cdc2f42010e890e50618387a8c78.
+No prior BASE result is reused here or retrospectively qualified.
+
+Source assessment
+-----------------
+The proposed loss kernel adds a static trace_rows attribute and conditional
+ON payload. With trace_rows=False, each original weighted CE/BC/Q-policy/margin
+expression and the four-output return remain in their original order. Original
+projection/no_grad handling, C51 smoothing, action selection, model forward and
+autocast are unchanged. At this failing boundary compile_kernels calls the loss
+directly: train_step wrapper, trace retention, prefetch, priorities and optimizer
+updates do not execute. Thus source inspection finds no intended default-OFF
+tensor-math change, but does not prove compiled kernels or floating results equal.
+Module/class frames, compiled artifacts and floating reduction/dispatch behavior
+remain possible factors. Source includes repeated projection destinations and
+recorded TF32/high/cudnn-benchmark settings; no actual numerical cause is inferred.
+
+Fixed experiment before execution
+---------------------------------
+Fresh roles, in order: base_a, base_repeat, off. BASE_A and BASE_REPEAT use the
+SAME pinned original baseline_loss_kernel.py/class/constructor. OFF uses the
+proposed loss_kernel.py with explicit trace_rows=False. No ON source route,
+observer, full train_step, prefetch producer or optimizer update is invoked.
+All three use separate subprocesses, caches/models/tmpfs/log paths, with the
+same reviewed private-package cwd. Native library __pycache__ remains the
+precreated pinned private package cache, as in the reviewed parent. No production
+checkpoint/replay/control/settings path is accessed by children.
+
+Pin the same trained320M independent readonly verification copy SHA1225731c...
+and its CPU receipt, full online/target/infer/81-slot Adam/scaler/clocks, seed
+20261017, actual Rainbow11128/81actions/51atoms, CUDA AMP FP16, fused Adam object
+and fullcompile/default/native1/directfill1/GIL-disabled/TF32/high/cudnnbenchmark
+profile. Saved scaler1048576/tracker27 is loaded unchanged and never stepped.
+No deterministic-algorithm, batch, scale, fixture or tolerance change is made.
+
+The new parent privately copies all pinned source and an independent readonly
+trained.pt. The pinned ba003 worker is loaded only AFTER the new worker's full
+bootstrap to reuse setup/input/CPU/RNG helpers; its bootstrap, compile_kernels
+and eight-step runner are NEVER called. Its source bytes stay unchanged. Only
+its HERE lookup is anchored to the new source lock for input metadata. BASE_A
+alone creates one new actual synthetic sampler4096 draw with the original
+bounded0..1 feature recipe. Other roles read the exact persisted batch/draw/RNG
+and verify hashes. There is no old partial-baseline or live-ring reuse/copy.
+
+Four cases per role, exactly:
+  1 normal diagnostic flagFalse, persisted structured states/next_states
+  2 normal flagFalse, zero states/next_states
+  3 diagnostic flagTrue, persisted structured states/next_states
+  4 diagnostic flagTrue, zero states/next_states
+Actions/rewards/dones/horizons/experts/weights are the same saved4096 arrays;
+schedule is the original warmup ones(3). Each case runs one compiled forward
+and unscaled backward under original FP16 autocast, with the exact4-output ABI.
+No ninth/replacement case, optimizer/scaler step/update, frame credit, CE/KL
+priority update, inference refresh or target update occurs. BASE_A reference-only
+comparison_pass=True is a bookkeeping identity, never an independent test.
+
+RNG and persistent-state controls
+---------------------------------
+Explicitly restore the sealed input Python/NumPy/CPU/CUDA RNG BEFORE EACH case
+and require its complete PRE state/hash equality. This reset differs from the
+old sequential warmup and is explicitly a new diagnostic control, not a claim
+to reproduce old warmup randomness exactly. Persist complete PRE/POST RNG states
+in the native payload, per-component hashes/changed names and cross-role POST
+differences. Compiler/cache work may consume RNG: POST movement or cross-role
+POST differences require interpretation review but do not suppress later finite
+cases. No flags or RNG outputs are changed after observing a result.
+
+Fingerprint online/target/infer, Adam/scaler, clocks, modes and exposure counters/
+config before/after each case and across roles. Cross-role scientific digests
+exclude ONLY exposure process_id and instance_monotonic_ns; complete per-process
+optimizer observations retain those identities and must match before/after.
+Initial and final gradients are None. Adam pre-hook and scaler.step/update guards
+reject any attempted update; all call counts and optimizer-exposure totals must
+remain zero. Finiteness and unchanged persistent state remain mandatory.
+
+Evidence-before-comparison and fixed tolerances
+----------------------------------------------
+Before ANY comparison, fsync/save the complete actual native payload: all four
+loss outputs, every named unscaled native gradient including None, exact case,
+full PRE/POST RNG, scientific-state fingerprints and update-call counters.
+Save/hash all four BASE_A payloads; future roles verify their immutable path/
+hash before and after loading. Record their exact expected identity in each
+candidate case. No extra forward computes a cleaner target or reference.
+
+Use the ORIGINAL numerical lock without loosening it:
+  CE rtol0.0002/atol0.00002
+  named gradients and tensor fallback rtol0.002/atol0.000002
+  loss/BC scalars rtol0.002/atol0.000002
+The full diagnostic output is additionally retained/compared using the existing
+warmup tensor-fallback tolerance. Shape/dtype/key/None/boolean controls are exact.
+Native-dtype torch.isclose defines element violations, matching the original
+torch.testing.assert_close; double error/bound/L2 statistics are descriptive.
+Save every tensor path/count/hash/tolerance/max error, the maximum violating
+coordinate with signed actual/expected/error/bound, up to16 coordinate examples,
+and complete boolean masks for every failing tensor. Full actual+expected native
+payloads make every remaining coordinate recoverable. No allclose-only summary.
+
+Finite, structurally valid numeric mismatches are recorded and all remaining
+cases/roles continue as precommitted, including OFF after an A/A mismatch. They
+are not swallowed as successes. Nonfinite unscaled values, structural/None
+mismatch, kernel/runtime failure, changed persistent state, incorrect PRE RNG,
+ownership/source/fixture drift and storage errors remain fatal. Retain partial
+mutable comparison records in finally. Failure-report I/O must not replace an
+original scientific/runtime exception; report secondary persistence context
+best-effort then preserve the original exception. No retry or adaptive rescue.
+
+Meaning and launch envelope
+---------------------------
+OBSERVATIONS_COMPLETE/exit0 means all12 backward observations and owned cleanup
+completed, possibly with finite mismatches. qualification_pass is ALWAYS false.
+A/A mismatch shows tested repeatability exceeds the ORIGINAL threshold; it does
+not excuse OFF. A/A pass plus OFF mismatch motivates further source/compile
+investigation; one A/A pass does not prove determinism or establish general source
+equivalence. This diagnostic cannot validate ON, actual optimizer outcomes,
+first8 live-mixture capture, full agent lifecycle, quality or learning speed.
+The live acquisition runbook remains blocked on separately accepted parity.
+
+Reuse exact reviewed parent resource/ownership/token/PDEATH/scanner/storage/owned
+cleanup contracts. Bounds unchanged:2CPU/16GiBhost/12GiBallocator/13GiBprocessGPU/
+6GiBartifacts/128MiBtmpfs/128tasks,180s per role,600s total. Persisting12 gradient
+payloads is roughly0.85GiB plus fixed input/model/cache/masks; actual total fit
+remains unvalidated and the unchanged budget must fail closed on overflow/OOM.
+No GPU1/main trainer context or competing job. Root must separately run reviewed
+private CPU tests, authorize a fresh preflight, reconcile its exact waiting384M
+helper, and launch a NEW retained dedicated unit via the reviewed detached3s
+timer with no --wait/--collect; scheduling client exits before child token guards.
+Archive original invocation/PID/start/ExecMainCode/Status/Result and journal before
+owned terminal-unit release; verify cleanup/main health, then rearm the same
+checkpoint target/tag/experiment/output and remaining original deadline.
+
+Authoring is source-only: no proposal/default imports, compilation, tests,
+numerical workloads, model/replay data, GPU/runtime queries or actual launch.
+All prior source bundles, failures and receipts remain immutable. Root reviews
+the final source/test manifest and owns any later execution; this text authorizes
+no live action and silently adopts no experimental source or tolerance.

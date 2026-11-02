@@ -1,0 +1,23 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/run_cold_slot64_prefix_v1.before-honest-cleanup-bracket.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/run_cold_slot64_prefix_v1.py
+@@ -257,7 +257,8 @@
+             except Exception as error:
+                 message = 'Original slot' + str(slot) + ': ' + repr(error)
+                 if failure_events is not None:
+-                    failure_events.append(dict(slot=slot, error=repr(error), message=message, observed_monotonic_ns=time.monotonic_ns(), intentional_cleanup_observed=intentional_cleanup is not None and intentional_cleanup.is_set()))
++                    cleanup_observed = intentional_cleanup is not None and intentional_cleanup.is_set()
++                    failure_events.append(dict(slot=slot, error=repr(error), message=message, intentional_cleanup_observed=cleanup_observed, observed_monotonic_ns=time.monotonic_ns()))
+                 errors.append(message)
+         worker = threading.Thread(target=serve, name='compiled32-proxy-' + str(slot), daemon=True)
+         actors[slot] = dict(private=private, proxy=proxy, listener=listener, worker=worker, child=None, birth=None, boot_restore=restored, trace_identity=trace_identity, lifecycle_identity=lifecycle_identity, witness_writer=witness_writer, worker_started=False)
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/review_cold_slot64_prefix_v1.before-honest-cleanup-bracket.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/review_cold_slot64_prefix_v1.py
+@@ -228,7 +228,7 @@
+     for event in observed:
+         assert type(event['slot']) is int and 4096 <= event['slot'] <= 4159
+         assert event['intentional_cleanup_observed'] is True
+-        assert type(event['observed_monotonic_ns']) is int and event['observed_monotonic_ns'] >= declared
++        assert type(event['observed_monotonic_ns']) is int and event['observed_monotonic_ns'] >= begin
+         assert event['message'] == 'Original slot' + str(event['slot']) + ': ' + event['error']
+     assert collections.Counter(event['message'] for event in observed) == collections.Counter(result['errors'][1:]), 'Unattributed private/runtime/cleanup error'
+     return dict(exact_original_error_event_join=True, intentional_cleanup_source_order_and_clock_boundary_verified=True,

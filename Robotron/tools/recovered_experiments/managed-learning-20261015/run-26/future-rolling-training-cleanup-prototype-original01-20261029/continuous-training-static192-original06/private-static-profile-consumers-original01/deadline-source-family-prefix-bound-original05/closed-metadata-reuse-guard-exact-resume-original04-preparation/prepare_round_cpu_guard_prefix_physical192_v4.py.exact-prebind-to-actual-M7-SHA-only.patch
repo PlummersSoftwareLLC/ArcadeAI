@@ -1,0 +1,15 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/closed-metadata-reuse-guard-exact-resume-original04-preparation/unselected-prebind-source-snapshots/prepare_round_cpu_guard_prefix_physical192_v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/closed-metadata-reuse-guard-exact-resume-original04-preparation/prepare_round_cpu_guard_prefix_physical192_v4.py
+@@ -9,9 +9,9 @@
+ HERE = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
+ LOCAL = Path(__file__).resolve().parent
+ REUSE = LOCAL
+-SOURCE_CONTRACT_SHA = None  # Pending actual M7 PASS/close/manifest and final binding.
+-DRIVER_SHA = None  # Pending actual M7 PASS/close/manifest and final binding.
+-SHIM_SHA = None  # Pending actual M7 PASS/close/manifest and final binding.
++SOURCE_CONTRACT_SHA = '128f8db839ddc4cff84887cbe11f2b4d0ea390fe1ccdbc05fc8fed4701671fcc'
++DRIVER_SHA = '87e85dfee7b2f03df3fb79c319bce620da21f00f75821d633f4085b72b7dad68'
++SHIM_SHA = '46b55df85a392c080f16e9a3765868205ec17b8c35e5aaf7eaed2dfe11b4cbba'
+ EXACT_METADATA_CLASSIFIER = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/exact-resume-guard-constructor-original01-preparation/prepare_round_cpu_guard_with_exact_resume_v1.py', 'sha256': 'b874c357951592a12c91a68be8addd28884c9b8a5c38eacde2de1480a5404aa3', 'bytes': 11045, 'identity': {'device': 2304, 'inode': 85339233, 'bytes': 11045, 'mtime_ns': 1793301764341221318, 'ctime_ns': 1793301834691087722, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+ 
+ 

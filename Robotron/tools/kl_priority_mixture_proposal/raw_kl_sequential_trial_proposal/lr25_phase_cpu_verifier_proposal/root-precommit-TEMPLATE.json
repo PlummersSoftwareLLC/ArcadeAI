@@ -1,0 +1,17 @@
+{
+  "schema": "robotron-live-CE-lr25-hot-change-precommit-v1",
+  "status": null,
+  "experiment": null,
+  "owner": null,
+  "current_phase": null,
+  "entry_checkpoint": null,
+  "entry_CPU": null,
+  "source_freeze_release": null,
+  "quality_closed": null,
+  "lr_scale_before": 0.5,
+  "lr_scale_after": 0.25,
+  "optimizer_lr_before": 2.5e-05,
+  "optimizer_lr_after": 1.25e-05,
+  "no_weight_or_optimizer_reset": null,
+  "no_replay_clear": null
+}

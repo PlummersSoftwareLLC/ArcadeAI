@@ -1,0 +1,30 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/prepare_selected_admission_study_cpu_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original03-private-AST-preparation/prepare_selected_admission_study_cpu_v1.py
+@@ -13,8 +13,9 @@
+ import sys
+ import time
+ 
+-HERE=Path(__file__).resolve().parent
+-ROOT=HERE.parents[1]
++HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
++LOCAL=Path(__file__).resolve().parent
++ROOT=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ 
+ 
+ def load(name,path):
+@@ -37,13 +38,13 @@
+     capture=json.loads(h.checked(job['capture_result']).read_bytes())
+     assert capture['state']=='captured_CPU_verified'and capture['endpoint']['sha256']==job['candidate_sha256']
+     output=Path(job['output']);output.mkdir(mode=0o700);started=time.monotonic()
+-    preparer=load('_selected_admission_actual_preparer',HERE/'prepare_round_study_v10.py')
++    preparer=load('_selected_admission_actual_preparer',LOCAL/'prepare_round_study_v10.py')
+     prepared=preparer.prepare(Path(job['study_directory']),job['reference_profile'],job['candidate_profile'],
+         main_domain_proof=job['deadline_readiness'],lease_recovery=job['lease_recovery'],engineering=False)
+     manifest=json.loads(h.checked(prepared).read_bytes());assert manifest['engineering_only']is False
+     study=json.loads(h.checked(manifest['study_precommit']).read_bytes())
+     assert study['policies']['candidate']['checkpoint']['sha256']==job['candidate_sha256']
+-    guard=load('_selected_admission_actual_guard_preparer',HERE/'prepare_round_cpu_guard_v9.py')
++    guard=load('_selected_admission_actual_guard_preparer',LOCAL/'prepare_round_cpu_guard_v9.py')
+     cpu=guard.prepare(Path(prepared['path']),Path(job['study_directory'])/'four-exact-contexts-CPU-original01')
+     for case in manifest['cases']:
+         subject=json.loads(h.checked(case['native_job']).read_bytes())

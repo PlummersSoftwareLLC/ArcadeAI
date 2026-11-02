@@ -1,0 +1,32 @@
+{
+  "schema": "robotron-stageB-parent-before-source-only-marker-coherence-fix-v1",
+  "reason": "Root identified first entered read absent/pending then complete read present; one strict monotonic entered reread required before rejecting. Before any imports/tests/execution.",
+  "files": {
+    "cuda_trace_parent.py": {
+      "sha256": "374823b72375b50ab2bcca91480eabb4a665ebd7774e533a87947601f477ff2a",
+      "bytes": 56033,
+      "mode": "0o444"
+    },
+    "PARENT_NOTES.txt": {
+      "sha256": "5bfaf42bdbad2eacc52ad95b2328e59480efaa42d6bb33794ae533792719fe87",
+      "bytes": 5435,
+      "mode": "0o444"
+    },
+    "test_process_scan.py": {
+      "sha256": "80d38d79c23516bff6414a0b3abc271e260bc504a5b46549561a8579550bce1e",
+      "bytes": 19620,
+      "mode": "0o444"
+    },
+    "test_storage_watcher.py": {
+      "sha256": "cf31417b8d152cfe792c8663a47aee340e9e739126ba705215c598eacb46b0ac",
+      "bytes": 23551,
+      "mode": "0o444"
+    },
+    "test_stage_b_parent.py": {
+      "sha256": "bf7ed92a9f91d2f8d34cefac6ab80cd852e789ac0d5562ae9ed1d70c918c7b7b",
+      "bytes": 10439,
+      "mode": "0o444"
+    }
+  },
+  "actual_execution": null
+}

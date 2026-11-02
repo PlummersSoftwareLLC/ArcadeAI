@@ -1,0 +1,20 @@
+--- socket_server_continuous_train_candidate_v1.py
++++ socket_server_continuous_train_candidate_v2.py
+@@ -1263,6 +1263,17 @@
+                      main_measurement_entry_disabled=bool(getattr(metrics,"main_measurement_entry_disabled",False)))
+         value["training_refill_candidate"] &= not active
+         return value
++
++    def continuous_training_connections_snapshot(self):
++        policy=self.continuous_training_policy_snapshot()
++        with self.client_lock:
++            tokens=[cs["_cleanup_token"] for cid,cs in self.client_states.items()
++                    if type(cs.get("_cleanup_token")) is str
++                    and self.clients.get(cid) is not None]
++        rows=self._cleanup_receipts.active_identity_rows(tokens)
++        policy.update(schema="robotron-continuous-active-connections-v1",connections=rows,
++            observed_unix_s=time.time(),observed_monotonic_ns=time.monotonic_ns())
++        return policy
+ 
+     def continuous_training_policy_snapshot(self):
+         if not self.continuous_training_mode or self._cleanup_receipts is None:

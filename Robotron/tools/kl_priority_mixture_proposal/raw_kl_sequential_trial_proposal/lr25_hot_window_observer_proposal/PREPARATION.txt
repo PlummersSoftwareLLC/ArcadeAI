@@ -1,0 +1,118 @@
+UNSELECTED SOURCE PREPARATION — no hot LR change, baseline, window or result exists.
+
+This pure sibling of e880 observes a future hot change from CE4096/.5 to
+CE4096/.25 under the unchanged CE9b3 phase. It adds no controller, process action,
+boot, owner stop, phase start, reset, trainer restart or automatic LR reversal.
+The current all-four quality campaign and its scientific source freeze remain
+untouched. Root can select/test/integrate only after that campaign's genuine
+closure, explicit freeze release and a new precommit. The original FAILED
+CE2048 trials and their separate maintenance recovery remain unchanged.
+
+Root inputs and authentication
+------------------------------
+The strict future job has exactly schema, experiment, owner, recipe,
+current_phase, proofs, barrier_completed_clock, baseline and policy. The template
+keeps every future owner, clock, API PIN, control proof, experiment and cutoff
+null. The actual current .5 baseline445b is NOT a future .25 B.
+
+Root must authenticate every file's exact bytes, source/control/recipe and owner
+before constructing a job and injecting baseline_api. baseline.api is the FULLPIN
+of those genuine raw bytes; baseline.observed_clock is the actual observation
+clock after the API callbacks. Raw API is passed separately so unrelated NaN does
+not enter a strict science job. This pure module does not open PIN paths and does
+not claim to authenticate files, a CPU result or a control publication itself.
+The PIN validator checks metadata shape, not real inode/mode/ownership.
+
+The four proof PINs are root_precommit, control_after, entry_CPU and barrier.
+Root must join the genuine pre-change live192 .5 entry CPU and unchanged owner /
+optimizer / replay / CE9b3 phase, new .25 control readback and exact held recipe,
+no weight/optimizer/replay reset, completed barrier, and actual current-quality
+closure/release. The entry CPU and historical phase boot are evidence, never the
+clock origin. Existing lr25_phase_cpu_verifier_proposal is a separately unselected
+numeric/context family; it is not executed or made ready by this observer.
+
+Root's evidence callback must freshly check the same owned process, source,
+control, recipe, phase,192 actors, faults and other precommitted runtime health;
+only an honest exact boolean ok=True is accepted. API supplies real keys
+training_enabled, measurement_active, client_count, managed_experiment, lr, ts,
+pipeline_snapshot_age_s and pipeline_read_error. There is no invented exported
+lr_scale, batch_size or priority-phase field. api.lr is scheduled-rate evidence,
+not proof of the first applied Adam update at the new rate. B's conservative
+ts-pipeline_snapshot_age_s bound must be after the actual barrier; collection is
+non-atomic, so this does not identify the first changed Adam step.
+
+Window semantics
+----------------
+B is fresh,192,training_enabled,nonmeasurement,.25 scheduledlr1.25e-5 with
+nonzero existing four clocks, replay inserts and applied/outcome counters. B has
+pending0, optimizer/replay available and lifetime unavailable0. Both exposure
+identities include PID, instance_monotonic_ns, epoch and epoch_reason. Later
+pending1 remains valid and is recorded; it is not silently replaced by a later
+pending0 observation. Unavailable outcomes, identity/epoch changes, counter
+regression, source/health failure and invalid clocks fail closed.
+
+All deltas share this same B: learner and fleet frames; logical training steps
+and optimized samples; DQN/epsilon/expert/eval/unattributed accepted inserts;
+and optimizer attempts/outcomes/applied/AMP skipped/unavailable. The horizons are
+8M learner frames AND6M accepted_learner_total (DQN+epsilon normally completed
+adds). The sum of all five physical origins is reported separately. It cannot
+substitute for learner inserts. Cap8 remains an external held recipe condition;
+its fleet-frame allowance is not a learner-insert or logical-sample identity.
+
+Applied delta*4096 is admitted_samples_from_B. Total applied*4096 is explicitly
+process cumulative. Neither is logical optimized_samples nor per-parameter
+movement. AMP_classified_denominator is delta(applied+amp_skipped); pending is
+reported separately and unavailable must remain zero. There is no equality
+assertion across non-atomic exposure, logical and frame counter structures.
+
+Management rules remain1Hz, fresh API and pipeline<=5s, poll/missing grace<30s,
+and no-applied stall60s while frames/inserts advance. The future precommit must
+explicitly retain these constants and supply a positive finite cutoff_s. Window
+time starts at B observed_clock, after barrier/callback work. There is no old
+3240/3600 owner-retirement deadline. At cutoff an absent eligible observation is
+INCOMPLETE; root separately owns any later reversal of LR on the healthy owner.
+
+First LATCH and durability
+-------------------------
+HorizonObserver(job, baseline_api).observe(api, owner, evidence, clock) is pure.
+The first terminal observation is immutable, including pending1. A LATCH alone
+always grants candidate_requests_allowed=0 and qualification_pass=False.
+
+For injected publication, ReceiptJournal accepts publish(path, value), get_clock,
+root output path and the authenticated job. The publisher must create NEW owned
+readonly files containing EXACT encoded(value) bytes, fsync each file and parent
+directory before returning an authentic FULLPIN. No callback may replace an
+existing file. The helper checks returned path/hash/bytes. Tests use an honest
+synthetic MemoryPublisher and make no actual fsync/numerical claim.
+
+The event file is written first. Only AFTER its file+directory fsync does the
+completion clock get read. A paired durability receipt records that exact event
+PIN and measured completion, then is itself published durably. It may be
+published after the cutoff; the original event's actual fsync completion may not.
+Both the original observation and that completion must be <=precommitted cutoff.
+durable_result joins the exact original event bytes, paired receipt bytes and
+sequence/boot/clock before permitting one candidate. It never edits the first
+LATCH into a different observation. A late fsync returns LATCH_LATE_DURABILITY
+with permission0 and preserves the original event and receipt.
+
+poll timestamps only after all API/owner/evidence callbacks; emit must return
+the genuine durable_event pair. A callback/publication/validation failure returns
+EVIDENCE_FAILED with the original observation and permission0. No retry,
+reanchoring, process reset, replacement event, new observer instance or later
+candidate is authorized. Root must preserve original outputs/errors even when
+no complete paired receipt could be written. The journal retains the proven
+32MiB total/4KiB durability reservation and forbids retry after a failed or
+terminal emission. No game-quality or causal-improvement claim follows from a
+window latch. Future frozen-policy evaluation remains a separate root decision.
+
+Source review and deferred guards
+---------------------------------
+require/integer/number/bounded/identity/normalise are exact e880 source texts.
+The unified diff and source-preservation.json list intentional changes to B,
+health keys, horizons, accounting, durable permission and removed ending logic.
+Eleven authored stdlib metadata methods cover genuine API shape, nonzero B,
+barrier freshness, exact context, learner-only insert horizons, same-B AMP and
+logical deltas, pending1 first LATCH, invalid epochs/counters/outcomes, timing,
+original durable pairing, late/failed once-only emission and literal read-free
+PLAN. They have NOT been imported or executed by the author. No runtime proof,
+guard PASS, real .25 context or implementation integration is claimed.

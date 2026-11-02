@@ -1,0 +1,150 @@
+{
+  "actual_GPU_execution": null,
+  "actual_test_execution": null,
+  "adoption": null,
+  "authored_test_methods": {
+    "test_process_scan.py": 18,
+    "test_stage_a_contract.py": 15,
+    "test_storage_watcher.py": 25
+  },
+  "authored_total": 58,
+  "clipping_calls": 0,
+  "compiled_forwards": 3,
+  "created_utc": "2026-10-17T09:49:35.453372+00:00",
+  "explicit_test_selection": [
+    "Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.cuda_numeric_validation_timeout_reviewed2_proposal.test_process_scan",
+    "Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.cuda_numeric_validation_timeout_reviewed2_proposal.test_storage_watcher",
+    "Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.cuda_numeric_validation_timeout_reviewed2_proposal.test_stage_a_contract"
+  ],
+  "explicit_unscaled_objective_backwards": 3,
+  "files": {
+    "PREPARATION.txt": {
+      "bytes": 4482,
+      "mode": "0o444",
+      "sha256": "7a0ee5a6751e550b81ab3d1cc0deee2b6b0d373c6298333ffd349007442e1940"
+    },
+    "PROTOCOL.txt": {
+      "bytes": 6689,
+      "mode": "0o444",
+      "sha256": "c2f2edbd9a720fbf87c043f677e0667519ac097f91607df2a8e06036de1ea3e4"
+    },
+    "TEST_SELECTION_REVIEWED2.json": {
+      "bytes": 1654,
+      "mode": "0o444",
+      "sha256": "e68a536868de11b0bb783675529ea8fd68e44bbddedc14871510234d3136b4c8"
+    },
+    "TIMEOUT_PRECOMMIT.json": {
+      "bytes": 1335,
+      "mode": "0o444",
+      "sha256": "ff545c3ccd1e3e4ea0434020c45332d51561654f64615683a1479763ce5cba73"
+    },
+    "cuda_trace_parent.py": {
+      "bytes": 46064,
+      "mode": "0o444",
+      "sha256": "8521f1ac82dc7c74162f717ad45171fe62b5463b26c96101565b3d009340a9dd"
+    },
+    "cuda_trace_worker.py": {
+      "bytes": 25621,
+      "mode": "0o444",
+      "sha256": "65b1d0a7244fb7601ef6189c9f120622011d8bacc5fb7cec808bd1622baec71e"
+    },
+    "future-argv.json": {
+      "bytes": 2292,
+      "mode": "0o444",
+      "sha256": "2c93a1a48f0810bd7bac6b115cc751747a2382afd45f2cbc40cfdf50bfa1c0f5"
+    },
+    "source-adaptation.patch": {
+      "bytes": 1303,
+      "mode": "0o444",
+      "sha256": "38679fd8bcd4278f96d1f308ae4089714fc020e769eea78bdc65f94ddd5dc16d"
+    },
+    "source-lock.json": {
+      "bytes": 13584,
+      "mode": "0o444",
+      "sha256": "bcc1c696ed1ddbd18879e64cee01d55909b99c8401d908f636228d4c83b36551"
+    },
+    "test_process_scan.py": {
+      "bytes": 19169,
+      "mode": "0o444",
+      "sha256": "e978d7a055cca7490ff98127afad4e9be66e78747c2894a53399b7ebd73df981"
+    },
+    "test_stage_a_contract.py": {
+      "bytes": 11980,
+      "mode": "0o444",
+      "sha256": "abfa875a4398f714b54690db3009e3f0f19563eea8393243ae0ef11ec0994768"
+    },
+    "test_storage_watcher.py": {
+      "bytes": 23531,
+      "mode": "0o444",
+      "sha256": "325eb2e2a03d68caffbfe1c49e5854622e411e25298c761af7b7fa3470eafaaa"
+    }
+  },
+  "fixture_only_companion": {
+    "sha256": "2f083c4327540380498f10f7e3274b7cd1c9a1c2d4c54d9f5f8262cfbb2afd9a",
+    "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/preparation-manifest-reviewed2.json"
+  },
+  "independent_source_peer": null,
+  "internal_comparison_gate": [
+    "candidate_ce4_vs_original4",
+    "candidate_kl5_vs_candidate_ce4"
+  ],
+  "optimizer_scaler_calls": 0,
+  "original_scientific_bundle": {
+    "sha256": "1144139f168292b7c0648fcc76d24a945d7d7f295ec14d5f304f70d5ca5dfe11",
+    "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/preparation-manifest.json"
+  },
+  "original_unexecuted_manifest": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/cuda_numeric_validation_proposal/preparation-manifest.json",
+    "sha256": "dc9e324cbc7fed648b24f392274e7d2cf5b0fb1fc39ccf7cdb66a137a87c3683"
+  },
+  "precommitted_timeouts": {
+    "total_s": 900,
+    "worker_s": 600
+  },
+  "qualification_pass": false,
+  "root_runtime_owner": true,
+  "schema": "robotron-raw-kl-stage-a-timeout-reviewed2-source-manifest-with-test-selection-v1",
+  "scope": "Stage A independent loss numeric validation only. No live agent/native/fusedAdam/readback/phase-load proof; Stage B mandatory before adoption.",
+  "selected_original_index": 1,
+  "separate_historical_descriptive_residual": "original4_vs_captured_actual",
+  "source_author_actions": {
+    "PT_tensor_model_replay_body_reads": false,
+    "imports_tests_compiles_defaults": false,
+    "runtime_queries_signals_services": false,
+    "source_saved_small_metadata_reads_and_new_writes_only": true
+  },
+  "source_exact_bootstrap_vs1f72": true,
+  "source_exact_functions_vs3ccd": [
+    "storage_directory_identity",
+    "owned_byte_count",
+    "scan_quality_processes",
+    "checked_module",
+    "helpers",
+    "configure_environment",
+    "Layout",
+    "file_identity",
+    "stable_file",
+    "bounded_json",
+    "payload_metadata",
+    "row_contract",
+    "bind_inputs",
+    "publish",
+    "command",
+    "run_variant"
+  ],
+  "stage_a_fixed_routes": [
+    "original4",
+    "candidate_ce4",
+    "candidate_kl5"
+  ],
+  "status": "SOURCE_ONLY_UNEXECUTED_READY_FOR_PEER_REVIEW",
+  "supersedes_handoff_instructions_only": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/cuda_numeric_validation_timeout_reviewed2_proposal/preparation-manifest.json",
+    "sha256": "0f547542b1afbb843243a0cc0292b7e96ab7dc52ae1c5cc5eb2f540a9d51936e"
+  },
+  "timing_authority": {
+    "parent_total_s": 900,
+    "source": "Selected sibling cuda_trace_parent.py BOUNDS, manifest TIMEOUT_PRECOMMIT and actual launch manifest. Inherited worker limitation text180s is superseded, never actual timeout authority.",
+    "worker_phase_s": 600
+  }
+}

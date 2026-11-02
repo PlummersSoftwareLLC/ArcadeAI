@@ -1,0 +1,73 @@
+{
+  "schema": "robotron-fixed448-candidate-root-preparer-source-proposal-reviewed3",
+  "status": "SOURCE_PREPARED_PENDING_EXACT_PEER_AND_ROOT14TESTS",
+  "files": {
+    "PREPARATION.txt": {
+      "sha256": "9eb66db600909a77187ba6d400995a90f497297e1a7ad31a56190b38aa999bc4",
+      "bytes": 1620,
+      "mode": "0o444"
+    },
+    "planned-argv.json": {
+      "sha256": "bb7cf0bd0e4f2d1ee74082195cf5ecb41fb5a26c7e439edefa4f2b0bec2234a3",
+      "bytes": 1787,
+      "mode": "0o444"
+    },
+    "prepare_448_candidate.py": {
+      "sha256": "587c3d3982e2a606bb63f360ac81bbea14f6bceb820f8af82bbad5710b2b9637",
+      "bytes": 18998,
+      "mode": "0o444"
+    },
+    "source-correction.patch": {
+      "sha256": "6f272c8206857c69fcd09de68039d5a658fbd22182042351780ac6037302defa",
+      "bytes": 512,
+      "mode": "0o444"
+    },
+    "test_prepare_448_candidate.py": {
+      "sha256": "308e4d5e7288b0af39807876304c8622368de9872a4101d5c91c09085468baee",
+      "bytes": 9583,
+      "mode": "0o444"
+    }
+  },
+  "predecessor_manifest": {
+    "path": "Robotron/tools/managed_candidate_capture_proposal/reviewed2/preparation-manifest.json",
+    "sha256": "61bac3bd92f77820fb34115581ab03afe7a13401b819ea7feae50b93ec521e60"
+  },
+  "predecessor_source": {
+    "path": "Robotron/tools/managed_candidate_capture_proposal/reviewed2/prepare_448_candidate.py",
+    "sha256": "be1f7f9dcda8b240c7d63965c6d5f4a741342896da6969902905b67edf053548"
+  },
+  "actual_reviewed2_preparer_failure": {
+    "path": "Robotron/logs/managed-learning-20261015/run-26/quality448M-preparer-reviewed2-root-execution-20261017/actual-child-completion.json",
+    "sha256": "9e4c26920f0ce28aa1efa032d7540d1464263bbeadbf14e8ec7e2662cf908d9c",
+    "bytes": 1309,
+    "scope": "Actual original1 collector failure before directory/candidatecopy; not a CPU/model verification"
+  },
+  "only_change": "Use systemctl show UNIT --all in terminal_watcher to collect explicitemptyCG; identity/cgroup/PID/clocks/copy/job guards unchanged",
+  "authored_methods": 14,
+  "author_executed": false,
+  "actual_root14tests": null,
+  "actual_candidate": null,
+  "actual_CPU_result": null,
+  "inherited_dependencies": {
+    "pretrigger": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/fresh3-448M-root-live-capture-binding-20261017/pretrigger-root-live-binding.json",
+      "sha256": "8d8c94ff1696f86b643a591e233016dd21642f0c0995738fac9e9f0c3c083084"
+    },
+    "context": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/initial-stopped/cpu-job.json",
+      "sha256": "a7f689e23923b63693f2aacd43db4efd2157700be1836502ed8a14dac031544b"
+    },
+    "verifier": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/managed-candidate-checkpoint-CPU-verifier-proposal-20261017/verify_candidate_checkpoint.py",
+      "sha256": "ea6ccfcd62e2683641475634ba1647856a988691a6cede3dbeda629dd03ba56b"
+    },
+    "schema": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/managed-candidate-checkpoint-CPU-verifier-proposal-20261017/job.schema.json",
+      "sha256": "357d4e92c5b7c6bbfe2d8c9a2c5998087ee31a8dd118a52005f1955eac5a7c5c"
+    },
+    "strict_base": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-maintenance-checkpoint-CPU-verifier-proposal-20261017/verify_maintenance_checkpoint.py",
+      "sha256": "7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead"
+    }
+  }
+}

@@ -1,0 +1,174 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/stop_current_continuous_closed_fleet_continuation_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/stop_current_continuous_closed_fleet_continuation_v4.py
+@@ -3,6 +3,8 @@
+ The fleet is already closed. New GAME holds and a new last zero-frame FIFO
+ frontier precede the unchanged original trainer SIGINT/save/archive kernels.
+ Prior input closure is history, never a presently held admission fence.
++Every pre-stop census temporarily seals HTTP admission and retains the original
++ALL Thread-N/Timer classifier; there is no HTTP worker name exemption.
+ """
+ import argparse
+ import hashlib
+@@ -118,6 +120,70 @@
+     return prior
+ 
+ 
++def settled_native_census(rows,allowed_probe):
++    """No name exception: only one exact owned probe birth may remain."""
++    require(type(rows)is dict and all(type(tid)is int and type(row)is dict
++        and row['tid']==tid and type(row['starttime_ticks'])is int and row['starttime_ticks']>0
++        for tid,row in rows.items()),'Typed raw native census required')
++    if allowed_probe is None:return not rows
++    require(set(allowed_probe)=={'tid','starttime_ticks'}and type(allowed_probe['tid'])is int
++        and allowed_probe['tid']>0 and type(allowed_probe['starttime_ticks'])is int
++        and allowed_probe['starttime_ticks']>0,'Exact original owned probe native birth required')
++    tid=allowed_probe['tid']
++    if tid in rows:
++        require(not rows[tid]['comm'].startswith('Timer'),'A Timer is never an allowed probe handler')
++        require(rows[tid]['starttime_ticks']==allowed_probe['starttime_ticks'],
++            'Owned probe native TID was reused; never rebound')
++    return set(rows)=={tid}
++
++
++def validate_released_continuation_failure(job,read):
++    history=job['released_continuation_failure']
++    require(set(history)=={'job','config','outcome','controller_closeout'},'Exact second failed maintenance history required')
++    prior=read(history['job']);cfg=read(history['config']);outcome=read(history['outcome']);closed=read(history['controller_closeout'])
++    require(prior['source']['path']==str(Path(__file__).with_name('stop_current_continuous_closed_fleet_continuation_v3.py'))
++        and prior['source']['sha256']=='9ed5fe275ea7cb43eb8a21663e8ed057c5b67bbbadb18440a0f8a60ef78554c7'
++        and prior['trainer']==job['trainer']and prior['fleet']==job['fleet']
++        and prior['closed_fleet_continuation']==job['closed_fleet_continuation']
++        and prior['original_population']==job['original_population']
++        and prior['expected_current_cap']==job['expected_current_cap']
++        and history['outcome']['path']==str(Path(prior['output'])/'original-current-stop-outcome.json')
++        and outcome['status']=='ORIGINAL_CONTINUOUS_STOP_INCOMPLETE'and outcome['actual_stopped_authority']is None
++        and outcome['original_attempt']==1 and outcome['no_retry']is True and outcome['replacement_started']is False
++        and outcome['owned_hold_release_errors']==[]
++        and outcome['one_shot_manual_stop_requests']==dict(fleet=False,trainer=False),
++        'Only same-owner released maintenance failure before any trainer/fleet StopUnit required')
++    require(closed['original_exit']==1 and closed['status']=='ORIGINAL_AUDIT_NONZERO_PRESERVED_ARCHIVED_AND_RELEASED'
++        and closed['original']['unit']==cfg['unit']
++        and history['controller_closeout']['path']==str(Path(cfg['output'])/'root-original-result-and-owned-release.json')
++        and cfg['argv']==['/usr/bin/python3','-I','-B',prior['source']['path'],'--execute',
++            '--job',history['job']['path'],'--job-sha256',history['job']['sha256'],
++            '--source-sha256',prior['source']['sha256']], 'Exact second failed controller/job join required')
++    review=load(ARCHIVE_REVIEW,ARCHIVE_REVIEW_SHA,'_prior_continuation_failure_archives')
++    review.archived_closure(closed,closed['original'],read,exit_zero=False)
++    launch=read(closed['timer_launch_archive']);intent=read(launch['launch_intent'])
++    require(launch['schema']=='robotron-root-exact-audit-timer-launch-archive-v1'
++        and launch['unit']==closed['original']['unit']and launch['timer']==closed['original']['timer']
++        and launch['timer_invocation_id']==closed['original']['timer_invocation_id']
++        and all(intent[k]==v for k,v in cfg.items())and intent['no_retry']is True
++        and intent['original_attempt']==launch['original_attempt']==1 and launch['no_retry']is True,
++        'Exact second failed controller launch required')
++    for key,command in [('timer_cat','cat'),('timer_show','show')]:
++        row=launch[key];require(row['argv']==['systemctl','--user',command,closed['original']['timer']]
++            and row['exit']==0 and row['timed_out']is False,'Second failed timer launch not positive')
++        read(row['stdout'],False);read(row['stderr'],False)
++    fields=dict(x.split('=',1)for x in read(launch['timer_show']['stdout'],False).decode().splitlines()if'='in x)
++    require(fields.get('LoadState')=='loaded'and fields.get('InvocationID')==closed['original']['timer_invocation_id']
++        and fields.get('Unit')==closed['original']['unit'],'Second failed timer original invocation differs')
++    for released in closed['owned_release']:
++        row=released['final'];require(row['argv']==['systemctl','--user','show',released['unit']]
++            and row['exit']==0 and row['timed_out']is False,'Second failed owned release SHOW required')
++        fields=dict(x.split('=',1)for x in read(row['stdout'],False).decode().splitlines()if'='in x)
++        read(row['stderr'],False);require(fields.get('Id')==released['unit']and fields.get('LoadState')=='not-found',
++            'Second failed controller/timer not positively released')
++    return prior
++
++
+ def execute(job_pin,own_sha):
+     require(hashlib.sha256(Path(__file__).read_bytes()).hexdigest()==own_sha,'Actual current stop producer changed')
+     raw=Path(job_pin['path']).read_bytes();require(hashlib.sha256(raw).hexdigest()==job_pin['sha256'],'Actual stop job changed')
+@@ -136,6 +202,7 @@
+                 raw=self.u.checked(value)
+                 return json.loads(raw)if as_json else raw
+             self.prior_job=validate_history(job,history_read)
++            validate_released_continuation_failure(job,history_read)
+             selected=helper.read(job['current_selection']);self.anchor=helper.startup_anchor(selected)
+             require(selected['owner']==self.owner and selected['fleet']==self.fleet
+                 and selected['expected_current_cap']==job['expected_current_cap'], 'Same current owner/cap required')
+@@ -178,7 +245,45 @@
+                 'Prior fleet service is live, replaced, restarted or not normal0')
+             return True
+ 
++        def api(self):
++            require(not any(k.startswith('HTTP_CENSUS_')for k in self.holds),
++                'No API call while transient HTTP admission is fenced')
++            return old.Stop.api(self)
++
++        def candidates(self):
++            if 'HTTP'in self.holds:return old.Stop.candidates(self)
++            require(not any(k.startswith('HTTP_CENSUS_')for k in self.holds),'Nested HTTP census fence refused')
++            self.http_census_number=getattr(self,'http_census_number',0)+1
++            key='HTTP_CENSUS_'+str(self.http_census_number).zfill(4)
++            allowed=getattr(self,'census_probe',None)if self.probe is not None else None
++            if allowed is not None:
++                require(old.birth(self.owner['pid'],allowed['tid'])==allowed['starttime_ticks'],
++                    'Original probe birth changed before HTTP fence')
++            self.hold(key,'Thread-1 (serve')
++            rows=None;started=time.monotonic()
++            try:
++                while True:
++                    rows=old.Stop.candidates(self)
++                    if allowed is not None:
++                        require(old.birth(self.owner['pid'],allowed['tid'])==allowed['starttime_ticks'],
++                            'Original probe native birth changed inside HTTP fence')
++                    if settled_native_census(rows,allowed):
++                        if allowed is not None:
++                            require(old.birth(self.owner['pid'],allowed['tid'])==allowed['starttime_ticks'],
++                                'Original probe birth changed after fenced census')
++                        return rows
++                    require(time.monotonic()-started<10,'HTTP-fenced original Thread/Timer census did not drain')
++                    time.sleep(.05)
++            finally:
++                try:
++                    self.event(key+'-census.json',dict(hold=self.holds[key],allowed_original_probe=allowed,
++                        raw_candidates=rows,elapsed_s=time.monotonic()-started,
++                        HTTP_thread_name_exemptions=False,API_called_while_transient_fenced=False))
++                finally:self.release(key)
++
+         def uncached(self,path,limit):
++            require(not any(k.startswith('HTTP_CENSUS_')for k in self.holds),
++                'No uncached getter while transient HTTP admission is fenced')
+             self.live(self.owner)
+             with urllib.request.urlopen('http://127.0.0.1:8771'+path,timeout=5)as r:raw=r.read(limit+1)
+             require(len(raw)<=limit,'Bounded uncached cleanup evidence required');value=json.loads(raw)
+@@ -265,8 +370,14 @@
+                     'Owned probe receipt/source identity differs or already ended')
+                 if probe_identity is not None:
+                     require(all(value[k]==probe_identity[k]for k in identity_keys),'Owned probe token/native identity changed')
+-                native=self.candidates();tid=value['handler_native_id']
+-                require(type(tid)is int and tid not in before_native,'Owned probe native task was not fresh')
++                tid=value['handler_native_id'];born=old.birth(self.owner['pid'],tid)
++                require(type(tid)is int and tid not in before_native and type(born)is int and born>0,
++                    'Owned probe native task was not fresh')
++                selected_native=dict(tid=tid,starttime_ticks=born)
++                if getattr(self,'census_probe',None)is not None:
++                    require(self.census_probe==selected_native,'Original probe native birth was reused; never rebound')
++                self.census_probe=selected_native
++                native=self.candidates()
+                 if set(native)!={tid}:return False
+                 require(native[tid]['wchan'].startswith('poll_schedule_timeout'),'Owned probe is not in zero-frame receive wait')
+                 if probe_identity is not None:
+@@ -311,7 +422,9 @@
+                 and set(map(int,(group/'cgroup.threads').read_text().split()))=={hold['tid']},'Original GAME accept hold changed')
+             result=self.event('input-closure.json',dict(schema='robotron-Root-continuous-input-closure-v1',
+                 owner=self.owner,fleet=self.fleet,source=helper.pin(Path(__file__).resolve()),old_kernel=helper.pin(KERNEL),
+-                closed_fleet_continuation=job['closed_fleet_continuation'],prior_input_closure_adopted=False,
++                closed_fleet_continuation=job['closed_fleet_continuation'],
++                released_continuation_failure=job['released_continuation_failure'],prior_input_closure_adopted=False,
++                raw_Thread_and_Timer_classifier_preserved=True,transient_HTTP_fenced_census=True,
+                 all_original_population_births_absent=True,all_GAME_handlers_and_FIFO_work_finished=True,
+                 no_deferred_callbacks_or_Timer_threads=True,GAME_listener_sealed_until_original_trainer_exit=True,
+                 GAME_hold=hold,initial_connections=initial,historical_tokens_preserved_without_success_reclassification=captured,
+@@ -327,7 +440,8 @@
+         def run(self):
+             outcome=dict(status='ORIGINAL_CONTINUOUS_STOP_INCOMPLETE',actual_stopped_authority=None,
+                 original_attempt=1,no_retry=True,replacement_started=False,payload_integrity_qualified=False,
+-                closed_fleet_continuation=job['closed_fleet_continuation'],second_fleet_stop_requested=False)
++                closed_fleet_continuation=job['closed_fleet_continuation'],
++                released_continuation_failure=job['released_continuation_failure'],second_fleet_stop_requested=False)
+             try:
+                 self.preflight();closure=self.close_inputs()
+                 selected=helper.read(job['current_selection']);selected.update(input_closure=closure,

@@ -1,0 +1,117 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-preview-LR0625-hot-registry-original01-preparation-20261027/prepare_hot_LR0625_registry_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-preview-LR0625-hot-registry-original01-preparation-20261027/prepare_hot_LR0625_registry_v2.py
+@@ -1,4 +1,4 @@
+-"""Inert by default. Exact owned HOT LR transition metadata rebind/read-only monitor."""
++"""Inert by default. Physical192/slot-role HOT monitor; CIDs are snapshot observations."""
+ import argparse
+ import hashlib
+ import json
+@@ -248,6 +248,17 @@
+     hot = validate_hot_transition(p,binding['hot_lr_transition'],binding['prior_binding'])
+     require(policy['source_files'][str(GAME/'models_dqn/learning_control.json')] == hot['after_current_control'],
+             'Current HOT recipe must bind its exact owned transition')
++    return check_physical_current(p,binding_pin,3.125e-6)
++
++
++def check_before_hot(p,binding_pin):
++    require(binding_pin['path'] == str(HOT_PRIOR) and binding_pin['sha256'] == HOT_PRIOR_SHA,
++            'Only the exact precommitted before-HOT physical registry is permitted')
++    return check_physical_current(p,binding_pin,6.25e-6)
++
++
++def check_physical_current(p,binding_pin,expected_lr):
++    binding = p.read(binding_pin); policy = p.read(binding['supervision_policy'])
+     require(binding['mixed_physical_game_cohorts'] is True and binding['new_live_game_cohort'] is False,
+             'Explicit actual mixed-cohort registry required')
+     for path,expected in policy['source_files'].items():
+@@ -260,16 +271,16 @@
+         with urllib.request.urlopen('http://127.0.0.1:8771/api/now',timeout=5) as stream: raw = stream.read(2_000_001)
+         require(len(raw) <= 2_000_000, 'Bounded API metadata required'); value = json.loads(raw)
+         roles = api_roles(value,policy['actual_API_roles'],policy['trainer']['pid'],
+-                          capture['api']['host_pipeline']['learning_exposure'],fresh=True,
+-                          expected_lr=binding.get('current_effective_lr',6.25e-6))
+-        require(roles == policy['actual_API_roles'], 'Current CID map changed; ROOT rebind required'); return value
++                          capture['api']['host_pipeline']['learning_exposure'],fresh=True,expected_lr=expected_lr)
++        require(slot_roles(roles) == slot_roles(policy['actual_API_roles']), 'Current slot roles changed')
++        return value,roles
+     def owners():
+         result = {}
+         for key in ('trainer','fleet','supplemental0'):
+             owner = policy[key]; fields = h.unit_show(owner['unit'])
+             result[key] = dict(unit={k:fields[k] for k in UNIT_FIELDS},process=collector.process_record(owner['pid']))
+         return result
+-    started = time.monotonic(); first = api(); before = owners()
++    started = time.monotonic(); first,first_roles = api(); before = owners()
+     require(before == policy['baseline_owners'], 'Current owner incarnation changed')
+     actors = {slot:collector.process_record(actor['pid']) for slot,actor in policy['baseline_actors'].items()}
+     require(actors == policy['baseline_actors'], 'Current actor birth/source/environment changed; ROOT rebind required')
+@@ -290,19 +301,28 @@
+             and {k:v for k,v in environment.items() if k.startswith('CUDA_')} ==
+                 dict(CUDA_DEVICE_ORDER='PCI_BUS_ID',CUDA_VISIBLE_DEVICES='GPU-c0c5d295-6f07-aab5-bbde-b592ea426ec1'),
+             'Exact full current trainer environment/GPU binding changed')
+-    after = owners(); last = api()
++    after = owners(); last,last_roles = api()
+     require(before == after and time.monotonic()-started <= 5, 'Current observation raced or exceeded bound')
+     return dict(status='READONLY_PASS',binding=binding_pin,source_count=len(binding['held_hashes']),
+         actor_count=192,eval_count=37,training_count=155,
+         emulator_survivor_count=binding['emulator_survivor_count'],emulator_replacement_count=binding['emulator_replacement_count'],
+         full192_RAM_continuity_attempt_succeeded=False,mixed_physical_game_cohorts=True,
+         learner_frame_count=last['learner_frame_count'],training_steps=last['training_steps'],fps=last['fps'],
++        expected_effective_lr=expected_lr,physical_actor_and_slot_role_authority=binding_pin,
++        CID_scope='Unique CIDs per API snapshot are observations, not fixed physical actor identities.',
++        historical_CID_roles=policy['actual_API_roles'],current_CID_observations=dict(before=first_roles,after=last_roles),
++        historical_CID_changed_slots=sorted((slot for slot in SLOTS if last_roles[slot]['client_id'] != policy['actual_API_roles'][slot]['client_id']),key=int),
++        within_observation_CID_changed_slots=sorted((slot for slot in SLOTS if first_roles[slot]['client_id'] != last_roles[slot]['client_id']),key=int),
+         controls_process_or_canonical_writes=0)
+ 
+ 
+ HOT_ROOT = Path(__file__).resolve().parent
+ HOT_PRIOR = CASE/'actual-current-mixed192-registry-original01/current-mixed192-main-binding.json'
+ HOT_PRIOR_SHA = '6bfe2e5ceac0be42fce70f95ee65fbd160b8daff3b4a5e15f691b6586ad131fd'
++
++
++def slot_roles(observation):
++    return {slot:row['eval'] for slot,row in observation.items()}
+ 
+ 
+ def typed(value):
+@@ -355,7 +375,7 @@
+                 'Historical applied-LR snapshots must be bounded and fresh')
+         roles = api_roles(api,prior['actual_roles'],prior['owner']['pid'],
+             capture['api']['host_pipeline']['learning_exposure'],expected_lr=lr)
+-        require(roles == prior['actual_roles'], 'All192 transport roles/CIDs must remain unchanged')
++        require(slot_roles(roles) == slot_roles(prior['actual_roles']), 'All192 slot roles must remain unchanged')
+         snapshots.append((api,witness))
+     times = [writer['publication_begin_unix_s'],writer['publication_complete_unix_s']]
+     require(all(type(t) in (int,float) and math.isfinite(t) and t > 0 for t in times)
+@@ -395,6 +415,8 @@
+         baseline_API=hot['applied_anchor_API'],hot_lr_transition=transition_pin,current_lr_scale=.0625,current_effective_lr=3.125e-6,
+         hot_lr_applied_anchor_clocks={k:hot['applied_anchor_API'][k] for k in ('training_steps','optimized_samples','learner_frame_count','frame_count')},
+         hot_lr_applied_anchor_replay_exposure=hot['applied_anchor_API']['host_pipeline']['learning_exposure']['replay'],
++        hot_lr_applied_anchor_CID_observations={str(row['client_slot']):dict(client_id=row['client_id'],eval=row['eval']) for row in hot['applied_anchor_API']['client_rows']},
++        CID_identity_scope='Prior actual_roles remains historical observed CIDs; physical actors and slot-eval roles are the authority.',
+         historical_startup_CPU_recipe_lr_scale=.125,current_LR0625_checkpoint_CPU_qualified=False,
+         startup_CPU_report_scope='Historical actual.125 boot/startup proof retained; it is not relabeled as a.0625 saved-checkpoint qualification.',
+         current_recipe_scope='Root one-field hot control +later applied API anchor; same owner/192 actors/CE phase/producer epochs, no source install or model/replay load/reset.')
+@@ -407,16 +429,16 @@
+ def main():
+     parser = argparse.ArgumentParser(description='Default inert. Metadata-only HOT LR registry rebind or read-only monitor.')
+     parser.add_argument('--rebind-hot',action='store_true'); parser.add_argument('--preflight-hot',action='store_true')
+-    parser.add_argument('--check',action='store_true'); parser.add_argument('--transition'); parser.add_argument('--transition-sha256')
++    parser.add_argument('--check',action='store_true'); parser.add_argument('--check-before-hot',action='store_true'); parser.add_argument('--transition'); parser.add_argument('--transition-sha256')
+     parser.add_argument('--prior-binding'); parser.add_argument('--prior-binding-sha256')
+     parser.add_argument('--binding'); parser.add_argument('--binding-sha256'); parser.add_argument('--output'); parser.add_argument('--expected-source-sha256')
+-    args = parser.parse_args(); require(sum((args.rebind_hot,args.preflight_hot,args.check)) <= 1, 'Select one explicit mode')
+-    if not(args.rebind_hot or args.preflight_hot or args.check): print('PLAN_ONLY: no metadata reads, probes or controls'); return
++    args = parser.parse_args(); require(sum((args.rebind_hot,args.preflight_hot,args.check,args.check_before_hot)) <= 1, 'Select one explicit mode')
++    if not(args.rebind_hot or args.preflight_hot or args.check or args.check_before_hot): print('PLAN_ONLY: no metadata reads, probes or controls'); return
+     p = primitives(); own = p.pin(__file__)
+     require(own['sha256'] == args.expected_source_sha256 and own['identity']['mode'] == '0o444', 'Frozen selected HOT monitor source required')
+-    if args.check:
++    if args.check or args.check_before_hot:
+         bp = p.pin(args.binding); require(bp['sha256'] == args.binding_sha256, 'Exact current binding required')
+-        result = check_live(p,bp)
++        result = check_before_hot(p,bp) if args.check_before_hot else check_live(p,bp)
+     else:
+         prior = p.pin(args.prior_binding); transition = p.pin(args.transition)
+         require(prior['sha256'] == args.prior_binding_sha256 and transition['sha256'] == args.transition_sha256, 'Exact ROOT current/HOT pins required')

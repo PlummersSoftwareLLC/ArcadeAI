@@ -1,0 +1,20 @@
+--- Robotron/logs/managed-learning-20261015/run-26/live8-maintenance-checkpoint-CPU-verifier-proposal-20261017/verify_maintenance_checkpoint.py
++++ Robotron/tools/phase_snapshot_cpu_verifier_proposal/strict_phase_base.py
+@@ -380,7 +380,7 @@
+         require(value is None or type(value) in (str, bool), f'Unsupported checkpoint value: {path}:{type(value)}')
+ 
+ 
+-def validate_checkpoint(path, floor, evidence):
++def validate_checkpoint(path, floor, evidence, *, metadata_callback=None):
+     torch, source_model = numerical_setup(evidence)
+     checkpoint = torch.load(path, map_location='cpu', weights_only=True)
+     require(isinstance(checkpoint, dict), 'Checkpoint must be a dictionary')
+@@ -477,6 +477,8 @@
+     for name, expected in SOURCE_HASHES.items():
+         require(fingerprint(GAME / 'Scripts/dqn' / name) == evidence['current_model_source'][name], f'Source changed: {name}')
+         require(fingerprint(DIRECTORY / 'private-source' / name) == evidence['private_model_source'][name], f'Private source changed: {name}')
++    if metadata_callback is not None:
++        metadata_callback(checkpoint, evidence)
+ 
+ 
+ def main(argv=None):

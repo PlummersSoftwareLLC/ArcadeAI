@@ -1,0 +1,39 @@
+{
+  "schema": "robotron-postaccepted-newgame-live8M-quality-bindings-v1",
+  "activation_authorized": false,
+  "experiment": null,
+  "candidate": null,
+  "reference": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-incumbents/freshCE-543M-confirmed.pt",
+    "sha256": "8b86546355ade166937a8287a008c7854276ed773a103eb815287dde00d6fb7e",
+    "bytes": 275192614,
+    "metadata": null
+  },
+  "evidence": {
+    "capture_case": null,
+    "capture_result": null,
+    "capture_release": null,
+    "window_job": null,
+    "window_result": null,
+    "decision": null,
+    "durability": null,
+    "trigger_API": null,
+    "phase_cpu_job": null,
+    "phase_cpu_report": null,
+    "phase_cpu_completion": null,
+    "CPU_execution": null
+  },
+  "current_ce_phase": null,
+  "runtime_baseline": null,
+  "runtime_anchor": null,
+  "predecessor_quality_plan": null,
+  "campaign": {
+    "output_directory": null,
+    "preview_directory": null,
+    "execution_directory": null,
+    "unit": null,
+    "reference_label": "protected-CE543M",
+    "candidate_label": null,
+    "hypothesis": null
+  }
+}

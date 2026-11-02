@@ -1,0 +1,38 @@
+{
+  "schema": "robotron-ce2048-shared-recipe-selection-template-v1",
+  "status": "UNSELECTED_SOURCE_ONLY",
+  "helper_pins": {
+    "controller": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/run_CE_batch_transition.py",
+      "sha256": "c7374cec895b7d98470ef9d83590980200817f37b2e0745d98ab895148345ea5",
+      "bytes": 76813
+    },
+    "live_host": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/helpers/parallel_state_fill_trial.py",
+      "sha256": "0993ed57c6c32ad629b7ed078133e77fb0c54b211c8a324ef9bf7327d62b97f3",
+      "bytes": 43951
+    },
+    "metrics": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/helpers/inference_worker_affinity.py",
+      "sha256": "579dafd9410f9e97872074c444e5fb0e79b24a67e7476568c27faaf3341fd9ed",
+      "bytes": 34706
+    },
+    "identity": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/cpu_affinity_pilot.py",
+      "sha256": "ee1fa4f3018eccc479cfe4e484883505115aaeeb8778801657d2a37af6b071f0",
+      "bytes": 20930
+    },
+    "protection": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/protect_quality_winner.py",
+      "sha256": "e45965d3057ec8542ab2b05fd2250209e53986a0977fbb1294aa54f64a11f0f0",
+      "bytes": 9580
+    }
+  },
+  "future_controller": null,
+  "future_deadline": null,
+  "future_root_precommit": null,
+  "future_before_observation": null,
+  "future_owner": null,
+  "installed_mutations": false,
+  "trial01_retry": false
+}

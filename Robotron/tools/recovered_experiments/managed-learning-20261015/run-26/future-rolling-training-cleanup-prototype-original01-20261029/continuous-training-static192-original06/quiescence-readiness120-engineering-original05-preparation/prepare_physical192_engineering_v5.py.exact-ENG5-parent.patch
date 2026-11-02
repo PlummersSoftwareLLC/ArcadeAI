@@ -1,0 +1,64 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/immutable-bootstrap-live-pidfd-quiescence-engineering-original04-preparation/prepare_physical192_engineering_v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/quiescence-readiness120-engineering-original05-preparation/prepare_physical192_engineering_v5.py
+@@ -14,12 +14,13 @@
+ HERE = Path(__file__).resolve().parent
+ MODE_ROOT = HERE.parent
+ HC = MODE_ROOT/'health-consumer-live-pidfd-current-EVAL-quiescence-original05'
+-PROFILE = MODE_ROOT/'health-consumer-live-pidfd-current-EVAL-quiescence-original05/prepare_current_eval_quiescence_case_v5.py'
++OVERLAY = MODE_ROOT/'health-consumer-quiescence-readiness120-overlay-original06'
++PROFILE = OVERLAY/'prepare_quiescence_readiness120_case_overlay_v1.py'
+ HELPER = ROOT/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py'
+ HELPER_SHA = '2b6902933b502ac20dacbd444fbf786315d6c960fcad1d5b5bf223dd569708c1'
+-FAMILY_SHA = '9e00ed11b9ad56b8a16911eb38c3d48f9edd0a7fa7d0bb670749cc9ed75d0eac'
+-MAP_SHA = '5d8ce346200f8737aae484b72a15b7f38dd8ea1da8ac463acc1c94531894f8b9'
+-PROFILE_SHA = 'cce755775dfa8134a446b0d42d3a13bf96bcca23257fc92b8798622bee2a7b2e'
++FAMILY_SHA = '22245530f82299b2a3f634d07ba828a91678dc67a6ad5bd869a780d6d4a62651'
++MAP_SHA = 'c8231a36c0028567a6a7da884046aa98ceeaf0fc6f0c338e4230fd305fb7e553'
++PROFILE_SHA = '4c503e5aabc29b1059edc8d5e29719392d5d591806928e521ec0aaca4264881b'
+ REGISTRY_SHA = '8cc5340708a73ffb97b16be4b96e72b3d5560ee0b371b7ffd8d67c4074cf76b4'
+ REVIEWER_SHA = '30ea4d2eb6d97b5ccbd04e262f7b4c45e47af268f7644f7893ad88deba47a133'
+ 
+@@ -54,8 +55,8 @@
+     r.validate_case(case)  # Pure held metadata/event joins; no census/proc/API.
+     profile = load(PROFILE, PROFILE_SHA, '_static_engineering_inventory')
+     profile.validate_inventory(case, h)
+-    family_pin = h.pin(HC/'prepared-live-pidfd-current-EVAL-quiescence-health-and-observer-SOURCE-ONLY-NOT-QUALIFIED-v5.json')
+-    map_pin = h.pin(HC/'prospective-live-pidfd-current-EVAL-quiescence-eight-role-observer-source-map-v5.json')
++    family_pin = h.pin(OVERLAY/'prepared-current-EVAL-quiescence-readiness120-client-overlay-SOURCE-ONLY-NOT-QUALIFIED-v1.json')
++    map_pin = h.pin(OVERLAY/'prospective-current-EVAL-quiescence-readiness120-eight-role-source-map-v1.json')
+     require(family_pin['sha256'] == FAMILY_SHA and map_pin['sha256'] == MAP_SHA,
+             'Exact frozen static source family and eight-role map required')
+     family = json.loads(h.checked(family_pin).read_bytes())
+@@ -71,10 +72,11 @@
+     paths += [Path(value['path']) for value in (family_pin, map_pin, reviewer)]
+     paths += [PROFILE, HELPER,
+         HC/'independent-live-pidfd-current-EVAL-quiescence-health-six-source-peer-v5.json',
++        OVERLAY/'independent-current-EVAL-quiescence-readiness120-client-mixed-map-source-peer-v1.json',
+         ROOT/'tools/training_connection_lifecycle_proposal_20261023/finalize_dedicated_main_health_v1.py']
+-    paths += [HERE/name for name in ('prepare_physical192_engineering_v4.py',
+-                                    'probe_physical192_engineering_v4.py',
+-                                    'close_physical192_engineering_v4.py')]
++    paths += [HERE/name for name in ('prepare_physical192_engineering_v5.py',
++                                    'probe_physical192_engineering_v5.py',
++                                    'close_physical192_engineering_v5.py')]
+     sources = {str(path): h.pin(path) for path in paths}
+     # Basename keys retain the unchanged engineering closer/intents interface.
+     require(len({Path(key).name for key in sources}) == len(sources), 'Duplicate held source basename')
+@@ -87,7 +89,7 @@
+     records = []
+     for mode in ('warmup', 'long', 'abort'):
+         directory = output/(mode+'-original01'); directory.mkdir(mode=0o700)
+-        unit = 'robotron-original192-current-eval-quiescence-proof2s-%s-engineering-%s-original01-20261029.service' % (mode, case_sha[:16])
++        unit = 'robotron-original192-current-eval-quiescence-readiness120-proof2s-%s-engineering-%s-original01-20261029.service' % (mode, case_sha[:16])
+         command = ['systemd-run','--user','--unit='+unit,
+             '-p','CPUQuota=200%','-p','MemoryMax=4G','-p','MemorySwapMax=0','-p','TasksMax=128',
+             '-p','RuntimeMaxSec='+str(1800 if mode=='long' else 780),'-p','RemainAfterExit=yes','-p','Restart=no',
+@@ -96,7 +98,7 @@
+             '-p','StandardError=append:'+str(directory/'console.txt'),
+             '/usr/bin/env','-u','LD_PRELOAD','-u','PYTHONPATH','CUDA_VISIBLE_DEVICES=',
+             'PYTHONDONTWRITEBYTECODE=1','/usr/bin/python3','-I','-B',
+-            str(HERE/'probe_physical192_engineering_v4.py'),'--execute','--mode',mode,
++            str(HERE/'probe_physical192_engineering_v5.py'),'--execute','--mode',mode,
+             '--case',selected['path'],'--case-sha256',selected['sha256'],'--output',str(directory/'runtime')]
+         intent = h.put(directory/'original-launch-intent-NOT-EXECUTED.json', dict(
+             schema='robotron-original192-immutable-bootstrap-live-pidfd-engineering-intent-v4',

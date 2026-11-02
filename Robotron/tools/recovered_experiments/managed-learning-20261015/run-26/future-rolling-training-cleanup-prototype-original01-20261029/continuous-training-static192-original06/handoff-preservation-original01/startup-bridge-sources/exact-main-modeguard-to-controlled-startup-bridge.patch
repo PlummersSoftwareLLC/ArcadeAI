@@ -1,0 +1,31 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/main_continuous_training_guard_candidate_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/startup-bridge-sources/main_continuous_startup_hold_candidate_v2.py
+@@ -990,8 +990,12 @@
+         boot_path = RatchetController.INCUMBENT_PATH
+         print(f"RATCHET: booting from measured incumbent ({boot_path})")
+ 
++    if getattr(agent, "_continuous_startup_held", False) and not os.path.isfile(boot_path):
++        raise RuntimeError("Controlled startup refuses a missing preserved checkpoint")
+     if os.path.exists(boot_path):
+         loaded = agent.load(boot_path)
++        if getattr(agent, "_continuous_startup_held", False) and not loaded:
++            raise RuntimeError("Controlled startup refuses a failed or partial restoration")
+         if loaded:
+             print(f"Loaded model from: {boot_path}\n")
+         else:
+@@ -1002,6 +1006,15 @@
+         print("No model found, starting fresh\n")
+         game_settings.reset()
+         game_settings.save()
++
++    if getattr(agent, "_continuous_startup_held", False):
++        try:
++            from .continuous_startup_bridge import verify_restoration_and_wait
++        except ImportError:
++            from continuous_startup_bridge import verify_restoration_and_wait
++        # No dashboard, GAME listener or actors exist yet. No managed
++        # measurement is entered, and no optimizer update has been enabled.
++        verify_restoration_and_wait(agent, metrics, boot_path)
+ 
+     dashboard_enabled = _env_enabled("ROBOTRON_DQN_DASHBOARD", True) and MetricsDashboard is not None
+     dashboard_host = _resolve_dashboard_host()

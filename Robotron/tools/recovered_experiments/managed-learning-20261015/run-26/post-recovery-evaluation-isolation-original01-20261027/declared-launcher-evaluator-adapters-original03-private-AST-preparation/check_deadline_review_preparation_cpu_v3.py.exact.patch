@@ -1,0 +1,24 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/check_deadline_review_preparation_cpu_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original03-private-AST-preparation/check_deadline_review_preparation_cpu_v3.py
+@@ -10,7 +10,7 @@
+ import time
+ import unittest
+ 
+-ROOT=Path(__file__).resolve().parents[2]
++ROOT=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ 
+ 
+ def execute(args):
+@@ -23,7 +23,11 @@
+     for pin in job['inputs']:h.checked(pin)
+     os.environ['ROBOTRON_DEADLINE_REVIEW_TEST_PRECOMMIT']=job['review_precommit']['path']
+     sys.path.insert(0,str(ROOT.parent));output=io.StringIO();started=time.monotonic()
+-    suite=unittest.defaultTestLoader.loadTestsFromName('Robotron.tools.post_recovery_evaluation.test_deadline_review_preparation_v3')
++    test_path=Path(__file__).with_name('test_deadline_review_preparation_v3.py')
++    test_pin=h.pin(test_path);assert test_pin['sha256']=='a4372d5485d28b39668f26cde1e3a4fe55acb3c2ff1adb76a33f8ec82bff3bac'
++    spec=importlib.util.spec_from_file_location('_actual_launcher_review_tests',test_path)
++    tests=importlib.util.module_from_spec(spec);spec.loader.exec_module(tests)
++    suite=unittest.defaultTestLoader.loadTestsFromModule(tests)
+     result=unittest.TextTestRunner(stream=output,verbosity=2).run(suite)
+     for pin in job['inputs']:h.checked(pin)
+     assert result.wasSuccessful() and result.testsRun==6,output.getvalue()

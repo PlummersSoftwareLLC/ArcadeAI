@@ -1,0 +1,64 @@
+{
+  "status": "SOURCE_ONLY_UNSELECTED_UNEXECUTED",
+  "horizon_original": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/horizon_observer2048.py",
+    "sha256": "e8809615c3a837da3400f56d58ecdbfd59b13b83c574c65643731afe8b13a124",
+    "bytes": 17364
+  },
+  "durability_original": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_control_integration_proposal/run_one_trial.py",
+    "sha256": "849770e0fc31ac7049b8fa8226572478f6c183e4370c952295a49ac5684f252b",
+    "bytes": 51827
+  },
+  "exact_function_texts": {
+    "require": {
+      "exact_text": true,
+      "sha256": "3a3d4719e7fdff72d3f3869c4e60796f8b8e13de27000e42116bc96039a9a3f8"
+    },
+    "integer": {
+      "exact_text": true,
+      "sha256": "72e6215f865857db74e364540d563ae2b159d14601884c475ef504fc12ec87cb"
+    },
+    "number": {
+      "exact_text": true,
+      "sha256": "8fe2af80cfab5b6e8a1261e4a0c9e29b5283d480dbde0c09c49b239af15b988b"
+    },
+    "bounded": {
+      "exact_text": true,
+      "sha256": "ff5cb24abcf748283cd30f59c30bb96b5b41d9a135183ea1d863c098d58fbc3d"
+    },
+    "identity": {
+      "exact_text": true,
+      "sha256": "f34df9d4b22eeac44b4c18f81d17503e5b7a04197ed0091cdcb0fc86886794c3"
+    },
+    "normalise": {
+      "exact_text": true,
+      "sha256": "c3aee60a95967d2167f2c502a874cc37338a839389151df5e71ea6345dd277be"
+    }
+  },
+  "observer_changes": [
+    "Only clock origin is actual post-barrier nonzero B, never boot/start request.",
+    "Fixed4096/.25 CE9b3 context and genuine API keys; required proof PINs authenticated externally by root.",
+    "Both8M learner frames AND6M accepted_learner_total from same B; all5 physical and logical deltas separate.",
+    "Optimizer attempts/outcomes/applied/skipped/unavailable and AMP denominator from same B; later pending1 retained.",
+    "Immutable first LATCH itself grants0; only paired original event fsync completed by precommitted cutoff grants1.",
+    "No ceiling/retirement/owner stop/return logic; root separately controls any future LR reversal."
+  ],
+  "durability_changes": [
+    "Origin/cutoff from B/future precommit, not process start/old3240.",
+    "Root publisher exact serialized bytes/path/PIN checked; completion read after original event file+directory fsync.",
+    "Completion content joins the event and the paired durable receipt; receipt may be published after event cutoff.",
+    "32MiB total and4KiB reserved metadata retained; any terminal/failed emission cannot be retried."
+  ],
+  "checks_performed": [
+    "AST parse only; no proposed module imports or default/test/runtime execution.",
+    "Exact source-text equality of six functions and source hash inventory."
+  ],
+  "test_methods": 11,
+  "tests_executed": false,
+  "future_actual_job": null,
+  "future_control": null,
+  "future_B": null,
+  "future_cutoff": null,
+  "implementation_limit": "Root must authenticate every PIN, actual context, callbacks and the B raw bytes. Pure helper does not read their files."
+}

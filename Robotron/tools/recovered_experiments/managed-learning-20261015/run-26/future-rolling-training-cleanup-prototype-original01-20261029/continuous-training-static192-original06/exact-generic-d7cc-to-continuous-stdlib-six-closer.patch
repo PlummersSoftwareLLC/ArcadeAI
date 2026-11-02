@@ -1,0 +1,21 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/close_engineering_cpu_scope_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/close_continuous_stdlib_six_CPU_v1.py
+@@ -6,7 +6,7 @@
+ from pathlib import Path
+ import subprocess
+ 
+-ROOT=Path(__file__).resolve().parents[2]
++ROOT=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ 
+ 
+ def require(value,reason):
+@@ -49,6 +49,9 @@
+     report_pin=h.pin(Path(job['output'])/'report.json');report=read(report_pin)
+     require(report['status']=='PASS'and report['actual_PID']==owner['pid']and report['original_job']==job_pin
+             and report['Torch_imported']is report['GPU_or_MAME_launched']is False,'Actual engineering outcome differs')
++    require(job['expected_test_count']==6 and report['tests_run']==6
++        and report['schema']==job['expected_report_schema'] and report['failures']==report['errors']==[],
++        'Exact six focused groups/schema/empty errors required')
+     require(report.get('quality_qualified',False)is report.get('promotion',False)is False,'Engineering cannot qualify or promote')
+     return h.put(directory/'independent-original-CPU-scope-closeout.json',dict(schema='robotron-engineering-original-CPU-independent-closeout-v1',status='PASS_ENGINEERING_ONLY',
+         original_job=job_pin,original_config=cfg_pin,original_owner=owner_pin,original_closure=closure_pin,actual_report=report_pin,

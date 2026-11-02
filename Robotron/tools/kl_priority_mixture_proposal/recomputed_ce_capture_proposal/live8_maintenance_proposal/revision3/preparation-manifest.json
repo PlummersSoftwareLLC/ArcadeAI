@@ -1,0 +1,36 @@
+{
+  "schema": "robotron-live8-maintenance-source-preparation-v3",
+  "status": "SOURCE_PREPARED_NOT_EXECUTED_BY_AUTHORS",
+  "selected_controller": "run_live8_maintenance.py",
+  "selected_bank_helper": "bank_state_revision2.py",
+  "files": {
+    "run_live8_maintenance.py": {"sha256": "5059f5572c7e09a6949125fdb3126e0f7cb048e064ff4aafecc513ad72b251c1", "bytes": 56580},
+    "test_live8_maintenance.py": {"sha256": "120ab4d9da012fe03219a321299f5be3e696e77f52de77f61f1f1fad0b4b28db", "bytes": 28383},
+    "bank_state_revision2.py": {"sha256": "e0c69fb38f5fec86e117edf42b4ff1ce2ff44b82b979c5240116121a7a1ce54f", "bytes": 16047},
+    "test_bank_state_revision2.py": {"sha256": "20f43e310d80fabaab7247e9e1e5afdffa9536e9d65f9adf9fbe95f131fc0769", "bytes": 14164},
+    "job.schema.json": {"sha256": "46eb429edcc32068ae37168c76bda561a0473f0e99fdc32bb7ac607c24dbe19f", "bytes": 3974},
+    "PREPARATION.txt": {"sha256": "6917482dd15dff7a48586bf88e7fc2150a52fe0ad3a3f0a4d584ad214dcc2fd6", "bytes": 4896},
+    "future-argv.json": {"sha256": "0ab22ef238766f7d74ab36357e5b57f6b8bf9ded26c89ba2725b9bc1689ccdaa", "bytes": 1282},
+    "controller-source.patch": {"sha256": "578c96b14512ac08a804bd3990581a8fcde42961f463d9fa97b3e159d64b6e48", "bytes": 6661},
+    "test-source.patch": {"sha256": "ed3b0035293e4f2c33b6e9dc33db5cfc5f4b5c778307f279bd429d30e44760e5", "bytes": 5894}
+  },
+  "preserved_originals": {
+    "v1_manifest_sha256": "8ee75d0d14d0cbed339a4799d5c62b5bcdaeb590f63d6245b03b053ed9ad0d58",
+    "v1_controller_sha256": "8e61fd698f87c0da9fd09f09bb0452b9f4fb626b5403ecb4ed144f67a0a73e2c",
+    "v1_source_receipt_sha256": "e9814e73e8c662d312cf4ee8af3e015f923f5ab0d363f5b0db918541e0df0dbe",
+    "v2_manifest_sha256": "8fc4a2e32447f8a7998e301c95f6eddba12b10ea2b542e2c1dc5948a953bc716",
+    "v2_controller_sha256": "02f4fa028d4885fb59cad47eacf607d36df86b0b7ef41fddf5bd176cfb0891ea",
+    "v2_source_receipt_sha256": "6ebd7c56d048450d7e3a6f7dd4ed4c928589128477634ba32cb52567c3372419",
+    "root_reported_actual_tests": "35PASS then38PASS in separately retained/released owned CPU units; both immutable original results preserved. Authors ran neither.",
+    "root_reported_readonly_refusals": "Both read_job preflights refused before output/actor/main/source actions: first missing normal default MODEL_DIR env, second incorrect nonexistent GAME venv path. No maintenance trial began; records f44978fc andc325e60 prefixes retained by root."
+  },
+  "revision_scope": "Only explicit successful venv Python binding validation and its preflight/static/preCPU call sites. Preserve symlink argv for venv discovery; separately pin resolved executable, pyvenv cfg, exactfour package context files and actual successful insurance execution/terminal/result provenance. No other maintenance/learning/capture/cleanup predicate changes.",
+  "executable_hash_policy": "64MiB parse bound; full executable SHA at read_job and immediately before each CPU spawn. Frequent guards use full target metadata and exact link/config/library/provenance pins without recurring23MB reads.",
+  "actual_python_geometry_root_provided": {"argv": "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python", "resolved_target": "/home/dave/source/robotron-python/cpython-3.14.8+freethreaded-linux-aarch64-gnu/bin/python3.14t", "bytes": 23141232, "author_runtime_probe": false},
+  "authored_tests": {"previous_unchanged_selected": 38, "new_fake_FS_python_binding_contracts": 5, "total_selected": 43, "author_executed": false},
+  "source_review": {"root": "Root owns source review, actual bounded tests, actual job and any launch.", "audit_quality_result": "Independent SOURCE_ONLY controller5059/test120a narrowdiff/five contracts PASS; actual archived insurance field/flag order confirmed by author saved-JSON source read. Final all-file receipt follows separately.", "learning_review": "Independent SOURCE_ONLY controller5059/test120a narrowdiff/five contracts PASS; no imports/tests/runtime actions."},
+  "root_execution": null,
+  "actual_maintenance": null,
+  "insurance": {"receipt_sha256": "26bd3789f971db3c07bad91298bcd940fb964447f819c9bf8b09f73e4bcd166c", "CPU_proof_sha256": "83c898697675bae6445cbf3ec93c5a8134eb1ded8a13a9ca9e8a4fda34470e39", "new_request": false},
+  "limitations": ["No interpreter/library/model/tensor execution by authors; fake ELF never executed", "Source and savedmetadata review is not an actual193-process reload or live8 capture", "Package context pins do not claim hashing every library binary", "No protected/insurance rollback, ninth capture, changed recipe, coherent-tail/RNG/actor/replay RAM equality or learning-quality claim"]
+}

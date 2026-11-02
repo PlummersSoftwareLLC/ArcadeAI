@@ -1,0 +1,53 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/probe_buffered_deadline_observer_v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/observer-engineering-family-original01/probe_declared_launcher_observer_v1.py
+@@ -7,7 +7,7 @@
+ import threading
+ import time
+ 
+-ROOT = Path(__file__).resolve().parents[2]
++ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ 
+ 
+ def load(name, path):
+@@ -24,22 +24,25 @@
+     h = load('_round_bridge_evidence_helpers', helper_path)
+     case = h.pin(args.case.resolve())
+     assert case['sha256'] == args.case_sha256
+-    source = Path(__file__).resolve().parent
+-    sources = dict(client=h.pin(source / 'round_observer_client_v11.py'),
+-        worker=h.pin(source / 'round_observer_v10.py'),
+-        health=h.pin(source / 'round_health_transport_v7.py'),
+-        health_base=h.pin(source / 'round_main_health_v7.py'),
++    source = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
++    selected = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/observer-engineering-family-original01')
++    component = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation')
++    sources = dict(client=h.pin(selected / 'round_observer_client_launcher_v1.py'),
++        worker=h.pin(component / 'round_observer_launcher_v1.py'),
++        health=h.pin(component / 'round_health_transport_launcher_v1.py'),
++        health_base=h.pin(component / 'round_main_health_launcher_v1.py'),
+         API_projection=h.pin(source / 'api_reconnect_projection_v1.py'),
+         round_admission=h.pin(source / 'round_admission_proof_v2.py'),
++        launcher_census=h.pin(component / 'launcher_census_v1.py'),
+         durability=h.pin(source / 'buffered_raw_writer_v2.py'),
+         control=h.pin(source / 'volatile_live_control_v1.py'),
+         interpreter=h.pin(Path('/usr/bin/python3').resolve()))
+     job = dict(schema='robotron-round-health-interface-engineering-only-v1',
+         output=str(directory), runtime=h.pin(Path(__file__).resolve()), main_binding=case)
+     jp = h.put(directory / 'engineering-native-job.json', job)
+-    protocol = dict(schema='robotron-native-round-main-health-protocol-v10', case=case,
++    protocol = dict(schema='robotron-native-round-main-health-declared-launcher-protocol-v1', case=case,
+                     raw_API_required=True, close_requires_final_sample=True, hot_max_gap_s=.5, initial_samples=100,
+-                    raw_queue_protocol='pending-byte-digest-v2', volatile_live_tmpfs=True, source_bound_API_reconnect_projection=True, source_bound_natural_round_admission=True)
++                    raw_queue_protocol='pending-byte-digest-v2', volatile_live_tmpfs=True, source_bound_API_reconnect_projection=True, source_bound_natural_round_admission=True, source_bound_declared_launcher_census=True)
+     client = load('_round_bridge_actual_client', h.checked(sources['client']))
+     started = time.monotonic()
+     guard = client.DedicatedMainHealth(job, jp, protocol, dict(main_observer=sources), h,
+@@ -79,7 +82,7 @@
+     if args.mode == 'long':
+         errors.extend(result['errors'])
+         assert not errors and result['scope_complete'] and result['writer_stopped'], errors
+-        reviewer = load('_async_durability_actual_reviewer', source / 'review_round_observer_v11.py')
++        reviewer = load('_async_durability_actual_reviewer', selected / 'review_round_observer_launcher_v1.py')
+         raw_review = reviewer.verify(guard.lifecycle, h)
+         h.put(directory / 'independent-raw-review.json', raw_review)
+     else:

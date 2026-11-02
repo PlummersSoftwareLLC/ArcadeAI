@@ -1,0 +1,98 @@
+--- a/Robotron/DELL_SETUP.md
++++ b/Robotron/DELL_SETUP.md
+@@ -62,8 +62,9 @@
+ averaged 321,424 over 104 games and 320,204 over 108 games: +15.97% and +15.53%.
+ Both median gates passed, with all slots and full completion tails retained.
+ Independent review matched all 430 original games to receipts and admission
+-registries. The protected winner is now
+-`models_dqn/managed-incumbents/fresh3-256M-confirmed.pt`; all prior policies remain.
++registries. That winner was protected as
++`models_dqn/managed-incumbents/fresh3-256M-confirmed.pt`; it and all earlier
++protected policies remain available.
+ Live learning continues from its later state. The nominal 320M checkpoint was
+ saved at 324,630,791 learner frames on 2026-10-17 at 00:51 UTC. Its independent
+ CPU verification passed strict current-model loading and finite model, Adam and
+@@ -86,18 +87,38 @@
+ One CPU verification passed strict current geometry and finite model, Adam and
+ scaler checks. Independent review matched its saved proof and the original
+ successful checkpoint-watcher and verifier exits before their units were
+-released. This establishes a usable test input, without a quality or coherent
+-resume claim.
++released. This verification established a usable test input; it did not by
++itself establish policy quality or a coherent resume anchor.
+ 
+ The fresh four-leg comparison against protected 256M launched at **05:07 UTC**
+-on 2026-10-17 under `robotron-quality-256M-vs-384M-20261017.service`, with results
+-in `logs/managed-learning-20261015/quality-256M-vs-384M-20261017/`.
+-It keeps the same separate candidate gates, fresh references, 1200-second
+-admissions, all 16 slots and full completion tails. All four legs enable the
+-same accepted-input boundary diagnostics. The actual plan, checkpoint proof,
+-source archive and fresh runtime checks passed review before launch. Main
+-training continues unchanged; other experiments are deferred through the
+-campaign's terminal audit. Protected 256M remains the incumbent pending results.
++on 2026-10-17 under `robotron-quality-256M-vs-384M-20261017.service` and completed
++successfully. Results are in
++`logs/managed-learning-20261015/quality-256M-vs-384M-20261017/`.
++All **377 original games** passed independent admission/outcome/receipt review:
++103 + 102 fresh reference games and separate candidate cohorts of 85 and 87.
++Every leg retained all 16 slots, 1200-second admissions, full completion tails
++and the same accepted-input boundary diagnostics. The 205 fresh references had
++mean 331,723.29 and median 340,825. Candidate means were 364,260 and 361,793.97:
++**+9.81% and +9.06%**, independently above the fixed +5% mean gate. Their medians,
++408,600 and 393,475, both passed the unchanged reference-median gate. The pooled
++172-candidate-game mean 363,012.65 and median 406,225 are descriptive only; pooling
++did not rescue either separate gate. This is confirmed frozen-policy quality,
++not causal evidence of faster learning, a specific recipe change or a plateau.
++
++Root actually published and adopted
++`models_dqn/managed-incumbents/fresh3-384M-confirmed.pt` as the **current managed
++incumbent and next reference**. Its checkpoint SHA256 is the `ac8bc980...` value
++above; protected metadata SHA256 is
++`cb79fc9094022bd340a83d29282ed8bb7504b35fbd28a99552a2bb6ea4342ab4`.
++The campaign summary SHA256 is
++`5203f0c87a03e504dbe0734ce9324d0a13d0eaefe2f7ca61851d5ce83bb4bb80`.
++Actual publication/adoption and its independent verification are retained under
++`run-26/quality384M-managed-incumbent-adoption-root-20261017/` and
++`run-26/quality384M-actual-publication-managed-adoption-independent-review-20261017/`.
++Protected 256M and the ten prior incumbent-history entries remain preserved.
++Main training continued from its later state beyond 415M learner frames; it was
++not restored or restarted to the saved 388,633,116-frame policy. Its held learning
++recipe and affinity were unchanged by publication or adoption.
+ 
+ The following records the earlier checkpoint-waiting and diagnostic history.
+ The 384M capture was queued at 388,629,023 learner frames under
+@@ -172,8 +193,10 @@
+ Only that fixture was corrected; harness code, assertions and tolerances stayed
+ unchanged. Both runs are retained, with the aggregate review under
+ `run-26/recomputed-rehearsal-CPU43-plus-corrected9-root-review-20261017.json`.
+-The CUDA rehearsal remains unexecuted and follows the approaching 384M quality
+-comparison in priority. Its proposed offline CE comparison remains conditional.
++The private CUDA rehearsal remains unexecuted. Its owned launch is deferred
++until after the completed 384M confirmation and reporting work; separate
++resource approval is still required. Its proposed offline CE comparison remains
++conditional, with no live capture or priority change adopted.
+ The separate original-row auditor prepared for the fresh 384M comparison passed
+ all ten bounded stdlib synthetic checks. It binds the actual future checkpoint,
+ CPU proof and campaign plan, requires boundary diagnostics in all four legs,
+@@ -222,8 +245,9 @@
+ earlier two candidate cohorts and this first reference. The new reference mean
+ is about 12% higher, with no recorded cause established. See
+ `run-26/quality320M-protected256-crosscampaign-readonly-review-20261017/`.
+-These historical repeats provide context; current gates use only the two fresh
+-reference cohorts from this campaign.
++These historical repeats provide context. The 320M gates used only that
++campaign's two fresh reference cohorts; those games were not pooled into the
++separate 384M confirmation.
+ 
+ A normal cold compile briefly exceeded the dashboard reader's 30-second startup
+ grace. `tools/experiment_startup_status_proposal/` holds an unapplied,
+@@ -449,7 +473,8 @@
+ stall the initial page request. Live polling starts independently of history,
+ and transient failures retry without closing the dashboard.
+ 
+-The protected 256M policy is the current reference after repeated confirmation.
++The protected 384M policy is the current managed reference after both separate
++candidate cohorts passed the fresh-reference confirmation.
+ An offline 256-row priority study found CE strongly correlated with
+ target entropy, but replacing CE with KL also greatly reduced a sampled
+ importance-weight proxy. The opt-in proposal in `tools/priority_metric_proposal/`

@@ -1,0 +1,24 @@
+{
+  "schema": "robotron-coefficient-observation-root-record-v1",
+  "request_id": null,
+  "expected_phase": {
+    "metric": "ce",
+    "phase_id": null,
+    "root_precommit_sha256": null,
+    "founder_phase_record_sha256": null,
+    "last_resume_record_sha256": null,
+    "started_from": null,
+    "valid": true
+  },
+  "source_hashes": {
+    "agent.py": "256d3403956bbe0395f891f97227cef56cd9554f306d6d9290e92cdd58d60fce",
+    "training.py": "9347d095235a1aed1c1e0ea3eb6bf22ba5aff5c5c6e9bdc13e3a736d06e4a063",
+    "loss_kernel.py": "23eb8fc0d8409c9f31ef26ec4596da9c2257e3985abbbfa7d5fbdcb337e21f67",
+    "config.py": "19abcbde4d08cf8465b82185ac6dd52eb8965adb8611584e0677c4c7ff21d1fd",
+    "priority_phase.py": "ee3c0d02bc1eab55e92ffd605c3736fe5a0ef905a8a8ee242c687301ea2b7c5b",
+    "replay_buffer.py": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f",
+    "prefetch.py": "02871bc515ba23f8d353131e9b6b6b4e390692803578febee7c8d643dd308a27",
+    "model.py": "bcd174f05610c6f773ca8c53f9155206eba4f7b6a11383516ddd71f3b513eeb4",
+    "coefficient_observation.py": "961dd31e32c359e8eebfc2656ce905191099c635f2d21884de532dbdd495c44d"
+  }
+}

@@ -18,15 +18,17 @@ import torch
 try:
     from .agent import RainbowAgent, KeyboardHandler, print_with_terminal_restore
     from .config import (RL_CONFIG, MODEL_DIR, LATEST_MODEL_PATH, BEST_MODEL_PATH,
-                         IS_INTERACTIVE, metrics, SERVER_CONFIG, game_settings)
+                         IS_INTERACTIVE, metrics, SERVER_CONFIG, game_settings, learning_control)
     from .metrics_display import display_metrics_header, display_metrics_row, clear_screen
     from .socket_server import SocketServer
+    from .managed_driver import ManagedMeasurementDriver, consume_save_request
 except ImportError:
     from agent import RainbowAgent, KeyboardHandler, print_with_terminal_restore
     from config import (RL_CONFIG, MODEL_DIR, LATEST_MODEL_PATH, BEST_MODEL_PATH,
-                        IS_INTERACTIVE, metrics, SERVER_CONFIG, game_settings)
+                        IS_INTERACTIVE, metrics, SERVER_CONFIG, game_settings, learning_control)
     from metrics_display import display_metrics_header, display_metrics_row, clear_screen
     from socket_server import SocketServer
+    from managed_driver import ManagedMeasurementDriver, consume_save_request
 
 # Dashboard is optional — the training loop runs without it.
 try:
@@ -43,6 +45,29 @@ def _env_enabled(name: str, default: bool) -> bool:
     if raw is None:
         return default
     return raw.strip().lower() not in {"0", "false", "off", "no"}
+
+
+def _continuous_training_mode_enabled():
+    raw = os.getenv("ROBOTRON_CONTINUOUS_TRAINING_MODE", "0")
+    if raw not in ("0", "1"):
+        raise ValueError("Explicit continuous training mode0/1 required")
+    return raw == "1"
+
+
+def _apply_inference_batch_wait_override(cfg):
+    """Apply a main-process-only collector delay before any agent/server exists."""
+    raw = os.getenv("DQN_INFERENCE_BATCH_WAIT_MS")
+    if raw is None:
+        return None
+    try:
+        wait_ms = float(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("DQN_INFERENCE_BATCH_WAIT_MS must be a finite number in [0, 10] ms") from exc
+    if not math.isfinite(wait_ms) or not 0.0 <= wait_ms <= 10.0:
+        raise ValueError("DQN_INFERENCE_BATCH_WAIT_MS must be a finite number in [0, 10] ms")
+    cfg.inference_batch_wait_ms = wait_ms
+    print(f"[INFERENCE] DQN_INFERENCE_BATCH_WAIT_MS={wait_ms:g} ms (main process)")
+    return wait_ms
 
 
 def _has_desktop_session() -> bool:
@@ -168,6 +193,8 @@ def stats_reporter(agent, kb):
     print("Starting stats reporter thread...")
     display_metrics_header()
     last = time.time()
+    with metrics.lock:
+        metrics._last_row_time = last
     seen = False
 
     while True:
@@ -451,7 +478,7 @@ def print_network_info(agent, dashboard_status: str = "disabled"):
     _xp_hold_txt = f" (after {_xp_hold:,} step hold)" if _xp_hold > 0 else ""
     print(f"   Expert: {RL_CONFIG.expert_ratio_start*100:.0f}% -> {RL_CONFIG.expert_ratio_end*100:.0f}% over {RL_CONFIG.expert_ratio_decay_steps:,} train steps{_xp_hold_txt}")
     print(f"   BC weight: {RL_CONFIG.expert_bc_weight} -> {RL_CONFIG.expert_bc_min_weight} over {RL_CONFIG.expert_bc_decay_steps:,} train steps (after {RL_CONFIG.expert_bc_decay_start_step:,} step hold)")
-    print(f"   Eval clients: every {RL_CONFIG.eval_client_stride}th client at eps={RL_CONFIG.eval_epsilon:.2f}, no replay writes")
+    print(f"   Eval clients: every {RL_CONFIG.eval_client_stride}th client at eps={RL_CONFIG.eval_epsilon:.2f}, replay enabled")
 
     print(f"\nServices:")
     print(f"   Dashboard:        {dashboard_status}")
@@ -497,6 +524,9 @@ class RatchetController:
     INCUMBENT_PATH = os.path.join(MODEL_DIR, "robotron_dqn_ratchet_incumbent.pt")
 
     def __init__(self, agent):
+        if (_continuous_training_mode_enabled()
+                or bool(getattr(metrics, "continuous_training_mode", False))):
+            raise RuntimeError("Main policy ratchet is disabled in continuous training mode")
         self.agent = agent
         # Incumbent-as-behavior: the fleet plays the measured incumbent at all
         # times; candidates exist only inside the online net during training
@@ -573,6 +603,9 @@ class RatchetController:
 
     # ── phase transitions ────────────────────────────────────────────────
     def _enter_eval(self):
+        if (_continuous_training_mode_enabled()
+                or bool(getattr(metrics, "continuous_training_mode", False))):
+            raise RuntimeError("Main ratchet measurement entry is disabled in continuous training mode")
         self.agent.training_enabled = False
         self._quiesce()
         # The last <sync-interval steps of the window aren't in the infer net
@@ -895,6 +928,7 @@ class RatchetController:
 
 
 def main():
+    _apply_inference_batch_wait_override(RL_CONFIG)
     os.makedirs(MODEL_DIR, exist_ok=True)
 
     # Ratchet mode must be known BEFORE the agent exists: the freeze has to be
@@ -902,6 +936,23 @@ def main():
     # gradient steps into the epoch-0 "untouched checkpoint" baseline.
     ratchet_on = bool(getattr(RL_CONFIG, "ratchet_enabled", False)) or \
         os.getenv("DQN_RATCHET", "").strip().lower() in ("1", "true", "yes", "on")
+
+    continuous_training_mode = _continuous_training_mode_enabled()
+    if continuous_training_mode and ratchet_on:
+        raise RuntimeError("Main policy ratchet is incompatible with continuous training mode")
+    if continuous_training_mode and (bool(getattr(metrics, "measurement_active", False))
+                                     or bool(getattr(metrics, "ratchet_frozen", False))):
+        raise RuntimeError("Continuous training startup refuses an active main measurement")
+    # Selected before agent/checkpoint/server creation. These status markers
+    # are not the entry fence: the independent guards also check process mode.
+    with metrics.lock:
+        metrics.continuous_training_mode = continuous_training_mode
+        metrics.main_measurement_entry_disabled = continuous_training_mode
+        if continuous_training_mode:
+            metrics.managed_measurement_status = dict(active=False,
+                phase="disabled_continuous_training", complete=False, valid=None,
+                measurement_requests_disabled=True,
+                reason="Main managed/ratchet measurements disabled; private evaluators require mode0")
 
     agent = RainbowAgent(state_size=RL_CONFIG.state_size)
     if ratchet_on:
@@ -921,7 +972,7 @@ def main():
         print(f"  torch: {_t.__version__}   cuda available: {_t.cuda.is_available()}")
         print(f"  running: {sys.executable}")
         print("  Expected the project venv, e.g.:")
-        print("    /home/dave/source/repos/ai/venv/bin/python3 -Xgil=0 Scripts/run_dqn.py")
+        print("    /home/dave/source/repos/ArcadeAI/.venv/bin/python3 Scripts/run_dqn.py")
         print("  (CPU inference is ~100x slower: ~7 fps vs ~4000, GPUs idle.)")
         print("  Set DQN_ALLOW_CPU=1 if you really mean it.")
         print("=" * 70)
@@ -939,8 +990,12 @@ def main():
         boot_path = RatchetController.INCUMBENT_PATH
         print(f"RATCHET: booting from measured incumbent ({boot_path})")
 
+    if getattr(agent, "_continuous_startup_held", False) and not os.path.isfile(boot_path):
+        raise RuntimeError("Controlled startup refuses a missing preserved checkpoint")
     if os.path.exists(boot_path):
         loaded = agent.load(boot_path)
+        if getattr(agent, "_continuous_startup_held", False) and not loaded:
+            raise RuntimeError("Controlled startup refuses a failed or partial restoration")
         if loaded:
             print(f"Loaded model from: {boot_path}\n")
         else:
@@ -951,6 +1006,15 @@ def main():
         print("No model found, starting fresh\n")
         game_settings.reset()
         game_settings.save()
+
+    if getattr(agent, "_continuous_startup_held", False):
+        try:
+            from .continuous_startup_bridge import verify_restoration_and_wait
+        except ImportError:
+            from continuous_startup_bridge import verify_restoration_and_wait
+        # No dashboard, GAME listener or actors exist yet. No managed
+        # measurement is entered, and no optimizer update has been enabled.
+        verify_restoration_and_wait(agent, metrics, boot_path)
 
     dashboard_enabled = _env_enabled("ROBOTRON_DQN_DASHBOARD", True) and MetricsDashboard is not None
     dashboard_host = _resolve_dashboard_host()
@@ -1023,6 +1087,7 @@ def main():
     # Monotonic-improvement mode: candidate windows are measured against the
     # incumbent and rolled back unless they win.  Subsumes the watchdog and
     # the rolling-window best-save, so both are suspended while it runs.
+    managed_measurements = None if ratchet_on else ManagedMeasurementDriver(agent, metrics, server, MODEL_DIR)
     ratchet = None
     if ratchet_on:
         ratchet = RatchetController(agent)
@@ -1060,6 +1125,11 @@ def main():
     ratchet_tick_errors = 0
     try:
         while srv_thread.is_alive() and not server.shutdown_event.is_set():
+            learning_control.refresh()
+            metrics.managed_experiment = learning_control.label
+            consume_save_request(agent, MODEL_DIR)
+            if managed_measurements is not None:
+                managed_measurements.update(learning_control.measurement)
             if ratchet is not None:
                 try:
                     ratchet.tick()
@@ -1076,7 +1146,7 @@ def main():
                             metrics.ratchet_frozen = False
                             metrics.ratchet_eval_epoch = -1
                         ratchet = None
-            if wd_enabled and time.time() >= wd_next_check:
+            if wd_enabled and not getattr(metrics, 'measurement_active', False) and time.time() >= wd_next_check:
                 wd_next_check = time.time() + wd_interval
                 steps_now = int(getattr(metrics, "total_training_steps", 0))
                 trainer_active = steps_now != wd_last_steps
@@ -1112,7 +1182,7 @@ def main():
             # lag-free RScr5M sustained far below its own run high-water
             # (the slow bleed EScr1M lag concealed), and bank admission
             # starvation (the poisoning precursor).
-            if time.time() >= bs_next_check:
+            if not getattr(metrics, 'measurement_active', False) and time.time() >= bs_next_check:
                 bs_next_check = time.time() + 60.0
                 try:
                     with metrics.lock:
@@ -1163,7 +1233,7 @@ def main():
                         print(f"[BANKS] periodic save: {'; '.join(_saved)}")
                 except Exception as e:
                     print(f"[BANKS] periodic save failed: {e}")
-            if time.time() - last_save >= 300:
+            if not getattr(metrics, 'measurement_active', False) and time.time() - last_save >= 300:
                 if ratchet is None:
                     agent.save(LATEST_MODEL_PATH, show_status=False)
                 last_save = time.time()
@@ -1208,6 +1278,12 @@ def main():
     except KeyboardInterrupt:
         print("\nKeyboard interrupt, shutting down...")
     finally:
+        if managed_measurements is not None:
+            try:
+                managed_measurements.close()
+            except Exception as exc:
+                agent.training_enabled = False
+                print(f'[MANAGED MEASUREMENT] restore failed during shutdown: {exc}')
         if ratchet is not None:
             # Monotonicity across restarts: the final latest.pt must hold the
             # last MEASURED winner, never a mid-window candidate.

@@ -1,0 +1,72 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/immutable-bootstrap-live-pidfd-engineering-original03-preparation/probe_physical192_engineering_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/immutable-bootstrap-live-pidfd-quiescence-engineering-original04-preparation/probe_physical192_engineering_v4.py
+@@ -8,7 +8,7 @@
+ import time
+ 
+ ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+-INVENTORY_SHA = 'd8d39fcf36c6f2ff6fcd955fb99fe3bb983aa23d34412c5d985c70a90dc36de7'
++INVENTORY_SHA = 'cce755775dfa8134a446b0d42d3a13bf96bcca23257fc92b8798622bee2a7b2e'
+ 
+ 
+ def load(name, path):
+@@ -28,30 +28,30 @@
+     assert case['sha256'] == args.case_sha256
+     source = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
+     sources = {
+-        'registry': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/continuous_physical192_registry_v4.py')),
+-        'health_base': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/continuous_physical192_health_v4.py')),
+-        'health': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/continuous_physical192_transport_v4.py')),
+-        'worker': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/observe_continuous_physical192_v4.py')),
+-        'client': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/continuous_physical192_observer_client_v4.py')),
++        'registry': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_registry_v5.py')),
++        'health_base': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_health_v5.py')),
++        'health': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_transport_v5.py')),
++        'worker': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/observe_continuous_physical192_v5.py')),
++        'client': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_observer_client_v5.py')),
+         'durability': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/buffered_raw_writer_v2.py')),
+         'control': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/volatile_live_control_v1.py')),
+         'interpreter': h.pin(Path('/usr/bin/python3.12')),
+     }
+-    expected_source_sha = {'registry': '4bd2cd67c68a908a44c984f00f2586cd7116e6fb2ab4cf53ad8037dd2052b8a2', 'health_base': '42bfa00072a6ad7a0003fa0fea0672c997352c7e9e5f01104aa1463e0eef388a', 'health': '2d38c2ac7dfd09b148fa8db228a65a2e07541acbc5c3d4dd06251b9399327b75', 'worker': '3fddf6e8bed7492838f926e4bf103c05053f6c6efe6b0691668ee377e9968d01', 'client': '266db7465bcf6daed11782d309396a47afbd571d6c94f3b40c01fd5bff0f46da', 'durability': '5dbeb347474dd9289ae18a2de0c438820f535fa9d75badaa3cfbf82dff6c1aa5', 'control': 'a2ce55471f7ff14490553cf05871e79a0ff15c925d01441065821b0f95daade8', 'interpreter': 'c86f21d0da9290ece2d7d49a3f7ed52aed59cb029abdf0ea25c79634f6cbe960'}
++    expected_source_sha = {'registry': '8cc5340708a73ffb97b16be4b96e72b3d5560ee0b371b7ffd8d67c4074cf76b4', 'health_base': '3818916a5921cb6b66d50249dd4266aa710b396c6169a6cad5d17257519fdda1', 'health': '46e2e8c8435bcd644738f819a6cff8605ab68e2fb3b989a3acb9926d11623c83', 'worker': '39880853e6e04df59a666be020b6b26f2d7946cfcbe8dfbeb66856e9b240ef10', 'client': '1049fcba433abb9df6490a01fd228001ca9aa15f442e4bfc52041c1d153ea0be', 'durability': '5dbeb347474dd9289ae18a2de0c438820f535fa9d75badaa3cfbf82dff6c1aa5', 'control': 'a2ce55471f7ff14490553cf05871e79a0ff15c925d01441065821b0f95daade8', 'interpreter': 'c86f21d0da9290ece2d7d49a3f7ed52aed59cb029abdf0ea25c79634f6cbe960'}
+     assert set(sources) == set(expected_source_sha) and all(sources[k]['sha256'] == v for k,v in expected_source_sha.items())
+-    reviewer_pin = h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/review_continuous_physical192_observer_v4.py'))
+-    assert reviewer_pin['sha256'] == '9d4442cd4bde938923c61a22182b50261a4ef0a1b6700770d05c97d92c04fb4d'
+-    profile_path = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/prepare_immutable_bootstrap_live_pidfd_case_v4.py')
++    reviewer_pin = h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/review_continuous_physical192_observer_v5.py'))
++    assert reviewer_pin['sha256'] == '30ea4d2eb6d97b5ccbd04e262f7b4c45e47af268f7644f7893ad88deba47a133'
++    profile_path = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/prepare_current_eval_quiescence_case_v5.py')
+     assert hashlib.sha256(profile_path.read_bytes()).hexdigest() == INVENTORY_SHA
+     profile = load('_static_engineering_inventory', profile_path)
+     binding = json.loads(h.checked(case).read_bytes())
+     profile.validate_inventory(binding, h)
+-    job = dict(schema='robotron-original192-immutable-bootstrap-live-pidfd-health-interface-engineering-v3',
++    job = dict(schema='robotron-original192-immutable-bootstrap-live-pidfd-health-interface-engineering-v4',
+         output=str(directory), runtime=h.pin(Path(__file__).resolve()), main_binding=case)
+     jp = h.put(directory / 'engineering-native-job.json', job)
+-    protocol = dict(schema='robotron-native-original192-immutable-bootstrap-live-pidfd-proof2s-protocol-v4', case=case,
++    protocol = dict(schema='robotron-native-original192-live-pidfd-current-eval-quiescence-proof2s-protocol-v5', case=case,
+                     raw_API_required=True, close_requires_final_sample=True, hot_max_gap_s=2.0, initial_samples=100,
+-                    raw_queue_protocol='pending-byte-digest-v2', volatile_live_tmpfs=True, source_bound_retired_API_projection=True, source_bound_original192_physical_bootstrap=True, source_bound_physical_original192_partition=True, immutable_original192_bootstrap_certificate=True, fresh_original_keeper_pidfd_census=True)
++                    raw_queue_protocol='pending-byte-digest-v2', volatile_live_tmpfs=True, source_bound_retired_API_projection=True, source_bound_original192_physical_bootstrap=True, source_bound_physical_original192_partition=True, immutable_original192_bootstrap_certificate=True, fresh_original_keeper_pidfd_census=True, source_bound_current_once_only_EVAL_quiescence_after_recorded_disconnect_exception=True)
+     client = load('_round_bridge_actual_client', h.checked(sources['client']))
+     started = time.monotonic()
+     guard = client.DedicatedMainHealth(job, jp, protocol, dict(main_observer=sources), h,
+@@ -119,7 +119,7 @@
+         assert terminal['Result'] == 'exit-code' and terminal['ExecMainStatus'] == '1'
+         assert lifecycle['success'] is False and lifecycle['original_scope_released'] is True
+         raw_review = None
+-    report = dict(schema='robotron-original192-immutable-bootstrap-live-pidfd-health-interface-probe-v3',
++    report = dict(schema='robotron-original192-immutable-bootstrap-live-pidfd-health-interface-probe-v4',
+         status='PASS_ENGINEERING_INTERFACE_ONLY', original_job=jp, initial=initial, mode=args.mode,
+         proof_gap_contract='robotron-main-proof-gap-2s-v1',maximum_gap_s=2.0,
+         independently_replayed_raw_review=raw_review,
+@@ -130,7 +130,7 @@
+         actual_unchanged_native_finalizer=h.pin(finalizer_path), closure=result,
+         observer_lifecycle=guard.lifecycle, sources=sources, retired_API_reviewer_source=reviewer_pin,
+         main_runtime_changed=False, private_policy_or_GPU_loaded=False,
+-        main_health_profile='PHYSICAL_ORIGINAL192_IMMUTABLE_BOOTSTRAP_LIVE_PIDFD_V4',
++        main_health_profile='PHYSICAL_ORIGINAL192_LIVE_PIDFD_CURRENT_EVAL_QUIESCENCE_V5',
+         actual_logical_slot_domain=192, simultaneous192_actors_claimed=False,
+         case_inventory_authority=binding['input_inventory_authority'],
+         scientific_launch_qualified=False, quality_qualified=False)

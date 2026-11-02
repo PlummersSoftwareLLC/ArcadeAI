@@ -1,0 +1,129 @@
+{
+  "schema": "robotron-future-pilot-independent-evidence-helpers-v1",
+  "status": "CPU_VALIDATED_FUTURE_HELPERS_ONLY_NOT_INSTALLED",
+  "source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/eval_capacity_proposal/audit_pilot_evidence.py",
+    "sha256": "e3f701b78babb2d08794858f4ffeab10d26a9f4c1fa1874112dd2ca1126ffc7c",
+    "bytes": 11171,
+    "identity": {
+      "device": 2304,
+      "inode": 81666030,
+      "bytes": 11171,
+      "mtime_ns": 1792394177942807068,
+      "ctime_ns": 1792394315752283894,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "tests": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/eval_capacity_proposal/test_audit_pilot_evidence.py",
+    "sha256": "4aae02642e19f59bda8934f1357c4625f0ba5b05c8cd04e8ed1ebc65f8150414",
+    "bytes": 12373,
+    "identity": {
+      "device": 2304,
+      "inode": 81666033,
+      "bytes": 12373,
+      "mtime_ns": 1792394315713283756,
+      "ctime_ns": 1792394315754283901,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "CPU_report": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/eval-capacity-original-evidence-CPU-original02-preparation-20261019/CPU-report.json",
+    "sha256": "35936e51048d713b0829ae2a31a301fc1c2faf1e78c86eec180a15942adae4ca",
+    "bytes": 250,
+    "identity": {
+      "device": 2304,
+      "inode": 81666057,
+      "bytes": 250,
+      "mtime_ns": 1792394385884837831,
+      "ctime_ns": 1792394385884837831,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "original_CPU_closure": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/eval-capacity-original-evidence-CPU-original02-preparation-20261019/execution/root-original-result-and-owned-release.json",
+    "sha256": "9a9b3d1881465e08970f5a1ab90a0a72c587531c309bca831f57a6362d5fa782",
+    "bytes": 21767,
+    "identity": {
+      "device": 2304,
+      "inode": 81666162,
+      "bytes": 21767,
+      "mtime_ns": 1792394386413834167,
+      "ctime_ns": 1792394386413834167,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "preserved_initial_environment_failure": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/eval-capacity-original-evidence-CPU-original01-preparation-20261019/execution/root-original-result-and-owned-release.json",
+    "sha256": "3915ef38faecf111d438f620379e10c9aeffe9bf8cb4fe1f5f01171625fc5ed5",
+    "bytes": 21703,
+    "identity": {
+      "device": 2304,
+      "inode": 81666098,
+      "bytes": 21703,
+      "mtime_ns": 1792394322963309411,
+      "ctime_ns": 1792394322963309411,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "initial_failure_scope": "System Python lacked NumPy in two existing test groups;16 new tests passed. Corrected execution uses established private FT Python environment with identical source/test bytes.",
+  "unchanged_capacity_package": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/eval_capacity_proposal/profile03/runtime-source-package.json",
+    "sha256": "a2082d2a9ca76e70bb7faedd0b8b56b97f72d5983ef3856ab54a6e69172a12d1",
+    "bytes": 14937,
+    "identity": {
+      "device": 2304,
+      "inode": 81662865,
+      "bytes": 14937,
+      "mtime_ns": 1792388673472050106,
+      "ctime_ns": 1792388673472050106,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "original_auditor_helpers": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/confirmed_game_boundary_proposal/audit_confirmed_completed_leg_reviewed3.py",
+    "sha256": "de901669780868cb842e9c9068ce11261a1d1f359c1940bb5bba6b2646c37ade",
+    "bytes": 46968,
+    "identity": {
+      "device": 2304,
+      "inode": 80249578,
+      "bytes": 46968,
+      "mtime_ns": 1792391058972733974,
+      "ctime_ns": 1792391058972733974,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "proof_functions": [
+    "original_games",
+    "actor_logs",
+    "console_lines"
+  ],
+  "scope": "Independent original-byte/admission/full-tail/ROM/client-map/statistics/clock/actor-log/console helpers for ONE standalone32-actor pilot. This is not an executable full pilot controller/reviewer or a policy/capacity qualification.",
+  "remaining_root_requirements": [
+    "Only launch after whole current native R/C/R/C and reviewed4 observer have closed, been archived and exactly released; retain prior failures",
+    "Bind fresh main192 owner/actor/control preflight, unchanged123-file package, original planned pilot job and checkpoint bytes",
+    "Archive actual pilot original owner/exit/descriptors and owned actor/GPU0/port/lease/cgroup cleanup; main holds must remain valid throughout",
+    "Bind/capture every original artifact before calling helpers, load only exact source pins, verify source/artifact stability after review",
+    "Call original_games with selected profile03 backend (checkpoint readback mandatory), actor_logs with unchanged auditor helpers, and console_lines only after closed validity/cleanup",
+    "The optional expert classification for32 slots requires the original six-case source-exact unused-branch proof to be read back and validated; current16-slot auditor remains unchanged"
+  ],
+  "actual_GPU_or_MAME_validation": false,
+  "capacity_speedup_verified": false,
+  "learning_speed_gain_verified": false,
+  "quality_qualified": false,
+  "promotion": false
+}

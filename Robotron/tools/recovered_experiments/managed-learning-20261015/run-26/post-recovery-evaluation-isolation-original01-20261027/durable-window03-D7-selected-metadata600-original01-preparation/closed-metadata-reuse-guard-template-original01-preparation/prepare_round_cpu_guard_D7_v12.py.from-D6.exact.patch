@@ -1,0 +1,39 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window02-D6-selected-metadata600-original01-preparation/closed-metadata-reuse-guard-original01-preparation/prepare_round_cpu_guard_D6_v11.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-selected-metadata600-original01-preparation/closed-metadata-reuse-guard-template-original01-preparation/prepare_round_cpu_guard_D7_v12.py
+@@ -9,9 +9,9 @@
+ HERE = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
+ LOCAL = Path(__file__).resolve().parent
+ REUSE = LOCAL
+-SOURCE_CONTRACT_SHA = '51dba1d3150db4af359b57dec6c5d29e23d3b2ae4a360dfde5a7ee16d5dc0ecc'
+-DRIVER_SHA = '85e8bfed0594561036f7dae24b3ccf9aab180591d80ae9a92a5be968c9add8dc'
+-SHIM_SHA = '80f310235eca3edcfbd4674e772bf12182d62a3fa8c3dc233928ec124928d53b'
++SOURCE_CONTRACT_SHA = None  # UNFILLED; this template cannot qualify or prepare a guard.
++DRIVER_SHA = None  # UNFILLED; this template cannot qualify or prepare a guard.
++SHIM_SHA = None  # UNFILLED; this template cannot qualify or prepare a guard.
+ 
+ 
+ def load(name, path):
+@@ -26,10 +26,10 @@
+     study_pin = h.pin(Path(manifest).resolve())
+     study = json.loads(h.checked(study_pin).read_bytes())
+     assert [row['leg'] for row in study['cases']] == ['R1', 'C1', 'R2', 'C2']
+-    policy_pin = h.pin(LOCAL/'selected-D6-prospective-source-contract.json')
++    policy_pin = h.pin(LOCAL/'selected-D7-prospective-source-contract.json')
+     assert policy_pin['sha256'] == SOURCE_CONTRACT_SHA
+     authority = json.loads(h.checked(authority_pin).read_bytes())
+-    assert authority['schema'] == 'robotron-D6-closed-metadata-and-raw-readiness-predicate-reuse-authority-v2'
++    assert authority['schema'] == 'robotron-D7-closed-metadata-and-raw-readiness-predicate-reuse-authority-v3'
+     assert authority['native_prepared'] == study_pin and authority['native_jobs'] == [row['native_job'] for row in study['cases']]
+     assert authority['ordered_legs'] == ['R1', 'C1', 'R2', 'C2']
+     assert authority['source_contract'] == policy_pin
+@@ -39,8 +39,8 @@
+     control = load('_round_CPU_prepare_controller', Path(controller['path']))
+     old_directory = BASE/'deadline-score32-fixed-fleet-admission-original03-preparation-20261026/actual-four-job-prebody-and-native-chain-CPU-original01'
+     old = json.loads((old_directory/'job.json').read_bytes())
+-    driver = h.pin(REUSE/'qualify_round_study_cpu_closed_metadata_D6_v8.py')
+-    shim = h.pin(REUSE/'closed_metadata_readiness_reuse_D6_v2.py')
++    driver = h.pin(REUSE/'qualify_round_study_cpu_closed_metadata_D7_v9.py')
++    shim = h.pin(REUSE/'closed_metadata_readiness_reuse_D7_v3.py')
+     assert driver['sha256'] == DRIVER_SHA and shim['sha256'] == SHIM_SHA
+     def authority_pins(value):
+         if isinstance(value, dict):

@@ -1,0 +1,33 @@
+from pathlib import Path
+import copy,datetime,hashlib,importlib.util,json,os,sys
+G=Path('/home/dave/source/repos/ArcadeAI/Robotron');R=G/'logs/managed-learning-20261015/run-26';P=R/'rejected-gap-healthy-activation-root-preparation-20261018'
+def pin(path):
+ p=Path(path);b=p.read_bytes();s=p.stat();return dict(path=str(p),sha256=hashlib.sha256(b).hexdigest(),bytes=len(b),identity=dict(device=s.st_dev,inode=s.st_ino,bytes=len(b),mtime_ns=s.st_mtime_ns,ctime_ns=s.st_ctime_ns,mode=oct(s.st_mode&511),uid=s.st_uid,nlink=s.st_nlink))
+def pub(path,value):
+ data=(json.dumps(value,indent=2,allow_nan=False)+'\n').encode()
+ with path.open('xb') as f:f.write(data);f.flush();os.fchmod(f.fileno(),0o444);os.fsync(f.fileno())
+ return pin(path)
+def read(path):return json.loads(Path(path).read_text())
+seed=read(R/'accepted-newgame-healthy-CE-maintenance-root-preparation-20261017/root-actual-job.json')['transition'];cfg=copy.deepcopy(seed)
+fresh_pin=pin(P/'fresh-runtime-before.json');assert fresh_pin['sha256']=='7bcf498cc833b358ae4bb461e050cfbc2a06d43173d3d7c5f0026ddb9e916ae4';fresh=read(fresh_pin['path'])
+entry_pin=pin(R/'postaccepted-newgame-live8M-candidate-CPU-original01-root-execution-20261017/candidate-CPU-report-readonly.json');assert entry_pin['sha256']=='eb172ab4e1da764b6748a28b81cec3de278a8b0177786f473cb5ba7f08971b26'
+entry=read(entry_pin['path']);spec=entry['root_job']['phase_snapshot']
+cfg.update(before=fresh['before'],actor_masks=fresh['actor_masks'],worker_mask=fresh['worker_mask'],settings_lifecycle=fresh['settings_lifecycle'],original_dropin=fresh['original_dropin'],current_completed_request=fresh['current_completed_request'],boot_id=fresh['boot_id'],baseline_csv={k:fresh['fresh_API']['csv'][k] for k in ('replay_dropped','batch_size','replay_sample_cap','utc')},sources=read(P/'prepared-sources.json')['sources'],running_phase=dict(record=spec['phase_record'],boot_checkpoint=spec['boot_checkpoint'],boot_verification=spec['boot_verification'],expected=spec['expected_phase']),output_directory=str(R/'rejected-gap-healthy-activation-original01-20261018'),phase_id='ce4096_rejected_gap_observer_20261018',request_id='rejected_gap_healthy_activation_20261018_once01',startup_tag='rejected_gap_startup_20261018_once01')
+cfg['verifier']['context']=entry['root_job']['source_control_context']
+for x in (cfg['settings_lifecycle']['initial'],cfg['current_completed_request'],cfg['original_dropin']['pin']):assert pin(x['path'])==x,'Mutable before lifecycle changed; fresh root observation required'
+release=pin(R/'accepted-newgame-forward-recovery-root-control-20261017/root-confirmed704-protected-canonical-adoption-and-source-freeze-release-20261018.json')
+regression=pin(R/'accepted-newgame-forward-recovery-root-control-20261017/root-postquality43-original-PASS-and-healthy-activation-next-loop-20261018.json')
+combined=pin(G/'tools/rejected_gap_observation_combined_proposal/preparation-manifest.json')
+intent=dict(schema='robotron-rejected-gap-healthy-activation-intent-v1',owner=fresh['current_owner'],running_phase=cfg['running_phase'],phase_id=cfg['phase_id'],sources=cfg['sources'],quality_release=release,regression_result=regression,combined_manifest=combined,boot_newest_only=True,no_weight_or_optimizer_rollback=True,retain_original_fleet=True,target_batch_size=4096,target_lr_scale=0.5,telemetry_environment={'ROBOTRON_REJECTED_GAP_TELEMETRY':'1'},fleet_actions_forbidden=True)
+ip=pub(P/'root-actual-activation-intent.json',intent);cfg['trial_core']=ip
+sources=G/'tools/rejected_gap_healthy_activation_proposal'
+static=[Path(__file__),sources/'run_healthy_activation.py',sources/'preparation-manifest.json',sources/'preparation-reviewed2-manifest.json',sources/'test_healthy_activation_reviewed2.py',R/'rejected-gap-healthy-activation-independent-source-review-20261018/source-review-receipt.json',R/'rejected-gap-healthy-activation-reviewed2-seven-native-PASS-owned-closure-root-20261018/root-explicit-native7-PASS-launcher-failure-and-owned-release.json',R/'rejected-gap-healthy-activation-original-seven-guard-failure-owned-closure-root-20261018/root-explicit-original-seven-guard-failure-and-autoGC-owned-closure.json',R/'quality-audit-control-reviewed3-twenty-guards-original01-root-execution-20261018/root-original-result-and-owned-release.json',G/'tools/quality_audit_control_gc_repair_proposal/preparation-manifest-reviewed3.json',R/'quality-audit-control-reviewed3-independent-source-review-20261018/source-review-receipt.json',P/'prepared-sources.json',Path(fresh_pin['path']),Path(ip['path']),Path(release['path']),Path(regression['path']),Path(combined['path']),R/'rejected-gap-preactivation-baseline-original01-root-execution-20261018/baseline.json',R/'rejected-gap-synthetic-cost-original01-root-execution-20261018/cost.json',cfg['running_phase']['record']['path'],cfg['running_phase']['boot_verification']['path']]
+cfg['static_pins']=[pin(p) for p in static]
+job=dict(schema='robotron-rejected-gap-healthy-activation-job-v1',activation_authorized=True,transition=cfg,entry_CPU=entry_pin,entry_CPU_release=pin(R/'postaccepted-newgame-live8M-candidate-CPU-original01-root-execution-20261017/root-original-CPU-result-and-owned-release.json'),quality_release=release,regression_result=regression,combined_manifest=combined,activation_intent=ip)
+jp=pub(P/'root-actual-activation-job.json',job)
+source=sources/'run_healthy_activation.py';assert pin(source)['sha256']=='ef50ee32880ff93a788d33c7a90ccba01f3de33caa015c849712e31ca910f78e'
+s=importlib.util.spec_from_file_location('_root_healthy_activation_validation',source);m=importlib.util.module_from_spec(s);sys.modules[s.name]=m;s.loader.exec_module(m)
+H=m.load(m.HEALTHY,m.HEALTHY_SHA,'_root_healthy_pure');adapter=H.load(H.ADAPTER,H.ADAPTER_SHA,'_root_phase_pure');base=adapter.load_v4();validated,_=m.validate(job,base,adapter,H)
+assert validated==cfg and not any(n=='torch' or n.startswith(('torch.','numpy','dqn')) for n in sys.modules)
+receipt=pub(P/'root-actual-case-readonly-validation.json',dict(schema='robotron-root-healthy-activation-preexecute-case-validation-v1',utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),status='PASS_SOURCE_AND_IMMUTABLE_CASE_ONLY',job=jp,source=pin(source),builder=pin(Path(__file__)),source_count_before=61,source_count_after=62,source_files=4,original_actors=192,former_guard_failure_preserved=True,corrected_guards_native_pass=7,corrected_guard_launcher_exit=1,corrected_guard_observed_live_kernel_identity=False,gc_controller_changed_guards_pass=20,runtime_constructed=False,runtime_actions=False,project_numerical_imports=False,newest_checkpoint_not_yet_read=True))
+print(json.dumps(dict(job=jp,validation=receipt)),flush=True)

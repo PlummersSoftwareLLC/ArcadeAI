@@ -1,0 +1,21 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/sequence_deadline_study_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original03-private-AST-preparation/sequence_deadline_study_v6.py
+@@ -17,7 +17,8 @@
+ import time
+ import traceback
+ 
+-HERE=Path(__file__).resolve().parent
++HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
++LOCAL=Path(__file__).resolve().parent
+ ROOT=HERE.parents[1]
+ STATE=ROOT/'logs/managed-learning-20261015/state.json'
+ ORDER=['R1','C1','R2','C2']
+@@ -33,7 +34,7 @@
+ 
+ 
+ def preparation():
+-    return load('_deadline_sequence_review_preparation',HERE/'prepare_deadline_independent_review_v4.py')
++    return load('_deadline_sequence_review_preparation',LOCAL/'prepare_deadline_independent_review_v4.py')
+ 
+ 
+ class StopNewActions(Exception):pass

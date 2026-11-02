@@ -1,0 +1,174 @@
+--- a/Robotron/Scripts/dqn/native_sumtree.py
++++ b/Robotron/Scripts/dqn/native_sumtree.py
+@@ -25,6 +25,9 @@
+ _LIBRARY = None
+ _FUNCTION = None
+ _GATHER_FUNCTION = None
++_BATCH_FUNCTION = None
++NATIVE_BATCH_ENABLED = os.getenv("DQN_NATIVE_BATCH_UPDATE", "0").strip().lower() in ("1", "true", "yes", "on")
++NATIVE_BATCH_AVAILABLE = False
+ NATIVE_AVAILABLE = False
+ NATIVE_GATHER_AVAILABLE = False
+ NATIVE_STATUS = "not initialized"
+@@ -48,7 +51,8 @@
+ 
+ 
+ def _load_native():
+-    global _LIBRARY, _FUNCTION, _GATHER_FUNCTION
++    global _LIBRARY, _FUNCTION, _GATHER_FUNCTION, _BATCH_FUNCTION
++    global NATIVE_BATCH_AVAILABLE
+     global NATIVE_AVAILABLE, NATIVE_GATHER_AVAILABLE, NATIVE_STATUS
+     try:
+         directory = Path(__file__).resolve().parent
+@@ -95,6 +99,13 @@
+         _LIBRARY, _FUNCTION = library, function
+         NATIVE_AVAILABLE = True
+         NATIVE_STATUS = "exact float64 native propagation"
++        batch = getattr(library, "robotron_sumtree_batch_update", None)
++        if batch is not None:
++            batch.argtypes = (ctypes.c_void_p, ctypes.c_int64, ctypes.c_int64,
++                              ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int64)
++            batch.restype = ctypes.c_int
++            _BATCH_FUNCTION = batch
++            NATIVE_BATCH_AVAILABLE = True
+         if grace_v2:
+             gather = library.robotron_gather_fp16_rows
+             gather.argtypes = (ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+@@ -164,4 +175,35 @@
+     return output
+ 
+ 
++def batch_update(tree, capacity, indices, priorities):
++    """Default-off exact batched propagation; False leaves the old path intact.
++
++    Enable before process startup with DQN_NATIVE_BATCH_UPDATE=1. The caller
++    owns the replay lock, including this GIL-released C call. Unsupported ABI,
++    aliases, non-finite priorities and empty input retain NumPy semantics.
++    """
++    if not NATIVE_BATCH_ENABLED or _BATCH_FUNCTION is None:
++        return False
++    if (not isinstance(tree, np.ndarray) or tree.dtype != np.dtype(np.float64)
++            or tree.ndim != 1 or not tree.flags.c_contiguous
++            or not tree.flags.aligned or not tree.flags.writeable
++            or not isinstance(capacity, (int, np.integer))
++            or capacity < 1 or capacity > (2**63 - 1) // 2
++            or tree.size != 2 * capacity):
++        return False
++    if (not isinstance(indices, np.ndarray) or indices.dtype != np.dtype(np.int64)
++            or indices.ndim != 1 or not indices.flags.c_contiguous
++            or not indices.flags.aligned or not isinstance(priorities, np.ndarray)
++            or priorities.dtype != np.dtype(np.float64) or priorities.ndim != 1
++            or not priorities.flags.c_contiguous or not priorities.flags.aligned
++            or indices.size != priorities.size or indices.size == 0):
++        return False
++    if (np.may_share_memory(tree, indices) or np.may_share_memory(tree, priorities)
++            or int(indices.min()) < 0 or int(indices.max()) >= capacity
++            or not np.isfinite(priorities).all()):
++        return False
++    return bool(_BATCH_FUNCTION(tree.ctypes.data, tree.size, capacity,
++                       indices.ctypes.data, priorities.ctypes.data, indices.size))
++
++
+ _load_native()
+--- a/Robotron/Scripts/dqn/replay_buffer.py
++++ b/Robotron/Scripts/dqn/replay_buffer.py
+@@ -20,6 +20,14 @@
+     except ImportError:
+         _native_propagate = None
+         _native_gather_fp16_rows = None
++
++try:
++    from .native_sumtree import batch_update as _native_batch_update
++except ImportError:
++    try:
++        from native_sumtree import batch_update as _native_batch_update
++    except ImportError:
++        _native_batch_update = None
+ 
+ try:
+     from .config import RL_CONFIG, decode_token_types, TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT
+@@ -144,6 +152,12 @@
+         Sets all leaf priorities at once then walks up the tree one level at
+         a time, merging duplicate parents with np.unique at each level.
+         """
++        if (_native_batch_update is not None
++                and _native_batch_update(self.tree, self.capacity, data_indices, priorities)):
++            mx = float(priorities.max())
++            if mx > self.max_priority:
++                self.max_priority = mx
++            return
+         tree_idx = data_indices.astype(np.int64) + self.capacity
+         self.tree[tree_idx] = priorities.astype(np.float64)
+         mx = float(priorities.max())
+--- a/Robotron/Scripts/dqn/sumtree.c
++++ b/Robotron/Scripts/dqn/sumtree.c
+@@ -1,5 +1,7 @@
+ /* Exact scalar float64 parent recomputation. No reassociation or fast math. */
+ #include <stdint.h>
++#include <stddef.h>
++#include <stdlib.h>
+ 
+ void robotron_sumtree_propagate(double *tree, int64_t index)
+ {
+@@ -34,3 +36,61 @@
+     return 0;
+ #endif
+ }
++
++/* Optional exact batch path; existing scalar/gather functions above are unchanged. */
++static int compare_index(const void *a, const void *b)
++{
++    const int64_t left = *(const int64_t *)a;
++    const int64_t right = *(const int64_t *)b;
++    return (left > right) - (left < right);
++}
++
++/* Return zero only before any mutation, so the caller can use its old path. */
++int robotron_sumtree_batch_update(double *tree, int64_t tree_size,
++                                 int64_t capacity, const int64_t *indices,
++                                 const double *priorities, int64_t count)
++{
++    if (!tree || !indices || !priorities || count <= 0 || capacity <= 0
++            || capacity > INT64_MAX / 2 || tree_size != 2 * capacity
++            || (uint64_t)count > SIZE_MAX / sizeof(int64_t)
++            || (uint64_t)count > SIZE_MAX / sizeof(double)) return 0;
++    for (int64_t i = 0; i < count; ++i)
++        if (indices[i] < 0 || indices[i] >= capacity) return 0;
++    int64_t *parents = malloc((size_t)count * sizeof(int64_t));
++    double *sums = malloc((size_t)count * sizeof(double));
++    if (!parents || !sums) {
++        free(parents);
++        free(sums);
++        return 0;
++    }
++    /* Ordered leaf assignment exactly matches the observed NumPy oracle. */
++    for (int64_t i = 0; i < count; ++i) {
++        const int64_t leaf = indices[i] + capacity;
++        tree[leaf] = priorities[i];
++        parents[i] = leaf >> 1;
++    }
++    qsort(parents, (size_t)count, sizeof(int64_t), compare_index);
++    int64_t unique = 0;
++    for (int64_t i = 0; i < count; ++i)
++        if (unique == 0 || parents[i] != parents[unique - 1])
++            parents[unique++] = parents[i];
++    while (unique > 0 && parents[0] >= 1) {
++        /* An odd/non-power capacity can put ancestor+child in one level.
++         * NumPy gathers the complete RHS before assigning ANY parent. */
++        for (int64_t i = 0; i < unique; ++i) {
++            const int64_t parent = parents[i];
++            sums[i] = tree[parent * 2] + tree[parent * 2 + 1];
++        }
++        for (int64_t i = 0; i < unique; ++i) tree[parents[i]] = sums[i];
++        int64_t next = 0;
++        for (int64_t i = 0; i < unique; ++i) {
++            const int64_t parent = parents[i] >> 1;
++            if (parent >= 1 && (next == 0 || parent != parents[next - 1]))
++                parents[next++] = parent;
++        }
++        unique = next;
++    }
++    free(sums);
++    free(parents);
++    return 1;
++}

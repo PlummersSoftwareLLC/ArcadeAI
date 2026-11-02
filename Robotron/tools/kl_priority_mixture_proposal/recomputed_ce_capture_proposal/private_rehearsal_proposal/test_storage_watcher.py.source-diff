@@ -1,0 +1,18 @@
+--- reviewed-warmup/test_storage_watcher.py
++++ private-rehearsal/test_storage_watcher.py
+@@ -44,13 +44,13 @@
+         self.assertEqual(parent.REPO, parent.GAME.parent)
+         self.assertEqual((parent.GAME/'Scripts/dqn/config.py').parts[-4:],
+                          ('Robotron', 'Scripts', 'dqn', 'config.py'))
+-        self.assertEqual(parent.VARIANTS, ('base_a', 'base_repeat', 'off'))
++        self.assertEqual(parent.VARIANTS, ('capture', 'recompute'))
+         self.assertEqual(parent.BOUNDS['artifact_bytes'], 6 * (1 << 30))
+         self.assertEqual(parent.BOUNDS['phase_timeout_s'], 180)
+         self.assertEqual(parent.BOUNDS['total_timeout_s'], 600)
+         lock_bytes = (parent.HERE/'source-lock.json').read_bytes()
+         self.assertEqual(hashlib.sha256(lock_bytes).hexdigest(),
+-                         '20057c290b1a9f121a03dfb5e81d33c67170a2d51807c0c149e295f393fa359e')
++                         '28870c3cf7594cc0ac8f73eb3760e3665d5d4448668f4bf9010268427ec80dd3')
+         frozen = json.loads(lock_bytes)['frozen_science_helpers']
+         self.assertEqual(frozen['sha256'],
+                          'ba0039d406676f092309c6bf2248ddcf169af8960f60ed18b698ece1ea602f93')

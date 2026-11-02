@@ -1,0 +1,72 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_one_trial_installed_ce_revision2_proposal/run_raw_kl_transition.py (three extracted functions only)
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_boundary_proposal/profile_boundary.py (three extracted functions only)
+@@ -1,28 +1,47 @@
+-def selected_environment(before, metric, record):
+-    require(metric in ('kl','ce'), 'Unknown static metric')
++def selected_environment(before, spec, phase_record_pin):
++    spec = checked_spec(spec)
++    require(isinstance(before, dict) and before.get('DQN_BATCH_SIZE') == str(spec['before_batch_size'])
++            and before.get('DQN_PER_PRIORITY_METRIC') == 'ce', 'Actual before CE batch differs')
++    require(not any(before.get(flag) for flag in FLAGS), 'Unexpected capture flag')
++    record = full_metadata_pin(phase_record_pin)
+     result = dict(before)
+-    for flag in FLAGS: result.pop(flag, None)
+-    result.update(DQN_PER_PRIORITY_METRIC=metric,DQN_PRIORITY_PHASE_RECORD=record['path'],
+-        DQN_PRIORITY_PHASE_RECORD_SHA256=record['sha256'])
++    for flag in FLAGS:
++        result.pop(flag, None)
++    result.update(DQN_BATCH_SIZE=str(spec['after_batch_size']), DQN_PER_PRIORITY_METRIC='ce',
++        DQN_PRIORITY_PHASE_RECORD=record['path'], DQN_PRIORITY_PHASE_RECORD_SHA256=record['sha256'])
+     return result
+ 
+-def start_record(mode, phase_id, core_sha, model_dir, checkpoint, boot_proof):
+-    require(mode in ('activate_kl','return_ce') and re.fullmatch(r'[A-Za-z0-9_-]{1,100}',phase_id or ''), 'Invalid transition identity')
+-    require(re.fullmatch(r'[0-9a-f]{64}',core_sha or ''), 'Invalid immutable trial core SHA')
++def start_record(spec, phase_id, root_precommit_sha256, model_dir,
++                 checkpoint, boot_proof, required_floor):
++    checked_spec(spec); digest(root_precommit_sha256); canonical_path(model_dir)
++    require(type(phase_id) is str and re.fullmatch(r'[A-Za-z0-9_-]{1,100}', phase_id),
++            'New explicit CE phase ID required')
++    source = triple(checkpoint)
++    require(source['path'] == model_dir + '/robotron_dqn_latest.pt', 'Only actual newest latest may boot')
++    require(boot_proof.get('status') == 'PASS' and boot_proof['sha256'] == source['sha256']
++            and boot_proof['bytes'] == source['bytes'], 'Exact actual newest CPU proof required')
++    require(boot_proof.get('phase_metadata_verified') is True
++            and boot_proof['root_job']['phase_snapshot']['purpose'] == 'newest_stopped'
++            and boot_proof['held_recipe_context']['batch_size'] == spec['before_batch_size'],
++            'Actual before-profile newest-stopped phase CPU proof required')
++    clocks, floor = four(boot_proof['clocks']), four(required_floor)
++    require(all(clocks[key] >= floor[key] for key in CLOCKS), 'Newest state predates required forward floor')
+     previous = boot_proof.get('saved_priority_metric_phase')
+-    if mode == 'activate_kl':
+-        require(isinstance(previous,dict) and previous.get('metric') == 'ce' and previous.get('valid') is True,
+-            'Installed-source activation requires newest verified valid CE predecessor')
+-    if mode == 'return_ce':
+-        require(isinstance(previous,dict) and previous.get('metric') == 'kl' and previous.get('valid') is True,
+-            'CE return requires actual newest valid KL phase; no historical rollback')
+-    require(previous is None or previous.get('phase_id') != phase_id, 'New phase ID required')
+-    return dict(schema='robotron-priority-metric-start-v1',phase_id=phase_id,
+-        metric='kl' if mode == 'activate_kl' else 'ce',action='start',
+-        previous_metric='unknown' if previous is None else previous['metric'],checkpoint=triple(checkpoint),
+-        model_dir=model_dir,root_precommit_sha256=core_sha)
++    require(isinstance(previous, dict) and previous.get('schema') == 'robotron-priority-metric-phase-v1'
++            and type(previous.get('phase_id')) is str
++            and re.fullmatch(r'[A-Za-z0-9_-]{1,100}', previous['phase_id']) and previous.get('metric') == 'ce'
++            and previous.get('valid') is True and previous.get('phase_id') != phase_id,
++            'A new CE phase must follow actual valid newest CE; no KL or old boot')
++    return dict(schema='robotron-priority-metric-start-v1', phase_id=phase_id,
++        metric='ce', action='start', previous_metric='ce', checkpoint=source,
++        model_dir=model_dir, root_precommit_sha256=root_precommit_sha256)
+ 
+ def expected_start(record, record_pin, boot_proof):
+-    return dict(metric=record['metric'],phase_id=record['phase_id'],root_precommit_sha256=record['root_precommit_sha256'],
+-        founder_phase_record_sha256=record_pin['sha256'],last_resume_record_sha256=None,
+-        started_from=dict(record['checkpoint'],clocks=four(boot_proof['clocks'])),valid=True)
++    require(record['metric'] == 'ce' and record['previous_metric'] == 'ce'
++            and record['action'] == 'start', 'Explicit new CE start required')
++    require(record['checkpoint']['sha256'] == boot_proof['sha256']
++            and record['checkpoint']['bytes'] == boot_proof['bytes'], 'Founder boot proof differs')
++    return dict(metric='ce', phase_id=record['phase_id'],
++        root_precommit_sha256=record['root_precommit_sha256'],
++        founder_phase_record_sha256=triple(record_pin)['sha256'], last_resume_record_sha256=None,
++        started_from=dict(record['checkpoint'], clocks=four(boot_proof['clocks'])), valid=True)

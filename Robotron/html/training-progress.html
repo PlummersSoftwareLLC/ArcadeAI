@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Robotron learning progress</title><style>
+*{box-sizing:border-box}body{margin:0;background:#101721;color:#e5edf7;font:16px system-ui,sans-serif}main{max-width:1100px;margin:auto;padding:32px 24px}h1{font-size:30px;margin:0 0 8px}h2{font-size:17px;color:#a9b9cc;margin:0 0 12px}.muted{color:#a9b9cc}.badge{display:inline-block;padding:5px 10px;background:#173c32;color:#8ce6ba;border-radius:16px;font-size:13px}.grid{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin:24px 0}.card{background:#192432;border:1px solid #2b3d52;border-radius:14px;padding:22px}.big{font-size:24px;line-height:1.4}.countdown{font-size:36px;font-variant-numeric:tabular-nums;color:#7ed4ff;margin:12px 0}.next{border-color:#6986e5}.steps{display:flex;gap:10px;margin:16px 0;flex-wrap:wrap}.step{padding:12px 18px;border-radius:8px;background:#283548}.done{background:#174237;color:#9ce4bd}.active{outline:2px solid #7ed4ff}.stats{display:flex;gap:24px;flex-wrap:wrap;margin:18px 0}.stat strong{display:block;font-size:24px}.table{overflow:auto}table{width:100%;border-collapse:collapse;white-space:nowrap}th,td{text-align:left;padding:12px;border-bottom:1px solid #314155}th{color:#a9b9cc;font-weight:500}a{color:#8bd7ff}.note{line-height:1.6;font-size:14px}#error{color:#ffcf85} @media(max-width:700px){.grid{grid-template-columns:1fr}main{padding:22px 14px}.big{font-size:21px}}
+
+progress{width:100%;height:20px;margin:12px 0}.counter{font-variant-numeric:tabular-nums}.warning{color:#ffcf85}
+</style><main>
+<span class="badge" id="training">Connecting to trainer</span>
+<h1>Robotron learning progress</h1><div class="muted" id="updated">Reading live status…</div>
+<div class="grid"><section class="card"><h2 id="trainingModeTitle">Current training round</h2><div class="big" id="phase">Loading…</div><p id="wait" class="muted"></p><p id="trainingModeNote" class="note">Each finished actor records its score and exits. The next 192-actor round starts after all current games finish.</p></section>
+<section class="card next"><h2>Next policy check</h2><div class="big" id="next">Observe the current lower-rate continuation, then freeze a checkpoint for comparison.</div><p id="nextExposure" class="note muted"></p><p id="candidateDetail" class="note muted"></p><p id="candidateETA" class="note muted"></p><p id="screeningState" class="note muted"></p><p class="note muted">A one-hour screen can reject a candidate. Promotion still requires two independently valid complete-game confirmations against the fixed reference.</p></section></div>
+<section class="card"><h2>Fresh post-recovery observation window</h2><div id="windowState">Waiting for the observer</div><progress id="bar" max="1" value="0"></progress><div class="stats"><div class="stat"><strong id="newFrames">—</strong>Learner frame counter increase /8M</div><div class="stat"><strong id="newExperience">—</strong>DQN + exploration inserts /8M</div><div class="stat"><strong id="updates">—</strong>Admitted optimizer updates</div></div><p id="eta" class="note muted"></p><p class="note muted">Both observation counters must reach8M before checkpoint capture. Greedy evaluation data can enter training replay while contributing zero to these counters. Earlier interrupted or invalidated observations remain preserved; their partial counts are not reused. This observation does not establish a causal learning-speed gain.</p></section>
+<section class="card" style="margin-top:18px"><h2>Live trainer</h2><div class="stats"><div class="stat"><strong id="frames">—</strong>Learner frame counter</div><div class="stat"><strong id="fps">—</strong>All game frames/sec</div><div class="stat"><strong id="experienceRate">—</strong>Fresh replay inserts/sec</div><div class="stat"><strong id="policyExperienceRate">—</strong>DQN + exploration inserts/sec</div><div class="stat"><strong id="clients">—</strong>Connected clients</div><div class="stat"><strong id="trainActors">—</strong>Active training clients</div><div class="stat"><strong id="evalActors">—</strong>Active evaluation clients</div><div class="stat"><strong id="appliedRate">—</strong>Applied updates/sec</div><div class="stat"><strong id="reuse">—</strong>Samples / game frame</div><div class="stat"><strong id="gpuBusy">—</strong>GB300 sampled busy</div><div class="stat"><strong id="gpuMemory">—</strong>GB300 memory used</div><div class="stat"><strong id="steps">—</strong>Training steps</div></div><p id="actorNote" class="note muted"></p><p id="experienceNote" class="note muted"></p><p id="scoreAccountingNote" class="note muted"></p><div id="error" class="warning"></div></section>
+<section class="card" style="margin-top:18px"><h2 id="screenTableTitle">Previous one-hour screening comparison: candidate rejected</h2><p class="note muted" id="screenTableNote">Historical results, separate from the live training round. Each mean includes all32 games scored at one hour, including games still running at that cutoff. The protected model was retained.</p><div class="table"><table><thead><tr><th>Leg</th><th>Scored</th><th>Finished naturally</th><th>Unfinished at cutoff</th><th>Mean cutoff score</th></tr></thead><tbody id="rows"></tbody></table></div></section>
+<p class="note muted">Live status refreshes every10seconds. <a href="/">Open the main training report</a>.</p>
+</main><script>
+const $=id=>document.getElementById(id),fmt=n=>Number.isFinite(n)?Math.round(n).toLocaleString():'—';
+let historyLoaded=false,previousExperience=null,previousOptimizer=null;
+async function get(path){const response=await fetch(path+'?t='+Date.now(),{cache:'no-store'});if(!response.ok)throw Error('Status unavailable');return response.json()}
+function screeningDeadlineText(t,e,nowMs=Date.now()){
+ if(!t||!e||t.schema!=='robotron-fixed-deadline-display-timing-v1'||e.state!=='running'||!Number.isFinite(nowMs))return '';
+ const a=e.deadline_anchor&&e.deadline_anchor.anchor;
+ const leg=Array.isArray(e.legs)&&e.legs.find(row=>row&&row.leg===e.current_leg);
+ if(!a||!leg||leg.phase!=='collecting'||t.leg!==e.current_leg||t.candidate_sha256!==e.candidate_sha256||
+    !/^[0-9a-f]{64}$/.test(t.candidate_sha256)||t.derived_from_original_anchor!==true||t.members!==32||a.members!==32||
+    !Number.isSafeInteger(a.anchor_monotonic_ns)||!Number.isSafeInteger(a.deadline_monotonic_ns)||
+    t.anchor_monotonic_ns!==a.anchor_monotonic_ns||t.deadline_monotonic_ns!==a.deadline_monotonic_ns||
+    a.deadline_monotonic_ns-a.anchor_monotonic_ns!==3600000000000||
+    !Number.isFinite(t.deadline_unix_s)||t.deadline_unix_s<=0)return '';
+ const cutoff=new Date(t.deadline_unix_s*1000);
+ if(!Number.isFinite(cutoff.getTime()))return '';
+ const when=cutoff.toISOString().slice(0,19).replace('T',' ')+' UTC ('+cutoff.toLocaleString(undefined,{timeZoneName:'short'})+')';
+ const remaining=cutoff.getTime()-nowMs;
+ return 'Fixed one-hour cutoff: '+when+'. '+(remaining>0?'About '+Math.ceil(remaining/60000).toLocaleString()+' min remaining.':'Cutoff reached; collecting final scores and closure.');
+}
+function nextWorkView(e){
+ const w=e&&e.next_work,text=v=>typeof v==='string'?v.trim():'';
+ if(!w||(!text(w.current_stage)&&!text(w.state)))return null;
+ const stateText={startup_guard_fix_in_progress:'Correcting the startup guard'};
+ const stage=text(w.current_stage)||stateText[w.state]||text(w.state).replaceAll('_',' ');
+ const stamp=Number.isFinite(w.updated_unix_s)&&w.updated_unix_s>0?w.updated_unix_s:e.updated_unix_s;
+ const updated=Number.isFinite(stamp)&&stamp>0?new Date(stamp*1000).toLocaleString():'Update time unavailable';
+ const deadline=Number.isFinite(w.deadline_unix_s)&&w.deadline_unix_s>0?new Date(w.deadline_unix_s*1000):null;
+ return {stage,detail:text(w.detail),waiting:text(w.waiting_for),next:text(w.next_stage),updated,
+  eta:text(w.eta)||(deadline&&Number.isFinite(deadline.getTime())?'Recorded deadline: '+deadline.toLocaleString()+'.':'No completion time has been set.'),
+  training:w.main_training_continues===true?'Main training continues.':w.main_training_continues===false?'Main training is not active.':'Main training status has not been reported.',
+  trainingContinues:w.main_training_continues};
+}
+function renderNextWork(view,now){
+ if(!view)return;
+ $('trainingModeTitle').textContent='Current work';
+ $('phase').textContent=view.stage;
+ $('wait').textContent=[view.detail,view.waiting?'Waiting for: '+view.waiting:''].filter(Boolean).join(' ');
+ $('trainingModeNote').textContent=view.training;
+ $('next').textContent=view.next||view.waiting||'Next step has not been reported.';
+ $('nextExposure').textContent='';
+ $('candidateDetail').textContent=view.detail;
+ $('candidateETA').textContent=view.eta;
+ $('screeningState').textContent=view.training+' Previous comparison results remain below.';
+ $('eta').textContent='This earlier observation is retained; current work status is shown above.';
+ $('updated').textContent='Work status updated '+view.updated+(now&&Number.isFinite(now.ts)?' · live trainer updated '+new Date(now.ts*1000).toLocaleTimeString():' · live trainer data unavailable');
+ if(typeof view.trainingContinues==='boolean')$('training').textContent=view.trainingContinues?'Main training continues':'Main training not active';
+ $('error').textContent=now?'':'Live trainer data is unavailable; the recorded work status remains visible.';
+}
+async function update(){
+ try{
+  const [now,p,c,e,t]=await Promise.all([get('/api/now').catch(()=>null),get('/api/html/training-progress.json').catch(()=>null),get('/api/html/next-policy-capture.json').catch(()=>null),get('/api/html/next-policy-evaluation.json').catch(()=>null),get('/api/html/next-policy-timing.json').catch(()=>null)]);
+  const work=nextWorkView(e);
+  if(!now||!p){if(work){renderNextWork(work,now);return;}throw Error('Live status unavailable');}
+  const round=now.training_round||{};
+  $('phase').textContent='Round '+(round.round||'—')+' · '+fmt(round.completed)+' of '+fmt(round.total)+' games finished';
+  $('wait').textContent=fmt(round.active)+' managed games remain. '+Math.max(0,(now.client_count||0)-(round.active||0))+' additional clients are connected. There is no fixed finishing time for these full games.';
+  const clientRows=Array.isArray(now.client_rows)?now.client_rows:[];
+  const rolesKnown=clientRows.length===now.client_count&&clientRows.every(row=>row&&typeof row.eval==='boolean');
+  const trainingClients=rolesKnown?clientRows.filter(row=>row.eval===false).length:NaN;
+  const evaluationClients=rolesKnown?clientRows.filter(row=>row.eval===true).length:NaN;
+  const continuous=e&&e.next_work&&e.next_work.mode_installed===true&&e.next_work.main_mode==='CONTINUOUS_TRAIN155_EVAL37_ONCE';
+  if(continuous){
+   $('trainingModeTitle').textContent='Continuous training';
+   $('phase').textContent=fmt(trainingClients)+' of 155 training clients active';
+   $('wait').textContent=fmt(evaluationClients)+' evaluation clients remain active. Training clients continue into their next game; completed evaluation clients exit.';
+   $('trainingModeNote').textContent='Training continues across game boundaries. Evaluation clients retire after one completed game.';
+  }else{
+   $('trainingModeTitle').textContent='Current training round';
+   $('trainingModeNote').textContent='Each finished actor records its score and exits. The next 192-actor round starts after all current games finish.';
+  }
+  const completed=now.eval_games||{},prior=e&&e.next_work&&e.next_work.previous_phase_completed_evaluation;
+  const validScores=v=>v&&Number.isInteger(v.count)&&v.count>=0&&Number.isFinite(v.mean)&&Number.isFinite(v.max);
+  $('scoreAccountingNote').textContent=validScores(completed)?'Current training phase: '+fmt(completed.count)+' completed evaluation games · mean '+fmt(completed.mean)+' · best '+fmt(completed.max)+'. Full scores count; running games enter this average when they finish. The main report’s Avg Score describes current live clients.' : '';
+  if(validScores(prior))$('scoreAccountingNote').textContent+=' Previous phase retained: '+fmt(prior.count)+' completed evaluation games · mean '+fmt(prior.mean)+' · best '+fmt(prior.max)+'. These training statistics are separate from frozen-policy comparisons.';
+
+  const evalTail=now.client_count>0&&rolesKnown&&trainingClients===0;
+  $('trainActors').textContent=fmt(trainingClients);$('evalActors').textContent=fmt(evaluationClients);
+  $('actorNote').textContent=rolesKnown?'Rates reflect '+fmt(trainingClients)+' training and '+fmt(evaluationClients)+' evaluation clients. Samples/frame uses accepted non-measurement frames; replay inserts and applied updates have separate counters.':'Active-client roles are unavailable in this snapshot.';
+  const gpuKey=Object.keys(now).find(key=>/^gpu\d+_name$/.test(key)&&String(now[key]).includes('GB300'));
+  const gpu=gpuKey?gpuKey.slice(0,-5):null;
+  const gpuBusy=gpu?now[gpu+'_util']:NaN,gpuUsed=gpu?now[gpu+'_mem_used_mib']:NaN,gpuTotal=gpu?now[gpu+'_mem_total_mib']:NaN;
+  $('gpuBusy').textContent=Number.isFinite(gpuBusy)?fmt(gpuBusy)+'%':'—';
+  $('gpuMemory').textContent=Number.isFinite(gpuUsed)&&Number.isFinite(gpuTotal)&&gpuTotal>0?(100*gpuUsed/gpuTotal).toFixed(1)+'%':'—';
+  $('training').textContent=now.training_enabled?(evalTail?'Learning active · greedy evaluation actors':'Training active'):'Training paused';
+  $('updated').textContent='Live trainer updated '+new Date(now.ts*1000).toLocaleTimeString();
+  $('frames').textContent=fmt(now.learner_frame_count);$('fps').textContent=fmt(now.fps);$('clients').textContent=fmt(now.client_count);$('steps').textContent=fmt(now.training_steps);
+  const pipeline=now.host_pipeline||{},exposure=pipeline.learning_exposure||{},replay=exposure.replay||{},optimizer=exposure.optimizer||{};
+  const currentOptimizer={ts:pipeline.elapsed_s,generation:pipeline.generation,count:(optimizer.since_epoch||{}).applied,pid:optimizer.process_id,instance:optimizer.instance_monotonic_ns,epoch:optimizer.epoch};
+  const sameOptimizer=previousOptimizer&&['pid','instance','epoch','generation'].every(key=>currentOptimizer[key]===previousOptimizer[key]);
+  const updateSeconds=previousOptimizer?currentOptimizer.ts-previousOptimizer.ts:0;
+  const appliedDelta=previousOptimizer?currentOptimizer.count-previousOptimizer.count:NaN;
+  $('appliedRate').textContent=sameOptimizer&&Number.isFinite(updateSeconds)&&updateSeconds>0&&updateSeconds<=60&&Number.isFinite(appliedDelta)&&appliedDelta>=0?(appliedDelta/updateSeconds).toFixed(1):'—';
+  previousOptimizer=currentOptimizer;
+  const currentExperience={ts:pipeline.elapsed_s,generation:pipeline.generation,apiTs:now.ts,count:replay.accepted_total,policyCount:replay.accepted_learner_total,pid:replay.process_id,instance:replay.instance_monotonic_ns,epoch:replay.epoch,rawFrames:now.frame_count-now.measurement_frames,samples:now.optimized_samples};
+  const sameExperience=previousExperience&&['pid','instance','epoch','generation'].every(key=>currentExperience[key]===previousExperience[key]);
+  const experienceSeconds=previousExperience?currentExperience.ts-previousExperience.ts:0;
+  const experienceDelta=previousExperience?currentExperience.count-previousExperience.count:NaN;
+  const policyExperienceDelta=previousExperience?currentExperience.policyCount-previousExperience.policyCount:NaN;
+  $('experienceRate').textContent=sameExperience&&experienceSeconds>0&&experienceSeconds<=60&&experienceDelta>=0?fmt(experienceDelta/experienceSeconds):'—';
+  $('policyExperienceRate').textContent=sameExperience&&experienceSeconds>0&&experienceSeconds<=60&&policyExperienceDelta>=0?fmt(policyExperienceDelta/experienceSeconds):'—';
+  const metricSeconds=previousExperience?currentExperience.apiTs-previousExperience.apiTs:0;
+  const rawFrameDelta=previousExperience?currentExperience.rawFrames-previousExperience.rawFrames:NaN;
+  const sampleDelta=previousExperience?currentExperience.samples-previousExperience.samples:NaN;
+  $('reuse').textContent=sameExperience&&sameOptimizer&&metricSeconds>0&&metricSeconds<=60&&Number.isFinite(rawFrameDelta)&&rawFrameDelta>0&&Number.isFinite(sampleDelta)&&sampleDelta>=0?(sampleDelta/rawFrameDelta).toFixed(1):'—';
+  previousExperience=currentExperience;
+  $('experienceNote').textContent=evalTail?'The surviving greedy evaluation actors still add fresh experience to training replay. The observation window excludes those inserts from its DQN/exploration target, which awaits the next round.':'Fresh replay inserts include greedy evaluation data. The observation target counts accepted DQN and exploration inserts separately. Optimizer updates may reuse stored experience.';
+  const a=p.added||{},target=p.minimum_added_each||8000000;
+  $('newFrames').textContent=fmt(a.learner_frames);$('newExperience').textContent=fmt(a.accepted_DQN_epsilon);$('updates').textContent=fmt(p.applied_updates);
+  $('bar').value=Math.max(0,Math.min(1,Math.min(a.learner_frames||0,a.accepted_DQN_epsilon||0)/target));
+  const producer=(((now.host_pipeline||{}).learning_exposure||{}).optimizer||{}).process_id;
+  const changed=p.owner&&producer&&p.owner.pid!==producer;
+  const delayed=['collecting','waiting_for_autosave'].includes(p.state)&&Date.now()/1000-p.updated_unix_s>60;
+  const states={needs_isolation:'Controlled observation stopped: an extra manual client is connected',collecting:'Collecting new experience at the unchanged lower learning rate',waiting_for_autosave:'Both targets reached; waiting for a fresh autosave',captured_CPU_verified:'Checkpoint captured and CPU-verified; frozen-policy comparison preparation is next',failed:'Window stopped; original failure retained for review'};
+  $('windowState').textContent=changed?'Window interrupted by a changed trainer process':delayed?'Window observer status delayed':p.state==='collecting'&&evalTail?'Waiting for DQN/exploration targets; greedy evaluation experience and optimizer updates continue':states[p.state]||'Observer status unavailable';
+  $('next').textContent=p.state==='needs_isolation'?'Move manual play to port9997 or close it, then start a fresh observation window':p.state==='captured_CPU_verified'?'Prepare a matched frozen-policy comparison against the protected model':'Capture and CPU-verify a checkpoint after both exposure targets are reached';
+  let candidateWarning='';
+  if(c){
+   const candidateStates={observer_starting:'Preparing a fresh candidate observer; training continues',interrupted_unknown_exit:'Candidate observer interrupted; training continues',collecting:'Next checkpoint: at least 1 hour, 5,000 optimizer updates and 1 million fresh replay inserts',waiting_for_autosave:'Checkpoint exposure targets reached; waiting for a fresh autosave',captured_CPU_verified:'Checkpoint captured and CPU-verified; frozen-policy comparison preparation is next',failed:'Candidate observer stopped; training continues and the original record is preserved',exposure_bound_inconclusive:'Checkpoint capture window ended without all targets; no candidate qualified'};
+   const candidateChanged=c.owner&&producer&&c.owner.pid!==producer;
+   const candidateDelayed=['collecting','waiting_for_autosave'].includes(c.state)&&Date.now()/1000-c.updated_unix_s>60;
+   $('next').textContent=candidateChanged?'Checkpoint window interrupted by a changed trainer process':candidateDelayed?'Checkpoint capture observer status delayed':candidateStates[c.state]||'Checkpoint capture status unavailable';
+   const ca=c.added||{};
+   const ct=c.thresholds||{applied_updates:5000,replay_inserts:1000000,elapsed_s:3600};
+   $('nextExposure').textContent=fmt(ca.applied_updates)+' / '+fmt(ct.applied_updates)+' updates · '+fmt(ca.replay_inserts)+' / '+fmt(ct.replay_inserts)+' fresh replay inserts · '+fmt(Number.isFinite(ca.elapsed_s)?ca.elapsed_s/60:NaN)+' / '+fmt(ct.elapsed_s/60)+' minimum minutes. This separate prospective rule includes greedy evaluation data; the DQN/exploration window below retains its original targets.';
+   $('candidateDetail').textContent=String(c.detail||c.reason||'');
+   let candidateETA='';
+   if(candidateChanged){candidateETA='No candidate ETA: the observer belongs to a different trainer process.';}
+   else if(candidateDelayed){candidateETA='No candidate ETA: the last observer update is '+Math.floor((Date.now()/1000-c.updated_unix_s)/60)+' minutes old. Live training continues independently.';}
+   else if(c.state==='observer_starting'){candidateETA='The new one-hour minimum starts at this observer’s own recorded anchor. Earlier partial counts are not reused.';}
+   else if(['failed','interrupted_unknown_exit'].includes(c.state)){candidateETA='No candidate qualification ETA until a fresh original observer is running. Training continues; partial observations do not qualify a checkpoint.';}
+   else if(c.state==='waiting_for_autosave'){candidateETA='Exposure targets met. Waiting for a fresh autosave and isolated CPU verification; no guaranteed finishing time.';}
+   else if(c.state==='collecting'&&[ca.elapsed_s,ca.applied_updates,ca.replay_inserts,ct.elapsed_s,ct.applied_updates,ct.replay_inserts].every(v=>Number.isFinite(v)&&v>=0)&&ca.elapsed_s>0&&ca.applied_updates>0&&ca.replay_inserts>0){
+    const remaining=Math.max(ct.elapsed_s-ca.elapsed_s,(ct.applied_updates-ca.applied_updates)/(ca.applied_updates/ca.elapsed_s),(ct.replay_inserts-ca.replay_inserts)/(ca.replay_inserts/ca.elapsed_s),0);
+    candidateETA='Roughly '+Math.ceil(remaining/60).toLocaleString()+' minutes until all capture exposure thresholds at this window’s observed rates. A fresh autosave and CPU verification are still required afterward; this is not a policy-quality verdict.';
+   }
+   $('candidateETA').textContent=candidateETA;
+   if(candidateChanged||candidateDelayed||['failed','interrupted_unknown_exit'].includes(c.state))candidateWarning='Candidate observation needs attention; live training health and actor counts are shown above.';
+  }
+  if(e&&c&&c.endpoint&&e.candidate_sha256===c.endpoint.sha256){
+   const screenStates={pending:'Frozen-policy comparison queued',review_pending:'Scoring complete; independent validation stage',unresolved:'Frozen-policy comparison needs attention; original outcome unresolved',preparing:'Preparing the fresh frozen-policy comparison',prepared_waiting_for_gpu:'Frozen-policy comparison prepared; waiting for private GPU availability',ready:'Frozen-policy comparison prepared; final launch checks pending',running:'Frozen-policy comparison running',screened:'Frozen-policy comparison independently reviewed',closed:'Frozen-policy comparison closed; independent result review pending',failed:'Frozen-policy comparison invalid; original failure preserved'};
+   $('next').textContent=screenStates[e.state]||'Frozen-policy comparison preparation needs review';
+   const deadlineText=screeningDeadlineText(e.deadline_timing||t,e);
+   $('screeningState').textContent=(e.detail||'')+(deadlineText?' '+deadlineText:'')+' Status updated '+new Date(e.updated_unix_s*1000).toLocaleTimeString()+'. Full-game confirmation remains required before promotion.';
+  }else{$('screeningState').textContent=e&&e.state==='failed'?(e.detail||'The prior comparison failed; its partial scores do not qualify.'):'';}
+  const elapsed=Math.max(1,(p.updated_unix_s||0)-(p.anchor_unix_s||0));
+  const rateF=(a.learner_frames||0)/elapsed,rateA=(a.accepted_DQN_epsilon||0)/elapsed;
+  if(p.state==='collecting'&&!changed&&!delayed&&!evalTail&&rateF>0&&rateA>0){
+   const remaining=Math.max((target-a.learner_frames)/rateF,(target-a.accepted_DQN_epsilon)/rateA,0);
+   $('eta').textContent='At this window’s average rate: about '+Math.ceil(remaining/60).toLocaleString()+' minutes to both targets. The rate changes as actors finish.';
+  }else{$('eta').textContent='Observer last updated '+new Date(p.updated_unix_s*1000).toLocaleTimeString()+'.'}
+  $('error').textContent=[changed||delayed?'The DQN/exploration window observer needs review; live actor counts above come directly from the trainer.':'',candidateWarning].filter(Boolean).join(' ');
+  if(e&&Array.isArray(e.legs)&&(e.state==='failed'||(c&&c.endpoint&&e.candidate_sha256===c.endpoint.sha256))){
+   $('screenTableTitle').textContent=e.state==='failed'?'Latest one-hour comparison: invalid':'Current one-hour screening comparison';
+   $('screenTableNote').textContent='Reviewed means include all32 games scored at the fixed cutoff, including unfinished games. Scores appear after independent review. The main report’s complete-game counts and averages describe finished games only. Full-game confirmation remains required before promotion.';
+   $('rows').replaceChildren(...e.legs.map(v=>{const tr=document.createElement('tr');for(const text of[v.leg+(v.independently_qualified?' · reviewed':' · '+String(v.phase||'queued').replaceAll('_',' ')),fmt(v.n_scored),fmt(v.n_completed),fmt(v.n_censored),fmt(v.mean_score)]){const td=document.createElement('td');td.textContent=text;tr.append(td)}return tr}));
+  }else if(!historyLoaded){const h=await get('/api/html/training-progress-history.json');$('rows').replaceChildren(...['R1','C1','R2','C2'].map(name=>{const v=h.legs[name],tr=document.createElement('tr');for(const text of[name,v.n_scored,v.n_completed,v.n_censored,fmt(v.mean_score)]){const td=document.createElement('td');td.textContent=text;tr.append(td)}return tr}));historyLoaded=true;}
+  renderNextWork(work,now);
+ }catch(error){$('error').textContent='Status update delayed; retrying. Last good values remain visible.';}
+}
+update();setInterval(update,10000);
+</script></html>

@@ -1,0 +1,14 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original06-fresh-study-namespaces-preparation/source-family-original02-unit-authority/assess_fullgame_study_v8.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-proof2s-fullgame-confirmation-original01-preparation/source-family-original01/assess_fullgame_study_v8.py
+@@ -111,8 +111,10 @@
+             and report['main_health_engine']==packet['sources']['main_health_engine']
+             and report['source_family_manifest']==subject['source_family_manifest']
+             and report['main_health_case_roles']==p.ORDER[:len(legs)+1], 'Independent original raw main-health joins differ')
++        p.require(health['proof_gap_contract']=='robotron-main-proof-gap-2s-v1'
++            and health['verified_maximum_gap_s']==2.0, 'Exact prospective2s fullgame raw proof required')
+         for key in ('raw_API_and_TCP_and_retirement_snapshots_replayed','hundred_sample_readiness_verified',
+-                    'legacy_500ms_evidence_and_projection_gaps_verified','fresh_final_sample_verified',
++                    'accepted_evidence_and_projection_gaps_verified','fresh_final_sample_verified',
+                     'actual_resources_and_exit_and_owned_release_verified'):
+             p.require(health[key]is True,'Incomplete independent original health proof: '+key)
+         worker=p.read(life['worker_job'])

@@ -1,0 +1,38 @@
+SOURCE-ONLY PROPOSAL — 2026-10-17; NOT APPLIED OR EXECUTED
+
+During the frozen320M quality campaign, root observed the dashboard mark an
+otherwise running evaluator stale while its first status file was absent
+during a normal roughly40-second cold compile. The current reader permits
+only30seconds when started_unix_s exists and does not display initialization.
+
+The proposed patch permits120seconds from the explicit leg start, only for
+the current running leg with a controller heartbeat no older than30seconds
+and no previously observed game count (including zero). A small latch scoped
+to the resolved current campaign path retains count history even when later
+valid JSON omits count; changing campaign path resets it, and pruning to the
+current at-most-four leg indices bounds it. It displays phase
+initializing. Heartbeats cannot move that fixed start deadline. Missing start,
+missing finished receipt, vanished established count or stale controller still
+fails closed. No cohort timing, evaluator, controller or training behavior changes.
+
+Base source pins:
+  Scripts/dqn/experiment_status.py
+  e7048ec8365bca60f7bd320794c635e491407b33113e37a617f06f9f9d56c237
+  Scripts/dqn/test_experiment_status.py
+  c2f4ecbd7bdc6f466ce7374bd7f9d67e53aa3530150c7a758f8a00584ec246eb
+
+experiment_status_candidate.py is a private source copy with the proposed
+reader change. unapplied.patch targets the original reader plus the existing
+test's new initializing label/explicit start. test_startup_grace.py exercises
+the private candidate with temporary files and fake clocks after release.
+
+No patch application, imports, compilation, tests, helper invocation, runtime/
+API/process/service/GPU query or numerical work was performed. Source-only
+review is not passing test evidence. Keep production/evaluator source frozen
+until root releases the current quality campaign and separately reviews this.
+
+Deployment: the live trainer already imported the reader and constructed its
+instance. Editing the source file alone will not update that instance. Validate
+and apply only after quality release, then deploy at the next independently
+justified owned restart/maintenance window. Do not restart training now for
+this display correction, and do not silently hot-reload the active reader.

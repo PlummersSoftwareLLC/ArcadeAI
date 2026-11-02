@@ -1,0 +1,34 @@
+--- reviewed-warmup/test_process_scan.py
++++ private-rehearsal/test_process_scan.py
+@@ -285,7 +285,7 @@
+         lock = json.loads((parent.HERE / 'source-lock.json').read_text())
+         old = ast.parse(Path(lock['immutable_helpers']['launcher']['source']).read_text())
+         current = ast.parse((parent.HERE / 'cuda_trace_parent.py').read_text())
+-        previous_bytes = (parent.HERE.parent / 'process_scan_revision/cuda_trace_parent.py').read_bytes()
++        previous_bytes = (parent.HERE.parents[1] / 'cuda_trace_validation_proposal/process_scan_revision/cuda_trace_parent.py').read_bytes()
+         self.assertEqual(hashlib.sha256(previous_bytes).hexdigest(),
+                          '38fab41957a4b3ff53f878f477e18b741497e34b4836fcde444aa4c1be851abe')
+         storage = ast.parse(previous_bytes)
+@@ -333,9 +333,10 @@
+         self.assertEqual(result['status'], 'PLAN_ONLY_UNEXECUTED')
+         self.assertFalse(result['runtime_queries'])
+         self.assertEqual(parent.GAME, Path(__file__).parents[4])
+-        self.assertEqual(parent.VARIANTS, ('base_a', 'base_repeat', 'off'))
+-        self.assertEqual(result['attempts'], 0)
+-        self.assertEqual(result['warmup_cases'], 4)
++        self.assertEqual(parent.VARIANTS, ('capture', 'recompute'))
++        self.assertEqual(result['attempts'], 1)
++        self.assertEqual(result['compiled_loss_outputs'], 4)
++        self.assertEqual(result['offline_outputs'], 5)
+         self.assertFalse(result['qualification_pass'])
+         self.assertEqual(parent.BOUNDS, dict(cpu_threads=2, memory_bytes=16 * (1 << 30),
+             vram_allocator_bytes=12 * (1 << 30), vram_process_bytes=13 * (1 << 30),
+@@ -343,7 +344,7 @@
+             phase_timeout_s=180, total_timeout_s=600))
+         lock_bytes = (parent.HERE / 'source-lock.json').read_bytes()
+         self.assertEqual(hashlib.sha256(lock_bytes).hexdigest(),
+-                         '20057c290b1a9f121a03dfb5e81d33c67170a2d51807c0c149e295f393fa359e')
++                         '28870c3cf7594cc0ac8f73eb3760e3665d5d4448668f4bf9010268427ec80dd3')
+         lock = json.loads(lock_bytes)
+         frozen = lock['frozen_science_helpers']
+         self.assertEqual(frozen['sha256'],

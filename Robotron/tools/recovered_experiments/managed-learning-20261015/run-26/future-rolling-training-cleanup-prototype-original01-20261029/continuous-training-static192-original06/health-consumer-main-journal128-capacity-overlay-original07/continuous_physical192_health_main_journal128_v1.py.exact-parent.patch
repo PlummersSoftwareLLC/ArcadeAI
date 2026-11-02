@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_health_v5.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_health_main_journal128_v1.py
+@@ -253,7 +253,7 @@
+         offset+=len(line)
+     require(set(old)<=set(entries)|{slot for slot,_,_ in new},'Original EVAL retirement journal lost a prior row')
+     if new:
+-        main_raw,main_id=read_producer_prefix(main,16<<20)
++        main_raw,main_id=read_producer_prefix(main,128<<20)
+         for slot,line,retirement_offset in new:
+             at=main_raw.find(line)
+             require(at>=0 and main_raw.find(line,at+1)<0 and (at==0 or main_raw[at-1:at]==b'\n'),

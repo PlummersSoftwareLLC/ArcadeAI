@@ -53,6 +53,13 @@ LATEST_MODEL_PATH = os.path.join(MODEL_DIR, "robotron_dqn_latest.pt")
 # the time the 2026-07-05 LR-restart collapse was diagnosed — never again).
 BEST_MODEL_PATH = os.path.join(MODEL_DIR, "robotron_dqn_best.pt")
 SETTINGS_PATH = os.path.join(MODEL_DIR, "game_settings.json")
+try:
+    from .learning_control import LearningControl
+except ImportError:
+    from learning_control import LearningControl
+learning_control = LearningControl(os.getenv("ROBOTRON_DQN_CONTROL_PATH")
+                                   or os.path.join(MODEL_DIR, "learning_control.json"))
+
 
 # ---------------------------------------------------------------------------
 #  Wire / state-slice geometry
@@ -434,7 +441,7 @@ def slice_model_state(wire) -> np.ndarray:
 class ServerConfigData:
     host: str = "0.0.0.0"
     port: int = 9998
-    max_clients: int = 36
+    max_clients: int = 128
     wire_params_count: int = WIRE_PARAMS_COUNT
 
 SERVER_CONFIG = ServerConfigData()
@@ -585,7 +592,7 @@ class RLConfigData:
     # cross-entropy away from zero (~0.095 at 0.01).  Prevents the critic's
     # distributions collapsing to deltas and the TD gradient starving to
     # nothing (the 415K→210K sag of 2026-07-19).  0 disables.
-    c51_target_smoothing: float = 0.01
+    c51_target_smoothing: float = float(os.getenv("DQN_C51_TARGET_SMOOTHING", "0.01"))
 
     # EMA smoothing for the live Q diagnostics (Q-Range + OvEst overestimation
     # gauge).  Applied once per training step, so alpha=0.002 → time constant
@@ -599,11 +606,17 @@ class RLConfigData:
     use_dueling: bool = True
 
     # ── training ────────────────────────────────────────────────────────
-    # Net is tiny (~779k params); the GPU is far from saturated at 768, so a
-    # larger batch raises samples/sec (and Rpl/F) at near-zero extra wall-time.
-    # Keep sampling/transfers inline: pinned-memory or background CUDA host work
-    # re-enables the GIL in the free-threaded Torch build and tanks MAME FPS.
-    batch_size: int = 512
+    # The GB300 launcher selects the measured batch size and uses bounded
+    # asynchronous pinned staging on the free-threaded runtime (-Xgil=0).
+    batch_size: int = int(os.getenv("DQN_BATCH_SIZE", "512"))
+    compile_full_loss: bool = os.getenv("DQN_FULL_LOSS_COMPILE", "1") == "1"
+    optimizer_fused: bool = os.getenv("DQN_FUSED_ADAM", "1") == "1"
+    baseline_batch_size: int = 512
+    diagnostic_interval: int = int(os.getenv("DQN_DIAGNOSTIC_INTERVAL", "20"))
+    replay_prefetch: bool = os.getenv("DQN_REPLAY_PREFETCH", "1") == "1"
+    replay_direct_state_fill: bool = os.getenv("DQN_DIRECT_REPLAY_FILL", "0") == "1"
+    replay_prefetch_slots: int = 3
+    torch_compile_mode: str = os.getenv("DQN_COMPILE_MODE", "default")
     # ── LR GEARBOX (2026-07-19): the reproduction protocol, automated ───
     # The 1.68M lineage's recipe, verified end to end:
     #   1. From frame 0, CLIMB gear (hot LR) drives the curriculum ramp —
@@ -639,12 +652,12 @@ class RLConfigData:
     # re-annealed, leaving nothing to recover from. Cosine-to-floor, then flat.
     lr_use_restarts: bool = False
     gamma: float = 0.995
-    n_step: int = 16
+    n_step: int = int(os.getenv("DQN_N_STEP", "16"))
     # Replay-pressure cap: steps/s <= max_samples_per_frame * FPS / batch_size.
     # This is the binding constraint on steps/s, NOT GPU speed — the v18 model
     # is ~30% cheaper per step, so convert that headroom into more gradient
     # steps per unit of experience (20 -> 32 ≈ FPS/32 steps/s).
-    max_samples_per_frame: float = 32
+    max_samples_per_frame: float = float(os.getenv("DQN_MAX_SAMPLES_PER_FRAME", "32"))
 
     # Replay (PER with proportional priorities).  The grouped-object representation is
     # wider than the old compact lane slice: state/next_state alone cost about
@@ -673,6 +686,14 @@ class RLConfigData:
     priority_beta_start: float = 0.4
     priority_beta_frames: int = 10_000_000
     priority_eps: float = 1e-6
+    # Static startup choice: changing metric requires an explicit phase and restart.
+    per_priority_metric: str = os.getenv("DQN_PER_PRIORITY_METRIC", "ce").strip().lower()
+    # Fixed proposal validity bounds, NOT old CE-comparison tolerances. Changing
+    # either requires a new reviewed protocol; no post-failure tuning.
+    per_kl_target_mass_atol: float = 1e-5
+    per_kl_signed_negative_atol: float = 1e-5
+    if per_priority_metric not in ("ce", "kl"):
+        raise ValueError("DQN_PER_PRIORITY_METRIC must be ce or kl")
     per_new_priority_cap_multiplier: float = 3.0
     # 10K -> 500K (2026-07-17): training on a ~90-second buffer after a ring
     # wipe (thousands of updates on correlated data with fresh Adam) deformed
@@ -1258,8 +1279,8 @@ class RLConfigData:
     # back in with DQN_TORCH_COMPILE=1 (revisit after a PyTorch upgrade).
     use_torch_compile: bool = os.getenv("DQN_TORCH_COMPILE", "0").strip().lower() not in ("0", "false", "no", "off")
     inference_on_cpu: bool = False         # agent falls back to CPU if no CUDA
-    train_cuda_device_index: int = 0
-    inference_cuda_device_index: int = 1
+    train_cuda_device_index: int = int(os.getenv("ROBOTRON_TRAIN_GPU", "0"))
+    inference_cuda_device_index: int = int(os.getenv("ROBOTRON_INFERENCE_GPU", "0"))
     # 5 -> 50 (2026-07-15): PERF FIX cherry-picked onto the 415K-era code, NOT a
     # learning change.  Every sync now forces a GPU queue drain (see the event
     # fix in agent._sync_inference); at every-5-steps that drain fires 10x more
@@ -1270,13 +1291,12 @@ class RLConfigData:
     inference_batching_enabled: bool = True
     inference_batch_max_size: int = 128
     inference_batch_wait_ms: float = 1.0
-    # How long a handler waits for the batcher before solo-inferring.  Was a
-    # hardcoded 50ms — short enough that one boot-time stall tipped all 32
-    # handlers into permanent solo fallback (each timed-out request was ALSO
-    # still batched: double inference, self-sustaining ~104ms stampede,
-    # 2026-07-13).  Waiting out a transient stall in the batched path is
-    # nearly always cheaper than defecting to a solo-call convoy.
-    inference_request_timeout_ms: float = 250.0
+    # One absolute deadline for queue admission plus batched inference. Expiry
+    # closes the client; there is no solo fallback or neutral-action success.
+    # Strict 250ms caused frequent reconnects with 128 actors. Allow 3s for
+    # transient stalls, retaining nominal 0.5s headroom under Lua's 3.5s
+    # whole-roundtrip timeout. Other handler work also consumes that headroom.
+    inference_request_timeout_ms: float = 3000.0
 
     # ── background training ─────────────────────────────────────────────
     training_steps_per_cycle: int = 16
@@ -1499,6 +1519,8 @@ class MetricsData:
     learner_frame_count: int = 0
     total_controls: int = 0
     total_training_steps: int = 0
+    total_optimized_samples: int = 0
+    loaded_optimized_samples: int = 0
     memory_buffer_size: int = 0
     client_count: int = 0
     web_client_count: int = 0
@@ -1587,6 +1609,7 @@ class MetricsData:
     last_priority_mean: float = 0.0
     last_agreement: float = 0.0
     last_train_sample_ms: float = 0.0
+    last_train_stage_host_ms: float = 0.0
     last_train_transfer_ms: float = 0.0
     last_train_compute_ms: float = 0.0
     last_train_priority_ms: float = 0.0
@@ -1726,6 +1749,8 @@ class MetricsData:
 
     def update_learner_frame_count(self, delta: int = 1):
         with self.lock:
+            if getattr(self, 'measurement_active', False):
+                return
             self.learner_frame_count += max(0, int(delta))
 
     def note_replay_drop(self, n: int = 1):
@@ -1787,6 +1812,11 @@ class MetricsData:
                 self.peak_game_score = int(score)
             self._push_score_1m_locked(float(score))
             if level is not None and int(score) > 0:
+                # Keep transient accepted-frame peaks even though the live
+                # fleet-average scan is limited to one update per250ms.
+                level_int = int(level)
+                if level_int >= 0 and level_int > self.peak_level:
+                    self.peak_level = level_int
                 self._push_level_1m_locked(float(level))
             if score_delta is not None:
                 self.rscr_bucket_frames += 1
@@ -1891,7 +1921,7 @@ class MetricsData:
 
     def get_effective_epsilon(self) -> float:
         with self.lock:
-            if self.ratchet_frozen:
+            if self.ratchet_frozen or getattr(self, 'measurement_active', False):
                 return 0.0          # measurement protocol: pure greedy
             # Hard floor on every non-measurement path: the 2026-07-22
             # collapse ran 787M frames at a UI-pinned 0% with no recovery
@@ -1907,10 +1937,11 @@ class MetricsData:
     @staticmethod
     def _natural_epsilon_for_learner_frame(learner_frame_count: int) -> float:
         progress = min(1.0, learner_frame_count / max(1, RL_CONFIG.epsilon_decay_frames))
-        return RL_CONFIG.epsilon_start + progress * (RL_CONFIG.epsilon_end - RL_CONFIG.epsilon_start)
+        natural = RL_CONFIG.epsilon_start + progress * (RL_CONFIG.epsilon_end - RL_CONFIG.epsilon_start)
+        return learning_control.epsilon(learner_frame_count, natural)
 
     def _effective_expert_ratio_locked(self) -> float:
-        if self.ratchet_frozen:
+        if self.ratchet_frozen or getattr(self, 'measurement_active', False):
             return 0.0              # measurement protocol: no bot frames
         xp = game_settings.expert_pct
         if xp >= 0:
@@ -1919,7 +1950,7 @@ class MetricsData:
 
     def update_epsilon(self, frames_advanced: int = 1):
         with self.lock:
-            if self.manual_epsilon_override:
+            if self.manual_epsilon_override or getattr(self, 'measurement_active', False):
                 return self.epsilon
             base = self._natural_epsilon_for_learner_frame(int(self.learner_frame_count))
             # While the expert still drives a meaningful share of frames, hold a
@@ -1949,7 +1980,7 @@ class MetricsData:
             if self.expert_mode or self.override_expert or self.manual_expert_override:
                 return self.expert_ratio
             start_step = int(getattr(RL_CONFIG, "expert_ratio_decay_start_step", 0))
-            ts = int(self.total_training_steps)
+            ts = (self.total_optimized_samples / RL_CONFIG.baseline_batch_size) if self.total_optimized_samples else int(self.total_training_steps)
             if ts <= start_step:
                 progress = 0.0
             else:
@@ -2122,7 +2153,7 @@ class MetricsData:
         with self.lock:
             self.manual_expert_override = False
             start_step = int(getattr(RL_CONFIG, "expert_ratio_decay_start_step", 0))
-            ts = int(self.total_training_steps)
+            ts = (self.total_optimized_samples / RL_CONFIG.baseline_batch_size) if self.total_optimized_samples else int(self.total_training_steps)
             if ts <= start_step:
                 progress = 0.0
             else:

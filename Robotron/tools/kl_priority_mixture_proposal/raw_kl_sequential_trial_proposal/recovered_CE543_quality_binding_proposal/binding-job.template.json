@@ -1,0 +1,120 @@
+{
+  "schema": "robotron-recovered-CE543-candidate-quality-bindings-v1",
+  "experiment": "best10M-fresh3-eps10-cap8-nosmooth",
+  "candidate": null,
+  "reference": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-incumbents/freshCE-543M-confirmed.pt",
+    "sha256": "8b86546355ade166937a8287a008c7854276ed773a103eb815287dde00d6fb7e",
+    "bytes": 275192614,
+    "metadata": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-incumbents/freshCE-543M-confirmed.pt.json",
+      "sha256": "b080f538f84e9c76739b9d142a2065a55d1292c3dbdcb01806003a14339956d5",
+      "bytes": 285284,
+      "identity": {
+        "device": 2304,
+        "inode": 79991769,
+        "bytes": 285284,
+        "mtime_ns": 1792258685902039522,
+        "ctime_ns": 1792258685905567023,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "evidence": {
+    "capture_result": null,
+    "phase_cpu_job": null,
+    "phase_cpu_report": null,
+    "phase_cpu_completion": null
+  },
+  "current_ce_phase": null,
+  "runtime_baseline": null,
+  "runtime_anchor": null,
+  "previous_campaign": {
+    "closure": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-quality-terminal-closure-root-reviewed1-20261017/cleanup-receipt.json",
+      "sha256": "58834fa0cb661b3a649eae0779a9f03bebd519276fdf6f045e3b25201c84ed9e",
+      "bytes": 14897,
+      "identity": {
+        "device": 2304,
+        "inode": 81016068,
+        "bytes": 14897,
+        "mtime_ns": 1792258503821019083,
+        "ctime_ns": 1792258503821019083,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "source_freeze_release": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-quality-root-freeze-release-20261017/root-explicit-source-freeze-release.json",
+      "sha256": "c1abbbb5da36836830a367c6f4a165d890ee550120a79014d1d6aa8ca2191f2a",
+      "bytes": 3184,
+      "identity": {
+        "device": 2304,
+        "inode": 81016078,
+        "bytes": 3184,
+        "mtime_ns": 1792258587574945779,
+        "ctime_ns": 1792258587574945779,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "publication": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-protected-publication-original-root-execution-20261017/root-protected-readback.json",
+      "sha256": "ea74c5eb0c6a1cd3dedbf3cb3236912d375e6f82f0443db92fcb7e0f404caeef",
+      "bytes": 2312,
+      "identity": {
+        "device": 2304,
+        "inode": 81016096,
+        "bytes": 2312,
+        "mtime_ns": 1792258686083046460,
+        "ctime_ns": 1792258686083046460,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "adoption": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-managed-incumbent-adoption-root-20261017/root-promotion-and-goal-continuation-receipt.json",
+      "sha256": "bfe5c1d327dc5eaaac7335bba2cf5faa2ed0dec4802d4b8e2e3f02a57efb0972",
+      "bytes": 5722,
+      "identity": {
+        "device": 2304,
+        "inode": 81035980,
+        "bytes": 5722,
+        "mtime_ns": 1792259253467613562,
+        "ctime_ns": 1792259253467613562,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "predecessor_quality_plan": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-448M-vs-CE543M-20261017/plan.json",
+    "sha256": "25aaded11bf956b715cc5fb58be1901d236a30444e74253594461f8d11c00d75",
+    "bytes": 276625,
+    "identity": {
+      "device": 2304,
+      "inode": 81006687,
+      "bytes": 276625,
+      "mtime_ns": 1792252160703487369,
+      "ctime_ns": 1792252160705487377,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "campaign": {
+    "output_directory": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-CE543M-vs-postRecoveryCE-candidate02-20261017",
+    "preview_directory": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/postRecoveryCE-candidate02-quality-default-preview-20261017",
+    "execution_directory": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/postRecoveryCE-candidate02-quality-original-execution-20261017",
+    "unit": "robotron-quality-CE543M-vs-postRecoveryCE-candidate02-20261017",
+    "reference_label": "protected-CE543M",
+    "candidate_label": "postRecoveryCE-candidate02",
+    "hypothesis": "Additional learning since the protected543M policy improves full-game frozen-policy quality. Mixed failed2048 startup ancestry is retained; no causal batch-size claim."
+  }
+}

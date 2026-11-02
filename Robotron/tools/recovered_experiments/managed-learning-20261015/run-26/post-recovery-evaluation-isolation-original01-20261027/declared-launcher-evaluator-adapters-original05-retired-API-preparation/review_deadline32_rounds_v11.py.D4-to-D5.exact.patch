@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original04-mmap-preparation/review_deadline32_rounds_v11.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original05-retired-API-preparation/review_deadline32_rounds_v11.py
+@@ -33,7 +33,7 @@
+ 
+ def round_contract():
+     path=Path(__file__).with_name('deadline_round_contract_v11.py')
+-    return load(dict(path=str(path),sha256='cdafb1a0c417a697e1232ca7be7d21bd0652dbf7cfc949cbd8bb12c913f079c3'),'_deadline_round_review_contract')
++    return load(dict(path=str(path),sha256='4823f5e7c4fda5491a19f96be0bdf401b04a47b05da1642f3cb23ef1093bddaa'),'_deadline_round_review_contract')
+ 
+ def review_health(review,job,jp,result,owner,cfg,started,ended,family,protocol,read,h):
+     contract=round_contract()

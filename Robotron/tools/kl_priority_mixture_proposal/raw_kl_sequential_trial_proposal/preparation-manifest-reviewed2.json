@@ -1,0 +1,183 @@
+{
+  "actual_first_run": {
+    "all_observed_errors": "KeyError: 'totals' in test-only snapshot lookups",
+    "artifact_bindings": {
+      "root-original-terminal-archive.json": {
+        "bytes": 1216,
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/optional-rawKL-CPU-tests-root-execution-reviewed1-20261017/root-original-terminal-archive.json",
+        "sha256": "a87781cfa203be20d9525f7417a84c98510f1617b8aba795c18c1053fdeb7a34"
+      },
+      "root-result-review-and-release.json": {
+        "bytes": 219,
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/optional-rawKL-CPU-tests-root-execution-reviewed1-20261017/root-result-review-and-release.json",
+        "sha256": "216a02ef7c1c59b9c24e76656660bed260be878a77ef6ceb6fe79ae27fe80b5e"
+      },
+      "stderr.txt": {
+        "bytes": 21293,
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/optional-rawKL-CPU-tests-root-execution-reviewed1-20261017/stderr.txt",
+        "sha256": "f2868586df02ad602d53fb70b27839a7c9f48f3db64973cab438bed466d21ed0"
+      }
+    },
+    "not_a_scientific_or_efficacy_PASS": true,
+    "original_exit": 1,
+    "original_failure_preserved": true,
+    "original_invocation": "9939ce984afe4ed99b0ed60ce416a8fc",
+    "original_pid": 142173,
+    "status": "FAILED",
+    "subtest_errors": 17,
+    "test_methods": 21
+  },
+  "author_actions": {
+    "candidate_imports_compile_tests_numerics_PT_or_runtime": false,
+    "new_companion_patch_manifest_only": true,
+    "stdlib_source_and_saved_test_log_reads_only": true
+  },
+  "correction": {
+    "actual_counter_keys": [
+      "attempts_started",
+      "outcomes_recorded",
+      "applied",
+      "amp_skipped",
+      "unavailable"
+    ],
+    "actual_return_fields": "total and since_epoch; singular total contains the process-local counters. available may be false initially/inflight, not asserted as a failure.",
+    "actual_snapshot_schema": "robotron-optimizer-exposure-v1",
+    "actual_source_dependency": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/learning_exposure.py",
+      "sha256": "30d9191e9fc845d80e52a7a891244fcf0c7041cf60529f6559b15e6d47ac5c7f"
+    },
+    "algorithm_objective_guard_threshold_or_production_changes": false,
+    "correct_expression": "snapshot()[\"total\"]",
+    "old_expression": "snapshot()[\"totals\"]",
+    "sites": 5
+  },
+  "created_utc": "2026-10-17T09:37:03.087066+00:00",
+  "future_explicit_test_selection": {
+    "CUDA_VISIBLE_DEVICES": "",
+    "ROBOTRON_ALLOW_PRIORITY_CPU": "1",
+    "corrected_run_result": null,
+    "execution_owner": "root",
+    "fresh_process": true,
+    "methods": 21,
+    "no_broad_discovery": true,
+    "test_priority_phase": [
+      "PhaseContracts"
+    ],
+    "test_priority_routes_reviewed2": [
+      "PriorityRouteTests",
+      "StaticDefaultContracts"
+    ]
+  },
+  "new_files": {
+    "fixture-access-reviewed2.patch": {
+      "bytes": 3432,
+      "mode": "0o444",
+      "sha256": "c951dfe04e3981dbedda545c4d2bee05c032d835916f19510291f2ee3b3f48a2"
+    },
+    "test_priority_routes_reviewed2.py": {
+      "bytes": 19565,
+      "mode": "0o444",
+      "sha256": "5d089b95e0c2f7f592c9bd636703cfb47c8d2404193aae9d658ef42e630ea002"
+    }
+  },
+  "remaining_limits": "Corrected tests have not been imported, syntax-compiled or executed by author. No actual4096 CUDA/native optimizer route or live treatment qualification;448 quality continues unchanged.",
+  "same_five_scientific_source_files": {
+    "agent.py": {
+      "bytes": 98429,
+      "mode": "0o444",
+      "sha256": "865a0df717b39951b7f7c516e4a962e3d48cf4d3dc11295ff266e58653e6c74b"
+    },
+    "config.py": {
+      "bytes": 117528,
+      "mode": "0o444",
+      "sha256": "19abcbde4d08cf8465b82185ac6dd52eb8965adb8611584e0677c4c7ff21d1fd"
+    },
+    "loss_kernel.py": {
+      "bytes": 9373,
+      "mode": "0o444",
+      "sha256": "23eb8fc0d8409c9f31ef26ec4596da9c2257e3985abbbfa7d5fbdcb337e21f67"
+    },
+    "priority_phase.py": {
+      "bytes": 8049,
+      "mode": "0o444",
+      "sha256": "ee3c0d02bc1eab55e92ffd605c3736fe5a0ef905a8a8ee242c687301ea2b7c5b"
+    },
+    "training.py": {
+      "bytes": 35009,
+      "mode": "0o444",
+      "sha256": "90b847856f810cb4f52513a4bd0625b2d15d4801107bff398060faae25bc4be4"
+    }
+  },
+  "schema": "robotron-optional-raw-kl-fixture-correction-reviewed2-v1",
+  "source_peer_review": "Pending separate narrow companion/source API review.",
+  "status": "SOURCE_ONLY_FIXTURE_CORRECTION_UNEXECUTED",
+  "supersedes_test_selection_only": {
+    "old_manifest": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/preparation-manifest.json",
+      "sha256": "1144139f168292b7c0648fcc76d24a945d7d7f295ec14d5f304f70d5ca5dfe11"
+    },
+    "original_bundle_immutable": true,
+    "original_test": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/test_priority_routes.py",
+      "sha256": "b8e0bbadb9168a7d889e09ed62808faeffd6adddfcd1a74ae954d87f7f47c07a"
+    },
+    "original_test_must_not_be_discovered_with_companion": true
+  },
+  "unchanged_original_bundle_pins": {
+    "PREPARATION.txt": {
+      "bytes": 7555,
+      "mode": "0o444",
+      "sha256": "a05581812e8cf3bf78a08f3086065c5ed40dd38f2005ac6f71ac92c6c6bec655"
+    },
+    "agent.py": {
+      "bytes": 98429,
+      "mode": "0o444",
+      "sha256": "865a0df717b39951b7f7c516e4a962e3d48cf4d3dc11295ff266e58653e6c74b"
+    },
+    "config.py": {
+      "bytes": 117528,
+      "mode": "0o444",
+      "sha256": "19abcbde4d08cf8465b82185ac6dd52eb8965adb8611584e0677c4c7ff21d1fd"
+    },
+    "loss_kernel.py": {
+      "bytes": 9373,
+      "mode": "0o444",
+      "sha256": "23eb8fc0d8409c9f31ef26ec4596da9c2257e3985abbbfa7d5fbdcb337e21f67"
+    },
+    "phase-record.template.json": {
+      "bytes": 355,
+      "mode": "0o444",
+      "sha256": "f06dd1a94b61da3ce83608065711d199eae4260345677380cf30c78586e5a8b2"
+    },
+    "priority_phase.py": {
+      "bytes": 8049,
+      "mode": "0o444",
+      "sha256": "ee3c0d02bc1eab55e92ffd605c3736fe5a0ef905a8a8ee242c687301ea2b7c5b"
+    },
+    "source-lock.json": {
+      "bytes": 2193,
+      "mode": "0o444",
+      "sha256": "ea5cb58cee4c2a7b2ab3da0af39efca95fe18119cc3a28398889ebacf24a68d9"
+    },
+    "test_priority_phase.py": {
+      "bytes": 6716,
+      "mode": "0o444",
+      "sha256": "d39a8cf68d42c29e931f1aa65e15ac7a5217501b7a65cf9277987f2820fdeada"
+    },
+    "test_priority_routes.py": {
+      "bytes": 19570,
+      "mode": "0o444",
+      "sha256": "b8e0bbadb9168a7d889e09ed62808faeffd6adddfcd1a74ae954d87f7f47c07a"
+    },
+    "training.py": {
+      "bytes": 35009,
+      "mode": "0o444",
+      "sha256": "90b847856f810cb4f52513a4bd0625b2d15d4801107bff398060faae25bc4be4"
+    },
+    "unapplied.patch": {
+      "bytes": 29054,
+      "mode": "0o444",
+      "sha256": "0512fc6b0c80642da7dddffa4737d2fb084b22a49ff42aab957cab1caddf5d44"
+    }
+  }
+}

@@ -1,0 +1,80 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/posttrial-slot163-authorities-and-readonly-reconciliation-original01/prepare_slot163_readonly_reconciliation_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/posttrial-slot163-authorities-and-readonly-reconciliation-original02-guard-corrections/prepare_slot163_readonly_reconciliation_v2.py
+@@ -71,7 +71,13 @@
+     old = facts['prior_binding']; policy = read(old['supervision_policy'])
+     before = facts['before_snapshot']; after = facts['after_old_birth_probe_snapshot']
+     ready = facts['new_registry_snapshot']; first_api, last_api = facts['before_API'], facts['after_API']
+-    require(len(old['held_hashes']) >= 197, 'Original held source set missing')
++    require(len(old['held_hashes']) == 197, 'Exact original197 held sources required')
++    require(all(type(pin) is dict and type(pin.get('path')) is str
++                for pin in plan['extra_pins'].values()), 'Exact extra source paths required')
++    extra_paths = [pin['path'] for pin in plan['extra_pins'].values()]
++    require(len(extra_paths) == len(set(extra_paths)) == 10
++            and set(extra_paths).isdisjoint(old['held_hashes']),
++            'Ten DISTINCT extra source paths disjoint from original197 required')
+     base.validate_snapshot(policy, before, first_api['client_count'])
+     wanted = {str(slot) for slot in range(192)}
+     require(set(after['actors']) == set(ready['actors']) == wanted
+@@ -146,7 +152,7 @@
+         require(pin['path'] not in old['held_hashes'] or old['held_hashes'][pin['path']] == pin['sha256'],
+                 'Old held input would be rewritten')
+         held[pin['path']] = pin['sha256']
+-    require(len(held) > len(old['held_hashes'])
++    require(len(held) == 207
+             and all(held[path] == sha for path, sha in old['held_hashes'].items()),
+             'All original197+ holds must remain and new installed sources be explicit')
+     new_policy = copy.deepcopy(policy)
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/posttrial-slot163-authorities-and-readonly-reconciliation-original01/posttrial_slot163_output_authority_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/posttrial-slot163-authorities-and-readonly-reconciliation-original02-guard-corrections/posttrial_slot163_output_authority_v2.py
+@@ -21,6 +21,34 @@
+ def require(value, message):
+     if not value:
+         raise ValueError(message)
++
++
++def validate_private_claim_directory(directory):
++    """Restore b5's exact four-key identity, plus canonical directory/nlink2.
++
++    Keeping this identity ABI unchanged lets reserve_once recheck the same
++    dev/inode/mode/uid on its O_NOFOLLOW directory fd. nlink2 is checked here
++    and again by the parent callback after the atomic claim, before exec.
++    """
++    require(type(directory) is dict and set(directory) == {'path', 'identity'}
++            and type(directory['path']) is str and type(directory['identity']) is dict,
++            'Exact private claim-directory schema required')
++    expected = directory['identity']
++    require(set(expected) == {'device', 'inode', 'mode', 'uid'}
++            and type(expected['device']) is int and expected['device'] > 0
++            and type(expected['inode']) is int and expected['inode'] > 0
++            and type(expected['uid']) is int and expected['uid'] == os.getuid()
++            and expected['mode'] == '0o700', 'Private0700 owned claim identity required')
++    path = Path(directory['path'])
++    require(path.is_absolute() and str(path) == directory['path']
++            and '..' not in path.parts and path.resolve(strict=True) == path,
++            'Canonical nonsymlink claim directory required')
++    observed = path.lstat()
++    require(stat.S_ISDIR(observed.st_mode) and observed.st_nlink == 2
++            and dict(device=observed.st_dev, inode=observed.st_ino,
++                     mode=oct(stat.S_IMODE(observed.st_mode)), uid=observed.st_uid) == expected,
++            'Actual private claim-directory identity/nlink differs')
++    return directory
+ 
+ 
+ def validate_authority(authority, read, base):
+@@ -88,6 +116,7 @@
+                 and selection['closed_trial_outcome'] is not None
+                 and selection['explicit_rollback_selected'] is True,
+                 'Rollback requires separate closed-trial authority and NEW one-use directory')
++        validate_private_claim_directory(authority['claim_directory'])
+         outcome = read(selection['closed_trial_outcome'])
+         require(outcome['schema'] == 'robotron-root-closed-slot163-preview-trial-outcome-v1'
+                 and outcome['prior_owned_process'] == authority['prior_actor']
+@@ -131,6 +160,8 @@
+     def parent_check():
+         # Deliberately use the NEW authority's output identity, not read_permit
+         # from v2 (which binds the original INPUT census actor2258553).
++        if authority['mode'] == ROLLBACK:
++            validate_private_claim_directory(authority['claim_directory'])
+         observed = fuse.verify_parent(authority, collector)
+         observed['prior_owned_output_identity'] = dict(pid=authority['prior_actor']['pid'],
+                     starttime_ticks=authority['prior_actor']['starttime_ticks'])

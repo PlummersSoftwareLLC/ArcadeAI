@@ -1,0 +1,31 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/immutable-bootstrap-live-pidfd-quiescence-engineering-original04-preparation/probe_physical192_engineering_v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/quiescence-readiness120-engineering-original05-preparation/probe_physical192_engineering_v5.py
+@@ -8,7 +8,7 @@
+ import time
+ 
+ ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+-INVENTORY_SHA = 'cce755775dfa8134a446b0d42d3a13bf96bcca23257fc92b8798622bee2a7b2e'
++INVENTORY_SHA = '4c503e5aabc29b1059edc8d5e29719392d5d591806928e521ec0aaca4264881b'
+ 
+ 
+ def load(name, path):
+@@ -32,16 +32,16 @@
+         'health_base': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_health_v5.py')),
+         'health': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_transport_v5.py')),
+         'worker': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/observe_continuous_physical192_v5.py')),
+-        'client': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_observer_client_v5.py')),
++        'client': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-quiescence-readiness120-overlay-original06/continuous_physical192_observer_client_readiness120_v1.py')),
+         'durability': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/buffered_raw_writer_v2.py')),
+         'control': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/volatile_live_control_v1.py')),
+         'interpreter': h.pin(Path('/usr/bin/python3.12')),
+     }
+-    expected_source_sha = {'registry': '8cc5340708a73ffb97b16be4b96e72b3d5560ee0b371b7ffd8d67c4074cf76b4', 'health_base': '3818916a5921cb6b66d50249dd4266aa710b396c6169a6cad5d17257519fdda1', 'health': '46e2e8c8435bcd644738f819a6cff8605ab68e2fb3b989a3acb9926d11623c83', 'worker': '39880853e6e04df59a666be020b6b26f2d7946cfcbe8dfbeb66856e9b240ef10', 'client': '1049fcba433abb9df6490a01fd228001ca9aa15f442e4bfc52041c1d153ea0be', 'durability': '5dbeb347474dd9289ae18a2de0c438820f535fa9d75badaa3cfbf82dff6c1aa5', 'control': 'a2ce55471f7ff14490553cf05871e79a0ff15c925d01441065821b0f95daade8', 'interpreter': 'c86f21d0da9290ece2d7d49a3f7ed52aed59cb029abdf0ea25c79634f6cbe960'}
++    expected_source_sha = {'registry': '8cc5340708a73ffb97b16be4b96e72b3d5560ee0b371b7ffd8d67c4074cf76b4', 'health_base': '3818916a5921cb6b66d50249dd4266aa710b396c6169a6cad5d17257519fdda1', 'health': '46e2e8c8435bcd644738f819a6cff8605ab68e2fb3b989a3acb9926d11623c83', 'worker': '39880853e6e04df59a666be020b6b26f2d7946cfcbe8dfbeb66856e9b240ef10', 'client': '82e5e02e49c853355fd0bf1dd4839efdb498a8f798dbf08e3c7a72703778cbec', 'durability': '5dbeb347474dd9289ae18a2de0c438820f535fa9d75badaa3cfbf82dff6c1aa5', 'control': 'a2ce55471f7ff14490553cf05871e79a0ff15c925d01441065821b0f95daade8', 'interpreter': 'c86f21d0da9290ece2d7d49a3f7ed52aed59cb029abdf0ea25c79634f6cbe960'}
+     assert set(sources) == set(expected_source_sha) and all(sources[k]['sha256'] == v for k,v in expected_source_sha.items())
+     reviewer_pin = h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/review_continuous_physical192_observer_v5.py'))
+     assert reviewer_pin['sha256'] == '30ea4d2eb6d97b5ccbd04e262f7b4c45e47af268f7644f7893ad88deba47a133'
+-    profile_path = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/prepare_current_eval_quiescence_case_v5.py')
++    profile_path = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-quiescence-readiness120-overlay-original06/prepare_quiescence_readiness120_case_overlay_v1.py')
+     assert hashlib.sha256(profile_path.read_bytes()).hexdigest() == INVENTORY_SHA
+     profile = load('_static_engineering_inventory', profile_path)
+     binding = json.loads(h.checked(case).read_bytes())

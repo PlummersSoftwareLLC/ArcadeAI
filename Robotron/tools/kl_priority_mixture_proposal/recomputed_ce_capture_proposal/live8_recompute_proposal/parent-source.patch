@@ -1,0 +1,311 @@
+--- Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/private_rehearsal_proposal/cuda_trace_parent.py	2026-10-16 23:40:32.910201668 -0500
++++ Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_recompute_proposal/cuda_trace_parent.py	2026-10-17 03:31:13.208814002 -0500
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env python3
+-"""SOURCE-ONLY one-attempt capture and conditional offline recomputation.
++"""SOURCE-ONLY conditional reconstruction of eight existing live PRE captures.
+ 
+ Default prints a literal plan without helper/source/data reads or live queries.
+ Future --launch requires a separately reviewed exclusive resource window and a
+@@ -28,17 +28,15 @@
+ HERE = Path(__file__).parent
+ GAME = HERE.parents[3]
+ REPO = GAME.parent
+-SCHEMA = 'robotron-recomputed-ce-private-rehearsal-v1'
++SCHEMA = 'robotron-live8-conditional-ce-reconstruction-v1'
+ SEED = 20261017
+-VARIANTS = ('capture', 'recompute')
++VARIANTS = ('recompute8',)
+ GIB, MIB = 1 << 30, 1 << 20
+ BOUNDS = dict(cpu_threads=2, memory_bytes=16*GIB, vram_allocator_bytes=12*GIB,
+               vram_process_bytes=13*GIB, artifact_bytes=6*GIB, tmpfs_bytes=128*MIB,
+               tasks=128, phase_timeout_s=180, total_timeout_s=600)
+-SOURCE_LOCK_SHA256 = '28870c3cf7594cc0ac8f73eb3760e3665d5d4448668f4bf9010268427ec80dd3'
++SOURCE_LOCK_SHA256 = '683278660704999645e93dfbc7aad1b20423a5755080a76ccad8f3af54c3c82f'
+ LOCK_SHA = SOURCE_LOCK_SHA256
+-CHECKPOINT_SHA256 = '1225731cb8e976aacee925cb7bbac76a31ea6f81e404fedb5a909019a4373688'
+-CPU_RECEIPT_SHA256 = '0f1cf4820804971b7b13f02604a6d0f73e5579f34a68a45312d212d4a1a51068'
+ BLOCKED_NAMES = {
+     'cuda_trace_parent.py', 'cuda_trace_worker.py', 'checkpoint_at_frame.py',
+     'cpu_reservation_trial.py', 'forensic_parent.py', 'forensic_worker.py',
+@@ -265,14 +263,16 @@
+     require(hashlib.sha256(data).hexdigest() == SOURCE_LOCK_SHA256, 'Reviewed source lock changed')
+     lock = json.loads(data)
+     require(lock['schema'] == SCHEMA and lock['seed'] == SEED and lock['variants'] == list(VARIANTS)
+-            and lock['attempts'] == 1 and lock['compiled_loss_outputs'] == 4
++            and lock['attempts'] == 8 and lock['actual_training_attempts'] == 0 and lock['conditional_forwards'] == 8
++            and lock['compiled_loss_outputs'] == 4
+             and lock['offline_outputs'] == 5 and lock['qualification_pass'] is False
+             and lock['batch_rows'] == 4096
+             and lock['state_width'] == 11128 and lock['joint_actions'] == 81 and lock['atoms'] == 51,
+             'Fixed trace validation protocol changed')
+-    checkpoint = lock['checkpoint']
+-    require(checkpoint['sha256'] == CHECKPOINT_SHA256 and checkpoint['bytes'] == 275181008
+-            and checkpoint['receipt_sha256'] == CPU_RECEIPT_SHA256, 'Reviewed trained fixture changed')
++    require('checkpoint' not in lock and 'fixture_recipe' not in lock
++            and lock['tolerances']['ce'] == dict(rtol=2e-4,atol=2e-5)
++            and lock['reconstruction_policy']['attempt_indices'] == list(range(1,9))
++            and lock['reconstruction_policy']['diagnostics_indices'] == [7], 'Live8 population/tolerance changed')
+     for group in ('immutable_helpers', 'source_files'):
+         for name, item in lock[group].items():
+             if group == 'source_files':
+@@ -282,7 +282,9 @@
+                     and source.is_file() and digest(source) == item['sha256'], 'Pinned source changed: ' + name)
+     for name, expected in (
+             ('frozen_science_helpers', 'ba0039d406676f092309c6bf2248ddcf169af8960f60ed18b698ece1ea602f93'),
+-            ('original_numeric_lock', 'd6ffdaae63d97bce24a18d1b11ed165b9e12484d17d65365415aab3c08beb13b')):
++            ('original_numeric_lock', 'd6ffdaae63d97bce24a18d1b11ed165b9e12484d17d65365415aab3c08beb13b'),
++            ('conditional_helpers','53ab48313f79bc6cdae6ba2ab70969a229ec478ff94b7d52a331c8c64dd37464'),
++            ('acquisition_audit','5c73ef6520c36ff26ddf7334782ae7407692c566f4d526d24e087c6725feaaf4')):
+         item = lock[name]
+         source = Path(item['source'])
+         require(item['sha256'] == expected and source.is_absolute() and source == source.resolve()
+@@ -367,12 +369,8 @@
+                        DQN_NATIVE_BATCH_UPDATE='1', DQN_DIRECT_REPLAY_FILL='1',
+                        DQN_COMPILE_MODE='default', DQN_DIAGNOSTIC_INTERVAL='20',
+                        PYTHONDONTWRITEBYTECODE='1')
+-    # Only CAPTURE arms the new observer. RECOMPUTE imports its five-output
+-    # conditional loss only after bootstrap, never in the actual training call.
+     environment.pop('DQN_EXECUTED_CE_TRACE_DIR', None)
+     environment.pop('DQN_RECOMPUTED_CE_CAPTURE_DIR', None)
+-    if variant == 'capture':
+-        environment['DQN_RECOMPUTED_CE_CAPTURE_DIR'] = str(paths['root']/'ce-recomputed-capture-private-one')
+     return environment
+ 
+ 
+@@ -407,37 +405,78 @@
+     return dict(path=str(path), sha256=observed, bytes=identity['size'], identity=identity)
+ 
+ 
+-def copy_fixture(lock, output, deadline):
+-    checkpoint = lock['checkpoint']
+-    receipt = stable_file(checkpoint['receipt'], CPU_RECEIPT_SHA256, read_only=False)
+-    source = Path(checkpoint['source'])
+-    source_record = stable_file(source, CHECKPOINT_SHA256, checkpoint['bytes'])
+-    target = output/'inputs/trained.pt'
+-    target.parent.mkdir(mode=0o700)
+-    descriptor = os.open(source, os.O_RDONLY | os.O_NOFOLLOW)
+-    with os.fdopen(descriptor, 'rb') as stream, target.open('xb') as copied:
+-        require(file_identity(os.fstat(stream.fileno())) == source_record['identity']
+-                and file_identity(source.lstat()) == source_record['identity'], 'Source changed before private copy')
+-        hasher = hashlib.sha256()
+-        while chunk := stream.read(MIB):
+-            require(time.monotonic() < deadline, 'Total deadline exceeded while copying trained fixture')
+-            copied.write(chunk)
+-            hasher.update(chunk)
+-        copied.flush()
+-        os.fsync(copied.fileno())
+-        require(hasher.hexdigest() == CHECKPOINT_SHA256 and copied.tell() == checkpoint['bytes'], 'Trained copy differs')
+-        require(file_identity(os.fstat(stream.fileno())) == source_record['identity']
+-                and file_identity(source.lstat()) == source_record['identity'], 'Source changed during private copy')
+-    target.chmod(0o444)
+-    with target.open('rb') as stream:
+-        os.fsync(stream.fileno())
+-    sync_directory(target.parent)
+-    copied_record = stable_file(target, CHECKPOINT_SHA256, checkpoint['bytes'])
+-    require((source_record['identity']['device'], source_record['identity']['inode']) !=
+-            (copied_record['identity']['device'], copied_record['identity']['inode']), 'Fixture copy is not independent')
+-    require(stable_file(checkpoint['receipt'], CPU_RECEIPT_SHA256, read_only=False) == receipt,
+-            'CPU verification provenance changed')
+-    return dict(source=source_record, copied=copied_record, cpu_verification=receipt)
++def bounded_json(record, *, read_only=False):
++    require(0 < record['bytes'] <= 2*MIB, 'JSON evidence exceeds bounded metadata size')
++    proof = stable_file(record['path'],record['sha256'],record['bytes'],read_only=read_only)
++    value = json.loads(Path(record['path']).read_text())
++    require(stable_file(record['path'],record['sha256'],record['bytes'],read_only=read_only) == proof,
++            'JSON evidence changed during read')
++    return value,proof
++
++
++def payload_metadata(record, directory, index):
++    path = Path(record['path'])
++    require(path == directory/('attempt-%02d.payload.pt'%index) and path.is_absolute()
++            and path == path.resolve() and not path.is_symlink(), 'Payload escaped fixed capture directory')
++    info = path.lstat()
++    require(stat.S_ISREG(info.st_mode) and info.st_uid == os.getuid() and info.st_nlink == 1
++            and not stat.S_IMODE(info.st_mode)&0o222 and info.st_size == record['bytes']
++            and 0 < info.st_size <= 640*MIB and isinstance(record['sha256'],str)
++            and len(record['sha256']) == 64, 'Captured payload metadata differs')
++    # Parent binds full metadata only. The numerical worker hashes each full
++    # payload before/after weights_only load; no repeated4GB parent guard read.
++    return dict(path=str(path),sha256=record['sha256'],bytes=record['bytes'],identity=file_identity(info))
++
++
++def row_contract(row,index,capture_id):
++    require(row['index']==index and row['capture_complete'] is True
++            and row['optimizer_outcome']=='applied_admission'
++            and row['actual_exposure_delta']==dict(amp_skipped=0,applied=1,attempts_started=1,outcomes_recorded=1,unavailable=0)
++            and row['draw_capture_id']==capture_id and row['draw_batch_join_checked'] is True
++            and row['staged_draw_join_checked'] is True,'Original complete row/outcome/draw binding differs')
++    require(row['backend']==('original_compiled4_diagnostics' if index==7 else 'original_compiled4'),
++            'Actual diagnostic route differs')
++    prefetch=row['prefetch']
++    require(prefetch['current'] is True and prefetch['lease_epoch']==prefetch['owner_epoch_at_consumption'],
++            'Original lease was not current')
++    expected={name:prefetch[name] for name in ('current','lease_epoch','owner_epoch_at_consumption')}
++    require(all(row['prefetch_'+point]==expected for point in ('begin','pre_loss','exit')),
++            'Original consumed lease epochs differ')
++    require(row['after']['training_steps']==row['before']['training_steps']+1
++            and row['after']['optimized_samples']==row['before']['optimized_samples']+4096,
++            'Original consumed logical clocks differ')
++
++
++def bind_inputs(lock):
++    item=lock['retained_input_binding']
++    data,binding_pin=bounded_json(dict(path=item['source'],sha256=item['sha256'],bytes=item['bytes']))
++    require(data['schema']=='robotron-actual-ce-observational-analysis-inputs-v1'
++            and data['population']=='live_consecutive_consumed_attempts'
++            and data['actual_target_entropy_or_KL_observed'] is False and len(data['attempts'])==8,
++            'Actual live8 input manifest differs')
++    metadata={};values={}
++    for name in ('producer_manifest','acquisition_review','maintenance_result','maintenance_root_job','context','final'):
++        values[name],metadata[name]=bounded_json(data[name],read_only=name in ('context','final'))
++    context,final=values['context'],values['final']
++    require(context['schema']=='robotron-recomputed-ce-capture-v1' and context['loss_abi']==4
++            and context['loss_sha256']==lock['original_loss_sha256'] and context['attempts']==8
++            and final['status']=='EIGHT_INPUT_CE_CAPTURES_COMPLETE' and final['complete'] is True
++            and final['attempts_consumed']==8 and final['observer_errors']==[] and len(final['rows'])==8
++            and values['maintenance_result']['status']=='COMPLETE'
++            and values['maintenance_result']['capture_complete'] is True
++            and values['maintenance_result']['manual_recovery_required'] is False,
++            'Complete original live8 acquisition required')
++    directory=Path(metadata['context']['path']).parent
++    require(Path(metadata['final']['path'])==directory/'final.json','Context/final roots differ')
++    rows=[]
++    for index,item in enumerate(data['attempts'],1):
++        require(Path(item['receipt']['path'])==directory/('attempt-%02d.json'%index), 'Receipt escaped exact index')
++        row,row_pin=bounded_json(item['receipt'],read_only=True)
++        row_contract(row,index,context['capture_id'])
++        require(row==final['rows'][index-1] and all(row['payload'][key]==item['payload'][key]
++                for key in ('path','sha256','bytes')),'Original row/final/payload identity differs')
++        rows.append(dict(index=index,receipt=row_pin,payload=payload_metadata(item['payload'],directory,index)))
++    return dict(input_binding=binding_pin,metadata=metadata,attempts=rows,capture_id=context['capture_id'])
+ 
+ 
+ def publish(base, path, value):
+@@ -450,6 +489,28 @@
+             '--manifest', str(manifest_path), '--variant', variant]
+ 
+ 
++def result_contract(result,variant):
++    require(result.get('status')=='OBSERVATIONS_COMPLETE' and result.get('variant')==variant
++            and result.get('qualification_pass') is False and isinstance(result.get('comparison_pass'),bool)
++            and isinstance(result.get('interpretation_requires_review'),bool),'Role did not certify fixed scope/identity')
++    require(result.get('optimizer_steps')==0 and result.get('explicit_worker_backward_calls')==0
++            and result.get('update_guard_counts')==dict(optimizer_step=0,scaler_step=0,scaler_update=0)
++            and result.get('grad_enabled') is True and result.get('conditional_recomputed') is True
++            and result.get('executed_target_observed') is False and result.get('actual_attempts_in_this_process')==0,
++            'Offline phase exceeded conditional grad-enabled forward scope')
++    rows=result.get('attempts',[])
++    require([row['index'] for row in rows]==list(range(1,9)) and all(row['status']=='OBSERVATIONS_COMPLETE'
++            and row['qualification_pass'] is False and isinstance(row['comparison_pass'],bool)
++            and row['comparison_pass']==row['ce_comparison']['passed']
++            and row['ce_comparison']['tolerance']==dict(rtol=2e-4,atol=2e-5)
++            and row['diagnostics'] is (row['index']==7) and row['original_optimizer_outcome']=='applied_admission'
++            and row['update_guard_counts']==dict(optimizer_step=0,scaler_step=0,scaler_update=0) for row in rows),
++            'Exactly all8 original routes/results at original CE tolerance required')
++    require(result['comparison_pass']==all(row['comparison_pass'] for row in rows)
++            and result['interpretation_requires_review']==any(row['interpretation_requires_review'] for row in rows),
++            'Aggregate comparison/review flags disagree with original8 rows')
++
++
+ def run_variant(base, layout, manifest_path, variant, cgroup, main, overall_deadline):
+     paths = layout.phase(variant)
+     manifest = json.loads(manifest_path.read_text())
+@@ -525,21 +586,7 @@
+                             scope='Direct owned Popen result; parent service exit retained separately by root'))
+     require(time.monotonic() <= overall_deadline, 'Overall deadline exceeded at variant completion')
+     result = json.loads((paths['root']/'phase-result.json').read_text())
+-    require(result.get('status') == 'OBSERVATIONS_COMPLETE' and result.get('variant') == variant
+-            and result.get('qualification_pass') is False and isinstance(result.get('comparison_pass'), bool)
+-            and isinstance(result.get('interpretation_requires_review'), bool),
+-            'Role did not certify its fixed diagnostic scope/identity')
+-    if variant == 'capture':
+-        require(result.get('consumed_attempts') == 1 and result.get('capture_complete') is True
+-                and result.get('loss_abi') == 4 and result.get('optimizer_outcome') in ('applied_admission', 'amp_skipped')
+-                and result.get('lease_released') is True and result.get('producer_closed') is True,
+-                'Exactly one complete original4 consumed attempt required')
+-    else:
+-        require(result.get('optimizer_steps') == 0 and result.get('explicit_worker_backward_calls') == 0
+-                and result.get('update_guard_counts') == dict(optimizer_step=0,scaler_step=0,scaler_update=0)
+-                and result.get('grad_enabled') is True and result.get('conditional_recomputed') is True
+-                and result.get('executed_target_observed') is False,
+-                'Offline phase exceeded conditional grad-enabled forward scope')
++    result_contract(result,variant)
+     return result
+ 
+ 
+@@ -584,24 +631,24 @@
+             native_cache_path = layout.scripts/'dqn/__pycache__'
+             native_cache_path.mkdir(mode=0o700)
+             native_cache = dict(path=str(native_cache_path), identity=storage_directory_identity(native_cache_path))
+-            fixture = copy_fixture(lock, directory, overall_deadline)
++            retained_inputs = bind_inputs(lock)
+             for variant in VARIANTS:
+                 paths = layout.phase(variant)
+                 for name in ('root', 'models', 'journal', 'tmpfs', 'cache'):
+                     paths[name].mkdir(parents=True, mode=0o700)
+                 for name in ('inductor', 'triton', 'cuda', 'torch', 'extensions', 'tmp'):
+                     (paths['cache']/name).mkdir(mode=0o700)
+-                publish(base, paths['control'], dict(experiment='isolated-one-attempt-recomputed-ce', lr_scale=.5))
++                publish(base, paths['control'], dict(experiment='isolated-live8-conditional-ce', lr_scale=.5))
+             cgroup = base.OwnedCgroup(delegated, nonce)
+             manifest = dict(schema=SCHEMA, explicit_launch=True, seed=SEED, variants=list(VARIANTS),
+-                attempts=1, compiled_loss_outputs=4, offline_outputs=5, qualification_pass=False,
++                attempts=8, actual_training_attempts=0, compiled_loss_outputs=4, offline_outputs=5, qualification_pass=False,
+                 source_lock_sha256=SOURCE_LOCK_SHA256,
+                 parent_sha256=digest(__file__), worker_sha256=digest(HERE/'cuda_trace_worker.py'),
+                 launch_token=uuid.uuid4().hex, nonce=nonce, parent=base.identity(), output=str(directory),
+                 output_identity=root_identity, tmpfs=str(layout.tmpfs), tmpfs_identity=tmp_identity,
+                 cgroup=str(cgroup.path), cgroup_identity=cgroup.identity, main_owners=initial['main_owners'],
+                 gpu_uuid=base.GPU0_UUID, forbidden_gpu_uuid=base.MAIN_GPU_UUID,
+-                bounds=dict(BOUNDS), sources=lock['source_files'], trained_fixture=fixture,
++                bounds=dict(BOUNDS), sources=lock['source_files'], retained_inputs=retained_inputs,
+                 native_compiler_cache=native_cache,
+                 parent_process_scan_observations=dict(base.process_scan_observations),
+                 numerical_protocol=lock, service_exit_provenance='Root must retain original invocation and terminal fields before owned unit release')
+@@ -619,10 +666,7 @@
+                     owned_byte_count(layout.tmpfs, tmp_identity) <= BOUNDS['tmpfs_bytes'], 'Final storage bound exceeded')
+             base.verify_source_copies(layout, lock['source_files'])
+             require(read_lock() == lock and digest(path) == manifest_sha, 'Final immutable source/protocol changed')
+-            require(stable_file(fixture['source']['path'], CHECKPOINT_SHA256, 275181008) == fixture['source']
+-                    and stable_file(fixture['copied']['path'], CHECKPOINT_SHA256, 275181008) == fixture['copied']
+-                    and stable_file(fixture['cpu_verification']['path'], CPU_RECEIPT_SHA256, read_only=False) == fixture['cpu_verification'],
+-                    'Trained fixture/provenance changed')
++            require(bind_inputs(lock)==retained_inputs,'Original live8 source identities/provenance changed')
+             base.guard_live_resources(allowed_pids={os.getpid()}, expected_main=initial['main_owners'])
+         except BaseException as error:
+             if root_identity is not None:
+@@ -653,18 +697,19 @@
+                     raise RuntimeError('Owned cleanup requires recovery: ' + repr(errors))
+         aggregate = dict(status='OBSERVATIONS_COMPLETE', schema=SCHEMA, variants=results,
+             qualification_pass=False, comparison_pass=all(result['comparison_pass'] for result in results),
++            comparison_scope='CONDITIONAL offline CE only, all8 at original CE tolerances; no four-output parity or learning qualification',
+             interpretation_requires_review=any(result['interpretation_requires_review'] for result in results),
+             comparison_summary=[dict(variant=result['variant'], comparison_pass=result['comparison_pass'],
+                 interpretation_requires_review=result['interpretation_requires_review'],
+-                actual_training_capture=result['variant'] == 'capture') for result in results],
++                actual_training_capture=False,conditional_attempts=8) for result in results],
+             source_lock_sha256=SOURCE_LOCK_SHA256, owned_cleanup_complete=True,
+             parent_process_scan_observations=dict(base.process_scan_observations),
+             limitations=['Completed diagnostic may include original-tolerance mismatches; exit0 is not parity qualification',
+-                         'One captured original4 training attempt; AMP skip retained without replacement',
+-                         'Fresh offline grad-enabled five-output forward has no backward or optimizer step',
++                         'Original8 actual captured PRE payloads retained without new actual attempt or replacement',
++                         'Fresh offline grad-enabled five-output forwards have no explicit worker backward or owned optimizer step',
+                          'Offline target/entropy/KL are conditional RECOMPUTED quantities, not the executed target',
+                          'Matching CE does not bound unobserved target entropy, KL, or replay priority ranking',
+-                         'Fixed synthetic batch at trained checkpoint; no live replay-population or learning-quality claim',
++                         'Eight observed consumed batches do not establish replay-population or learning-quality conclusions',
+                          'No actual live Rainbow agent/server lifecycle or throughput comparison',
+                          'Storage watcher is cooperative, not a filesystem quota',
+                          'Parent service original exit must be independently archived by root before release'])
+@@ -679,7 +724,7 @@
+     args = parser.parse_args(argv)
+     if not args.launch:
+         print(json.dumps(dict(status='PLAN_ONLY_UNEXECUTED', schema=SCHEMA, launch=False,
+-            variants=list(VARIANTS), batch_rows=4096, attempts=1, compiled_loss_outputs=4, offline_outputs=5,
++            variants=list(VARIANTS), batch_rows=4096, attempts=8, actual_training_attempts=0, compiled_loss_outputs=4, offline_outputs=5,
+             qualification_pass=False, bounds=BOUNDS,
+             source_lock_sha256=SOURCE_LOCK_SHA256, numerical_imports=False,
+             runtime_queries=False, outputs_created=False, automatic_retry=False), indent=2))

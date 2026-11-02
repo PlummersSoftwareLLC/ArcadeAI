@@ -1,0 +1,16 @@
+--- socket_server_cleanup_receipts_candidate_v3.py
++++ socket_server_cleanup_receipts_candidate_v4.py
+@@ -1232,8 +1232,11 @@
+                     or self.client_states.get(cid) is not cs
+                     or type(cs.get("_cleanup_token")) is not str):
+                 raise RuntimeError("Stale or non-owner connection replay producer")
+-        # No client_lock is held across preserving replay enqueue. This exact
+-        # handler cannot enter its own finally/release while this call runs.
++        self._cleanup_receipts.require_active_owner(
++            cs["_cleanup_token"], cid, cs["client_slot"], cs["eval_only"],
++            threading.current_thread())
++        # No client_lock is held across receipt verification or preserving replay
++        # enqueue. This exact handler cannot finalize itself while this runs.
+ 
+     def connection_cleanup_snapshot(self, cid, slot, journal_game_id=None):
+         if self._cleanup_receipts is None:

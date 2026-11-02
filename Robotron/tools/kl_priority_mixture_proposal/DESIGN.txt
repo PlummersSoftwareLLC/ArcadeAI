@@ -1,0 +1,176 @@
+SOURCE-ONLY KL PRIORITY / ACTUAL-MIXTURE CALIBRATION DESIGN — 2026-10-17
+
+Decision: investigate after320M quality; do not switch the improving live recipe.
+CE's target-entropy component is a high-confidence source fact, not proof that
+KL learns faster. The old uniform256-row result motivates calibration only.
+Its proxy mean normalized weights0.498→0.043 are NOT live weights or an LR factor.
+This design authorizes no implementation, capture, sampling, import/test, tensor
+read, checkpoint/replay copy, numerical workload, process/API query or launch.
+
+Reuse the existing minimal UNAPPLIED opt-in algorithm patch, do not duplicate it:
+  tools/priority_metric_proposal/optional-kl-priorities.patch
+  SHA2567d09bec1a2611ece11814d8b241d6af054e3dd9310c30e5009a71c0b2e3838c8
+Default DQN_PER_PRIORITY_METRIC=ce; candidate=kl. The original proposal/receipts
+remain unchanged. Its old CPU tests are historical, not current CUDA readiness.
+Source pins and prior evidence bindings are recorded in source-lock.json here.
+
+Exact algorithm boundary
+========================
+Keep loss=(weights*CE).mean()+the existing expert auxiliaries. Never backprop
+through KL, entropy or priorities. CE, CE slice diagnostics, target construction,
+support[-10,50]/51atoms, gamma, stored n-step reward/horizon, done masking and
+the current zero target smoothing remain unchanged. Use the SAME executed
+projected/smoothed FP32 target m and taken-joint-action CE for priorities:
+  H(m)=-sum(m*log(clamp_min(m,1e-12)))
+  metric=max(0, stop_gradient(float32(CE)-H(float32(m))))
+Do not do another stochastic/noisy forward, use raw preprojection entropy,
+renormalize m, special-case terminals, or discount the stored n-step return again.
+For done rows the bootstrap is zero; the reward can still project across two
+atoms. Exact-bin and clipped-support rows must retain the actual projection.
+CE-H is literal KL only for a normalized nonnegative target distribution. Retain
+target mass error, raw signed CE-H, negative/near-zero counts and extremes before
+clamping; clamping is not evidence that a materially negative result is valid.
+
+Actual update_priorities then filters bank sentinels and writes
+  leaf=(abs(metric)+1e-6)**alpha, alpha=0.7.
+Thus metric0 produces a strictly positive epsilon**alpha leaf, not a zero leaf
+or a1e-6 priority-space leaf. Config.priority_eps is NOT read by this method.
+The entropy log floor1e-12, sampler's leaf floor1e-10 and insert priority floor
+1e-6 are different conventions. Do not conflate or change any of them in rawKL.
+The old eager entropy diagnostic uses1e-8 whereas the compiled diagnostic uses
+1e-12: neither aggregate diagnostic alone certifies per-row candidate priorities.
+
+The patch preserves the four-output TrainingLoss default but opts production
+compiled callers into a fifth output even for CE. Validate default-CE actual
+CUDA/AMP/compiled ABI and readback-offset/outcome parity, then eager and diagnostic
+variants. The kernel binds the metric at construction; training.py reads cfg.
+Treat selection as restart/rebuild-only and require their metric identities to
+agree. No hot control change or silent fallback. No optimizer/scaler/AMP tuning.
+
+Actual4096-row mixture and objective conventions
+================================================
+Draw order is PER ring, interesting ring, recent ring, HOF, EpHOF. Preserve
+explicit origin slices from sampling time: duplicate/overlapping indices cannot
+reconstruct which proposal selected a row. Only PER rows receive normalized IS:
+  w_i=(minimum selected clamped PER priority / clamped selected priority_i)^beta
+when the production max-weight denominator is active. Beta reaches1 after its
+actual nonmeasurement-fleet-frame schedule, not after accepted inserts.
+Use the emitted/staged weights; the tree may change while prefetch waits.
+Recent and interesting weights are1; each bank row gets THIS batch's mean PER
+weight. Banks are uniform valid-slot draws with no PER leaves. Bank staleness,
+minimum transitions and interest shortfalls alter quotas; never infer live mix
+from comments. Nominal eligible/nonstale/full-interest4096 default counts are
+PER901/interesting737/recent1434/HOF410/EpHOF614, not75% PER. Record actual counts.
+
+Only Bellman CE is IS-weighted. Expert BC is an expert-subset mean multiplied by
+max(BC_floor,scheduled_BC*expert_fraction); Q-policy/margin are expert-masked
+sums/B with their scheduled coefficients. None gets replay IS weights. Log
+these terms separately by stored is_expert/actor_kind and origin. Eval-origin
+rows are stored with DQN actor_kind, so that byte cannot recover eval identity.
+Bank downweighting changes Bellman-versus-expert balance even without changing
+any explicit coefficient. Such induced balance is part of rawKL, not a reason
+to force mean-weight equality or adjust LR. A common leaf multiplier cancels
+from batch-normalized IS away from fixed floors/hints; it is not a general fix.
+
+Smallest useful calibration, two distinct claims
+==============================================
+1. After a separately reviewed maintenance/capture window, retain8 consecutive
+   real4096-row executed batches, with every applied/AMP-skipped attempt kept.
+   No extra sampler/RNG call, favorable selection or bank/quota forcing. Bind
+   each sample ticket's draw-time beta, exact origin boundaries, indices/order,
+   supplied weights, selected leaf priorities/tree total/minimum/max, pointer/
+   valid-size/add-generation, bank valid counts/admission/staleness clocks and
+   prefetch age. Record actual config/source/backend/model/target clock identities.
+   At the same executed target/loss boundary retain per-row CE, m, taken-action
+   log-probabilities, actions/rewards/done/horizons/is_expert/actor_kind, auxiliary
+   contributions and actual optimizer outcome. Trace acquisition needs a new
+   minimal audited hook, NOT implemented or authorized by this design.
+
+   Compare CE/H/rawKL/leaf ranks, terminal/horizon/support/rare-event coverage,
+   duplicate indices and floor/cap rates. Reconstruct CURRENT supplied weights
+   exactly from draw-time data; decompose weight sums and weighted CE by origin,
+   plus unweighted expert terms. Report THREE paired weight vectors on the SAME
+   rows: actual emitted weights, fresh-CE-leaf normalization and fresh-KL-leaf
+   normalization, each with its matching mean-PER bank recoupling. FreshCE vs
+   freshKL isolates entropy subtraction; emitted vs freshCE exposes priority
+   staleness. All needed vectors are already captured: no extra batch, forward
+   or RNG call. Label these CE-selected sensitivities: they are NOT
+   the KL sampler's draw distribution or an unbiased expected-gradient estimate.
+   Retain numerical failures, empty/missing strata and all natural bank events.
+
+2. True candidate sampling requires actual private draws under a DECLARED tree
+   migration, with a coherent immutable ring/tree/banks/age/interest/current-window
+   anchor and private RNG/source paths. A small synthetic actual-sampler fixture
+   can validate4096-row quota/weight/duplicate mechanics, not the live population.
+   The old256 uniform rows cannot serve as that population. Do not copy the full
+   267GB ring merely for stage1. A real private anchor or capture remains an
+   independently authorized readiness gate; none is established here.
+
+   Compare actual CE and rawKL private-sampler4096 batches, preserving native
+   duplicate leaf-write order, quota shortfalls, bank weighting and prefetch
+   semantics. Retain concentration/duplicates/event coverage, true emitted
+   weight distributions and bank coupling. Full4096 eager/compiled AMP numerical
+   validation needs separately feasible owned hardware; batch8 GPU0 forensics
+   does not validate production4096. Never silently downsample or change AMP.
+
+Migration must be an explicit part of the hypothesis
+===================================================
+Proposed first rawKL branch: start BOTH branches from the same CE-priority tree;
+retain historical max, reward hints, cap3*mean and all existing boosts/floors.
+B converts only subsequent sampled ring rows, including recent/interesting;
+banks remain unprioritized. Priorities update even when AMP skips: preserve that
+behavior and distinguish conversion from applied learning. Preserve ring-index
+ordering/duplicates, bank sentinels and any prefetched private batches/reset rule.
+Do not retrospectively rebuild the entire tree, reset its maximum or hide a
+post-switch interval. A full-tree conversion would be a different experiment.
+
+New rows still begin at historical max, capped to3*current mean, raised by
+abs(reward hint)**alpha then capped again and priority-floored. Terminal hints
+can be raised to the death boost; elite/predeath multiply existing leaves.
+These scales do not cancel in a CE/KL mixed tree. Boosts can raise historical
+max and a normal reprioritization can erase a boost. Track insertion cap/hint
+saturation, boosted-event exposure and metric/conversion age per valid ring
+generation, including overwritten slots. Newly inserted hint-seeded leaves are
+not automatically CE- or KL-evaluated leaves. All accepted ring sources count
+toward physical turnover; accepted DQN+epsilon is a separate learning clock.
+
+Replay persists raw leaves plus[ptr,size,historical_max] without a metric tag.
+Before any learning trial, require matched versioned provenance/sidecar for
+metric, migration, source, conversion generation/state and coherent anchor;
+resume must reject missing/mismatched provenance rather than relabel old leaves.
+Run config/environment metadata alone cannot certify a replay tree's contents.
+
+Readiness and eventual efficacy comparison
+=========================================
+First require CPU formula/CE-gradient identity and actual4096 sampler boundary
+checks, then default-CE and KL actual CUDA/AMP/compiled validation with finite
+targets and reviewed numerical tolerances. Private numerical checks stop before
+optimizer/scaler steps and compare preclip gradients; they cannot establish
+actual AMP-skip/admission outcomes or postclip/applied Adam progress. Keep the
+normal executed trace's recorded outcomes separate. Any private applied-update
+validation needs its own reviewed authorization. Distinct
+gradient scales are observations, not automatic rawKL rejection or permission
+to compensate LR. Existing synthetic fresh-scale findings are a separate case.
+Require validated matched model/target/inference/optimizer/scaler/replay/banks,
+clocks and controls before branches. Equally fresh branch resets are not exact
+actor/game or deterministic RNG continuation. Sequential main-run switches
+cannot be described as matched-start learning A/B.
+
+If calibration supports proceeding and root chooses this after320M results,
+precommit frozen quality at matched learning exposure. A provisional meaningful
+first checkpoint needs at least8M learner frames AND6M total accepted ring
+insertions (one physical turnover); a separately predeclared16M/12M checkpoint
+can assess sustained behavior. Retain all switch/conversion cost in wall-time/
+exposure, not just a favorable fully converted interval. Final horizons/stop
+rules must be frozen BEFORE training; do not extend after inspecting quality.
+Compare fresh controls and rawKL using the established full-admission/full-tail
+two-cohort5%-mean/median-preservation quality standard, with no historical-win
+pooling. Report playing quality vs learner frames, total/learner accepted inserts,
+logical and applied-admission samples, AMP outcomes and elapsed wall time.
+Loss, offline ranking and sampler throughput cannot establish faster learning.
+
+Root independently verified Rainbow's Integrated Agent section
+(https://arxiv.org/pdf/1710.02298, page3) uses projected-target KL for distributional
+priorities. This is algorithm
+context, not a Robotron benefit claim. The next decision remains contingent on
+current quality results and calibrated mechanics; no live KL trial is ready.

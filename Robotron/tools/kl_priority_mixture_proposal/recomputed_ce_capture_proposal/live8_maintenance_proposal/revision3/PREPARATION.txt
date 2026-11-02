@@ -1,0 +1,72 @@
+LIVE8 MAINTENANCE ADAPTER REVIEWED3 — SOURCE ONLY, NO AUTHOR EXECUTION
+
+This NEW sibling bundle preserves original8ee75/v1 and8fc4a/v2, their actual
+root35/38PASS results, safe read_job refusals and independent source receipts.
+Root's first path declaration used nonexistent GAME/.venv-gb300; its actual
+successful insurance CPU interpreter was REPO/.venv-gb300/bin/python, a symlink.
+Canonicalizing the executable argv would lose venv discovery. No live maintenance
+started in either refused preflight, no actor/main/source state changed.
+
+Only the verifier interpreter validator and its three call sites change here.
+The existing default/explicit boot resolver, ownership/sources/dropins/bank/ring/
+graph/firstPREclock/capture/outcome/recovery gates remain byte-equivalent.
+The subprocess argv retains the EXACT archived successful venv path. It is NOT
+replaced by the resolved global/base Python. There is no interpreter execution,
+probe, model/tensor load, environment installation or binary copy by authors.
+
+Root job verifier adds REQUIRED python_binding with EXACT keys:
+ argv_path: same as verifier.python, explicit absolute canonical-parent path;
+ link_target: exact os.readlink(argv_path) string;
+ link_identity: full controller.identity(lstat(argv_path)), atime excluded;
+ executable: PIN for argv_path.resolve(strict=True), canonical regular target;
+ pyvenv_cfg: PIN for <venv>/pyvenv.cfg;
+ library_context: four exact regular smallfile PINs below;
+ successful_execution: PIN for actual insurance execution-precommit.json;
+ successful_completion: PIN for original-execution-completion.json;
+ successful_result: PIN for root-result-review-and-release.json.
+PIN format remains {path,sha256,bytes,identity:{device,inode,bytes,mtime_ns,
+ctime_ns,mode,uid,nlink}}. Final symlink identity is separate, not passed to the
+regular-file fingerprint checker. Actual root reports resolved executable size
+23141232B; explicit executable parse/hash bound is64MiB, not source4MiB.
+
+library_context exact paths under <venv>/lib/python3.14t/site-packages:
+ torch/__init__.py,torch/version.py,numpy/__init__.py,numpy/version.py.
+These bind the reviewed package context, not a claim of hashing every library
+binary. The existing independent verifier/private source and numerical runtime
+proof remain unchanged. Actual root confirmed these four paths canonical/regular.
+
+The actual successful archived insurance argv contains venvpython exactly once,
+followed by -Xgil=0 -I -B -u verifierpath --execute; its expected-verifier SHA and
+job SHA must match the held script and insurance proof.job_file. Completion and
+root release report must agree on original invocation/PID/ExecMainCode1/exit0/
+success and identify the actual numeric proof83c898. Those saved JSON shapes
+were source-read before authoring; synthetic tests are not the sole format basis.
+
+Read_job hashes the executable once. Frequent runtime guards compare its full
+stat identity and symlink resolution, plus small cfg/library/provenance pins;
+they do NOT rehash23MB every second. Immediately before each CPU subprocess,
+the controller hashes the target again and writes a proof. It still invokes
+verifier.python unchanged. No checkpoint/CPU verifier numerical source changed.
+
+Same rootjob schema except verifier.python_binding required. Root builds fresh
+reviewed3 job/output/unit after actual tests, never overwrites/resumes old files.
+OVERLAY sources remain original recomputed_ce_capture_proposal/revision2, NOT this
+maintenance revision3 folder. Copied bank helper/test are unchangede0c69/20f43.
+Operational details and saved insurance four-clock floor remain in immutable
+../PREPARATION.txt and ../revision2/PREPARATION.txt. No new insurance request,
+completed384 gate rearm, protected rollback, lost-tail/coherent-anchor or learning
+claim is introduced. First8/no9 and newest verified stopped-latest remain exact.
+
+Root future bounded stdlib command (NOT EXECUTED BY AUTHORS):
+ python3 -B -m unittest \
+ Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_maintenance_proposal.revision3.test_live8_maintenance \
+ Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_maintenance_proposal.revision3.test_bank_state_revision2
+Existing38 tests are carried unchanged; five new fakeFS/provenance contracts make
+43. The tiny fake ELF is never executed. They check explicit argv preservation,
+retarget/context/provenance refusal, absence of recurring ELF reads and metadata
+drift detection. All remain authored/unexecuted by authors and source reviewers.
+
+Future root service: Typeexec/RemainAfterExit,CPU2/Memory4G/Tasks128,4800s runtime,
+SIGINT/900s graceful/no forcekill; detached3s timer and carrier gone before trigger.
+Preserve actual original invocation/fullshow/cat/journal/exit BEFORE release.
+No launch or runtime operation is authorized by this source artifact itself.

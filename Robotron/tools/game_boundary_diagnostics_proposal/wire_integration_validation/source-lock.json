@@ -1,0 +1,53 @@
+{
+  "schema": "robotron-game-boundary-whole-wire-source-validation-v1",
+  "status": "SOURCE_ONLY_UNEXECUTED",
+  "base_package_sha256": {
+    "__init__.py": "a2b3412fc502b7631295d639092e320d73f848895b994edc16bf9eebf8b5054c",
+    "actor_tags.py": "fc5b868a7fb68d4ab7ba65ba872ea0e845759af6143edfe648239d57cb7f1591",
+    "agent.py": "28977d6b925a4606a61b76438595f45ae054fc81aaaad989ab93e00d98a05668",
+    "bank_output.py": "85a161a445dc44e8bb0ef225a5630b485ff0c4d4874f9d04367544ab744caa9d",
+    "config.py": "f2794754a14e9f13c82b613aa131698246a08dc9021c18f1b78fda7c4b484498",
+    "dashboard_history.py": "5dd229f7a0119d00a901ee6e570b53716b830ad0ed71929ed53a019f74e0b6cb",
+    "exact_inference_graphs.py": "222d5b8ba06df940006fc2d4e1c152b1a44313ff056312c94c49fb6bae8145db",
+    "experiment_status.py": "e7048ec8365bca60f7bd320794c635e491407b33113e37a617f06f9f9d56c237",
+    "expert_fast.py": "eac28fe5bb753b7008c7824b90e90cc0da37ab8d0e549fd90b35bc860929ae9c",
+    "frozen_evaluation.py": "65430d472231e3a1bf0f794cc65603bf5e41c495c446d9a4bab59ad0d3a3a669",
+    "game_journal.py": "27c6143851aff73dd355db89e1ffaa65d90d215b91921406050387be5ad69029",
+    "inference_actor.py": "7cc812adeab8dc7cb989f9024592767928afa786966b85f3488023fb8d6b34ce",
+    "learning_control.py": "29a74b25be391290b07373cdce4680ae7513db31596929f0bc9972aaf0ab220d",
+    "learning_exposure.py": "30d9191e9fc845d80e52a7a891244fcf0c7041cf60529f6559b15e6d47ac5c7f",
+    "loss_kernel.py": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a",
+    "main.py": "61fa053eea882e7e9ca1d95cd8dc081c45dec75677b12c51231aa95f51da0282",
+    "managed_driver.py": "05407642f75a5dc883ba7f45512f36711ffb66f29bce41fc860aba182644dc36",
+    "managed_measurement.py": "9649d0ba199bdc0943202164da7a9058e5d578b9c411ce26a950b2595c7e96e6",
+    "metrics_dashboard.py": "3013d511f1d933fe6012df5cecd7f8a8861824bdd41580cbe241b7498916f1c6",
+    "metrics_display.py": "e843a7d77df8bc8b7da7673b60f1088edcf25210277be33d0610485d1fd741ad",
+    "model.py": "bcd174f05610c6f773ca8c53f9155206eba4f7b6a11383516ddd71f3b513eeb4",
+    "native_sumtree.py": "de0900aecd09668dc0551d4ecec118351a1228e2a664bc183c5c06b865e52250",
+    "nstep_buffer.py": "e46f03e9a626b3a24dea702344b0bbf050f1fdc5af672fc8fc9d18e6afef74c1",
+    "pipeline_telemetry.py": "fa866eaaba56883a9df28046238ec0c235248dbf43837496caf40560c0aa69b6",
+    "prefetch.py": "a07cc84b6d411fd2536b1a17fa56c6b8b0f5ac9861740e44ea94878894a8d217",
+    "replay_buffer.py": "28556797d15e0acf9387030b87f9ccce0b18e1e3cfa629b63c2d7239a4206238",
+    "run_telemetry.py": "fac30f1f75d4d5272d21b2cdb2eae865aa519e1f344c04b3efbfdd6436a25863",
+    "socket_server.py": "8fe556f7507547a97839072bbcecc98384c2b395c8ae789ac8ee062f55bca721",
+    "test_measurement_actor.py": "4e76ea4723b8dbdc7b9545d029afcb78f18cc551afa3ce1085fd89813467d32f",
+    "training.py": "194081120faae4228b0af0d6127c1e12c6d6180acdfe7d7a6a8c7cbcf24b963f"
+  },
+  "base_package_count": 30,
+  "base_package_bytes": 1031633,
+  "activation_revision_source_lock_sha256": "3ded25b28ce5eef044c7ec3ff411f5c09e44cc4a34f3470884c0c4839d27d58e",
+  "new_files_sha256": {
+    "test_wire_integration.py": "1a56967a8ebbbbd4e8806da5f0ef21cb294bb90130b35de1095ba243ae0ab2c2",
+    "PREPARATION.txt": "2b50a916d33692c7b92af124bdfa89f3c25f548b4592eb2e925dc8cc7640085f"
+  },
+  "validation": {
+    "new_methods_executed": 0,
+    "full_handler_scenarios": 3,
+    "off_on_cases": 6,
+    "existing_private_measurement_methods": 7,
+    "new_parser_or_handler_mock": false,
+    "real_transport_or_mame_or_network_inference": false,
+    "checkpoint_or_replay_data": false,
+    "source_peer_review": "requested separately; pending"
+  }
+}

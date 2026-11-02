@@ -1,0 +1,177 @@
+"""Default INERT. One ROOT-selected socket source install after verified stop.
+
+No trainer/MAME launch, control edits or checkpoint/tensor body read. Original
+192 MAME births/RAM remain positively frozen in their two actual owner groups.
+"""
+import hashlib
+import importlib.util
+import json
+import os
+from pathlib import Path
+import subprocess
+import time
+
+G=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+C=G/'logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027'
+D=C/'preview-flags-preserveRAM-trainer-restart-original01'
+ENVELOPE=D/'launch-sources/source-install-envelope-NOT-EXECUTED.json'
+ENVELOPE_SHA='99291a725e6a5400eb5416d2c82641d490113f24fffc9f808ad40b5f2597bfcd'
+GENERATOR=D/'launch-sources/prepare_same_state_trainer_only_v1.py'
+DEST=G/'Scripts/dqn/socket_server.py'
+OLD_SHA='8a2889476d25d27dbfb09de698c676b99c2d23fb488d047ff24545a737b2e0e3'
+NEW_SHA='12214060f4d0caac8e7479dbfa3a29b3c7413516dfd73266c92a809c99eb29ec'
+VERIFIER='08c165ed917b8633ab658a8efbc915f81e37adff21c1330cd5806cd3148f4051'
+
+
+def require(value,message):
+    if not value:raise ValueError(message)
+
+
+def module(pin,name):
+    p=Path(pin['path']);raw=p.read_bytes()
+    require(hashlib.sha256(raw).hexdigest()==pin['sha256'],'Selected module changed')
+    spec=importlib.util.spec_from_file_location(name,p);m=importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m);return m
+
+
+def write(l,path,value):return l.publish(path,value)
+
+
+def archived_terminal(l,saved,old):
+    archive=json.loads(l.checked(saved['original_terminal_archive']))
+    require(archive['owner']==old and archive['original_terminal_before_any_source_change']is True,
+            'Actual old terminal archive belongs to another owner')
+    receipt=json.loads(l.checked(archive['archives']['show']))
+    require(receipt['argv']==['systemctl','--user','show',old['unit']]
+            and type(receipt['exit'])is int and receipt['exit']==0 and receipt['owner']==old,
+            'Actual original show producer/archive differs')
+    raw=l.checked(receipt['stdout']);fields=dict(row.split('=',1)for row in raw.decode().splitlines()if'='in row)
+    require(fields.get('Id')==old['unit'] and fields.get('InvocationID')==old['invocation_id']
+            and fields.get('ExecMainPID')==str(old['pid']) and fields.get('MainPID')=='0'
+            and fields.get('ExecMainCode')=='1' and fields.get('ExecMainStatus')=='0'
+            and fields.get('NRestarts')=='0' and fields.get('ActiveState')=='inactive',
+            'Only archived original Exit0/PID/invocation permits installation')
+    return dict(archive=saved['original_terminal_archive'],show=archive['archives']['show'],fields=fields)
+
+
+def current_retired(l,old,terminal):
+    require(l.process_start(old['pid'])is None,'Original trainer PID remains; no install')
+    result=subprocess.run(['systemctl','--user','show',old['unit']],capture_output=True,text=True,timeout=15)
+    fields=dict(row.split('=',1)for row in result.stdout.splitlines()if'='in row)
+    require(fields.get('Id')==old['unit'] and fields.get('MainPID')=='0',
+            'Current old unit is unknown or has a live PID')
+    if fields.get('LoadState')=='not-found':
+        require(result.returncode in(0,1) and fields.get('ActiveState')=='inactive'
+                and fields.get('InvocationID','')=='' and terminal['fields']['ExecMainStatus']=='0',
+                'GC absence is allowed only alongside positive archived original Exit0')
+        kind='actual_archived_Exit0_then_transient_unit_GC'
+    else:
+        require(result.returncode==0 and fields.get('LoadState')=='loaded'
+                and fields.get('InvocationID')==old['invocation_id']
+                and fields.get('ExecMainPID')==str(old['pid']) and fields.get('ExecMainCode')=='1'
+                and fields.get('ExecMainStatus')=='0' and fields.get('NRestarts')=='0'
+                and fields.get('ActiveState')=='inactive','Loaded original unit is not exact inactive Exit0')
+        kind='actual_loaded_original_inactive_Exit0'
+    return dict(status=kind,argv=['systemctl','--user','show',old['unit']],exit=result.returncode,
+                stdout=result.stdout,stderr=result.stderr,old_pid_absent=True)
+
+
+def execute():
+    # The envelope is ROOT's immutable actual one-file selection, not a future hash guess.
+    raw=ENVELOPE.read_bytes();require(hashlib.sha256(raw).hexdigest()==ENVELOPE_SHA,'Exact ROOT envelope required')
+    env=json.loads(raw);require(env['schema']=='robotron-root-preview-flags-source-install-envelope-v1'
+        and env['commands_executed']is False and len(env['changes'])==1,'One selected source-only change required')
+    for key,sha in [('linux','3268d0bf2e18d3a7aa9c09addd331b1e42353be45c666203f0818caf294d7437'),
+                    ('preserved_producer_helper','de4c3a4ea12155adb7ab51b9b4c1d25a9a53f52cb00466828c7ed7b8b414af6c')]:
+        require(env[key]['sha256']==sha and hashlib.sha256(Path(env[key]['path']).read_bytes()).hexdigest()==sha,
+                'Selected helper source differs')
+    l=module(env['linux'],'_install_checked_linux')
+    for key in('linux','preserved_producer_helper','registry','selection','source_peer'):l.checked(env[key])
+    h=module(env['preserved_producer_helper'],'_install_preserved_192')
+    # Generator is immutable and used only for its reviewed constants/stat-only check.
+    gp=l.full_pin(GENERATOR)
+    require(gp['identity']['mode']=='0o444' and gp['sha256']==
+        '693db6e0daeacbfcea9e0e117114bd72f8bfb0d97edb40429e3e83b45395b37f',
+        'Exact reviewed ROOT launch generator required')
+    g=module(gp,'_install_pure_launch_data')
+    require(env['require_old_trainer']==g.OLD,'Installer and launch source original owner differ')
+    registry=json.loads(l.checked(env['registry']));held=h.held_original_inputs(l,registry)
+    require(held['owners']==g.PRODUCERS,'Exact two preserved producer records required')
+    result_pin=l.full_pin(D/'stop-original01/result.json');result=json.loads(l.checked(result_pin));saved=result['saved']
+    require(result['status']=='CURRENT_TRAINER_STOPPED_AND_FULL_STATE_HOT_REPLAY_PRESERVED'
+        and result['trainer_stopped']is True and result['replacement_started']is False
+        and result['source_install_performed']is False,'Actual successful stop-only result required')
+    require(type(saved['actual_original_CPU_exit'])is int and saved['actual_original_CPU_exit']==0
+        and all(saved[k]is True for k in('strict_phase_verified','newest_stopped_source','replay_bank_consistency_verified')),
+        'Actual strict stopped CPU/replay/bank PASS required')
+    terminal=archived_terminal(l,saved,g.OLD);retired=current_retired(l,g.OLD,terminal)
+    report=json.loads(l.checked(saved['report']))
+    require(report['status']=='PASS' and report['phase_metadata_verified']is True
+        and report['script']['sha256']==VERIFIER and report['sha256']==saved['checkpoint']['sha256'],
+        'Actual strict08c stopped report/source differs')
+    g.resume_record(saved,report)  # Valid CE phase and exact four positive saved clocks.
+    job=json.loads(l.checked(l.full_pin(D/'stop-live-job.json')))
+    require(job['schema']=='robotron-current-fresh192-preserveRAM-stop-job-v1' and job['authorized']is True
+        and job['backend_source']==env['linux'],'Actual selected stop job differs')
+    prepared=json.loads(l.checked(job['prepared']))
+    require(prepared['current_binding']==env['registry'],'Actual stopped registry differs')
+    cfg=json.loads(l.checked(job['poststop_inputs']))
+    banks=l.module(cfg['bank_helper'],'_install_unchanged_R3_banks')
+    checker=l.module(cfg['archive_checker'],'_install_owned_closure_reader')
+    reader=l.module(job['dependencies']['reader'],'_install_original_dual_ABI_reader')
+    read=lambda value,as_json=True:reader.read_pin(value,as_json=as_json)
+    def closed(path):
+        cp=l.full_pin(path);value=json.loads(l.checked(cp))
+        owner=json.loads(l.checked(l.full_pin(path.parent/'root-original-identity.json')))
+        checker.archived_closure(value,owner,read,exit_zero=True)
+        require(type(value['original_exit'])is int and value['original_exit']==0
+            and value['lifecycle_complete']is True and value['unit_released']is True,'Original owned closure0 required')
+        return cp
+    cpu=closed(Path(saved['CPU_closure']['path']))
+    require(cpu==saved['CPU_closure'],'Actual numerical CPU closure pin differs')
+    outer={key:closed(D/'stop-execution-envelopes-original01'/folder/'root-original-result-and-owned-release.json')
+           for key,folder in(('stop','stop-execution'),('rescue','rescue-execution'))}
+    snapshot=json.loads(l.checked(saved['ring_and_banks']));banks.assert_unchanged(snapshot,cfg['bank_spec'])
+    require(snapshot['spec']==dict(ring='/dev/shm/robotron_dqn_latest_replay',model_dir=str(l.MODEL),
+        capacity=6000000,state_size=11128,episode_capacity=192,bank_strides=dict(hof=1536,ephof=2048)),
+        'Exact full6MR3 geometry required')
+    g.stat_checkpoint(saved['checkpoint'])  # No checkpoint body read.
+    row=env['changes'][0]
+    require(row['destination']==str(DEST) and row['require_absent']is False
+        and row['expected_old']['sha256']==OLD_SHA and row['selected_source']['sha256']==NEW_SHA,
+        'Only the exact canonical8a→122 socket source may change')
+    selected=l.checked(row['selected_source']);require(l.full_pin(DEST)==row['expected_old'],'Actual original source differs')
+    held=h.held_original_inputs(l,registry);require(held['owners']==g.PRODUCERS,'Original192 input holders changed')
+    A=D/'source-install-original01';require(not A.exists(),'One new install attempt only');A.mkdir(mode=0o700)
+    envelope_pin=l.full_pin(ENVELOPE)
+    authority=write(l,D/'ROOT-stopped-source-install-authority-original01.json',dict(
+        schema='robotron-root-stopped-source-install-authority-v1',created_unix_s=time.time(),
+        original_trainer=g.OLD,old_trainer_birth_absent=True,exact_old_unit_closed=True,
+        actual_stop_result=result_pin,strict_CPU_replay_bank_PASS=True,outer_stop_and_rescue_owned_closed=True,
+        outer_closures=outer,actual_terminal_archive=terminal,current_retired_unit=retired,
+        preserved_producer_owners=g.PRODUCERS,same192_actor_births_preserved=True,
+        both_producer_cgroups_positive_frozen=True))
+    archive=write(l,A/'old-socket-server.py',l.checked(row['expected_old']))
+    write(l,A/'ROOT-source-install-intent.json',dict(authority=authority,actual_stop_result=result_pin,
+        expected_old_envelope=envelope_pin,old_archive=archive,only_one_canonical_source=True,
+        source_files_only_model_replay_controls_not_changed=True))
+    installed=l.atomic_owned_replace(DEST,row['expected_old'],selected,suffix='previewflags-preserveRAM-original01')
+    require(installed['sha256']==NEW_SHA,'Selected candidate source not installed')
+    banks.assert_unchanged(snapshot,cfg['bank_spec']);g.stat_checkpoint(saved['checkpoint'])
+    h.held_original_inputs(l,registry);current_retired(l,g.OLD,terminal)
+    receipt=write(l,A/'ROOT-actual-source-install-receipt-original01.json',dict(
+        schema='robotron-root-stopped-source-install-receipt-v1',authority=authority,actual_stop_result=result_pin,
+        old_archives={str(DEST):archive},actual_installed_pins={str(DEST):installed},
+        checkpoint_still_original_stopped=saved['checkpoint'],model_replay_optimizer_controls_not_changed=True,
+        preserved_producer_owners=g.PRODUCERS,same192_actor_births_preserved=True,
+        both_producer_cgroups_positive_frozen=True,actual_replacement_started=False))
+    print(json.dumps(dict(authority=authority,install_receipt=receipt,installed_names=['socket_server.py']),indent=2))
+
+
+def main():
+    import sys
+    if sys.argv[1:]!=['--execute']:
+        print('INERT: no reads, outputs or actions; explicit ROOT --execute required');return
+    execute()
+
+if __name__=='__main__':main()

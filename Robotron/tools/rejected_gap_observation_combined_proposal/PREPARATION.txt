@@ -1,0 +1,139 @@
+UNSELECTED / UNAPPLIED / SOURCE-ONLY / NOT DEPLOYMENT READY
+
+Select combined-unapplied-reviewed2.patch/ecc2a1fc ONLY. The preserved original
+combined-unapplied.patch/c2c256d2 is historical, not an additional patch to apply.
+Reviewed2 changes only saved-clock >=0 to >0; all other combined code is exact.
+One combined unified diff reconstructs four future runtime files. No selected
+source, environment, control, state, process or API was changed. No proposal or
+project was imported/executed/tested. No live campaign/log/API/process or model/checkpoint referent body, stat
+or hash was accessed. Only held source and the explicitly authorized
+closed leg03 audit directory's JSON were read; model path descriptors in those
+documents were not followed or statted/hashed.
+
+FIXED CONTENTS AND BASES
+1. ADD Scripts/dqn/rejected_gap_telemetry.py with EXACT reviewed3d58610a1 contents,
+   12216 bytes. This new-file hunk resolves the runtime basename required by the
+   socket import. Original proposal56cd and intermediate33727 are not selected.
+2. socket_server.py held4a1f6a3c -> combinedf44ddfe3. This is telemetryb095 plus
+   loggingde5dc. Each original patch was reconstructed independently against4a;
+   the logging lock initialization and complete print/traceback replacement were
+   then merged using two unique exact text anchors into the telemetry candidate.
+   Reverse of those two edits restores telemetry-only0eed byte-for-byte. No blind
+   sequential application of overlapping hunks is claimed.
+3. metrics_dashboard.py held3013d511 ->3d1aa195 is exactly API174b. It adds only
+   the readonly body method and GET /api/rejected_gaps; no now/history/HTML/sampler/
+   heartbeat/control/listener change. Existing metrics.global_server wiring is used.
+4. experiment_status.py helde7048ec8 ->aa1d0189 reuses saved-clock patch5580be5c,
+   then removes its ambiguous filename fallback. The headline is produced by this
+   existing reader dependency, not a duplicated/hardcoded frontend caption.
+
+All hashes/byte counts and per-file original-function preservation are recorded
+in source-preservation.json. The three held source candidates and new helper were
+parsed and reversed in memory only; no giant full source copies were written.
+
+OBSERVATION AND ERROR SEMANTICS
+Telemetry remains enabled only when replay_enabled=True and the exact constructor
+environment flag ROBOTRON_REJECTED_GAP_TELEMETRY=1. Default/private replay-off
+evaluators remain disabled. Root must explicitly choose any future main-only flag;
+this proposal makes no environment/control write or hot-enable operation.
+Reviewed3 retains the no-ticket pre-lock fast return, positive UID continuity
+across reject/before/AFTER real reset, measurement boundaries as a separate axis,
+fixed reason counters,256 tracked connections and global first32 closure witnesses.
+All existing action/rejection/reset/reward/nstep/enqueue/bank decisions are retained.
+Queue calls/returns remain distinct from physical replay insertion or training.
+
+The logging change preserves fatal-latch condition/call BEFORE logging. It places
+the existing Client error header plus full formatted traceback in one stderr write
+and flush under a per-server exception-log lock. Native merged stdout/stderr keeps
+the complete record text; the header's stdout->stderr move remains explicit.
+Unrelated writers/other server instances/OS-level atomicity are not covered. Slow
+or failed stderr can affect cleanup timing; no performance/noninterference test
+result is claimed. The logging lock is released before finally's diagnostic call;
+no new reverse diagnostic-lock-to-client/model/replay lock order is introduced.
+
+GET /api/rejected_gaps uses only the diagnostic snapshot lock, returns a strict
+finite JSON envelope (128KiB emitted limit), and never drains counters/witnesses.
+Disabled/missing getter/startup/fault/saturation/overflow and serialization/oversize
+failures remain unavailable, not zero-success substitutes. No witnesses enter
+every /api/now response. HTTP200 is not an available/healthy-main proof. Source
+helper bounds limit structure; the response cap is not an arbitrary-getter resource
+sandbox. Snapshot/client-stage/API/gameplay times are not jointly atomic. Any future
+10-second observation cadence and enabled/disabled overhead remain unmeasured.
+
+HEADLINE FIX AND AUTHORIZED CLOSED EVIDENCE
+Existing preparation located first: run-26/dashboard-checkpoint-label-source-
+preparation-20261017/unapplied.patch5580be5c plus its activation addendum. It takes
+learner_frame_count from already-read checkpoint_metadata, otherwise frozen clocks,
+only for the declared role with checkpoint_sha256 equal to that plan checkpoint.
+Only one consistent positive finite integer clock per role supplies a rounded label;
+booleans, zero/negative/malformed/unbound data and conflicts supply none. No extra JSON/model
+read, journal/gate/statistic or public leg-payload field is introduced.
+
+This combined proposal makes one additional finite presentation change: a role
+without exactly one accepted saved clock uses its sanitized explicit leg label,
+or the literal reference/candidate role. It NEVER extracts a clock from checkpoint
+filenames. Thus first8M cannot become an asserted total8M. Explicit role labels
+remain full labels, not parsed total-frame estimates. Conflicting clocks do not
+select a peak or silently prefer one receipt. The old three-argument _comparison
+call stays valid; its optional clock set defaults to role-label fallback.
+
+Authorized sample only: postaccepted-newgame-live8M-quality-original-leg03-audit-
+20261017-output/campaign-plan.json, receipt.json and candidate-phase-cpu-
+verification.json. Reference receipt clocks543235763 match plan reference SHA
+8b865463; candidate CPU clocks704405115 match plan candidate SHAeba19578. The plan
+explicitly labels candidate roles postaccepted-newgame-704M-01/02. With both role
+evaluator clock witnesses present, formatting yields543.2M vs704.4M. This is a
+source/closed-metadata-derived expectation, not imported-code or live-API output.
+The CPU proof is explanatory sample evidence; the dashboard DOES NOT add a CPU
+proof read. Before candidate evaluator clocks exist, it can show the explicit
+candidate role label rather than infer total frames from the first8M filename.
+No score, cohort acceptance, campaign verdict, efficacy, speed or promotion claim
+is made by the caption or this combined source preparation.
+
+The older explicit active.comparison_label override proposale03bfac9 and the
+completed-campaign fallback proposal are preserved separately and NOT merged.
+No canonical state/caption write or fallback to an unselected completed campaign
+is needed or authored here. All current source/runtime provenance stays unchanged.
+
+ACTIVATION AND FUTURE CLOSURE STILL PENDING
+Root may consider application only after the original current campaign/audits,
+owned closure and explicit source-freeze release, with a fresh source check and
+explicit selection. Source files on disk alone do not update loaded Python classes
+or existing reader/server instances. Browser refresh/data-cache expiry is not code
+activation. A future authorized managed startup or explicitly designed/reviewed
+rebind is required; no restart/reload/deploy command or lifecycle is supplied here.
+
+Native run_frozen_sidecar.py source_hashes currently lists12 evaluator sources.
+The new socket import loads the helper even with private replay disabled: add
+Scripts/dqn/rejected_gap_telemetry.py/d586 to that future list, and bind actual
+combined socketf44ddfe3. Changing the list changes the evaluator's own hash in E13
+AND its entry in X4; the4 execution paths do not gain a fifth path solely for this
+change. No modified evaluator source/hash is fabricated in this proposal.
+Main complete source inventories must include the new helper and changed socket,
+dashboard and reader, plus unchanged main wiring. Historical61-entry sets stay
+historical; future exact source counts/ancestry require a genuine new inventory.
+Do not omit the helper or overwrite historical startup provenance to fit old counts.
+
+Old a128/0410/a73f/9e0c is NOT compatible unchanged: exact E12/socket4a and evaluator
+hashes, BINDINGS.EXECUTION/EVALUATOR, carrier SIDECAR_SHA/source checks, auditor
+BOUNDARY_SOURCES/inventory checks, literal61/recovery source equality and historical
+predecessor-closure construction require a distinct reviewed future family. Preserve
+old original plans, receipts, failures, outcomes and source maps. Keep source-aware
+new precommit/readiness/capture/owner and original-audit selectors honest. Row/life/
+admission/tail/runtime classification, fresh RCRC, minimum50/all16 and each separate
+C5%-mean/median gates must remain unchanged. No future candidate/owner/job/plan,
+runtime observation, checkpoint, selection or outcome is invented here.
+
+VALIDATION LIMITS / DEFERRED ROOT WORK
+Checks here are source hashes, AST parsing, finite reconstruction, inverse diff
+equality and original-function text comparison only. A source-only generation
+check initially needed its new-file zero-line range handling corrected before
+any patch output was written; it was not a runtime/test/experiment retry.
+No tests were executed. Existing deferred helper12 and independent logging test
+plans are not combined-handler/API/label execution proofs. Future root validation
+must authenticate these exact candidates, drive real handler insertion order and
+unchanged policy decisions under synthetic I/O, test concurrent error record
+serialization/fatal latch, strict API enabled/disabled/error/NaN/oversize/no-heartbeat,
+and label SHA/role clock conflicts/missing data versus misleading first8M names.
+Measure overhead under matched load; do not patch the same-game neutral gap or
+select a training intervention merely because conditional reachability exists.

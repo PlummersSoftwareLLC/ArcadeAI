@@ -1,0 +1,58 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/fullgame_review_pipeline_v7.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original02-linked-preparation/fullgame_review_pipeline_v7.py
+@@ -7,9 +7,10 @@
+ from pathlib import Path
+ import sys
+ 
+-ROOT=Path(__file__).resolve().parents[2]
++ROOT=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ BASE=ROOT/'logs/managed-learning-20261015/run-26'
+-HERE=Path(__file__).resolve().parent
++HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
++LOCAL=Path(__file__).resolve().parent
+ ORIGINAL=BASE/'future-fixed-slot64-full-game-protocol-original01-preparation-20261024'
+ PARENT=BASE/'quality32-protected1741-vs-currentLR125-quota64Protocol-firstSave-original01-preparation-20261024'
+ CPU_CONTROLLER=ORIGINAL/'extended-review-resources-original01/control_owned_health_CPU1980_v1.py'
+@@ -51,16 +52,16 @@
+ def sources(h):
+     before=read(h.pin(PARENT/'04-candidate/independent-review-job.json'))['sources']
+     result=dict(before)
+-    result.update(runtime=h.pin(HERE/'run_fullgame_rounds_v7.py'),control=h.pin(HERE/'control_fullgame_rounds_v6.py'),
+-        main_health_engine=h.pin(HERE/'round_health_transport_v7.py'),main_prefix_validator=h.pin(HERE/'fullgame_round_contract_v7.py'),
+-        main_observer_reviewer=h.pin(HERE/'review_fullgame_round_observer_v7.py'))
++    result.update(runtime=h.pin(LOCAL/'run_fullgame_rounds_v7.py'),control=h.pin(LOCAL/'control_fullgame_rounds_v6.py'),
++        main_health_engine=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/round_health_transport_launcher_v1.py')),main_prefix_validator=h.pin(LOCAL/'fullgame_round_contract_v7.py'),
++        main_observer_reviewer=h.pin(LOCAL/'review_fullgame_round_observer_v7.py'))
+     for pin in result.values():h.checked(pin)
+     return result
+ 
+ 
+ def validate_packet(case,packet,config,h):
+     subject=read(case['native_job']);native_config=read(packet['controller_config'])
+-    q=load('_fullgame_pipeline_leg_reviewer',HERE/'review_fullgame_rounds_v7.py')
++    q=load('_fullgame_pipeline_leg_reviewer',LOCAL/'review_fullgame_rounds_v7.py')
+     require(packet['schema']=='robotron-original-quota64-independent-leg-review-job-v1'
+         and packet['native_job']==case['native_job']and packet['acceptance']==case['acceptance']
+         and packet['sources']==sources(h)
+@@ -68,10 +69,10 @@
+         and packet['output']==str(Path(case['native_job']['path']).parent/'independent-quality-leg-review-original01'),
+         'Exact original native/scope/source review packet required')
+     q.validate_scope(subject,case['native_job'],read(case['acceptance']),native_config)
+-    native_control=load('_fullgame_pipeline_native_control',HERE/'control_fullgame_rounds_v6.py')
++    native_control=load('_fullgame_pipeline_native_control',LOCAL/'control_fullgame_rounds_v6.py')
+     for pin in native_config['pins']:require(native_control.pin(pin['path'])==pin,'Native controller input differs')
+     job_pin=h.pin(Path(case['native_job']['path']).parent/'independent-review-job.json')
+-    reviewer=h.pin(HERE/'fullgame_review_entry_v6.py')
++    reviewer=h.pin(LOCAL/'fullgame_review_entry_v6.py')
+     require(config['argv']==['/usr/bin/python3.12','-I','-B',reviewer['path'],'--observe','--job',job_pin['path'],
+         '--job-sha256',job_pin['sha256'],'--expected-source-sha256',reviewer['sha256']]
+         and config['properties']==CPU_PROPERTIES and config['observation_s']==2040
+@@ -91,7 +92,7 @@
+     require(owner['unit']==config['unit']and closure['original']==owner,'Original scope belongs to another configuration')
+     require(all(token in fields['ExecStart']for token in config['argv']),'Actual original argv/source differs')
+     if native:
+-        reviewer=load('_fullgame_pipeline_closed_native_reviewer',HERE/'review_fullgame_rounds_v7.py')
++        reviewer=load('_fullgame_pipeline_closed_native_reviewer',LOCAL/'review_fullgame_rounds_v7.py')
+         interval=reviewer.validate_native_fields(fields,config,owner,archive.duration_seconds)
+     else:
+         require(config['properties']==CPU_PROPERTIES and config['observation_s']==2040,'Exact declared CPU review bounds required')

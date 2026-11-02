@@ -1,0 +1,90 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/test_deadline_review_preparation_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/remaining-three-main-journal128-amendment-original01/mixed-review-continuation-source-original01/test_mixed_review_preparation_v1.py
+@@ -7,7 +7,7 @@
+ import unittest
+ 
+ import importlib.util
+-_spec=importlib.util.spec_from_file_location('_actual_launcher_review_preparer',Path(__file__).with_name('prepare_deadline_independent_review_v4.py'))
++_spec=importlib.util.spec_from_file_location('_actual_launcher_review_preparer',Path(__file__).with_name('prepare_mixed_main_journal128_reviews_v1.py'))
+ p=importlib.util.module_from_spec(_spec);_spec.loader.exec_module(p)
+ 
+ 
+@@ -20,6 +20,11 @@
+         cls.packet = cls.read(cls.h.pin(cls.precommit))
+         cls.prepared = cls.read(cls.packet['native_prepared'])
+         cls.study = cls.read(cls.prepared['study_precommit'])
++        cls.wrapper = cls.read(cls.packet['capacity_preparation'])
++        cls.original = cls.read(cls.prepared['original_manifest'])
++        cls.old_review = cls.read(cls.packet['retained_R1']['precommit'])
++        cls.amendment = cls.read(cls.packet['capacity_amendment'])
++        cls.publication = cls.read(cls.packet['CPU_guard_publication'])
+ 
+     def test_actual_four_original_jobs_and_review_sources(self):
+         p.validate_manifest(self.prepared, self.study)
+@@ -43,18 +48,23 @@
+                 path.write_text(json.dumps(config))
+                 with self.assertRaises(ValueError): control.checked_config(path)
+ 
+-    def test_live_R1_and_unlaunched_later_legs_create_no_review_artifacts(self):
+-        for leg in p.ORDER:
+-            case = self.packet['cases'][p.ORDER.index(leg)]
+-            paths = [Path(case[key]) for key in ('review_job_path','review_config_path','execution','report')]
++    def test_retained_R1_is_read_only_and_future_legs_create_no_review_artifacts(self):
++        target=Path(self.packet['retained_R1']['qualification']['path'])
++        before=self.h.pin(target)
++        self.assertEqual(p.original_R1_verification(),self.packet['retained_R1']['qualification'])
++        for method in (p.prepare_leg,p.qualify):
++            with self.assertRaises(ValueError):method(self.precommit,'R1')
++        self.assertEqual(self.h.pin(target),before)
++        for leg in p.FUTURE:
++            case=self.packet['cases'][p.ORDER.index(leg)]
++            paths=[Path(case[key])for key in ('review_job_path','review_config_path','execution','report')]
+             paths.append(Path(case['native_job']['path']).parent/'independent-review-prepared-original01.json')
+-            self.assertFalse(any(path.exists() for path in paths))
+-            with self.assertRaises((FileNotFoundError, ValueError)):
+-                p.prepare_leg(self.precommit,leg)
+-            self.assertFalse(any(path.exists() for path in paths))
++            self.assertFalse(any(path.exists()for path in paths))
++            with self.assertRaises((FileNotFoundError,ValueError)):p.prepare_leg(self.precommit,leg)
++            self.assertFalse(any(path.exists()for path in paths))
+ 
+     def test_no_report_or_unobserved_exit_can_qualify_any_leg(self):
+-        for leg in p.ORDER:
++        for leg in p.FUTURE:
+             root = Path(self.packet['cases'][p.ORDER.index(leg)]['native_job']['path']).parent
+             target = root/('root-'+leg+'-independent-qualified.json')
+             with self.assertRaises((FileNotFoundError,ValueError)):
+@@ -74,6 +84,21 @@
+                 p.validate_manifest(prepared,study)
+         prepared=copy.deepcopy(self.prepared);prepared['cases'][0],prepared['cases'][1]=prepared['cases'][1],prepared['cases'][0]
+         with self.assertRaises(ValueError): p.validate_manifest(prepared,self.study)
++        p.validate_mixed_identity(self.wrapper,self.prepared,self.original,self.old_review,self.amendment)
++        for name in ('R1qualification','R1row','commonstudy','futureorder','scientificflag'):
++            wrapper=copy.deepcopy(self.wrapper);prepared=copy.deepcopy(self.prepared);amendment=copy.deepcopy(self.amendment)
++            if name=='R1qualification':wrapper['original_R1_qualification']={}
++            elif name=='R1row':prepared['cases'][0]['native_job']={}
++            elif name=='commonstudy':prepared['study_precommit']={}
++            elif name=='futureorder':amendment['future_legs']=['R2','C1','C2']
++            else:amendment['scientific_fields_unchanged']=False
++            with self.assertRaises(ValueError,msg=name):p.validate_mixed_identity(wrapper,prepared,self.original,self.old_review,amendment)
++        p.validate_three_publication(self.publication)
++        for key,value in (('schema','robotron-four-exact-native-guard-publication-v1'),('ordered_legs',p.ORDER),
++                          ('old_exact_job_receipts_reused',True),('guards',self.publication['guards'][:2]),('status','FAIL')):
++            publication=copy.deepcopy(self.publication);publication[key]=value
++            with self.assertRaises(ValueError,msg=key):p.validate_three_publication(publication)
++
+ 
+     def test_unknown_leg_and_default_invocation_are_inert(self):
+         with self.assertRaises(ValueError):p.selected(self.precommit,'C3')
+@@ -82,9 +107,8 @@
+         self.assertEqual(result.stdout.strip(),'PLAN_ONLY_NO_READS_OR_ACTIONS')
+ 
+     def test_actual_historical_six_descriptor_reader_positional_ABI(self):
+-        # Historical evidence is only a reader regression, never a new result.
+-        old=p.BASE/'deadline-score32-fixed-fleet-admission-original03-preparation-20261026/fixed-RCRC-deadline32-study-original03/R1'
+-        qualification=self.read(self.h.pin(old/'root-R1-independent-qualified.json'))
++        # Retained original R1 is a reader regression, never a new result.
++        qualification=self.read(self.packet['retained_R1']['qualification'])
+         owner=self.read(qualification['review_owner']);closure=self.read(qualification['review_closure'])
+         archive=p.load('_test_deadline_review_historical_archive',self.h.checked(self.packet['sources']['archive']))
+         fields=archive.archived_closure(closure,owner,self.read,exit_zero=True)

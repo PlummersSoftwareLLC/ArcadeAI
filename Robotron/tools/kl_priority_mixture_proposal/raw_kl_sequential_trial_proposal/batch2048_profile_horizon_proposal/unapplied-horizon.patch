@@ -1,0 +1,97 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/horizon_observer_proposal/horizon_observer.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/horizon_observer2048.py
+@@ -7,7 +7,13 @@
+ import json
+ import math
+ 
+-SCHEMA='robotron-raw-kl-horizon-job-v1'
++SCHEMA='robotron-ce-batch2048-horizon-job-v1'
++BATCH_SIZE=2048
++# Pure validator: future root must authenticate these exact profile-file bytes
++# before building its immutable job. The helper itself performs no file reads.
++PROFILE_BINDING_JSON='{"pin":{"bytes":764,"path":"/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json","sha256":"e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50"},"value":{"LR_compensation":false,"batch_size":2048,"before_batch_size":4096,"deliberate_recipe_changes":["DQN_BATCH_SIZE"],"held_recipe_context":{"baseline_batch_size":512,"batch_size":2048,"c51_target_smoothing":0,"epsilon":0.1,"expert_ratio":0.1,"fused":true,"gamma":0.995,"learning_control_lr_scale":0.5,"lr_anchor_step":0.0,"lr_gear":"climb","max_samples_per_frame":8,"n_step":3,"num_atoms":51,"optimizer_eps":0.00015,"optimizer_lr":2.5e-05,"v_max":50.0,"v_min":-10.0},"priority_metric":"ce","profile_id":"ce_batch2048_efficacy_screen_v1","return_batch_size":4096,"schema":"robotron-ce-batch2048-efficacy-profile-v1"}}'
++PROFILE_BINDING=json.loads(PROFILE_BINDING_JSON)
++
+ OWNER_KEYS={'pid','starttime_ticks','unit','invocation_id','cgroup'}
+ IDENTITY=('process_id','instance_monotonic_ns','epoch','epoch_reason')
+ COUNTERS=('attempts_started','outcomes_recorded','applied','amp_skipped','unavailable')
+@@ -78,6 +84,11 @@
+ 
+ 
+ def validate_job(job):
++    require(type(job.get('batch_size')) is int and job['batch_size']==BATCH_SIZE,
++            'Exact declared batch2048 required')
++    require(isinstance(job.get('profile_binding'),dict) and
++            json.dumps(job['profile_binding'],sort_keys=True,separators=(',',':'),allow_nan=False)==PROFILE_BINDING_JSON,
++            'Exact pinned CE-batch2048 profile binding required')
+     require(job['schema']==SCHEMA and job['policy']==POLICY,'Frozen observer policy differs')
+     require(set(job['owner'])==OWNER_KEYS and integer(job['owner']['pid'],'owner.pid')>0 and
+             integer(job['owner']['starttime_ticks'],'owner.start')>0,'Exact owned trainer fields required')
+@@ -116,7 +127,7 @@
+         # without inventing an observation time or raising again while reporting.
+         mono=now.get('monotonic_s') if isinstance(now,dict) else None
+         verified_time=type(mono) in (int,float) and math.isfinite(mono)
+-        result=dict(schema='robotron-raw-kl-horizon-observation-v1',state=state,reason=reason,
++        result=dict(schema='robotron-ce-batch2048-horizon-observation-v1',state=state,reason=reason,
+             elapsed_s=mono-self.job['start_request']['monotonic_s'] if verified_time else None,
+             observed_monotonic_s=mono if verified_time else None,
+             boot_id=now.get('boot_id') if isinstance(now,dict) else None,
+@@ -168,7 +179,7 @@
+                         'Counter regressed: '+group)
+             require(current['optimizer']['unavailable']==0,'Classified unavailable optimizer outcome increased')
+         if elapsed>=POLICY['ceiling_s']:
+-            return self._event('INVALID','KL owner at or beyond fixed ceiling',now,manual_recovery_required=True)
++            return self._event('INVALID','CE batch2048 owner at or beyond fixed ceiling',now,manual_recovery_required=True)
+         if elapsed>POLICY['cutoff_s']:
+             return self._event('INCOMPLETE','Horizon not observed by fixed cutoff',now)
+         if current is None:
+@@ -185,8 +196,8 @@
+             logical_samples=current['clocks']['optimized_samples']-self.job['boot_four_clocks']['optimized_samples'],
+             optimizer_total=current['optimizer'],
+             optimizer_delta_since_pre_resume={key:current['optimizer'][key]-self.baseline['optimizer'][key] for key in COUNTERS},
+-            admitted_samples_total=current['optimizer']['applied']*4096,
+-            admitted_samples_scope='Process-local admitted4096 batches; not per-parameter movement')
++            admitted_samples_total=current['optimizer']['applied']*BATCH_SIZE,
++            admitted_samples_scope='Process-local admitted2048 batches; not per-parameter movement')
+         if current['optimizer']['applied']>self.last['optimizer']['applied']:
+             self.last_applied_s=now['monotonic_s'];self.applied_anchor=copy.deepcopy(current)
+         stalled=(now['monotonic_s']-self.last_applied_s>=POLICY['no_applied_s'] and
+@@ -200,7 +211,7 @@
+         if progress['learner_frames']>=POLICY['learner_frames'] and progress['physical_accepted']>=POLICY['physical_adds']:
+             return self._event('LATCH','First fresh BOTH-horizon observation',now,progress=progress,
+                 first_eligible_observation=copy.deepcopy(self.last_observation),candidate_requests_allowed=1,
+-                root_next='Owned pause/unique save/stop/newest-state CE return; helper performs no actions')
++                root_next='Owned pause/unique save/stop/newest-state batch4096 CE return; helper performs no actions')
+         if elapsed==POLICY['cutoff_s']:return self._event('INCOMPLETE','Both horizons absent at cutoff',now,progress=progress)
+         return self._event('CONTINUE','Both horizons not yet reached',now,progress=progress)
+ 
+@@ -231,22 +242,23 @@
+     emit(event);return event
+ 
+ 
+-def ending_deadline(job,now,*,KL_owner_present):
++def ending_deadline(job,now,*,CE_owner_present):
+     """Pure follow-up; root separately proves exact absence/handles recovery.
+ 
+     This never overwrites the immutable candidate latch or grants a new one.
+     """
+-    require(type(KL_owner_present) is bool,'Root must supply observed owner-presence classification')
++    require(type(CE_owner_present) is bool,'Root must supply observed owner-presence classification')
+     require(now['boot_id']==job['start_request']['boot_id'],'Boot changed during ending')
+     elapsed=number(now['monotonic_s'],'ending time')-number(job['start_request']['monotonic_s'],'start time')
+-    return dict(state='INVALID' if KL_owner_present and elapsed>=POLICY['ceiling_s'] else 'ROOT_ENDING_PROOF_REQUIRED',
+-        KL_owner_present=KL_owner_present,elapsed_s=elapsed,qualification_pass=False,
+-        reason='Ceiling breach/manual' if KL_owner_present and elapsed>=POLICY['ceiling_s'] else
+-               'Root must prove retirement/newest CPU/explicit CE return; no helper action')
++    return dict(state='INVALID' if CE_owner_present and elapsed>=POLICY['ceiling_s'] else 'ROOT_ENDING_PROOF_REQUIRED',
++        CE_owner_present=CE_owner_present,elapsed_s=elapsed,qualification_pass=False,
++        reason='Ceiling breach/manual' if CE_owner_present and elapsed>=POLICY['ceiling_s'] else
++               'Root must prove retirement/newest CPU/explicit batch4096 CE return; no helper action')
+ 
+ 
+ def main():
+     print(json.dumps(dict(status='PLAN_ONLY',schema=SCHEMA,policy=POLICY,actions=False,
++        batch_size=BATCH_SIZE,profile_binding=PROFILE_BINDING,policy_is_unactivated_proposal=True,
+         API_or_owner_reads=False,output_writes=False,qualification_pass=False),sort_keys=True))
+     return 0
+ 

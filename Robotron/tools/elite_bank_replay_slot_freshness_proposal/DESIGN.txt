@@ -1,0 +1,128 @@
+DORMANT FRESHNESS CONTRACT — NO PRODUCTION PATCH OR EXECUTION
+
+Finding: source-finding.json. Test: test_stale_bank_admission_deferred.py,
+six authored methods, all UNEXECUTED. It uses real exact-source methods for
+ring construction/add, agent.step, synchronous AsyncReplayBuffer._consume,
+elite callback, both bank admission paths, bank span/copies, and pre-death
+priority boost. Small ring64 x state-width4; actual NumPy only during root's
+future CPU test. No project modules/torch/socket/server/worker thread/mmap/
+persistence loader is imported or constructed. Existing module imports and
+class startup are not executed: root's later test extracts named whole method
+AST nodes into closed explicit namespaces. Source pins refuse changed bases.
+
+DETERMINISTIC CASES
+A32 distinct rows, B64 distinct rows, A terminal: both banks copy32 B rows plus
+A terminal under A's score100000/game_uid7001 (EpHOF life score60000), if ordinary
+admission gates pass. All fields of a copied B transition remain together;
+this is foreign elite selection/provenance, not a claim of a malformed B target.
+A32 then A terminal, no B turnover: both banks retain all33 A rows in order.
+The actual consumer's exception printing is captured and required empty;
+unexpected dependency/queue calls are separately retained and fail assertions.
+The unrelated percentile-based priority-elite gate is explicitly held false;
+absolute HOF/EpHOF admission remains real. The pre-death callback test shows
+actual old A indices boosting current B leaves after wrap. Configured pre-death
+reward repaint is disabled (base/danger0), so that test does NOT claim reward
+repaint happened. The design contract also covers it if enabled in a future
+profile. Token tests are a reference mathematical guard, not a selected fix.
+
+WHAT MUST BE ATOMIC IN A FUTURE FIX
+1. Every successful ring insertion publishes, under memory.lock after all row
+   fields commit, a token (process-local ring epoch, monotonic write serial,
+   actual slot index). Do not derive it later by reading tree.data_ptr outside
+   that lock. Existing memory.add return behavior and agent.step integer-index
+   API stay compatible: use a private/common commit implementation plus an
+   opt-in token-returning ingestion API, executing each insert exactly once.
+2. Async per-client episode/lookback bookkeeping retains the token from that
+   same insert. Do not regenerate a token from a bare index at admission.
+3. With N current successful writes, pointer p to next cyclic slot, capacity C,
+   token serial s/index i is resident iff same epoch, 0<=N-s<C and
+       i == (p - 1 - (N-s)) mod C.
+   This follows exactly from one-slot cyclic advancement per successful write.
+   It holds after arbitrary starting pointer and does not assume equal client
+   rates or time-based throughput. At age C-1 it is resident; at C overwritten.
+4. Under the SAME existing replay lock used by each copy/write, validate the
+   tokens BEFORE range filtering, bank-span subsampling or any mutation. A
+   separate validate-unlock-admit sequence is a TOCTOU bug. The current lock is
+   plain non-reentrant: do not wrap _bank_admit in another acquisition; factor
+   a private locked limb or place validation directly in its existing with.
+5. Conservative policy for bank admission: if any supplied episode reference
+   is stale/unknown/different epoch, refuse that admission and count the reason.
+   Do not silently admit the remaining tail as a complete elite episode. If a
+   later policy intentionally admits a partial tail, it requires explicit
+   different semantics/metadata, not this correction. Both HOF and EpHOF share
+   the validation. Normal fresh admissions keep all thresholds, per-game caps,
+   relief clocks, scores, stride, copied fields and persisted bank formats.
+6. Connected callbacks must validate their selected tokens under the same lock
+   BEFORE boost_priorities, apply_pre_death_penalty or mark_interesting. A short
+   lookback reduces exposure; it does not guarantee residency after a long
+   cross-client delay. Preserve current duplicate/index selection semantics
+   AFTER validity is established. Foreign rows must never be changed.
+
+CAN THIS AVOID A SIX-MILLION-ELEMENT GENERATION ARRAY?
+Yes, conditional on enforcing the write/epoch invariant above. Successful
+inserts are globally serialized through memory.lock and advance the ring by
+one. One epoch + one serial (optionally epoch's starting pointer) can derive
+residency and slot index; no per-slot array is mathematically required. Tokens
+must be genuine outputs of commit. The fixture models this invariant only; it
+is NOT proof that a production implementation has established it.
+
+The current _adds_total is a bank-age/insert-attempt clock, not yet a reliable
+completed-write token. It increments at add422 BEFORE tree/row writes. A failed
+conversion/copy can leave partial mutation. clear495-511 and flush2221-2244
+reset ring pointer/contents WITHOUT resetting _adds_total in the held source;
+load/adoption replace rows/pointer without incrementing it per row. Reusing it
+unchanged is UNSOUND. Either add a dedicated tiny successful-write serial or
+prove reuse with an epoch/base offset plus exception handling; never change its
+existing bank starvation/quota semantics just to obtain a token clock.
+
+PER-CLIENT STORAGE COST ALSO NEEDS MEASUREMENT
+Naively keeping Python triples for192 x65536 references can cost substantially
+more than a48MB uint64 per-slot array. No-array does not imply low total cost.
+Possible compact representation: one epoch per uninterrupted client segment,
+retain serial integers (and derive indices under lock), sharing references
+between episode/lookback queues. Epoch change must mark/discard the old partial
+segment rather than merge old/new serials. Preserve public integer-index APIs.
+Packed bounded serial storage is another option, but select only after memory/
+CPU measurement. No implementation or optimization is chosen by this design.
+
+MUTATION-PATH AUDIT (HELD SOURCE TEXT ONLY)
+- __init__193-330: fresh ring identity and serial0; never restore tokens from disk.
+- add418-481: one successful slot commit => one serial, token publication atomic.
+  Any insertion exception/partial-write must invalidate old tokens under lock
+  before the exception escapes; publish no token for the failed row. Pointer
+  advancement and serial must never be assumed consistent after failure.
+- clear481-511 and flush2221-2244: invalidate epoch BEFORE destructive mutation;
+  reset token serial for new epoch; bank retention remains existing behavior.
+- _restore_from_arrays2024-2110 (directory fallback/legacy npz), including pointer
+  restoration/truncation: invalidate epoch before first row/pointer mutation.
+- _try_adopt_mmap_directory1931-2000: invalidate epoch before replacing arrays/
+  tree/pointer, regardless of whether pathname or old stored pointer matches.
+- _promote_to_live_mmap1889-1930: conservative epoch invalidation before storage
+  rebinding/partial failure. Exact-copy promotion could theoretically preserve
+  row identity, but that requires a separate proof; do not assume it here.
+- Ordinary priority updates, intentional reward repaint and interesting flags
+  do not insert/replace the logical row; they do not advance insertion serial.
+  Any delayed callback still requires residency before its own write.
+- save, mmap flush and bank snapshot/save/load do not create ring insertion
+  generations. Bank _bank_revision, _bank_load_epoch and disk CURRENT generation
+  refer to banks, not ring rows. Never substitute any of them for ring epoch.
+- Other ordinary PER delayed index users are not corrected by this dormant
+  callback-only design; no blanket freshness guarantee for every index API.
+
+APPLICABILITY AND HONEST NEXT STEPS
+C=6000000. At K192 equal-rate clients a turnover consumes31250 own inserts;
+at K128,46875. Both are below per-client deque65536. Equal share is an example,
+not measured client timing; actual global insert age is the invariant.
+First root runs this one bounded CPU characterization AFTER the entire current
+quality workflow closes and freeze is released. A future corrected handler/
+ingestion regression must prove atomic commit+token/FIFO, under-lock refusal,
+all clear/load/error paths, both banks and connected callbacks; current tests do
+not implement or certify that correction. Before selecting a learning change,
+obtain bounded prospective counts/witnesses of stale admission/write attempts
+and quantify token CPU/memory cost. Do not scan6M rows or write hot-path files.
+No current occurrence, contaminated-bank count, plateau explanation, learning
+benefit, throughput gain or retrospective bank certification is established.
+Any actual fix/deployment needs a new truthful source/phase continuation and
+fresh controlled quality comparison. Preserve Adam, existing stored replay/
+banks and epochs honestly; no automatic memory.flush, bank wipe or old-model
+rollback. Already-stored banks cannot be retrocertified using absent tokens.

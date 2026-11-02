@@ -1,0 +1,47 @@
+--- a/Robotron/Scripts/dqn/experiment_status.py
++++ b/Robotron/Scripts/dqn/experiment_status.py
+@@ -141,6 +141,7 @@
+         indices = list(dict.fromkeys([*specs, *live_specs]))[:_MAX_LEGS]
+         updated = _number(status.get("updated_unix_s")) or status_path.stat().st_mtime
+         legs = []
++        checkpoint_frames = {"reference": set(), "candidate": set()}
+         for index in indices:
+             spec = specs.get(index, {})
+             progress = live_specs.get(index, {})
+@@ -169,6 +170,14 @@
+                     if (leg_state == "finished" or previous.get("count") is not None or
+                             (started is not None and self._clock() - started > 30)):
+                         raise
++            role = spec.get("role")
++            checkpoint = _mapping(_mapping(plan.get("checkpoints")).get(role))
++            frames = _number(_mapping(data.get("checkpoint_metadata")).get(
++                "learner_frame_count", _mapping(data.get("clocks")).get("learner_frame_count")))
++            if (role in checkpoint_frames and checkpoint.get("sha256")
++                    and data.get("checkpoint_sha256") == checkpoint["sha256"]
++                    and isinstance(frames, int) and frames >= 0):
++                checkpoint_frames[role].add(frames)
+             cohort = _mapping(data.get("cohort"))
+             leg = {"index": _number(index),
+                    "role": _text(progress.get("role") or spec.get("role")),
+@@ -186,15 +195,19 @@
+         return {"available": True, "state": _text(status.get("state")) or "unknown",
+                 "current_leg": _number(status.get("current_leg")),
+                 "total_legs": len(indices), "updated_unix_s": updated,
+-                "comparison": self._comparison(plan, active, legs), "legs": legs,
++                "comparison": self._comparison(plan, active, legs, checkpoint_frames), "legs": legs,
+                 "outcome": _text(status.get("outcome")),
+                 "reason": _text(status.get("reason"))}
+ 
+     @staticmethod
+-    def _comparison(plan, active, legs):
++    def _comparison(plan, active, legs, checkpoint_frames=None):
+         checkpoints = _mapping(plan.get("checkpoints"))
+         labels = []
+         for role in ("reference", "candidate"):
++            frames = _mapping(checkpoint_frames).get(role, ())
++            if len(frames) == 1:
++                labels.append(f"{next(iter(frames)) / 1_000_000:.1f}M")
++                continue
+             checkpoint = _mapping(checkpoints.get(role))
+             source = checkpoint.get("source") or active.get(role + "_checkpoint")
+             label = next((leg.get("label") for leg in legs if leg["role"] == role), None)

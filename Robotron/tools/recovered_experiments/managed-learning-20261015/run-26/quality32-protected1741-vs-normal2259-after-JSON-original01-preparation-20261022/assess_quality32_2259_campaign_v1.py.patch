@@ -1,0 +1,11 @@
+--- assess_quality32_campaign_v1.py
++++ assess_quality32_2259_campaign_v1.py
+@@ -20,7 +20,7 @@
+ ORDER=('R1','C1','R2','C2')
+ ROLES={'R1':'reference','C1':'candidate','R2':'reference','C2':'candidate'}
+ DIRECTORIES=('01-reference','02-candidate','03-reference','04-candidate')
+-PAIR_SHA='79ae0a32e8d924d36517dbd76e6b97bb34309f695d0b913a28da514b3a269b90'
++PAIR_SHA='ad0ff9558602611227651bdf472ca4d2685d7038711c934dbe123142f6639d6e'
+ 
+ def require(value,message):
+     if not value:raise ValueError(message)

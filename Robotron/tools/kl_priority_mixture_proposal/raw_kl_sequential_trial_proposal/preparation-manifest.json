@@ -1,0 +1,125 @@
+{
+  "actual_GPU_or_trial_authorization": false,
+  "author_actions": {
+    "candidate_import_compile_tests_numerical_work": false,
+    "new_proposal_files_only": true,
+    "production_source_state_docs_units_requests_services_actions": false,
+    "source_and_saved_small_metadata_reads": true,
+    "tensor_checkpoint_replay_or_live_runtime_reads": false
+  },
+  "authored_tests": {
+    "scope": "Tiny CPU four/five output objective/gradient and entire proposed training-body packing; real CPU Adam/GradScaler with explicit CUDA device/events/found_inf adapter; stdlib small-file phase guard tests. No actual constructor/Rainbow4096/compiler/native-tree/CUDA/live checkpoint or replay.",
+    "status": "UNEXECUTED",
+    "test_priority_phase.py": 10,
+    "test_priority_routes.py": 11,
+    "total": 21
+  },
+  "base_sources": {
+    "agent.py": {
+      "bytes": 95163,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/agent.py",
+      "sha256": "b885020db1c07e2a736d46f20c295dc71a461242f717bd324e1a3111379b5157"
+    },
+    "config.py": {
+      "bytes": 116996,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/config.py",
+      "sha256": "f2794754a14e9f13c82b613aa131698246a08dc9021c18f1b78fda7c4b484498"
+    },
+    "loss_kernel.py": {
+      "bytes": 7957,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/loss_kernel.py",
+      "sha256": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a"
+    },
+    "training.py": {
+      "bytes": 31175,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/training.py",
+      "sha256": "16a327b08eeb0be829d92e46dd72eab014c5f8b8f5331a7cf043785979e842c5"
+    }
+  },
+  "created_utc": "2026-10-17T09:21:35.873750+00:00",
+  "files": {
+    "PREPARATION.txt": {
+      "bytes": 7555,
+      "mode": "0o444",
+      "sha256": "a05581812e8cf3bf78a08f3086065c5ed40dd38f2005ac6f71ac92c6c6bec655"
+    },
+    "agent.py": {
+      "bytes": 98429,
+      "mode": "0o444",
+      "sha256": "865a0df717b39951b7f7c516e4a962e3d48cf4d3dc11295ff266e58653e6c74b"
+    },
+    "config.py": {
+      "bytes": 117528,
+      "mode": "0o444",
+      "sha256": "19abcbde4d08cf8465b82185ac6dd52eb8965adb8611584e0677c4c7ff21d1fd"
+    },
+    "loss_kernel.py": {
+      "bytes": 9373,
+      "mode": "0o444",
+      "sha256": "23eb8fc0d8409c9f31ef26ec4596da9c2257e3985abbbfa7d5fbdcb337e21f67"
+    },
+    "phase-record.template.json": {
+      "bytes": 355,
+      "mode": "0o444",
+      "sha256": "f06dd1a94b61da3ce83608065711d199eae4260345677380cf30c78586e5a8b2"
+    },
+    "priority_phase.py": {
+      "bytes": 8049,
+      "mode": "0o444",
+      "sha256": "ee3c0d02bc1eab55e92ffd605c3736fe5a0ef905a8a8ee242c687301ea2b7c5b"
+    },
+    "source-lock.json": {
+      "bytes": 2193,
+      "mode": "0o444",
+      "sha256": "ea5cb58cee4c2a7b2ab3da0af39efca95fe18119cc3a28398889ebacf24a68d9"
+    },
+    "test_priority_phase.py": {
+      "bytes": 6716,
+      "mode": "0o444",
+      "sha256": "d39a8cf68d42c29e931f1aa65e15ac7a5217501b7a65cf9277987f2820fdeada"
+    },
+    "test_priority_routes.py": {
+      "bytes": 19570,
+      "mode": "0o444",
+      "sha256": "b8e0bbadb9168a7d889e09ed62808faeffd6adddfcd1a74ae954d87f7f47c07a"
+    },
+    "training.py": {
+      "bytes": 35009,
+      "mode": "0o444",
+      "sha256": "90b847856f810cb4f52513a4bd0625b2d15d4801107bff398060faae25bc4be4"
+    },
+    "unapplied.patch": {
+      "bytes": 29054,
+      "mode": "0o444",
+      "sha256": "0512fc6b0c80642da7dddffa4737d2fb084b22a49ff42aab957cab1caddf5d44"
+    }
+  },
+  "overlay_install_targets": {
+    "agent.py": "Robotron/Scripts/dqn/agent.py",
+    "config.py": "Robotron/Scripts/dqn/config.py",
+    "loss_kernel.py": "Robotron/Scripts/dqn/loss_kernel.py",
+    "priority_phase.py": "Robotron/Scripts/dqn/priority_phase.py",
+    "training.py": "Robotron/Scripts/dqn/training.py"
+  },
+  "remaining_validation": [
+    "Independent exact source peer before any actual tests/application.",
+    "Root-owned CUDA-hidden CPU source/whole-step contracts; authored tests are not results.",
+    "Precommitted current4096 CUDA CE-default/control plus KL normal/diagnostic output/native update/outcome/phase-load validation after448 quality.",
+    "Root actual newest model/ring/banks/epochs/stop/gate/window precommit before any explicitly sequential trial."
+  ],
+  "schema": "robotron-optional-raw-kl-sequential-source-preparation-v1",
+  "scientific_contract": {
+    "KL_outputs": 5,
+    "KL_priority": "detached clamp_min(CE-H(executed projected/smoothed target),0)",
+    "conditional_recomputed_live_entropy_claim": false,
+    "default_CE_outputs": 4,
+    "fixed_signed_negative_abs_bound": 1e-05,
+    "fixed_target_mass_error_max": 1e-05,
+    "old_comparison_tolerance_changes": false,
+    "original_CE_objective_and_auxiliary_terms": true,
+    "phase": "Explicit restart/load record and persisted mixed/unknown leaf provenance; row visits are not unique conversion or physical insertion counts.",
+    "sampling_or_priority_tree_recipe_edits": false
+  },
+  "source_peer_review": "Pending separate exact-hash source review. Early source comments incorporated; no source PASS claim on this final bundle.",
+  "status": "SOURCE_ONLY_UNEXECUTED_UNAPPLIED"
+}

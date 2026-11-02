@@ -1,0 +1,18 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original06/prepare_round_cpu_guard_v9.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/prepare_round_cpu_guard_v9.py
+@@ -7,13 +7,13 @@
+ ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ BASE = ROOT/'logs/managed-learning-20261015/run-26'
+ HERE = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
+-LOCAL = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original06')
++LOCAL = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07')
+ 
+ 
+ # The fifth control is an exact immutable resume record already held by the
+ # selected original192 case. This is not a directory-wide JSON/model exception.
+ SELECTED_RESUME_RECORD = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/resume-records/resume-f3dcfa4e6893fe8111afc53bc14204943d7535b6c152d05d6018db9f1d8be0e0.json', 'sha256': 'ad351d26a04afd2f99eb1deb628f86f6b470fad3093b1fd0b7516c722da481f0', 'bytes': 559, 'identity': {'bytes': 559, 'ctime_ns': 1793280707389499730, 'device': 2304, 'inode': 84699900, 'mode': '0o444', 'mtime_ns': 1793280707389499730, 'nlink': 1, 'uid': 1001}}
+-UNCHANGED_DRIVER = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original06/qualify_round_study_cpu_v6.py', 'sha256': 'c231234990ba10dc0bb04d4e01967ea83c6da20f52afac2642e5d0b896d52072', 'bytes': 18886, 'identity': {'device': 2304, 'inode': 85355318, 'bytes': 18886, 'mtime_ns': 1793311425839795069, 'ctime_ns': 1793311527248071013, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
++UNCHANGED_DRIVER = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/qualify_round_study_cpu_v6.py', 'sha256': 'c231234990ba10dc0bb04d4e01967ea83c6da20f52afac2642e5d0b896d52072', 'bytes': 18886, 'identity': {'device': 2304, 'inode': 85357791, 'bytes': 18886, 'mtime_ns': 1793311807208038077, 'ctime_ns': 1793311807220938767, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+ MODELS = ROOT/'models_dqn'
+ SMALL_MODEL_METADATA_PATHS = frozenset({MODELS/'game_settings.json', MODELS/'learning_control.json',
+     MODELS/'managed_save.request.json.completed',

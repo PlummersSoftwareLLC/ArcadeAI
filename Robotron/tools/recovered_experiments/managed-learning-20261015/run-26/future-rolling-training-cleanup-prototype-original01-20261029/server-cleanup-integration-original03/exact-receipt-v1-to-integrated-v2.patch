@@ -1,0 +1,89 @@
+--- connection_cleanup_receipts_v1.py
++++ connection_cleanup_receipts_candidate_v2.py
+@@ -1,12 +1,13 @@
+ """Inert prospective server-local cleanup receipts, not a refill authority.
+ 
+-No HTTP endpoint or running server integration exists in this prototype. The
+-caller must bind server_stamp to its actual runtime. A supervisor must separately
+-join a durable natural-game receipt and its original Popen PID/birth/reap.
++This revision is staged with a prospective server/HTTP getter, never installed.
++Server connection identity is not an actor PID proof. A supervisor must separately
++join its original Popen birth, socket observation, durable game and actual reap.
+ """
+ import copy
+ import hashlib
+ import json
++from pathlib import Path
+ import secrets
+ import threading
+ import time
+@@ -30,19 +31,25 @@
+         self.records = {}
+         self.sequence = 0
+ 
+-    def begin(self, cid, slot, eval_only, connection_ns, handler):
++    def begin(self, cid, slot, eval_only, connection_ns, handler, *, endpoints):
+         if (type(cid) is not int or cid < 0 or type(slot) is not int or not 0 <= slot < 192
+                 or type(eval_only) is not bool or type(connection_ns) is not int or connection_ns <= 0
+                 or not isinstance(handler, threading.Thread)
+                 or handler is not threading.current_thread() or not handler.is_alive()):
+             raise ValueError('Exact original handler/slot/role incarnation required')
++        if (type(endpoints) is not dict or set(endpoints) != {'server', 'peer'}
++                or any(type(endpoints[k]) is not list or len(endpoints[k]) != 2
++                       or type(endpoints[k][0]) is not str or not 1 <= len(endpoints[k][0]) <= 45
++                       or type(endpoints[k][1]) is not int or not 1 <= endpoints[k][1] <= 65535
++                       for k in endpoints)):
++            raise ValueError('Actual socket endpoint pair required')
+         with self.lock:
+             if len(self.records) >= self.maximum_records:
+                 raise RuntimeError('Cleanup receipt capacity exhausted; no receipt was overwritten')
+             self.sequence += 1
+             token = f"{self.stamp['pid']}:{self.stamp['birth']}:{self.incarnation}:{self.sequence}"
+             self.records[token] = dict(cid=cid, slot=slot, eval_only=eval_only,
+-                connection_ns=connection_ns, handler=handler, timer=None,
++                connection_ns=connection_ns, endpoints=copy.deepcopy(endpoints), handler=handler, timer=None,
+                 timer_done=None, reset_ack=None, journal_ok=False, terminal=None,
+                 terminal_sha=None, error=None, recorded=False, began_ns=time.monotonic_ns())
+             return token
+@@ -101,10 +108,11 @@
+                 healthy = admission_open = False
+             ready = bool(r['recorded'] and r['journal_ok'] and r['error'] is None
+                          and ack and handler_dead and timer_dead and timer_ok and healthy)
+-            return dict(schema='robotron-prospective-connection-cleanup-receipt-v1',
++            return dict(schema='robotron-prospective-connection-cleanup-receipt-v2',
+                 token=token, server_stamp=copy.deepcopy(self.stamp), client_id=r['cid'],
+                 server_cleanup_incarnation=self.incarnation,
+                 client_slot=r['slot'], eval_only=r['eval_only'], connection_ns=r['connection_ns'],
++                socket_endpoints=copy.deepcopy(r['endpoints']),
+                 handler_native_id=r['handler'].native_id, original_handler_stopped=handler_dead,
+                 original_owned_timer_stopped=timer_dead, owned_timer_callback_succeeded=timer_ok,
+                 journal_disconnect_succeeded=r['journal_ok'], FIFO_reset_executed=ack,
+@@ -129,3 +137,28 @@
+         if len(found) != 1:
+             raise ValueError('No unique original terminal cleanup receipt')
+         return self.snapshot(found[0])
++
++    def lookup_active(self, cid, slot):
++        if type(cid) is not int or type(slot) is not int:
++            raise ValueError('Exact active connection lookup required')
++        with self.lock:
++            found = [token for token, row in self.records.items()
++                     if row['cid'] == cid and row['slot'] == slot
++                     and not row['recorded'] and row['handler'].is_alive()]
++        if len(found) != 1:
++            raise ValueError('No unique active connection incarnation')
++        return self.snapshot(found[0])
++
++
++def current_server_stamp(source_path):
++    """Read the actual current process birth and its installed source bytes once."""
++    path = Path(source_path)
++    stable = lambda s: (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns,
++                        s.st_ctime_ns, s.st_mode, s.st_uid, s.st_nlink)
++    before = path.stat()
++    digest = hashlib.sha256(path.read_bytes()).hexdigest()
++    if stable(before) != stable(path.stat()):
++        raise RuntimeError('Installed server source changed during incarnation binding')
++    process = Path('/proc/self/stat').read_text().rsplit(')', 1)[1].split()
++    return dict(pid=int(Path('/proc/self').resolve().name), birth=int(process[19]),
++                source_sha256=digest)

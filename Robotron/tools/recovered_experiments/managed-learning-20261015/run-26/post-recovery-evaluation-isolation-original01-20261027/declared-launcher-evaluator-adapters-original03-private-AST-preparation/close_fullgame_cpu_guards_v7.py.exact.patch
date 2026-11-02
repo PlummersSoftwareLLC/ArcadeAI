@@ -1,0 +1,44 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/close_fullgame_cpu_guards_v7.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original03-private-AST-preparation/close_fullgame_cpu_guards_v7.py
+@@ -9,8 +9,9 @@
+ 
+ from importlib.util import spec_from_file_location,module_from_spec
+ 
+-ROOT=Path(__file__).resolve().parents[2]
+-HERE=Path(__file__).resolve().parent
++ROOT=Path('/home/dave/source/repos/ArcadeAI/Robotron')
++HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
++LOCAL=Path(__file__).resolve().parent
+ ORDER=['R1','C1','R2','C2']
+ 
+ 
+@@ -24,7 +25,7 @@
+ 
+ def close(directory):
+     h=load('_fullgame_guard_close_helpers',ROOT/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py')
+-    producer=load('_fullgame_guard_close_producer',HERE/'prepare_fullgame_study_v6.py')
++    producer=load('_fullgame_guard_close_producer',LOCAL/'prepare_fullgame_study_v6.py')
+     directory=directory.resolve();jp=h.pin(directory/'job.json');job=producer.read(jp,h)
+     prepared=producer.read(job['prepared'],h)
+     require(job['schema']=='robotron-fullgame-four-exact-CPU-job-v1'
+@@ -35,7 +36,7 @@
+             and job['original_attempt']==1 and job['no_retry']is True,'Four exact original jobs required')
+     producer.eligible_screen(prepared['screen_assessment'],prepared['reference_epoch'],h)
+     cfg=producer.read(h.pin(directory/'controller-config.json'),h)
+-    driver=h.pin(HERE/'check_fullgame_four_cpu_v7.py')
++    driver=h.pin(LOCAL/'check_fullgame_four_cpu_v7.py')
+     require(job['source']==driver and cfg['argv']==['/usr/bin/python3','-I','-B',driver['path'],
+         '--execute','--job',jp['path'],'--job-sha256',jp['sha256'],'--source-sha256',driver['sha256']],
+         'Actual four-job CPU driver/argv differs')
+@@ -50,9 +51,9 @@
+             and all(row['rejected']is True for row in report['actual_rejected_contexts']),
+             'All four exact contexts and48 damaged-context rejections required')
+     plans=[]
+-    native=load('_fullgame_guard_close_native',HERE/'run_fullgame_rounds_v7.py')
++    native=load('_fullgame_guard_close_native',LOCAL/'run_fullgame_rounds_v7.py')
+     contract=native.round_contract()
+-    control=load('_fullgame_guard_close_controller',HERE/'control_fullgame_rounds_v6.py')
++    control=load('_fullgame_guard_close_controller',LOCAL/'control_fullgame_rounds_v6.py')
+     for case in prepared['cases']:
+         subject=producer.read(case['native_job'],h);ctx=native.validate_completed_context(subject,h)
+         path=Path(subject['prelaunch_CPU_closeout'])

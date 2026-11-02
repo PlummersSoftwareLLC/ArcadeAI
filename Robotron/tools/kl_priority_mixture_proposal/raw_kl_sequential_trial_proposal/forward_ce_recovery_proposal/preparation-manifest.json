@@ -1,0 +1,49 @@
+{
+  "schema": "robotron-raw-kl-forward-CE-repair-source-manifest-v1",
+  "status": "SOURCE_ONLY_FROZEN",
+  "files": {
+    "run_forward_ce_repair.py": {
+      "sha256": "7eea179eeae5daf2219c5d5a16111400efe3d203fedded0d04a6d6f9b1776de6",
+      "bytes": 13880,
+      "mode": "0o444"
+    },
+    "test_forward_ce_repair.py": {
+      "sha256": "b9f0fd00d40af2f1c4d49b97dc91a3004128789c407e52fc22ffb13d7b9c6c17",
+      "bytes": 8320,
+      "mode": "0o444"
+    }
+  },
+  "authored_test_methods": 8,
+  "test_module": "Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.forward_ce_recovery_proposal.test_forward_ce_repair",
+  "test_argv": [
+    "python3",
+    "-I",
+    "-B",
+    "-c",
+    "import sys,unittest;sys.path.insert(0,\"/home/dave/source/repos/ArcadeAI\");unittest.main(module=None,argv=[\"unittest\",'Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.forward_ce_recovery_proposal.test_forward_ce_repair',\"-v\"])"
+  ],
+  "execute_argv": [
+    "python3",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/forward_ce_recovery_proposal/run_forward_ce_repair.py",
+    "--execute",
+    "--job",
+    "ROOT_ACTUAL_REPAIR_JOB",
+    "--expected-job-sha256",
+    "ROOT_ACTUAL_JOB_SHA",
+    "--expected-source-sha256",
+    "7eea179eeae5daf2219c5d5a16111400efe3d203fedded0d04a6d6f9b1776de6"
+  ],
+  "scope": "Explicit original failed-before192 activation\u2192verified newest validKL\u2192NEWCE/client0startup proof\u2192192. No trial retry, source installation, old-state fallback, horizon/candidate or newestCPU rerun.",
+  "original_failure_preserved": true,
+  "author_execution_imports_tests_runtime_tensor_reads": false,
+  "actual_job_source_review_sha256": "20945aa6b40b4c5deb29e81881538a56b0a92c4847d9593568c9643f933ac762",
+  "consumed_source_sha256": {
+    "trial_helper": "de5e9070b224b8671ff85c41ae475fdcc7cc2837f12394da879d6971f97218a5",
+    "deadline": "8df7491a59025e07387bdf0d392ca2b748511d7adae3cf087abf342a5acfe36a",
+    "adapter": "7d0aa20b5ef4fc1d6c889718ee688387cd684cf702cced503714435132b949d6",
+    "phase_CPU": "b2e732dc731b2b601f7499d2cafd5841896daf2b0713d496b98cb6b8d7279519"
+  },
+  "actual_repair_execution": null
+}

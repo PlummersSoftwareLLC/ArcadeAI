@@ -1,0 +1,230 @@
+--- a/Robotron/Scripts/dqn/socket_server.py
++++ b/Robotron/Scripts/dqn/socket_server.py
+@@ -42,6 +42,7 @@
+     from .nstep_buffer import NStepReplayBuffer
+     from .game_journal import GameJournal
+     from .frozen_evaluation import reset_client_replay_segment
++    from .rejected_gap_telemetry import RejectedGapTelemetry
+     from .actor_tags import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT
+     from .model import combine_action, split_joint_action, action_index_to_wire_dir
+     from .metrics_display import (
+@@ -61,6 +62,7 @@
+     from nstep_buffer import NStepReplayBuffer
+     from game_journal import GameJournal
+     from frozen_evaluation import reset_client_replay_segment
++    from rejected_gap_telemetry import RejectedGapTelemetry
+     from actor_tags import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT
+     from model import combine_action, split_joint_action, action_index_to_wire_dir
+     from metrics_display import (
+@@ -1083,6 +1085,8 @@
+         # without creating a replay consumer or accessing any bank/ring state.
+         # This latch also survives a controller clearing measurement_active.
+         self.replay_enabled = bool(replay_enabled)
++        self._rejected_gaps = RejectedGapTelemetry(enabled=(self.replay_enabled and
++            os.getenv("ROBOTRON_REJECTED_GAP_TELEMETRY", "") == "1"))
+         # Explicit private-evaluator diagnostics only. The live replay-enabled
+         # trainer retains its existing frame path even if this env is inherited.
+         self.game_boundary_diagnostics = (
+@@ -1166,6 +1170,10 @@
+             with self._inference_error_lock:
+                 if self.inference_only_error is None:
+                     self.inference_only_error = str(reason)
++
++    def rejected_gap_snapshot(self):
++        """Bounded diagnostic-only getter; no counter drain or policy action."""
++        return self._rejected_gaps.snapshot()
+ 
+     @staticmethod
+     def _measurement_snapshot():
+@@ -1722,6 +1730,8 @@
+     def handle_client(self, sock, cid):
+         local_accum = 0
+         local_measurement_accum = 0
++        _gap_connection = self._rejected_gaps.event("connect", cid=cid)
++        _gap_ticket = None
+         try:
+             sock.setblocking(False)
+             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+@@ -1769,27 +1779,35 @@
+                 hdr = self._recv_exact(sock, 4, timeout_s=0.25)
+                 if hdr is None:
+                     if time.time() - last_payload_time >= CLIENT_IDLE_TIMEOUT_S:
++                        self._rejected_gaps.event("receive_header_idle", _gap_connection)
+                         raise ConnectionError(
+                             f"idle timeout ({CLIENT_IDLE_TIMEOUT_S:.1f}s without frames)"
+                         )
+                     continue
+                 if len(hdr) < 4:
++                    self._rejected_gaps.event("receive_header_eof", _gap_connection)
+                     raise ConnectionError("EOF")
+                 dlen = struct.unpack(">I", hdr)[0]
+                 if dlen <= 0 or dlen > _MAX_FRAME_PAYLOAD_BYTES:
++                    self._rejected_gaps.event("receive_invalid_length", _gap_connection)
+                     raise ConnectionError(f"Invalid payload length {dlen}")
+ 
+                 data = self._recv_exact(sock, dlen, timeout_s=0.5)
+                 if data is None or len(data) < dlen:
++                    self._rejected_gaps.event("receive_broken_payload", _gap_connection)
+                     raise ConnectionError("Broken payload")
+                 last_payload_time = time.time()
++                self._rejected_gaps.event("received", _gap_connection)
++                _gap_ticket = None
+ 
+                 if len(data) >= 2:
+                     n = struct.unpack(">H", data[:2])[0]
+                     if n != WIRE_PARAMS_COUNT:
++                        self._rejected_gaps.event("param_mismatch", _gap_connection)
+                         print(f"Client {cid}: param mismatch {n} != {WIRE_PARAMS_COUNT}")
+                         break
+                 else:
++                    self._rejected_gaps.event("short_payload", _gap_connection)
+                     break
+ 
+                 preview_enabled = self._preview_enabled_for_client(cid)
+@@ -1803,11 +1821,19 @@
+                     if isinstance(_csv, dict) and not _csv.get("proto_v2"):
+                         _csv["proto_v2"] = True
+                 if not frame:
+-                    sock.sendall(self._pack_action(
+-                        -1, -1, _SRC_NONE, cid,
+-                        preview_enabled=preview_enabled,
+-                        hud_enabled=hud_enabled,
+-                    ))
++                    with self.client_lock:
++                        self._rejected_gaps.event("reject", _gap_connection, reason="parse_none",
++                            cs=self.client_states.get(cid))
++                    try:
++                        sock.sendall(self._pack_action(
++                            -1, -1, _SRC_NONE, cid,
++                            preview_enabled=preview_enabled,
++                            hud_enabled=hud_enabled,
++                        ))
++                    except BaseException:
++                        self._rejected_gaps.event("neutral_result", _gap_connection, ok=False)
++                        raise
++                    self._rejected_gaps.event("neutral_result", _gap_connection, ok=True)
+                     continue
+                 if should_parse_preview and frame.preview_pixels:
+                     self._cache_client_preview(cid, frame)
+@@ -2005,11 +2031,19 @@
+                         print(f"[INGEST] {_verdict}: cid={cid} raw={frame.game_score:,} "
+                               f"vs baseline {(_prev_for_log or 0):,} — one frame rejected, "
+                               f"baseline kept (torn BCD read or crash frame)")
+-                    sock.sendall(self._pack_action(
+-                        -1, -1, _SRC_NONE, cid,
+-                        preview_enabled=preview_enabled,
+-                        hud_enabled=hud_enabled,
+-                    ))
++                    with self.client_lock:
++                        self._rejected_gaps.event("reject", _gap_connection,
++                            reason=_verdict.replace("-", "_"), cs=self.client_states.get(cid))
++                    try:
++                        sock.sendall(self._pack_action(
++                            -1, -1, _SRC_NONE, cid,
++                            preview_enabled=preview_enabled,
++                            hud_enabled=hud_enabled,
++                        ))
++                    except BaseException:
++                        self._rejected_gaps.event("neutral_result", _gap_connection, ok=False)
++                        raise
++                    self._rejected_gaps.event("neutral_result", _gap_connection, ok=True)
+                     continue
+ 
+                 # Single-frame compact input; stacked current-first with recent history.
+@@ -2019,6 +2053,9 @@
+                     if cid not in self.client_states:
+                         break
+                     cs = self.client_states[cid]
++                    _gap_ticket = self._rejected_gaps.event("accepted", _gap_connection, cs=cs,
++                        score=int(frame.game_score), wave=int(frame.level_number),
++                        alive=bool(frame.player_alive), done=bool(frame.done), new_game=bool(_is_new_game))
+                     cs["frames"] += 1
+                     if cs["frames"] == 1:
+                         # First frame of a connection: clients (re)connect
+@@ -2071,6 +2108,7 @@
+                 if (_is_new_game and not measuring
+                         and not cs.get("replay_disabled", False)):
+                     self._reset_new_game_replay_segment(cid, cs, frame.game_score)
++                self._rejected_gaps.event("after_reset", _gap_ticket, cs=cs, writable=self._replay_writable(cs))
+                 model_state = self._stack_model_state(cs, single_state)
+ 
+                 # Measurement is separate from per-life RL terminal handling.
+@@ -2152,6 +2190,7 @@
+                 if (cs.get("last_state") is not None and cs.get("last_action") is not None
+                         and not getattr(metrics, "measurement_active", False)
+                         and cs.get("prev_action_source") != "measurement"):
++                    self._rejected_gaps.event("previous_step", _gap_ticket)
+                     mv_i, fr_i = cs["last_action"]
+                     try:
+                         score_delta_probe = max(0, int(frame.game_score) - int(cs.get("last_game_score", frame.game_score)))
+@@ -2243,23 +2282,30 @@
+                                 cs["last_clear_frame"] = int(cs["frames"])
+                         nstep = cs.get("nstep")
+                         if nstep is not None:
++                            self._rejected_gaps.event("nstep_before", _gap_ticket, nstep=nstep, actor=tag, done=bool(training_done))
+                             joint = combine_action(mv_i, fr_i)
+                             matured = nstep.add(cs["last_state"], joint, total_r,
+                                                 model_state, bool(training_done),
+                                                 actor=tag, priority_reward=total_r,
+                                                 interest=interest)
++                            self._rejected_gaps.event("nstep_after", _gap_ticket, count=len(matured))
+                             for s0, a, Rn, pR, sn, dn, h, act, intr in matured:
+                                 mv_n, fr_n = split_joint_action(a)
++                                self._rejected_gaps.event("enqueue_called", _gap_ticket)
+                                 self.async_buffer.step_async(
+                                     s0, (mv_n, fr_n), Rn, sn, bool(dn),
+                                     client_id=cid, actor=act, horizon=int(h), priority_reward=pR,
+                                     interest=intr)
++                                self._rejected_gaps.event("enqueue_returned", _gap_ticket)
+                         else:
++                            self._rejected_gaps.event("one_step", _gap_ticket, actor=tag, done=bool(training_done))
++                            self._rejected_gaps.event("enqueue_called", _gap_ticket)
+                             self.async_buffer.step_async(
+                                 cs["last_state"], (mv_i, fr_i), total_r,
+                                 model_state, bool(training_done), client_id=cid,
+                                 actor=tag, horizon=1, priority_reward=total_r,
+                                 interest=interest)
++                            self._rejected_gaps.event("enqueue_returned", _gap_ticket)
+ 
+                     cs["total_reward"] += total_r
+                     cs["ep_subj_reward"] = cs.get("ep_subj_reward", 0.0) + subj_r
+@@ -2343,6 +2389,7 @@
+                     hist = cs.get("frame_history")
+                     if hist is not None:
+                         hist.clear()
++                    self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_done_neutral_write_completed")
+                     continue
+ 
+                 if cs.get("was_done"):
+@@ -2382,6 +2429,7 @@
+                         ))
+                     except Exception:
+                         break
++                    self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_inactive_neutral_write_completed")
+                     continue
+ 
+                 # ── Choose action ───────────────────────────────────────
+@@ -2432,6 +2480,7 @@
+                 cs["last_game_score"] = int(frame.game_score)
+                 cs["last_level_number"] = int(frame.level_number)
+                 cs["prev_action_source"] = action_source
++                self._rejected_gaps.event("next_action", _gap_ticket, cs=cs)
+ 
+                 move_cmd = action_index_to_wire_dir(int(mv_idx))
+                 fire_cmd = action_index_to_wire_dir(int(effective_fire))
+@@ -2477,6 +2526,7 @@
+                     ))
+                 except Exception:
+                     break
++                self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_action_write_completed")
+ 
+         except ConnectionError as e:
+             if not self.shutdown_event.is_set():
+@@ -2488,6 +2538,7 @@
+             print(f"Client {cid} error: {e}")
+             traceback.print_exc()
+         finally:
++            self._rejected_gaps.event("disconnect", _gap_connection)
+             # Flush frames accumulated since the last batch so decay schedules
+             # (epsilon / expert ratio) don't lag when a client disconnects.
+             if local_accum > 0:

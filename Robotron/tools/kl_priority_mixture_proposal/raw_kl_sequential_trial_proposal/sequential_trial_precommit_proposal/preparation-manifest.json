@@ -1,0 +1,49 @@
+{
+  "actual_Stage_A_B_execution_results": null,
+  "actual_owner_or_deadline": null,
+  "actual_protected_best_after448": null,
+  "actual_quality448_finalization": null,
+  "actual_trial_core": null,
+  "actual_trial_or_candidate_or_confirmation": null,
+  "author_actions": "Source/smallJSON reads and isolated contract/template authoring only; no imports/tests/PT/runtime/production/control/state/actions",
+  "dependencies_pending": [
+    "actualStageA+StageB validation and cleanup",
+    "current448final audits/originalexit/cleanup and actualprotectedselection",
+    "narrowphase-snapshotCPUwrapper+guards",
+    "reviewedactualactivation/returnadapter and rootcurrentownerinsurance/job",
+    "frozenactualwatcherjob"
+  ],
+  "files": {
+    "CONTRACT.txt": {
+      "bytes": 11904,
+      "mode": "0o444",
+      "sha256": "030ab5996819e359ac5135d237797614dc57cb6a9fc5b0cc8ddea3f410259488"
+    },
+    "conditional-precommit-template.json": {
+      "bytes": 8323,
+      "mode": "0o444",
+      "sha256": "9afaae6672befb16c51bebc83fa1ca7eefdb61d8c1389dbc19aeefc5ac114ac1"
+    },
+    "source-lock.json": {
+      "bytes": 3046,
+      "mode": "0o444",
+      "sha256": "a8b2b6b2e55cffd3046038646faa98fb2668464e2112ec42ea9e6d39bb479b04"
+    }
+  },
+  "old_proposals_preserved": true,
+  "root_conditionally_accepted_proposal_not_active": {
+    "KL_owner_ceiling_seconds": 3600,
+    "ending_reserve_seconds": 360,
+    "first_observed_by_seconds": 3240,
+    "future_first_candidate_only": true,
+    "horizon_learners": 8000000,
+    "horizon_total_physical_accepted_adds": 6000000,
+    "no_deadline_or_candidate_rescue": true,
+    "origin": "durable actual pre-start request, including startup delays"
+  },
+  "schema": "robotron-raw-kl-sequential-precommit-preparation-v1",
+  "scope": "One continuous bounded sequential policy screen with genuine counter epochs; no matched A/B or causal speed claim; all confirmation after explicit newest-state CEreturn",
+  "source_peer": "Lifecycle reviewer reports noessentialsourceblocker; finalexacthashreply independent and not executionauthorization",
+  "status": "INACTIVE_CONDITIONAL_SOURCE_CONTRACT",
+  "tests_or_code_added": false
+}

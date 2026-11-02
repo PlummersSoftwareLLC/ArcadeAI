@@ -1,0 +1,116 @@
+UNSELECTED / UNAPPLIED / TESTS DEFERRED
+
+This proposal observes the existing rejected-frame path. It changes no rejection,
+neutral-response, action, reward, replay, reset, journal or bank decision. It has
+not been imported, executed, tested, installed or enabled. Root alone decides any
+future testing and integration after the scientific source freeze is released.
+
+EXACT FUTURE SELECTION (NOT AN INSTALL INSTRUCTION FOR THE CURRENT RUN)
+Select rejected_gap_telemetry_reviewed3.py, SHA256
+d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd,
+12216 bytes, as the CONTENTS of Scripts/dqn/rejected_gap_telemetry.py.
+The unchanged socket_server-insertion.patch imports that runtime basename.
+Do not accidentally copy the original proposal file rejected_gap_telemetry.py
+(56cd5363769d51bdf32f43dca3d89f71beb825b935b4f518b866591a4a1b82f8).
+Original56cd and intermediate reviewed2/33727 remain preserved as historical
+source proposals. Reviewed2 adds the no-ticket pre-lock return. Reviewed3 also
+defers same_classifier_game until after actual reset processing and requires a
+positive UID equal at rejection, before reset and after reset, plus no new-game
+classification. Before that stage continuity is null, not established by UID0.
+
+The socket patch is based ONLY on held socket_server.py SHA256
+4a1f6a3cc7c82d8c85e1af93ceac0ca7457663d5f5ba7c7d893e3c2b3003e26c.
+Its reconstructed candidate hash is in source-preservation.json. No giant socket
+copy or selected source was written. Future integration must add the helper hash
+to every relevant source/dependency closure, including private evaluations where
+it remains disabled: the proposed import is still a dependency. Existing E12
+hashing does not automatically capture it. Rebase/reconstruct any combined source
+with the separately proposed error-log serialization patch; the two unapplied
+patches overlap exception/finally context and are not claimed to apply blindly
+in sequence. The direct readonly getter is proposed only. API/dashboard wiring,
+source-closure integration and deployment are explicitly pending.
+
+ENABLE AND BOUNDS
+Only replay_enabled=True AND ROBOTRON_REJECTED_GAP_TELEMETRY=1 enables recording.
+The explicit flag is main-only in this proposal; replay-off private sidecars
+remain disabled even if they inherit it. No current environment/control changes
+are made. Tracking is at most 256 simultaneous connections, one pending gap and
+one first-accepted closure in progress per tracked connection. Each handler's
+finally removes its record. First32 scalar closure witnesses are retained
+globally in closure-completion order, never overwritten or sampled with policy
+RNG. Further closures increment witness_overflow; counts continue. Counters
+saturate at 2^63-1 and invalidate availability. Tracking overflow and observer
+exceptions also make available=False: zeroes then prove no absence. No state,
+reward, replay array or tensor is copied or retained. No file/network/device I/O
+occurs in the helper. Connection and per-connection receive sequences are
+ordinary process-lifetime Python integers; collection cardinalities are capped.
+
+DENOMINATORS AND FOLLOW-THROUGH
+payloads_complete counts complete received payloads, before parameter/parser
+validation; it is not socket read calls, wire bytes or physical replay inserts.
+Separate fixed counters record parameter/short-payload exits and terminal header
+idle/EOF/invalid-length/broken-body cases. Header polls returning None below the
+idle limit are not counted as errors. parse_none, crash_jump and crash_drop are
+unthrottled tracked parser/classifier outcomes, unlike existing printed warnings.
+Consecutive rejections share one gap with first/last receive sequence and reason
+counts. neutral_write_ok/failed report only the server sendall result for those
+existing responses, not Lua receipt, button application or elapsed game steps.
+
+The first accepted frame records classifier output and scalar client state
+BEFORE existing first-frame, measurement and accepted-newgame resets, then records
+state AFTER those real reset paths but before stacking/previous-step replay.
+same_classifier_game requires positive UID continuity across all three snapshots
+and no new-game classification. It is classifier continuity, not independent
+ground truth about game identity or clean temporal attribution. Measurement
+generation/active changes are recorded separately. UID0, reset UID changes, or a
+closure interrupted before the after-reset stage cannot prove same-game status.
+accepted_closures counts reaching the first accepted stage; disconnect_closures
+also includes a later interruption, so these are stages, not disjoint outcomes.
+
+The actual previous-step branch, nstep input and returned matured count, enqueue
+calls/returns and next selected action are distinct fields. Actor-group switches
+flush every old prefix BEFORE appending the current input: expert is one group,
+all nonexpert tags are learner, exactly as held nstep_buffer.py. The observer
+subtracts that pre-input flush count; those rows must not be attributed to the
+current gap-following input. Later emitted suffixes contain the current input;
+this is emission attribution, not proof of valid transitions. One-step fallback
+is labeled separately. step_async called/returned does not acknowledge physical
+insertion (it can return after stop), sampling, optimization or benefit. No such
+physical-insertion claim is made. Reset-discarded pending tails and preserved
+history/action metadata are visible without changing their behavior.
+
+READONLY COLLECTION AND COST
+snapshot() does not drain. Its own bounded diagnostic copy is lock-protected;
+client scalars are captured at distinct insertion stages, and this snapshot is
+not atomic with API clocks, journals, other clients or gameplay. Pending and
+first-accepted-in-progress totals expose unfinished observations. The getter is
+not wired into an API by this patch. Future low-rate collection should retain
+observer process/instance identity, availability, start/end counters, pending/
+in-progress totals and the bounded witness set; compare only the same instance.
+
+Reviewed3 avoids locking stage events when their ticket is None; accepted and
+receive events still take the diagnostic lock when enabled. Added call/keyword
+evaluation overhead remains even with the flag off, and enabled counters briefly
+serialize across clients. Snapshot deepcopy and witness-state conversions add
+bounded cost. No overhead, throughput or quality effect has been measured. Keep
+future collection infrequent, measure enabled/disabled cost under matched load,
+and do not infer causality or a speed benefit from rates or conditional examples.
+Current live occurrence is unestablished: a closed 60-second stdout observation
+had zero printed reject warnings and nine accepted/coerced score dips; printed
+warnings are throttled and some parser failures are silent, so this does not
+bound all rejections. Existing accepted-game journals cannot reconstruct all
+receive/reject/first-accepted action relationships.
+
+DEFERRED VALIDATION / NEXT ROOT DECISION
+Only source AST parsing, finite text reconstruction, reverse-byte equality and
+metadata hashing were performed. No helper/project import, executable test,
+handler execution, runtime observation or model/replay access was performed.
+Future meaningful tests must drive the real handler with parserNone and both
+classifier rejections, successful/failed neutral writes, no gap and flag-off,
+UID0 first-frame minting, same positive UID, accepted-newgame/measurement resets,
+terminal/inactive/action closure, disconnect, overflow and readonly snapshot.
+Exercise n3 same-group continuation, expert-group flush and one-step fallback;
+verify emitted-call attribution without pretending calls prove physical inserts.
+Assert original control/action/replay decisions unchanged, bounded bookkeeping
+and noninterference on observer faults. Reconcile future source hashes before
+tests/deployment. No neutral-gap correction or training intervention is selected.

@@ -1,0 +1,51 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/api_cached_projections_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/api_cached_projections_v3.py
+@@ -96,7 +96,7 @@
+ ADMISSION_SOURCE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/round_admission_proof_v2.py')
+ ADMISSION_SHA='9a5506a5b2163506f0cd40f71ca9c0a78945653a6ae9ae5552fb5a2bf70a4087'
+ RETIREMENT_MAX_S=.5
+-RETIRED_SCHEMA='robotron-source-bound-retired-API-row-evidence-v1'
++RETIRED_SCHEMA='robotron-source-bound-retired-API-row-evidence-v2'
+ 
+ 
+ def _admission():
+@@ -157,6 +157,7 @@
+     """Attach bounded raw evidence only. Acceptance is independently recomputed."""
+     extras={str(row['client_slot'])for row in sample['api']['client_rows']}-set(sample['actors'])
+     if not extras:return sample
++    capture_started=time.monotonic()
+     admission=_admission();entries={}
+     for slot in sorted(extras):
+         if slot not in sample['results']:
+@@ -171,7 +172,8 @@
+                 PID_absence=_pid_probe(anchor['actor']['pid']))
+         except (ValueError,OSError,KeyError)as failure:
+             entries[slot]=dict(error=repr(failure))
+-    sample['retired_API_projection']=dict(schema=RETIRED_SCHEMA,entries=entries)
++    sample['retired_API_projection']=dict(schema=RETIRED_SCHEMA,entries=entries,
++        capture_started_monotonic_s=capture_started,capture_ended_monotonic_s=time.monotonic())
+     return sample
+ 
+ 
+@@ -187,6 +189,10 @@
+     proof=sample.get('retired_API_projection',{})
+     require(proof.get('schema')==RETIRED_SCHEMA and set(proof.get('entries',{}))==extras,
+             'Unknown extra API row or missing positive retirement evidence')
++    require(number(proof['capture_started_monotonic_s'])<=number(proof['capture_ended_monotonic_s'])
++            <=number(sample['monotonic_s'])
++            and 0<=sample['monotonic_s']-proof['capture_started_monotonic_s']<=RETIREMENT_MAX_S,
++            'Retired API capture bracket is future, reversed or stale')
+     admission=_admission()
+     require(not admission.view(sample)['bootstrap']and not admission.view(previous)['bootstrap'],
+             'Retired API projection cannot admit a new/bootstrap round')
+@@ -245,8 +251,8 @@
+         require(type(probe['pid'])is int and probe['pid']==actor['pid']
+                 and probe['path']==str(Path('/proc',str(actor['pid']),'stat'))
+                 and probe['absent']is True and probe['current_birth']is probe['state']is None
+-                and sample['monotonic_s']<=number(probe['before_monotonic_s'])<=number(probe['after_monotonic_s'])
+-                <=sample['monotonic_s']+RETIREMENT_MAX_S,
++                and proof['capture_started_monotonic_s']<=number(probe['before_monotonic_s'])
++                <=number(probe['after_monotonic_s'])<=proof['capture_ended_monotonic_s'],
+                 'Retired API original PID is live, reused, unobserved or probe is stale')
+         require(slot not in transport['socket_inodes']and slot not in transport['namespaces'],
+                 'Retired API actor still owns a captured socket namespace')

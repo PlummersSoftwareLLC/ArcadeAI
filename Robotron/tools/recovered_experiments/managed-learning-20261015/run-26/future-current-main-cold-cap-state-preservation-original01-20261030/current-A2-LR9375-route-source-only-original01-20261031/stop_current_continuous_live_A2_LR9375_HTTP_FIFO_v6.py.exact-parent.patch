@@ -1,0 +1,150 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/stop_current_continuous_main_fifo_frontier_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/current-A2-LR9375-route-source-only-original01-20261031/stop_current_continuous_live_A2_LR9375_HTTP_FIFO_v6.py
+@@ -1,4 +1,4 @@
+-"""One Root-selected continuous stop; exact inherited Linux/service kernels.
++"""One Root-selected current A2/.1875 live-fleet stop with HTTP-fenced FIFO closure.
+ 
+ No work at import. Only an explicitly selected zero-frame FIFO probe; no
+ measurement/control edit, replacement or retry.
+@@ -17,8 +17,8 @@
+ import urllib.request
+ 
+ ROOT=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+-KERNEL=ROOT/'logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/stop-sources/stop_owned_current_round_training_v3.py'
+-KERNEL_SHA='fe4a804db13347a74af512bca37adaf9aeb4660025cc9efe373b22a086ded7db'
++KERNEL=Path(__file__).with_name('stop_owned_current_A2_LR9375_recipe_kernels_v4.py')
++KERNEL_SHA='50b41a88353f94dff0dbc1e9cfc65c477183b81cc6e5abb3ec613b60f2e1537b'
+ FRONTIER_SOURCES={'connection_cleanup_receipts.py':'f27e38411238fcf62256e6b317836b757d31d5e0ac962ec8523dd380236d80ee',
+     'game_journal.py':'6aa78cb40434793853d17a1032cc6454ac86b0168828848d9d390336ba8678f0'}
+ PROBE=dict(authorized=True,client_slot=1,eval_only=True,application_frames_to_send=0,
+@@ -32,6 +32,23 @@
+ def load(path,sha,name):
+     raw=Path(path).read_bytes();require(hashlib.sha256(raw).hexdigest()==sha,'Exact selected source required')
+     spec=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
++
++
++def settled_native_census(rows,allowed_probe):
++    """No name exception: only one exact owned probe birth may remain."""
++    require(type(rows)is dict and all(type(tid)is int and type(row)is dict
++        and row['tid']==tid and type(row['starttime_ticks'])is int and row['starttime_ticks']>0
++        for tid,row in rows.items()),'Typed raw native census required')
++    if allowed_probe is None:return not rows
++    require(set(allowed_probe)=={'tid','starttime_ticks'}and type(allowed_probe['tid'])is int
++        and allowed_probe['tid']>0 and type(allowed_probe['starttime_ticks'])is int
++        and allowed_probe['starttime_ticks']>0,'Exact original owned probe native birth required')
++    tid=allowed_probe['tid']
++    if tid in rows:
++        require(not rows[tid]['comm'].startswith('Timer'),'A Timer is never an allowed probe handler')
++        require(rows[tid]['starttime_ticks']==allowed_probe['starttime_ticks'],
++            'Owned probe native TID was reused; never rebound')
++    return set(rows)=={tid}
+ 
+ 
+ def execute(job_pin,own_sha):
+@@ -73,18 +90,62 @@
+                     and str((proc/'exe').resolve())==job['mame_executable']
+                     and(proc/'cmdline').read_bytes().decode().rstrip('\0').split('\0')==job['actor_command'],
+                     'Original physical actor birth/source/cgroup differs')
++                role_env=dict(x.split('=',1)for x in(proc/'environ').read_bytes().decode().split('\0')if'='in x)
++                require(type(row['slot'])is int and 0<=row['slot']<192 and type(row['eval_only'])is bool
++                    and role_env.get('ROBOTRON_CLIENT_SLOT')==str(row['slot'])
++                    and role_env.get('ROBOTRON_EVAL_MODE')==('1'if row['eval_only']else'2')
++                    and role_env.get('ROBOTRON_RETIRE_AFTER_GAME')==('1'if row['eval_only']else'0'),
++                    'Original physical actor role/slot environment differs')
+             require(job['zero_frame_FIFO_probe']==PROBE,'Explicit Root-selected unused slot1 zero-frame EVAL probe required')
+             require(set(job['FIFO_frontier_sources'])==set(FRONTIER_SOURCES),'Exact FIFO source companions required')
+             for name,sha in FRONTIER_SOURCES.items():
+                 selected=job['FIFO_frontier_sources'][name]
+                 require(selected['path']==str(ROOT/'Scripts/dqn'/name)and selected['sha256']==sha
+                     and helper.pin(selected['path'])==selected,'FIFO/zero-frame source companion changed')
+-            self.api();self.old_handlers=self.candidates()
++            self.api();self.old_handlers=old.Stop.candidates(self)
+             self.event('current-stop-before-actions.json',dict(owner=self.owner,fleet=self.fleet,
+                 expected_current_cap=job['expected_current_cap'],actual_boot=self.anchor,
+                 original_population=job['original_population'],source=helper.pin(Path(__file__).resolve())))
+ 
++        def api(self):
++            require(not any(k.startswith('HTTP_CENSUS_')for k in self.holds),
++                'No API call while transient HTTP admission is fenced')
++            return old.Stop.api(self)
++
++        def candidates(self):
++            if 'HTTP'in self.holds:return old.Stop.candidates(self)
++            require(not any(k.startswith('HTTP_CENSUS_')for k in self.holds),'Nested HTTP census fence refused')
++            self.http_census_number=getattr(self,'http_census_number',0)+1
++            key='HTTP_CENSUS_'+str(self.http_census_number).zfill(4)
++            allowed=getattr(self,'census_probe',None)if self.probe is not None else None
++            if allowed is not None:
++                require(old.birth(self.owner['pid'],allowed['tid'])==allowed['starttime_ticks'],
++                    'Original probe birth changed before HTTP fence')
++            self.hold(key,'Thread-1 (serve')
++            rows=None;started=time.monotonic()
++            try:
++                while True:
++                    rows=old.Stop.candidates(self)
++                    if allowed is not None:
++                        require(old.birth(self.owner['pid'],allowed['tid'])==allowed['starttime_ticks'],
++                            'Original probe native birth changed inside HTTP fence')
++                    if settled_native_census(rows,allowed):
++                        if allowed is not None:
++                            require(old.birth(self.owner['pid'],allowed['tid'])==allowed['starttime_ticks'],
++                                'Original probe birth changed after fenced census')
++                        return rows
++                    require(time.monotonic()-started<10,'HTTP-fenced original Thread/Timer census did not drain')
++                    time.sleep(.05)
++            finally:
++                try:
++                    self.event(key+'-census.json',dict(hold=self.holds[key],allowed_original_probe=allowed,
++                        raw_candidates=rows,elapsed_s=time.monotonic()-started,
++                        HTTP_thread_name_exemptions=False,API_called_while_transient_fenced=False))
++                finally:self.release(key)
++
+         def uncached(self,path,limit):
++            require(not any(k.startswith('HTTP_CENSUS_')for k in self.holds),
++                'No uncached getter while transient HTTP admission is fenced')
+             self.live(self.owner)
+             with urllib.request.urlopen('http://127.0.0.1:8771'+path,timeout=5)as r:raw=r.read(limit+1)
+             require(len(raw)<=limit,'Bounded uncached cleanup evidence required');value=json.loads(raw)
+@@ -96,7 +157,7 @@
+             return value
+ 
+         def close_inputs(self):
+-            # Initially seal admission so no old actor reconnects during fleet closure.
++            # Seal current live-fleet admission before the one original fleet stop.
+             self.hold('GAME_INITIAL','Thread-4 (start')
+             snapshot=self.uncached('/api/continuous_training_connections',524288)
+             require(snapshot['schema']=='robotron-continuous-active-connections-v1','Exact active-token getter required')
+@@ -114,7 +175,7 @@
+                 require(token not in originals,'Historical/current token alias refused');originals[token]=value
+             require(len(originals)<=512,'Bounded selected current/historical cleanup set required')
+             initial=self.event('initial-current-connection-identities.json',snapshot)
+-            self.close_population()  # Unchanged one StopUnit/normal0/owned absence/client_count0 kernel.
++            self.close_population()  # One original FleetStop; all selected actor births must disappear.
+             def old_handlers_gone():
+                 api=self.api();current=self.uncached('/api/continuous_training_connections',524288)
+                 return api['client_count']==0 and api['client_rows']==[]and current['connections']==[]and not self.candidates()
+@@ -170,8 +231,14 @@
+                     'Owned probe receipt/source identity differs or already ended')
+                 if probe_identity is not None:
+                     require(all(value[k]==probe_identity[k]for k in identity_keys),'Owned probe token/native identity changed')
+-                native=self.candidates();tid=value['handler_native_id']
+-                require(type(tid)is int and tid not in before_native,'Owned probe native task was not fresh')
++                tid=value['handler_native_id'];born=old.birth(self.owner['pid'],tid)
++                require(type(tid)is int and tid not in before_native and type(born)is int and born>0,
++                    'Owned probe native task was not fresh')
++                selected_native=dict(tid=tid,starttime_ticks=born)
++                if getattr(self,'census_probe',None)is not None:
++                    require(self.census_probe==selected_native,'Original probe native birth was reused; never rebound')
++                self.census_probe=selected_native
++                native=self.candidates()
+                 if set(native)!={tid}:return False
+                 require(native[tid]['wchan'].startswith('poll_schedule_timeout'),'Owned probe is not in zero-frame receive wait')
+                 if probe_identity is not None:
+@@ -216,6 +283,7 @@
+                 and set(map(int,(group/'cgroup.threads').read_text().split()))=={hold['tid']},'Original GAME accept hold changed')
+             result=self.event('input-closure.json',dict(schema='robotron-Root-continuous-input-closure-v1',
+                 owner=self.owner,fleet=self.fleet,source=helper.pin(Path(__file__).resolve()),old_kernel=helper.pin(KERNEL),
++                raw_Thread_and_Timer_classifier_preserved=True,transient_HTTP_fenced_census=True,
+                 all_original_population_births_absent=True,all_GAME_handlers_and_FIFO_work_finished=True,
+                 no_deferred_callbacks_or_Timer_threads=True,GAME_listener_sealed_until_original_trainer_exit=True,
+                 GAME_hold=hold,initial_connections=initial,historical_tokens_preserved_without_success_reclassification=captured,

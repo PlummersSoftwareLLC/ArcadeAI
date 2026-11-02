@@ -1,0 +1,28 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/managed_measurement.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/managed_measurement_continuous_guard_candidate_v1.py
+@@ -6,7 +6,15 @@
+ """
+ 
+ import math
++import os
+ import time
++
++
++def _continuous_training_mode_enabled():
++    raw = os.getenv("ROBOTRON_CONTINUOUS_TRAINING_MODE", "0")
++    if raw not in ("0", "1"):
++        raise ValueError("Explicit continuous training mode0/1 required")
++    return raw == "1"
+ 
+ 
+ class ManagedMeasurement:
+@@ -52,6 +60,9 @@
+         return values
+ 
+     def enter(self, label, checkpoint_path=None, cohort_s=120, timeout_s=600):
++        if (_continuous_training_mode_enabled()
++                or bool(getattr(self.metrics, "continuous_training_mode", False))):
++            raise RuntimeError("Main managed measurement entry is disabled in continuous training mode")
+         if self._prior is not None:
+             raise RuntimeError("Exit the active measurement before entering another")
+         if not isinstance(label, str) or not label.strip():

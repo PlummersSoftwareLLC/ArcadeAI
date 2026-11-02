@@ -1,0 +1,167 @@
+{
+  "schema": "robotron-CE543M-quality-owned-closure-job-v1",
+  "binding_job": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-quality-binding-root-preparation-20261017/root-quality-binding-job.json",
+    "sha256": "f43719ed4dc60a4c275a7414995aa79d0f40062c76964200cf8700a8abe50dc3",
+    "bytes": 236374,
+    "identity": {
+      "device": 2304,
+      "inode": 81006632,
+      "bytes": 236374,
+      "mtime_ns": 1792251768970192128,
+      "ctime_ns": 1792251768970192128,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "timer_invocation_id": "4fb2938381614c8f9816227bff5d4602",
+  "terminal_status": null,
+  "terminal_summary": null,
+  "root_acceptance": null,
+  "legs": [
+    {
+      "index": 1,
+      "receipt": null,
+      "finished_record": null,
+      "audit_receipt": null,
+      "audit_execution": null,
+      "independent_review": null,
+      "startup_observation": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-quality-launch-and-R1-startup-root-reviewed3-20261017/actual-parent-R1-all16-main192-source-GPU-and-API.json",
+        "sha256": "7e9bb444aaad19de4c77e7c400344b2723b3b3a950329d227e0006d9fb92e4e9",
+        "bytes": 632874,
+        "identity": {
+          "device": 2304,
+          "inode": 81008916,
+          "bytes": 632874,
+          "mtime_ns": 1792252408464652318,
+          "ctime_ns": 1792252408464652318,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "evaluator": {
+        "pid": 894298,
+        "starttime_ticks": 34316739
+      },
+      "actors": [
+        {
+          "slot": 4096,
+          "pid": 895529,
+          "starttime_ticks": 34320884
+        },
+        {
+          "slot": 4097,
+          "pid": 895530,
+          "starttime_ticks": 34320885
+        },
+        {
+          "slot": 4098,
+          "pid": 895531,
+          "starttime_ticks": 34320887
+        },
+        {
+          "slot": 4099,
+          "pid": 895532,
+          "starttime_ticks": 34320888
+        },
+        {
+          "slot": 4100,
+          "pid": 895533,
+          "starttime_ticks": 34320890
+        },
+        {
+          "slot": 4101,
+          "pid": 895535,
+          "starttime_ticks": 34320891
+        },
+        {
+          "slot": 4102,
+          "pid": 895538,
+          "starttime_ticks": 34320893
+        },
+        {
+          "slot": 4103,
+          "pid": 895541,
+          "starttime_ticks": 34320894
+        },
+        {
+          "slot": 4104,
+          "pid": 895544,
+          "starttime_ticks": 34320896
+        },
+        {
+          "slot": 4105,
+          "pid": 895547,
+          "starttime_ticks": 34320898
+        },
+        {
+          "slot": 4106,
+          "pid": 895551,
+          "starttime_ticks": 34320900
+        },
+        {
+          "slot": 4107,
+          "pid": 895554,
+          "starttime_ticks": 34320901
+        },
+        {
+          "slot": 4108,
+          "pid": 895557,
+          "starttime_ticks": 34320903
+        },
+        {
+          "slot": 4109,
+          "pid": 895560,
+          "starttime_ticks": 34320905
+        },
+        {
+          "slot": 4110,
+          "pid": 895564,
+          "starttime_ticks": 34320906
+        },
+        {
+          "slot": 4111,
+          "pid": 895566,
+          "starttime_ticks": 34320908
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "receipt": null,
+      "finished_record": null,
+      "audit_receipt": null,
+      "audit_execution": null,
+      "independent_review": null,
+      "startup_observation": null,
+      "evaluator": null,
+      "actors": null
+    },
+    {
+      "index": 3,
+      "receipt": null,
+      "finished_record": null,
+      "audit_receipt": null,
+      "audit_execution": null,
+      "independent_review": null,
+      "startup_observation": null,
+      "evaluator": null,
+      "actors": null
+    },
+    {
+      "index": 4,
+      "receipt": null,
+      "finished_record": null,
+      "audit_receipt": null,
+      "audit_execution": null,
+      "independent_review": null,
+      "startup_observation": null,
+      "evaluator": null,
+      "actors": null
+    }
+  ],
+  "output_directory": null
+}

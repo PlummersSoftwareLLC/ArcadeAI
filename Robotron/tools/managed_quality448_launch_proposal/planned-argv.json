@@ -1,0 +1,79 @@
+{
+  "status": "SOURCE_PREPARED_NOT_EXECUTED",
+  "carrier": "root_quality448_carrier.py",
+  "default": "LiteralPLAN, no reads/imports/queries/actions",
+  "required_actual_input_flags": [
+    "--candidate-sha256",
+    "ACTUAL_SHA",
+    "--candidate-bytes",
+    "ACTUAL_BYTES",
+    "--root-job",
+    "ABS_ACTUAL_JOB",
+    "--root-job-sha256",
+    "ACTUAL_JOB_SHA",
+    "--cpu-proof",
+    "ABS_ACTUAL_EA6_PASS",
+    "--cpu-proof-sha256",
+    "ACTUAL_CPU_SHA",
+    "--cpu-completion",
+    "ABS_MATCHING_CPU_RELEASE",
+    "--cpu-completion-sha256",
+    "ACTUAL_RELEASE_SHA"
+  ],
+  "prepare_argv": [
+    "/usr/bin/python3",
+    "-B",
+    "ABS_BUNDLE/root_quality448_carrier.py",
+    "--execute",
+    "--action",
+    "prepare",
+    "PLUS_REQUIRED_ACTUAL_INPUT_FLAGS"
+  ],
+  "launch_argv": [
+    "/usr/bin/python3",
+    "-B",
+    "ABS_BUNDLE/root_quality448_carrier.py",
+    "--execute",
+    "--action",
+    "launch",
+    "PLUS_REQUIRED_ACTUAL_INPUT_FLAGS",
+    "--plan-sha256",
+    "ACTUAL_PREVIEW_SHA",
+    "--plan-review",
+    "ABS_ACTUAL_PLAN_REVIEW",
+    "--plan-review-sha256",
+    "ACTUAL_REVIEW_SHA",
+    "--runtime-readiness",
+    "ABS_FRESH_CONCRETE_READINESS",
+    "--runtime-readiness-sha256",
+    "ACTUAL_READINESS_SHA"
+  ],
+  "observe_argv": [
+    "/usr/bin/python3",
+    "-B",
+    "ABS_BUNDLE/root_quality448_carrier.py",
+    "--execute",
+    "--action",
+    "observe"
+  ],
+  "archive_argv": [
+    "/usr/bin/python3",
+    "-B",
+    "ABS_BUNDLE/root_quality448_carrier.py",
+    "--execute",
+    "--action",
+    "archive"
+  ],
+  "test_argv": [
+    "/usr/bin/python3",
+    "-B",
+    "-m",
+    "unittest",
+    "-v",
+    "Robotron.tools.managed_quality448_launch_proposal.test_quality448_bindings"
+  ],
+  "authored_unexecuted_tests": 6,
+  "source_freeze": "From actualpreview preparation through fullterminal originalrows/source/cleanup/finalstrictreview",
+  "no_release_retry_publish": true,
+  "actual_plan_unknown_in_source_bundle": true
+}

@@ -1,0 +1,91 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/fast-preview-rgb565-capture-original01-preparation-20261027/exec_next_once_fast_preview_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/raw-preview-parameterized-one-use-helper-original01/exec_next_once_raw_preview_v2.py
+@@ -1,7 +1,7 @@
+-"""One NEXT experimental slot163 OUTPUT; no persistent acceptance or actions.
++"""One ROOT-selected RAW-preview slot163 OUTPUT; no persistent acceptance or actions.
+ 
+ INPUT remains original4947 cached oldLua/env0. NEW owned authority names the
+-current507 OUTPUT actor, not original2258553. A new one-use directory is consumed
++ROOT-selected current OUTPUT actor/binding/count, not original2258553. A new one-use directory is consumed
+ before one exec. No install, signal, retry, rearm, observation or publication.
+ """
+ import argparse
+@@ -13,7 +13,8 @@
+ 
+ MODE = 'NEXT_ONE_USE_PREVIEW_CAPTURE_EXPERIMENT_SLOT163'
+ INPUT_SHA = '494797d8c8e0f6e9511ce93cb295baa03ec796928c7b606ca20f5deecc9c411d'
+-PRIOR_BINDING_SHA = 'd1661e1c52eb990281f2ebdf1eca63f042abf97863656b706d76b0bfa9515d23'
++MINIMUM_HELD_INPUT_COUNT = 215
++RAW_WIRE_POLICY = dict(format=1, name='raw_rgb565be', RLE_enabled=False)
+ SOURCE_SHAS = dict(
+     fuse='b5fdc64b6777e6db2541f7c535be2fc49e47f5b565dcd714086cdb33d6041723',
+     guards='9a8fe7c08e1e941e2d26a2cc3c65124b27129b9f470a0020453e33010bf32027',
+@@ -40,6 +41,10 @@
+             and all(selection[key] == authority[key] for key in ('current_output_binding', 'base_manifest',
+                 'fresh_parent_snapshot', 'prior_actor', 'output_lua', 'claim_directory')),
+             'Explicit ROOT experimental target authority required')
++    expected_count = selection.get('expected_held_input_count')
++    require(type(expected_count) is int and MINIMUM_HELD_INPUT_COUNT <= expected_count <= 4096
++            and selection.get('wire_policy') == RAW_WIRE_POLICY,
++            'ROOT must select exact existing held-input count and RAW format1 wire policy')
+     release = read(selection['root_freeze_release'])
+     require(release['schema'] == 'robotron-root-fixed03-preview-freeze-release-v1'
+             and release['all_four_legs_qualified'] is True and release['all_owned_scopes_closed'] is True,
+@@ -52,26 +57,32 @@
+             and authority['output_lua'] != manifest['target_lua'],
+             'Keep old INPUT507 authority distinct from experimental OUTPUT target')
+     read(authority['output_lua'], False)
++    binding = read(authority['current_output_binding']); policy = read(binding['supervision_policy'])
++    current_output_lua = binding['preview_extra_source_pins']['target_lua']
++    require(current_output_lua['sha256'] == binding['preview_expected_target_sha256']
++            and authority['output_lua'] != current_output_lua,
++            'Current OUTPUT source and different ROOT RAW target must be explicit')
++    read(current_output_lua, False)
+     proof = read(selection['capture_equivalence_proof'])
+-    require(proof['schema'] == 'robotron-preview-fast-capture-byte-equivalence-and-CPU-source-package-v2'
+-            and proof['parent'] == manifest['target_lua'] and proof['candidate'] == authority['output_lua']
+-            and proof['preview_bytes_only'] is True
+-            and proof['gameplay_tensor_input_transport_timer_source_unchanged'] is True,
+-            'Explicit byte-equivalent capture-only source authority required')
++    require(proof['schema'] == 'robotron-preview-decoded-RGB565-and-wire-policy-v1'
++            and proof['parent'] == current_output_lua and proof['candidate'] == authority['output_lua']
++            and proof['decoded_RGB565_equality_all_cases'] is True
++            and proof['encoded_bytes_equality_required'] is False
++            and proof['wire_policy'] == selection['wire_policy'] == RAW_WIRE_POLICY
++            and proof['gameplay_tensor_input_transport_timer_source_unchanged'] is True
++            and proof['exact_single_line_delta_verified'] is True,
++            'Explicit decoded-RGB565 equality and RAW-wire-policy proof required')
+     result = read(proof['benchmark'])
+-    require(result['schema'] == 'robotron-offline-exact-Lua54-preview-capture-benchmark-v1'
+-            and result['actual_lua'] == 'Lua 5.4'
+-            and result['actual_source_syntax_both_pass'] is True
+-            and result['raw_and_compressed_preview_byte_equality_all_cases'] is True
+-            and result['exact_whole_source_allowed_delta_verified'] is True
+-            and len(result['cases']) >= 6, 'Actual Lua54 equivalence proof missing')
+-    require(authority['current_output_binding']['sha256'] == PRIOR_BINDING_SHA,
+-            'Select exact original207 current OUTPUT binding')
+-    binding = read(authority['current_output_binding']); policy = read(binding['supervision_policy'])
+-    require(len(binding['held_hashes']) == 207 and binding['preview_actual_roles']['163']['eval'] is True
++    require(result['schema'] == 'robotron-preview-actual314t-RLE-vs-RAW-AST-benchmark-v1'
++            and result['actual_free_threaded'] is True
++            and result['decoded_RGB565_equality_all_cases'] is True
++            and len(result['cases']) >= 2,
++            'Actual free-threaded RAW/RLE decoder-equivalence benchmark required')
++    require(len(binding['held_hashes']) == expected_count
++            and binding['preview_actual_roles']['163']['eval'] is True
+             and policy['baseline_actors']['163'] == authority['prior_actor']
+             and policy['fleet'] == authority['supervisor_owner'],
+-            'Prior authority must name current OUTPUT actor and original supervisor')
++            'Exact ROOT-selected binding/count/current OUTPUT/original supervisor required')
+     selected = next(row for row in binding['actors'] if row['slot'] == 163)
+     require((selected['pid'], selected['starttime_ticks']) ==
+             (authority['prior_actor']['pid'], authority['prior_actor']['starttime_ticks']),
+@@ -80,7 +91,7 @@
+     original = census['actual_snapshot']['actors']['163']; prior = authority['prior_actor']
+     require(prior['pid'] != original['pid'] and prior['starttime_ticks'] > original['starttime_ticks']
+             and prior['environment']['ROBOTRON_EVAL_MODE'] == '1'
+-            and prior['command'][prior['command'].index('-autoboot_script') + 1] == manifest['target_lua']['path'],
++            and prior['command'][prior['command'].index('-autoboot_script') + 1] == current_output_lua['path'],
+             'Never authorize against old cached INPUT2258553 instead of current OUTPUT')
+     fresh = read(authority['fresh_parent_snapshot'])
+     require(fresh['actors'] == policy['baseline_actors']

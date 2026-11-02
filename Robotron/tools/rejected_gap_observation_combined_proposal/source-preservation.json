@@ -1,0 +1,89 @@
+{
+  "actual_activation": null,
+  "all_reverse_byte_checks": true,
+  "clock_reader_additive_delta": "Drop filename clock inference; absent/conflicting clock set uses sanitized explicit leg label or literal role only.",
+  "held_source_writes": 0,
+  "helper_contents_exact_d586": true,
+  "logging_merged_by_two_unique_replacements": true,
+  "logging_reverse_restores_telemetry_candidate": true,
+  "project_imports": 0,
+  "runtime_actions": 0,
+  "separate_logging_patch_reconstructed_against_original": true,
+  "sources": {
+    "Robotron/Scripts/dqn/experiment_status.py": {
+      "AST_parsed": true,
+      "added_functions": [],
+      "base_bytes": 9734,
+      "base_sha256": "e7048ec8365bca60f7bd320794c635e491407b33113e37a617f06f9f9d56c237",
+      "candidate_bytes": 10343,
+      "candidate_sha256": "b8ca6676189cbee4ff7bfafd4412b9ee5c084beb5158340d1576909064c9f1d0",
+      "changed_original_functions": [
+        "ExperimentStatusReader._comparison",
+        "ExperimentStatusReader._load"
+      ],
+      "original_function_count": 9,
+      "reverse_byte_equality": true,
+      "unchanged_original_functions": 7
+    },
+    "Robotron/Scripts/dqn/metrics_dashboard.py": {
+      "AST_parsed": true,
+      "added_functions": [
+        "_DashboardState.rejected_gap_body"
+      ],
+      "base_bytes": 233840,
+      "base_sha256": "3013d511f1d933fe6012df5cecd7f8a8861824bdd41580cbe241b7498916f1c6",
+      "candidate_bytes": 236331,
+      "candidate_sha256": "3d1aa1950e6b1c5224ace3aecb9c837e433e5c36941b89465b414749f903da27",
+      "changed_original_functions": [
+        "_make_handler",
+        "_make_handler.DashboardHandler.do_GET"
+      ],
+      "original_function_count": 55,
+      "reverse_byte_equality": true,
+      "unchanged_original_functions": 53
+    },
+    "Robotron/Scripts/dqn/rejected_gap_telemetry.py": {
+      "AST_parsed": true,
+      "added_functions": [
+        "RejectedGapTelemetry.__init__",
+        "RejectedGapTelemetry._close",
+        "RejectedGapTelemetry._event",
+        "RejectedGapTelemetry._inc",
+        "RejectedGapTelemetry.event",
+        "RejectedGapTelemetry.snapshot",
+        "_actor",
+        "_group",
+        "_state"
+      ],
+      "base_bytes": 0,
+      "base_sha256": null,
+      "candidate_bytes": 12216,
+      "candidate_sha256": "d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd",
+      "changed_original_functions": [],
+      "original_function_count": 0,
+      "reverse_byte_equality": true,
+      "unchanged_original_functions": 0
+    },
+    "Robotron/Scripts/dqn/socket_server.py": {
+      "AST_parsed": true,
+      "added_functions": [
+        "SocketServer.rejected_gap_snapshot"
+      ],
+      "base_bytes": 136403,
+      "base_sha256": "4a1f6a3cc7c82d8c85e1af93ceac0ca7457663d5f5ba7c7d893e3c2b3003e26c",
+      "candidate_bytes": 140517,
+      "candidate_sha256": "f44ddfe31408b77b6d622e1d4ec4cda60a03999dc984d9e11b5aeac38911a9ed",
+      "changed_original_functions": [
+        "SocketServer.__init__",
+        "SocketServer.handle_client"
+      ],
+      "original_function_count": 74,
+      "reverse_byte_equality": true,
+      "unchanged_original_functions": 72
+    }
+  },
+  "status": "SOURCE_ONLY_UNSELECTED_UNAPPLIED_PEER_PENDING",
+  "tests_executed": 0,
+  "upstream_clock_reader_candidate": "a68cb5aed601814c3667f4207e13e8fbaf25e30c868a6654d99619813b426b9f",
+  "upstream_telemetry_candidate": "0eed0f6176270c5abe51fa481f10085818b63ac2d59427ff59ea9615d1c9b698"
+}

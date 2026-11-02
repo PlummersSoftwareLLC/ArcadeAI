@@ -1,0 +1,10 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/power_recovery/watch_replay_progress_candidate.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-continuous-fresh-candidate-20261029-original04-preparation/watch_replay_progress_continuous_candidate_v2.py
+@@ -94,6 +94,7 @@
+     source = Path(plan['observer_library']['path'])
+     assert hashlib.sha256(source.read_bytes()).hexdigest() == plan['observer_library']['sha256']
+     observer = load(source)
++    observer.configure(plan)
+     directory = plan_path.parent
+     assert plan['thresholds'] == dict(applied_updates=5000, replay_inserts=1_000_000, elapsed_s=3600)
+     assert plan['maximum_wait_s'] == 14400 and plan['original_DQN_window_unchanged'] is True

@@ -1,0 +1,22 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/round_health_transport_retired_API_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_health_transport_retired_API_v4.py
+@@ -14,8 +14,8 @@
+ import sys
+ import time
+ 
+-BASE = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/round_main_health_retired_API_v3.py')
+-BASE_SHA = '8fc46d3eb84fe0e49c1e52ce569a416c96b3c979e8b3b70421aeff2b853e3ea1'
++BASE = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_main_health_retired_API_v4.py')
++BASE_SHA = 'bb578e92a7cb796651673ca7e0bbf43027bc5058ee88ed4ae65a973ce7460c3a'
+ PORT = 9998
+ 
+ 
+@@ -26,7 +26,7 @@
+ 
+ def base():
+     require(hashlib.sha256(BASE.read_bytes()).hexdigest() == BASE_SHA, 'Round reader source changed')
+-    name = '_pinned_round_transport_retired_API_v3'
++    name = '_pinned_round_transport_retired_API_v4'
+     if name not in sys.modules:
+         spec = importlib.util.spec_from_file_location(name, BASE)
+         module = importlib.util.module_from_spec(spec)

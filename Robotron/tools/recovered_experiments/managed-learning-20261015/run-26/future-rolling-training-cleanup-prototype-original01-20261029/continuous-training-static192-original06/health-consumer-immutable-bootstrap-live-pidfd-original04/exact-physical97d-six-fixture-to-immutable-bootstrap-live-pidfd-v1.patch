@@ -1,0 +1,491 @@
+--- parent97d465/test_physical_original192_health_adversarial_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/test_immutable_bootstrap_live_pidfd_health_adversarial_v1.py
+@@ -1,9 +1,10 @@
+ """Source-bound physical-cohort fixtures; Root alone operates the bounded CPU job.
+ 
+-Only SHA-bound actual pure verifier functions are compiled. All process, unit,
++Only SHA-bound actual pure verifier functions and the keeper descriptor collector are compiled.
++The collector uses explicit synthetic remote-FD readers, clock, and unit records. All process, unit,
+ API, TCP, bootstrap/startup authority, CPU closeout and event evidence below is
+ SYNTHETIC test data. Temporary0444 events exercise the real immutable reader.
+-No collector/proc/API/unit/model/actor code is imported or called, and passing
++No live collector/proc/API/unit/model/actor operation is imported or called, and passing
+ these fixtures would not establish any actual startup or scientific readiness.
+ """
+ import ast
+@@ -26,9 +27,9 @@
+ 
+ HERE = Path(__file__).resolve().parent
+ SOURCES = {
+-    'registry': ('continuous_physical192_registry_v2.py', '71fc044d7b3bbbfceba5ef23f69a6c741eeff5700176050c6cdbe9e4794bba69'),
+-    'health': ('continuous_physical192_health_v2.py', '77a832a4202bf81e2f8eae00affc2127be0a22795c75f0c5cf1585f22d2991a9'),
+-    'transport': ('continuous_physical192_transport_v2.py', 'a460b4f3d5352d712c39929dcafe9883909610c01a71a0a08b82953f490d5541'),
++    'registry': ('continuous_physical192_registry_v4.py', '4bd2cd67c68a908a44c984f00f2586cd7116e6fb2ab4cf53ad8037dd2052b8a2'),
++    'health': ('continuous_physical192_health_v4.py', '42bfa00072a6ad7a0003fa0fea0672c997352c7e9e5f01104aa1463e0eef388a'),
++    'transport': ('continuous_physical192_transport_v4.py', '2d38c2ac7dfd09b148fa8db228a65a2e07541acbc5c3d4dd06251b9399327b75'),
+ }
+ LEGACY_ROOT = HERE.parent/'health-consumer-original01'
+ LEGACY_SOURCES = {
+@@ -38,7 +39,7 @@
+ }
+ PRODUCER = Path('/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/connection_cleanup_receipts.py')
+ PRODUCER_SHA = 'f27e38411238fcf62256e6b317836b757d31d5e0ac962ec8523dd380236d80ee'
+-NEW_PROFILE = 'PHYSICAL_ORIGINAL192_TRAIN_CURRENT_TCP_EVAL_ORIGINAL_ONCE'
++NEW_PROFILE = 'PHYSICAL_ORIGINAL192_IMMUTABLE_BOOTSTRAP_LIVE_PIDFD_V4'
+ KERNEL_SOURCE = HERE.parent/'EVAL-pidfd-exit-witness-original01-preparation/hold_original_EVAL_pidfd_exits_v1.py'
+ KERNEL_SOURCE_SHA = 'fe306753c9cbb20e715b76d60c116ef9ce47a768c1a1afe0b00c03eac02a095c'
+ 
+@@ -80,7 +81,7 @@
+     tree, filename = source('health',sources,root)
+     ns = dict(common, registry=lambda: registry)
+     wanted = {'birth','stat_identity','file_identity','check_inputs','validate_optimizer_accounting',
+-              'stable_round_status','observed_counts','validate_policy','validate_eval_holder','validate','require'}
++              'stable_round_status','observed_counts','validate_policy','validate_keeper_descriptors','validate_eval_holder','validate','require'}
+     selected = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in wanted]
+     # STATIC is the actual producer identity projection, not a relaxed fixture projection.
+     selected += [n for n in tree.body if isinstance(n, ast.Assign)
+@@ -193,6 +194,8 @@
+                 for s,r in c['original_slots'].items()}), incarnation=0, mono=998.0)
+         lineage = dict(process_id=1000, instance_monotonic_ns=500, epoch=1, epoch_reason='synthetic')
+         self.case['exposure'] = dict(optimizer=dict(lineage), replay=dict(lineage))
++        self.prepare_prefix()
++        self.prepare_keeper()
+ 
+     def write(self, label, value):
+         self.sequence += 1
+@@ -266,21 +269,7 @@
+         actors = {s:proc(r['original_child']['pid'],r['original_child']['birth'],c['supervisor']['pid'],
+             c['supervisor']['cgroup'],self.case['actor_command'],self.reg.expected_environment(self.case,s),
+             self.case['actor_executable']) for s,r in c['original_slots'].items()}
+-        status = dict(schema='robotron-continuous-training-static192-snapshot-v2',mode=self.reg.MODE,epoch=c['epoch'],
+-            supervisor=c['supervisor'],trainer=c['trainer'],rolemap=c['rolemap'],source_authority=c['source_authority'],
+-            original_membership=c['original_membership'],errors=[],slots={},updated_unix_s=unix-.1,
+-            updated_monotonic_ns=int((mono-.1)*1e9),initial_admission=dict(complete=True,
+-                slots_ever_bound=list(range(192)),immutable_all192_barrier=c['initial_barrier']))
+-        for slot,original in c['original_slots'].items():
+-            # Independent implementation of the declared compact-wire hash;
+-            # the actual verifier's original_digest/slot_view must agree.
+-            raw=json.dumps(original,sort_keys=True,separators=(',',':'),
+-                ensure_ascii=True,allow_nan=False).encode('utf-8')
+-            status['slots'][slot]=dict(eval_only=self.roles[slot],incarnation=1,
+-                state='active_eval' if self.roles[slot] else 'active_train',
+-                original_pid=original['original_child']['pid'],original_birth=original['original_child']['birth'],
+-                original_slot_sha256=hashlib.sha256(raw).hexdigest(),natural_result=None,closure=None,
+-                prior_fault_closure=None,quarantine_reason=None,faults=0)
++        status = self.reg.bootstrap_projection(self.case)
+         def capture(schema):
+             return dict(before_monotonic_ns=int((mono-.15)*1e9),after_monotonic_ns=int((mono-.05)*1e9),
+                 value=dict(schema=schema,server_stamp=c['server_stamp'],continuous_training_mode=True,
+@@ -289,7 +278,7 @@
+                     observed_monotonic_ns=int((mono-.1)*1e9),observed_unix_s=unix-.1))
+         connections = capture('robotron-continuous-active-connections-v1')
+         connections['value']['connections'] = copy.deepcopy(list(self.connections.values()))
+-        result = dict(schema='robotron-continuous-physical-original192-main-health-snapshot-v2',unix_s=unix,monotonic_s=mono,
++        result = dict(schema='robotron-original192-immutable-bootstrap-live-pidfd-snapshot-v4',unix_s=unix,monotonic_s=mono,
+             owners=copy.deepcopy(self.case['owners']),status=status,actors=actors,api=api,
+             policy_capture=capture('robotron-continuous-main-policy-v1'),connections_capture=connections,
+             PID_absence={},EVAL_journal_evidence={},EVAL_cleanup_captures={},
+@@ -298,7 +287,9 @@
+                 socket_inodes=dict(trainer=['1999']+[str(self.server_inode(s))for s in actors],
+                                    **{s:[str(self.client_inode(s))]for s in actors}),
+                 namespaces={s:'net:[SYNTHETIC]'for s in ['trainer',*actors]},collector_namespace='net:[SYNTHETIC]'))
+-        self.counts(result); self.sync_children(result)
++        self.sync_children(result)
++        self.prefix_capture(result)
++        self.holder_capture(result,{})
+         return self.refresh(result)
+ 
+ 
+@@ -323,11 +314,7 @@
+         sample=self.sample(mono=mono)
+         for row in sample['api']['client_rows']:
+             if row['client_slot']==int(slot):row.update(client_id=cid,connected_seconds=.2)
+-        # A known static-publisher TRAIN token error stays retained as raw
+-        # history, never rewritten into a healthy old-schema sample.
+-        sample['status']['slots'][slot].update(state='quarantined',quarantine_reason='Original connection changed')
+-        sample['status']['errors']=['SYNTHETIC preserved old static TRAIN token rejection']
+-        self.counts(sample)
++        # Mutable publisher diagnostics do not enter the v4 bootstrap certificate.
+         sample['connections_capture']['value']['connections']=actual_current_rows(self.connections)
+         return self.refresh(sample)
+ 
+@@ -335,11 +322,10 @@
+         case=copy.deepcopy(self.case);case['schema']='robotron-continuous-static192-health-case-v1'
+         case['continuous']['accepted_profile']='STATIC_ORIGINAL192_NO_FAULT_ADOPTION'
+         raw=copy.deepcopy(sample);raw['schema']='robotron-continuous-static192-main-health-snapshot-v1'
+-        # Isolate the old fixed-TCP refusal rather than its known publisher
+-        # quarantine/error refusal. This is only an explicitly synthetic
+-        # negative control and never rescues any actual failed old proof.
+-        raw['status']['errors']=[]
+-        raw['status']['slots']['40'].update(state='active_train',quarantine_reason=None)
++        raw['status']['schema']='robotron-continuous-training-static192-snapshot-v2'
++        raw['status'].pop('historical_bootstrap_only');raw['status'].pop('current_health_claimed')
++        raw['status'].update(errors=[],updated_unix_s=raw['unix_s']-.1,
++            updated_monotonic_ns=int((raw['monotonic_s']-.1)*1e9))
+         self.counts(raw);self.refresh(raw)
+         return case,raw
+ 
+@@ -356,7 +342,6 @@
+             (json.dumps(result,separators=(',',':'))+'\n').encode())
+         natural = self.event('natural-result',0,dict(result=result,raw_line=raw_line,natural_complete=True),
+                              mono=999.85,unix=self.now-.05)
+-        row['state'],row['natural_result'] = 'retiring_eval',natural
+         conn = self.connections[slot]
+         receipt = dict(schema='robotron-prospective-connection-cleanup-receipt-v2',
+             server_stamp=self.case['continuous']['server_stamp'],token=conn['token'],client_id=0,
+@@ -373,15 +358,11 @@
+         sample['EVAL_journal_evidence'][slot]=dict(schema='robotron-independent-original-EVAL-journal-evidence-v1',
+             raw_line=raw,raw_line_sha256=raw_line['sha256'],main_raw_line=raw,retirement_raw_line=raw,
+             main_path=str(journal/'games.jsonl'),retirement_path=str(journal/'completed_clients.jsonl'),
+-            first_observed_unix_s=self.now-.05,first_observed_monotonic_s=999.9)
++            first_observed_unix_s=self.now-.05,first_observed_monotonic_s=999.9,
++            retirement_line_offset=0,retirement_prefix_identity=identity((journal/'completed_clients.jsonl').stat()))
+         wire,sha=self.wire(receipt)
+         sample['EVAL_cleanup_captures'][slot]=dict(before_monotonic_ns=999850000000,
+             after_monotonic_ns=999950000000,value=receipt,raw_wire=wire,sha256=sha)
+-        if closed:
+-            row['closure'] = self.event('original-reaped-closure',0,dict(actual_exit=0,
+-                original_pid=2000,original_birth=9000,original_wait_reaped=True,original_birth_absent=True,
+-                natural_result=natural,restart_censored=False,connection_cleanup=[receipt]),mono=999.9)
+-            row['state'] = 'closed_eval'
+         del sample['actors'][slot]
+         sample['PID_absence'][slot] = dict(pid=2000,path='/proc/2000/stat',absent=True,current_birth=None,state=None,
+             before_monotonic_s=999.9,after_monotonic_s=999.91)
+@@ -393,7 +374,9 @@
+         sample['transport']['socket_inodes']['trainer'].remove('40000')
+         sample['retired_API_projection'] = dict(schema='robotron-continuous-retired-API-evidence-v1',entries={slot:
+             dict(anchor=self.transport.anchor(self.case,previous,slot),PID_absence=sample['PID_absence'][slot])})
+-        self.sync_children(sample);self.counts(sample)
++        self.sync_children(sample);self.prefix_capture(sample)
++        self.holder_capture(sample,{})
++        if closed:self.kernel(sample)
+         return previous,self.refresh(sample)
+ 
+     def write_named(self,path,value):
+@@ -414,60 +397,137 @@
+         return bytes(raw)
+ 
+     def kernel(self,sample,*,mask=44,status=0,all37=False):
+-        source=pin(KERNEL_SOURCE)
+-        assert source['sha256']==KERNEL_SOURCE_SHA
+-        c=self.case['continuous']
+-        if source['path']not in self.case['inputs']:
+-            c['source_pins'].append(source)
+-            self.case['inputs'][source['path']]=dict(sha256=source['sha256'],identity=source['identity'])
+-        self.sequence+=1;output=self.root/('synthetic-kernel-%04d'%self.sequence)
+-        holder=dict(pid=5000,birth=10000,parent=1,uid=os.getuid(),unit='synthetic-holder.service',
+-                    invocation_id='5'*32,cgroup='/synthetic/holder')
+-        originals={s:dict(pid=r['original_child']['pid'],birth=r['original_child']['birth'],
+-            parent=r['original_child']['parent'],uid=os.getuid(),initial_connection_binding=r['connection_binding'])
+-            for s,r in c['original_slots'].items()if self.roles[s]}
+-        selection=self.write('synthetic-kernel-selection.json',dict(output=str(output),nonce='3'*32,originals=originals))
+-        anchors_value=dict(schema='robotron-original37-EVAL-pidfd-held-anchors-v1',source=source,
+-            selection=selection,holder=holder,nonce='3'*32,all37_acquired_while_originals_live=True,
+-            originals={s:dict(slot=int(s),original=r,descriptor=dict(fd=100+int(s),SYNTHETIC=True),
+-                initial_info=dict(raw80_hex=self.info80(r['pid'],r['parent']).hex()),
+-                capture_end_monotonic_ns=997500000000)for s,r in originals.items()})
+-        anchors=self.write_named(output/'held-original37-anchors.json',anchors_value)
+-        c['eval_exit_witness']=dict(selection=selection,source=source,anchors=anchors,output=str(output),holder=holder)
+-        receipts={}
++        selected=self.case['continuous']['eval_exit_witness'];anchors=self.anchors_value;receipts={}
++        originals=anchors['originals']
+         for slot in (originals if all37 else ['0']):
+-            original=originals[slot];raw=self.info80(original['pid'],original['parent'],mask=mask,status=status)
++            anchor=originals[slot];original=anchor['original'];raw=self.info80(original['pid'],original['parent'],mask=mask,status=status)
+             info=dict(raw80_hex=raw.hex(),returned_mask=mask,supported_mask=127,exit_code_raw=status)
+-            value=dict(schema='robotron-original-EVAL-retained-pidfd-exit-v1',anchors=anchors,selection=selection,
+-                source=source,holder=holder,nonce='3'*32,slot=int(slot),anchor=anchors_value['originals'][slot],
+-                original=original,descriptor=anchors_value['originals'][slot]['descriptor'],
++            value=dict(schema='robotron-original-EVAL-retained-pidfd-exit-v1',anchors=selected['anchors'],
++                selection=selected['selection'],source=selected['source'],holder=selected['holder'],nonce='3'*32,
++                slot=int(slot),anchor=anchor,original=original,descriptor=anchor['descriptor'],
+                 request_ioctl=0xc050ff0b,request_mask=0x28,original_Popen_wait_called_claimed=False,
+                 actor_signals_or_wait_or_reap_performed=False,returned_raw80_hex=raw.hex(),returned_info=info,
+                 raw_wait_status=status,normal_exit_zero=True,normal_exit=True,normal_exit_status=0,
+                 signal_termination=False,original_birth_absent=True,status='KERNEL_REAPED_NORMAL0',
+                 capture_begin_monotonic_ns=999800000000,capture_end_monotonic_ns=999850000000,
+                 observed_monotonic_ns=999900000000)
+-            receipts[slot]=self.write_named(output/('exit-slot-%03d.json'%int(slot)),value)
+-        sample['EVAL_kernel_exit_receipts']=receipts
+-        common=dict(holder=holder,source=source,selection=selection,anchors=anchors,nonce='3'*32,exit_receipts=receipts)
++            path=self.kernel_output/('exit-slot-%03d.json'%int(slot))
++            if path.exists():path.unlink()  # replace only this temporary synthetic scenario's test evidence
++            receipts[slot]=self.write_named(path,value)
++        return self.holder_capture(sample,receipts,all37=all37)
++
++    def prepare_prefix(self):
++        journal=Path(self.case['continuous']['eval_journal_directory']);journal.mkdir()
++        for name in ('completed_clients.jsonl','games.jsonl'):
++            with (journal/name).open('xb')as f:
++                f.flush();os.fchmod(f.fileno(),0o664);os.fsync(f.fileno())
++        info=identity((journal/'completed_clients.jsonl').stat())
++        archive=self.write('synthetic-prior-EVAL-prefix.jsonl',b'')
++        thin={k:info[k]for k in ('device','inode','mode','uid','nlink')}
++        record=self.write('synthetic-prior-EVAL-prefix.json',dict(
++            schema='robotron-prior-cohort-EVAL-completed-prefix-v1',
++            canonical_path=str(journal/'completed_clients.jsonl'),canonical_identity=thin,
++            archive=archive,prefix_bytes=0,prefix_sha256=archive['sha256'],cohort_min_spawn_unix_s=self.now-10))
++        self.case['continuous']['completed_clients_prefix']=record
++        for entry in (record,archive):self.case['inputs'][entry['path']]=dict(sha256=entry['sha256'],identity=entry['identity'])
++
++    def prefix_capture(self,sample):
++        record=self.reg.read_pin(self.case['continuous']['completed_clients_prefix'])
++        path=Path(record['canonical_path']);info=identity(path.stat())
++        sample['EVAL_completed_prefix_capture']=dict(record=self.case['continuous']['completed_clients_prefix'],
++            canonical_path=str(path),canonical_identity=info,raw_prefix_wire='',prefix_bytes=0,
++            prefix_sha256=hashlib.sha256(b'').hexdigest(),
++            before_monotonic_s=sample['monotonic_s']-.18,after_monotonic_s=sample['monotonic_s']-.17)
++        return sample
++
++    def prepare_keeper(self):
++        source=pin(KERNEL_SOURCE);assert source['sha256']==KERNEL_SOURCE_SHA
++        c=self.case['continuous'];c['source_pins'].append(source)
++        self.case['inputs'][source['path']]=dict(sha256=source['sha256'],identity=source['identity'])
++        self.kernel_output=self.root/'synthetic-retained-kernel'
++        holder=dict(pid=5000,birth=10000,parent=1,uid=os.getuid(),unit='synthetic-holder.service',
++            invocation_id='5'*32,cgroup='/synthetic/holder')
++        originals={slot:dict(pid=row['original_child']['pid'],birth=row['original_child']['birth'],
++            parent=row['original_child']['parent'],uid=os.getuid(),initial_connection_binding=row['connection_binding'])
++            for slot,row in c['original_slots'].items()if self.roles[slot]}
++        selection=self.write('synthetic-kernel-selection.json',dict(output=str(self.kernel_output),nonce='3'*32,originals=originals))
++        anchors_value=dict(schema='robotron-original37-EVAL-pidfd-held-anchors-v1',source=source,
++            selection=selection,holder=holder,nonce='3'*32,all37_acquired_while_originals_live=True,
++            originals={slot:dict(slot=int(slot),original=row,fd_number=100+int(slot),
++                descriptor=dict(device=5,inode=70000+int(slot),mode='0o700',uid=0),
++                initial_info=dict(raw80_hex=self.info80(row['pid'],row['parent']).hex()),
++                capture_end_monotonic_ns=997500000000)for slot,row in originals.items()})
++        anchors=self.write_named(self.kernel_output/'held-original37-anchors.json',anchors_value)
++        c['eval_exit_witness']=dict(source=source,selection=selection,anchors=anchors,output=str(self.kernel_output),holder=holder)
++        self.anchors_value=anchors_value
++
++    def synthetic_original_keeper(self):
++        selected=self.case['continuous']['eval_exit_witness'];holder=selected['holder']
++        return dict(unit=holder['unit'],invocation=holder['invocation_id'],process=proc(holder['pid'],holder['birth'],1,
++            holder['cgroup'],['SYNTHETIC-PYTHON',selected['source']['path'],selected['source']['sha256'],
++                selected['selection']['path'],selected['selection']['sha256']],{},dict(path='SYNTHETIC-PYTHON')))
++
++    def actual_keeper_census(self,sample,publication,owner):
++        """Actual source collector with synthetic remote FD readers only.
++
++        No /proc read, pidfd acquisition, ioctl, unit query or clock observation
++        occurs. Every delegated reader checks its exact synthetic selected path.
++        """
++        tree,filename=source('health')
++        fn=next(n for n in tree.body if isinstance(n,ast.FunctionDef)and n.name=='collect_keeper_descriptors')
++        selected=self.case['continuous']['eval_exit_witness'];holder=selected['holder']
++        byfd={str(row['fd_number']):(slot,row)for slot,row in self.anchors_value['originals'].items()}
++        calls=[]
++        def row(path,kind):
++            p=Path(path);assert p.parts[-3:]==(str(holder['pid']),kind,p.name)
++            slot,value=byfd[p.name];return slot,value
++        def descriptor(path):
++            slot,value=row(path,'fd');calls.append(('stat',slot));return copy.deepcopy(value['descriptor'])
++        def link(path):
++            slot,value=row(path,'fd');calls.append(('link',slot));return 'anon_inode:[pidfd]'
++        def fdinfo(path):
++            slot,value=row(path,'fdinfo');calls.append(('fdinfo',slot))
++            target=value['original']['pid']if slot in sample['actors']else -1
++            return 'pos:\t0\nflags:\t02000002\nmnt_id:\t15\nino:\t%d\nPid:\t%d\nNSpid:\t%d\n'%(value['descriptor']['inode'],target,target)
++        begin=int((sample['monotonic_s']-.16)*1e9);ticks=iter(begin+100000*i for i in range(500))
++        def unit(name,reader):assert name==holder['unit'];return copy.deepcopy(owner)
++        ns=dict(registry=lambda:self.reg,Path=Path,require=self.health.require,
++            time=SimpleNamespace(monotonic_ns=lambda:next(ticks)),os=SimpleNamespace(readlink=link),
++            pidfd_descriptor=descriptor,read_pidfd_info=fdinfo,unit_record=unit)
++        exec(compile(ast.Module(body=[fn],type_ignores=[]),filename,'exec'),ns)
++        value=ns['collect_keeper_descriptors'](self.case,publication,object(),copy.deepcopy(owner))
++        unresolved=set(self.anchors_value['originals'])-set(publication['exit_receipts'])
++        assert len(calls)==len(unresolved)*6
++        for slot in unresolved:
++            assert calls.count(('stat',slot))==calls.count(('link',slot))==calls.count(('fdinfo',slot))==2
++        return value
++
++    def holder_capture(self,sample,receipts,*,all37=False,old_publication=True):
++        c=self.case['continuous'];selected=c['eval_exit_witness'];holder=selected['holder']
++        common=dict(holder=holder,source=selected['source'],selection=selected['selection'],
++            anchors=selected['anchors'],nonce='3'*32,exit_receipts=receipts)
++        mono=sample['monotonic_s'];sample['EVAL_kernel_exit_receipts']=receipts
+         if all37:
+             value=dict(common,schema='robotron-original37-EVAL-pidfd-holder-terminal-v1',
+                 all37_exit_receipts_present=True,unresolved_slots=[],status='ALL37_REAPED_NORMAL0')
+-            published=self.write_named(output/'holder-terminal.json',value)
+-            capture=dict(state='ALL37_IMMUTABLE_EXIT_RECEIPTS_PUBLISHED',holder=None,
+-                publication=dict(kind='COMPLETE_TERMINAL_PUBLICATION',immutable_pin=published))
++            path=self.kernel_output/'holder-terminal.json'
++            if path.exists():path.unlink()  # synthetic temporary publication only
++            publication=self.write_named(path,value)
++            cap=dict(state='ALL37_IMMUTABLE_EXIT_RECEIPTS_PUBLISHED',holder=None,descriptor_census=None,
++                publication=dict(kind='COMPLETE_TERMINAL_PUBLICATION',immutable_pin=publication))
+         else:
+             value=dict(common,schema='robotron-original37-EVAL-pidfd-holder-live-v1',state='HOLDING_UNRESOLVED_ORIGINALS',
+-                unresolved_slots=sorted(set(originals)-set(receipts)),updated_monotonic_ns=999950000000,
+-                updated_unix_s=sample['unix_s']-.05)
+-            owner=dict(unit=holder['unit'],invocation=holder['invocation_id'],process=proc(holder['pid'],holder['birth'],1,
+-                holder['cgroup'],['SYNTHETIC-PYTHON',source['path'],source['sha256'],selection['path'],selection['sha256']],
+-                {},dict(path='SYNTHETIC-PYTHON')))
+-            capture=dict(state='HOLDING_UNRESOLVED_ORIGINALS',holder=owner,publication=dict(kind='LIVE_HEARTBEAT'))
++                unresolved_slots=sorted(set(self.anchors_value['originals'])-set(receipts)),
++                updated_monotonic_ns=int((mono-200 if old_publication else mono-.05)*1e9),
++                updated_unix_s=sample['unix_s']-(200 if old_publication else .05))
++            owner=self.synthetic_original_keeper()
++            cap=dict(state='HOLDING_UNRESOLVED_ORIGINALS',holder=owner,
++                descriptor_census=self.actual_keeper_census(sample,value,owner),
++                publication=dict(kind='LIVE_HEARTBEAT',path=str(self.kernel_output/'holder-live.json')))
+         wire,sha=self.wire(value)
+-        capture['publication'].update(before_monotonic_ns=999900000000,after_monotonic_ns=999990000000,
+-                                     raw_wire=wire,sha256=sha,value=value)
+-        sample['EVAL_exit_witness_capture']=capture
++        cap['publication'].update(before_monotonic_ns=int((mono-.16)*1e9),after_monotonic_ns=int((mono-.02)*1e9),
++            raw_wire=wire,sha256=sha,value=value)
++        sample['EVAL_exit_witness_capture']=cap
+         return sample
+ 
+     def replacement_event(self, sample, field, change):
+@@ -503,18 +563,23 @@
+             sample=h.rebind_train();original=h.case['continuous']['original_slots']['40']['original_child']
+             self.assertEqual(sample['actors']['40']['pid'],original['pid'])
+             self.assertEqual(sample['actors']['40']['starttime_ticks'],original['birth'])
+-            result=h.transport.validate(h.case,sample)
++            h.transport.validate(h.case,sample)
+             view=h.reg.validate_snapshot(h.case,sample)
+             self.assertEqual(view['current_connections']['40']['client_id'],1040)
+             self.assertEqual(view['current_connections']['40']['token'],'SYNTHETIC-FRESH-TRAIN-TCP')
+             self.assertEqual(len(view['current_connections']),192)
+-            self.assertEqual(sample['status']['slots']['40']['state'],'quarantined')
+-            self.assertTrue(sample['status']['errors'])  # raw history is not laundered
++            certificate=copy.deepcopy(sample['status'])
++            self.assertTrue(certificate['historical_bootstrap_only']);self.assertFalse(certificate['current_health_claimed'])
++            # Deliberately malformed and oversized SYNTHETIC mutable publisher data.
++            # No actual production/status file is read or written by the fixture.
++            Path(h.case['continuous']['snapshot_path']).write_bytes(b'SYNTHETIC UNREAD BAD STATUS '*24000)
++            self.assertEqual(h.reg.bootstrap_projection(h.case),certificate)
++            h.transport.validate(h.case,sample)
++            bad=copy.deepcopy(sample);bad['status']['current_health_claimed']=True;h.refresh(bad)
++            with self.assertRaises(ValueError):h.transport.validate(h.case,bad)
+             oldreg,oldhealth,oldtransport=actual_pure_functions(LEGACY_SOURCES,LEGACY_ROOT)
+             case,old_sample=h.legacy(sample)
+             with self.assertRaises(ValueError):oldtransport.validate(case,old_sample)
+-            # Actual current-producer method does not manufacture a game UID
+-            # or physical PID proof. Exact process/TCP joins remain separate.
+             rows=actual_current_rows(h.connections)
+             self.assertNotIn('game_uid',rows[0]);self.assertNotIn('pid',rows[0])
+ 
+@@ -572,55 +637,80 @@
+ 
+     def test_EVAL_keeps_original_connection_natural_row_and_positive_normal_closure(self):
+         with tempfile.TemporaryDirectory()as directory:
+-            h=Synthetic192(directory);previous,good=h.retired(score=0)
+-            h.transport.validate(h.case,good,previous)  # exact original Popen closure path only
+-            bad=h.sample();next(r for r in bad['connections_capture']['value']['connections']if r['client_slot']==0)['token']='NEW-EVAL-TOKEN';h.refresh(bad)
+-            with self.assertRaises(ValueError):h.transport.validate(h.case,bad)
+-            checks=[lambda b:b['data'].__setitem__('actual_exit',1),lambda b:b['data'].__setitem__('original_wait_reaped',False),
+-                lambda b:b['data'].__setitem__('original_birth_absent',False),lambda b:b['data'].__setitem__('original_birth',99999),
+-                lambda b:b['data']['connection_cleanup'][0].__setitem__('token','wrong'),
+-                lambda b:b['data']['connection_cleanup'][0].__setitem__('FIFO_reset_executed',False),
+-                lambda b:b['data']['connection_cleanup'][0].__setitem__('original_handler_stopped',False),
+-                lambda b:b['data']['connection_cleanup'][0].__setitem__('original_owned_timer_stopped',False),
+-                lambda b:b['data']['connection_cleanup'][0].__setitem__('owned_timer_callback_succeeded',False),
+-                lambda b:b['data']['connection_cleanup'][0].__setitem__('terminal_line_sha256','0'*64)]
+-            for i,change in enumerate(checks):
+-                bad=copy.deepcopy(good);h.replacement_event(bad,'closure',change)
+-                with self.subTest(case=i),self.assertRaises(ValueError):h.transport.validate(h.case,bad,previous)
+-            prior,missing=h.retired(closed=False)
+-            result=h.transport.validate(h.case,missing,prior)
++            h=Synthetic192(Path(directory)/'normal');previous,good=h.retired(score=0)
++            h.reg.validate_case(h.case);h.transport.validate(h.case,good,previous)
++            self.assertEqual(h.reg.validate_snapshot(h.case,good,previous)['counts']['closed_eval'],1)
++            # Bootstrap is historical even when independent journal/kernel/cleanup closes EVAL.
++            self.assertIsNone(good['status']['slots']['0']['natural_result'])
++            self.assertIsNone(good['status']['slots']['0']['closure'])
++            active=h.sample();next(r for r in active['connections_capture']['value']['connections']if r['client_slot']==0)['token']='NEW-EVAL-TOKEN';h.refresh(active)
++            with self.assertRaises(ValueError):h.transport.validate(h.case,active)
++            for flag in ('original_handler_stopped','original_owned_timer_stopped','owned_timer_callback_succeeded',
++                         'journal_disconnect_succeeded','FIFO_reset_executed','replay_consumer_healthy'):
++                bad=copy.deepcopy(good);value=bad['EVAL_cleanup_captures']['0']['value'];value[flag]=False
++                raw,sha=h.wire(value);bad['EVAL_cleanup_captures']['0'].update(raw_wire=raw,sha256=sha)
++                with self.subTest(cleanup=flag),self.assertRaises(ValueError):h.transport.validate(h.case,bad,previous)
++            for field,value in [('original_birth_absent',False),('normal_exit_zero',False),('source',dict(path='foreign'))]:
++                bad=copy.deepcopy(good);body=h.reg.read_pin(bad['EVAL_kernel_exit_receipts']['0']);body[field]=value
++                path=h.kernel_output/'exit-slot-000.json';path.unlink();entry=h.write_named(path,body)
++                bad['EVAL_kernel_exit_receipts']['0']=entry
++                pub=bad['EVAL_exit_witness_capture']['publication'];pub['value']['exit_receipts']['0']=entry
++                wire,sha=h.wire(pub['value']);pub.update(raw_wire=wire,sha256=sha)
++                with self.subTest(exit_guard=field),self.assertRaises(ValueError):h.transport.validate(h.case,bad,previous)
++                h.kernel(good)  # restore a new synthetic positive receipt for the next independent negative
++            h=Synthetic192(Path(directory)/'pending');prior,missing=h.retired(closed=False)
++            h.transport.validate(h.case,missing,prior)
+             view=h.reg.validate_snapshot(h.case,missing,prior)
+-            self.assertEqual(view['counts']['closed_eval'],0)
+-            self.assertEqual(view['counts']['retiring_eval'],1)  # absence is not a normal-exit claim
++            self.assertEqual(view['counts']['closed_eval'],0);self.assertEqual(view['counts']['retiring_eval'],1)
++            # Pid=-1 on a held descriptor proves neither exit code nor reaping.
++            raw=missing['EVAL_exit_witness_capture']['descriptor_census']['descriptors']['0']['raw_fdinfo_before']
++            self.assertIn('Pid:\t-1',raw)
++            with self.assertRaises(ValueError):h.reg.kernel_eval_exit(h.case,missing,'0')
+             bad=copy.deepcopy(missing);bad['EVAL_cleanup_captures'].clear()
+             with self.assertRaises(ValueError):h.transport.validate(h.case,bad,prior)
+-            # Exact independent journal reconstruction plus positive retained-kernel normal0/reap.
+-            missing['status']['slots']['0'].update(natural_result=None,closure=None)
+-            h.refresh(missing);h.kernel(missing);h.reg.validate_case(h.case)
+-            h.transport.validate(h.case,missing,prior)
++            h.kernel(missing);h.transport.validate(h.case,missing,prior)
+             self.assertEqual(h.reg.validate_snapshot(h.case,missing,prior)['counts']['closed_eval'],1)
++            unlisted=h.holder_capture(copy.deepcopy(missing),{})
++            self.assertTrue((h.kernel_output/'exit-slot-000.json').is_file())
++            self.assertEqual(h.reg.validate_snapshot(h.case,unlisted,prior)['counts']['closed_eval'],0)
++            with self.assertRaises(ValueError):h.health.validate_eval_holder(h.case,unlisted,missing)
+             for mask,status in [(0,0),(39,0),(44,15),(44,1792)]:
+                 h.kernel(missing,mask=mask,status=status)
+-                with self.subTest(mask=mask,raw_status=status),self.assertRaises(ValueError):
+-                    h.transport.validate(h.case,missing,prior)
++                with self.subTest(mask=mask,raw_wait_status=status),self.assertRaises(ValueError):h.transport.validate(h.case,missing,prior)
+             h.kernel(missing)
+             bad=copy.deepcopy(missing);bad['EVAL_exit_witness_capture']['publication']['value']['exit_receipts']={}
+-            value=bad['EVAL_exit_witness_capture']['publication']['value'];wire,sha=h.wire(value)
+-            bad['EVAL_exit_witness_capture']['publication'].update(raw_wire=wire,sha256=sha)
++            pub=bad['EVAL_exit_witness_capture']['publication'];wire,sha=h.wire(pub['value']);pub.update(raw_wire=wire,sha256=sha)
+             with self.assertRaises(ValueError):h.health.validate_eval_holder(h.case,bad)
+             with self.assertRaises(ValueError):h.reg.kernel_eval_exit(h.case,bad,'0')
+-            for mutation in ('dead','stale','missing','birth'):
+-                bad=copy.deepcopy(missing);cap=bad['EVAL_exit_witness_capture']
+-                if mutation=='dead':cap['holder']['process']['state']='Z'
+-                elif mutation=='birth':cap['holder']['process']['starttime_ticks']+=1
+-                elif mutation=='missing':bad['EVAL_kernel_exit_receipts']={}
+-                else:
+-                    cap['publication']['value']['updated_monotonic_ns']=997000000000
+-                    wire,sha=h.wire(cap['publication']['value']);cap['publication'].update(raw_wire=wire,sha256=sha)
+-                with self.subTest(holder=mutation),self.assertRaises(ValueError):h.health.validate_eval_holder(h.case,bad)
+-            # Terminal publication is tested only as the actual holder predicate;
+-            # it makes no claim that still-synthetic active actors have exited.
+-            terminal=h.sample();h.kernel(terminal,all37=True);h.reg.validate_case(h.case)
++            # An authentic old publication clock is acceptable only with a fresh actual-FD census.
++            h.health.validate_eval_holder(h.case,missing)
++            for field,value in [('updated_monotonic_ns',1001000000000),('updated_monotonic_ns',-1),
++                                ('updated_monotonic_ns',999900000000.5),('updated_monotonic_ns',True),
++                                ('updated_unix_s',missing['unix_s']+1),('updated_unix_s',-1),
++                                ('updated_unix_s',float('nan'))]:
++                bad=copy.deepcopy(missing);pub=bad['EVAL_exit_witness_capture']['publication']
++                pub['value'][field]=value;wire,sha=h.wire(pub['value']);pub.update(raw_wire=wire,sha256=sha)
++                with self.subTest(publication_clock=field,value=value),self.assertRaises(ValueError):
++                    h.health.validate_eval_holder(h.case,bad)
++            for mutation in ('dead','birth','missing_fd','inode','target','namespace','live_target_absent','duplicate','bracket','source','foreign_fd','reused_fd'):
++                bad=copy.deepcopy(missing);cap=bad['EVAL_exit_witness_capture'];census=cap['descriptor_census']
++                if mutation=='dead':census['owner_after']['process']['state']='Z'
++                elif mutation=='birth':census['owner_after']['process']['starttime_ticks']+=1
++                elif mutation=='missing_fd':census['descriptors'].pop('1')
++                elif mutation=='inode':census['descriptors']['1']['descriptor_after']['inode']+=1
++                elif mutation=='target':census['descriptors']['1']['raw_fdinfo_after']=census['descriptors']['1']['raw_fdinfo_after'].replace('Pid:\t2001','Pid:\t9999')
++                elif mutation=='namespace':census['descriptors']['1']['raw_fdinfo_after']=census['descriptors']['1']['raw_fdinfo_after'].replace('NSpid:\t2001','NSpid:\t2001 100')
++                elif mutation=='live_target_absent':
++                    census['descriptors']['1']['raw_fdinfo_after']=census['descriptors']['1']['raw_fdinfo_after'].replace('Pid:\t2001','Pid:\t-1').replace('NSpid:\t2001','NSpid:\t-1')
++                elif mutation=='duplicate':census['descriptors']['1']['descriptor_before']=copy.deepcopy(census['descriptors']['2']['descriptor_before'])
++                elif mutation=='bracket':census['after_monotonic_ns']=1001000000000
++                elif mutation=='source':census['owner_after']['process']['command']=['FOREIGN']
++                elif mutation=='foreign_fd':census['descriptors']['1']['link_after']='socket:[123]'
++                else:census['descriptors']['1']['fd_number']+=1
++                with self.subTest(FD_guard=mutation),self.assertRaises(ValueError):h.health.validate_eval_holder(h.case,bad)
++            # Only actual publication/kernel predicates are exercised here;
++            # this synthetic terminal does not prove still-present actors exited.
++            terminal=h.sample();h.kernel(terminal,all37=True)
+             h.health.validate_eval_holder(h.case,terminal)
+             for slot in terminal['EVAL_kernel_exit_receipts']:h.reg.kernel_eval_exit(h.case,terminal,slot)
+             bad=copy.deepcopy(terminal);bad['EVAL_kernel_exit_receipts'].pop('36')

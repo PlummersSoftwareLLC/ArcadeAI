@@ -1,0 +1,60 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/main.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/main_continuous_training_guard_candidate_v1.py
+@@ -45,6 +45,13 @@
+     if raw is None:
+         return default
+     return raw.strip().lower() not in {"0", "false", "off", "no"}
++
++
++def _continuous_training_mode_enabled():
++    raw = os.getenv("ROBOTRON_CONTINUOUS_TRAINING_MODE", "0")
++    if raw not in ("0", "1"):
++        raise ValueError("Explicit continuous training mode0/1 required")
++    return raw == "1"
+ 
+ 
+ def _apply_inference_batch_wait_override(cfg):
+@@ -517,6 +524,9 @@
+     INCUMBENT_PATH = os.path.join(MODEL_DIR, "robotron_dqn_ratchet_incumbent.pt")
+ 
+     def __init__(self, agent):
++        if (_continuous_training_mode_enabled()
++                or bool(getattr(metrics, "continuous_training_mode", False))):
++            raise RuntimeError("Main policy ratchet is disabled in continuous training mode")
+         self.agent = agent
+         # Incumbent-as-behavior: the fleet plays the measured incumbent at all
+         # times; candidates exist only inside the online net during training
+@@ -593,6 +603,9 @@
+ 
+     # ── phase transitions ────────────────────────────────────────────────
+     def _enter_eval(self):
++        if (_continuous_training_mode_enabled()
++                or bool(getattr(metrics, "continuous_training_mode", False))):
++            raise RuntimeError("Main ratchet measurement entry is disabled in continuous training mode")
+         self.agent.training_enabled = False
+         self._quiesce()
+         # The last <sync-interval steps of the window aren't in the infer net
+@@ -923,6 +936,23 @@
+     # gradient steps into the epoch-0 "untouched checkpoint" baseline.
+     ratchet_on = bool(getattr(RL_CONFIG, "ratchet_enabled", False)) or \
+         os.getenv("DQN_RATCHET", "").strip().lower() in ("1", "true", "yes", "on")
++
++    continuous_training_mode = _continuous_training_mode_enabled()
++    if continuous_training_mode and ratchet_on:
++        raise RuntimeError("Main policy ratchet is incompatible with continuous training mode")
++    if continuous_training_mode and (bool(getattr(metrics, "measurement_active", False))
++                                     or bool(getattr(metrics, "ratchet_frozen", False))):
++        raise RuntimeError("Continuous training startup refuses an active main measurement")
++    # Selected before agent/checkpoint/server creation. These status markers
++    # are not the entry fence: the independent guards also check process mode.
++    with metrics.lock:
++        metrics.continuous_training_mode = continuous_training_mode
++        metrics.main_measurement_entry_disabled = continuous_training_mode
++        if continuous_training_mode:
++            metrics.managed_measurement_status = dict(active=False,
++                phase="disabled_continuous_training", complete=False, valid=None,
++                measurement_requests_disabled=True,
++                reason="Main managed/ratchet measurements disabled; private evaluators require mode0")
+ 
+     agent = RainbowAgent(state_size=RL_CONFIG.state_size)
+     if ratchet_on:

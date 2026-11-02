@@ -1,0 +1,120 @@
+{
+  "schema": "robotron-same-LR25-candidate-CPU-launcher-finite-source-preservation-v1",
+  "status": "SOURCE_TEXT_COMPARISON_ONLY_UNEXECUTED",
+  "base": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_cpu_launcher_proposal/run_candidate_cpu_reviewed2.py",
+    "sha256": "d203f21066af5f090b93d6eab25f9bf40b1c3df119b5ece9b4281b2c305faf77",
+    "bytes": 22137,
+    "identity": {
+      "device": 2304,
+      "inode": 81290926,
+      "bytes": 22137,
+      "mtime_ns": 1792327742678807021,
+      "ctime_ns": 1792327742678807021,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "selected_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/same_lr25_candidate_cpu_launcher_proposal/run_candidate_cpu.py",
+    "sha256": "24e81273f99fa540bdebd3a1d3eb7fab85f5e5e4af2c2fdaab8bfa74996b53f3",
+    "bytes": 25023,
+    "identity": {
+      "device": 2304,
+      "inode": 81536006,
+      "bytes": 25023,
+      "mtime_ns": 1792343664965659595,
+      "ctime_ns": 1792343664965659595,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "finite_literal_and_preflight_changes": [
+    {
+      "before": "Dormant root-only current-recipe CPU launcher.",
+      "after": "Dormant root-only SAME-.25 prospective candidate CPU launcher."
+    },
+    {
+      "before": "PACK = ROOT/'Robotron/tools/live_lr_recipe_gcaware_capture_binding_proposal'",
+      "after": "PACK = ROOT/'Robotron/tools/same_lr25_prospective_continuation_proposal'"
+    },
+    {
+      "before": "BINDER_SHA = '888f05060527f79ece09892394543ae07375bd3c400374bdb3fd320ac576b774'",
+      "after": "BINDER_SHA = 'fe7764fdbf7ebd26be459aa74012dcfcd1c4a490601b4dd69b2969363cd64d4c'"
+    },
+    {
+      "before": "SELECTOR = ROOT/'Robotron/tools/live_lr_recipe_continuation_proposal/capture_candidate.py'",
+      "after": "SELECTOR = ROOT/'Robotron/tools/same_lr25_prospective_continuation_proposal/capture_candidate.py'"
+    },
+    {
+      "before": "SELECTOR_SHA = '96f7035b30e827c1d16cedb9073a6c89d7ccee6dea1e95b9b1433d34529dfbae'",
+      "after": "SELECTOR_SHA = '32fe0841936f25db8254afdc7c4a63dc1081504850313a0f0144a29b3d6eb909'"
+    },
+    {
+      "before": "PHASE = SELECTOR.with_name('verify_recipe_phase_snapshot.py')",
+      "after": "PHASE = ROOT/'Robotron/tools/live_lr_recipe_continuation_proposal/verify_recipe_phase_snapshot.py'\nRECIPE_SOURCE = PACK/'recipe.py'\nRECIPE_SHA = '9bc9a24f5f36c5dbe4f6385c1f47a5698bcda0bd6178f7546b263ee136aa1c3a'"
+    },
+    {
+      "before": "RESULT_PATH = RUN/'LR25-continuation-capture-trial01-20261018/result.json'",
+      "after": "RESULT_PATH = RUN/'same-LR25-continuation-capture-trial01-20261018/result.json'"
+    },
+    {
+      "before": "CAPTURE_RELEASE_PATH = RUN/'LR25-continuation-capture-original01-root-execution-20261018/root-original-result-and-owned-release.json'",
+      "after": "CAPTURE_RELEASE_PATH = RUN/'same-LR25-continuation-capture-original01-root-execution-20261018/root-original-result-and-owned-release.json'"
+    },
+    {
+      "before": "UNIT = 'robotron-LR25-continuation-candidate-CPU-original01-20261018.service'",
+      "after": "UNIT = 'robotron-same-LR25-continuation-candidate-CPU-original01-20261018.service'"
+    },
+    {
+      "before": "CASE_SCHEMA = 'robotron-root-live-LR25-candidate-CPU-launch-case-v1'",
+      "after": "CASE_SCHEMA = 'robotron-root-same-LR25-candidate-CPU-launch-case-v1'"
+    },
+    {
+      "before": "assert out.name == 'LR25-continuation-candidate-CPU-original01-root-execution-20261018'",
+      "after": "assert out.name == 'same-LR25-continuation-candidate-CPU-original01-root-execution-20261018'"
+    },
+    {
+      "before": "    assert pin(SELECTOR)['sha256'] == SELECTOR_SHA and pin(PHASE)['sha256'] == PHASE_SHA",
+      "after": "    assert pin(SELECTOR)['sha256'] == SELECTOR_SHA and pin(PHASE)['sha256'] == PHASE_SHA\n    assert pin(RECIPE_SOURCE)['sha256'] == RECIPE_SHA and pin(RECIPE_SOURCE)['identity']['mode'] == '0o444'"
+    }
+  ],
+  "semantic_region": {
+    "before": "        assert (terminal['original_exec_code'],terminal['original_exit'],terminal['original_result']) == (1,0,'success')\n        assert report_value is not None and report_value['job_file'] == job_pin\n        B.check_cpu(job,report_value,completion_value,context['candidate'])\n        B.check_CPU_command(dict(cat=groups['service_cat']['stdout'],show=groups['service_show']['stdout']),completion_value,B.archive_text)",
+    "after": "        check_CPU_semantics(context, terminal, report_value, completion_value, groups)"
+  },
+  "added_pure_metadata_functions": {
+    "check_report_job_file": {
+      "sha256": "0e6adfc1fabfb73101cc3fe1c3a817635a7099a90a635cf39d9d512dc7738d2f",
+      "bytes": 1773
+    },
+    "check_CPU_semantics": {
+      "sha256": "d88505bd5b1abeb53760f0207caef7a4e85a7fde53bb6f06a05f5a2b31175fa0",
+      "bytes": 1147
+    }
+  },
+  "exact_reverse_to_d203": true,
+  "old_whole_function_count": 12,
+  "new_whole_function_count": 14,
+  "unchanged_whole_functions": [
+    "identity",
+    "pin",
+    "read",
+    "publish",
+    "call",
+    "show",
+    "process_start",
+    "require_terminal",
+    "execute",
+    "main"
+  ],
+  "changed_existing_functions": [
+    "preflight",
+    "run_original"
+  ],
+  "run_original_difference": "Only the four-line semantic try block becomes one call to the two strict pure metadata seams; all remaining launch/live-observation/native completion/six-group archives/report-copy/timer-first release/execution publication/exception code remains exact.",
+  "no_known_FAIL_admission_or_numeric_retry": true,
+  "author_AST_compile_import_tests_execution": false
+}

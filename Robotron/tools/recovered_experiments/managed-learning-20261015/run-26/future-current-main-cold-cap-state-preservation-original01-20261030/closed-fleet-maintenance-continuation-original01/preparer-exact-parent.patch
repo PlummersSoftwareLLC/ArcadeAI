@@ -1,0 +1,183 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/prepare_current_continuous_preservation_header_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/prepare_current_continuous_preservation_closed_fleet_v4.py
+@@ -1,4 +1,4 @@
+-"""Root metadata-only assembly of current continuous stop/strict600 jobs.
++"""Root metadata-only assembly for an already-closed-fleet maintenance continuation.
+ 
+ Default inert. Owner/closure captures are supplied by Root. No live probe,
+ model/array body read, save, source install or service action occurs here.
+@@ -17,58 +17,58 @@
+ BASE=ROOT/'logs/managed-learning-20261015/run-26'
+ HERE=Path(__file__).resolve().parent
+ PARENT=BASE/'future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01'
+-SOURCES={'inputs': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/current_main_preservation_inputs_v1.py',
+-            'sha256': 'cd42c21fe6a2109f7cf6bb6263db2d09a03996400b8286e58469cb81c03b3be8',
+-            'bytes': 12947,
++SOURCES={'inputs': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/current_main_preservation_inputs_cold_bank_v2.py',
++            'sha256': 'bf8c7e3ee1ae5c32285e35f95ef982859940bffab65972c9fcb6aa3de7fa9bf1',
++            'bytes': 19656,
+             'identity': {'device': 2304,
+-                         'inode': 81426562,
+-                         'bytes': 12947,
+-                         'mtime_ns': 1793382427000467088,
+-                         'ctime_ns': 1793382507049799732,
++                         'inode': 81426615,
++                         'bytes': 19656,
++                         'mtime_ns': 1793391199871225823,
++                         'ctime_ns': 1793391540916177983,
+                          'mode': '0o444',
+                          'uid': 1001,
+                          'nlink': 1}},
+- 'stop': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/stop_current_continuous_main_fifo_frontier_v2.py',
+-          'sha256': '65baffacb24d2b93cfa97a337dd212f968e10e3af5cdbbec34247dde46a7345b',
+-          'bytes': 21714,
++ 'stop': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/stop_current_continuous_closed_fleet_continuation_v3.py',
++          'sha256': '9ed5fe275ea7cb43eb8a21663e8ed057c5b67bbbadb18440a0f8a60ef78554c7',
++          'bytes': 29092,
+           'identity': {'device': 2304,
+-                       'inode': 81426610,
+-                       'bytes': 21714,
+-                       'mtime_ns': 1793383829863680833,
+-                       'ctime_ns': 1793383903489292510,
++                       'inode': 81426616,
++                       'bytes': 29092,
++                       'mtime_ns': 1793391328108322233,
++                       'ctime_ns': 1793391611576269690,
+                        'mode': '0o444',
+                        'uid': 1001,
+                        'nlink': 1}},
+- 'verifier': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/verify_current_continuous_stopped_fullstate_v4.py',
+-              'sha256': '20048ea1639e42d5812cf4f3e4c69a61aa0cf69d8be3f2f47207c75c220b543b',
+-              'bytes': 34911,
++ 'verifier': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/verify_current_continuous_stopped_fullstate_cold_bank_v5.py',
++              'sha256': 'c244f7b9672f6b4218f284fb95b648033dfea4f6af581e0baae565e1a7cdd599',
++              'bytes': 37145,
+               'identity': {'device': 2304,
+-                           'inode': 81427020,
+-                           'bytes': 34911,
+-                           'mtime_ns': 1793384958820982369,
+-                           'ctime_ns': 1793384958820982369,
++                           'inode': 81428853,
++                           'bytes': 37145,
++                           'mtime_ns': 1793391337608840077,
++                           'ctime_ns': 1793391540922177991,
+                            'mode': '0o444',
+                            'uid': 1001,
+                            'nlink': 1}},
+- 'backup': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/copy_verified_current_continuous_state_v6.py',
+-            'sha256': 'ad9e5748e152043ffd02ff422a8f2e7de3a7adc790c51f4a7886b8cefd3b3aca',
+-            'bytes': 22393,
++ 'backup': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/copy_verified_current_continuous_state_cold_bank_v7.py',
++            'sha256': '1558eb0fd04ebdd838eaf56233c8299a65bd426a4f0d962c4a350a1c43ef1655',
++            'bytes': 22403,
+             'identity': {'device': 2304,
+-                         'inode': 81427019,
+-                         'bytes': 22393,
+-                         'mtime_ns': 1793385023686821276,
+-                         'ctime_ns': 1793385023686821276,
++                         'inode': 81430663,
++                         'bytes': 22403,
++                         'mtime_ns': 1793391540922781607,
++                         'ctime_ns': 1793391540925177994,
+                          'mode': '0o444',
+                          'uid': 1001,
+                          'nlink': 1}},
+- 'budget_intent': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/continuous_budget_bank_intent_v1.py',
+-                   'sha256': '2095dbc7dfe7ea96e4be231fe65bc0f6a2bdd481820ac67d605f231f679e18d7',
+-                   'bytes': 6200,
++ 'budget_intent': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/continuous_budget_bank_intent_cold_bank_v2.py',
++                   'sha256': '79059d8ecc0f7f97dc28c65fef510e0974208bd8d4f8b8db272c9affb462a06f',
++                   'bytes': 7823,
+                    'identity': {'device': 2304,
+-                                'inode': 81426553,
+-                                'bytes': 6200,
+-                                'mtime_ns': 1793380773213401285,
+-                                'ctime_ns': 1793380773213401285,
++                                'inode': 81428852,
++                                'bytes': 7823,
++                                'mtime_ns': 1793391337606966540,
++                                'ctime_ns': 1793391540914177981,
+                                 'mode': '0o444',
+                                 'uid': 1001,
+                                 'nlink': 1}},
+@@ -181,7 +181,29 @@
+                                'ctime_ns': 1793280905225032357,
+                                'mode': '0o664',
+                                'uid': 1001,
+-                               'nlink': 1}}}
++                               'nlink': 1}},
++ 'parent_stop': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/stop_current_continuous_main_fifo_frontier_v2.py',
++                 'sha256': '65baffacb24d2b93cfa97a337dd212f968e10e3af5cdbbec34247dde46a7345b',
++                 'bytes': 21714,
++                 'identity': {'device': 2304,
++                              'inode': 81426610,
++                              'bytes': 21714,
++                              'mtime_ns': 1793383829863680833,
++                              'ctime_ns': 1793383903489292510,
++                              'mode': '0o444',
++                              'uid': 1001,
++                              'nlink': 1}},
++ 'archive_review': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/tools/eval_capacity_proposal/review_original_pilot_raw_API_v1.py',
++                    'sha256': '2ed5fde26fe50a23bc9572965e483ae6634b31ffbe5d4147c9f5bc338396d445',
++                    'bytes': 41700,
++                    'identity': {'device': 2304,
++                                 'inode': 81678691,
++                                 'bytes': 41700,
++                                 'mtime_ns': 1792418424753572422,
++                                 'ctime_ns': 1792418754597299596,
++                                 'mode': '0o444',
++                                 'uid': 1001,
++                                 'nlink': 1}}}
+ HELD=dict(batch_size=4096,baseline_batch_size=512,epsilon=.1,expert_ratio=.1,n_step=3,
+     max_samples_per_frame=8,c51_target_smoothing=0,learning_control_lr_scale=.0625,
+     lr_gear='climb',lr_anchor_step=0.,optimizer_lr=3.125e-6,optimizer_eps=1.5e-4,
+@@ -233,14 +255,25 @@
+     require(len(persistent)==5 and len({v['comm']for v in persistent.values()})==5
+         and {v['comm']for v in persistent.values()}=={'Thread-1 (serve','Thread-2 (_samp','Thread-3 (_cons','Thread-4 (start','Thread-5 (stats'},
+         'Five source-bound current persistent native tasks required')
++    require(actual['actors']==read(selected['closed_fleet_continuation']['original_population'])['actors'],
++        'Original failed-attempt actor population may not be replaced')
++    stop=load('stop');linux=load('linux')
++    def history_read(value,as_json=True):
++        require(type(value['bytes'])is int and 0<=value['bytes']<=4<<20,'Bounded closed-fleet history required')
++        raw=linux.checked(value)
++        return json.loads(raw)if as_json else raw
++    stop.validate_history(dict(trainer=selected['owner'],fleet=selected['fleet'],
++        expected_current_cap=selected['expected_current_cap'],original_population=selected['closed_fleet_continuation']['original_population'],
++        closed_fleet_continuation=selected['closed_fleet_continuation']),history_read)
+     out=Path(output).absolute();require(out.resolve()==out and out.parent.is_dir()and not out.exists(),'Fresh metadata directory required');out.mkdir(mode=0o700)
+-    population=put(out/'original-current-population.json',dict(trainer=selected['owner'],fleet=selected['fleet'],actors=actual['actors']))
++    population=selected['closed_fleet_continuation']['original_population']
+     control,control_raw=metadata(ROOT/'models_dqn/learning_control.json');require(control==actual['base_control'],'Selected actual control changed')
+     require(json.loads(control_raw)['lr_scale']==.0625 and json.loads(control_raw).get('measurement')is None,'Exact ordinary continuous recipe required')
+-    job=dict(schema='robotron-owned-current-round-stop-job-v1',operation_mode='CONTINUOUS_INPUT_CLOSED_BUDGET_EXHAUSTED',
+-        authorized=True,original_attempt=1,no_retry=True,case='continuous-stop-'+sp['sha256'][:16],source=SOURCES['stop'],
++    job=dict(schema='robotron-owned-current-round-stop-job-v1',operation_mode='CONTINUOUS_ALREADY_CLOSED_FLEET_FRESH_FIFO_BUDGET_EXHAUSTED',
++        authorized=True,original_attempt=1,no_retry=True,case='continuous-stop-closed-fleet-'+sp['sha256'][:16],source=SOURCES['stop'],
+         trainer=selected['owner'],fleet=selected['fleet'],current_selection=sp,current_inputs_source=SOURCES['inputs'],
+         expected_current_cap=selected['expected_current_cap'],output=str(out/'runtime'),base_control=control,
++        closed_fleet_continuation=selected['closed_fleet_continuation'],
+         zero_frame_FIFO_probe=selected['zero_frame_FIFO_probe'],
+         FIFO_frontier_sources={name:SOURCES[role]for name,role in
+             [('connection_cleanup_receipts.py','cleanup_book'),('game_journal.py','game_journal')]},
+@@ -249,9 +282,9 @@
+         original_population=population,current_source_pins=sourcepins,historical_cleanup_receipts=actual['historical_cleanup_receipts'],
+         console=actual['console'],actor_command=actual['actor_command'],mame_executable=actual['mame_executable'],
+         dependencies=dict(linux_utilities=SOURCES['linux'],bank_reader=SOURCES['bank_reader'],bank_intent=SOURCES['budget_intent'],bank_semantics=SOURCES['semantics']),
+-        inputs=[own,sp,op,population,control,*sourcepins,*SOURCES.values(),selected['startup_job'],selected['startup_held'],selected['startup_release_consumed'],*actual['historical_cleanup_receipts']])
++        inputs=[own,sp,op,population,control,*sourcepins,*SOURCES.values(),selected['startup_job'],selected['startup_held'],selected['startup_release_consumed'],*actual['historical_cleanup_receipts'],*selected['closed_fleet_continuation'].values(),*helper.COLD_ORIGIN.values()])
+     jp=put(out/'job.json',job);ctl=load('stop_controller')
+-    cfg=dict(unit='robotron-current-continuous-stop900-'+sp['sha256'][:16]+'.service',output=str(out/'execution-original01'),
++    cfg=dict(unit='robotron-current-continuous-closed-fleet-stop900-'+sp['sha256'][:16]+'.service',output=str(out/'execution-original01'),
+         argv=['/usr/bin/python3','-I','-B',SOURCES['stop']['path'],'--execute','--job',jp['path'],'--job-sha256',jp['sha256'],'--source-sha256',SOURCES['stop']['sha256']],
+         properties=['CPUQuota=200%','MemoryMax=4G','MemorySwapMax=0','RuntimeMaxSec=900','TasksMax=128','TimeoutStopSec=5','SendSIGKILL=no'],
+         observation_s=960,pins=[ctl.pin(v['path'])for v in[jp,*job['inputs']]])
+@@ -300,7 +333,7 @@
+             provenance=[sp,ap,a['bank_seal'],selected['startup_job'],selected['startup_held'],selected['startup_release_consumed']],held_recipe_context=recipe))
+     old['inputs']=[own,SOURCES['strict_template'],sp,ap,cp,a['bank_seal'],a['final_API'],seal['before_API'],selected['input_closure'],a['terminal_archive'],
+         a['fleet_terminal_archive'],terminal['archives']['cat'],cat['stdout'],archived_control,ring_anchor,selected['ring_storage_before'],
+-        seal['boot_state_descriptor'],anchor['phase_record'],*package.values(),*old['dependencies'].values(),*SOURCES.values()]
++        seal['boot_state_descriptor'],anchor['phase_record'],*package.values(),*old['dependencies'].values(),*SOURCES.values(),*helper.COLD_ORIGIN.values()]
+     jp=put(out/'job.json',old);ctl=load('CPU_controller');cfg=dict(unit=old['unit'],output=str(out/'execution-original01'),
+         argv=[str(ROOT.parent/'.venv-gb300/bin/python'),'-Xgil=0','-I','-B',SOURCES['verifier']['path'],'--execute','--job',jp['path'],'--job-sha256',jp['sha256'],'--source-sha256',SOURCES['verifier']['sha256']],
+         properties=['CPUQuota=200%','MemoryMax=4G','MemorySwapMax=0','RuntimeMaxSec=600','TasksMax=128','TimeoutStopSec=5','SendSIGKILL=no'],

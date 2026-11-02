@@ -1,0 +1,27 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/engineering-contexts-original01-preparation/joint-finalization-source-original01/finalize_retired_API_engineering_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/engineering-contexts-original01-preparation/joint-finalization-source-original01/finalize_retired_API_engineering_v2.py
+@@ -125,11 +125,22 @@
+                 and outcome['success'] is lifecycle['success'] is True and outcome['error'] is None,
+                 'Long run lacks actual successful full raw review')
+     else:
+-        request = read(outcome['finish_request'])
++        request_pin = job['abort_request']
++        require(request_pin['path'] == str(Path(record['output'])/'runtime/main-observations/finish-request.json'),
++                'Exact original abort request artifact required')
++        request = read(request_pin)
+         require(probe['independently_replayed_raw_review'] is None
+                 and outcome['success'] is lifecycle['success'] is False
++                and outcome['finish_request'] is outcome['finish_observed_monotonic_s'] is None
++                and outcome['final_snapshot_after_finish_request'] is False
++                and outcome['error'] == "ValueError('Original parent aborted or never became ready')"
++                and outcome['signals_received'] == []
+                 and request['action'] == 'abort' and request['job'] == lifecycle['worker_job']
+-                and request['nonce'] == worker['nonce'], 'Original expected abort disposition differs')
++                and request['nonce'] == worker['nonce'] and request['parent'] == worker['parent']
++                and type(request['created_monotonic_s']) in (int,float)
++                and lifecycle['native_started_monotonic_s'] <= outcome['initial']['durable_ready_monotonic_s']
++                <= request['created_monotonic_s'] <= outcome['ended_monotonic_s'],
++                'Original expected abort disposition differs')
+     small = read(job[mode + '_small'])
+     require(small['schema'] == 'robotron-retired-API-original-engineering-SMALL-independent-readback-v1'
+             and small['status'] == 'PASS_SMALL_ENGINEERING_ONLY'

@@ -1,0 +1,79 @@
+{
+  "actual_CPU_checkpoint_execution": null,
+  "actual_future_root_job": null,
+  "actual_installed_source_context": "Eight current/archive pairs = four numerical model files union candidate5, all actual future caller pins. No f279 or other historical config constant. Archived controls/unit/provenance immutable.",
+  "actual_phase_or_candidate": null,
+  "actual_runtime_actions": null,
+  "actual_test_execution": null,
+  "author_actions": {
+    "PT_model_checkpoint_replay_tensor_reads": false,
+    "application_framework_imports_compile_tests_defaults": false,
+    "bound_source_state_control_changes": false,
+    "live_API_proc_unit_GPU_queries_actions": false,
+    "source_and_small_metadata_reads_new_unbound_writes_only": true
+  },
+  "authored_stdlib_test_methods": 12,
+  "created_utc": "2026-10-17T10:39:51.309687+00:00",
+  "files": {
+    "PREPARATION.txt": {
+      "bytes": 8421,
+      "mode": "0o444",
+      "sha256": "ce7faf4025468597aa07084d823bae3673c46fa2b49890adffba19ab0e81a84b"
+    },
+    "future-plan.json": {
+      "bytes": 1224,
+      "mode": "0o444",
+      "sha256": "b01ea8b6a8c9c28bf04833988e9d7af3e3f6ecb1268b829563401abdf744080e"
+    },
+    "job.schema.json": {
+      "bytes": 11540,
+      "mode": "0o444",
+      "sha256": "ea783bb9f2c8e50ab28fc79383593893e9f4f0b2b7080ff15108774241f517d3"
+    },
+    "strict-body-metadata-only.patch": {
+      "bytes": 1148,
+      "mode": "0o444",
+      "sha256": "7800660c99e3fd9a92696de4ad5dc672354580f566e612cba0c48f5030d81a52"
+    },
+    "strict_phase_base.py": {
+      "bytes": 33634,
+      "mode": "0o444",
+      "sha256": "9ef38e17e1b9eee3f6c43e40005812f2ebe3cff16d08bf61d3e820c2d41134c8"
+    },
+    "test_phase_snapshot.py": {
+      "bytes": 14121,
+      "mode": "0o444",
+      "sha256": "dda172cba3c77dab4c52dc420f3498ec9619240ea662c6a1d84fbaaaab82a3d8"
+    },
+    "verify_phase_snapshot.py": {
+      "bytes": 21460,
+      "mode": "0o444",
+      "sha256": "b2e732dc731b2b601f7499d2cafd5841896daf2b0713d496b98cb6b8d7279519"
+    }
+  },
+  "original_strict_body": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-maintenance-checkpoint-CPU-verifier-proposal-20261017/verify_maintenance_checkpoint.py",
+    "sha256": "7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead"
+  },
+  "phase_contract": [
+    "Actual saved valid metric/id/rootprecommit/founder+resume record and started_from metadata, single loaded dictionary.",
+    "actionstart origin is current actual boot; actionresume original origin/founder retained, current resume SHA separate.",
+    "Current saved4clocks>=actualboot+acquisitionfloor with overshoot reported; no exact loaded-clock or zero-update claim.",
+    "Historical request.completed uses immutable archive plus original before/request/after transition PINs, no later current-slot assumption.",
+    "Only newest_stopped reads exact known old-owner absence beforecopy/aftervalidation."
+  ],
+  "role": "honest phase_snapshot startup/candidate/newest_stopped, no insurance or gate forgery",
+  "schema": "robotron-phase-snapshot-CPU-verifier-source-preparation-v1",
+  "scientific_limits": [
+    "Saved phase metadata plus pinned owned-source/acquisition evidence only; snapshotrequiresfinish_load source contract, not invented persisted loadedflag.",
+    "No replay coherence, unique leaf conversion, live serving readiness, exact clock restoration, CUDA/numerical execution, learning benefit or quality qualification.",
+    "No second checkpoint load or automatic CPU retry; original helpers/results/quality source archives preserved."
+  ],
+  "source_peer_status": {
+    "learning_review": "requested final source-only phase semantics review; pending at seal",
+    "runtime_review": "SOURCE_ONLY_PASS at entryb2e732dc/strict9ef38e17/testdda172cb; final manifest binding receipt pending"
+  },
+  "status": "SOURCE_ONLY_UNEXECUTED",
+  "strict_body_delta": "Only optional metadata_callback keyword in validate_checkpoint signature and two-line callback at end after all original checks; reverse reproduces original7d bytes exactly. Exactly one original torch.load remains.",
+  "test_scope": "Pure metadata predicates, exact body reversal/one-load text, tiny private source/request archives, ownership fields/phase lineage. No numeric strict-body/model/framework workload repeated."
+}

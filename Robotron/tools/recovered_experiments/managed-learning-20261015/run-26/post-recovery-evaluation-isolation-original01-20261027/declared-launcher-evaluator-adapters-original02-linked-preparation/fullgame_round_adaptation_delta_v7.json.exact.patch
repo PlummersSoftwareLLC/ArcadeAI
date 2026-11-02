@@ -1,0 +1,25 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/fullgame_round_adaptation_delta_v7.json
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original02-linked-preparation/fullgame_round_adaptation_delta_v7.json
+@@ -11,7 +11,7 @@
+     },
+     {
+       "old": "def validate_job(job):\n",
+-      "new": "def round_contract():\n    path=Path(__file__).with_name('fullgame_round_contract_v7.py')\n    require(hashlib.sha256(path.read_bytes()).hexdigest()=='__FULLGAME_CONTRACT_SHA__','Exact recovered fullgame contract required')\n    return load('_recovered_fullgame_round_contract',path)\n\n\ndef validate_completed_context(job,h):\n    validate_job(job)\n    for entry in job['inputs']:h.checked(entry)\n    context=round_contract().context(job,h)\n    context['reader']=load('_fullgame_prebody_reader',h.checked(job['main_sources']['reader']))\n    return context\n\n\ndef validate_job(job):\n    round_contract().install_pair(job,globals())\n"
++      "new": "def round_contract():\n    path=LOCAL/'fullgame_round_contract_v7.py'\n    require(hashlib.sha256(path.read_bytes()).hexdigest()=='__FULLGAME_CONTRACT_SHA__','Exact recovered fullgame contract required')\n    return load('_recovered_fullgame_round_contract',path)\n\n\ndef validate_completed_context(job,h):\n    validate_job(job)\n    for entry in job['inputs']:h.checked(entry)\n    context=round_contract().context(job,h)\n    context['reader']=load('_fullgame_prebody_reader',h.checked(job['main_sources']['reader']))\n    return context\n\n\ndef validate_job(job):\n    round_contract().install_pair(job,globals())\n"
+     },
+     {
+       "old": "def validate_main_health_contract(job,protocol,family):\n    \"\"\"Exact native producer/consumer contract, callable before private actions.\"\"\"\n    require(protocol['schema']=='robotron-native-quota64-dedicated-main-health-protocol-v1'\n        and protocol['health_job']['binding']==job['main_binding']\n        and family['runtime']==job['runtime']\n        and set(protocol['health_job']['sources'])==set(HEALTH_DEPENDENCIES)\n        and all(protocol['health_job']['sources'][key]['sha256']==sha for key,sha in HEALTH_DEPENDENCIES.items())\n        and family['main_prefix_validator']['sha256']==PREFIX_VALIDATOR_SHA\n        and family['main_health_finalizer']['sha256']==FINALIZER_SHA\n        and set(family['main_observer'])==set(OBSERVER_DEPENDENCIES)\n        and all(family['main_observer'][key]['sha256']==sha for key,sha in OBSERVER_DEPENDENCIES.items()),\n        'Exact prospective main-health engine/dependencies/family/binding required')\n",
+@@ -41,11 +41,11 @@
+     },
+     {
+       "old": "SELECTED_RUNTIME=Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-fixed-slot64-full-game-protocol-original01-preparation-20261024/scientific-protocol-interface-correction-original01/run_quality32_quota64_selected_original01_v2.py')",
+-      "new": "SELECTED_RUNTIME=Path(__file__).with_name('run_fullgame_rounds_v7.py')"
++      "new": "SELECTED_RUNTIME=LOCAL/'run_fullgame_rounds_v7.py'"
+     },
+     {
+       "old": "def validate_scope(job,job_pin,scope,config):\n",
+-      "new": "def round_contract():\n    path=Path(__file__).with_name('fullgame_round_contract_v7.py')\n    require(hashlib.sha256(path.read_bytes()).hexdigest()=='__FULLGAME_CONTRACT_SHA__','Exact recovered fullgame contract required')\n    return load('_recovered_fullgame_round_contract',path)\n\n\ndef validate_scope(job,job_pin,scope,config):\n    round_contract().install_pair(job,globals())\n"
++      "new": "def round_contract():\n    path=LOCAL/'fullgame_round_contract_v7.py'\n    require(hashlib.sha256(path.read_bytes()).hexdigest()=='__FULLGAME_CONTRACT_SHA__','Exact recovered fullgame contract required')\n    return load('_recovered_fullgame_round_contract',path)\n\n\ndef validate_scope(job,job_pin,scope,config):\n    round_contract().install_pair(job,globals())\n"
+     },
+     {
+       "old": "    native_pin=config['native_job'];job=read(native_pin);directory=Path(native_pin['path']).parent",

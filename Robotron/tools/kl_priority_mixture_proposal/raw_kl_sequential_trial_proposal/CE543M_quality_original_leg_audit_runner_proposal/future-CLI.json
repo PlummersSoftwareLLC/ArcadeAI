@@ -1,0 +1,38 @@
+{
+  "status": "INERT_SOURCE_ONLY_FUTURE_CLI",
+  "launch_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE543M_quality_original_leg_audit_runner_proposal/run_original_leg_audit.py",
+    "--execute",
+    "--action",
+    "launch",
+    "--leg",
+    "<ONE_ORIGINAL_FINISHED_LEG_1_TO_4>",
+    "--expected-source-sha256",
+    "e3b4e3492fa3e26dcebdfefb84c5d9c5f7b6468861cf7e7f2c63d0e0804286c5",
+    "--future-commands",
+    "<ROOT_OBSERVED_ACTUAL_FOUR_COMMANDS_FILE>",
+    "--expected-future-sha256",
+    "<ACTUAL_COMMAND_FILE_SHA>"
+  ],
+  "archive_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE543M_quality_original_leg_audit_runner_proposal/run_original_leg_audit.py",
+    "--execute",
+    "--action",
+    "archive",
+    "--leg",
+    "<SAME_LEG>",
+    "--expected-source-sha256",
+    "e3b4e3492fa3e26dcebdfefb84c5d9c5f7b6468861cf7e7f2c63d0e0804286c5"
+  ],
+  "actual_plan_sha256": null,
+  "actual_controller_pid": null,
+  "actual_controller_starttime_ticks": null,
+  "actual_controller_invocation_id": null,
+  "actual_R1_evaluator": null
+}

@@ -1,0 +1,23 @@
+{
+  "schema": "robotron-lr25-phase-snapshot-checkpoint-CPU-job-v1",
+  "verifier_sha256": "d73b7381adc6405af41cdfcaa910ec1f444bc66935616f6f94e6e804faad0b5f",
+  "strict_phase_base_sha256": "0854f1437510a4264bc922d241e76350ee3209963bd4f28ce9b8a826e6cb159b",
+  "original_strict_base_sha256": "7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead",
+  "experiment": null,
+  "source": null,
+  "verification_copy": null,
+  "clock_floor": {
+    "training_steps": null,
+    "optimized_samples": null,
+    "learner_frame_count": null,
+    "frame_count": null
+  },
+  "source_control_context": null,
+  "output_directory": null,
+  "phase_snapshot": null,
+  "lr25_context": {
+    "schema": "robotron-live-CE-lr25-hot-control-context-v1",
+    "precommit": null,
+    "entry_CPU": null
+  }
+}

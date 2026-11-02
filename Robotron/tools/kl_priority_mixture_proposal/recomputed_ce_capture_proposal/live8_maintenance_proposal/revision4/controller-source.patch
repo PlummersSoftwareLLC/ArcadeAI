@@ -1,0 +1,188 @@
+--- Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision3/run_live8_maintenance.py	2026-10-17 02:47:35.871001165 -0500
++++ Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision4/run_live8_maintenance.py	2026-10-17 03:05:32.564451830 -0500
+@@ -214,6 +214,61 @@
+         interpretation="Pinned original load source plus exact-graph postload/optimizer/scaler refusal guards; no exported loaded-clock API exists")
+ 
+ 
++class SettingsLifecycle:
++    """One precommitted state file may be replaced only by a confirmed stop.
++
++    The held content/values/mode/owner/link policy never changes. Each registered
++    retirement may authorize at most one durable full-identity transition.
++    Repeated verification cannot adopt a later unknown writer's replacement.
++    """
++    def __init__(self, specification, model_dir):
++        require(isinstance(specification, dict) and set(specification) == {"initial", "parsed_values", "policy"}
++            and specification["policy"] == "same_bytes_after_owned_stop_only", "Invalid settings lifecycle precommit")
++        self.initial = copy.deepcopy(specification["initial"])
++        self.current = copy.deepcopy(self.initial)
++        self.values = copy.deepcopy(specification["parsed_values"])
++        require(self.initial["path"] == str(Path(model_dir) / "game_settings.json"), "Wrong settings lifecycle path")
++        expected = {"start_advanced": False, "start_level_min": 1, "epsilon_pct": -1,
++            "expert_pct": -1, "auto_curriculum": False, "difficulty": 5}
++        actual_values = read_json(self.initial)
++        require(self.values == expected and all(type(self.values[key]) is type(value) for key,value in expected.items())
++            and actual_values == self.values and all(type(actual_values[key]) is type(value) for key,value in expected.items()),
++            "Initial full settings identity/content/parsed values differ")
++        info = self.initial["identity"]
++        require(info["uid"] == os.getuid() and info["nlink"] == 1 and int(info["mode"],8) in (0o644,0o664),
++            "Settings must initially be owned regular single-link with held writable mode")
++        self.transitions = {}
++
++    @staticmethod
++    def key(retired):
++        return "%s-%s" % (retired["pid"],retired["starttime_ticks"])
++
++    def check(self):
++        pin(self.current, MAX_JSON)
++
++    def adopt_after_stop(self, retired, source_phase, confirm_owned_absence, publish_receipt):
++        require(source_phase in ("before","after"), "Unknown source phase for settings transition")
++        confirm_owned_absence()
++        key = self.key(retired)
++        if key in self.transitions:
++            self.check()
++            return self.transitions[key]
++        candidate = fingerprint(self.initial["path"], MAX_JSON)
++        require(candidate["sha256"] == self.initial["sha256"] and candidate["bytes"] == self.initial["bytes"]
++            and all(candidate["identity"][name] == self.initial["identity"][name] for name in ("device","mode","uid","nlink"))
++            and read_json(candidate) == self.values, "Stopped settings replacement changed held bytes/values/mode/owner/link policy")
++        confirm_owned_absence()
++        pin(candidate, MAX_JSON)
++        receipt = publish_receipt(dict(schema="robotron-live8-owned-stop-settings-transition-v1", retired_trainer=retired,
++            source_phase=source_phase, original=self.initial, previous=self.current, replacement=candidate,
++            parsed_values=self.values, allowed_change="Full identity only after known owned stop; bytes/SHA/values/device/mode/uid/nlink unchanged"))
++        # Publication must succeed before a replacement identity is trusted by
++        # any later static guard, checkpoint verification or trainer start.
++        self.current = candidate
++        self.transitions[key] = receipt
++        return receipt
++
++
+ def fsync_directory(path):
+     fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+     try:
+@@ -387,6 +442,10 @@
+         job["helper_pins"]["controller"]["sha256"] == args.expected_controller_sha256, "Controller helper pin differs")
+     for value in job["static_pins"]:
+         pin(value, MAX_SOURCE)
++    settings = SettingsLifecycle(job["settings_lifecycle"], job["model_dir"])
++    require(not any(value["path"] == settings.initial["path"] for value in job["static_pins"])
++        and job["before"]["bindings"]["control_hashes"][settings.initial["path"]] == settings.initial["sha256"],
++        "Settings lifecycle must be separate from static pins and join the original control content binding")
+     pin(job["verifier"]["script"], MAX_SOURCE)
+     validate_python_binding(job["verifier"], job["insurance_verification"], hash_executable=True)
+     return job, record
+@@ -425,6 +484,10 @@
+             saved["source"]["sha256"] == self.insurance["root_job"]["source"]["sha256"], "Wrong completed insurance request consumed")
+         self.current_checkpoint = None
+         self.last_retired = None
++        self.retirement_candidate = None
++        self.retired_owner = None
++        self.cpu_attempts = {}
++        self.settings = SettingsLifecycle(job["settings_lifecycle"], job["model_dir"])
+         self.verification_failed = False
+         self.lease_fd = None
+         self.original_dropin = base64.b64decode(job["original_dropin"]["content_base64"]) if job["original_dropin"]["content_base64"] is not None else None
+@@ -460,6 +523,7 @@
+         self.exclusive()
+         for value in self.job["helper_pins"].values():
+             pin(value, MAX_SOURCE)
++        self.settings.check()
+         for value in self.job["static_pins"]:
+             pin(value, MAX_SOURCE)
+         pin(self.job["verifier"]["script"], MAX_SOURCE)
+@@ -538,8 +602,40 @@
+         require(not group.exists() or not group.read_text().split(), "Owned cgroup still has a process; no source write/start")
+         return unit
+ 
++    def stop_owned(self, expected=None):
++        retired = self.trainer_id()
++        # Register the exact candidate before requesting stop. If interruption
++        # lands after stop completes but before this caller returns, recovery
++        # can confirm its absence; a PID observed later is never adopted.
++        with self.metrics.block_restore_signals():
++            self.retirement_candidate = copy.deepcopy(retired)
++        self.host.stop(expected)
++        self.confirm_retired()
++        return retired
++
++    def confirm_retired(self):
++        retired = self.retirement_candidate
++        require(retired is not None, "No explicitly registered owned stop")
++        key = SettingsLifecycle.key(retired)
++        if key not in self.settings.transitions:
++            known = self.host.known_trainer
++            require(known is not None and retired["pid"] == known["pid"]
++                and retired["starttime_ticks"] == known["identity"]["starttime_ticks"]
++                and retired["unit"] == self.job["trainer_unit"] and retired["cgroup"] == known["cgroup"]
++                and known["identity"] in self.host.retired_trainers, "Stop candidate is not a known explicitly stopped trainer")
++        self.absence()
++        # This retirement does NOT mean a checkpoint passed verification. Keep
++        # the owner before the first post-stop file check or publication.
++        self.retired_owner = copy.deepcopy(retired)
++        with self.metrics.block_restore_signals():
++            receipt = self.settings.adopt_after_stop(retired, self.phase, self.absence,
++                lambda value:publish(self.output / ("settings-after-stop-"+key+".json"), value))
++        return retired,receipt
++
+     def stopped_checkpoint(self, retired, label):
+         self.static(); self.absence()
++        require(retired == self.retired_owner and SettingsLifecycle.key(retired) not in self.cpu_attempts,
++            "Checkpoint owner unregistered or a CPU attempt already started; no retry")
+         root = self.output / label
+         root.mkdir(mode=0o700)
+         latest = Path(self.job["model_dir"]) / "robotron_dqn_latest.pt"
+@@ -566,11 +662,16 @@
+             "--expected-verifier-sha256", self.job["verifier"]["script"]["sha256"]]
+         try:
+             with (root / "cpu.stdout").open("xb") as stdout, (root / "cpu.stderr").open("xb") as stderr:
++                # Register immediately before a possible child launch. Earlier
++                # file/preflight failures have not attempted this CPU check.
++                with self.metrics.block_restore_signals():
++                    self.cpu_attempts[SettingsLifecycle.key(retired)] = "started"
+                 completed = subprocess.run(argv, env=env, stdout=stdout, stderr=stderr, timeout=120, check=False)
+             publish(root / "cpu-completion.json", dict(argv=argv, exit_code=completed.returncode, CUDA_VISIBLE_DEVICES=""))
+             require(completed.returncode == 0, "Stopped latest CPU verification failed; no automatic rollback")
+         except BaseException:
+-            self.verification_failed = True
++            if SettingsLifecycle.key(retired) in self.cpu_attempts:
++                self.verification_failed = True
+             raise
+         result_pin = fingerprint(root / "cpu-output/cpu-verification.json", MAX_JSON)
+         result = read_json(result_pin)
+@@ -579,6 +680,7 @@
+         self.absence(); require(fingerprint(latest) == source, "Latest changed after CPU proof")
+         self.current_checkpoint = dict(source=source, verification=result_pin, clocks=result["clocks"])
+         self.last_retired = retired
++        self.cpu_attempts[SettingsLifecycle.key(retired)] = "passed"
+         return self.current_checkpoint
+ 
+     def start(self, phase, label):
+@@ -768,12 +870,12 @@
+                             r.host.paused.append(actor)
+                             r.host.signal_actor(actor, signal.SIGSTOP)
+                 r.host.wait_paused()
+-                r.host.stop()
++                retired = r.stop_owned()
+             else:
+-                retired = r.last_retired
+-                require(retired is not None, "No verified retired owner; manual recovery")
++                retired,_ = r.confirm_retired()
+             r.absence()
+-            if retired != r.last_retired:
++            if retired != r.last_retired or r.current_checkpoint is None:
++                require(SettingsLifecycle.key(retired) not in r.cpu_attempts, "Earlier CPU attempt did not pass; no retry")
+                 r.stopped_checkpoint(retired, "recovery-stopped")
+             else:
+                 require(r.current_checkpoint is not None and fingerprint(r.current_checkpoint["source"]["path"]) == r.current_checkpoint["source"],
+@@ -805,8 +907,7 @@
+             # through every later source, journal, signal and readiness failure.
+             r.host.pause(dict(initial=r.job["before"]))
+             self.changed = True
+-            retired = r.trainer_id()
+-            r.host.stop(before)
++            retired = r.stop_owned(before)
+             self.event("stopped", checkpoint=r.stopped_checkpoint(retired, "initial-stopped"))
+             banks = r.banks.stopped_state(r.job["bank_spec"])
+             self.event("stopped_disk_state", state=banks)

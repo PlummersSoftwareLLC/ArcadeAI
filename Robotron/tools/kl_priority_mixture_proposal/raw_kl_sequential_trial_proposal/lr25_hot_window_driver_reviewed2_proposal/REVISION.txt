@@ -1,0 +1,44 @@
+UNSELECTED SOURCE-ONLY DRIVER REVIEWED2: FRESH SNAPSHOT TRIGGER
+
+Original f3ba/9dd family and all five files remain immutable0444. This sibling
+changes ONE production assignment in Driver.save: use raw,api from the health
+check immediately preceding snapshot construction, instead of discarding it.
+The caller's already-declared floor remains unchanged; final source/completion
+checks and second health check remain unchanged. Raw optionalNaN/object identity
+is preserved through Files.raw_api and Files.api as before.
+
+The six prior metadata guard function bodies are byte-exact. A seventh authored,
+UNEXECUTED guard invokes real Driver.save with mocked IO/Snapshot and verifies
+the fresh raw/API object reaches Snapshot.start, exact predeclared floor survives,
+completion is authenticated and both health checks run. No live/numeric proof.
+Driver.api/check_process/check_health are byte-exact9dd; ENTRY may bind these
+methods with a truthful authenticated historical health_floor_clocks. No cycle.
+
+All remaining behavior, root job schema and explicit supervision policy are
+unchanged. Root must use original root-job-TEMPLATE.json and PREPARATION.txt from
+f3ba plus this delta. In particular default PLAN is read-free; actual .25 entry/
+precommit/control/B/cutoff remain null/unselected; no owner-stop/controller/CPU
+lifecycle was copied. Endpoint context is sealed before exact .5 restoration,
+and root runs the one strictCPU separately. Failed/untrusted/unresolved save
+requires manual root control review and may leave .25 active. No automatic
+reversal across an untrusted capture is claimed.
+
+Root future guard selector (AFTER current quality closure/freeze release):
+ROOT_VERIFIED_PYTHON -I -B -m unittest discover -s THIS_DIRECTORY \
+  -p test_driver_metadata.py -v
+Expected7 authored methods. Author/peer did not import/run tests or source, query
+runtime/API/process/systemd/GPU, read model bodies, or mutate installed/control/
+canonical files. Only new isolated source/metadata were written.
+
+Exact production diff (source-only; already reflected in sibling file):
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/lr25_hot_window_driver_proposal/run_hot_window.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/lr25_hot_window_driver_reviewed2_proposal/run_hot_window.py
+@@ -314,7 +314,7 @@
+             'No control transaction across foreign/unmatched request or completion')
+ 
+     def save(self,stage,raw,api,floor):
+-        self.check_health(self.pre['experiment'],1.25e-5)
++        raw,api=self.check_health(self.pre['experiment'],1.25e-5)
+         slot=GAME/'models_dqn/managed_save.request.json.completed'
+         actual=self.files.fingerprint(slot,4<<20) if slot.exists() else None
+         require(actual==self.expected_completed,'Current completion changed before declared stage')

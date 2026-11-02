@@ -1,0 +1,62 @@
+{
+  "schema": "robotron-executed-ce-trace-source-prototype-v1",
+  "status": "SOURCE_ONLY_UNEXECUTED_UNAPPLIED_REVIEW_PENDING",
+  "parent_sampler_manifest": {
+    "path": "Robotron/tools/kl_priority_mixture_proposal/sampler-preparation-manifest.json",
+    "sha256": "ff93d7970d9750cb15379ceefcef5503e8f57ae9e85e0639daadcc80f65a94b8"
+  },
+  "unchanged_design": {
+    "DESIGN.txt": "2c14712ebbdf85b5c2f6d00b5ea6cadddd6d378bc0bb480d02f1755a7bd63378",
+    "source-lock.json": "f5b5c1e8ee3a2726775b2189c9619c1d68cd095d19fe739584b797b3cd2c8962"
+  },
+  "base_sha256": {
+    "Robotron/Scripts/dqn/agent.py": "28977d6b925a4606a61b76438595f45ae054fc81aaaad989ab93e00d98a05668",
+    "Robotron/Scripts/dqn/prefetch.py": "a07cc84b6d411fd2536b1a17fa56c6b8b0f5ac9861740e44ea94878894a8d217",
+    "Robotron/Scripts/dqn/training.py": "194081120faae4228b0af0d6127c1e12c6d6180acdfe7d7a6a8c7cbcf24b963f",
+    "Robotron/Scripts/dqn/loss_kernel.py": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a",
+    "Robotron/tools/kl_priority_mixture_proposal/replay_buffer_candidate.py": "b659cd7bba656adb1c313d6805f0499d23dcb2a60f1cb779da11e2696f2dd17c"
+  },
+  "overlay_sha256": {
+    "agent.py": "05e2da8b4aa836635166ede19fd67c7234dc31b9a2e4aa23148e845b37a06353",
+    "prefetch.py": "02871bc515ba23f8d353131e9b6b6b4e390692803578febee7c8d643dd308a27",
+    "training.py": "c10cf8deaea99c9c74edbebf82d1f1c1badfdc4d33186f3874d6bc80c1e6a938",
+    "loss_kernel.py": "ce527c840f1b0cce3f77fece52923c7023519605db92d7c5e691b1b573ee6d2f",
+    "replay_buffer.py": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f",
+    "executed_ce_trace.py": "d9b02b3108cdb7aa9cf895ce585810287ca5cde6ddc6b1b872721731e49648eb"
+  },
+  "support_sha256": {
+    "unapplied.patch": "dba0b15f20e07b6d933be7032634ae7ce2cc9f1db32b01f293ccd0ebc7a9acb4",
+    "test_trace_protocol.py": "c9a3c74c87098685c82d882049f7d533e452a040ca976f82782d3f7b78b22ee6",
+    "test_trace_cpu_boundaries.py": "dbc63ce652f23d5e3c6125a4eb0b1161e5b202033880e70e0ee7e4b4ab89a5ac",
+    "PREPARATION.txt": "044736b552256b0286f9dc80d638124a3cbbf11f422e8c5a69ef5d3c3577bc7d"
+  },
+  "incremental_patch_apply_order": [
+    "Original production replay28556797 plus sealed sampler patch99900858 gives immutable sampler candidateb659cd7b.",
+    "Apply this incremental unapplied.patch to that replay candidate and the other four exact production bases; add executed_ce_trace.py.",
+    "No apply/check/import/compile/test command has run. Full copied overlays also exist for future isolated tests."
+  ],
+  "contract": {
+    "startup_environment": "DQN_EXECUTED_CE_TRACE_DIR",
+    "default": "OFF: ordinary10-field replay/eight staged tensors/four-output loss",
+    "on_loss_return_count": 5,
+    "same_forward_payload_fields": 10,
+    "consumed_attempts": 8,
+    "count_boundary": "after enabled/replay-pressure/minimum/batch guards, before transfer",
+    "replacement_attempts": false,
+    "trace_tensor_budget_mib": 64,
+    "trace_cumulative_disk_budget_mib": 128,
+    "maximum_existing_prefetch_slots": 3,
+    "full_states_or_ring_copied": false,
+    "priority_metric_changed": false,
+    "observer_changes_optimizer_scaler_lr_or_recipe": false
+  },
+  "tests_authored": {"stdlib_mock_methods": 11, "cpu_source_boundary_methods": 5, "methods_executed": 0},
+  "limitations": [
+    "Every source/syntax/import/test/native/numerical/current CUDA contract remains unexecuted. Source-only review is not runtime validation.",
+    "Eight actual consumed/executed attempts have not been acquired. There is no launch/deployment/livecapture authorization.",
+    "Mocks/injected exposure outcomes and no-step/private CPU tensor tests cannot validate actual AMP, fused Adam or parameter progress.",
+    "Resident retention is bounded; repeated invalidated/unconsumed observations and transient producer metadata overlap are explicitly distinguished from eight consumed rows.",
+    "External immutable run/source/checkpoint provenance, checkpoint-load-before-consumption proof, actual whole train_step and current Rainbow4096 CUDA/AMP/default-control parity remain readiness blockers.",
+    "No full replay anchor, exact RNG continuation, matched learning branch, KL sampler population, faster learning or quality benefit claim is established."
+  ]
+}

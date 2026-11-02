@@ -1,0 +1,103 @@
+WARMUP REPEATABILITY PARENT — SOURCE-ONLY PREPARATION
+
+This new sibling parent is adapted from the frozen process_scan_revision parent
+38fab41957a4b3ff53f878f477e18b741497e34b4836fcde444aa4c1be851abe.
+All previous failures, sources and evidence remain unchanged. It is a diagnostic
+preparation, not a repair of proc-reviewed3, a successful parity qualification,
+a live source adoption or permission to launch.
+
+Fixed contract
+--------------
+schema=robotron-cuda-warmup-repeatability-v1
+roles=(base_a,base_repeat,off), each in a fresh subprocess and per-role cache/paths;
+all use the same verified owned private-package cwd, as in the reviewed bootstrap
+four original warmups in original order: normal/nonempty,normal/empty,
+diagnostic/nonempty,diagnostic/empty; B4096/state11128/actions81/atoms51
+full train_step calls=0,optimizer steps=0,scaler steps/updates=0,trace ON=false
+Original trained fixture/CPU receipt, numerical tolerances, seed and input
+algorithm are retained. The new source lock separately pins the old ba0039d4
+science-helper worker and d6ffdaae original numerical lock. The new worker may
+reuse only their reviewed functions after its own token/bootstrap guards; no
+old bootstrap, train_step/observe_steps or optimizer work is authorized.
+
+Resource and ownership reuse
+----------------------------
+The parent keeps the exact reviewed process scanner, fixed-field process-local
+disappearance counters, NOFOLLOW/dirfd storage watcher, frozen sources, independent
+readonly checkpoint copy, CPU-receipt metadata exception, GPU ownership checks,
+initial >=14GiB margin, and lazy helper imports. It does not call the inherited
+snapshot source_manifest, launch or setup policy. Default remains a literal plan
+without helper/source/data reads, runtime queries, output creation or child launch.
+
+All roles use separate private paths and the held native1/directfill1/fullcompile1/
+default-mode/diagnostic20/GIL-disabled profile. DQN_EXECUTED_CE_TRACE_DIR is absent
+for EVERY role; there is no observer directory or ON five-output acquisition.
+BASE_A and BASE_REPEAT must select exactly the same baseline constructor/imports
+in the worker, without trace_rows; OFF selects the proposed four-output source.
+Parent role labels are never substituted as an implicit source selector.
+
+Bounds are unchanged:2 CPU,16GiB host,12GiB Torch allocator,13GiB process VRAM,
+6GiB artifacts,128MiB private tmpfs,128 child tasks,180s per role and600s total.
+The total deadline starts before preflight/copy; a smaller diagnostic does not
+authorize higher limits or longer runtime. The cooperative size observer is not
+a filesystem quota. The known compiler-cache atomic-publication exceptions are
+unchanged, boundary-pinned and separately counted; final post-reap scan is strict.
+The inherited ON observer exceptions remain unreachable because no role is ON.
+
+The parent/worker launch remains token-gated: capture exact Popen PID/start/PGID,
+attach to the owned bounded sibling cgroup, verify resources, then release token.
+Child guards require parent identity/PDEATH/cgroup/GPU/private source checks before
+numerical imports. Signal-handler lifetime encloses cleanup; handled signals are
+blocked during exact owned termination, cgroup close and tmpfs removal. Unknown
+PID replacement is never signalled. Direct child-exit receipts retain actual
+return codes and scanner/cache observations. Root owns the external service exit.
+
+Observation and failure semantics
+--------------------------------
+Every role must publish OBSERVATIONS_COMPLETE, its exact role, four cases,
+comparison_pass:boolean, interpretation_requires_review:boolean and
+qualification_pass:false. BASE_A additionally says baseline_reference_only;
+its comparison_pass:true means reference construction, not an independent test.
+
+The worker must persist full actual native payloads, expected reference identities,
+case/path/tolerance/masks/statistics and RNG evidence BEFORE assessing mismatch.
+Finite, structurally valid original-tolerance mismatches continue through the
+remaining cases and roles and require review; they are never silently promoted,
+substituted or cured. Exact PRE RNG restoration is mandatory. POST RNG movement
+or cross-role differences are retained and require review, rather than discarding
+the rest of the observation. Persistent model/Adam/scaler/exposure/clocks changes,
+nonfinite/structural/runtime/ownership/persistence faults remain fatal.
+
+The parent returns OBSERVATIONS_COMPLETE only after all three complete roles and
+owned cleanup; it propagates comparison/review flags and labels BASE_A reference
+only. qualification_pass is ALWAYS false. Exit0 therefore means a completed
+diagnostic that may contain mismatches; it never means OFF/ON parity, successful
+training, source equivalence in general, or faster learning. A fatal child error
+stops later roles and retains the original partial artifacts and actual exit;
+it does not rerun a case or reuse any previous failed-run result.
+
+Pre-execution review and retained exit evidence
+---------------------------------------------
+This author only copied/read/edited new source text and hashes; no candidate import,
+compile, default, CPU test, numerical/model/tensor read, runtime/GPU query, signal,
+service or affinity action was used. Root and peers separately review the complete
+worker/lock/parent/test protocol and final all-file manifest. Actual CPU tests and
+any future GPU launch require separate root authorization and separate evidence.
+The existing43 stdlib process/storage regressions need new copies that import THIS
+parent and adjust only declared diagnostic-role/lock/default expectations. Root
+also requires focused private comparator/retention regressions; no old test result
+is silently credited to this new parent.
+
+Future live launch is root-owned only: a fresh delegated
+robotron-snapshot-smoke-*.service with detached3s scheduling, scheduler client gone
+before trigger, RemainAfterExit=yes and no --collect. Root binds actual PID/start/
+invocation and archives original ExecMainCode/ExecMainStatus/Result, unitcat/show
+and invocation journal BEFORE exact terminal-unit release. A retained successful
+active(exited) unit is terminal, not a live controller. Collected/default0 fields
+are never accepted as original exit proof. Root verifies all owned child/cgroup/
+tmpfs cleanup, free exclusive lease/GPU0 and unchanged main before release and
+same-target/deadline checkpoint-watch rearm. The exact owned waiting gate must be
+resolved immediately before an exclusive launch; its guard is never bypassed.
+
+All parent resource/ownership/source checks remain fail-closed. This note proposes
+no production source, model/replay/control, live actor or learning-recipe change.

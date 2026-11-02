@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")"
+# Select a GPU explicitly with CUDA_VISIBLE_DEVICES when several are installed.
+# A machine-specific GPU UUID must never be the default on a fresh checkout.
+export ROBOTRON_TRAIN_GPU="${ROBOTRON_TRAIN_GPU:-0}"
+export ROBOTRON_INFERENCE_GPU="${ROBOTRON_INFERENCE_GPU:-0}"
+export ROBOTRON_CPU_THREADS="${ROBOTRON_CPU_THREADS:-8}"
+export ROBOTRON_CPU_INTEROP_THREADS="${ROBOTRON_CPU_INTEROP_THREADS:-2}"
+export ROBOTRON_DQN_DASHBOARD_HOST="${ROBOTRON_DQN_DASHBOARD_HOST:-0.0.0.0}"
+export ROBOTRON_DQN_DASHBOARD_PUBLIC_HOST="${ROBOTRON_DQN_DASHBOARD_PUBLIC_HOST:-$(hostname -s)}"
+export ROBOTRON_DQN_DASHBOARD_BROWSER="${ROBOTRON_DQN_DASHBOARD_BROWSER:-0}"
+export DQN_FULL_LOSS_COMPILE="${DQN_FULL_LOSS_COMPILE:-1}"
+export DQN_TORCH_COMPILE="${DQN_TORCH_COMPILE:-1}"
+export DQN_BATCH_SIZE="${DQN_BATCH_SIZE:-2048}"
+export DQN_REPLAY_PREFETCH="${DQN_REPLAY_PREFETCH:-1}"
+export DQN_DIRECT_REPLAY_FILL="${DQN_DIRECT_REPLAY_FILL:-1}"
+export DQN_N_STEP="${DQN_N_STEP:-3}"
+export DQN_MAX_SAMPLES_PER_FRAME="${DQN_MAX_SAMPLES_PER_FRAME:-8}"
+export DQN_C51_TARGET_SMOOTHING="${DQN_C51_TARGET_SMOOTHING:-0}"
+export DQN_FUSED_ADAM="${DQN_FUSED_ADAM:-1}"
+export DQN_DIAGNOSTIC_INTERVAL="${DQN_DIAGNOSTIC_INTERVAL:-20}"
+export TORCHINDUCTOR_COMPILE_THREADS="${TORCHINDUCTOR_COMPILE_THREADS:-8}"
+export PYTHONUNBUFFERED=1
+REPO_DIR="$(cd .. && pwd)"
+PYTHON_BIN="${ROBOTRON_PYTHON:-$REPO_DIR/.venv/bin/python}"
+if [[ ! -x "$PYTHON_BIN" && -z "${ROBOTRON_PYTHON:-}" && -x "$REPO_DIR/.venv-gb300/bin/python" ]]; then
+    PYTHON_BIN="$REPO_DIR/.venv-gb300/bin/python"
+fi
+if [[ ! -x "$PYTHON_BIN" ]]; then
+    echo 'Python environment missing. Run Robotron/setup.sh first.' >&2
+    exit 1
+fi
+exec "$PYTHON_BIN" -Xgil=0 Scripts/run_dqn.py "$@"

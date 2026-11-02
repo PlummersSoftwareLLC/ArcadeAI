@@ -1,0 +1,7 @@
+{
+  "status": "ORIGINAL01_FAILURE_PRESERVED_REVISED_FIXTURE_READY",
+  "original_source_sha256": "e4526c6308100b4a9a9bd2bce8a8713f6fa30dee40221298f0a79af86d186e32",
+  "new_source_sha256": "d61a45598c09a22ee3281f89914f026959491c695dc4f59ea3522bfd57e5a61b",
+  "reason": "Original dummy lacked the batch API and wrongly asserted no batcher. Keep the actual constructor/batcher and add valid dummy act_batch plus explicit private16 profile and exact owned-thread cleanup. Production sources and candidate scorer unchanged.",
+  "original_execution": "confirmed-game-boundary-private-wire-original01-execution-20261018"
+}

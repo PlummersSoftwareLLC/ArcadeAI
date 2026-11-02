@@ -1,0 +1,185 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/engineering-contexts-original01-preparation/joint-finalization-source-original01/finalize_retired_API_engineering_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-two-second-main-proof-contract-original01-preparation/engineering-contexts-original01-preparation/joint-finalization-source-original01/finalize_proof2s_engineering_v1.py
+@@ -10,7 +10,7 @@
+ HERE = Path(__file__).resolve().parent
+ ENGINEERING = HERE.parent
+ CONTEXTS = ENGINEERING / 'actual-current-main-contexts-original01'
+-REVISION = ENGINEERING.parent / 'capture-bracket-revision02'
++REVISION = ENGINEERING.parent / 'source-family-original01'
+ ISOLATION = ENGINEERING.parent.parent
+ LIMIT = 16 << 20
+ ROLES = {'client','worker','health','health_base','API_projection','round_admission',
+@@ -63,7 +63,7 @@
+     require(close_pin['path'] == str(Path(record['output']) / 'independent-original-engineering-closeout.json'),
+             'Another engineering scope closeout was supplied')
+     closed = read(close_pin)
+-    require(closed['schema'] == 'robotron-source-bound-reconnect-original-engineering-closeout-v1'
++    require(closed['schema'] == 'robotron-proof2s-original-engineering-closeout-v1'
+             and closed['status'] == 'PASS_ENGINEERING_ONLY' and closed['kind'] == 'deadline'
+             and closed['mode'] == mode and closed['launch_index'] == job['launch_index']
+             and closed['original_live_owner'] == record['original_live_owner']
+@@ -72,8 +72,8 @@
+             and closed['all_original_births_units_cgroups_and_tmpfs_control_absent'] is True
+             and closed['actual_parent_CPU_cores'] == 2 and closed['actual_parent_memory_bytes'] == 4 << 30
+             and closed['actual_parent_runtime_s'] == 780, 'Actual original engineering closure differs')
+-    require(closed['source'] == prepared['sources']['close_declared_launcher_engineering_mmap_v2.py'],
+-            'Unchanged owned closer source differs')
++    require(closed['source'] == prepared['sources']['close_two_second_engineering_v1.py'],
++            'Selected prospective2s owned closer source differs')
+     source_identity(closed['source'])
+     owner, intent = read(record['original_live_owner']), read(record['intent'])
+     terminal, probe = read(closed['parent_terminal']), read(closed['actual_probe_result'])
+@@ -88,9 +88,11 @@
+             and terminal['RuntimeMaxUSec'] == '13min', 'Original parent identity, exit, or resource bound differs')
+     require(probe['status'] == 'PASS_ENGINEERING_INTERFACE_ONLY' and probe['mode'] == mode
+             and probe['sources'] == prepared['observer_sources'] == family['observer_sources']
+-            and probe['retired_API_reviewer_source'] == family['round_observer_reviewer']
++            and probe['retired_API_reviewer_source'] == family['reviewer']
+             and all(probe[key] is False for key in ('main_runtime_changed','private_policy_or_GPU_loaded',
+                 'scientific_launch_qualified','quality_qualified')), 'Probe source map or scope differs')
++    require(probe['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1'
++            and probe['maximum_gap_s'] == 2.0, 'Probe uses another observation contract')
+     native = read(probe['original_job'])
+     lifecycle = read(closed['worker_lifecycle'])
+     worker = read(lifecycle['worker_job'])
+@@ -105,6 +107,9 @@
+             and outcome['parent'] == worker['parent']
+             and worker['parent']['pid'] == owner['pid'] and worker['parent']['birth'] == owner['birth']
+             and worker['parent']['invocation_id'] == owner['invocation_id'], 'Actual parent, job, case, or ten-map join differs')
++    require(worker['schema'] == 'robotron-round-observer-declared-launcher-proof2s-job-v1'
++            and worker['interval_s'] == .2 and worker['initial_samples'] == 100
++            and worker['maximum_gap_s'] == 2.0, 'Exact prospective2s worker contract required')
+     require(all(lifecycle[key] is True for key in ('all_original_processes_reaped',
+                 'original_scope_released','launcher_birth_absent'))
+             and outcome['all_writer_threads_stopped'] is True and outcome['uncommitted_raw'] == []
+@@ -121,7 +126,9 @@
+         reviewed = probe['independently_replayed_raw_review']
+         require(reviewed['status'] == 'PASS' and reviewed['accepted_samples'] >= 3000
+                 and all(reviewed[key] is True for key in ('queued_publication_byte_joins_verified',
+-                    'fresh_final_sample_verified','legacy_500ms_evidence_and_projection_gaps_verified'))
++                    'fresh_final_sample_verified','accepted_evidence_and_projection_gaps_verified'))
++                and reviewed['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1'
++                and reviewed['verified_maximum_gap_s'] == 2.0
+                 and outcome['success'] is lifecycle['success'] is True and outcome['error'] is None,
+                 'Long run lacks actual successful full raw review')
+     else:
+@@ -142,7 +149,7 @@
+                 <= request['created_monotonic_s'] <= outcome['ended_monotonic_s'],
+                 'Original expected abort disposition differs')
+     small = read(job[mode + '_small'])
+-    require(small['schema'] == 'robotron-retired-API-original-engineering-SMALL-independent-readback-v1'
++    require(small['schema'] == 'robotron-proof2s-original-engineering-SMALL-independent-readback-v1'
+             and small['status'] == 'PASS_SMALL_ENGINEERING_ONLY'
+             and small['mode'] == mode and small['closeout'] == close_pin
+             and small['launch_index'] == job['launch_index']
+@@ -150,41 +157,80 @@
+             and small['worker_actual_exit'] == closed['worker_actual_exit']
+             and small['all_original_births_units_cgroups_and_tmpfs_control_absent'] is True,
+             'Independent small readback is not this original closed scope')
++    raw_pin = None
++    if mode == 'long':
++        require(small['original_full_raw_review_PASS_joined_but_not_rerun_by_peer'] is True
++                and small['exact_ten_source_map_matches_prepared_and_frozen_family'] is True
++                and small['all247_historical_main_inputs_unchanged'] is True,
++                'Long independent SMALL/raw source-domain join differs')
++        raw_pin = small['independent_raw_review']
++        require(read(raw_pin) == reviewed and reviewed['original_sources'] == family['observer_sources']
++                and reviewed['lifecycle'] == closed['worker_lifecycle']
++                and reviewed['original_job'] == lifecycle['worker_job']
++                and reviewed['full_main_input_count'] == 247, 'Actual long full raw review pin differs')
+     return dict(closeout=close_pin, independent_small=job[mode + '_small'],
++        independent_raw_review=raw_pin,
+         actual_parent_exit=0, actual_worker_exit=closed['worker_actual_exit'],
+         lifecycle=closed['worker_lifecycle'], accepted_samples=closed['accepted_samples'],
+         unaccepted_samples=closed['unaccepted_samples'], full_raw_review_rerun_by_finalizer=False)
+ 
+ 
+ def finalize(job):
+-    require(job['schema'] == 'robotron-retired-API-joint-engineering-finalization-job-v1', 'Wrong job schema')
++    require(job['schema'] == 'robotron-proof2s-joint-engineering-finalization-job-v1', 'Wrong job schema')
+     own = job['source']
+     require(own['path'] == str(Path(__file__).resolve()), 'Another finalizer source selected')
+     require(hashlib.sha256(Path(__file__).read_bytes()).hexdigest() == own['sha256'], 'Finalizer bytes differ')
+     source_identity(own)
+     index = fixed(job['launch_index'], CONTEXTS/'ROOT-two-original-actual-launches-index-original01.json',
+-        '2b8209357930c2c181d7347e946c2e5a06749b84f957993c0d17a204f72ff549')
+-    family = fixed(job['source_family'], REVISION/'prepared-retired-API-capture-bracket-ten-source-family-v2.json',
+-        'd2a287e6f97ad3cee4db0279ae5a05816dccbe14bb820c9f4e91264e2b5388c7')
++        'b71802fb8abb325c29af3ecc27d9a12b0e2569229619d96430b77ea1963efc53')
++    require(index['schema'] == 'robotron-proof2s-two-original-engineering-launches-v1',
++            'Actual prospective2s launch index required')
++    family = fixed(job['source_family'], REVISION/'prepared-proof2s-observer-sources-NOT-QUALIFIED.json',
++        'ab870d1e08ddc27a7ed6456ce4a3be821fc247829c867a94f8c4db96947ff0ef')
+     prepared = read(index['preparation'])
+-    require(family['actual_engineering_preparation'] == index['preparation']
+-            and set(family['observer_sources']) == ROLES and family['logical_dependency_count'] == 10
++    require(index['preparation']['path'] == str(CONTEXTS/'prepared-two-original-observer-contexts-NOT-LAUNCHED.json')
++            and prepared['schema'] == 'robotron-proof2s-two-observer-engineering-preparation-v1'
++            and prepared['source']['path'] == str(ENGINEERING/'prepare_two_second_engineering_v1.py')
++            and prepared['source']['sha256'] == '1ed6c1331b4c67bfb785b9dd0b5e4282de4eac250dcc5651a116c60babf4e05c'
++            and prepared['sources']['prepared-proof2s-observer-sources-NOT-QUALIFIED.json'] == job['source_family']
++            and set(family['observer_sources']) == ROLES
++            and prepared['logical_observer_dependency_count'] == len(family['observer_sources']) == 10
+             and prepared['observer_sources'] == family['observer_sources']
+             and prepared['original_held_input_count'] == 247 and prepared['held_inputs_unchanged'] is True,
+             'Selected family, original247 case, or actual preparation differs')
+-    for pin in [*family['observer_sources'].values(), family['round_observer_reviewer']]:
++    for pin in [*family['observer_sources'].values(), family['reviewer'], prepared['source']]:
+         source_identity(pin)
+-    focused = fixed(job['focused_small'], REVISION/'focused6-CPU-original01/independent-focused6-original-CPU-SMALL-closeout.json',
+-        'c7d3dfa7ac91047df31c56d8fdbbe1a552f3954d05e0b88cb8590b7274326a0d')
+-    require(family['actual_focused_CPU_closeout'] == job['focused_small']
+-            and focused['status'] == 'PASS_FOCUSED_FIXTURES_ONLY' and focused['actual_tests'] == 6
+-            and focused['actual_original_ExecMainCode'] == 1 and focused['actual_original_exit'] == 0
+-            and focused['all_six_original_archives_resources_argv_verified'] is True
+-            and focused['original_birth_absent'] is focused['original_cgroup_absent'] is True,
+-            'Actual focused6 independent closure differs')
++    focused = fixed(job['focused_small'], ENGINEERING.parent/'focused-CPU-original01-preparation/actual-focused-CPU-original01/independent-original-CPU-scope-closeout.json',
++        '858f4115e41c94af6e8c753b62975ba4eec8114616548030218a7e3a2d6e945e')
++    require(focused['schema'] == 'robotron-engineering-original-CPU-independent-closeout-v1'
++            and focused['status'] == 'PASS_ENGINEERING_ONLY' and focused['actual_exit'] == 0
++            and focused['actual_CPU_cores'] == 2 and focused['actual_memory_bytes'] == 4 << 30
++            and focused['actual_runtime_limit_s'] == 180
++            and focused['all_six_original_descriptors_and_resources_argv_birth_unit_timer_cgroup_and_owned_release_verified'] is True,
++            'Actual focused7 original CPU closure differs')
+     require(read(focused['original_closure'])['original_exit'] == 0, 'Focused CPU did not exit0')
++    focused_report = read(focused['actual_report']); focused_job = read(focused['original_job'])
++    require(focused_report['schema'] == 'robotron-proof2s-focused-original-CPU-report-v1'
++            and focused_report['status'] == 'PASS' and focused_report['tests_run'] == 7
++            and focused_report['failures'] == focused_report['errors'] == []
++            and focused_report['original_job'] == focused['original_job']
++            and focused_report['source'] == focused_job['source']
++            and focused_report['source']['sha256'] == '047e393b60651c65717a7b5d80ab950bae5a32cc6ebd4ea991c672d54b2ab220'
++            and focused_report['fixture'] == focused_job['fixture']
++            and focused_report['fixture']['sha256'] == '582bbf8fbf1696becb174338cacc13dc443fe7164b66826280deb2681f9242cd'
++            and focused_report['Torch_imported'] is focused_report['GPU_or_MAME_launched'] is False
++            and focused_report['admission_TCP_and_live_collection_mocked_not_qualified'] is True
++            and focused_report['old_500ms_failed_studies_remain_invalid'] is True,
++            'Actual focused7 source/fixture/report scope differs')
+     records = {row['mode']:row for row in index['records']}
+     require(set(records) == {'long','abort'} and len(index['records']) == 2, 'Exact two original contexts required')
++    prepared_records = {row['mode']:row for row in prepared['records']}
++    require(set(prepared_records) == {'long','abort'} and len(prepared['records']) == 2,
++            'Exact two prepared original contexts required')
++    for mode in ('long','abort'):
++        require(all(records[mode][key] == prepared_records[mode][key]
++                    for key in ('kind','mode','output','unit','intent')),
++                'Actual launch differs from the selected original preparation')
+     modes = {mode:mode_evidence(job, mode, records[mode], prepared, family) for mode in ('long','abort')}
+     old = fixed(job['old192_usage'], ISOLATION/'declared-launcher192-usage-smoke-original01-preparation/prepared-original03/ROOT-independent-original-owned192-usage-closeout.json',
+         'b886b608c5bec16c9a46a365109408089b7cba097a61e3f9301b6d993ba29b8d')
+@@ -195,11 +241,12 @@
+             and old['actual_simultaneous192_MAME_or_full500ms_qualified'] is False
+             and old['scientific_or_quality_qualified'] is False, 'Historical usage fixture scope differs')
+     output = Path(job['output'])
+-    require(output == CONTEXTS/'independent-retired-API-joint-engineering-qualification-original01.json'
++    require(output == CONTEXTS/'independent-proof2s-joint-engineering-qualification-original01.json'
+             and not output.exists(), 'Exclusive new qualification output required')
+-    value = dict(schema='robotron-retired-API-joint-engineering-readiness-v1',
++    value = dict(schema='robotron-proof2s-joint-engineering-readiness-v1',
+         status='ENGINEERING_PASS_AT_RECORDED_OBSERVED_LOAD_ONLY', created_unix_s=time.time(),
+         source=own, launch_index=job['launch_index'], source_family=job['source_family'],
++        proof_gap_contract='robotron-main-proof-gap-2s-v1', maximum_gap_s=2.0,
+         focused_small=job['focused_small'], engineering=modes, observer_sources=family['observer_sources'],
+         historical_main_input_count=247, old192_usage=dict(closeout=job['old192_usage'],
+             all192_original_Popen0_reaped=True, gate192_paired_capture_s=old['gate192_paired_capture_s'],

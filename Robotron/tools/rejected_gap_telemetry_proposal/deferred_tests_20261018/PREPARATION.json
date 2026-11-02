@@ -1,0 +1,59 @@
+{
+  "schema": "robotron-rejected-gap-deferred-metadata-tests-v1",
+  "status": "SOURCE_ONLY_UNSELECTED_AUTHORED_UNEXECUTED",
+  "root_execution_required_after_current_freeze_release": true,
+  "activation_authorized": false,
+  "test_class": "RejectedGapContracts",
+  "test_methods": 12,
+  "selection": {
+    "helper": "rejected_gap_telemetry_reviewed3.py d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd",
+    "socket_insertion": "socket_server-insertion.patch b09570b80da4ec94acd7ba1221ce87010aa7a3b45141d09555fde18ae7fca448",
+    "held_nstep": "Robotron/Scripts/dqn/nstep_buffer.py e46f03e9a626b3a24dea702344b0bbf050f1fdc5af672fc8fc9d18e6afef74c1",
+    "source_preparation": "preparation-manifest.json 225a0a0192c46478d7286239aced07c720db9174efeed84f6cacdf27031a4366"
+  },
+  "future_root_argv": [
+    "/usr/bin/env", "-u", "LD_PRELOAD", "-u", "PYTHONPATH",
+    "CUDA_VISIBLE_DEVICES=", "PYTHONDONTWRITEBYTECODE=1",
+    "/usr/bin/python3.12", "-I", "-B", "-m", "unittest", "discover",
+    "-s", "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_proposal/deferred_tests_20261018",
+    "-p", "test_rejected_gap_telemetry.py", "-v"
+  ],
+  "future_root_bounds": {
+    "CPUQuota": "100%",
+    "MemoryMax": "512M",
+    "MemorySwapMax": "0",
+    "RuntimeMaxSec": "60",
+    "TasksMax": "128",
+    "actual_execution": null,
+    "original_PID": null,
+    "result": null
+  },
+  "load_boundary": [
+    "Current authoring read source and parsed test AST only. No helper, n-step class, project module or test was imported/executed.",
+    "During a future root test run, setUpClass authenticates exact source bytes before importing the real reviewed3 helper; its imports are stdlib only.",
+    "The held n-step file contains an unused numpy import. Future tests authenticate the complete file then compile only its actual _PendingStep and NStepReplayBuffer class AST nodes into a stdlib namespace. Their method bodies are not copied, rewritten or numerically reimplemented.",
+    "The test source imports no project, NumPy or Torch module. All states, rewards, client IDs and queue results in fixtures are synthetic."
+  ],
+  "coverage": [
+    "Off and absent-ticket events must avoid the diagnostic lock and leave counters untouched.",
+    "Complete-payload denominator versus terminal receive failures, all three rejection reasons, consecutive gap coalescing and one failed neutral send followed by disconnect.",
+    "First32 witnesses remain unchanged after40 closures; overflow counts continue. Active connection cap256 invalidates availability without admitting an extra tracked client. Saturation cannot wrap to a valid zero.",
+    "Positive rejection/before-reset/after-reset UID continuity, initial UID0, independent before/after UID changes, newgame classification, measurement reset and interrupted unknown continuity.",
+    "Actual held n3 same-learner-group continuation and terminal tails, followed by actual expert-prefix flush before current terminal input. Queue failure distinguishes all three calls from two returned calls; a returning no-op queue proves no physical insertion.",
+    "Readonly snapshots neither drain nor expose caller objects. Unknown reasons and incompatible n-step emission ordering fail visibly as unavailable without throwing into the fake caller.",
+    "Eight concurrent synthetic clients open gaps together, then complete six each. Exact global totals and retained witnesses must preserve each client's UID, slot, reason and receive sequence."
+  ],
+  "limits": [
+    "These tests invoke the real helper and held n-step class bodies through synthetic stage events. They do not execute socket_server.handle_client or prove insertion-hook reachability/order in the real handler.",
+    "No socket/model/replay-array/device/file producer or live API is exercised. A queue call/return is not physical replay insertion, training or client application.",
+    "No enabled/disabled performance or behavior noninterference result exists. Actual handler integration, source-closure/API selection and measured overhead remain separate future root work.",
+    "The suite does not apply either socket patch, alter the helper, edit installed sources or select an intervention."
+  ],
+  "verification": {
+    "test_source_AST_parsed": true,
+    "tests_executed": 0,
+    "helper_or_project_imports": 0,
+    "runtime_or_model_access": false,
+    "actual_test_result": null
+  }
+}

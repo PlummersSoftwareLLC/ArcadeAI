@@ -1,0 +1,245 @@
+--- original-source-archive/cuda_trace_parent.py
++++ cuda_trace_parent.py
+@@ -10,6 +10,7 @@
+ 
+ import argparse
+ from dataclasses import dataclass
++import errno
+ import fcntl
+ import hashlib
+ import importlib.util
+@@ -25,7 +26,7 @@
+ 
+ 
+ HERE = Path(__file__).parent
+-GAME = HERE.parents[2]
++GAME = HERE.parents[3]
+ REPO = GAME.parent
+ SCHEMA = 'robotron-cuda-executed-ce-trace-validation-v1'
+ SEED = 20261017
+@@ -65,6 +66,149 @@
+         os.close(descriptor)
+ 
+ 
++def storage_directory_identity(path):
++    info = Path(path).lstat()
++    require(stat.S_ISDIR(info.st_mode), 'Storage boundary is not a nonsymlink directory: ' + str(path))
++    return dict(device=info.st_dev, inode=info.st_ino)
++
++
++def owned_byte_count(root, expected_identity, *, volatile_caches=(), events=None, observer=None):
++    """Count owned files without following links or hiding scientific I/O loss.
++
++    Only declared compiler-cache churn and the pinned ON observer's exact
++    atomic JSON publication paths are tolerated. Persistent scientific loss
++    remains fatal. All observed directory boundaries must survive unchanged.
++    This remains a cooperative, non-atomic storage observation, not a quota.
++    """
++    root = Path(root)
++    caches = [(Path(path), identity) for path, identity in volatile_caches]
++    require(root.is_absolute(), 'Storage root must be absolute')
++    for path, identity in caches:
++        require(path != root and path.is_relative_to(root), 'Volatile cache must be strictly inside owned root')
++    observer_path = Path(observer['path']) if observer is not None else None
++    if observer_path is not None:
++        require(observer_path != root and observer_path.is_relative_to(root), 'Observer must be strictly inside owned root')
++    observer_temporaries = {'context.json.tmp', 'status.json.tmp'} | {
++        'attempt-%02d.json.tmp' % index for index in range(1, 9)}
++
++    def pin_observer(info=None):
++        if observer is None:
++            return
++        if info is None:
++            try:
++                info = observer_path.lstat()
++            except OSError as error:
++                if error.errno == errno.ENOENT and observer['identity'] is None:
++                    return  # Session has not created its NEW directory yet.
++                raise
++        require(stat.S_ISDIR(info.st_mode), 'Observer boundary is not a nonsymlink directory')
++        identity = dict(device=info.st_dev, inode=info.st_ino)
++        if observer['identity'] is None:
++            observer['identity'] = identity
++        require(identity == observer['identity'], 'Observer directory identity changed')
++
++    def boundaries():
++        require(storage_directory_identity(root) == expected_identity, 'Owned storage root identity changed')
++        for path, identity in caches:
++            require(storage_directory_identity(path) == identity, 'Active compiler-cache boundary changed')
++        pin_observer()
++
++    def cache_for(path):
++        return next((cache for cache, identity in caches if path != cache and path.is_relative_to(cache)), None)
++
++    def vanished(path, error, *, regular=None):
++        if error.errno == errno.ENOENT:
++            cache = cache_for(path)
++            if cache is not None:
++                if events is not None:
++                    events['ignored_enoent'] = events.get('ignored_enoent', 0) + 1
++                    events['last_relative_path'] = str(path.relative_to(cache))
++                    events['last_cache_root'] = str(cache)
++                return True
++            if (observer is not None and observer['identity'] is not None and regular is not False
++                    and path.parent == observer_path and path.name in observer_temporaries):
++                observer['ignored_temp_enoent'] = observer.get('ignored_temp_enoent', 0) + 1
++                observer['last_temp_name'] = path.name
++                return True
++        return False
++
++    def inspect(parent_fd, name, path, *, previous=None):
++        try:
++            return os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
++        except OSError as error:
++            if vanished(path, error, regular=None if previous is None else stat.S_ISREG(previous.st_mode)):
++                return None
++            raise
++
++    def walk(descriptor, path):
++        try:
++            with os.scandir(descriptor) as iterator:
++                entries = list(iterator)
++        except OSError as error:
++            if vanished(path, error, regular=False):
++                return 0
++            raise
++        total = 0
++        for entry in entries:
++            child = path / entry.name
++            info = inspect(descriptor, entry.name, child)
++            if info is None:
++                continue
++            require(not stat.S_ISLNK(info.st_mode), 'Unexpected symlink in owned artifacts: ' + str(child))
++            if child == observer_path:
++                pin_observer(info)
++            if stat.S_ISDIR(info.st_mode):
++                try:
++                    nested = os.open(entry.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=descriptor)
++                except OSError as error:
++                    if vanished(child, error, regular=False):
++                        continue
++                    raise
++                try:
++                    opened = os.fstat(nested)
++                    require((opened.st_dev, opened.st_ino) == (info.st_dev, info.st_ino),
++                            'Storage directory replaced during traversal: ' + str(child))
++                    size = walk(nested, child)
++                finally:
++                    os.close(nested)
++            elif stat.S_ISREG(info.st_mode):
++                size = info.st_size
++            else:
++                size = 0  # Same accounting as the pinned watcher for other file types.
++            after = inspect(descriptor, entry.name, child, previous=info)
++            if after is None:
++                continue
++            require(not stat.S_ISLNK(after.st_mode), 'Unexpected symlink in owned artifacts: ' + str(child))
++            if (after.st_dev, after.st_ino) != (info.st_dev, info.st_ino):
++                regular_pair = stat.S_ISREG(info.st_mode) and stat.S_ISREG(after.st_mode)
++                cache = cache_for(child)
++                if regular_pair and cache is not None:
++                    if events is not None:
++                        events['regular_cache_replacements'] = events.get('regular_cache_replacements', 0) + 1
++                        events['last_cache_replacement_relative_path'] = str(child.relative_to(cache))
++                        events['last_cache_root'] = str(cache)
++                elif (regular_pair and observer is not None and observer['identity'] is not None
++                      and child.parent == observer_path and child.name in ('status.json', 'status.json.tmp')):
++                    field = 'status_replacements' if child.name == 'status.json' else 'status_tmp_replacements'
++                    observer[field] = observer.get(field, 0) + 1
++                else:
++                    raise RuntimeError('Storage entry replaced during traversal: ' + str(child))
++            total += max(size, after.st_size) if stat.S_ISREG(info.st_mode) else size
++        return total
++
++    boundaries()
++    descriptor = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
++    try:
++        opened = os.fstat(descriptor)
++        require(dict(device=opened.st_dev, inode=opened.st_ino) == expected_identity,
++                'Owned storage root changed before open')
++        total = walk(descriptor, root)
++        boundaries()
++        return total
++    finally:
++        os.close(descriptor)
++
++
+ def checked_module(path, expected, name):
+     """Execute only verified helper bytes, exclusively on the explicit path."""
+     path = Path(path)
+@@ -240,6 +384,14 @@
+ 
+ def run_variant(base, layout, manifest_path, variant, cgroup, main, overall_deadline):
+     paths = layout.phase(variant)
++    manifest = json.loads(manifest_path.read_text())
++    native_cache = manifest['native_compiler_cache']
++    require(Path(native_cache['path']) == layout.scripts/'dqn/__pycache__', 'Unexpected native compiler-cache path')
++    cache_identity = storage_directory_identity(paths['cache'])
++    cache_events = dict(ignored_enoent=0, last_relative_path=None)
++    observer = (dict(path=str(paths['root']/'ce-executed-trace-cuda-validation'), identity=None,
++                     ignored_temp_enoent=0, last_temp_name=None, status_replacements=0, status_tmp_replacements=0)
++                if variant == 'on' else None)
+     deadline = min(overall_deadline, time.monotonic() + BOUNDS['phase_timeout_s'])
+     process = owned = None
+     token_released = False
+@@ -255,15 +407,18 @@
+                 require(owned['pgid'] == process.pid, 'Worker process group is not isolated')
+                 cgroup.attach(process.pid)
+             base.guard_live_resources(allowed_pids={os.getpid(), process.pid}, expected_main=main)
+-            manifest = json.loads(manifest_path.read_text())
+             process.stdin.write((manifest['launch_token'] + '\n').encode())
+             process.stdin.close()
+             token_released = True
+             next_guard = 0.0
+             while process.poll() is None:
+                 require(time.monotonic() < deadline, 'Fixed variant/overall deadline exceeded')
+-                require(base.byte_count(layout.output) <= BOUNDS['artifact_bytes'] and
+-                        base.byte_count(layout.tmpfs) <= BOUNDS['tmpfs_bytes'], 'Owned storage bound exceeded')
++                require(owned_byte_count(layout.output, manifest['output_identity'],
++                            volatile_caches=((paths['cache'], cache_identity),
++                                             (Path(native_cache['path']), native_cache['identity'])), events=cache_events,
++                            observer=observer) <= BOUNDS['artifact_bytes'] and
++                        owned_byte_count(layout.tmpfs, manifest['tmpfs_identity']) <= BOUNDS['tmpfs_bytes'],
++                        'Owned storage bound exceeded')
+                 if time.monotonic() >= next_guard:
+                     base.guard_live_resources(allowed_pids={os.getpid(), process.pid}, expected_main=main)
+                     next_guard = time.monotonic() + 1
+@@ -295,6 +450,9 @@
+                             variant=variant, owned_identity=owned, pid=process.pid,
+                             actual_returncode=process.returncode, token_released=token_released,
+                             elapsed_s=time.monotonic()-launched,
++                            compiler_cache_identity=cache_identity, compiler_cache_observations=cache_events,
++                            native_compiler_cache=native_cache,
++                            observer_storage_observations=observer,
+                             scope='Direct owned Popen result; parent service exit retained separately by root'))
+     require(time.monotonic() <= overall_deadline, 'Overall deadline exceeded at variant completion')
+     result = json.loads((paths['root']/'phase-result.json').read_text())
+@@ -342,6 +500,9 @@
+                     output=root_identity, tmpfs=tmp_identity))
+             publish(base, layout.tmpfs/'ownership.json', dict(nonce=nonce, parent=base.identity()))
+             base.prepare_private_sources(layout, lock['source_files'])
++            native_cache_path = layout.scripts/'dqn/__pycache__'
++            native_cache_path.mkdir(mode=0o700)
++            native_cache = dict(path=str(native_cache_path), identity=storage_directory_identity(native_cache_path))
+             fixture = copy_fixture(lock, directory, overall_deadline)
+             for variant in VARIANTS:
+                 paths = layout.phase(variant)
+@@ -359,6 +520,7 @@
+                 cgroup=str(cgroup.path), cgroup_identity=cgroup.identity, main_owners=initial['main_owners'],
+                 gpu_uuid=base.GPU0_UUID, forbidden_gpu_uuid=base.MAIN_GPU_UUID,
+                 bounds=dict(BOUNDS), sources=lock['source_files'], trained_fixture=fixture,
++                native_compiler_cache=native_cache,
+                 numerical_protocol=lock, service_exit_provenance='Root must retain original invocation and terminal fields before owned unit release')
+             path = directory/'launch-manifest.json'
+             publish(base, path, manifest)
+@@ -370,8 +532,8 @@
+                 base.guard_live_resources(allowed_pids={os.getpid()}, expected_main=initial['main_owners'], initial=True)
+                 results.append(run_variant(base, layout, path, variant, cgroup,
+                                            initial['main_owners'], overall_deadline))
+-            require(base.byte_count(layout.output) <= BOUNDS['artifact_bytes'] and
+-                    base.byte_count(layout.tmpfs) <= BOUNDS['tmpfs_bytes'], 'Final storage bound exceeded')
++            require(owned_byte_count(layout.output, root_identity) <= BOUNDS['artifact_bytes'] and
++                    owned_byte_count(layout.tmpfs, tmp_identity) <= BOUNDS['tmpfs_bytes'], 'Final storage bound exceeded')
+             base.verify_source_copies(layout, lock['source_files'])
+             require(read_lock() == lock and digest(path) == manifest_sha, 'Final immutable source/protocol changed')
+             require(stable_file(fixture['source']['path'], CHECKPOINT_SHA256, 275181008) == fixture['source']

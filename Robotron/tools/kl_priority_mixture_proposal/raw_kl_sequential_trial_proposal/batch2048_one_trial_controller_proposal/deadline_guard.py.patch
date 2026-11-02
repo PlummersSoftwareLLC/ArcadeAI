@@ -1,0 +1,100 @@
+--- predecessor/deadline_guard.py
++++ CE2048/deadline_guard.py
+@@ -1,7 +1,7 @@
+-"""Independent, exact-owner deadline invocation for one precommitted KL trial.
++"""Independent exact-owner deadline for an UNCONSUMED CE batch2048 trial.
+ 
+ Literal PLAN by default. This process is armed before the activation invocation;
+-it never infers a new KL PID from the previous CE unit's current MainPID.
++it never infers a new CE2048 PID from the previous CE unit's current MainPID.
+ """
+ import argparse
+ import contextlib
+@@ -15,7 +15,15 @@
+ import subprocess
+ import time
+ 
+-SCHEMA = 'robotron-one-raw-kl-trial-job-v1'
++SCHEMA = 'robotron-one-ce-batch2048-trial-job-v1'
++EXECUTION_BLOCKERS = ('actual2048 producer capture/bind integration is incomplete',
++    'honest phase early-insurance return consumer/provenance integration is incomplete',
++    'current private CE2048 numerical readiness is unbound',
++    'future actual root precommit and owner/checkpoint bindings are unbound')
++PROFILE_PATH = '/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json'
++PROFILE_SHA = 'e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50'
++PROFILE_BYTES = 764
++PROFILE_VALUE = {'LR_compensation': False, 'batch_size': 2048, 'before_batch_size': 4096, 'deliberate_recipe_changes': ['DQN_BATCH_SIZE'], 'held_recipe_context': {'baseline_batch_size': 512, 'batch_size': 2048, 'c51_target_smoothing': 0, 'epsilon': 0.1, 'expert_ratio': 0.1, 'fused': True, 'gamma': 0.995, 'learning_control_lr_scale': 0.5, 'lr_anchor_step': 0.0, 'lr_gear': 'climb', 'max_samples_per_frame': 8, 'n_step': 3, 'num_atoms': 51, 'optimizer_eps': 0.00015, 'optimizer_lr': 2.5e-05, 'v_max': 50.0, 'v_min': -10.0}, 'priority_metric': 'ce', 'profile_id': 'ce_batch2048_efficacy_screen_v1', 'return_batch_size': 4096, 'schema': 'robotron-ce-batch2048-efficacy-profile-v1'}
+ OWNER_KEYS = {'pid', 'starttime_ticks', 'unit', 'invocation_id', 'cgroup'}
+ LIMIT = 2 << 20
+ STOP_INTENT_S = 3310
+@@ -55,10 +63,27 @@
+     return json.loads(data)
+ 
+ 
+-def validate_authorization(core, activation):
++def profile_binding(profile, *, read=read_pin):
++    require(isinstance(profile, dict) and
++        {k:profile.get(k) for k in ('path','sha256','bytes')} ==
++            dict(path=PROFILE_PATH, sha256=PROFILE_SHA, bytes=PROFILE_BYTES),
++        'Exact immutable CE2048 profile required')
++    value = read(profile)
++    require(value == PROFILE_VALUE, 'Declared profile value differs')
++    return dict(pin={k:profile[k] for k in ('path','sha256','bytes')}, value=value)
++
++
++def validate_authorization(core, activation, *, read=read_pin):
++    profile = core.get('batch_profile')
++    binding = profile_binding(profile, read=read)
++    boundary = activation['batch_boundary']
+     require(core.get('activation_authorized') is True and core.get('status') == FINAL_CORE_STATUS
+-        and core.get('mode') == 'activate_kl' and core.get('phase_id') == activation['phase_id'],
+-        'Only the final explicitly authorized immutable activation core may execute/arm')
++        and core.get('mode') == activation['mode'] == 'activate_batch2048'
++        and core.get('phase_id') == activation['phase_id']
++        and boundary['mode'] == 'activate_batch2048' and boundary['profile_binding'] == binding
++        and boundary['before_batch_size'] == 4096 and boundary['after_batch_size'] == 2048
++        and boundary['priority_metric'] == 'ce',
++        'Only the exact final authorized CE4096-to-CE2048 start may execute/arm')
+ 
+ 
+ def publish(path, value, *, allow_nan=False):
+@@ -181,11 +206,11 @@
+         and start['experiment'] == activation['experiment'] and start['model_dir'] == activation['model_dir']
+         and start['source_phase'] == 'after'
+         and start['owned_start_requested'] is True and start['boot_id'] == planned['boot_id'],
+-        'Start marker does not bind the planned new KL start')
++        'Start marker does not bind the planned CE2048 start')
+     record = read(start['phase_record'])
+-    require(record['metric'] == 'kl' and record['phase_id'] == activation['phase_id']
++    require(record['metric'] == 'ce' and record['phase_id'] == activation['phase_id']
+         and record['action'] == 'start' and record['root_precommit_sha256'] == activation['trial_core']['sha256'],
+-        'Start is not the precommitted KL phase')
++        'Start is not the precommitted CE2048 phase')
+     return dict(start=start, start_pin=start_pin)
+ 
+ 
+@@ -303,6 +328,7 @@
+     if not args.execute:
+         print('PLAN_ONLY: independent one-trial exact-owner deadline; no reads/actions')
+         return 0
++    require(not EXECUTION_BLOCKERS, 'UNCONSUMED CE2048: ' + '; '.join(EXECUTION_BLOCKERS))
+     require(args.job and args.expected_job_sha256 and args.expected_source_sha256, 'Explicit root bindings required')
+     self_pin, _ = pin(__file__)
+     require(self_pin['sha256'] == args.expected_source_sha256, 'Deadline source changed')
+@@ -312,6 +338,7 @@
+     activation = read_pin(job['activation_job'])
+     core = read_pin(activation['trial_core'])
+     validate_authorization(core, activation)
++    require(job['profile'] == core['batch_profile'], 'Trial profile differs from final authorized core')
+     root = Path(job['output_directory']); root.mkdir(mode=0o700)
+     lock_path = root / 'unit-actions.lock'
+     fd = os.open(lock_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+@@ -322,7 +349,7 @@
+     now = clock(); require(now['boot_id'] == job['boot_id'], 'Boot differs before arm')
+     planned = dict(old_owner=job['old_owner'], request_id=activation['request_id'], boot_id=job['boot_id'])
+     require(job['deadlines'] == dict(latch_s=3240, stop_intent_s=3310, owner_ceiling_s=3600), 'Fixed deadlines differ')
+-    publish(root / 'deadline-armed.json', dict(schema='robotron-raw-kl-deadline-armed-v1',
++    publish(root / 'deadline-armed.json', dict(schema='robotron-ce-batch2048-deadline-armed-v1',
+         job=jp, source=self_pin, pid=os.getpid(), starttime_ticks=process_start(os.getpid()),
+         clock=now, lock_path=str(lock_path), lock_identity=lock_identity, planned=planned))
+     lock = ActionLock(lock_path, lock_identity)

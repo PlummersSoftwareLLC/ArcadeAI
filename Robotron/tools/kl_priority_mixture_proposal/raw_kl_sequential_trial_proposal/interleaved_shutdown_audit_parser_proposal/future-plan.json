@@ -1,0 +1,27 @@
+{
+  "status": "SOURCE_ONLY_PURE_HELPER_AND_UNAPPLIED_DIFF",
+  "test_loader_contract": {
+    "interpreter": [
+      "/usr/bin/python3.12",
+      "-I",
+      "-B"
+    ],
+    "test_file": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/interleaved_shutdown_audit_parser_proposal/test_expected_shutdown.py",
+    "class_name": "InterleavedShutdownGuards",
+    "methods_authored": 12,
+    "scope": "Pure stdlib with frozenC1 text/receipt projection and archived source bytes; modified strings are negative synthetic guard cases, not actual cohorts."
+  },
+  "suggested_guard_bounds": {
+    "CPUQuota": "100%",
+    "MemoryMax": "512M",
+    "RuntimeMaxSec": 60,
+    "CUDA_VISIBLE_DEVICES": ""
+  },
+  "actual_guard_execution": null,
+  "future_auditor": null,
+  "future_binding_job": null,
+  "future_launch_argv": null,
+  "current_audit_rerun": false,
+  "current_sources_modified": false,
+  "current_source_freeze_released": false
+}

@@ -1,0 +1,267 @@
+--- a/Robotron/DELL_SETUP.md
++++ b/Robotron/DELL_SETUP.md
+@@ -81,7 +81,7 @@
+ failed exit, partial results and diagnostics remain preserved; 320M was not
+ promoted.
+ 
+-The current protected incumbent and next fixed reference is
++The preceding 448M protected incumbent and fixed reference was
+ `models_dqn/managed-incumbents/fresh3-448M-confirmed.pt`, SHA256
+ `1e085a128e237c2bb0636b073e5053dd8bf5be932bcbd8249543b3af20e23021`.
+ All 336 original games in the fresh 384M-versus-448M comparison passed review.
+@@ -90,8 +90,8 @@
+ (+19.11% and +26.35%) and medians 434,000 and 437,937.50. Both individually
+ passed the unchanged mean and median gates. Publication and canonical adoption
+ are recorded under `run-26/quality448M-managed-incumbent-adoption-root-20261017/`.
+-The prior 384M policy and all ten earlier history entries are preserved; history
+-now contains eleven entries. Promotion itself did not reload or restart the learner.
++The prior 384M policy and all ten earlier history entries were preserved; that
++adoption brought history to eleven entries. Promotion itself did not reload or restart the learner.
+ Before live adoption, the raw-KL source passed 58 Stage A CPU guards,
+ and the fixed GPU loss/gradient comparison passed independent review. All three
+ forwards and backwards matched the planned internal comparisons; the historical
+@@ -119,7 +119,7 @@
+ See `run-26/rawKL-trial01-controller-20261017/`,
+ `run-26/rawKL-trial01-forward-CE-repair-20261017/` and
+ `run-26/rawKL-trial01-forward-CE-repair-root-terminal-and-health-20261017/`.
+-The progress chart now includes the confirmed 448M annotation and retains every
++The 448M progress-chart update retained every
+ historical point; see `run-26/confirmed448M-reporting-root-adoption-20261017/`.
+ 
+ A separately precommitted second KL trial completed. The installed-CE
+@@ -175,58 +175,54 @@
+ Final cleanup and freeze release are in
+ `run-26/rawKL-trial02-quality-root-freeze-release-20261017/`.
+ 
+-The next confirmation is now running:
+-`quality-448M-vs-CE543M-20261017`, original controller PID 894289, invocation
+-`4bcb24eb3bb344da9dc67b483a8ee946`. One live managed save captured the advancing
+-CE model at 543,235,763 learner frames, SHA256
+-`8b86546355ade166937a8287a008c7854276ed773a103eb815287dde00d6fb7e`.
+-The original save helper and strict CPU verifier exited 0, with independent
+-readonly copies, phase lineage and saved-result reviews retained. All 192 actors
+-continued throughout; this is a model-only snapshot, not a replay/RNG anchor.
+-The original first reference evaluator PID 894298 exited 0 after all 71 admitted
+-games finished across all 16 slots, with zero pending or abandoned games. Its
+-original row auditor PID 948555 also exited 0; its complete archives preceded
+-exact owned timer/service release. R1 mean is 418,877.46 and median 427,400;
+-the 12 post-admission tails are included. These are one reference cohort's
+-results, not the final pooled reference or a candidate qualification.
+-Candidate 1's original evaluator PID 947304 exited 0 after all 59 admitted games
+-finished: mean 513,536.02, median 480,800, with all 11 post-close tails included.
+-Its original row auditor exited 2 on interleaved shutdown traces. Independent
+-full-row/source review and explicit root review accepted only the six exhaustive
+-owned teardown traces after every game ended; the original failed report and
+-exit remain preserved. Reference 2's original evaluator PID 1001646 completed
+-all 78 games with exit 0; its original row audit and independent review passed.
+-Both fresh reference cohorts now form the fixed 149-game pool: mean 402,881.21,
+-median 424,575. Candidate 1 passes both gates against that pool: mean +27.47%
+-and median 480,800. This is one passing cohort; confirmation still requires C2.
+-Candidate 2 is collecting under original evaluator PID 1053703 with all 16 slots
+-acknowledged. Its admission window is 2026-10-17T17:03:33.754161Z through
+-17:23:33.754161Z, followed by every admitted game's full tail. Its separate
+-thresholds are mean at least 423,025.27 and median at least 424,575. Root adoption
+-and current main192/source/GPU evidence are in
+-`run-26/CE543M-quality-fixed-reference-C1-pass-C2-running-root-20261017/`.
+-The actual plan SHA is
+-`25aaded11bf956b715cc5fb58be1901d236a30444e74253594461f8d11c00d75`.
+-Both candidate cohorts must independently pass against the same fixed 149-game
+-reference; the preceding 141-game pool is historical. Source and runtime
+-settings remain frozen through all four cohorts and final review. The dashboard
+-now displays "448M vs 543M" through its existing filename reader, without a
+-trainer restart. Main CE training continues as PID 620749 with 192 actors.
+-See `run-26/live-CE-candidate01-complete-root-20261017/` and
+-`run-26/CE543M-quality-launch-and-R1-startup-root-reviewed3-20261017/`.
+-R1 audit evidence is in `run-26/CE543M-quality-original-row-leg01-audit/` and
+-`run-26/CE543M-quality-original-row-leg01-audit-root-execution-reviewed1-20261017/`;
+-the genuine C1 startup observation is in
+-`run-26/CE543M-quality-launch-and-C1-startup-root-reviewed1-20261017/`.
+-Independent saved R1 row/audit and C1 startup reviews passed under
+-`run-26/CE543M-quality-R1-original-rows-independent-saved-review-20261017/` and
+-`run-26/CE543M-quality-C1-startup-independent-saved-review-20261017/`.
+-The C1 narrow review and explicit acceptance are in
+-`run-26/CE543M-quality-C1-original-rows-narrow-shutdown-independent-saved-review-20261017/`
+-and `run-26/CE543M-quality-C1-original-audit-R2-running-root-20261017/`.
+-R2 identities and its independent startup review are in
+-`run-26/CE543M-quality-launch-and-R2-startup-root-reviewed1-20261017/` and
+-`run-26/CE543M-quality-R2-startup-independent-saved-review-20261017/`.
++The fresh `quality-448M-vs-CE543M-20261017` campaign completed all 274
++original games and qualified. The protected incumbent and next fixed reference is
++`models_dqn/managed-incumbents/freshCE-543M-confirmed.pt`, SHA256
++`8b86546355ade166937a8287a008c7854276ed773a103eb815287dde00d6fb7e`,
++saved at 543,235,763 learner frames. The fresh 71- and 78-game reference cohorts
++form one fixed 149-game pool (mean 402,881.21, median 424,575). The separate
++59-game candidate cohort scored mean 513,536.02 (+27.47%) and median 480,800;
++the 66-game candidate cohort scored mean 488,850.38 (+21.34%) and median
++490,487.50. Each independently passed mean >= 423,025.27 and median >= 424,575.
++The 125-game candidate pool (mean 500,502, median 481,450) is descriptive only.
++All cohorts retain the 1200-second admission windows, full tails, all 16 slots,
++minimum 50 games and diagnostics-enabled backend; no older reference pool was used.
++
++Original row-auditor exits remain `[0, 2, 0, 0]`. C1's exit 2 and failed report
++are preserved: independent full-row/source review and explicit root acceptance
++classified exactly six owned shutdown traces after all games ended. The original
++campaign parent exited 0; all 69 owned campaign processes were absent before
++exact owned release and explicit source-freeze release. Create-only protected
++publication and canonical adoption preserved 448M and all earlier artifacts;
++incumbent history now has 12 entries. The live CE trainer remains PID 620749 with
++192 actors and batch 4096, without a promotion restart or checkpoint restore.
++The updated progress figure passed a private CPython3.12 render and visual review,
++retaining all 13 historical curves and three guards; see
++`run-26/confirmedCE543M-reporting-root-adoption-20261017/`.
++The optimization goal continues; this establishes frozen-policy qualification,
++not a causal batch/KL effect or a learning-speed result.
++See `run-26/CE543M-quality-final-fixed-gates-and-closure-preparation-root-20261017/`,
++`run-26/CE543M-quality-C1-original-rows-narrow-shutdown-independent-saved-review-20261017/`,
++`run-26/CE543M-quality-C1-original-audit-R2-running-root-20261017/` and
++`run-26/CE543M-managed-incumbent-adoption-root-20261017/`.
++
++The separate private CE2048 readiness run also completed all three original
++roles (`ce18`, `resume`, `restart_ce`) with readiness true and original parent
++exit 0. All 18 fixed optimizer attempts applied; resume and new-CE restart used
++the newest post-step checkpoint without another update. This used verified 448M
++fixture weights and the first 2048 ordered rows of the fully validated original
++4096-row attempt01, reused 18 times. It proves private constructor/load,
++CE-four-output, AMP/fused-Adam/native-priority and phase lifecycle readiness for
++that fixture; it does not prove full live replay restoration, concurrent serving,
++throughput or efficacy. The result explicitly has `qualification_pass=false`. The subset contains ring
++rows only (one duplicate); bank-origin coverage and an actual 2048-to-4096
++profile return were not exercised.
++Root archived the original parent and all three child exits 0 before timer-first
++unit release (both stops 0); separate owned cleanup confirmed main192 and resources
++healthy. No live batch2048 trial has been activated; the current recipe remains
++CE4096. Saved result and terminal/cleanup evidence:
++`run-26/CE2048-private-training-readiness-reviewed1-20261017/result.json` and
++`run-26/CE2048-private-readiness-owned-cleanup-root-reviewed1-20261017/`.
+ 
+ The following records the earlier 384M promotion. That checkpoint saved at
+ **388,633,116 learner frames**, with
+@@ -771,8 +767,8 @@
+ stall the initial page request. Live polling starts independently of history,
+ and transient failures retry without closing the dashboard.
+ 
+-The protected 448M policy is the current managed reference after both separate
+-candidate cohorts passed the fresh-reference confirmation.
++The protected 543M CE policy is the current managed reference after both separate
++candidate cohorts passed the fresh448M-reference confirmation.
+ An offline 256-row priority study found CE strongly correlated with
+ target entropy, but replacing CE with KL also greatly reduced a sampled
+ importance-weight proxy. The opt-in proposal in `tools/priority_metric_proposal/`
+--- a/Robotron/tools/PIPELINE_REPORTING.md
++++ b/Robotron/tools/PIPELINE_REPORTING.md
+@@ -519,66 +519,55 @@
+ Final original cleanup and explicit freeze release are in
+ `run-26/rawKL-trial02-quality-root-freeze-release-20261017/`.
+ 
+-Fresh `quality-448M-vs-CE543M-20261017` is running under original controller
+-894289/invocation4bcb24eb3bb344da9dc67b483a8ee946. Candidate543 saved at
+-543,235,763 learner frames with hash8b86546355ade166937a8287a008c7854276ed773a103eb815287dde00d6fb7e.
+-Its original live managed capture and separate strict CPU verification exited 0;
+-independent saved reviews passed. Capture used one unique managed request and an
+-independent readonly model copy while all 192 actors kept running. It did not
+-pause/restart the learner, change the recipe or create a coherent replay anchor.
+-Eight capture guards and ten corrected quality-binding guards passed. The first
+-binding proposal's stale KL metadata lookup was caught before any preparation or
+-launch; its corrected sibling preserves the evaluator and scoring code exactly.
+-Original R1 evaluator894298 exited 0 after all 71 admitted games finished across
+-all 16 slots, with no pending or abandoned games. Mean418877.4647887324 and
+-median427400 include all12 post-close tails (maximum179.3431568145752seconds).
+-The original row audit948555/start34462407/invocationef5efed8772d4e6c804e406a54ec3cd8
+-exited0/success; full archives preceded exact owned timer/service release.
+-Candidate1 original947304/start34459706 exited0 with all59 admitted games,
+-sum30298625, mean513536.0169491525, median480800 and11 full post-close tails
+-(maximum270.32784152030945s). Original rowaudit1004038/start34620085/invocation
+-51e2931323684968b9c7d1f6692f0269 exited2 on interleaved teardown traces. The
+-failed report/exit are retained. Independent full-row/source review and explicit
+-root acceptance classify exactly6 owned stop traces, all after the unique stop
+-marker and after every tail; final fatal latches and cleanup diagnostics are
+-clear. Original Reference2 evaluator1001646/start34611733 completed78 games,
+-sum30289000, mean388320.5128205128, median422975, all14 full post-close tails
+-(maximum209.6805181503296s), with zero pending/abandoned. Original rowaudit
+-1055111/start34761706/invocation50db5fa1817445afa80b4b6b10a343da exited0;
+-its full archives/release and independent saved review passed. The same fresh
+-149-game R1+R2 pool is now fixed: sum60029300, mean402881.20805369125,
+-median424575. Candidate1 passes separately with mean+27.4658650449426% and
+-median480800; original auditor2/manual integrity disposition remains preserved.
+-Candidate2 is collecting under original1053703/start34757703, all16 acknowledged,
+-from17:03:33.754161Z to17:23:33.754161Z on October17, then full tails. Its mean
+-must reach423025.2684563758 and median424575 using this same fixed pool.
+-Root adoption/current main192/source/GPU evidence is in
+-`run-26/CE543M-quality-fixed-reference-C1-pass-C2-running-root-20261017/`.
+-Actual plan25aaded11bf956b715cc5fb58be1901d236a30444e74253594461f8d11c00d75
+-differs from its reviewed preview only in creation time. All four cohorts retain
+-the same protocol, diagnostics, full tails and separate confirmation gates; this
+-campaign uses its final fresh149 reference pool. Main620749/192 actors
+-continues, the new source freeze is held, and the current dashboard correctly
+-reads "448M vs 543M" without a reader change. No current candidate qualification
+-or causal learning-speed claim is established. Evidence is in
+-`run-26/live-CE-candidate01-complete-root-20261017/`,
+-`run-26/CE543M-quality-launch-and-R1-startup-root-reviewed3-20261017/` and
+-`run-26/CE543M-quality-launch-canonical-adoption-root-20261017/`.
+-Current original R1 audit/archive evidence is in
+-`run-26/CE543M-quality-original-row-leg01-audit/` and
+-`run-26/CE543M-quality-original-row-leg01-audit-root-execution-reviewed1-20261017/`;
+-genuine C1 identities and main192/source/GPU checks are in
+-`run-26/CE543M-quality-launch-and-C1-startup-root-reviewed1-20261017/`.
+-Independent saved R1 row/audit and C1 startup reviews passed under
+-`run-26/CE543M-quality-R1-original-rows-independent-saved-review-20261017/` and
+-`run-26/CE543M-quality-C1-startup-independent-saved-review-20261017/`.
+-The original C1 exit2, independent narrow review and explicit root acceptance
+-are retained under `run-26/CE543M-quality-original-row-leg02-audit-root-execution-reviewed1-20261017/`,
+-`run-26/CE543M-quality-C1-original-rows-narrow-shutdown-independent-saved-review-20261017/`
+-and `run-26/CE543M-quality-C1-original-audit-R2-running-root-20261017/`.
+-Actual R2 startup and independent review are under
+-`run-26/CE543M-quality-launch-and-R2-startup-root-reviewed1-20261017/` and
+-`run-26/CE543M-quality-R2-startup-independent-saved-review-20261017/`.
++Fresh `quality-448M-vs-CE543M-20261017` completed all 274 original games
++and qualified. Candidate543 was saved at 543,235,763 learner frames, SHA256
++`8b86546355ade166937a8287a008c7854276ed773a103eb815287dde00d6fb7e`;
++its original model-only live capture and strict phase CPU verification exited 0.
++All 192 actors kept running during capture; no replay/RNG anchor was claimed.
++Fresh reference counts are `[71, 78]`: the same fixed 149-game pool has mean
++402,881.20805369125 and median 424,575. Candidate counts `[59, 66]` separately
++score means 513,536.0169491525 (+27.465865%) and 488,850.3787878788
++(+21.338590%), with medians 480,800 and 490,487.50. Each passes the unchanged
++mean >= 1.05 * fixed reference mean and median >= 424,575 gates. The 125-game
++candidate pool (mean 500,502, median 481,450) is descriptive, never the gate.
++All 16 slots, minimum50, 1200-second admission windows, full tails and diagnostic
++settings remain enforced; the historical KL campaign's reference pool is excluded.
++
++Original auditor exits are `[0, 2, 0, 0]`. C1's failed report and exit 2 remain
++unchanged; exact independent full-row/source review and explicit root acceptance
++cover its six owned post-stop traces after all 59 games ended. The original
++campaign parent894289 exited 0; full service/timer archives preceded exact owned
++release, all 69 owned campaign processes were absent, and root explicitly
++released the source freeze. Create-only publication at
++`models_dqn/managed-incumbents/freshCE-543M-confirmed.pt` and actual canonical
++adoption preserved the prior448M descriptor and all earlier history (12 entries).
++Main620749 remains CE/batch4096 with192 actors and no promotion reload/restart.
++The actual CPython3.12 private report render and visual review passed before the
++renderer/data/PNG update; all 13 historical curves and three guards remain exact.
++Evidence: `run-26/confirmedCE543M-reporting-root-adoption-20261017/`.
++The goal remains active; no causal learning-speed or batch/KL efficacy claim follows.
++See `run-26/CE543M-quality-final-fixed-gates-and-closure-preparation-root-20261017/`,
++`run-26/CE543M-quality-C1-original-rows-narrow-shutdown-independent-saved-review-20261017/`,
++`run-26/CE543M-quality-C1-original-audit-R2-running-root-20261017/`,
++`run-26/CE543M-quality-root-freeze-release-20261017/` and
++`run-26/CE543M-managed-incumbent-adoption-root-20261017/`.
++
++The separate private CE2048 probe completed `ce18`, `resume` and `restart_ce`:
++all three report readiness true, parent exit0, and all18 optimizer attempts
++applied. Resume and new-CE restart load the newest saved state with zero further
++attempts. The declared fixture uses verified448M weights and first2048 ordered
++rows of the fully checked original4096-row attempt01, reused18 times. Actual
++constructor/load, CE-four-output training, AMP/fused Adam, native priorities and
++phase lifecycle were exercised. `qualification_pass=false`: no full live replay,
++serving/learning concurrency, live trajectory, throughput or efficacy proof.
++The subset contains ring rows only (one duplicate); bank-origin coverage and an
++actual 2048-to-4096 profile return were not exercised.
++The original parent and all three child exits0 were archived before exact
++timer-first release (both stops0). Separate root cleanup confirmed main192,
++source/control and resource ownership held. Result and original terminal/cleanup:
++`run-26/CE2048-private-training-readiness-reviewed1-20261017/result.json` and
++`run-26/CE2048-private-readiness-owned-cleanup-root-reviewed1-20261017/`.
++The prospective CE2048 live trial remains unactivated; main is still CE4096.
+ 
+ The proposed bank-weight floor remains unselected: historical coefficient mass
+ and scalar loss shares do not establish a gradient or retention defect. No

@@ -1,0 +1,103 @@
+{
+  "status": "INERT_UNBOUND_NOT_AN_ACTUAL_JOB",
+  "job": {
+    "schema": "robotron-one-ce-batch2048-trial-job-v1",
+    "sources": {
+      "controller": null,
+      "deadline": null,
+      "early_insurance": null,
+      "adapter": null,
+      "horizon": null
+    },
+    "profile": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json",
+      "sha256": "e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50",
+      "bytes": 764,
+      "identity": {
+        "device": 2304,
+        "inode": 84803605,
+        "bytes": 764,
+        "mtime_ns": 1792254423401979979,
+        "ctime_ns": 1792254423401979979,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "activation_job": null,
+    "trial_core": null,
+    "old_owner": null,
+    "boot_id": null,
+    "output_directory": null,
+    "deadlines": {
+      "latch_s": 3240,
+      "stop_intent_s": 3310,
+      "owner_ceiling_s": 3600
+    },
+    "observation_budget_bytes": 33554432,
+    "early_insurance": {
+      "tag": null,
+      "cpu_unit": null,
+      "save_timeout_s": 60,
+      "cpu_timeout_s": 120,
+      "profile": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json",
+        "sha256": "e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50",
+        "bytes": 764,
+        "identity": {
+          "device": 2304,
+          "inode": 84803605,
+          "bytes": 764,
+          "mtime_ns": 1792254423401979979,
+          "ctime_ns": 1792254423401979979,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "collector": {
+        "script": null,
+        "manifest": null
+      },
+      "python_identity": null,
+      "producer_expectation": null
+    },
+    "candidate_tag": null,
+    "return_intent": {
+      "phase_id": null,
+      "request_id": null,
+      "startup_tag": null,
+      "output_directory": null
+    }
+  },
+  "core_additions": {
+    "mode": "activate_batch2048",
+    "batch_profile": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json",
+      "sha256": "e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50",
+      "bytes": 764,
+      "identity": {
+        "device": 2304,
+        "inode": 84803605,
+        "bytes": 764,
+        "mtime_ns": 1792254423401979979,
+        "ctime_ns": 1792254423401979979,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "activation_authorized": false,
+    "status": null,
+    "phase_id": null
+  },
+  "remaining_actuals": {
+    "private_CE2048_numerical_readiness": null,
+    "root_precommit": null,
+    "activation_owner": null,
+    "candidate": null,
+    "return_owner": null,
+    "deadline": null,
+    "future_quality_reference": null
+  }
+}

@@ -1,0 +1,64 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/power_recovery/launch_resume.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-cold-replay-cap-launcher-source-only-original01-20261029/launch_resume_expected_cold_cap_v1.py
+@@ -14,7 +14,8 @@
+ import sys
+ import time
+ 
+-G=Path(__file__).resolve().parents[2]
++# Preserve the canonical Robotron root when this isolated copy lives below logs.
++G=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ 
+ def digest(path):
+     with path.open('rb')as stream:return hashlib.file_digest(stream,'sha256').hexdigest()
+@@ -32,7 +33,16 @@
+     assert path.resolve(strict=True)==path and not path.is_symlink()and path.stat().st_nlink==1
+     return dict(path=str(path),sha256=hashlib.sha256(raw).hexdigest(),bytes=len(raw))
+ 
+-def prepare(checkpoint,records,report=None):
++def validate_startup_cap(expected_cap, startup_environment_cap, configured_cap):
++    """Check an explicit cold-start selection; never set or infer the desired cap."""
++    assert type(expected_cap) is int and expected_cap in (8, 12), 'Explicit startup cap8 or12 required'
++    assert startup_environment_cap == str(expected_cap), 'Startup environment cap differs from explicit selection'
++    assert type(configured_cap) in (int, float) and configured_cap == expected_cap, 'Imported configuration cap differs from explicit selection'
++    return dict(expected_startup_cap=expected_cap, startup_environment_cap=startup_environment_cap,
++                imported_config_cap=configured_cap)
++
++def prepare(checkpoint,records,report=None,expected_startup_cap=8):
++    startup_environment_cap=os.environ.get('DQN_MAX_SAMPLES_PER_FRAME')
+     import torch
+     import numpy as np
+     torch.set_num_threads(2)
+@@ -45,7 +55,8 @@
+     sys.path.insert(0,str(G/'Scripts'))
+     from dqn.config import RL_CONFIG
+     from dqn.model import RainbowNet
+-    assert RL_CONFIG.batch_size==4096 and RL_CONFIG.n_step==3 and RL_CONFIG.max_samples_per_frame==8
++    assert RL_CONFIG.batch_size==4096 and RL_CONFIG.n_step==3
++    startup_cap=validate_startup_cap(expected_startup_cap,startup_environment_cap,RL_CONFIG.max_samples_per_frame)
+     model=RainbowNet(saved['state_size'])
+     summaries={}
+     for key in ['online_state_dict','target_state_dict']:
+@@ -78,7 +89,7 @@
+     meta=Path('/dev/shm/robotron_dqn_latest_replay/_meta.npy')
+     replay=None if not meta.exists()else np.load(meta,allow_pickle=False).tolist()
+     control=json.loads((G/'models_dqn/learning_control.json').read_bytes())
+-    result=dict(schema='robotron-power-recovery-checkpoint-CPU-verification-v1',checkpoint=spec['checkpoint'],resume_record=pin,phase_id=phase['phase_id'],priority_phase_preserved=True,saved_clocks={k:saved[k]for k in ['training_steps','optimized_samples','learner_frame_count','frame_count']},model=summaries,Adam_state_parameters=len(optimizer.state),Adam_step_min=min(steps),Adam_step_max=max(steps),saved_optimizer_lrs=[p['lr']for p in optimizer.param_groups],selected_lr_scale=control['lr_scale'],replay_meta=replay,CUDA_initialized=False,created_unix_s=time.time())
++    result=dict(schema='robotron-power-recovery-checkpoint-CPU-verification-v1',startup_cap=startup_cap,checkpoint=spec['checkpoint'],resume_record=pin,phase_id=phase['phase_id'],priority_phase_preserved=True,saved_clocks={k:saved[k]for k in ['training_steps','optimized_samples','learner_frame_count','frame_count']},model=summaries,Adam_state_parameters=len(optimizer.state),Adam_step_min=min(steps),Adam_step_max=max(steps),saved_optimizer_lrs=[p['lr']for p in optimizer.param_groups],selected_lr_scale=control['lr_scale'],replay_meta=replay,CUDA_initialized=False,created_unix_s=time.time())
+     if report:immutable(report,result)
+     print(json.dumps(result),flush=True)
+     return pin
+@@ -86,12 +97,13 @@
+ def main():
+     parser=argparse.ArgumentParser(description=__doc__)
+     parser.add_argument('--verify-only',action='store_true')
++    parser.add_argument('--expected-startup-cap',type=int,choices=(8,12),default=8)
+     parser.add_argument('--checkpoint',type=Path,default=G/'models_dqn/robotron_dqn_latest.pt')
+     parser.add_argument('--records',type=Path,default=G/'models_dqn/resume-records')
+     parser.add_argument('--report',type=Path)
+     args=parser.parse_args();env=dict(os.environ)
+     os.environ['CUDA_VISIBLE_DEVICES']=''
+-    pin=prepare(args.checkpoint.resolve(strict=True),args.records.resolve(),args.report)
++    pin=prepare(args.checkpoint.resolve(strict=True),args.records.resolve(),args.report,expected_startup_cap=args.expected_startup_cap)
+     if args.verify_only:return
+     env.update(DQN_PRIORITY_PHASE_RECORD=pin['path'],DQN_PRIORITY_PHASE_RECORD_SHA256=pin['sha256'],DQN_EXACT_GRAPH_CHECKPOINT=str(G/'models_dqn/robotron_dqn_latest.pt'))
+     os.chdir(G)

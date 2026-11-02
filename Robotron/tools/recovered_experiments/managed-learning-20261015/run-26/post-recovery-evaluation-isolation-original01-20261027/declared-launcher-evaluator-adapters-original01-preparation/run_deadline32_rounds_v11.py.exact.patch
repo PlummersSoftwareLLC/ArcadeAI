@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/run_deadline32_rounds_v11.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original01-preparation/run_deadline32_rounds_v11.py
+@@ -106,7 +106,7 @@
+ 
+ def round_contract():
+     path=Path(__file__).with_name('deadline_round_contract_v11.py')
+-    require(hashlib.sha256(path.read_bytes()).hexdigest()=='45e72094ab9678ad7035a39c3809a4b534d3ed8dd8d4804066f306863f5444ec','Exact round contract source required')
++    require(hashlib.sha256(path.read_bytes()).hexdigest()=='d0a4636f97df940e11270577bd37023ca6300c130d6bf32f60fe320d689ab388','Exact round contract source required')
+     return load('_deadline_round_contract',path)
+ 
+ def validate_main_health_contract(job,protocol,family):

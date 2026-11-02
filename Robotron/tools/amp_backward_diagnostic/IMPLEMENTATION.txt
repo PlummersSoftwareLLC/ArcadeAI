@@ -1,0 +1,180 @@
+EXECUTED BACKWARD-ONLY DIAGNOSTIC — NO SNAPSHOT/LEARNING QUALIFICATION
+
+forensic_parent.py and forensic_worker.py implement the unchanged peer-approved
+PROPOSAL.txt ad92cee9... and source-lock.json1eb72d79.... Those two design files,
+all earlier smoke/failure receipts, and the live core/helpers remain unchanged.
+The parent is stdlib-only, read-only by default. Only --launch creates private
+state or a numerical child. Its explicit54-source archival selection is OLD
+reviewed2 forensics, never current merged snapshot qualification.
+
+Use the environment interpreter for any separately approved future run; the worker command
+inherits sys.executable. A system Python without Torch is not a GPU launcher.
+
+  .venv-gb300/bin/python -I -B Robotron/tools/amp_backward_diagnostic/forensic_parent.py \
+    --directory /home/dave/source/repos/ArcadeAI/Robotron/logs/NEW-forensic-output
+
+This default only verifies immutable source/design hashes and prints its plan.
+It performs no NVIDIA query, output mkdir, subprocess spawn or numeric import.
+
+Future separately reviewed DETACHED TIMER launch topology (NOT authorization):
+
+  systemd-run --user --collect \
+    --unit=robotron-snapshot-smoke-forensic-UNIQUE \
+    --on-active=3s --timer-property=AccuracySec=100ms \
+    --property='Delegate=cpu memory pids' \
+    --property=DelegateSubgroup=snapshot-supervisor \
+    --property=RuntimeMaxSec=330 --property=KillMode=control-group \
+    --property=MemoryMax=14G --property=TasksMax=128 \
+    /home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python -I -B \
+    /home/dave/source/repos/ArcadeAI/Robotron/tools/amp_backward_diagnostic/forensic_parent.py \
+    --directory /home/dave/source/repos/ArcadeAI/Robotron/logs/NEW-forensic-output --launch
+
+Do NOT add --wait. Verify that the scheduling client has exited before the
+timer triggers, then monitor the exact service PID/start identity, invocation
+ID and journal. A successful scheduling-client exit proves scheduling only.
+Retain the original invocation's execution/exit journal and result artifacts;
+after --collect, default Result=success/ExecMainStatus=0 from an absent/collected
+unit is not historical execution proof. The3s detached timer avoids leaving a
+foreground carrier with forensic_parent.py among its argv basenames, which the
+unchanged archived exclusion guard correctly treats as a forbidden process.
+
+The pinned archived launcher supplies exact ownership, delegated cgroup bounds,
+exclusive GPU0 lease, environment isolation, resource/process guards and owned
+signal cleanup. The adapter adds its own scripts plus other smokes/restoration
+to exclusions. All ownership/source/token/cgroup/env/live checks precede numeric
+imports. Worker imports the old helper setup only by pinned hash, sets the fixed
+seed before constructing the actual Rainbow agent, then joins prefetch before
+generating/sampling the private fixture. No server or MAME client is created.
+
+Inputs include exact fresh model/target/inference state, empty Adam state/groups,
+all10 sampled arrays, config/scalars/control/settings, and Python/NumPy/Torch CPU/
+owned CUDA RNG. Per-tensor dtype/shape/native hashes and current object presence
+are saved. Each case reloads those bytes/RNG before its single source-bound
+backward. AMP cases construct fresh real GradScalers at65536 and1 respectively;
+the FP32 case uses no scaler. Growth/backoff settings stay fixed. No GIL setting,
+backend policy or optional expert package is changed to hide warnings.
+
+Reversible child-only hooks save native scaled/unscaled gradients, actual
+forward outputs/masks/LayerNorm variance and loss/projection/input tensors. The
+hook aborts exactly at actual training.py's clipping call, BEFORE clipping,
+exposure.begin,optimizer/scaler step/update,priority writes or clock advances.
+Hard step guards are additional protection. Original scheduled LR assignment
+is recorded then reset only for the no-step state comparison. Full network,
+Adam state,ring/priorities,exposure and clock fingerprints must remain equal.
+A safety-certificate failure prevents remaining cases and records NOT_RUN rows.
+Ordinary diagnostic errors stay visible; no resampling/retry/fourth case exists.
+
+Completed observation status is OBSERVATIONS_COMPLETE, never training/snapshot
+PASS. Nonfinite gradients are expected possible observations, retained without
+nan_to_num/clipping. A finite scale1 or FP32 case could support a precision/scale
+hypothesis for this fresh seeded state; it cannot reproduce the old failed
+weights/batches, establish that run's exact cause, or justify changing AMP.
+
+Prepared focused CPU/std-library tests (run ONLY after root confirms no active
+fixed performance window):
+
+  python3 -B -m unittest Robotron.tools.amp_backward_diagnostic.test_forensic_guards -v
+
+After root explicitly released the original invalid affinity window,15 focused
+stdlib/mock tests passed in0.064s. They include actual54-source dry-run verification
+with live guards/Popen/query blocked and no numerical imports or output creation;
+exact archival byte loading without pycache writes; actual-source/API AST checks;
+private caller/parameter boundary validation; scaled/delegated/unscaled ordering;
+fatal step guards, hook restoration and no extra cases after a safety error.
+Root independently ran the same15 tests PASS0.067s. All test processes exited
+before any prospective new performance window.
+
+Independent preparation review also passed15 stdlib/mock tests in0.066s and
+approved the exact adapter sources, while explicitly deferring actual numerical
+and child execution. Its immutable receipt is:
+  logs/managed-learning-20261015/run-26/
+  amp-backward-diagnostic-independent-preparation-review-20261017/review-receipt.json
+SHA2562231498c26612b07ecae079b983b33dc9335a7dc50f55391ed92c9e8ba195735.
+
+Actual executions (old evidence retained; same unchanged parent/worker)
+===================================================================
+The0035Z foreground --wait launch failed in the initial guard, before output
+directory creation, numerical imports or worker spawn. It reported a blocked
+quality/sidecar/performance process. The all-argv exclusion scan matches the
+foreground scheduling client's forensic_parent.py argument; the original guard
+did not retain its matched PID, so no historical culprit PID is asserted.
+This preimport failure is preserved separately, not erased or called a numeric
+attempt:
+  logs/managed-learning-20261015/run-26/
+  whole-agent-amp-backward-forensic-20261017T0035Z-preimport-startup-failure.json
+SHA25653af2e68a46a4a5f917de7571428cacd00f66c7fe17349cec0d2b656ca6b3d41.
+
+Root then launched a separate0040Z output through the detached carrier, using
+the same reviewed parent/worker, fixed seed20261016 and the three planned cases.
+The actual worker completed AMP65536, AMP1 and FP32 backwards from the shared
+saved fresh state/batch/RNG. It reached the real preclip boundary once per case
+and reports zero optimizer/scaler step/update calls plus all three no-step
+certificates true. result.json reports OBSERVATIONS_COMPLETE; no optimizer
+update, snapshot capture, restoration or game client was part of this run:
+  logs/managed-learning-20261015/run-26/
+  whole-agent-amp-backward-forensic-20261017T0040Z/result.json
+SHA2563a3fcc872213b52222d8d1f06ac6bd99bf430e25cfed942edb5519b764adb45e.
+
+The independent scientific artifact audit verified all80 scientific-file hashes,
+the saved initial model tensors/empty Adam state, all10 batch arrays and their
+native dtype/shape/bytes, saved RNG, masks and actual preclip gradients with
+CUDA hidden and uninitialized. Exactly four lane_attn parameter-gradient tensors
+are nonfinite before clipping at AMP65536; all81 present gradients are finite
+at AMP1 and FP32. AMP65536 and AMP1 have bitwise-identical recorded forward/
+boundary inputs and outputs except found_inf. This demonstrates scale/precision
+sensitivity for this one fresh seeded8-row batch, but neither identifies the
+first overflowing backward operator nor establishes reviewed2's exact cause
+(its fresh weights/batches were not saved). It does not validate an applied
+optimizer step or justify changing production AMP.
+
+Independent cleanup/scope review completed47/47 checks PASS, including exact
+sources and JSON/input fingerprints, original main PID/start and192 actors,
+original72-CPU inference mask, no GPU0 compute owner, owned parent/worker/cgroups/
+tmpfs removed, lease free, protected256M unchanged and active320M gate. This is
+47 evidence checks, not47 newly executed unit tests. Its original-invocation
+journal is retained rather than relying on collected-unit default fields:
+  logs/managed-learning-20261015/run-26/
+  whole-agent-amp-backward-forensic-20261017T0040Z-independent-cleanup-scope-audit/review-receipt.json
+SHA256c716aefffc6b6177bd2302d60a51bb510bf7bdbbb0322d66e9243df83c970e86.
+That reviewer did NOT load tensor/NumPy payloads. The separate scientific
+artifact audit is now sealed:
+  logs/managed-learning-20261015/run-26/
+  whole-agent-amp-backward-forensic-20261017T0040Z-independent-scientific-audit/review-receipt.json
+SHA25676e3af56b919f10bc16e832ffe3810c2dc15dac4613b340e82a8ba00c15f7ec6.
+Its CPU verification report SHA256 is
+dfd62c4d0ad15100df41df7cf1df19f5d5d215e5d076fdff32ac76339800ea2b.
+Its result is OBSERVATIONS_COMPLETE_ARTIFACT_VERIFICATION_PASS. The earlier
+incomplete first-serialization audit artifact remains separately preserved;
+the correction was in audit reporting, not diagnostic inputs or execution.
+
+No-step evidence has a precise limit: the initial network/empty optimizer tensor
+archives were independently verified, but after-state network/optimizer/replay
+values are recorded fingerprints, not independently retained after-state tensor
+archives. The private replay was deleted on cleanup and cannot be rehashed.
+Unchanged recorded certificates, zero recorded forbidden calls/exposure and
+the frozen source guards support the no-step certificate; they are not a second
+tensor archive or an applied optimizer/AMP-skip validation.
+
+Expert metadata distinguishes current availability UNKNOWN (no expert import
+attempted), module-loaded observation and guidance exercised=False. It separately
+retains the historical reviewed2 unavailable-v3 warning. It neither infers current
+availability from sys.modules nor imports extra packages to hide the limitation.
+
+The actual run records effective GIL enabled and the original TF32/backend
+policy; no import or GIL policy was changed to obtain these observations.
+
+Actual diagnostic execution, owned cleanup and the separate scientific CPU
+artifact audit are complete as described above. The result remains an old-source
+backward-only observation with empty initial Adam state and a tiny synthetic
+batch. A trained-checkpoint/current-source/production4096-batch applied-update
+snapshot case remains unvalidated and requires a new design/review/schedule.
+No MAME, full-size storage, source-merge, snapshot capture/restore or learning
+benefit is certified. Matching saved RNG cannot make nondeterministic CUDA
+projection/reductions bitwise deterministic. Host performance trials and frozen
+quality always exclude this diagnostic's execution window.
+
+Documentation provenance: prior preparation-only IMPLEMENTATION.txt SHA256
+06e1bb05905fc8b718e351644914e51f13e52c54e0e03ea7fe7642bf5c553fe2
+is retained by the immutable preparation review. This update changes only this
+unbound documentation file. Parent/worker remain0a4640e0.../1f922bd4...;
+PROPOSAL.txt remainsad92cee9... and source-lock.json remains1eb72d79....

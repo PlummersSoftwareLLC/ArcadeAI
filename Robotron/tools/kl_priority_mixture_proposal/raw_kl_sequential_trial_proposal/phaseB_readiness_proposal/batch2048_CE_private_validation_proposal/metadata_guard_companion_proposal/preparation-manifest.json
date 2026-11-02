@@ -1,0 +1,23 @@
+{
+  "status": "SOURCE_ONLY_UNEXECUTED",
+  "schema": "robotron-private-CE2048-metadata-guard-companion-v1",
+  "source_preparation": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/batch2048_CE_private_validation_proposal/preparation-manifest.json",
+    "sha256": "9a1b0189a6dc5ae552bd16404d745227202a9da24c9dfd7e4654725fce8914c7",
+    "bytes": 4186
+  },
+  "files": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/batch2048_CE_private_validation_proposal/metadata_guard_companion_proposal/test_CE2048_contract.py",
+      "sha256": "a746f773b5d34bcfa8e1613c3becc7b74b75eb56153b65a2ae2517f4b9199872",
+      "bytes": 9327
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/batch2048_CE_private_validation_proposal/metadata_guard_companion_proposal/future-argv.json",
+      "sha256": "9c23eb476a06376989ee46cf118eb5334ab947ebf5034cbe0e61d4132a71a6e2",
+      "bytes": 485
+    }
+  ],
+  "methods": 9,
+  "scope": "Nine stdlib metadata guards: fixed ordered subset, exact held pressure predicate at2048/256, real CE4 observer and actual allrole CE2048 environment. No tensor/CUDA/model/numerical/runtime proof."
+}

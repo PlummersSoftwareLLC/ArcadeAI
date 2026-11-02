@@ -1,0 +1,105 @@
+Raw-KL one-shot horizon observer — source preparation,2026-10-17
+
+INACTIVE. This small pure helper implements the already frozen conditional contract;
+it neither activates treatment nor starts, stops, pauses, saves or restarts anything.
+No actual owner/job/deadline, source adoption, checkpoint or pass is supplied. Current
+448 qualification/cleanup and actual Stage A+B validity remain upstream root gates.
+The proposed60min ceiling is a root planning choice, not a user constraint or active trial.
+
+Inputs and bridge
+Root freezes an actual immutable job after validating the trial core and activation
+receipt: exact trainer five-field identity; actual durable BEFORE-start boot ID and
+monotonic timestamp; strict CPU boot four clocks; actual192-ready monotonic timestamp;
+actual decoded saved before_resume_api (the adapter's independently verified PIN);
+and core/activation SHA bindings. job-template.json is deliberately NOT a valid job.
+The helper has no file/hash/API/process readers and cannot authenticate a PIN by itself.
+Root's bridge must bind the original raw JSON bytes to the activation receipt, not
+invent a compatible baseline. Initial accepted_total must be0; restored ring/banks
+are not new inserts. One original continuous owner/optimizer/replay instance+epoch
+is required. Replay restore/import and optimizer outcomes remain distinct counters.
+
+Functions
+HorizonObserver(job).observe(api,owner,evidence,now) returns CONTINUE, LATCH,
+INCOMPLETE or INVALID. API is the actual unmodified decoded metrics API; owner is
+Runtime.trainer_id's exact pid/starttime_ticks/unit/invocation_id/cgroup dictionary.
+now={boot_id,monotonic_s,wall_s} is a root observation timestamp after reads.
+evidence={ok:True,...} is a bounded root result of actual source/environment/control,
+owned journal/error and fleet health checks, not an invented API phase field. Root
+must implement these checks against current owner and actual precommit; a cached
+unverified 'ok' is not sufficient. Only root adapter code may perform host actions.
+
+normalise follows actual learning_exposure.py: TOTAL and since_epoch optimizer
+counters are separately retained/partitioned, availability is CURRENT unavailable0
+and CURRENT recorded>0 and TOTAL inflight0. A startup current0/availableFalse and
+one internal inflight attempt are valid; false availability is not itself a failure.
+Any TOTAL unavailable outcome, owner/epoch/instance change, component regression,
+partition error, root evidence failure or invalid timestamp is terminal INVALID.
+A first call>=30s after actual192 readiness, or any later observed poll gap>=30s,
+is INVALID even with a fresh endpoint API. Start immediately and never restart the
+observer after a blind interval; callback delays cannot create a fresh candidate.
+Admitted batches*4096 is labelled optimizer-call admission, not actual parameter
+movement. Top-level persisted clocks and cached exposure snapshot are sequential
+observations; no equality is asserted between those structures.
+
+Decision order
+- Validate named owner/evidence/clock, fresh API structure/epochs/counters.
+- At or beyond3600s, a still-active KL owner is INVALID/manual.
+- After3240s without an earlier latch, return INCOMPLETE, even if a late snapshot
+  contains both thresholds. Shutdown tails cannot create a replacement candidate.
+- Before/at cutoff, missing/stale observations get30s continuous grace; an expired
+  grace is INVALID. At exactly3240 with no fresh observation, INCOMPLETE.
+- Fresh API age and pipeline snapshot age each<=5s; negative age/future timestamps
+  are invalid. The source pipeline read error makes the sample unobservable.
+- Once192 healthy,60s with no new admitted update while real learner frames and
+  physical inserts have advanced is INVALID; a high skip fraction alone is not.
+- The FIRST fresh eligible sample at elapsed<=3240 with BOTH>=8M learner frames
+  from CPU boot AND>=6M total physical accepted adds from the fresh pre-resume0
+  baseline latches exactly one candidate. Physical includes all five source
+  categories; learner-eligible adds are separately reported. Logical steps/samples,
+  ring size and wire frames are never horizon substitutes.
+All observed terminal decisions, including LATCH, are deep-copied/immutable in the
+observer. Later bad observations or late horizons cannot replace the first decision.
+The helper never labels a result quality-qualified or permits a second candidate.
+
+poll(job,get_api,get_owner,get_evidence,get_clock,sleep,emit) uses injected callbacks
+only, at most3602 polls plus one poll-budget-exhaustion receipt. Root callbacks must
+have their own short deadlines; synchronous Python cannot enforce wall deadlines
+while a callback blocks. Root watchdog/owned cleanup, not this helper, enforces
+physical termination. API exceptions become missing observations; owner/evidence
+exceptions become INVALID. Clock, sleep, interrupt and persistence errors propagate
+for root cleanup; never restart this observer to search for a favorable candidate.
+Root emit must persist each summary append-only/create-only and durably persist the
+full LATCH before returning. No receipt writer is provided here. Required bound:
+32MiB cumulative journal, at most3603 emitted records,2MiB raw API and64KiB evidence
+per call. The helper retains the job, current+last valid raw API and first terminal
+only; it does not retain the polling history. Terminal invalid/incomplete retains
+one bounded terminal API (or last valid if none). LATCH includes the full eligible
+API; summaries before it include scalar counts. APIs may carry unrelated NaN grad
+norm on a known AMP skip; required counters/times are finite separately, and raw
+NaN is preserved rather than converted to0. Root JSON writer must preserve that
+observed representation or label a publication failure, never invent finite data.
+
+ending_deadline(job,now,KL_owner_present=bool) is a separate pure ending check; it
+never changes or regrants a latch. Root must prove exact retired owner/cgroup absence,
+unique candidate/request reconciliation, strict newest-stopped CPU phase validity,
+and explicit new CE start/record on candidate5 BEFORE RCRC preparation. It reports
+INVALID/manual if the KL owner remains at3600; absence alone is not CE readiness.
+Startup/final managed-save clocks can overshoot. No exact optimizer-cutoff/FIFO-tail,
+coherent anchor, full leaf conversion, gradient factor or causal efficacy claim.
+
+Source validation and future execution
+18 meaningful stdlib guards are authored but UNEXECUTED. They target both thresholds,
+all5 physical categories, actual current-vs-total availability,1 inflight/real skips,
+identity/epoch/counter/partition errors, fresh/missing grace, no-applied guard, exact
+3240/3600 precedence, immutable first result, malformed clock evidence, root bindings,
+injected poll callback failures, blind first/later gaps, and durable receipt failure
+with no retry. They
+import the future helper only under explicit root test invocation. They do not run
+application modules, service actions, model/optimizer/replay, or numerical workloads.
+Root may use a fresh owned CPU2/MemoryMax256MiB/Swap0/TasksMax32/Runtime60s unit,
+CUDA_VISIBLE_DEVICES empty, -I -B, exact18 class selection with independent source
+pins before/after; retained original unit exit/logs before release. The future argv
+is a template with an unknown root-pinned interpreter, not an executed job. Successful
+pure guards do not establish callback freshness, actual owner lifecycle, physical
+stop timing, phase CPU execution or trial readiness. No source installed; all prior
+contracts/proposals and actual failures remain unchanged.

@@ -1,0 +1,116 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-selected-context600-original01-preparation/guard247-source-correction-original01/qualify_round_study_cpu_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-selected-context600-original01-preparation/closed-metadata-readiness-reuse-original03-preparation/qualify_round_study_cpu_closed_metadata_v7.py
+@@ -22,6 +22,10 @@
+ 
+ def require(ok,message):
+     if not ok:raise ValueError(message)
++
++
++def phase(name,**values):
++    print(json.dumps(dict(schema='robotron-CPU-guard-phase-v1',phase=name,monotonic_s=time.monotonic(),**values)),flush=True)
+ 
+ 
+ def load(name,path):
+@@ -63,7 +67,9 @@
+         return original_open(path,*a,**kw)
+     Path.open=guarded_open
+     h=load('_deadline_actual_CPU_helpers',Path(job['helpers']['path']))
++    phase('held_inputs_begin',count=len(job['inputs']))
+     for pin in job['inputs']:h.checked(pin)
++    phase('held_inputs_complete')
+     def stat_only(pin):
+         p=Path(pin['path']);s=p.lstat();i=pin['identity']
+         if p.is_symlink():
+@@ -95,44 +101,16 @@
+     prepared=json.loads(h.checked(job['prepared_manifest']).read_bytes());cases=prepared['cases']
+     require([v['leg']for v in cases]==['R1','C1','R2','C2'],'Actual fixed four serialized subjects required')
+     native=load('_deadline_actual_CPU_native',h.checked(cases[0]['runtime']))
+-    # All four jobs bind the same immutable readiness lifecycle. Replay its
+-    # health predicates once in this CPU scope. The unchanged launch contract
+-    # still hashes/rejoins every raw snapshot and current owner/epoch for EACH
+-    # exact serialized job; no game/score check is cached or bypassed.
+-    original_contract_factory = native.round_contract
+-    proof_cache = {}
+-    proof_counts = dict(fresh=0, reused=0)
++    # Explicit semantic reuse from the already closed exact four-job metadata
++    # execution. Every original per-job domain join and every raw full SHA and
++    # identity remain freshly checked; no scientific/native function changes.
++    phase('closed_metadata_authority_begin')
++    reuse_module=load('_closed_metadata_readiness_reuse',h.checked(job['readiness_reuse_shim']))
++    reuse=reuse_module.ClosedMetadataReadiness(job,h,phase)
++    original_contract_factory=native.round_contract
+     def bounded_contract():
+-        contract = original_contract_factory()
+-        original_load = contract.load
+-        def checked_load(name,path):
+-            module = original_load(name,path)
+-            if name != '_deadline_main_domain_readiness_reviewer':
+-                return module
+-            source = h.pin(path)
+-            original_verify = module.verify
+-            def verify(lifecycle_pin,helpers,**kwargs):
+-                require(helpers is h and kwargs == {}, 'Only exact CPU readiness review may be reused')
+-                h.checked(source)
+-                life = json.loads(h.checked(lifecycle_pin).read_bytes())
+-                h.checked(life['outcome'])
+-                worker = json.loads(h.checked(life['worker_job']).read_bytes())
+-                for pin in worker['sources'].values():
+-                    h.checked(pin)
+-                key = json.dumps(dict(source=source,lifecycle=lifecycle_pin),sort_keys=True)
+-                if key in proof_cache:
+-                    proof_counts['reused'] += 1
+-                    return copy.deepcopy(proof_cache[key])
+-                result = original_verify(lifecycle_pin,helpers)
+-                require(result['status'] == 'PASS', 'Original raw proof did not pass')
+-                proof_counts['fresh'] += 1
+-                proof_cache[key] = copy.deepcopy(result)
+-                return result
+-            module.verify = verify
+-            return module
+-        contract.load = checked_load
+-        return contract
+-    native.round_contract = bounded_contract
++        return reuse.bind(original_contract_factory())
++    native.round_contract=bounded_contract
+     subjects=[]
+     for case in cases:
+         subject=json.loads(h.checked(case['native_job']).read_bytes())
+@@ -147,7 +125,9 @@
+         def test_all_four_actual_native_completed_prebody_contexts(self):
+             for case,subject in subjects:
+                 with self.subTest(leg=case['leg']):
++                    phase('native_prebody_begin',leg=case['leg'])
+                     ctx=native.validate_completed_context(subject,h)
++                    phase('native_prebody_complete',leg=case['leg'])
+                     self.assertEqual(len(ctx['modules']),12)
+                     self.assertEqual(len(ctx['main_binding']['inputs']),247)
+                     baseline=json.loads(h.checked(ctx['main_binding']['baseline_snapshot']).read_bytes())
+@@ -210,13 +190,15 @@
+                 self.assertTrue(proof['raw_API_and_TCP_and_retirement_snapshots_replayed'])
+                 self.assertTrue(proof['legacy_500ms_evidence_and_projection_gaps_verified'])
+                 self.assertEqual(proof['full_main_input_count'],247)
+-            self.assertEqual(proof_counts,dict(fresh=1,reused=3))
++            self.assertEqual(reuse.counts,dict(semantics_reused_from_closed_metadata=4,raw_full_integrity_passes=4))
+     tests=load('_deadline_actual_CPU_NEW_native_chain_tests',h.checked(job['new_native_chain_tests']))
+     actual_new_count=unittest.defaultTestLoader.loadTestsFromTestCase(tests.Tests).countTestCases()
+     require(actual_new_count==job['expected_new_native_chain_tests'],'Exact selected NEW integration count differs')
+     suite=unittest.TestSuite([unittest.defaultTestLoader.loadTestsFromTestCase(ActualSerializedJobs),
+         unittest.defaultTestLoader.loadTestsFromTestCase(tests.Tests)])
++    phase('subject_and_integration_tests_begin',tests=suite.countTestCases())
+     started=time.time();capture=io.StringIO();result=unittest.TextTestRunner(stream=capture,verbosity=2).run(suite)
++    phase('subject_and_integration_tests_complete',passed=result.wasSuccessful(),tests=result.testsRun)
+     for case,subject in subjects:require(not Path(subject['output']).exists(),'CPU guard created native outcome')
+     require('torch'not in sys.modules,'CPU guard imported Torch')
+     for pin in job['inputs']:h.checked(pin)
+@@ -224,7 +206,10 @@
+     output=Path(job['output']);require(not output.exists(),'Original CPU output already exists');output.mkdir(mode=0o700)
+     report=dict(schema='robotron-deadline32-four-actual-jobs-CPU-guard-result-v1',passed=result.wasSuccessful(),
+         tests_run=result.testsRun,actual_serialized_job_tests=6,
+-        identical_readiness_proof_replays=proof_counts,
++        readiness_semantics_reused_from_closed_metadata=reuse.counts['semantics_reused_from_closed_metadata'],
++        readiness_raw_full_integrity_passes=reuse.counts['raw_full_integrity_passes'],
++        closed_metadata_readiness_authority=job['closed_metadata_readiness_authority'],
++        reused_predicates='Original closed metadata actual four-job raw health and all192 slot predicates; no semantic raw replay in this guard.',
+         every_job_raw_hash_slot_and_owner_epoch_checks_unchanged=True,new_native_chain_tests=actual_new_count,
+         old_clock_controller19_rerun=False,actual_prebody_contexts=prebody,actual_contract_negative_cases=negative_checks,
+         native_jobs=[c['native_job']for c in cases],prepared_manifest=job['prepared_manifest'],original_CPU_job=h.pin(args.job),

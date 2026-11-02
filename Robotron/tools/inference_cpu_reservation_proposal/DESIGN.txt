@@ -1,0 +1,246 @@
+PROSPECTIVE DESIGN ONLY — DISTINCT CPU71 EXCLUSION TREATMENT
+
+This file prepares a different future experiment. It does not authorize launch,
+alter the completed pin-only v2 trial, rescue that trial, change any source/control,
+or claim an efficiency gain. No controller, tests, affinity calls or numerical
+workloads were run to prepare it. Root must review this design before substantial
+implementation. The v2 audit is now sealed and the trial rejected with original
+affinity restored. This proposal remains NOT IMPLEMENTED and NOT AUTHORIZED for
+live use; any eventual trial is deferred until AFTER320M quality confirmation.
+
+Question and scope
+==================
+The preliminary pin-only observation supplied by root was approximately70,199
+applied-admission samples/s for B versus69,287 for A: below the precommitted5%
+threshold even before comparison with Areturn. Inference ready-wait rose from
+3.106 to110.063ms/s while migrations fell from328.6/s to0. These are motivating
+observations, not a completed result or proof of contention as the bottleneck.
+
+Prospective B gives the unique, identity-bound InferBatchWorke thread {71}, and
+removes71 from every other thread in the exact trainer and192 exact main MAME
+actors. On the currently described unrestricted masks this means {0..70} for
+those other threads. A and Areturn use the original per-thread masks. There is
+no process restart, model/config/actor-count change, cgroup restructuring, CPU
+hotplug, system/IRQ isolation, or automatic adoption. Other host tasks, the
+fleet supervisor, unrelated children/processes and this controller are outside
+the treatment. Thus this excludes owned competitors, not exclusive OS-level
+ownership of a physical core. CPU71 may have sibling/host scheduling effects;
+online CPU and NUMA topology are precommitted, not reconfigured.
+
+Smallest useful prospective trial
+===============================
+Use a NEW output directory, source manifest, originals and original observations.
+Run A, B, Areturn, each with90s settling followed by at least300s primary, with
+the same1s API/affinity observation work and30s deep binding checks in all three
+phases. Whole-fleet transitions finish before the settling clock begins. Keep
+all primary rows and natural bank/checkpoint events; no favorable trimming,
+window pooling with pin-only v2, restart/resume, re-anchoring or extension after
+seeing a result. Minimum observation time is1170s (19.5min), plus preflight,
+transitions and cleanup. Root has deferred this trial until AFTER the required
+saved320M quality confirmation (target324629023 learner frames); preparation
+must not delay that campaign. No controller implementation is needed now.
+
+Primary qualification follows the existing affinity definition: B applied-
+admission samples/s >=1.05 times EACH fresh control, with B accepted DQN+epsilon
+insertions/s >= EACH control, B AMP-skip fraction <=max(controls)+0.001, and SPF
+in7.6..8.4 for every primary interval and nominal30s bin. Preserve existing
+source/identity/control/recipe, clients192, drops, exposure, finite-loss,
+exact-graph, native update, stream-bank, fault/log and progress guards unchanged.
+Record logical samples/s, fleet and learner frame rates, eval/expert/all replay
+insertions, bank writes/locks, scheduler runtime/ready-wait/migrations, guard
+cost, newly seen/lost threads and every mask transition as secondary evidence.
+Keep original observation JSONL plus raw owner/TID/start/mask scan records and
+ordered mutation journal, with phase and monotonic timestamps. This all-thread
+state is an addition to the existing helper's process/unique-worker bindings;
+those bindings alone do not prove all other threads' masks.
+No quality or unique-sample-efficiency claim follows from host throughput.
+
+Reuse boundaries
+================
+cpu_affinity_pilot.py supplies exact UID/executable/cwd/argv/slot/PID-start
+identity, Tgid/TID-start identity, stable thread capture and durable atomic JSON.
+Do NOT invoke its make_plan/apply_plan/CLI: those encode an obsolete16/32-actor
+layout, trainer56..71 and per-slot actor assignment. Nor should its restore
+result silently count a skipped/replaced process as a successful restoration.
+
+The current inference_worker_affinity.py supplies the corrected classified-MAME
+discovery, full fixed-recipe/environment/source/control/log bindings, compact
+API/exposure validation, summaries, fixed gates and INT/TERM/HUP lifecycle.
+A separate controller can import the source-bound stdlib helpers unchanged and
+extend its own manifest; it must not monkeypatch or edit their live bound files.
+Deep bindings must include the new controller/test/design bytes and all reused
+helpers. Dry-run is read-only and makes no affinity syscall/output directory;
+--launch must be explicit. A restore-only route must remain usable independently
+of source/control/performance guards, using only the sealed identity snapshot.
+
+All-thread original precommit before the first affinity syscall
+=============================================================
+1. Require the reviewed original v2 trial terminal and independently audited,
+   its unique inference thread restored, and no campaign/sidecar/performance/
+   smoke/forensic/checkpoint-launch window active. Root's exclusive scheduling
+   is required as well as process/port checks; a process-name scan is not an
+   atomic cross-tool lease. Do not invent an overlapping scheduling authority.
+2. Bind boot ID, UID, project, trainer PID/start/exact argv, unique inference
+   TID/start/comm, fleet unit/cgroup, exact slots0..191 with PID/start/exact argv,
+   selected trainer environment, sources, controls, logs and exposure identity.
+   Require online0..71, expected single NUMA topology, and every original thread
+   mask exactly0..71; other masks require a different prospective design.
+3. Capture ALL current threads in ALL193 owned processes with owner identity,
+   Tgid, TID/start and original mask, including each leader's original fallback.
+   Retry a bounded8 passes to obtain stable thread sets across the fleet, then
+   reverify every process/thread/current mask. Any actor/inference replacement,
+   ambiguous slot or unstable capture fails before any mask syscall.
+4. Durably publish immutable originals.json (fsync file+directory, create-only),
+   immutable precommit/source hashes, and initial status. All original threads
+   must be represented before the first write. The immutable original file is
+   never rewritten; later discovery and write-intent/outcome records are an
+   append-only fsynced journal. Failure to durably record a TREATMENT intent
+   means no treatment syscall. Emergency restoration is explicitly exempt from
+   new journal/status durability: already-sealed originals and in-memory owned
+   mutation records must remain sufficient to ATTEMPT rollback after disk,
+   fsync or logging failure. Restoration must not be disabled by that failure.
+5. During A, classify new threads without changing masks; require the original
+   broad mask and append their exact original identity/mask before they can be
+   included in B. Complete another stable full capture/readback before B. A
+   mutation from outside the experiment invalidates it rather than overwriting
+   that mutation and continuing the trial.
+
+Applying B and keeping the interval well defined
+==============================================
+Install handled INT/TERM/HUP exceptions before launch mutation. Maintain a
+rollback-capable state in memory and on disk before each treatment syscall.
+With those handled signals temporarily blocked, journal owner/TID/start,
+expected-current mask, requested mask and restore mask; fsync; reverify exact
+owner/TID/start and expected-current mask immediately before the syscall;
+register that exact task as POSSIBLY MUTATED in memory BEFORE the syscall;
+write; read back mask+identity; then journal the outcome. A failing write or
+interrupted readback is still a possibly changed task to restore. Never infer
+unchanged merely because the syscall did not return normally.
+
+Change non-inference trainer/actor threads first, including all process leaders,
+then pin the exact original inference thread last. Exited non-inference tasks
+are recorded, not confused with a reused TID. Repeat bounded discovery/readback
+until all current tasks match the requested phase. No live process is stopped
+to force an atomic fleet transition. Cross-thread transition is non-atomic and
+outside the settled/primary windows. No new process is automatically adopted.
+
+Per1s observation, enumerate owned thread sets and verify masks/TID start times;
+every30s compare complete immutable process/fleet/environment/source/control
+bindings, and immediately before any affinity syscall reverify the full owner.
+Record scan duration and snapshot spread; if bounded complete checking cannot
+keep up, fail rather than weaken guards or present a precise-time exclusivity
+claim. The same checks run in A/B/Areturn. Their actual overhead is unmeasured.
+
+New threads, thread exit and PID/TID reuse
+========================================
+Production creates BankPersistence on demand in replay_buffer.py:1432, socket
+handler threads in socket_server.py:2559, and delayed cleanup Timers at2480;
+other native/lazy worker creation is possible. The normal expected new-thread
+mask follows its creating thread: after non-inference parents are restricted,
+new bank/client/checkpoint-related work should already exclude71. This is an
+expectation to verify for every observed task, not a claimed birth barrier.
+
+For a NEW TID/start in the SAME verified original process:
+* During B, an already correct0..70 task is accepted and journaled without a
+  syscall, with the original owner's saved leader0..71 as restoration fallback.
+  It has no literal pre-experiment per-thread mask; label the fallback honestly.
+* A task born after treatment may inherit {71} from the pinned inference thread,
+  or a still-unrestricted parent during transition. Once B writes begin, any
+  newly observed non-inference task with {71} or any mask other than0..70
+  INVALIDATES the trial, including transition and settle. Restore, retain all
+  rows, and do not repair, reset settling or salvage the window. A short-lived
+  task can begin/end between polls, so zero momentary competition is unproven.
+* During A/Areturn require0..71. No new task with a surprising mask is normalized
+  silently to make the interval eligible.
+* A reused TID in that same owner is NEW, never the old thread's saved identity.
+  A vanished task is recorded. Replaced/exited trainer or MAME process, changed
+  slot/cgroup/owner, missing/replaced inference TID, or classified actor failing
+  inspection invalidates immediately. Never write a replacement process.
+
+Rollback, Areturn and failure semantics
+======================================
+Restore original masks before Areturn's settling and in one unconditional
+finally for success, invalid observation, source drift, syscall/disk failure,
+KeyboardInterrupt and handled INT/TERM/HUP. Keep handlers installed through
+cleanup; defer repeated handled signals while all known owners are attempted.
+Restore does not require unchanged controls/source/API/fleet cardinality:
+those may be the reason cleanup is required. It DOES require exact boot/user/
+project and the saved original process identity immediately before each write.
+
+Per-task rollback is independent of GLOBAL health and fresh telemetry success.
+Use the sealed original ownership/masks plus the in-memory POSSIBLY MUTATED set
+established BEFORE each syscall, even if its outcome was never journaled. A
+fresh journal/fsync/status failure must NOT prevent an eligible restore syscall,
+abort an owner traversal, or skip the other owners. Record diagnostics on a
+best-effort basis, continue all owners, and return unsuccessful/manual-recovery
+status if complete mask verification or truthful evidence publication fails.
+Do not report a durable recovery receipt if its write failed; use best-effort
+stderr/exit status and retain the original sealed file for manual recovery.
+
+Immediately before EACH rollback write, verify the saved exact owner, Tgid and
+TID/start, and read that individual task's current mask. For an original task,
+allowed rollback masks are its original mask and the masks this controller
+durably intended/applied to THAT identity (including possibly-mutated attempts).
+Restore its exact durable saved original. An unexpected mask outside that
+per-task set may be another actor's mutation: skip that task, explicitly report
+manual recovery, and continue restoring every other eligible exact-owned task.
+Do not normalize an external change or make global health a rollback condition.
+
+For a current NEW/reused TID in the SAME verified original owner, use the saved
+original leader0..71 fallback, never a different process or an old reused TID's
+identity. At rollback only, known masks0..70, {71}, and0..71 are eligible for
+that fallback. In particular, a newly observed non-inference {71} INVALIDATES
+B, but its plausible inherited experiment mask must still be restorable to
+the original leader's72 CPUs. This emergency undo is NOT a treatment repair,
+does not resume B, and does not salvage its data. Label fallback use honestly:
+there was no literal per-thread pre-experiment mask for a newborn. Any other
+unexpected newborn mask is skipped with manual-recovery-required evidence;
+continue the other eligible tasks. Journal this distinction when possible.
+
+Retry bounded8 passes until thread sets/readbacks stabilize. New threads can
+inherit a narrow mask from a parent not yet restored, so one pass is insufficient.
+Attempt every surviving original owner even if another owner or task fails;
+never target a replaced PID. If an owner exited/replaced, classify it explicitly
+and invalidate the experiment. Report original-mask restoration only for still-
+owned eligible live tasks, never full-fleet success. Unrestorable live tasks,
+unexpected external masks, unstable sets or unavailable proof require explicit
+manual-recovery-required status with known remaining identities/masks.
+
+An exclusive fsynced originals file plus ordered intents makes crash recovery
+reviewable, but SIGKILL/power loss cannot run finally. A future root-owned
+restore-only command must use that snapshot/journal and exact identities, with
+no broad kill, PID search replacement, or automatic adoption. Linux affinity
+accepts numeric TIDs: immediate start/Tgid/owner checks cannot eliminate reuse
+between verification and syscall. State this unavoidable API race.
+
+Proposed implementation/tests after design review (NOT EXECUTED)
+==============================================================
+Small new stdlib controller under this directory, unchanged source-bound helper
+imports, one separate test module and launch/readiness receipt. Focus tests on
+global precommit-before-first-write; exact per-thread restore; changed mask/TID/
+PID rejection; new correct inherited mask; inference-inherited wrong mask during
+transition/settle/primary invalidation without repair; actor
+replacement; partial apply/readback failure; journal/fsync failure BEFORE a
+treatment write prevents that write, while AFTER earlier writes still allows
+all eligible rollback attempts; global API/source/log failure cannot gate
+per-task rollback; unexpected external masks are skipped and reported while
+other exact tasks restore; new non-inference{71} invalidates B yet restores via
+the same owner's72-CPU fallback; repeated
+signals during write acquisition and cleanup; attempt-all cleanup; failure to
+stabilize; explicit recovery status; no adoption and unchanged primary gates.
+Mocks must prove no affinity calls/default output mutation on read-only mode.
+Tests and any live dry-run require a separately released execution window.
+Actual all-thread syscall/rollback and monitoring cost remain unvalidated and
+need review before any prospective launch. This is design only, with no new
+controller or live authorization, and is deferred until AFTER320M quality.
+
+Design provenance
+=================
+Initial source-only design SHA256:
+8aabfbe4757be44446118ba860d27307008c697ad0bfc09aa99d238aafb284a2.
+Independent reviewer /root/runtime_review identified the journal/disk-failure
+rollback ambiguity; root requested the explicit emergency-undo, per-task mask,
+newborn fallback and no-global-health-gate resolution above. Only this unbound
+design file changed. Completed pin-only v2 final raw audit SHA256:
+9798a5609f7fc974ad94c6f9ed46a044ecda039bcb5d49b2d6e3ac478d3aeb81.
+No old trial, helper, controller, source freeze or sealed receipt was modified.

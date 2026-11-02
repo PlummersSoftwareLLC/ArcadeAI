@@ -1,0 +1,67 @@
+{
+  "actual_private_CUDA_result": null,
+  "actual_test_result": null,
+  "files": {
+    "DESIGN.txt": {
+      "bytes": 8757,
+      "sha256": "2571e936692d964158df174e7402ed82ad75d669e59c74dceb05b75fdec57537"
+    },
+    "PREPARATION.txt": {
+      "bytes": 4956,
+      "sha256": "890f5659e7af57ac4b5439ae29b5e513c1bc6d303a4a3d9cb0e91bcfee633f7b"
+    },
+    "agent.py": {
+      "bytes": 95163,
+      "sha256": "b885020db1c07e2a736d46f20c295dc71a461242f717bd324e1a3111379b5157"
+    },
+    "prefetch.py": {
+      "bytes": 15674,
+      "sha256": "02871bc515ba23f8d353131e9b6b6b4e390692803578febee7c8d643dd308a27"
+    },
+    "recomputed_ce_capture.py": {
+      "bytes": 26538,
+      "sha256": "6c3ef3735342295154f24b37f7fe0f54c2f05bd13789629c856214441e087263"
+    },
+    "replay_buffer.py": {
+      "bytes": 113613,
+      "sha256": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f"
+    },
+    "source-lock.json": {
+      "bytes": 3767,
+      "sha256": "8c644ecefda03cea6d5f67bc81301134200449579f8aa1f430059c69e34f15ef"
+    },
+    "test_recomputed_capture.py": {
+      "bytes": 15662,
+      "sha256": "5736fc65a87725ac01027ba523613d44a38ab76362ad5ee702f46902a1cf425e"
+    },
+    "test_whole_training_capture.py": {
+      "bytes": 14754,
+      "sha256": "bee716f8f6f15b10ce678e82feb230aad71d9a5448a6216514d595d856523a1f"
+    },
+    "training.py": {
+      "bytes": 31175,
+      "sha256": "16a327b08eeb0be829d92e46dd72eab014c5f8b8f5331a7cf043785979e842c5"
+    },
+    "unapplied.patch": {
+      "bytes": 46185,
+      "sha256": "4606259cfc9b1f55165030039f847c3da7f3f91b4490a75279521db323e47145"
+    }
+  },
+  "imports_tests_compile_runtime_actions": false,
+  "loss_kernel_sha256": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a",
+  "loss_overlay": false,
+  "original_v1_unchanged": true,
+  "private_rehearsal_harness_present": false,
+  "production_applied": false,
+  "revision": 2,
+  "schema": "robotron-recomputed-ce-capture-review-manifest-v2",
+  "status": "SOURCE_ONLY_UNEXECUTED_PENDING_PEER",
+  "supersedes": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/manifest-source-review-v1.json",
+    "sha256": "76b62cb993fca7ef59c2ead23d0282eab022cbfc04c994d3a52f8320ed51295f"
+  },
+  "tests_authored_methods": {
+    "test_recomputed_capture.py": 14,
+    "test_whole_training_capture.py": 6
+  }
+}

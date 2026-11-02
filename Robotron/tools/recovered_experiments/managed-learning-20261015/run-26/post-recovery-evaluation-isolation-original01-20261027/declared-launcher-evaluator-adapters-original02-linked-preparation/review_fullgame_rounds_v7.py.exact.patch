@@ -1,0 +1,30 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/review_fullgame_rounds_v7.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original02-linked-preparation/review_fullgame_rounds_v7.py
+@@ -11,6 +11,7 @@
+ import math
+ import os
+ from pathlib import Path
++LOCAL=Path(__file__).resolve().parent
+ import re
+ import socket
+ import subprocess
+@@ -20,7 +21,7 @@
+ G=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ HERE=G/'tools/startup_policy_journal_proposal'
+ R=G/'logs/managed-learning-20261015/run-26'
+-SELECTED_RUNTIME=Path(__file__).with_name('run_fullgame_rounds_v7.py')
++SELECTED_RUNTIME=LOCAL/'run_fullgame_rounds_v7.py'
+ NEW_CANDIDATE_CLOCK_FLOOR={'learner_frame_count': 3041579470, 'training_steps': 11979944, 'optimized_samples': 47494055936, 'frame_count': 5918642727}
+ SLOTS=tuple(range(4096,4128))
+ GPU='GPU-b549355c-78bb-53d8-04a6-da34d45e1dd0'
+@@ -76,8 +77,8 @@
+ 
+ 
+ def round_contract():
+-    path=Path(__file__).with_name('fullgame_round_contract_v7.py')
+-    require(hashlib.sha256(path.read_bytes()).hexdigest()=='99ee7aed8bc2e895fc0c0dfd32442672ca9d5c2a938b650b6b5c239df0eb0b0e','Exact recovered fullgame contract required')
++    path=LOCAL/'fullgame_round_contract_v7.py'
++    require(hashlib.sha256(path.read_bytes()).hexdigest()=='5a13a88b5333f0f28ac488529b314029b6987f6d5c33d7874898ca31475e0c5f','Exact recovered fullgame contract required')
+     return load('_recovered_fullgame_round_contract',path)
+ 
+ 

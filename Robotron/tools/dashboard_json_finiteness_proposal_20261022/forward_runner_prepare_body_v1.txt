@@ -1,0 +1,75 @@
+def prepare(output):
+    """Select one current-owner forward plan after closed preparation proofs."""
+    l = linux_module()
+    l.require(output.parent == RUN and output.name == PREPARATION_NAME
+              and not output.exists(), 'One new original live preparation required')
+    prepared_pin = l.full_pin(H/'prepared-inputs.json')
+    l.require(prepared_pin['sha256'] == 'c27c57a591702df5c12a0dc563633d99b58a176130748a06b1e8e418e49d98ca',
+              'Exact current-owner prepared inputs required')
+    prepared = json.loads(l.checked(prepared_pin))
+    main = json.loads(l.checked(prepared['original_main']))
+    guard_pin = l.full_pin(RUN/'capacity-original-full-reviewer-CPU-original01-preparation-20261019/immutable-main-hold-guard.py')
+    l.require(guard_pin['sha256'] == 'f44f392188bcc6924baab87b2762d6a80879331078f76495bb4c00686b8b65f3',
+              'Unchanged main hold guard required')
+    guard = l.module(guard_pin, '_JSON_runner_prepare_guard')
+    guard.owner_and_files(main)
+    proof_pin = l.full_pin(H/'handoff-preparation-independent-readback-original01/readback.json')
+    l.require(proof_pin['sha256'] == 'de6e3c5bef2a2963e4a7d1deaf3d66baf0e033cd10ccf16b82724b9f99a641ea',
+              'Exact new23-contracts and unchanged kernel proof required')
+    proof = json.loads(l.checked(proof_pin))
+    l.require(proof['status'] == 'CURRENT_OWNER_23_CONTRACTS_AND_UNCHANGED_ACTUAL_KERNEL_PROOFS_VERIFIED'
+              and proof['actual_CPU_exit'] == 0 and proof['original_CPU_tests'] == 23
+              and proof['main_owner'] == main['owner'], 'Actual current-owner preparation did not pass')
+    kernel_pin = proof['prior_original_actual_kernel_readback']
+    l.require(kernel_pin['sha256'] == 'c619978ca38973aec58994e54aaff06ff7fb9461dfa83fe948dab1390bfdee32',
+              'Exact preserved original actual-kernel proof required')
+    l.checked(kernel_pin)
+    bundle = json.loads(l.checked(proof['source_bundle']))
+    contract = json.loads(l.checked(proof['contracts_report']))
+    for name, entry in bundle['source_pins'].items():
+        l.require(contract['tested_sources'][name] == entry
+                  and (Path(__file__).parent/name).read_bytes() == l.checked(entry),
+                  'New contract-tested handoff source changed')
+    poststop_pin = proof['poststop_preparation']
+    poststop = json.loads(l.checked(poststop_pin))
+    l.require(poststop['status'] == 'POSTSTOP_ADAPTER_CONSTRUCTED_INPUTS_VERIFIED'
+              and poststop['current_original_owner'] == main['owner'], 'Fresh poststop input preparation required')
+    for entry in json.loads(l.checked(poststop['poststop_inputs']))['pins']:
+        l.checked(entry)
+    l.require(not (H/'live-original01').exists(), 'This live output has already been consumed')
+    output.mkdir(mode=0o700)
+    sources = output/'sources'
+    sources.mkdir()
+    pins = {}
+    for name in ('handoff_controller_v1.py', 'handoff_linux_v1.py', 'handoff_recovery_v1.py',
+                 'handoff_poststop_v1.py', 'handoff_socket_seal_v1.py', 'handoff_live_runner_v1.py', 'bank_shutdown_intent_v1.py'):
+        raw = (Path(__file__).parent/name).read_bytes()
+        compile(raw, name, 'exec')
+        pins[name] = l.publish(sources/name, raw)
+    dependencies = dict(reader=l.full_pin(GAME/'tools/confirmed_game_boundary_proposal/protect_confirmed_winner_reviewed4.py'),
+        raw_API=l.full_pin(GAME/'tools/eval_capacity_proposal/raw_api_witness_v1.py'), main_guard=guard_pin,
+        bank_shutdown_intent=pins['bank_shutdown_intent_v1.py'], bank_witness=prepared['tested_bank_witness'],
+        socket_seal=pins['handoff_socket_seal_v1.py'])
+    base_job = dict(schema='robotron-score-carry-live-handoff-job-v1', authorized=True, case=CASE,
+        prepared=prepared_pin, output=str(H/'live-original01'), backend_source=pins['handoff_linux_v1.py'],
+        recovery_source=pins['handoff_recovery_v1.py'], poststop_adapter=pins['handoff_poststop_v1.py'],
+        poststop_inputs=poststop['poststop_inputs'], dependencies=dependencies,
+        base_control_archive=poststop['base_control_archive'], base_control_sha256=poststop['base_control_sha256'],
+        control_path=str(l.CONTROL), probe_endpoint=['192.168.1.131', 9998])
+    proofs = dict(current_owner_preparation=proof_pin, exact_prior_actual_kernel=kernel_pin,
+        JSON_candidate=prepared['component_proofs']['dashboard_JSON_composed_readiness'],
+        original_closed196=prepared['component_proofs']['original_closed196'],
+        original_failed_quality_review=prepared['component_proofs']['original_failed_quality_review'],
+        current_normal_insurance=prepared['component_proofs']['current_normal_autosave_insurance'],
+        poststop_preparation=poststop_pin)
+    plan = dict(schema='robotron-original-score-carry-live-runner-plan-v1', authorized=True, case=CASE,
+        output=str(output), sources=pins, runner_source=pins['handoff_live_runner_v1.py'], prepared=prepared_pin,
+        controller_unit='robotron-'+CASE+'-controller.service', rescue_unit='robotron-'+CASE+'-rescue.service',
+        base_live_job=base_job, live_job_path=str(output/'live-job.json'), live_output=base_job['output'], proofs=proofs,
+        lifecycle_controller=l.full_pin(GAME/'tools/quality_capacity_proposal/control_quality32_review_v1.py'),
+        archive_checker=l.full_pin(GAME/'tools/eval_capacity_proposal/review_original_pilot_raw_API_v1.py'),
+        prior_original_owner=main['owner'], observation_s=1900, controller_runtime_s=1800, rescue_runtime_s=2300,
+        main_source_changed=False, live_execution_started=False, goal_complete=False)
+    guard.owner_and_files(main)
+    return l.publish(output/'plan.json', plan)
+

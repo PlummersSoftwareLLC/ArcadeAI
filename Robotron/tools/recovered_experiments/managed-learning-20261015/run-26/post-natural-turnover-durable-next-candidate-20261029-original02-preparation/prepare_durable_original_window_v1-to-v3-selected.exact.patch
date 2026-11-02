@@ -1,0 +1,92 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-natural-turnover-durable-next-candidate-20261029-original01-preparation/prepare_durable_original_window_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-natural-turnover-durable-next-candidate-20261029-original02-preparation/prepare_durable_original_window_v3.py
+@@ -9,26 +9,30 @@
+ import importlib.util
+ import json
+ import os
++import stat
+ from pathlib import Path
+ import time
+ 
+ G = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ B = G/'logs/managed-learning-20261015/run-26'
+-OLD = B/'post-natural-turnover-next-candidate-20261028-original01'
+-OUT = B/'post-natural-turnover-durable-next-candidate-20261029-original01'
++OLD = B/'post-natural-turnover-durable-next-candidate-20261029-original01'
++OUT = B/'post-natural-turnover-durable-next-candidate-20261029-original02'
+ WATCH = G/'tools/power_recovery/watch_replay_progress_candidate.py'
+ WATCH_SHA = '303a6cd4096b42477df60c4631aa76d3df234a1ccb88cc7a69d5a6ab0e88f962'
+ LIB = G/'tools/power_recovery/watch_learning_window_v2.py'
+ LIB_SHA = 'f7398454d3985b05d653b54a4dd7b13299a50866d8e5dbbd98100e786c9ce186'
+-OLD_PLAN_SHA = '4c36195defd94942ed6683e56866ed2dd22ef6d4bd696ad7798294ee5c808a1a'
+-LOSS = B/'checkpoint-observer-process-loss-20261029-original01/observer-process-loss-disposition.json'
+-LOSS_SHA = 'e258c0a6c3b463d32c5eba106346c33d83a1c11ae52293e060a5f1a6358fb5c9'
++OLD_PLAN_SHA = '97206a8e82ff4f43f8d74b8ab564c682ef2504d2f3ec13195154f52888baee6a'
++LOSS = B/'post-recovery-evaluation-isolation-original01-20261027/durable-e078b0da-launcher-mmap-study-original01/R1/read-only-startup-observation-original01/independent-original-R1-anchor-then-failure-small-observation.json'
++LOSS_SHA = '59fb3487cf82e1121c85f28c4ca6dbaa394b44e861b2ea6581561906b73d41bf'
+ FAMILY = B/'post-recovery-evaluation-isolation-original01-20261027/distincta6e17a3c-single-journal-family11-study-original01/R1/source-family.json'
+ FAMILY_SHA = 'dca06ef8a24d99839a396ce478780520c9338c4e1f6d6c8c57606cbb9bc33df4'
+-ENTRY_UNIT = 'robotron-durable-entry-CPU-original01-20261029.service'
+-ENDPOINT_UNIT = 'robotron-durable-endpoint-CPU-original01-20261029.service'
+-OBSERVER_UNIT = 'robotron-durable-candidate-window-original01-20261029.service'
++ENTRY_UNIT = 'robotron-durable-entry-CPU-original02-20261029.service'
++ENDPOINT_UNIT = 'robotron-durable-endpoint-CPU-original02-20261029.service'
++OBSERVER_UNIT = 'robotron-durable-candidate-window-original02-20261029.service'
+ THRESHOLDS = dict(applied_updates=5000,replay_inserts=1000000,elapsed_s=3600)
++CANONICAL_SOURCE_MODES = {WATCH:0o664, LIB:0o664,
++    G/'tools/post_recovery_evaluation/round_observer_v10.py':0o664,
++    G/'tools/post_recovery_evaluation/round_health_transport_v7.py':0o664}
+ 
+ 
+ def require(value, message):
+@@ -37,7 +41,13 @@
+ 
+ def checked(path, digest):
+     require(path.is_file() and not path.is_symlink(), 'Regular source required: '+str(path))
+-    raw=path.read_bytes(); require(hashlib.sha256(raw).hexdigest()==digest, 'Pinned source changed: '+str(path)); return raw
++    before=path.stat()
++    require(before.st_uid==os.getuid() and stat.S_IMODE(before.st_mode)==CANONICAL_SOURCE_MODES.get(path,0o444) and before.st_nlink==1,
++            'Selected source/authority must retain its exact owned mode and independent link')
++    raw=path.read_bytes(); after=path.stat()
++    stable=lambda value:(value.st_dev,value.st_ino,value.st_size,value.st_mtime_ns,value.st_ctime_ns,value.st_mode,value.st_uid,value.st_nlink)
++    require(stable(before)==stable(after) and hashlib.sha256(raw).hexdigest()==digest,
++            'Pinned source changed: '+str(path)); return raw
+ 
+ 
+ def load(name, path, digest):
+@@ -50,9 +60,11 @@
+     observer=load('_durable_original_observer',LIB,LIB_SHA)
+     plan=json.loads(checked(OLD/'window-plan.json',OLD_PLAN_SHA))
+     loss=json.loads(checked(LOSS,LOSS_SHA))
+-    require(loss['terminal_exit_not_observed'] is True and loss['original_window_complete'] is False
+-            and loss['original_window_will_not_restart'] is True and loss['no_counts_reused'] is True,
+-            'Original interruption disposition differs')
++    require(loss['schema']=='robotron-readonly-original-R1-anchor-then-failure-small-observation-v1'
++            and loss['status']=='ORIGINAL_ANCHORED_THEN_FAILED_NO_QUALITY'
++            and loss['scientific_quality_or_improvement_qualified'] is False
++            and loss['private_scores_or_quality_comparisons_read'] is False,
++            'Original E078 evaluation failure must remain invalid without a quality claim')
+     require(plan['thresholds']==THRESHOLDS and plan['maximum_wait_s']==14400, 'Original selection rules differ')
+     require(observer.owner()==plan['owner'], 'Original live trainer incarnation changed')
+     for value in plan['inputs']: observer.check_pin(value)
+@@ -108,13 +120,17 @@
+     require(all(fresh[k]>=verification['clocks'][k] for k in observer.CLOCKS), 'Entry proof is newer than prelaunch API')
+     observer.publish(OUT/'prelaunch-API-NOT-WINDOW-ANCHOR.json',fresh,exclusive=True)
+     new=copy.deepcopy(plan)
+-    new.update(purpose='New independent durable original exposure window after interrupted90742; unknown exit preserved, no counters or elapsed time reused.',
++    for key in ('interrupted_observer_case','interrupted_observer_exit_known','interrupted_observer_disposition'):
++        new.pop(key,None)
++    new.update(purpose='New independent durable original02 exposure window after invalid E078 screening; no old elapsed time, progress counts, reference games or scores reused.',
+         entry_Adam_step=verification['Adam_step_min'],entry_verification=authority['actual_CPU_verification'],
+         CPU_unit=ENDPOINT_UNIT,clean_roster_case=observer.pin(OUT/'fresh-main-case.json'),
+         clean_roster_snapshot=observer.pin(OUT/'fresh-main-entry.raw.json'),
+         original_partial_counts_reused=False,original_failed_case_restarted=False,
+-        interrupted_observer_case=str(OLD),interrupted_observer_exit_known=False,
+-        interrupted_observer_disposition=observer.pin(LOSS),
++        prior_completed_candidate_case=str(OLD),prior_completed_candidate_policy_sha256='e078b0da4ce4e25146fab7484f8489f590e1086370746cb392afcd7f5f8adef5',
++        prior_candidate_screening_failed_without_quality=True,prior_scientific_case_retried=False,
++        prior_failed_screening_disposition=observer.pin(LOSS),
++        clean_roster_entry_scope='Entry sanity for this exposure-only window; no500ms scientific observer qualification or evaluator source-family selection is conferred.',
+         observer_process_lifetime='Root-launched durable systemd service, Restart=no, RemainAfterExit=yes; original terminal must be archived.',
+         entry_snapshot_authority_is_historical_same_process=False)
+     # Drop historical entry/case inputs, then retain exact source/config guards.

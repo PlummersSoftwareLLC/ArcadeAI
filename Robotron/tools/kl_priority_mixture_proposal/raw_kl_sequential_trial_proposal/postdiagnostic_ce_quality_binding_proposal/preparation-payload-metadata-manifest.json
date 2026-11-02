@@ -1,0 +1,379 @@
+{
+  "schema": "robotron-postdiagnostic-payload-metadata-compatibility-source-preparation-v1",
+  "utc": "2026-10-18T08:27:57.995880+00:00",
+  "status": "SOURCE_ONLY_ADDITIVE_COMPATIBILITY_UNSELECTED_UNEXECUTED",
+  "activation_authorized": false,
+  "files": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/quality_bindings_payload_metadata.py",
+      "sha256": "e00c135d93ea83e0da23dd5b0a13e323f79023f0c3a111de4d2627bde1d13596",
+      "bytes": 45318,
+      "identity": {
+        "device": 2304,
+        "inode": 86245533,
+        "bytes": 45318,
+        "mtime_ns": 1792311776203337399,
+        "ctime_ns": 1792311776203337399,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/root_quality_carrier_payload_metadata.py",
+      "sha256": "161a50f6ddaf860fbbe5e7ad50c361d8af5281a632862f0549360bd82c639d25",
+      "bytes": 24267,
+      "identity": {
+        "device": 2304,
+        "inode": 86245534,
+        "bytes": 24267,
+        "mtime_ns": 1792311866096433453,
+        "ctime_ns": 1792311866096433453,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/collect_quality_readiness_payload_metadata.py",
+      "sha256": "ef1fbbdbf7b30e2a0fc0daf675ea70611c175a9db4f8cb96f2fe1ea34b27bdbe",
+      "bytes": 20173,
+      "identity": {
+        "device": 2304,
+        "inode": 86245535,
+        "bytes": 20173,
+        "mtime_ns": 1792311866098592885,
+        "ctime_ns": 1792311866098592885,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/audit_completed_leg_payload_metadata.py",
+      "sha256": "27745c52bff13bb98d70e870ff1e0c146224caf1e6cabee401937fe59f8a5eba",
+      "bytes": 34356,
+      "identity": {
+        "device": 2304,
+        "inode": 86245536,
+        "bytes": 34356,
+        "mtime_ns": 1792311866099295416,
+        "ctime_ns": 1792311866099295416,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/test_payload_metadata.py",
+      "sha256": "0867f6dea35ae80d8b89dc4c1bac2b139e79794c44dddbdbff78eaf3afacc429",
+      "bytes": 8890,
+      "identity": {
+        "device": 2304,
+        "inode": 86245537,
+        "bytes": 8890,
+        "mtime_ns": 1792311918349040770,
+        "ctime_ns": 1792311965480225066,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  ],
+  "files_count": 5,
+  "foundation": {
+    "manifest": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/preparation-manifest.json",
+      "sha256": "045f2ac9bcaf065c3dde018fb7e753852022e7c46b4ab664e3aa5b40e9e65e19",
+      "bytes": 75895,
+      "identity": {
+        "device": 2304,
+        "inode": 86245532,
+        "bytes": 75895,
+        "mtime_ns": 1792308724969529908,
+        "ctime_ns": 1792308724969529908,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "original_owned_file_count": 16,
+    "original16_fullpins_checked_unchanged": true,
+    "consume_original_packaging_and_unchanged_code_at_original_paths": true,
+    "historical_upstreams_not_replayed": true
+  },
+  "dependencies": {
+    "original_binder": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/quality_bindings.py",
+      "sha256": "f2d2ceb819fe3fb08edaf2169da8ee0dd8c7f7296eb0f5b96b87d6908d438f62",
+      "bytes": 44613,
+      "identity": {
+        "device": 2304,
+        "inode": 86245521,
+        "bytes": 44613,
+        "mtime_ns": 1792308429196478460,
+        "ctime_ns": 1792308669963330850,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "original_consumers": [
+      {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/root_quality_carrier.py",
+        "sha256": "24fb96afdb35b90d7039a41050f4f6fa83e82e905021a994e94aeb5b6ae5b63a",
+        "bytes": 24250,
+        "identity": {
+          "device": 2304,
+          "inode": 86245522,
+          "bytes": 24250,
+          "mtime_ns": 1792308429225033023,
+          "ctime_ns": 1792308669941330771,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/collect_quality_readiness.py",
+        "sha256": "926570ad56f62ba1042f51dbe134c91f72f2a2db2fb194e77036e678997c388d",
+        "bytes": 20156,
+        "identity": {
+          "device": 2304,
+          "inode": 86245524,
+          "bytes": 20156,
+          "mtime_ns": 1792308429226006466,
+          "ctime_ns": 1792308669972330882,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/audit_completed_leg.py",
+        "sha256": "4493bfbcd06c5e93af26e2bb9dc22494289ed690dbc204cda3af0cd4af537c7d",
+        "bytes": 34339,
+        "identity": {
+          "device": 2304,
+          "inode": 86245523,
+          "bytes": 34339,
+          "mtime_ns": 1792308429225822945,
+          "ctime_ns": 1792308669950330803,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      }
+    ],
+    "actual_producer_selector": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/capture_candidate.py",
+      "sha256": "e01a36c197c889d1994e72bee82a8622c8d7fad72477d6d0eaffef2c5e5aefbe",
+      "bytes": 28840,
+      "identity": {
+        "device": 2304,
+        "inode": 86245518,
+        "bytes": 28840,
+        "mtime_ns": 1792307833989361019,
+        "ctime_ns": 1792308669957330828,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "actual_pure_observer": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/observer.py",
+      "sha256": "579f2eee9afe9a4429f52b809c428f15696013a2834b2ca50a80a047d5c4194a",
+      "bytes": 25083,
+      "identity": {
+        "device": 2304,
+        "inode": 86245517,
+        "bytes": 25083,
+        "mtime_ns": 1792307833984129414,
+        "ctime_ns": 1792308669945330785,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "payload_guard_source_manifest": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/payload-metadata-guard-manifest.json",
+      "sha256": "cb4bd82633de7ccfa2b261d761eb71b612d4994201cf82c43683bf9bd8ac2253",
+      "bytes": 17498,
+      "identity": {
+        "device": 2304,
+        "inode": 86245538,
+        "bytes": 17498,
+        "mtime_ns": 1792311965482225073,
+        "ctime_ns": 1792311965482225073,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "consumer_comparisons": [
+    {
+      "before": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/root_quality_carrier.py",
+        "sha256": "24fb96afdb35b90d7039a41050f4f6fa83e82e905021a994e94aeb5b6ae5b63a",
+        "bytes": 24250,
+        "identity": {
+          "device": 2304,
+          "inode": 86245522,
+          "bytes": 24250,
+          "mtime_ns": 1792308429225033023,
+          "ctime_ns": 1792308669941330771,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "after": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/root_quality_carrier_payload_metadata.py",
+        "sha256": "161a50f6ddaf860fbbe5e7ad50c361d8af5281a632862f0549360bd82c639d25",
+        "bytes": 24267,
+        "identity": {
+          "device": 2304,
+          "inode": 86245534,
+          "bytes": 24267,
+          "mtime_ns": 1792311866096433453,
+          "ctime_ns": 1792311866096433453,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "exact_changes": [
+        "One binder filename/path basename: quality_bindings.py -> quality_bindings_payload_metadata.py",
+        "One selected binder SHA: f2d2 -> e00c"
+      ],
+      "all_other_source_bytes_exact": true,
+      "reverse_exact": true
+    },
+    {
+      "before": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/collect_quality_readiness.py",
+        "sha256": "926570ad56f62ba1042f51dbe134c91f72f2a2db2fb194e77036e678997c388d",
+        "bytes": 20156,
+        "identity": {
+          "device": 2304,
+          "inode": 86245524,
+          "bytes": 20156,
+          "mtime_ns": 1792308429226006466,
+          "ctime_ns": 1792308669972330882,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "after": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/collect_quality_readiness_payload_metadata.py",
+        "sha256": "ef1fbbdbf7b30e2a0fc0daf675ea70611c175a9db4f8cb96f2fe1ea34b27bdbe",
+        "bytes": 20173,
+        "identity": {
+          "device": 2304,
+          "inode": 86245535,
+          "bytes": 20173,
+          "mtime_ns": 1792311866098592885,
+          "ctime_ns": 1792311866098592885,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "exact_changes": [
+        "One binder filename/path basename: quality_bindings.py -> quality_bindings_payload_metadata.py",
+        "One selected binder SHA: f2d2 -> e00c"
+      ],
+      "all_other_source_bytes_exact": true,
+      "reverse_exact": true
+    },
+    {
+      "before": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/audit_completed_leg.py",
+        "sha256": "4493bfbcd06c5e93af26e2bb9dc22494289ed690dbc204cda3af0cd4af537c7d",
+        "bytes": 34339,
+        "identity": {
+          "device": 2304,
+          "inode": 86245523,
+          "bytes": 34339,
+          "mtime_ns": 1792308429225822945,
+          "ctime_ns": 1792308669950330803,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "after": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/audit_completed_leg_payload_metadata.py",
+        "sha256": "27745c52bff13bb98d70e870ff1e0c146224caf1e6cabee401937fe59f8a5eba",
+        "bytes": 34356,
+        "identity": {
+          "device": 2304,
+          "inode": 86245536,
+          "bytes": 34356,
+          "mtime_ns": 1792311866099295416,
+          "ctime_ns": 1792311866099295416,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "exact_changes": [
+        "One binder filename/path basename: quality_bindings.py -> quality_bindings_payload_metadata.py",
+        "One selected binder SHA: f2d2 -> e00c"
+      ],
+      "all_other_source_bytes_exact": true,
+      "reverse_exact": true
+    }
+  ],
+  "binder_scope": "Only check_root_capture optional payload_result metadata: absence legacy or present exact typed minimal5 projection of supplied genuine result FULLPIN. Original e01 selector/579 observer paths and SHA identities remain unchanged; no capture/result mutation or alias.",
+  "preserved": [
+    "Original045f manifest and all16 owned files remain immutable; new siblings are an explicit overlay, not replacement history.",
+    "All scientific/numerical/lifecycle/row/life/tail/math/classifier bodies in these3 consumer siblings are byteexact original045f sources.",
+    "Current62-source/telemetry1/main2863379/75ec CE phase, E13/X4, protected704 reference, b2e/9ef candidate192/.5 recipe and eight-source strict CPU remain as originally reviewed.",
+    "RCRC2400/3600/min50/all16/fulltails/oneattempt/noextension and each candidate1.05mean+1.0median vs SAME freshR1+R2 pool remain unchanged.",
+    "No actual producer path/hash is rebound: capturee01 generated the genuine closed artifact and observer579 retains its own prospective B and8M+8M evidence.",
+    "Initial c90 outer metadata refusal occurred before any numeric unit/output attempt as root-reported; this source compatibility does not rerun capture, manufacture a CPU proof or retry a scientific cohort."
+  ],
+  "authored_guard_count": 6,
+  "guard_execution": null,
+  "scope_of_guard": "Testsource authored by /root/audit_quality_result; independent source peer assigned to learning_review. This manifest authenticates fixed source bytes only, not an execution/PASS result.",
+  "root_future_selection": [
+    "After source review and actual guards, root alone may select the additive CPU launcher/newbinder for one original numerical attempt against the SAME closed capture and genuine capture release.",
+    "Actual root quality binding remains unbound until genuine strict CPU0 plus original archives/release. Select newcarrier161a/newcollector ef1f/newauditor2774 by their actual hashes and this explicit compatibility manifest.",
+    "No additional waiter chain: root observes actual finished native leg and invokes selected audit_completed_leg_payload_metadata.py ONCE via proven b5 same-process launch/observe. Original11fe/sixPASS remain scoped to original4493.",
+    "Root audit config sources use exact minimal5 projections of explicitly selected fullPINs. Keep original045f foundation plus this5-file overlay; never relabel old producer/auditor/source identities."
+  ],
+  "future_actual": {
+    "numeric_CPU": null,
+    "quality_binding": null,
+    "quality_plan": null,
+    "quality_owner": null,
+    "quality_results": null,
+    "promotion": null
+  },
+  "deferred_guard_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal",
+    "-p",
+    "test_payload_metadata.py",
+    "-v"
+  ],
+  "author_actions": {
+    "source_text_and_pin_checks": true,
+    "AST": 0,
+    "compile": 0,
+    "project_or_target_imports": 0,
+    "tests": 0,
+    "execution": 0,
+    "runtime_or_model_reads": 0,
+    "installed_changes": 0
+  }
+}

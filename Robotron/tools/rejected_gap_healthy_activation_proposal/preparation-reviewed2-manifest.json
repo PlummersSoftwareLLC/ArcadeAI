@@ -1,0 +1,129 @@
+{
+  "schema": "robotron-rejected-gap-healthy-activation-reviewed2-fixture-selection-v1",
+  "status": "UNSELECTED_SOURCE_ONLY_UNEXECUTED",
+  "activation_authorized": false,
+  "files": {
+    "run_healthy_activation.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_healthy_activation_proposal/run_healthy_activation.py",
+      "sha256": "ef50ee32880ff93a788d33c7a90ccba01f3de33caa015c849712e31ca910f78e",
+      "bytes": 30491,
+      "identity": {
+        "device": 2304,
+        "inode": 81531257,
+        "bytes": 30491,
+        "mtime_ns": 1792305901151279910,
+        "ctime_ns": 1792305951851111298,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "test_healthy_activation_reviewed2.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_healthy_activation_proposal/test_healthy_activation_reviewed2.py",
+      "sha256": "3524b25b3e7440164001f427c908c1ff7fda9cc93acb482164266c94d9d920f0",
+      "bytes": 19587,
+      "identity": {
+        "device": 2304,
+        "inode": 81531265,
+        "bytes": 19587,
+        "mtime_ns": 1792306144714665563,
+        "ctime_ns": 1792306144714665563,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "fixture-reviewed2-source-note.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_healthy_activation_proposal/fixture-reviewed2-source-note.json",
+      "sha256": "d0557d3eb7e3773cc2e98335261a017bcbfd7039588d5952cf01c16d5acb22b0",
+      "bytes": 4615,
+      "identity": {
+        "device": 2304,
+        "inode": 81531266,
+        "bytes": 4615,
+        "mtime_ns": 1792306190419813368,
+        "ctime_ns": 1792306190419813368,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "upstream_pins": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_healthy_activation_proposal/preparation-manifest.json",
+      "sha256": "1d697fa071d699be80eb2ede50304c6b748bd163628f63ee50642ef2b614bdec",
+      "bytes": 18879,
+      "identity": {
+        "device": 2304,
+        "inode": 81531264,
+        "bytes": 18879,
+        "mtime_ns": 1792305951855665010,
+        "ctime_ns": 1792305951855665010,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_healthy_activation_proposal/test_healthy_activation.py",
+      "sha256": "881361ee7a11f73a01a185534c463d0b87d6867d157131009a6e87cf8d276924",
+      "bytes": 19552,
+      "identity": {
+        "device": 2304,
+        "inode": 81531259,
+        "bytes": 19552,
+        "mtime_ns": 1792305778900695647,
+        "ctime_ns": 1792305951851111298,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-healthy-activation-original-seven-guard-failure-owned-closure-root-20261018/root-explicit-original-seven-guard-failure-and-autoGC-owned-closure.json",
+      "sha256": "ddefe2e7bc37101a791f557de8bb10c9fe86fdc21d3eaad6c51b88ea77b9ff18",
+      "bytes": 12169,
+      "identity": {
+        "device": 2304,
+        "inode": 83624420,
+        "bytes": 12169,
+        "mtime_ns": 1792306156042960706,
+        "ctime_ns": 1792306156042960706,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  ],
+  "production_byte_unchanged": true,
+  "guard_methods": 7,
+  "future_guard_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_healthy_activation_proposal",
+    "-p",
+    "test_healthy_activation_reviewed2.py",
+    "-v"
+  ],
+  "guard_isolation": {
+    "CUDA_VISIBLE_DEVICES": "",
+    "remove_environment": [
+      "LD_PRELOAD",
+      "PYTHONPATH"
+    ],
+    "CPUQuota": "100%",
+    "MemoryMax": "512M",
+    "MemorySwapMax": "0",
+    "TasksMax": "128",
+    "RuntimeMaxSec": "60s",
+    "TimeoutStopSec": "5s"
+  },
+  "actual_guard_execution": null,
+  "actual_activation": null
+}

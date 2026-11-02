@@ -1,0 +1,111 @@
+{
+  "schema": "robotron-elite-bank-stale-slot-characterization-preparation-v1",
+  "status": "SOURCE_ONLY_UNSELECTED_UNEXECUTED",
+  "files": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_freshness_proposal/DESIGN.txt",
+      "sha256": "719a152fbe24a77f7d7b2fa31c6caa4cdb2926cdeda90049e8855b1a1794145b",
+      "bytes": 9008,
+      "identity": {
+        "device": 2304,
+        "inode": 81295412,
+        "bytes": 9008,
+        "mtime_ns": 1792332128284293249,
+        "ctime_ns": 1792332128284293249,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_freshness_proposal/source-finding.json",
+      "sha256": "1009690e1874cba131cab821d5464adaad49084849f5a929d35b2f5606a57bb3",
+      "bytes": 5735,
+      "identity": {
+        "device": 2304,
+        "inode": 81295408,
+        "bytes": 5735,
+        "mtime_ns": 1792331826236154650,
+        "ctime_ns": 1792331826236154650,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_freshness_proposal/source-pins.json",
+      "sha256": "bc5b7ae4859806ec352645355e13ebc948327d27d6a2f730185f175a1800770c",
+      "bytes": 3428,
+      "identity": {
+        "device": 2304,
+        "inode": 81295409,
+        "bytes": 3428,
+        "mtime_ns": 1792331955616170802,
+        "ctime_ns": 1792331955616170802,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_freshness_proposal/test_stale_bank_admission_deferred.py",
+      "sha256": "754c1970a87c8fd90f7af4e275c67d1dcf965ac6437c1bf6e2470f2443ed4eab",
+      "bytes": 11509,
+      "identity": {
+        "device": 2304,
+        "inode": 81295410,
+        "bytes": 11509,
+        "mtime_ns": 1792331955617281270,
+        "ctime_ns": 1792331955617281270,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  ],
+  "guard_argv": [
+    "/usr/bin/env",
+    "-u",
+    "LD_PRELOAD",
+    "-u",
+    "PYTHONPATH",
+    "CUDA_VISIBLE_DEVICES=",
+    "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_freshness_proposal",
+    "-p",
+    "test_stale_bank_admission_deferred.py",
+    "-v"
+  ],
+  "expected_tests": 6,
+  "fixture_scope": "Exact selected consumed methods under isolated small NumPy ring/fake finite queue. No target module import, startup, I/O, real thread, model or runtime. Token predicate is a design reference only, not a production patch.",
+  "recommended_caps": {
+    "CPUQuota": "100%",
+    "MemoryMax": "512M",
+    "MemorySwapMax": "0",
+    "TasksMax": "128",
+    "RuntimeMaxSec": "60",
+    "TimeoutStopSec": "5"
+  },
+  "future_gate": "Entire current frozen nativequality campaign terminal, honest scientific disposition, owned closure and explicit source/workload freeze release; fresh source pins/resources; one root-owned original bounded execution only.",
+  "actual_execution": null,
+  "production_patch": null,
+  "occurrence_measurement": null,
+  "author_actions": {
+    "source_text_reads": true,
+    "new_isolated_proposal_only": true,
+    "AST": false,
+    "compile": false,
+    "imports": false,
+    "tests": false,
+    "runtime": false,
+    "live_metadata": false,
+    "model_or_replay_reads": false
+  }
+}

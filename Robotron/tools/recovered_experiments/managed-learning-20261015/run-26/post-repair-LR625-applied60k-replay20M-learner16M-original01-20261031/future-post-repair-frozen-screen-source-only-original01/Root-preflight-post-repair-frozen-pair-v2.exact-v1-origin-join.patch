@@ -1,0 +1,53 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-repair-LR625-applied60k-replay20M-learner16M-original01-20261031/future-post-repair-frozen-screen-source-only-original01/Root-preflight-post-repair-frozen-pair-v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-repair-LR625-applied60k-replay20M-learner16M-original01-20261031/future-post-repair-frozen-screen-source-only-original01/Root-preflight-post-repair-frozen-pair-v2.py
+@@ -109,8 +109,48 @@
+     assert main_metadata['role_counts']['TRAIN'] == 155
+     # Authenticate this actual owner's selected origin; do not reuse old F's
+     # same-208501/no-new-restore historical predicates for the repaired Main.
+-    helper.checked(selection['current_main']['startup_authority'])
+-    helper.checked(selection['current_main']['startup_held'])
++    authority = json.loads(helper.checked(selection['current_main']['startup_authority']).read_text())
++    held = json.loads(helper.checked(selection['current_main']['startup_held']).read_text())
++    assert authority['schema'] == 'robotron-root-continuous-main-startup-qualified-v1'
++    assert authority['new_held_report'] == selection['current_main']['startup_held']
++    assert authority['all_model_optimizer_replay_banks_clocks_preserved'] is True
++    assert authority['new_mode_source_and_CPU_qualified'] is True
++    assert held['schema'] == 'robotron-continuous-main-held-exact-restoration-report-v1'
++    assert held['status'] == 'VERIFIED_HELD_BEFORE_FIRST_UPDATE'
++    owner = selection['current_main']['owner']
++    expected_owner = {key: owner[key] for key in ('pid', 'unit', 'invocation_id', 'cgroup')}
++    expected_owner['birth'] = owner['starttime_ticks']
++    for recorded in (authority['trainer'], held['owner']):
++        assert all(recorded[key] == value for key, value in expected_owner.items())
++        assert type(recorded['uid']) is int and recorded['uid'] == 1001
++    for key in ('all_online_target_Adam_scaler_payloads_equal',
++                'optimizer_implementation_flags_exactly_equal',
++                'training_and_memory_locks_held_until_Root_release',
++                'dashboard_and_GAME_listener_not_created'):
++        assert held[key] is True
++    for key in ('optimizer_attempts_before_release', 'new_replay_inserts_before_release'):
++        assert type(held[key]) is int and held[key] == 0
++    for key in ('samples_since_loaded', 'unmeasured_frames_since_loaded'):
++        assert type(held['startup_budget'][key]) is int and held['startup_budget'][key] == 0
++    assert held['startup_budget']['fresh_per_boot_baseline_verified'] is True
++    assert held['startup_budget']['anchor_installed_or_rebased'] is False
++    assert held['startup_budget']['model_optimizer_scaler_replay_or_lifetime_clock_changed'] is False
++    for key in ('full_original_mmap_adoption', 'all_eight_scalar_replay_payloads_equal',
++                'all_PER_leaf_priorities_equal'):
++        assert held['replay'][key] is True
++    for bank in ('hof', 'ephof'):
++        assert held['replay']['banks'][bank]['all_valid_field_payloads_and_episode_metadata_equal'] is True
++    identity_keys = ('process_id', 'instance_monotonic_ns', 'epoch', 'epoch_reason')
++    for kind in ('optimizer', 'replay'):
++        assert {key: held['exposure'][kind][key] for key in identity_keys} == selection['current_main']['exposure'][kind]
++    for family in ('total', 'since_epoch'):
++        assert all(type(value) is int and value == 0 for value in held['exposure']['optimizer'][family].values())
++    for key in ('accepted_total', 'accepted_learner_total', 'accepted_since_epoch', 'accepted_learner_since_epoch'):
++        assert type(held['exposure']['replay'][key]) is int and held['exposure']['replay'][key] == 0
++    for family in ('accepted_by_source_total', 'accepted_by_source_since_epoch'):
++        assert all(type(value) is int and value == 0 for value in held['exposure']['replay'][family].values())
++    # These are historical held-startup facts. Do not reopen/hash its mutable
++    # checkpoint or claim that a currently training model remains unchanged.
+     jobs = {leg: json.loads(helper.checked(prepared['jobs'][leg]['job']).read_text()) for leg in ['R1', 'C1']}
+     old_tokens = set()
+     for name in ['df519-vs-S2-fixed-cutoff-liveness-screen-original01-20261031',

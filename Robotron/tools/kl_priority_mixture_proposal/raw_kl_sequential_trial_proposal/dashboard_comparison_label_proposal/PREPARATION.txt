@@ -1,0 +1,34 @@
+DEFERRED, UNINSTALLED SOURCE PROPOSAL ONLY.
+Do not edit/install the held reader or controls during the current RCRC campaign.
+Root may apply only AFTER campaign terminal, all required original audits/owned
+cleanup and explicit full source-freeze release. No user permission flow is added.
+
+The current e704 reader extracts8M from rawkl-first8M, although8M is an increment.
+Candidate actual saved learner frame_count511985990 is approximately512M total.
+The reference remains the protected448M stage. The proposed explicit root label is:
+  active_quality_job.comparison_label = "448M vs KL candidate (~512M total)"
+This is a display caption only; it asserts no playing-quality or learning efficacy.
+The root will set that field only with the new reader activated after release.
+No actual canonical metadata update is included in this proposal.
+
+experiment_status.py is an exact e704 copy plus3 lines in _comparison: use the
+existing _text sanitizer for active.comparison_label, return it only when nonempty.
+Absent/None/blank/non-string values preserve the entire existing filename/leg-label
+fallback. Existing whitespace/path-redaction/160-character bounds apply to the new
+explicit label. All reads/path boundaries/cache/freshness/legs/statistics are byte
+unchanged. No total-frame estimate is inferred automatically from a checkpoint name.
+
+Three authored stdlib guards are unexecuted: private real state/plan/status JSON
+through snapshot; missing/blank/non-text legacy448M-vs8M and384M-vs448M/leg-label
+fallbacks; existing sanitizer/length limits. Future exact test argv is provided.
+Root alone executes guards, reviews results and installs the source if appropriate.
+Author performed only text/JSON/AST reads and additive proposal writes. No imports,
+compile, tests, runtime/API/unit actions, tensor/model reads, installed-source or
+control/state edits were performed. No chart/render work is part of this change.
+
+Before eventual installation, root must freshly confirm installed source is still
+exact e7048ec8365bca60f7bd320794c635e491407b33113e37a617f06f9f9d56c237.
+If it changed, rebase/review the tiny patch; do not overwrite unrelated changes.
+Use unapplied.patch or the reviewed reader copy; preserve the current owner/mode
+and record original/new hashes in a separate root adoption receipt. No restart,
+checkpoint request, new experiment, score threshold change or rollback is requested.

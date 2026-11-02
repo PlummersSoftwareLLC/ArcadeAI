@@ -1,0 +1,55 @@
+SOURCE ONLY: TWELVE AUTHORED METHODS, ZERO EXECUTION/IMPORT BY AUTHOR
+
+This separate suite preserves combined manifest333802 and selected patch ecc2.
+Run only at root's authorized post-freeze test boundary BEFORE application, while
+held socket4a/dashboard3013/reader e704 still match. If installation already changed
+them, do not relax these pins: a separately bound original-source fixture would
+be needed. No current source, control, process, runtime or experiment is selected.
+
+At a future test run, setUpClass authenticates333802/ecc2 and the three held source
+hashes, reconstructs all four candidates in memory and checks their exact hashes:
+helper d586, socket f44d, dashboard3d1a, reader aa1d. No candidate file is written or
+imported. Only selected AST bodies compile in synthetic containers:
+- Actual dashboard rejected_gap_body and nested handler do_GET/do_POST.
+- Actual reader _load/_comparison, its three scalar helpers and four limit constants.
+- Actual unchanged socket fatal-latch method and complete generic exception-handler
+  body, wrapped in a synthetic raise/except function to supply real exception context.
+The original giant constructors, server startup, imports, sampler and model code
+are never compiled/executed by these tests. All test-module imports are stdlib.
+
+API dependencies are strict fake server/state/metrics and captured _send calls.
+Unexpected state/metrics operations and repeated getter calls are retained for
+cleanup failure even if the real API method catches their initial exceptions.
+Cases cover success/readonly/no heartbeat, disabled/fault/saturation/overflow,
+missing server/getter/raised snapshot, foreign schema/nonboolean/contradictory
+flags, NaN/oversize, and POST404 without enable/reset/body reads. Strict JSON and
+128KiB responses are checked; no actual HTTP/listener/header-writing occurs.
+
+Reader _read/_under use an explicit synthetic mapping and PurePosixPath, never
+real filesystem/clock/model fallback. Tests run the real _load path over four
+declared completed role records: SHA-bound543235763/704405115 ->543.2M vs704.4M;
+missing/foreign/conflicting/zero/negative/boolean/float/nonfinite/text clocks use
+explicit role labels. Missing metadata exercises the actual frozen clocks fallback.
+Misleading first8M/999M checkpoint filenames are inert and never opened. Sanitizer,
+length bound and three-argument literal-role fallback are exercised. This does not
+test the original reader filesystem/cache/ownership path or certify cohort validity.
+
+Eight real future test threads synchronize at one bounded barrier, then execute
+the exact extracted exception body. A real underlying Lock with owner tracking
+requires each fake stderr write AND flush to occur under the candidate lock.
+Each record must contain its one Client header and complete traceback. The actual
+private fatal-latch method must set the latch before a pre-shutdown write; actual
+shutdown/main-replay paths leave it unchanged. The first fatal condition and
+method AST are compared to held originals; actual lock initialization is checked.
+No OS stderr/network I/O is exercised. Other writers, kernel atomicity, scheduler
+timing, whole-handler exception dispatch/finally ordering and performance are not
+proved. Virtual AST filenames avoid loading trainer source for traceback lines.
+
+Existing now/history/sampler/HTML/POST ASTs are compared unchanged. These metadata
+tests complement the separate helper/nstep12 suite; they do not execute the real
+socket receive/action/replay handler, Lua or physical replay inserts. Actual E13+X4,
+new quality family, integration/deployment and overhead measurement remain pending.
+
+Future root command and bounds are data in preparation-manifest.json; none ran.
+Root retains original test outcome/streams and handles any first failure honestly.
+There is no new launcher/controller/framework, retry, model request or intervention.

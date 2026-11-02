@@ -1,0 +1,115 @@
+{
+  "schema": "robotron-batch2048-phase-CPU-source-lock-v1",
+  "sources": {
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/strict_phase_base.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/strict_phase_base.py",
+      "sha256": "9ef38e17e1b9eee3f6c43e40005812f2ebe3cff16d08bf61d3e820c2d41134c8",
+      "bytes": 33634,
+      "identity": {
+        "device": 2304,
+        "inode": 80635720,
+        "bytes": 33634,
+        "mtime_ns": 1792233273712246789,
+        "ctime_ns": 1792233591307841657,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/verify_phase_snapshot.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/verify_phase_snapshot.py",
+      "sha256": "b2e732dc731b2b601f7499d2cafd5841896daf2b0713d496b98cb6b8d7279519",
+      "bytes": 21460,
+      "identity": {
+        "device": 2304,
+        "inode": 80635710,
+        "bytes": 21460,
+        "mtime_ns": 1792233329633821026,
+        "ctime_ns": 1792233591307841657,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/preparation-manifest.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/preparation-manifest.json",
+      "sha256": "df03306d5b82b8f81cd2372f191fa45fb445867fa0bf46325f52ecaf49c4b7a3",
+      "bytes": 4328,
+      "identity": {
+        "device": 2304,
+        "inode": 80635728,
+        "bytes": 4328,
+        "mtime_ns": 1792233591310022849,
+        "ctime_ns": 1792233591310921861,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-maintenance-checkpoint-CPU-verifier-proposal-20261017/verify_maintenance_checkpoint.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-maintenance-checkpoint-CPU-verifier-proposal-20261017/verify_maintenance_checkpoint.py",
+      "sha256": "7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead",
+      "bytes": 33521,
+      "identity": {
+        "device": 2304,
+        "inode": 80617333,
+        "bytes": 33521,
+        "mtime_ns": 1792221496029581201,
+        "ctime_ns": 1792221722145414918,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json",
+      "sha256": "e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50",
+      "bytes": 764,
+      "identity": {
+        "device": 2304,
+        "inode": 84803605,
+        "bytes": 764,
+        "mtime_ns": 1792254423401979979,
+        "ctime_ns": 1792254423401979979,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/preparation-manifest.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/preparation-manifest.json",
+      "sha256": "a7e17fcb1c4258b73a94019975860ccfbdfa53430b6334eea1e872ff66f38c46",
+      "bytes": 3448,
+      "identity": {
+        "device": 2304,
+        "inode": 84803613,
+        "bytes": 3448,
+        "mtime_ns": 1792254602823469772,
+        "ctime_ns": 1792254602823469772,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-batch2048-owned-lifecycle-minimal-blueprint-20261017/blueprint.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-batch2048-owned-lifecycle-minimal-blueprint-20261017/blueprint.json",
+      "sha256": "f4d4b2c4911fa0a879a02c07d7ca791e7e83a1d0c808a6601357b57014976dd7",
+      "bytes": 16226,
+      "identity": {
+        "device": 2304,
+        "inode": 81011276,
+        "bytes": 16226,
+        "mtime_ns": 1792254259031310026,
+        "ctime_ns": 1792254259031310026,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "actual_future_job": null,
+  "actual_producer": null,
+  "actual_checkpoint": null,
+  "actual_run_bindings": null,
+  "actual_numeric_execution": null
+}

@@ -1,0 +1,72 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/test_continuous_train_episode_boundaries_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/test_continuous_train_episode_boundaries_v4.py
+@@ -251,6 +251,18 @@
+         self.journal = self.ns['GameJournal'](directory, lives_start=3,
+             retire_after_game=True, continuous_train=continuous)
+         s.game_journal = self.journal
++        self.reset_lock_checks = []
++        actual_reset = self.buffer.reset_client_async
++        def reset_outside_journal(cid, **kwargs):
++            available = self.journal.lock.acquire(blocking=False)
++            if not available:
++                raise AssertionError('FIFO reset attempted while actual Journal.lock is held')
++            self.journal.lock.release()
++            self.reset_lock_checks.append(True)
++            return actual_reset(cid, **kwargs)
++        # Observe the actual server's call into its actual async method. This
++        # would fail before preserving-queue backpressure under Journal.lock.
++        self.buffer.reset_client_async = reset_outside_journal
+         self.sock = Socket()
+         self.boundary_evidence = []
+         real_boundary = s._confirmed_journal_boundary
+@@ -260,7 +272,21 @@
+             assert raw == json.dumps(row, allow_nan=False, separators=(',', ':')).encode()
+             assert json.loads(raw) == row
+             before = cs['game_uid']
++            queued_before = sum(item[0] == 'reset_client' for item in self.buffer.queue.queue)
+             real_boundary(cid, frame, cs, reason, row)
++            # Callback is still inside the old game's locked observe call.
++            # Local identity/history is already new; new Journal _begin/life
++            # processing has not run and preserving FIFO must not run here.
++            assert self.journal.active[cid]['finished'] is True
++            assert self.journal.active[cid]['game_uid'] == before
++            assert cs['game_uid'] != before and cs['deaths_this_game'] == 0
++            assert cs['last_state'] is cs['last_action'] is None
++            assert not cs['nstep']._deque and not cs['frame_history']
++            assert sum(item[0] == 'reset_client' for item in self.buffer.queue.queue) == queued_before
++            available = self.journal.lock.acquire(blocking=False)
++            if available:
++                self.journal.lock.release()
++            assert available is False
+             self.boundary_evidence.append((before, cs['game_uid'], dict(row), raw))
+         s._confirmed_journal_boundary = boundary
+ 
+@@ -341,6 +367,7 @@
+             self.assertEqual(h.rows('completed_clients.jsonl'), [])
+             self.assertFalse(h.cs['retire_after_game'])
+             self.assertEqual(h.boundary_evidence, [])  # positive classifier owns UID
++            self.assertEqual(h.reset_lock_checks, [True, True])
+             self.assertEqual([r['game_uid'] for r in h.rows('lives.jsonl')], [1, 2])
+             self.assertEqual([e[1][-1] for e in h.buffer.elites], [1, 2])
+             self.assertTrue(all(len(e[2]) == 2 for e in h.buffer.elites))
+@@ -367,6 +394,7 @@
+             self.assertEqual([(r['game_uid'], r['score'], r['deaths'], r['boundary_reason'])
+                 for r in rows], [(1, 0, 3, 'zero_score_restart'), (2, 0, 3, 'zero_score_restart')])
+             self.assertEqual([(b[0], b[1]) for b in h.boundary_evidence], [(1, 2), (2, 3)])
++            self.assertEqual(h.reset_lock_checks, [True, True])
+             self.assertEqual([r['game_uid'] for r in h.rows('lives.jsonl')], [1, 1, 1, 2, 2, 2])
+             self.assertEqual([r['life'] for r in h.rows('lives.jsonl')], [1, 2, 3, 1, 2, 3])
+             self.assertEqual(h.rows('completed_clients.jsonl'), [])
+@@ -393,6 +421,12 @@
+     def test_fifo_reset_separates_exact_old_and_new_episode_indices_without_clearing_ring(self):
+         with tempfile.TemporaryDirectory() as directory:
+             h = Harness(directory)
++            # Negative control: this collaborator must reject a reset attempt
++            # under the actual non-reentrant Journal.lock before enqueueing.
++            with h.journal.lock:
++                with self.assertRaisesRegex(AssertionError, 'Journal.lock'):
++                    h.buffer.reset_client_async(h.cid)
++            self.assertTrue(h.buffer.queue.empty())
+             s = np.array([1, 0]*3, dtype=np.float32)
+             h.buffer.step_async(s, (8, 8), 1.0, s, False, client_id=h.cid,
+                                 actor='dqn', horizon=1)

@@ -1,0 +1,12 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/physical-original192-context-engineering-original01-preparation/close_physical192_engineering_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/physical-original192-v4-cohort-engineering-original02-preparation/close_physical192_engineering_v2.py
+@@ -99,7 +99,8 @@
+                 and reviewed['main_health_profile']=='PHYSICAL_ORIGINAL192_TRAIN_CURRENT_TCP_EVAL_ORIGINAL_ONCE'
+                 and all(reviewed[k]is True for k in ('source_bound_original192_physical_bootstrap_verified',
+                     'TRAIN155_original_physical_and_current_TCP_verified','EVAL37_original_connection_and_strict_retirement_evidence_verified',
+-                    'EVAL_closed_slots_have_positive_normal0_reap_and_cleanup_verified'))
++                    'EVAL_closed_slots_have_positive_normal0_reap_and_cleanup_verified',
++                    'prior_completed_EVAL_prefix_and_current_suffix_verified'))
+                 and outcome['success']is True and outcome['error']is None
+                 and worker_terminal['ExecMainCode']=='1'and worker_terminal['ExecMainStatus']=='0',
+                 'Original long probe/raw replay did not pass')

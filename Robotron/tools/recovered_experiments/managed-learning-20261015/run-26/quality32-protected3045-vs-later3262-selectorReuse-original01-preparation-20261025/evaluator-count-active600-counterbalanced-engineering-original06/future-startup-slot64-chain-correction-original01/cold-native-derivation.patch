@@ -1,0 +1,235 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/B64/run_evaluator_count_active600_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/run_cold_slot64_prefix_v1.py
+@@ -1,10 +1,8 @@
+-"""UNSELECTED template: later-policy quality32 cohort with source-bound mixed main health.
+-
+-Fixed5400s admission/9000s timeout-from-enter, unchanged float32 compiled backend,
+-all32 original startup certificates and every admitted full tail. At least50
+-completed games are required in EACH leg. This native case never qualifies or
+-promotes a policy; separate independent per-leg and final four-leg review remain.
+-Main learning is supervised read-only. Default is inert.
++"""One original all64 compiled-GPU startup-prefix diagnostic; default is inert.
++
++Stop intentionally after all64 exact ROM1200/START/nonce/initialized-firstplay
++prefixes. Separate360s bounded scope; no active600/rate/full-tail/quality claim.
++Main192/197 and every owned-resource/health predicate remain fail-closed.
+ """
+ GAMES_PER_SLOT = 1
+ ACTOR_COUNT = 64
+@@ -23,15 +21,15 @@
+ import threading
+ import time
+ from types import SimpleNamespace
+-DIAGNOSTIC_SHA = '6dba28e854ae6c59254b94a927c7f32b508ba648b0df48123175ab6fdd722730'
++DIAGNOSTIC_SHA = 'c1804394a9da37aa0834083c594f8fa31a3e1c6b3126de66b835747ed8312cf3'
+ REFERENCE_SHA = 'b23152ece3bb614831a278fe0572c07433f1bee59c5accef5a1ab7d3007af883'
+ REFERENCE_CLOCKS = {'learner_frame_count': 3045860554, 'training_steps': 11995683, 'optimized_samples': 47558522880, 'frame_count': 5926701223}
+ HERE = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/startup_policy_journal_proposal')
+ G = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ BRIDGE_COMPONENTS = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/future-capacity64-shared-slot-domain-UNSELECTED-original01')
+ TIMING_SOURCE_SHA = '77b03507cc1826cbeee47ace7c08e256923f3252243c2adcd7a57dd832b9851b'
+-IMPLEMENTATION = 'B64'
+-CASE_NAMES = ('02-B1-capacity64', '03-B2-capacity64')
++IMPLEMENTATION = 'COLD64_PREFIX_ONLY'
++CASE_NAMES = ('cold-all64-prefix-only-original01',)
+ COMPONENTS = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/future-capacity64-shared-slot-domain-UNSELECTED-original01/runtime-family-original03/B64')
+ GPU = 'GPU-b549355c-78bb-53d8-04a6-da34d45e1dd0'
+ SLOTS = tuple(range(4096, 4096 + ACTOR_COUNT))
+@@ -39,7 +37,7 @@
+ LEASE = Path('/dev/shm/robotron-snapshot-smoke-gpu0.lock')
+ HEALTH_DEPENDENCIES = {'helpers': '2b6902933b502ac20dacbd444fbf786315d6c960fcad1d5b5bf223dd569708c1', 'health': '6124cd533852c4d531188a748eddf6c2b594c31eb9f2c781d80b6a0ed057a5df', 'supervision': '1f41d360fa23632cb26d6dee33d3c822bec7f9cf79fdbb75e47f3418059ca5f0', 'window': 'ef7b13fc39493b5986a77718263ee2e6b51147e6361cf40c90e733644c43428a', 'primitives': 'd2feaaffd0ab3a0d6b0b5dd06b9d27b3a6f853b6b1776733eba6f89fbe01ce1a', 'collector': 'de1f6d4aafe185d123d418766e94ca7f6c3aa709427ea8711118a56f6fa27b84', 'transport': '72edfb7c42106011e9551d59e1e43bba0ee8759b9e39402fd6b11dd4f5e7a0ad', 'io': '76f70f1bc8be17a70b8a95be9e6f7d01bf147ff7d38053e499eda21bc8bc0ec1', 'proc_repeat': 'cac772547eecc7269de4a5b4201eb5fb63e1a6463b425cae6f70558695d4c263', 'mixed_transport': '0a2c8251641fafc295e93c72deabae379422054d535e5e8aa591a88b44825378', 'full_health_engine': 'd67e696915762c66f3cb660d40f25ac11f0422e4e83b1d7fe35a8af0b1f9b72d', 'indexed_join': '10c1fe25c3f8b232ec5b32a51f649f626a71c6a7e7e56801b5440782fddd54ce'}
+ FINALIZER_SHA = '64c4001e3a46dd1f620bfa28b088f500bf8e9d3788a463d324cc408d7a42e6ee'
+-OBSERVER_DEPENDENCIES = {'client': '38c7d536301454aa99ead0c158dd63ee79ef0e2fb02d156603e87a05aaaea220', 'worker': '6c1d5421686a9bca126143fbf97d5fc5ce339e4da577345e66008e2ff0f0e5a5', 'protocol': '0ec8510b82783b6d47cad99ba63c59045f32e5b9acf6dbfa128b308f9641d2b9', 'controller': '12e479b0eb0545dab32da1d8f8130be3622670207c79ecaf0a164b812fa0ec5a', 'reviewer': '231ec7f56d70185a6c483495933683473f4bb2a4a04ed720303ece338a69d7be'}
++OBSERVER_DEPENDENCIES = {'client': 'b622b11e2afaea68f8ec932cec9009d799688bb75622d2fee321ea9032937df8', 'worker': '55a4160305bfee0d86b9b5029d5242c7a349a989e1377616cb0c7df07bc43c40', 'protocol': '0ec8510b82783b6d47cad99ba63c59045f32e5b9acf6dbfa128b308f9641d2b9', 'controller': '2b6cd5a25c66f99011621385616efad6adaaa792ef0eab28300ba18a0f6466c7', 'reviewer': 'c400a8d5b0d001b730c43a4ad6f839ae571c6421ce59f790ed737d376b07b999'}
+ PREFIX_VALIDATOR_SHA = '98c78c2fcb05e4a7373b65d6f10ca98197b35ce75cf9b0698af4929d46ad4e5a'
+ 
+ def require(value, message):
+@@ -59,15 +57,16 @@
+     return load('_compiled32_original_helper_defs', path)
+ 
+ def validate_job(job, *, cpu_initializer=False):
++    require(job['runtime']['path'] == str(Path(__file__).resolve()) and job['runtime']['sha256'] == hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), 'Actual cold runtime identity differs from job')
+     chain_path = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/startup_slot64_chain_v1.py')
+     require(hashlib.sha256(chain_path.read_bytes()).hexdigest() == '8d55787af32e4b9b348d7078ec553f6c4368a6e6ebb87a32666c93223dbce936', "Actual nested Lua chain guard changed")
+     load("_actual_startup_slot64_chain", chain_path).validate_job(job)
+     require(type(cpu_initializer) is bool and job.get('initializer_fixture_only') is cpu_initializer, 'Explicit CPU-only fixture mode or native-job mode required')
+     require(job.get('capacity_shape') == dict(actor_count=ACTOR_COUNT, games_per_slot=GAMES_PER_SLOT, expected_games=64, identity_count=2 * ACTOR_COUNT, inference_max_batch_size=16), 'Exact evaluator geometry required')
+-    require(job['schema'] == 'robotron-evaluator-count-active600-engineering-v1' and job['diagnostic_role'] == 'timing_load_only' and (job['diagnostic_only'] is True), 'This runtime is a startup/monitor diagnostic, never a quality leg')
++    require(job['schema'] == 'robotron-cold-all64-startup-prefix-original-v1' and job['diagnostic_role'] == 'cold_all64_startup_prefix_only' and (job['diagnostic_only'] is True), 'This runtime is a startup/monitor diagnostic, never a quality leg')
+     require(not any((key in job for key in ('quality_leg', 'quality_pair_precommit', 'minimum_completed_games'))), 'No failed scientific cohort/candidate adoption')
+     require(job['diagnostic_precommit']['sha256'] == DIAGNOSTIC_SHA and job['checkpoint']['sha256'] == REFERENCE_SHA and (job['expected_policy_clocks'] == REFERENCE_CLOCKS), 'Exact protected reference/precommit required')
+-    require(job['actor_slots'] == list(SLOTS) and job['startup_trace_frames'] == 1200 and (job['origin_port'] == 19998) and (job['proxy_ports'] == {str(k): v for k, v in PORTS.items()}) and (job['device'] == 'cuda') and (job['backend'] == 'inductor') and (job['gpu_uuid'] == GPU) and (job['cpu_threads'] == 2) and (job['admission_s'] == 21540) and (job['whole_cohort_timeout_s'] == 21600) and (type(job['wall_limit_s']) is int) and (job['wall_limit_s'] == 960), 'Exact bounded startup-only scope required')
++    require(job['actor_slots'] == list(SLOTS) and job['startup_trace_frames'] == 1200 and (job['origin_port'] == 19998) and (job['proxy_ports'] == {str(k): v for k, v in PORTS.items()}) and (job['device'] == 'cuda') and (job['backend'] == 'inductor') and (job['gpu_uuid'] == GPU) and (job['cpu_threads'] == 2) and (job['admission_s'] == 21540) and (job['whole_cohort_timeout_s'] == 21600) and (type(job['wall_limit_s']) is int) and (job['wall_limit_s'] == 360), 'Exact bounded startup-only scope required')
+     require(job['source_package']['sha256'] == '9c9d513328fb8f82427217b2bb2844d73226b3814de34905e28808a93496532e' and job['validated_CPU_prefix']['sha256'] == '7d0cc6f960626fef0b9c0a6c40f68f9dcb55fa98d351c6b25111792156cdb647', 'Original common compiled backend/certified prefix required')
+     require(all((type(job[key]) is int for key in ('admission_s', 'whole_cohort_timeout_s', 'startup_trace_frames', 'origin_port', 'cpu_threads'))) and all((type(value) is int for value in job['proxy_ports'].values())), 'Exact integer quota64 engineering limits required')
+     expected_quota_sources = dict(view='2e8d0aa660686875a87c8d44f5978b9dcfb60d07ac179080724f760e4ccc01fd', drain='276cdd70e380ec64d414168258e43c7dce05a10110010e8d3ed536ac7c50515b', bridge='af47c3dac80cc3888023e5ce8fb62b4b0934fab1df7576719adad4ef373832ca')
+@@ -225,7 +224,7 @@
+ def validate_main_health_contract(job, protocol, family):
+     require(protocol['schema'] == 'robotron-native-quota64-API-epoch-reference600-main-health-protocol-v1' and protocol['health_job']['binding'] == job['main_binding'] and (family['runtime'] == job['runtime']) and (set(protocol['health_job']['sources']) == set(HEALTH_DEPENDENCIES)) and all((protocol['health_job']['sources'][key]['sha256'] == sha for key, sha in HEALTH_DEPENDENCIES.items())) and (family['main_prefix_validator']['sha256'] == PREFIX_VALIDATOR_SHA) and (family['main_health_finalizer']['sha256'] == FINALIZER_SHA) and (set(family['main_observer']) == set(OBSERVER_DEPENDENCIES)) and all((family['main_observer'][key]['sha256'] == sha for key, sha in OBSERVER_DEPENDENCIES.items())), 'Exact prospective main-health engine/dependencies/family/binding required')
+ 
+-def prepare_actor_resources(*, job, output, server, h, seed, bridge, BoundedWitness, bridge_stop, policy_reader, admission, parse_frame_data, drain_reader, actors, streams, errors):
++def prepare_actor_resources(*, job, output, server, h, seed, bridge, BoundedWitness, bridge_stop, policy_reader, admission, parse_frame_data, drain_reader, actors, streams, errors, failure_events=None, intentional_cleanup=None):
+     for slot in SLOTS:
+         private = output / 'actors' / str(slot)
+         private.mkdir(mode=448)
+@@ -256,11 +255,74 @@
+                 with listener.accept()[0] as peer, socket.create_connection(('127.0.0.1', 19998), timeout=5) as origin:
+                     proxy.serve(peer, origin)
+             except Exception as error:
+-                errors.append('Original slot' + str(slot) + ': ' + repr(error))
++                message = 'Original slot' + str(slot) + ': ' + repr(error)
++                if failure_events is not None:
++                    cleanup_observed = intentional_cleanup is not None and intentional_cleanup.is_set()
++                    failure_events.append(dict(slot=slot, error=repr(error), message=message, intentional_cleanup_observed=cleanup_observed, observed_monotonic_ns=time.monotonic_ns()))
++                errors.append(message)
+         worker = threading.Thread(target=serve, name='compiled32-proxy-' + str(slot), daemon=True)
+         actors[slot] = dict(private=private, proxy=proxy, listener=listener, worker=worker, child=None, birth=None, boot_restore=restored, trace_identity=trace_identity, lifecycle_identity=lifecycle_identity, witness_writer=witness_writer, worker_started=False)
+         with (private / 'boot.lua').open('x') as stream:
+             stream.write('local ok,err=pcall(function() assert(loadfile(' + json.dumps(job['lua']['path']) + '))() end)\nif not ok then print("COMPILED32_FULL_TAIL_FATAL "..tostring(err));manager.machine:exit() end\n')
++
++def cold_prefixes_ready(actors):
++    return set(actors) == set(SLOTS) and all(row['proxy'].prefix_verified.is_set() and row['proxy'].sequence > 1200 for row in actors.values())
++
++def prefix_only_marker(actors, *, policy, boundary, admission, started_monotonic_s, observed_monotonic_s, observed_unix_s):
++    require(set(actors) == set(SLOTS) and len(actors) == 64, 'Every original cold64 slot required')
++    require(0 < observed_monotonic_s - started_monotonic_s < 300, 'Cold prefix startup duration differs')
++    require(boundary['ready'] is True and boundary['clients'] == 64 and boundary['actor_slots'] == list(SLOTS), 'All64 actual admission boundary required')
++    require(admission is not None and admission['generation'] > 0, 'Original fixed admission missing')
++    require(boundary['expected'] == boundary['acknowledged'] == 64 and boundary['pending_client_ids'] == [] and boundary['replay_pending_client_ids'] == [] and boundary['active'] is True and boundary['requested_generation'] == boundary['generation'] == admission['generation'], 'All64 original generation acknowledgements required')
++    prefixes, subjects, nonces = {}, {}, []
++    for slot, row in actors.items():
++        proxy = row['proxy']
++        require(proxy.prefix_verified.is_set() and proxy.sequence > 1200 and proxy.error is None and proxy.handoff is not None, 'Uncertified original prefix')
++        summary = proxy.prefix_summary
++        footer = summary['footer']
++        require(summary['dense_prefix_frames'] == 1200 and summary['continues_after_prefix'] is True
++            and footer['slot'] == slot and footer['reason'] == 'prefix_complete'
++            and footer['sequence'] == footer['frame_limit'] == 1200
++            and footer['failed'] is footer['machine_exit_requested'] is False,
++            'Original ROM1200 prefix footer differs')
++        require(footer['initialized_sequence'] > 0 and 0 <= footer['gate_sequence'] <= footer['setup_sequence'] <= footer['initialized_sequence']
++            <= footer['latched_sequence'] < footer['first_play_sequence'] <= 1200,
++            'Original accepted START/initialized-firstplay order differs')
++        nonce = proxy.issuer.nonce
++        require(type(nonce) is str and len(nonce) == 64 and nonce != '0' * 64
++            and all(c in '0123456789abcdef' for c in nonce), 'Original authorization nonce missing')
++        nonces.append(nonce)
++        require(row['child'] is not None and row['child'].poll() is None and row['birth'] > 0, 'Original actor must still be live before intentional stop')
++        prefixes[str(slot)] = summary
++        subjects[str(slot)] = dict(pid=row['child'].pid, birth=row['birth'], nonce=nonce,
++                                   handoff=proxy.handoff, sequence=proxy.sequence)
++    require(len(set(nonces)) == 64, 'Original nonce reused across slots')
++    return dict(schema='robotron-cold-all64-prefix-only-stop-v1',
++        reason='PRECOMMITTED_ALL64_COLD_STARTUP_PREFIX_ONLY_STOP',
++        observed_unix_s=observed_unix_s, observed_monotonic_s=observed_monotonic_s,
++        original_started_monotonic_s=started_monotonic_s, prefixes=prefixes, subjects=subjects,
++        policy=policy, boundary=boundary, fixed_admission=admission,
++        all64_prefixes_certified=True, no_active600_window=True, quality_qualified=False,
++        throughput_gain_verified=False, learning_speed_gain_verified=False)
++
++def begin_intentional_prefix_cleanup(server, marker_pin, errors, cleanup_event):
++    before_ns = time.monotonic_ns()
++    prior_errors = list(errors)
++    prior_inference_error = server.inference_only_error
++    prior_shutdown = server.shutdown_event.is_set()
++    # The original prefix success is already sealed. Announce intentional
++    # teardown before causing any owned actor EOF; never alter the server hook.
++    cleanup_event.set()
++    declared_ns = time.monotonic_ns()
++    server.shutdown_event.set()
++    after_ns = time.monotonic_ns()
++    return dict(schema='robotron-cold-prefix-intentional-cleanup-boundary-v1',
++        original_prefix_marker=marker_pin, begin_monotonic_ns=before_ns,
++        declaration_complete_monotonic_ns=declared_ns,
++        after_flags_monotonic_ns=after_ns, errors_before_intentional_cleanup=prior_errors,
++        inference_error_before_intentional_cleanup=prior_inference_error,
++        shutdown_already_set=prior_shutdown, shutdown_set_before_owned_signals=server.shutdown_event.is_set(),
++        intentional_cleanup_flag_set=cleanup_event.is_set(), before_first_owned_actor_signal=True)
+ 
+ def run(job, jp, h, *, cpu_initializer=False):
+     output = validate_job(job, cpu_initializer=cpu_initializer)
+@@ -279,6 +341,9 @@
+     stopped = threading.Event()
+     bridge_stop = threading.Event()
+     errors = []
++    private_failure_events = []
++    intentional_cleanup = threading.Event()
++    prefix_cleanup_boundary_pin = None
+     actors = {}
+     streams = []
+     health_stop = threading.Event()
+@@ -307,6 +372,7 @@
+     child_reap = None
+     all_threads_stopped = False
+     timing_api = selector_timing = selector_timing_report = active_start = active_end = active_rate_report = None
++    prefix_marker = prefix_marker_pin = None
+     started = time.monotonic()
+     deadline = started + job['wall_limit_s']
+     previous = {sig: signal.signal(sig, lambda *_: stopped.set()) for sig in (signal.SIGTERM, signal.SIGINT)}
+@@ -458,7 +524,7 @@
+         while not server.running:
+             require(server_worker.is_alive() and time.monotonic() < ready_end, 'Original compiled origin failed to bind')
+             time.sleep(0.01)
+-        prepare_actor_resources(job=job, output=output, server=server, h=h, seed=seed, bridge=bridge, BoundedWitness=BoundedWitness, bridge_stop=bridge_stop, policy_reader=policy_reader, admission=admission, parse_frame_data=parse_frame_data, drain_reader=drain_reader, actors=actors, streams=streams, errors=errors)
++        prepare_actor_resources(job=job, output=output, server=server, h=h, seed=seed, bridge=bridge, BoundedWitness=BoundedWitness, bridge_stop=bridge_stop, policy_reader=policy_reader, admission=admission, parse_frame_data=parse_frame_data, drain_reader=drain_reader, actors=actors, streams=streams, errors=errors, failure_events=private_failure_events, intentional_cleanup=intentional_cleanup)
+         for slot, row in actors.items():
+             require(not stopped.is_set() and time.monotonic() < deadline, 'Interrupted during original fleet launch')
+             row['worker'].start()
+@@ -487,20 +553,21 @@
+                     require(process_birth(child.pid) == row['birth'], 'Original actor birth changed')
+                 else:
+                     require(child.returncode == 0 and row['proxy'].stop_sent.is_set(), 'Original actor exited nonzero or before host-authorized drain')
+-            prefixes_ready = len(actors) == ACTOR_COUNT and all((row['proxy'].prefix_verified.is_set() for row in actors.values()))
+-            if active_start is None:
+-                if prefixes_ready and fixed_window is not None and boundary(controller.generation)['ready']:
+-                    active_start = timing_api.active_endpoint(actors)
+-                    h.put(output / 'original-active-start.json', active_start)
+-                else:
+-                    require(time.monotonic() - started < 300, 'Original active32 anchor not established within300s')
+-            if active_start is not None and time.monotonic_ns() - active_start['midpoint_monotonic_ns'] >= 600000000000:
+-                active_end = timing_api.active_endpoint(actors)
+-                rates = timing_api.window_rates(active_start, active_end)
+-                require(rates['midpoint_elapsed_s'] >= 600, 'Original active window shortened')
+-                active_rate_report = h.put(output / 'original-active-frame-rate.json', rates)
+-                h.put(output / 'original-all-slots-prefix-diagnostic-stop.json', dict(reason='PRECOMMITTED_ACTIVE600_SELECTOR_LOAD_STOP', active_rate_report=active_rate_report, observed_unix_s=time.time(), observed_monotonic_s=time.monotonic(), prefixes={str(slot): row['proxy'].prefix_summary for slot, row in actors.items()}, quality_qualified=False))
+-                raise ValueError('PRECOMMITTED_ACTIVE600_SELECTOR_LOAD_STOP_NOT_A_QUALITY_RESULT')
++            prefixes_ready = cold_prefixes_ready(actors)
++            require(time.monotonic() - started < 300, 'Original all64 cold startup prefix not certified within300s')
++            if prefixes_ready and fixed_window is not None and boundary(controller.generation)['ready']:
++                policy_after = policy_reader()
++                require(policy_after == policy_before and actor.compile_report == compile_before, 'Actual prefix policy/clocks/graphs changed')
++                require(not errors and server.inference_only_error is None and server.running, 'Runtime fault before intentional prefix stop')
++                prefix_marker = prefix_only_marker(actors, policy=policy_before,
++                    boundary=boundary(controller.generation), admission=fixed_window,
++                    started_monotonic_s=started, observed_monotonic_s=time.monotonic(),
++                    observed_unix_s=time.time())
++                require(not errors and server.inference_only_error is None and server.running, 'Runtime fault during prefix stop proof')
++                prefix_marker['runtime_errors_before_intentional_stop'] = []
++                prefix_marker['server_inference_error_before_intentional_stop'] = None
++                prefix_marker_pin = h.put(output / 'original-all64-startup-prefix-only-stop.json', prefix_marker)
++                raise ValueError('PRECOMMITTED_ALL64_COLD_STARTUP_PREFIX_ONLY_STOP_NOT_A_QUALITY_RESULT')
+             status = controller.tick()
+             require(status['valid'] is not False, 'Original complete-cohort controller invalidated: ' + str(status['reason']))
+             window_value = admission()
+@@ -560,6 +627,12 @@
+     except Exception as error:
+         errors.append(repr(error))
+     finally:
++        if prefix_marker_pin is not None:
++            try:
++                cleanup_boundary = begin_intentional_prefix_cleanup(server, prefix_marker_pin, errors, intentional_cleanup)
++                prefix_cleanup_boundary_pin = h.put(output / 'original-intentional-prefix-cleanup-boundary.json', cleanup_boundary)
++            except Exception as error:
++                errors.append('Original intentional prefix cleanup boundary: ' + repr(error))
+         for slot, row in actors.items():
+             child = row['child']
+             if child is not None and child.poll() is None:
+@@ -670,7 +743,7 @@
+             errors.append('Original private lease cleanup: ' + repr(error))
+     complete = bool(not errors and len(actual_slots) == ACTOR_COUNT and (policy_before == policy_after) and (policy_after is not None) and source_unchanged and released and (main_guard_report is not None) and (main_initial_readiness is not None) and main_guard.scope_complete and (main_guard.lifecycle is not None))
+     require(not complete, 'Startup-only diagnostic must not reach quality-complete branch')
+-    result = h.put(output / 'result.json', dict(schema='robotron-evaluator-count-active600-engineering-result-v1', status='IMPOSSIBLE_STARTUP_DIAGNOSTIC_QUALITY_COMPLETE' if complete else 'ORIGINAL_RAM_LIVE_FILTERED_REFERENCE_LOAD_STOPPED_NO_QUALITY', complete=complete, errors=errors, original_attempt=1, no_retry=True, original_slots=actual_slots, diagnostic_role=job['diagnostic_role'], diagnostic_precommit=job['diagnostic_precommit'], diagnostic_only=True, quota64_source_pins=job['quota64_source_pins'], cohort_selection=None if policy_before is None else policy_before['cohort_selection'], expected_policy_clocks=job['expected_policy_clocks'], quality_game_count_requirement_not_applicable_to_this_diagnostic=True, policy_before=policy_before, policy_after=policy_after, acquired_checkpoint=acquisition, selector_call_timing=selector_timing_report, active_start=active_start, active_end=active_end, active_frame_rate=active_rate_report, engineering_case=job['engineering_case'], engineering_implementation=job['engineering_implementation'], before_intentional_stop=before_stop, after_intentional_stop=after_stop, controller_exit=controller_exit, drain_identifier=drain_identifier, drain_payload=drain_payload, journal=journal, main_samples=main_samples, main_observation_failures=main_failures, main_health_report=main_guard_report, main_health_failure=main_guard_failure, initial_main_readiness=main_initial_readiness, main_health_protocol=job['main_health_protocol'], source_family_manifest=job['source_family_manifest'], main_observer_lifecycle=None if main_guard is None else main_guard.lifecycle, native_started_monotonic_s=started, native_deadline_monotonic_s=deadline, original_unsealed_journal_paths=unsealed_journal, original_post_origin_child_reap=child_reap, all_original_threads_stopped=all_threads_stopped, lease=lease_entry, original_lease_released=released, socket_wait_library=library_entry, immutable_inputs_unchanged=source_unchanged, quality_qualified=False, full_game_score_verified=False, learning_speed_gain_verified=False, main_runtime_changed=False, promotion_gates_changed=False, startup_protocol_changed_from_legacy=True, limitations='Protected-reference-only observer runtime integration/load diagnostic. All32 startup prefixes and at least600s native wall are required for positive load coverage. It intentionally stops unfinished games; no score, cohort, policy, learning-speed or useful-throughput qualification is possible. Every original health gate and failed-case result is preserved.'))
++    result = h.put(output / 'result.json', dict(schema='robotron-cold-all64-startup-prefix-result-v1', status='ORIGINAL_COLD_ALL64_PREFIX_STOPPED_NO_QUALITY' if prefix_marker_pin is not None else 'ORIGINAL_COLD_ALL64_PREFIX_FAILED_NO_RETRY', complete=complete, errors=errors, original_attempt=1, no_retry=True, original_slots=actual_slots, diagnostic_role=job['diagnostic_role'], diagnostic_precommit=job['diagnostic_precommit'], diagnostic_only=True, quota64_source_pins=job['quota64_source_pins'], cohort_selection=None if policy_before is None else policy_before['cohort_selection'], expected_policy_clocks=job['expected_policy_clocks'], quality_game_count_requirement_not_applicable_to_this_diagnostic=True, policy_before=policy_before, policy_after=policy_after, acquired_checkpoint=acquisition, selector_call_timing=selector_timing_report, active_start=active_start, active_end=active_end, active_frame_rate=active_rate_report, cold_prefix_marker=prefix_marker_pin, prefix_cleanup_boundary=prefix_cleanup_boundary_pin, private_failure_events=private_failure_events, engineering_case=job['engineering_case'], engineering_implementation=job['engineering_implementation'], before_intentional_stop=before_stop, after_intentional_stop=after_stop, controller_exit=controller_exit, drain_identifier=drain_identifier, drain_payload=drain_payload, journal=journal, main_samples=main_samples, main_observation_failures=main_failures, main_health_report=main_guard_report, main_health_failure=main_guard_failure, initial_main_readiness=main_initial_readiness, main_health_protocol=job['main_health_protocol'], source_family_manifest=job['source_family_manifest'], main_observer_lifecycle=None if main_guard is None else main_guard.lifecycle, native_started_monotonic_s=started, native_deadline_monotonic_s=deadline, original_unsealed_journal_paths=unsealed_journal, original_post_origin_child_reap=child_reap, all_original_threads_stopped=all_threads_stopped, lease=lease_entry, original_lease_released=released, socket_wait_library=library_entry, immutable_inputs_unchanged=source_unchanged, quality_qualified=False, full_game_score_verified=False, learning_speed_gain_verified=False, main_runtime_changed=False, promotion_gates_changed=False, startup_protocol_changed_from_legacy=True, limitations='One protected-reference-only all64 cold startup prefix diagnostic. All64 original1200-pair ROM/START/nonce/initialized-firstplay prefixes must certify within300s; nativewall360s with separate420s durablewatchdog. Intentionally unfinished games/exit1/cleanup diagnostics retained. No active600, rate, full-tail quality, policy, learning-speed or useful-training-throughput qualification.'))
+     print(json.dumps(dict(result=result, complete=complete)), flush=True)
+     return 0 if complete else 1
+ 

@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/stop-sources/control_current227_rescue_scope_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/preview-flags-preserveRAM-trainer-restart-original01/stop-sources/control_current192_rescue_scope_v1.py
+@@ -54,7 +54,7 @@
+     require(set(c)=={'unit','output','argv','properties','pins','observation_s'},
+             'Use the existing exact audit config; omit result_path and expected_tests')
+     require(re.fullmatch(r'robotron-[A-Za-z0-9_-]+\.service',c['unit']), 'Exact audit service name required')
+-    require(c['unit']=='robotron-scorecarry-current227-preserve-original01-20261027-rescue.service', 'Exact current continuation rescue unit required')
++    require(c['unit']=='robotron-scorecarry-previewflags-preserveRAM-original01-20261027-rescue.service', 'Exact current continuation rescue unit required')
+     props=dict(x.split('=',1) for x in c['properties'])
+     require(len(props)==len(c['properties']) and props.get('CPUQuota')=='200%' and
+         props.get('MemoryMax')=='4G' and props.get('RuntimeMaxSec')=='2200' and

@@ -1,0 +1,40 @@
+--- socket_server_continuous_train_candidate_v2.py
++++ socket_server_continuous_train_candidate_v3.py
+@@ -1349,7 +1349,7 @@
+             cs["measurement_generation"] = generation
+         return active
+ 
+-    def _reset_new_game_replay_segment(self, cid, cs, current_score):
++    def _reset_new_game_replay_segment(self, cid, cs, current_score, *, enqueue=True):
+         """Isolate a genuine accepted game reset, without inventing a death.
+ 
+         A missed terminal leaves an incomplete life: discard its uncertain
+@@ -1369,7 +1369,7 @@
+         cs["ep_t0"] = time.time()
+         cs["last_game_score"] = int(current_score)
+         cs["last_clear_frame"] = -1
+-        if self.async_buffer is not None:
++        if self.async_buffer is not None and enqueue:
+             # Same producer FIFO: old steps/elite finish before this reset;
+             # any new-game replay follows it. Stored rows/banks are retained.
+             self.async_buffer.reset_client_async(cid)
+@@ -1477,7 +1477,9 @@
+             self._game_uid_seq += 1
+             cs["game_uid"] = self._game_uid_seq
+             cs["deaths_this_game"] = 0
+-        self._reset_new_game_replay_segment(cid,cs,frame.game_score)
++        # Local history/UID must be ready before new journal/life rows.
++        # Defer preserving FIFO enqueue until Journal.observe releases its lock.
++        self._reset_new_game_replay_segment(cid,cs,frame.game_score,enqueue=False)
+         cs["_journal_boundary_reset"] = True
+ 
+     def _journal_observe(self, cid, frame, cs, new_game, boundary_inputs=None):
+@@ -2376,6 +2378,8 @@
+                 if cs.pop("_journal_boundary_reset",False):
+                     # The confirmed zero boundary cleared the old history after
+                     # the first stack build. Rebuild before any new replay.
++                    if self.async_buffer is not None:
++                        self.async_buffer.reset_client_async(cid)
+                     model_state = self._stack_model_state(cs,single_state)
+ 
+                 if _response_trace is not None: _response_trace.mark("metrics_aggregate")

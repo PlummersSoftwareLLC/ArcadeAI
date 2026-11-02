@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_reviewed2_proposal/root_quality_carrier.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/root_quality_carrier.py
+@@ -29,7 +29,7 @@
+ GPU0='GPU-b549355c-78bb-53d8-04a6-da34d45e1dd0'
+ GPU1='GPU-c0c5d295-6f07-aab5-bbde-b592ea426ec1'
+ BINDINGS_SOURCE=Path(__file__).with_name('quality_bindings.py')
+-BINDINGS_SHA='ecbe6ae896172ae7d44130de0004df7f25f33544b421106cdc325daa78f8cc59'
++BINDINGS_SHA='2396f8247143945b6ea70dcfff2684f709f5092ee4c775822d7f47f9f4cae176'
+ 
+ 
+ def require(ok,message):

@@ -1,0 +1,332 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/continuous-context-preparation-original01/prepare_continuous_static192_case_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/prepare_physical_original192_case_v2.py
+@@ -15,12 +15,18 @@
+ import stat
+ 
+ HERE = Path(__file__).resolve().parent
+-MODE_ROOT = HERE.parent.parent
+-HC = MODE_ROOT/'health-consumer-original01'
+-PROFILE = MODE_ROOT/'private-static-profile-consumers-original01/static_profile_contract_v2.py'
+-REGISTRY_SHA = '2f3eddaf75ee3b9a875d0a621a63eeea7274eae3afa75bcceb309002233316d1'
++MODE_ROOT = HERE.parent
++HC = HERE
++PRIOR_CASE_SHA='43a8436e475dd671d9219537e301e95353dee0a5d423ab4acda77182586ce944'
++FAMILY_SHA='0effd7170f23dfac8ecd811c2df4b74435972b330bf74ba61913c530ce7a35b5'
++ANCHORS_SHA='5b49571bbf451b69b305372350a5246a98860d8bfe076df795050bee6f71a38d'
++WITNESS_READBACK_SHA='a12a6f3d22f570655b317f8dffa5d1a799dfdb46340f7cb3f998348ad3f35172'
++WITNESS_SOURCE_SHA='fe306753c9cbb20e715b76d60c116ef9ce47a768c1a1afe0b00c03eac02a095c'
++WITNESS_SELECTION_SHA='3326bf373b718adba2e09002d986a7a02ef6d1ef0acdc520976e818188a0eb50'
++EVAL_JOURNAL_DIRECTORY=str(MODE_ROOT/'handoff-preservation-original01/live-original01/startup-repair-original02/runtime')
++REGISTRY_SHA = '71fc044d7b3bbbfceba5ef23f69a6c741eeff5700176050c6cdbe9e4794bba69'
+ PROFILE_SHA = '5260662e651c6f26cde42bb04cde913dd51015658d071499b6966e661e6a451b'
+-MAP_SHA = '4629c151898362a71c3aa1f011c2088154c1cd69b9abc8959efdad79103c7410'
++MAP_SHA = 'ed8d6356a7ab12ef00824d4cfa25048ada2974d32e61cfc6e57f227c5dc68a80'
+ SUPERVISOR_SHA = '904b01f21fc1daf5268c56c64d13246c9cac0992bf6370c866f4f8b8fd382e03'
+ PARENT_SHA = '8956d405f84cab32bb4778b117726ebb30588e473680ca2b8c5c8df93102c814'
+ MODE = 'CONTINUOUS_TRAIN155_EVAL37_ONCE'
+@@ -113,181 +119,140 @@
+     return dict(sha256=value['sha256'], identity=value['identity'])
+ 
+ 
++def read_inventory(value, h):
++    require(value['identity']['mode']=='0o444','Immutable Root inventory metadata required')
++    path=h.checked(value)
++    require(path.stat().st_size<=LIMIT,'Bounded Root inventory/case required')
++    return json.loads(path.read_bytes())
++
++
++def validate_inventory(binding, h):
++    require(binding['schema']=='robotron-continuous-physical-original192-health-case-v2',
++            'New explicit original physical-cohort case required')
++    authority=read_inventory(binding['input_inventory_authority'],h)
++    require(authority['schema']=='robotron-root-continuous-static192-input-inventory-v1'
++            and authority['status']=='ROOT_SELECTED_EXACT_HELD_INPUTS'
++            and authority['mode']==MODE
++            and authority['source_authority']==binding['continuous']['source_authority']
++            and authority['inputs']==binding['inputs']
++            and type(authority['input_count'])is int and authority['input_count']==len(binding['inputs']),
++            'Exact actual physical-cohort held-input inventory required')
++    parent=read_inventory(authority['parent_case'],h)
++    require(parent['schema']=='robotron-round-main-health-case-v1' and len(parent['inputs'])==247,
++            'Explicit original historical247 ancestor required')
++    old,current=parent['inputs'],binding['inputs']
++    require(set(old)<=set(current),'A historical held-input path was dropped')
++    require(authority['replacements']=={p:dict(before=v,after=current[p])for p,v in old.items()if v!=current[p]}
++            and authority['added_inputs']=={p:v for p,v in current.items()if p not in old}
++            and binding['input_inventory_authority']['path']not in current,
++            'Every actual replacement/addition must be exact; no self-hash recursion')
++    return authority
++
++
+ def assemble(selection_path, selection_sha, expected_source_sha, output):
+-    own = small_pin(Path(__file__).resolve())
+-    require(own['sha256'] == expected_source_sha and own['identity']['mode'] == '0o444',
+-            'Explicit frozen preparer source required')
+-    selected = small_pin(selection_path)
+-    require(selected['sha256'] == selection_sha, 'Root selection SHA differs')
+-    choice = checked(selected)
+-    require(choice['schema'] == 'robotron-root-continuous-static192-case-assembly-selection-v1'
+-            and set(choice) == {'schema','supervisor_config','publisher_snapshot',
+-                'owner_API_capture','parent_case','extra_inputs'},
+-            'Exact explicit Root retained-metadata selection required')
+-    cfg = checked(choice['supervisor_config'])
+-    snapshot = checked(choice['publisher_snapshot'])
+-    capture = checked(choice['owner_API_capture'])
+-    parent = checked(choice['parent_case'])
+-    require(choice['parent_case']['sha256'] == PARENT_SHA
+-            and parent['schema'] == 'robotron-round-main-health-case-v1'
+-            and len(parent['inputs']) == 247, 'Exact normalized historical247 parent required')
+-    require(capture['schema'] == 'robotron-root-static192-owner-and-API-metadata-capture-v1',
+-            'Actual Root-owned metadata capture required')
+-    owners = checked(capture['owners']); api = checked(capture['baseline_API'])
+-    api_capture = checked(capture['baseline_API_capture'])
+-    api_raw = checked(capture['baseline_API'], raw=True)
+-    require(api_capture['value'] == api and api_capture['raw_wire'].encode() == api_raw
+-            and api_capture['sha256'] == capture['baseline_API']['sha256'],
+-            'Actual baseline raw/API capture joins differ')
+-    require(cfg['schema'] == 'robotron-continuous-training-supervisor-job-v1'
+-            and cfg['mode'] == MODE and cfg['original_attempt'] == 1 and type(cfg['original_attempt']) is int
+-            and cfg['no_retry'] is True and cfg['startup_s'] == 5
+-            and cfg['fault_cleanup_s'] == 10 and cfg['max_faults'] == 3
+-            and cfg['api_root'] == 'http://127.0.0.1:8771'
+-            and not (set(cfg['parent_environment']) & LITERAL_INPUT_KEYS),
+-            'Selected literal supervisor profile/INPUT keyword-disjoint contract differs')
+-    require(snapshot['schema'] == 'robotron-continuous-training-static192-snapshot-v2'
+-            and snapshot['mode'] == MODE and snapshot['errors'] == []
+-            and snapshot['trainer'] == cfg['trainer'] and snapshot['rolemap'] == cfg['rolemap']
+-            and snapshot['source_authority'] == cfg['source_authority']
+-            and snapshot['supervisor']['source']['sha256'] == SUPERVISOR_SHA
+-            and snapshot['supervisor']['unit'] == cfg['unit']
+-            and snapshot['initial_admission']['complete'] is True
+-            and snapshot['initial_admission']['slots_ever_bound'] == list(range(192))
+-            and set(snapshot['slots']) == SLOTS,
+-            'Actual retained admitted-original192 snapshot/owner/source differs')
+-    authority = checked(cfg['source_authority']); rolemap = checked(cfg['rolemap'])
+-    require(authority['schema'] == 'robotron-root-continuous-main-startup-qualified-v1'
+-            and authority['trainer'] == cfg['trainer'], 'Actual qualified startup authority differs')
+-    registry = load(HC/'continuous_static192_registry_v1.py', REGISTRY_SHA, '_static_case_registry')
+-    profile = load(PROFILE, PROFILE_SHA, '_static_case_inventory')
+-    membership_pin = snapshot['original_membership']
+-    membership = checked(membership_pin); original = membership['data']['original_slots']
+-    require(set(original) == SLOTS, 'Immutable exact original192 membership required')
+-    map_pin = small_pin(HC/'prospective-static192-eight-role-observer-source-map-v1.json')
+-    require(map_pin['sha256'] == MAP_SHA, 'Exact frozen static eight-role map required')
+-    source_map = checked(map_pin)['observer_sources']
+-    require(set(source_map) == {'client','worker','health','health_base','registry',
+-            'durability','control','interpreter'}, 'Exact eight logical observer roles required')
+-
+-    # Full-value source authority is separate from the inherited247 inventory.
+-    source_pins = authority['canonical_sources'] + [snapshot['supervisor']['source'], cfg['physical_helper']]
+-    source_pins += [v for key,v in source_map.items() if key != 'interpreter']
+-    source_pins += [small_pin(HC/'review_continuous_static192_observer_v1.py'), small_pin(PROFILE)]
+-    sources = {}
++    own=small_pin(Path(__file__).resolve())
++    require(own['sha256']==expected_source_sha and own['identity']['mode']=='0o444',
++            'Exact frozen Root-selected physical case preparer required')
++    selected=small_pin(selection_path);require(selected['sha256']==selection_sha,'Root selection SHA differs')
++    choice=checked(selected)
++    require(choice['schema']=='robotron-root-physical-original192-case-assembly-selection-v2'
++            and set(choice)=={'schema','prior_case','startup_authority','witness_anchors',
++                'witness_readback','extra_inputs'}, 'Exact explicit physical-cohort Root selection required')
++    require(choice['prior_case']['sha256']==PRIOR_CASE_SHA,'Only the retained original192 physical history is selected')
++    prior=checked(choice['prior_case']);require(prior['schema']=='robotron-continuous-static192-health-case-v1'
++            and len(prior['inputs'])==292,'Actual prior292-input physical history required; no old qualification adoption')
++    old_inventory=checked(prior['input_inventory_authority']);parent_pin=old_inventory['parent_case']
++    require(parent_pin['sha256']==PARENT_SHA,'Exact original normalized247 ancestor required')
++    parent=checked(parent_pin)
++    require(parent['schema']=='robotron-round-main-health-case-v1' and len(parent['inputs'])==247
++            and set(parent['inputs'])<=set(prior['inputs']),'Original247 domain was not retained')
++    require(choice['startup_authority']==prior['continuous']['source_authority'],
++            'Actual current startup/source authority changed')
++    authority=checked(choice['startup_authority']);anchors=checked(choice['witness_anchors'])
++    readback=checked(choice['witness_readback'])
++    require(choice['witness_anchors']['sha256']==ANCHORS_SHA
++            and choice['witness_readback']['sha256']==WITNESS_READBACK_SHA
++            and anchors['schema']=='robotron-original37-EVAL-pidfd-held-anchors-v1'
++            and anchors['all37_acquired_while_originals_live']is True,
++            'Actual held-before-exit37 witness/readback required')
++    witness=dict(selection=anchors['selection'],source=anchors['source'],anchors=choice['witness_anchors'],
++        output=str(Path(choice['witness_anchors']['path']).parent),holder=anchors['holder'])
++    require(witness['source']['sha256']==WITNESS_SOURCE_SHA and witness['selection']['sha256']==WITNESS_SELECTION_SHA,
++            'Exact actual37 keeper source/selection required')
++    checked(witness['source'],raw=True);checked(witness['selection'])
++    family_pin=small_pin(HC/'prepared-physical-original192-typed-health-and-observer-SOURCE-ONLY-NOT-QUALIFIED-v2.json')
++    map_pin=small_pin(HC/'prospective-physical192-eight-role-observer-source-map-v2.json')
++    require(family_pin['sha256']==FAMILY_SHA and map_pin['sha256']==MAP_SHA,
++            'Exact independently reviewed new physical source family/map required')
++    family=checked(family_pin);mapping=checked(map_pin)['observer_sources']
++    require(family['observer_sources']==mapping and len(mapping)==8,
++            'Exact source-bound physical eight-role map required')
++    source_pins=list(prior['continuous']['source_pins'])+authority['canonical_sources']+[prior['continuous']['supervisor']['source']]
++    source_pins += [v for k,v in mapping.items()if k!='interpreter']
++    source_pins += [family['observer_reviewer'],witness['source']]
++    sources={}
+     for value in source_pins:
+-        checked(value, raw=True, immutable=False)
+-        require(value['path'] not in sources or sources[value['path']] == value,
+-                'Conflicting selected source pins')
+-        sources[value['path']] = value
+-
+-    # Never read a large historical executable/model/ROM body in this preparer.
+-    # All unchanged full8 identities retain the already held historical digest.
+-    inputs = {}; unchanged = 0; refreshed = []
+-    explicit = list(choice['extra_inputs']) + cfg['inputs'] + list(sources.values())
+-    explicit += [choice[k] for k in ('supervisor_config','publisher_snapshot','owner_API_capture','parent_case')]
+-    explicit += [capture[k] for k in ('owners','baseline_API','baseline_API_capture')]
+-    explicit += [cfg['source_authority'],cfg['rolemap'],map_pin,membership_pin,
+-                 snapshot['initial_admission']['immutable_all192_barrier']]
+-    overrides = {}
++        checked(value,raw=True,immutable=False)
++        require(value['path']not in sources or sources[value['path']]==value,'Conflicting selected source authority')
++        sources[value['path']]=value
++    explicit=list(choice['extra_inputs'])+list(sources.values())
++    explicit += [selected,own,choice['prior_case'],choice['startup_authority'],choice['witness_anchors'],
++        choice['witness_readback'],witness['selection'],family_pin,map_pin]
++    explicit += [small_pin(HC/'independent-physical-original192-health-and-kernel-exit-consumer-source-peer-v1.json')]
++    overrides={}
+     for value in explicit:
+-        require(type(value) is dict and set(value) == {'path','sha256','bytes','identity'}
+-                and current(value['path']) == value['identity'] and value['bytes'] == value['identity']['bytes'],
+-                'Explicit held-input full8 identity differs')
+-        if value['bytes'] <= LIMIT:
+-            # General historical inputs may be root-owned executables; small_pin
+-            # checks full bytes without imposing event producer ownership/mode.
+-            require(small_pin(Path(value['path'])) == value, 'Explicit held-input SHA differs')
+-        require(value['path'] not in overrides or overrides[value['path']] == value,
+-                'Conflicting explicit held-input authority')
+-        overrides[value['path']] = value
+-    for path, old in parent['inputs'].items():
+-        now = current(path)
+-        if path in overrides:
+-            inputs[path] = thin(overrides[path])
+-        elif now == old['identity']:
+-            inputs[path] = old; unchanged += 1
++        require(set(value)=={'path','sha256','bytes','identity'} and current(value['path'])==value['identity']
++                and value['bytes']==value['identity']['bytes'],'Explicit held-input full8 identity differs')
++        if value['bytes']<=LIMIT:require(small_pin(Path(value['path']))==value,'Explicit held small-input fullSHA differs')
++        require(value['path']not in overrides or overrides[value['path']]==value,'Conflicting explicit held input')
++        overrides[value['path']]=value
++    inputs={};reused=0;refreshed=[]
++    for path,old in prior['inputs'].items():
++        actual=current(path)
++        if path in overrides:inputs[path]=thin(overrides[path])
++        elif actual==old['identity']:inputs[path]=old;reused+=1
+         else:
+-            require(now['bytes'] <= LIMIT, 'Changed large input lacks explicit Root fullpin: ' + path)
+-            inputs[path] = thin(small_pin(Path(path))); refreshed.append(path)
+-    for path,value in overrides.items():
+-        inputs[path] = thin(value)
+-    mame = parent['actor_executable']
+-    require(mame['path'] == '/usr/games/mame'
+-            and {k:v for k,v in current(mame['path']).items() if k != 'nlink'} == mame['identity'],
+-            'Historical literal MAME executable identity changed')
+-    input_env = {}
+-    generations = set()
+-    for slot,row in original.items():
+-        spawn = checked(row['spawn_intent'])
+-        input_env[slot] = spawn['data']['input_environment']
+-        generations.add(spawn['data']['policy']['measurement_generation'])
+-    require(len(generations) == 1, 'Original spawn policies cross measurement generations')
+-    recipe = {key:api[key] for key in ('lr','epsilon','expert_ratio')}
+-    require(all(type(v) in (int,float) and math.isfinite(v) and v >= 0 for v in recipe.values())
+-            and type(api['managed_experiment']) is str and api['managed_experiment'],
+-            'Nonempty actual baseline experiment/fixed finite recipe required')
+-    case = dict(schema=registry.CASE_SCHEMA, inputs=inputs,
+-        units=dict(trainer=cfg['trainer']['unit'], fleet=cfg['unit']), owners=owners,
+-        slot_eval=rolemap['slot_eval'], actor_environment=cfg['actor_common_environment'],
+-        actor_command=cfg['mame_argv'], actor_executable=mame,
+-        actor_affinity=owners['fleet']['process']['affinity'], recipe=recipe,
+-        exposure=api['host_pipeline']['learning_exposure'], round_root=cfg['output'],
+-        source_guard=str(HC/'continuous_static192_health_v1.py'), experiment=api['managed_experiment'],
+-        continuous=dict(mode=MODE,accepted_profile='STATIC_ORIGINAL192_NO_FAULT_ADOPTION',
+-            maximum_proof_gap_s=2.0,narrow_API_exception_TTL_s=.5,epoch=snapshot['epoch'],
+-            snapshot_path=str(Path(cfg['output'])/'status.json'),supervisor=snapshot['supervisor'],
+-            trainer=cfg['trainer'],server_stamp=cfg['trainer']['server_stamp'],rolemap=cfg['rolemap'],
+-            source_authority=cfg['source_authority'],source_pins=list(sources.values()),
+-            policy_generation=next(iter(generations)),
+-            initial_barrier=snapshot['initial_admission']['immutable_all192_barrier'],
+-            original_membership=membership_pin,original_slots=original,
+-            launch_argv=cfg['launch_argv'],input_environment_by_slot=input_env))
+-    registry.validate_case(case)  # Pure immutable metadata joins, no live census.
+-    for slot,compact in snapshot['slots'].items():
+-        row = registry.slot_view(case,slot,compact)
+-        registry.original(case,slot,row)
+-        if row['eval_only']:
+-            require(row['state'] in ('active_eval','retiring_eval','closed_eval'), 'EVAL fault/replacement refused')
+-            if row['state'] != 'active_eval':
+-                natural,result = registry.natural(case,slot,row)
+-                if row['state'] == 'closed_eval':
+-                    registry.closed(case,slot,row,natural,result)
+-        else:
+-            require(row['state'] == 'active_train' and row['natural_result'] is row['closure'] is None,
+-                    'TRAIN must remain its exact original active process')
+-    for path,value in inputs.items():
+-        require(current(path) == value['identity'], 'Held input changed during assembly: ' + path)
+-    require(output.is_absolute() and output.parent.resolve(strict=True) == HERE
+-            and not output.exists(), 'One exclusive case DATA output directory under preparer required')
++            require(actual['bytes']<=LIMIT,'Changed large historical input lacks explicit Root fullpin')
++            inputs[path]=thin(small_pin(Path(path)));refreshed.append(path)
++    for path,value in overrides.items():inputs[path]=thin(value)
++    case=json.loads(json.dumps(prior))
++    case.update(schema='robotron-continuous-physical-original192-health-case-v2',inputs=inputs,
++        source_guard=str(HC/'continuous_physical192_health_v2.py'))
++    case['continuous'].update(accepted_profile='PHYSICAL_ORIGINAL192_TRAIN_CURRENT_TCP_EVAL_ORIGINAL_ONCE',
++        source_pins=list(sources.values()),eval_journal_directory=EVAL_JOURNAL_DIRECTORY,eval_exit_witness=witness)
++    case.pop('input_inventory_authority')
++    registry=load(HC/'continuous_physical192_registry_v2.py',REGISTRY_SHA,'_physical_case_registry_v2')
++    registry.validate_case(case)  # Pure original bootstrap/source/keeper anchors; no current health claim.
++    for path,value in inputs.items():require(current(path)==value['identity'],'Held input changed during case assembly')
++    require(output.is_absolute()and output.parent.resolve(strict=True)==HERE and not output.exists(),
++            'One exclusive physical-case DATA directory under this preparer required')
+     output.mkdir(mode=0o700)
+-    inventory = dict(schema='robotron-root-continuous-static192-input-inventory-v1',
+-        status='ROOT_SELECTED_EXACT_HELD_INPUTS',mode=MODE,source_authority=cfg['source_authority'],
+-        inputs=inputs,input_count=len(inputs),parent_case=choice['parent_case'],
+-        replacements={p:dict(before=v,after=inputs[p]) for p,v in parent['inputs'].items() if v != inputs[p]},
+-        added_inputs={p:v for p,v in inputs.items() if p not in parent['inputs']})
+-    inventory_pin = put(output/'exact-held-input-inventory.json',inventory)
+-    case['input_inventory_authority'] = inventory_pin
++    inventory=dict(schema='robotron-root-continuous-static192-input-inventory-v1',
++        status='ROOT_SELECTED_EXACT_HELD_INPUTS',mode=MODE,source_authority=choice['startup_authority'],
++        inputs=inputs,input_count=len(inputs),parent_case=parent_pin,
++        replacements={p:dict(before=v,after=inputs[p])for p,v in parent['inputs'].items()if v!=inputs[p]},
++        added_inputs={p:v for p,v in inputs.items()if p not in parent['inputs']},
++        prior_typed_case_history=choice['prior_case'],all_prior292_paths_retained=set(prior['inputs'])<=set(inputs))
++    inventory_pin=put(output/'exact-held-input-inventory.json',inventory);case['input_inventory_authority']=inventory_pin
+     class Reader:
+         @staticmethod
+-        def checked(value):
+-            checked(value,raw=True)
+-            return Path(value['path'])
+-    profile.validate_inventory(case, Reader)
+-    case_pin = put(output/'continuous-main-case.json',case)
+-    return put(output/'prepared-actual-continuous-static192-case-NOT-QUALIFIED.json',dict(
+-        schema='robotron-root-continuous-static192-case-preparation-v1',status='DATA_PREPARED_NOT_QUALIFIED',
++        def checked(value):checked(value,raw=True);return Path(value['path'])
++    validate_inventory(case,Reader)
++    case_pin=put(output/'physical-original192-main-case.json',case)
++    return put(output/'prepared-physical-original192-case-NOT-QUALIFIED.json',dict(
++        schema='robotron-root-physical-original192-case-preparation-v2',status='DATA_PREPARED_NOT_QUALIFIED',
+         source=own,selection=selected,case=case_pin,input_inventory_authority=inventory_pin,
+-        selected_retained_evidence=choice,actual_held_input_count=len(inputs),historical_parent_input_count=247,
+-        unchanged_full8_historical_digest_reuses=unchanged,changed_small_input_full_SHA_refreshes=refreshed,
+-        no_historical_input_dropped=True,no_large_executable_model_ROM_or_array_body_read=True,
+-        admission_basis='EVER_BOUND_ORIGINAL192_NOT_SIMULTANEOUS',simultaneous192_claimed=False,
+-        actual_runtime_freshness_or_resources_qualified=False,static_context_engineering_qualified=False,
++        held_input_count=len(inputs),historical_round_ancestor_inputs=247,prior_typed_history_inputs=292,
++        all_prior247_and292_paths_retained=True,unchanged_full8_historical_digest_reuses=reused,
++        changed_small_input_full_SHA_refreshes=refreshed,original_EVAL_exit_witness=witness,
++        no_large_executable_model_ROM_or_array_body_read=True,
++        old_case_and_postbarrier_snapshot_used_only_for_immutable_physical_history=True,
++        current_TRAIN_TCP_and_keeper_heartbeat_and_future_exit_files_not_frozen_case_inputs=True,
++        actual_current_physical_health_or_resources_or_engineering_qualified=False,
+         scientific_launch_qualified=False,quality_qualified=False,main_runtime_changed=False,
+-        next_Root_only_prepare_argv=['/usr/bin/python3.12','-I','-B',
+-            str(MODE_ROOT/'new-static-context-engineering-original01-preparation/prepare_static192_engineering_v1.py'),
++        next_Root_only_prepare_argv=['/usr/bin/python3.12','-I','-B',str(MODE_ROOT/'physical-original192-context-engineering-original01-preparation/prepare_physical192_engineering_v1.py'),
+             '--prepare','--case',case_pin['path'],'--case-sha256',case_pin['sha256'],'--output',
+-            str(MODE_ROOT/'new-static-context-engineering-original01-preparation/actual-new-main-contexts-original01')]))
++            str(MODE_ROOT/'physical-original192-context-engineering-original01-preparation/actual-physical-contexts-original01')]))
+ 
+ 
+ def main():

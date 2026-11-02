@@ -1,0 +1,12 @@
+--- a/Robotron/Scripts/dqn/experiment_status.py
++++ b/Robotron/Scripts/dqn/experiment_status.py
+@@ -192,6 +192,9 @@
+ 
+     @staticmethod
+     def _comparison(plan, active, legs):
++        comparison = _text(active.get("comparison_label"))
++        if comparison:
++            return comparison
+         checkpoints = _mapping(plan.get("checkpoints"))
+         labels = []
+         for role in ("reference", "candidate"):

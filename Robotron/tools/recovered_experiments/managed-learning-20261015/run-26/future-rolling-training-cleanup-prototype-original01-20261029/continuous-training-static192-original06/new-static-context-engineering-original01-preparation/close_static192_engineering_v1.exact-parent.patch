@@ -1,0 +1,67 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-two-second-main-proof-contract-original01-preparation/engineering-contexts-original01-preparation/close_two_second_engineering_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/new-static-context-engineering-original01-preparation/close_static192_engineering_v1.py
+@@ -41,7 +41,7 @@
+     require(ip['sha256']==expected_sha,'Exact original engineering launch index required')
+     immutable=load('_reconnect_engineering_close_reader',ROOT/'tools/confirmed_game_boundary_proposal/protect_confirmed_winner_reviewed4.py')
+     def read(pin):return immutable.read_pin(pin)
+-    packet=read(ip);require(packet['schema']=='robotron-proof2s-two-original-engineering-launches-v1','Original launch index schema differs')
++    packet=read(ip);require(packet['schema']=='robotron-static192-three-original-engineering-launches-v1','Original launch index schema differs')
+     records=[row for row in packet['records']if row['kind']==kind and row['mode']==mode]
+     require(len(records)==1,'One exact original engineering scope required')
+     record=records[0];out=Path(record['output']);owner=read(record['original_live_owner']);intent=read(record['intent'])
+@@ -63,11 +63,13 @@
+             and report['private_policy_or_GPU_loaded']is report['main_runtime_changed']is report['quality_qualified']is False,
+             'Actual engineering result/domain differs')
+     require(report['scientific_launch_qualified']is False,'Engineering cannot qualify a scientific launch')
+-    require(report['proof_gap_contract']=='robotron-main-proof-gap-2s-v1'and report['maximum_gap_s']==2.0,'Exact prospective2s report required')
++    require(report['proof_gap_contract']=='robotron-main-proof-gap-2s-v1'and report['maximum_gap_s']==2.0
++            and report['main_health_profile']=='STATIC_ORIGINAL192_NO_FAULT_ADOPTION'
++            and report['simultaneous192_actors_claimed']is False,'Exact prospective static2s report required')
+     native=read(report['original_job']);require(native['main_binding']==intent['case'],'Original case binding differs')
+     lifecycle=read(report['observer_lifecycle']);worker=read(lifecycle['worker_job']);outcome=read(lifecycle['outcome'])
+     actual_worker=read(outcome['owner']);worker_terminal=read(lifecycle['terminal_properties'])
+-    require(worker['schema']=='robotron-round-observer-declared-launcher-proof2s-job-v1'and worker['maximum_gap_s']==2.0
++    require(worker['schema']=='robotron-continuous-static192-observer-proof2s-job-v1'and worker['maximum_gap_s']==2.0
+             and worker['interval_s']==.2 and worker['initial_samples']==100,'Exact prospective2s worker bounds required')
+     require(lifecycle['all_original_processes_reaped']is lifecycle['original_scope_released']is lifecycle['launcher_birth_absent']is True,
+             'Original worker/launcher did not positively close')
+@@ -81,12 +83,14 @@
+             'Original queued raw records did not all durably close')
+     release=read(outcome['control_release'])
+     require(release['directory_absent']is True and not Path(release['original']['path']).exists(),'Original tmpfs control remains')
+-    if mode=='long':
++    if mode in ('warmup','long'):
+         reviewed=report['independently_replayed_raw_review']
+-        require(reviewed['status']=='PASS'and reviewed['accepted_samples']>=3000
++        require(reviewed['status']=='PASS'and reviewed['accepted_samples']>=(3000 if mode=='long' else 101)
+                 and reviewed['queued_publication_byte_joins_verified']is reviewed['fresh_final_sample_verified']
+                 is reviewed['accepted_evidence_and_projection_gaps_verified']is True
+                 and reviewed['proof_gap_contract']=='robotron-main-proof-gap-2s-v1'and reviewed['verified_maximum_gap_s']==2.0
++                and reviewed['main_health_profile']=='STATIC_ORIGINAL192_NO_FAULT_ADOPTION'
++                and reviewed['TRAIN155_originals_and_EVAL37_once_partition_verified']is True
+                 and outcome['success']is True and outcome['error']is None
+                 and worker_terminal['ExecMainCode']=='1'and worker_terminal['ExecMainStatus']=='0',
+                 'Original long probe/raw replay did not pass')
+@@ -105,10 +109,10 @@
+     try:os.fchmod(fd,0o444);os.fsync(fd)
+     finally:os.close(fd)
+     return h.put(out/'independent-original-engineering-closeout.json',dict(
+-        schema='robotron-proof2s-original-engineering-closeout-v1',status='PASS_ENGINEERING_ONLY',
++        schema='robotron-static192-original-engineering-closeout-v1',status='PASS_ENGINEERING_ONLY',
+         kind=kind,mode=mode,launch_index=ip,original_live_owner=record['original_live_owner'],parent_terminal=terminal,
+         owned_stop=stop,released_properties=after,actual_probe_result=reportpin,worker_lifecycle=report['observer_lifecycle'],
+-        accepted_samples=len(outcome['samples']),unaccepted_samples=len(outcome['unaccepted']),worker_actual_exit=0 if mode=='long'else 1,
++        accepted_samples=len(outcome['samples']),unaccepted_samples=len(outcome['unaccepted']),worker_actual_exit=0 if mode in ('warmup','long')else 1,
+         original_parent_actual_exit=0,all_original_births_units_cgroups_and_tmpfs_control_absent=True,
+         actual_parent_CPU_cores=2,actual_parent_memory_bytes=4<<30,actual_parent_runtime_s=780,
+         source=h.pin(Path(__file__).resolve()),scientific_qualification=False,quality_qualified=False,promotion=False))
+@@ -116,7 +120,7 @@
+ 
+ if __name__=='__main__':
+     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--execute',action='store_true')
+-    parser.add_argument('--index',type=Path);parser.add_argument('--index-sha256');parser.add_argument('--kind',choices=('deadline','fullgame'))
+-    parser.add_argument('--mode',choices=('long','abort'));args=parser.parse_args()
++    parser.add_argument('--index',type=Path);parser.add_argument('--index-sha256');parser.add_argument('--kind',choices=('main-static192',))
++    parser.add_argument('--mode',choices=('warmup','long','abort'));args=parser.parse_args()
+     if args.execute:print(json.dumps(close(args.index,args.index_sha256,args.kind,args.mode)),flush=True)
+     else:print('PLAN_ONLY_NO_READS_OR_ACTIONS')

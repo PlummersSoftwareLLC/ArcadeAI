@@ -1,0 +1,336 @@
+{
+  "API": {
+    "job_fields_unchanged": 11,
+    "job_schema": "robotron-phase-snapshot-checkpoint-CPU-job-v1",
+    "original_strict_base_sha256_field": "Actual7d SHA, unchanged",
+    "result_provenance": "recipe_specialization records common recipe source PIN, selected five-key recipe, full held context, raw/effective source SHA/bytes and exact reversal; strict_phase_base remains honest raw source PIN",
+    "result_schema": "robotron-phase-snapshot-checkpoint-CPU-result-v1",
+    "selection": "Full source_control_context.held_recipe_context, exact shared recipe.from_held, CE only",
+    "strict_phase_base_sha256_field": "Actual raw9ef source-container SHA; execution specialization explicitly separate",
+    "verifier_sha256_field": "Actual new wrapper SHA; never old b2e"
+  },
+  "activation_authorized": false,
+  "actual_CPU_result": null,
+  "actual_job": null,
+  "actual_test_result": null,
+  "author_actions": {
+    "AST_or_compile": 0,
+    "numerical_or_model_or_replay_reads": 0,
+    "project_imports": 0,
+    "runtime_queries": 0,
+    "target_execution": 0,
+    "tests": 0
+  },
+  "authored_utc": "2026-10-18T11:56:58.616117+00:00",
+  "changed_b2e_regions": [
+    "Entrypoint docstring and absolute original strict source path; two pinned common-recipe constants.",
+    "Added exact full-context inference, pure three-literal reversible specialization and authenticated common recipe loader/selection.",
+    "main selects recipe before output/numerical execution, publishes recipe_specialization, and rechecks common recipe PIN at completion."
+  ],
+  "future_guard_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal",
+    "-p",
+    "test_recipe_cpu_metadata.py",
+    "-v"
+  ],
+  "future_numeric_argv": [
+    "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/verify_recipe_phase_snapshot.py",
+    "--execute",
+    "--job",
+    "ROOT_FUTURE_IMMUTABLE_JOB.json",
+    "--expected-job-sha256",
+    "ROOT_FUTURE_JOB_SHA",
+    "--expected-verifier-sha256",
+    "14942da97b06c3c2870ac5d3109a2a5b76acefc1523e9b23b9e510c0994152b5"
+  ],
+  "future_numeric_resources": {
+    "CPUQuota": "200%",
+    "CUDA_VISIBLE_DEVICES": "",
+    "MemoryMax": "8G",
+    "MemorySwapMax": 0,
+    "RuntimeMaxSec": 120,
+    "TasksMax": 256,
+    "TimeoutStopSec": 5,
+    "unset": [
+      "LD_PRELOAD",
+      "PYTHONPATH"
+    ]
+  },
+  "guards": {
+    "authored_methods": 6,
+    "cases": [
+      ".5 exact original bytes and common ABI, ten original b2e functions exact",
+      "Only three .25 literals/reversal and unchanged finite/model/Adam/scaler function bodies",
+      "Mixed LR/context/type/additional field/corrupt source rejects",
+      "Actual saved Adam LR/eps/decay predicate both scales with wrong LR/NaN/bool negatives",
+      "Actual archived control scale/experiment/epsilon predicate both scales",
+      "Actual phase founder/metric/identity/four-clock floor and CE-only selection negatives"
+    ],
+    "executed": false,
+    "scope": "Pinned metadata-only wrapper/common API and actual extracted strict Adam/control predicates; original dynamic phase/four-clock function. No numerical/model/replay implementation or host fallback executed by these guards."
+  },
+  "limits": [
+    "Source text preservation is not syntax, test or numerical PASS.",
+    "Metadata guard predicates do not prove finite tensor/model/81-Adam/scaler execution; root must run the actual selected numerical verifier on a genuine future snapshot.",
+    "Original numerical bodies retain one81-state Adam group, all tensor/model/support/finite/scaler/four-clock checks, including the honest reported logical-vs-Adam step difference and uninitialized parameter names.",
+    "Historical boot proof may be .5; it is not relabelled to .25 or used as the endpoint recipe authority. Genuine job acquisition/current expected phase remains authoritative."
+  ],
+  "metadata_correction": {
+    "guard_source_reverse_only_common_and_wrapper_SHA": true,
+    "preserved_draft_history": {
+      "bytes": 5016,
+      "identity": {
+        "bytes": 5016,
+        "ctime_ns": 1792324882367596577,
+        "device": 2304,
+        "inode": 81288123,
+        "mode": "0o444",
+        "mtime_ns": 1792324882367596577,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/draft-history-common-release-abi-20261018/numeric-author-preservation.json",
+      "sha256": "52a29d619d42113094500c97c82e8d83ddbbf1899cf1e922bfa25dcb0102792a"
+    },
+    "preserved_original_note": {
+      "bytes": 10893,
+      "identity": {
+        "bytes": 10893,
+        "ctime_ns": 1792324882366596573,
+        "device": 2304,
+        "inode": 81288122,
+        "mode": "0o444",
+        "mtime_ns": 1792324882366596573,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/draft-history-common-release-abi-20261018/recipe-CPU-source-preservation.json",
+      "sha256": "c981173bec310e356871e9750fe797dfe5d8fb2fe750aa3157f5218de614e127"
+    },
+    "reason": "Propagate corrected common recipe source SHA after authentic567c actor-list ABI fix; verifier and guard source changes are only common/own-source SHA literals. Actual saved Adam LR predicate, three-literal specialization and all numeric/phase/test method bodies remain unchanged.",
+    "tests_or_numerical_execution": false,
+    "wrapper_source_reverse_only_common_SHA": true
+  },
+  "owned_files": [
+    {
+      "bytes": 27810,
+      "identity": {
+        "bytes": 27810,
+        "ctime_ns": 1792325182873697085,
+        "device": 2304,
+        "inode": 81288125,
+        "mode": "0o444",
+        "mtime_ns": 1792325182872697081,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/verify_recipe_phase_snapshot.py",
+      "sha256": "14942da97b06c3c2870ac5d3109a2a5b76acefc1523e9b23b9e510c0994152b5"
+    },
+    {
+      "bytes": 12307,
+      "identity": {
+        "bytes": 12307,
+        "ctime_ns": 1792325182874697089,
+        "device": 2304,
+        "inode": 81288103,
+        "mode": "0o444",
+        "mtime_ns": 1792325182873697085,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/test_recipe_cpu_metadata.py",
+      "sha256": "91b405d8d1824ca99036dbde26c3216e3ce537c5eb7d65e450e5ab40084674fc"
+    }
+  ],
+  "preserved_b2e_functions": [
+    {
+      "bytes": 82,
+      "exact_original": true,
+      "function": "require",
+      "source_text_sha256": "38ad9d5b50be85439928ad1d2e69734961c31e0ac4840c0eff7f80003b4cebb5"
+    },
+    {
+      "bytes": 141,
+      "exact_original": true,
+      "function": "sha",
+      "source_text_sha256": "a90a8d6a45f6e2218945af23f3184c57182890bc40992d8c457d9bee4b3fc2f0"
+    },
+    {
+      "bytes": 256,
+      "exact_original": true,
+      "function": "clocks",
+      "source_text_sha256": "cb9f7b9ccad04b6342004590d9fa428e112dab6f10e69c73eb504b670fd032f5"
+    },
+    {
+      "bytes": 592,
+      "exact_original": true,
+      "function": "triple",
+      "source_text_sha256": "a10feb2f0ff8840483e402c5bb33a05f52e4ea542c1d44e68f82b06a4a5da30d"
+    },
+    {
+      "bytes": 936,
+      "exact_original": true,
+      "function": "load_base",
+      "source_text_sha256": "d71511632b6885b041c6582e8c8e23734aec1323bbd285960f6649afb4a08cf4"
+    },
+    {
+      "bytes": 418,
+      "exact_original": true,
+      "function": "immutable",
+      "source_text_sha256": "dd98b804c4ac73276a85b817d6622dfe43d1e2d2456238eba00efb1421eb5277"
+    },
+    {
+      "bytes": 1770,
+      "exact_original": true,
+      "function": "read_job",
+      "source_text_sha256": "4566689837783a449d31b7288546b22e25fb94fca9dcbaa636fd56d1dec4dd0d"
+    },
+    {
+      "bytes": 1078,
+      "exact_original": true,
+      "function": "historical_archive",
+      "source_text_sha256": "79357e34440f564a6251fb818d6edc1ebac1244194541dfd1e1ee70eb61c52bc"
+    },
+    {
+      "bytes": 9037,
+      "exact_original": true,
+      "function": "check_acquisition",
+      "source_text_sha256": "4a5900bb9b3ca333f1b538f73c4aca716574d0168873ff1f7946c6a15fc26068"
+    },
+    {
+      "bytes": 2091,
+      "exact_original": true,
+      "function": "verify_phase",
+      "source_text_sha256": "22b74a46ead8b84e5d6a08537079e17963b4d6cf1dc8e8361e7d111a3aae13a2"
+    }
+  ],
+  "schema": "robotron-live-LR-recipe-phase-CPU-source-preservation-v1",
+  "status": "SOURCE_AUTHORED_ONLY_UNEXECUTED",
+  "strict_specialization": {
+    "actual_saved_Adam_LR_required": {
+      ".25": 1.25e-05,
+      ".5": 2.5e-05
+    },
+    "checkpoint_metadata_normalized": false,
+    "half_changes": 0,
+    "half_effective_sha256": "9ef38e17e1b9eee3f6c43e40005812f2ebe3cff16d08bf61d3e820c2d41134c8",
+    "literals": [
+      {
+        "effective": "learning_control_lr_scale=.25,",
+        "original": "learning_control_lr_scale=.5,"
+      },
+      {
+        "effective": "optimizer_lr=1.25e-5,",
+        "original": "optimizer_lr=2.5e-5,"
+      },
+      {
+        "effective": "control['lr_scale'] == .25",
+        "original": "control['lr_scale'] == .5"
+      }
+    ],
+    "quarter_changes": 3,
+    "quarter_effective_bytes": 33637,
+    "quarter_effective_sha256": "5612ad9c5730030f818232146fc5073000b89ae8e93577fab8bd18a03d16c8e8",
+    "reverse_exact_9ef": true
+  },
+  "untouched_numeric_function_bodies": [
+    {
+      "bytes": 1071,
+      "exact_9ef": true,
+      "function": "finite_tree",
+      "source_text_sha256": "45423ac5b1255bb0de7ba8bb0aa27c57c2b143d3db1a8d6bd085c710d642a4df"
+    },
+    {
+      "bytes": 7365,
+      "exact_9ef": true,
+      "function": "validate_checkpoint",
+      "source_text_sha256": "fa3d11f4423fa9f408498e3211ce5f5cdf87b39ad3c6357bd5d1b048dd720cb5"
+    },
+    {
+      "bytes": 4157,
+      "exact_9ef": true,
+      "function": "numerical_setup",
+      "source_text_sha256": "c9b647fdf567e59bc072ffeceafba10e8f715a0f2e41302c6c357aa205e08324"
+    },
+    {
+      "bytes": 1150,
+      "exact_9ef": true,
+      "function": "check_root_copy",
+      "source_text_sha256": "e84e1b68b8a24af05f8ab9c1bf42e189c10123f7b61301267473981fde2b508f"
+    }
+  ],
+  "upstream_sources": [
+    {
+      "bytes": 21460,
+      "identity": {
+        "bytes": 21460,
+        "ctime_ns": 1792233591307841657,
+        "device": 2304,
+        "inode": 80635710,
+        "mode": "0o444",
+        "mtime_ns": 1792233329633821026,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/verify_phase_snapshot.py",
+      "sha256": "b2e732dc731b2b601f7499d2cafd5841896daf2b0713d496b98cb6b8d7279519"
+    },
+    {
+      "bytes": 33634,
+      "identity": {
+        "bytes": 33634,
+        "ctime_ns": 1792233591307841657,
+        "device": 2304,
+        "inode": 80635720,
+        "mode": "0o444",
+        "mtime_ns": 1792233273712246789,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/strict_phase_base.py",
+      "sha256": "9ef38e17e1b9eee3f6c43e40005812f2ebe3cff16d08bf61d3e820c2d41134c8"
+    },
+    {
+      "bytes": 33521,
+      "identity": {
+        "bytes": 33521,
+        "ctime_ns": 1792221722145414918,
+        "device": 2304,
+        "inode": 80617333,
+        "mode": "0o444",
+        "mtime_ns": 1792221496029581201,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-maintenance-checkpoint-CPU-verifier-proposal-20261017/verify_maintenance_checkpoint.py",
+      "sha256": "7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead"
+    },
+    {
+      "bytes": 6135,
+      "identity": {
+        "bytes": 6135,
+        "ctime_ns": 1792325081404322886,
+        "device": 2304,
+        "inode": 81288102,
+        "mode": "0o444",
+        "mtime_ns": 1792325081397972975,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/recipe.py",
+      "sha256": "f11e4c8d6725c04c4495b416318713f675ba9305ffe6f7c4009a3bff9b860d0e"
+    }
+  ]
+}

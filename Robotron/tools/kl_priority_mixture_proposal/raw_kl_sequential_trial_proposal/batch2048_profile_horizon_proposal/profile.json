@@ -1,0 +1,31 @@
+{
+  "LR_compensation": false,
+  "batch_size": 2048,
+  "before_batch_size": 4096,
+  "deliberate_recipe_changes": [
+    "DQN_BATCH_SIZE"
+  ],
+  "held_recipe_context": {
+    "baseline_batch_size": 512,
+    "batch_size": 2048,
+    "c51_target_smoothing": 0,
+    "epsilon": 0.1,
+    "expert_ratio": 0.1,
+    "fused": true,
+    "gamma": 0.995,
+    "learning_control_lr_scale": 0.5,
+    "lr_anchor_step": 0.0,
+    "lr_gear": "climb",
+    "max_samples_per_frame": 8,
+    "n_step": 3,
+    "num_atoms": 51,
+    "optimizer_eps": 0.00015,
+    "optimizer_lr": 2.5e-05,
+    "v_max": 50.0,
+    "v_min": -10.0
+  },
+  "priority_metric": "ce",
+  "profile_id": "ce_batch2048_efficacy_screen_v1",
+  "return_batch_size": 4096,
+  "schema": "robotron-ce-batch2048-efficacy-profile-v1"
+}

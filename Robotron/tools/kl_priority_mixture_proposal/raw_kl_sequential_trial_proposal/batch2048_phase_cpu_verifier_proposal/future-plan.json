@@ -1,0 +1,46 @@
+{
+  "status": "SOURCE_ONLY_UNEXECUTED_NOT_ACTIVATION_READY",
+  "phase_CPU_argv": [
+    "ACTUAL_ROOT_VERIFIED_PYTHON",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_proposal/verify_phase_snapshot_2048.py",
+    "--execute",
+    "--job",
+    "ACTUAL_NEW_READONLY_JOB_PATH",
+    "--expected-job-sha256",
+    "ACTUAL_NEW_JOB_SHA256",
+    "--expected-verifier-sha256",
+    "165a1c0c9c7bdee1210c47d06487a48a4fc414b70477522317399882d108c90a"
+  ],
+  "guard_loader_contract": {
+    "interpreter": [
+      "/usr/bin/python3.12",
+      "-I",
+      "-B"
+    ],
+    "test_file": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_proposal/test_batch2048_context.py",
+    "class_name": "Batch2048MetadataGuards",
+    "authored_methods": 9,
+    "scope": "Fresh owned stdlib-only process; private tempfile/mock metadata, no runtime or numerical body invocation."
+  },
+  "suggested_CPU_limits": {
+    "CPUQuota": "200%",
+    "MemoryMax": "3G",
+    "MemorySwapMax": 0,
+    "TasksMax": 128,
+    "RuntimeMaxSec": 120,
+    "CUDA_VISIBLE_DEVICES": ""
+  },
+  "guard_limits": {
+    "CPUQuota": "100%",
+    "MemoryMax": "512M",
+    "RuntimeMaxSec": 60,
+    "CUDA_VISIBLE_DEVICES": ""
+  },
+  "actual_job": null,
+  "actual_argv": null,
+  "actual_guard_execution": null,
+  "actual_numerical_execution": null,
+  "activation_authorized": false
+}

@@ -1,0 +1,186 @@
+{
+  "PIN_contract": {
+    "full": "{path,sha256,bytes,identity:{device,inode,bytes,mtime_ns,ctime_ns,mode,uid,nlink}}",
+    "slot_archive_pair": "{actual_pin:FULL_PIN,archive:independent0444_PIN}",
+    "source_pair": "{current:installed_FULL_PIN,archive:independent0444_PIN}",
+    "triple": "{path,sha256,bytes}"
+  },
+  "acquisition_template": {
+    "boot_checkpoint": null,
+    "client_count": null,
+    "clock_floor": null,
+    "completed_slot_transition": {
+      "after": null,
+      "after_unix_s": null,
+      "before": null,
+      "before_unix_s": null,
+      "request": null,
+      "request_unix_s": null
+    },
+    "experiment": null,
+    "model_dir": null,
+    "owner_after": null,
+    "owner_before": null,
+    "phase_record_sha256": null,
+    "purpose": "candidate",
+    "schema": "robotron-owned-phase-snapshot-acquisition-v1",
+    "source_checkpoint": null,
+    "stopped_absence": null,
+    "tag": null
+  },
+  "actual_capture": null,
+  "all_future_hashes_bytes_saved_clocks_and_process_ids": "Unknown until actual root acquisition; null fields intentionally fail the frozen verifier.",
+  "capture_execution": {
+    "actual_original_unit_and_timer_identity": null,
+    "helper_source_PIN": null,
+    "managed_request_completion_transition": null,
+    "original_terminal_and_archive_before_release": null,
+    "source_control_phase_before_and_after_PINs": null,
+    "trigger_API_PIN": null
+  },
+  "historical_current_CE_seed_only": {
+    "observed_return_result": {
+      "bytes": 517549,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-return-CE-20261017/result.json",
+      "sha256": "9565d0b6405641455a28e821def2f85bda953068a891ff7646e517a906c3aa55"
+    },
+    "owner_as_of_return": {
+      "cgroup": "/user.slice/user-1001.slice/user@1001.service/app.slice/robotron-managed-run-26-d3b365c9-trainer.service",
+      "invocation_id": "3e0b59be7ec5484d9cc8d33265e74d77",
+      "pid": 620749,
+      "starttime_ticks": 33475842,
+      "unit": "robotron-managed-run-26-d3b365c9-trainer.service"
+    },
+    "phase": {
+      "boot_checkpoint": {
+        "bytes": 275186072,
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/robotron_dqn_latest.pt",
+        "sha256": "c5d282a3bbf95f6836d157f5033eed5444e8b094839581b384499a39cba3cf0e"
+      },
+      "boot_verification": {
+        "bytes": 61269,
+        "identity": {
+          "bytes": 61269,
+          "ctime_ns": 1792243752553704216,
+          "device": 2304,
+          "inode": 81133668,
+          "mode": "0o444",
+          "mtime_ns": 1792243752553704216,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-return-CE-20261017/newest-stopped/cpu-report-readonly.json",
+        "sha256": "b0a7922ec84bd8b4a0850285337cddbcb62869894240a4546f69097bc0e78553"
+      },
+      "expected": {
+        "founder_phase_record_sha256": "3475a048151c08bbc4fdc58a9b4336c7df67cb7e6668779523239d3a35274308",
+        "last_resume_record_sha256": null,
+        "metric": "ce",
+        "phase_id": "ce_after_rawkl_20261017_trial02",
+        "root_precommit_sha256": "472ac8fd9254fdac891cd5665de47bdcda2d94baaa3be1366c85a1b1bdcb90ca",
+        "started_from": {
+          "bytes": 275186072,
+          "clocks": {
+            "frame_count": 1023845366,
+            "learner_frame_count": 511985990,
+            "optimized_samples": 8336457728,
+            "training_steps": 2388683
+          },
+          "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/robotron_dqn_latest.pt",
+          "sha256": "c5d282a3bbf95f6836d157f5033eed5444e8b094839581b384499a39cba3cf0e"
+        },
+        "valid": true
+      },
+      "record": {
+        "bytes": 552,
+        "identity": {
+          "bytes": 552,
+          "ctime_ns": 1792243752920804535,
+          "device": 2304,
+          "inode": 81133669,
+          "mode": "0o444",
+          "mtime_ns": 1792243752920765271,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-return-CE-20261017/phase-record.json",
+        "sha256": "3475a048151c08bbc4fdc58a9b4336c7df67cb7e6668779523239d3a35274308"
+      }
+    },
+    "rule": "Use only after fresh root owner/environment/source/phase revalidation; replace honestly if an intentional resume occurred. Do not change the founder started_from to the new candidate or a periodic latest file."
+  },
+  "phase_cpu_job_template": {
+    "clock_floor": null,
+    "experiment": null,
+    "original_strict_base_sha256": "7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead",
+    "output_directory": null,
+    "phase_snapshot": {
+      "acquisition": null,
+      "boot_checkpoint": null,
+      "boot_verification": null,
+      "expected_phase": null,
+      "observed_clients": null,
+      "owner": null,
+      "phase_record": null,
+      "purpose": "candidate",
+      "sources": {
+        "__init__.py": {
+          "archive": null,
+          "current": null
+        },
+        "agent.py": {
+          "archive": null,
+          "current": null
+        },
+        "config.py": {
+          "archive": null,
+          "current": null
+        },
+        "learning_control.py": {
+          "archive": null,
+          "current": null
+        },
+        "loss_kernel.py": {
+          "archive": null,
+          "current": null
+        },
+        "model.py": {
+          "archive": null,
+          "current": null
+        },
+        "priority_phase.py": {
+          "archive": null,
+          "current": null
+        },
+        "training.py": {
+          "archive": null,
+          "current": null
+        }
+      }
+    },
+    "schema": "robotron-phase-snapshot-checkpoint-CPU-job-v1",
+    "source": null,
+    "source_control_context": null,
+    "strict_phase_base_sha256": "9ef38e17e1b9eee3f6c43e40005812f2ebe3cff16d08bf61d3e820c2d41134c8",
+    "verification_copy": null,
+    "verifier_sha256": "b2e732dc731b2b601f7499d2cafd5841896daf2b0713d496b98cb6b8d7279519"
+  },
+  "readiness": {
+    "actual_protected_winner_and_promotion_receipt": null,
+    "current_campaign_full_audits_terminal_cleanup_and_freeze_release": null,
+    "fresh_exact_owner_environment_profile_phase_and_health": null,
+    "one_unique_new_tag_and_request_output_absence": null
+  },
+  "required_source_control_context_keys": [
+    "game_root",
+    "model_dir",
+    "model_package",
+    "archived_control",
+    "archived_trainer_unit",
+    "provenance",
+    "held_recipe_context"
+  ],
+  "schema": "robotron-post-quality-live-ce-capture-input-template-v1",
+  "status": "INERT_LATE_BOUND_TEMPLATE_NOT_A_JOB",
+  "tests_or_execution": null
+}

@@ -1,0 +1,30 @@
+{
+  "actual_execution": null,
+  "argv": [
+    "<ROOT_PINNED_STDLIB_PYTHON>",
+    "-I",
+    "-B",
+    "-c",
+    "import hashlib,importlib.util,pathlib,sys,types,unittest\nroot=pathlib.Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/horizon_observer_proposal')\npins={'horizon_observer.py': '25d70b4a3888dcba83ea9020c333cba32cfbd19c93b6e69037d6299b161fd7ec', 'test_horizon_observer.py': '7ffc2dfed110a287c06872bb8e631ede79a9d36b547cf03c9ba39c97345cd7ce'}\nfor name,expected in pins.items():\n    if hashlib.sha256((root/name).read_bytes()).hexdigest()!=expected:raise SystemExit('Source pin changed: '+name)\npkg=types.ModuleType('_root_owned_horizon_tests');pkg.__path__=[str(root)];sys.modules[pkg.__name__]=pkg\nfor name in ('horizon_observer','test_horizon_observer'):\n    spec=importlib.util.spec_from_file_location(pkg.__name__+'.'+name,root/(name+'.py'))\n    module=importlib.util.module_from_spec(spec);sys.modules[spec.name]=module;spec.loader.exec_module(module)\nsuite=unittest.defaultTestLoader.loadTestsFromTestCase(sys.modules[pkg.__name__+'.test_horizon_observer'].HorizonContracts)\nif suite.countTestCases()!=18:raise SystemExit('Unexpected test selection')\nresult=unittest.TextTestRunner(verbosity=2).run(suite)\nfor name,expected in pins.items():\n    if hashlib.sha256((root/name).read_bytes()).hexdigest()!=expected:raise SystemExit('Source pin changed after guards: '+name)\nraise SystemExit(0 if result.wasSuccessful() else 1)\n"
+  ],
+  "environment": {
+    "CUDA_VISIBLE_DEVICES": "",
+    "LD_PRELOAD": null,
+    "PYTHONPATH": null
+  },
+  "expected_methods": 18,
+  "interpreter_pin": null,
+  "not_invoked": true,
+  "production_or_trial_actions": false,
+  "resources": {
+    "CPUQuota": "200%",
+    "MemoryMax": "256MiB",
+    "MemorySwapMax": 0,
+    "RuntimeMaxSec": 60,
+    "TasksMax": 32,
+    "journal_bytes": 33554432
+  },
+  "root_requirement": "Independently pin actual interpreter/parent/job/source and retain actual original exit/logs before exact unit release. This source template is not a root execution receipt.",
+  "schema": "robotron-horizon-observer-future-test-template-v1",
+  "selection": "HorizonContracts only; no discovery/application imports"
+}

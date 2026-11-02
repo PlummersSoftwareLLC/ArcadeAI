@@ -1,0 +1,31 @@
+{
+  "actual_execution": null,
+  "actual_transition_argv": null,
+  "argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-c",
+    "import sys, unittest; sys.path.insert(0, '/home/dave/source/repos/ArcadeAI/Robotron'); from tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.batch2048_phase_lifecycle_integration_reviewed2_proposal import test_transition_wiring as t0; suite=unittest.TestSuite([unittest.defaultTestLoader.loadTestsFromTestCase(t0.TransitionWiringContracts), unittest.defaultTestLoader.loadTestsFromTestCase(t0.RealCandidateRouteContracts)]); result=unittest.TextTestRunner(verbosity=2).run(suite); raise SystemExit(0 if result.wasSuccessful() else 1)"
+  ],
+  "combined_argv": [
+    "/usr/bin/python3",
+    "-I",
+    "-B",
+    "-c",
+    "import sys, unittest; sys.path.insert(0, '/home/dave/source/repos/ArcadeAI/Robotron'); from tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.batch2048_phase_boundary_reviewed2_proposal import test_profile_boundary as t0; from tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.batch2048_phase_lifecycle_integration_reviewed2_proposal import test_transition_wiring as t1; suite=unittest.TestSuite([unittest.defaultTestLoader.loadTestsFromTestCase(t0.ProfileBoundaryContracts), unittest.defaultTestLoader.loadTestsFromTestCase(t1.TransitionWiringContracts), unittest.defaultTestLoader.loadTestsFromTestCase(t1.RealCandidateRouteContracts)]); result=unittest.TextTestRunner(verbosity=2).run(suite); raise SystemExit(0 if result.wasSuccessful() else 1)"
+  ],
+  "combined_expected_methods": 21,
+  "expected_methods": 10,
+  "selection": "Exact three named classes only; do not discover old and new packages together.",
+  "status": "UNEXECUTED_FUTURE_ROOT_STDLIB_GUARDS_ONLY",
+  "suggested_limits": {
+    "CPUQuota": "200%",
+    "CUDA_VISIBLE_DEVICES": "",
+    "MemoryMax": "512M",
+    "MemorySwapMax": "0",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "RuntimeMaxSec": 60,
+    "TasksMax": 64
+  }
+}

@@ -1,0 +1,69 @@
+UNSELECTED SOURCE PREPARATION. No imports/tests/runtime/model actions by author.
+
+Purpose: a pure observer for ONE future post-fix CE4096 continuation window.
+NEW prospective root-precommitted thresholds are BOTH +8,000,000 learner frames
+AND +8,000,000 accepted DQN+epsilon ring insertions from the SAME nonzero B.
+This is not the old LR.25 8M/6M policy and does not reinterpret prior results.
+No LR write/barrier, phase creation, checkpoint request, owner stop/restart,
+control/canonical mutation, numerical verifier, or quality campaign is added.
+
+API: HorizonObserver(job, baseline_api), observe(api,owner,evidence,clock), or
+poll(job, baseline_api=..., get_api=...,get_owner=...,get_evidence=...,get_clock=...,
+sleep=...,emit=...). Class and function names follow the original f1fa observer.
+All file/publication/runtime interactions are injected root callbacks. Default
+main() prints literal PLAN values with no reads/callbacks/actions or output files.
+
+Nine exact job fields are shown in job-TEMPLATE.json. All owner/phase/proof/B/
+READY clocks/cutoff values are FUTURE NULL. The template is not an executable job.
+The recipe is fixed CE/B4096/cap8/lr_scale.5/actual API lr2.5e-5. No held source or
+recipe has been selected or altered by this preparation.
+
+Future root MUST authenticate the actual successful separate recovery result,
+its original execution/archive/owned release, actual current source/control/unit/
+environment/fleet and newowner, immutable new precommit, and raw B FULLPIN before
+constructing or injecting any job. proofs exact keys are root_precommit,
+recovery_result,recovery_release,control. This pure module checks descriptor shape
+and supplied data consistency; it never opens those PINs or supplies authentication.
+get_evidence.ok=true is meaningful only after the future root's real checks.
+
+current_phase is the actual new READY recovery's startup.phase descriptor:
+{record,boot_checkpoint,boot_verification,expected}; expected is the genuine seven-
+field expected_start result, new CE start/last_resume=None, founder equal actual
+record SHA, started_from exact boot triple+four clocks. No 9b3 founder or owner is
+hardcoded. The root must verify its bytes and actual phase provenance externally.
+B must exceed or equal all four boot clocks and have existing nonzero process
+counters, available applied outcomes, unavailable0 and pending0. Process counters
+are never reset. Later pending1 remains valid and separate from applied/skipped.
+
+recovery_ready_clock={boot_id,monotonic_s,wall_s}: derive from authenticated new
+READY healthy192.api observed_monotonic_s/observed_unix_s plus genuine original
+start_request.boot_id. B observed clocks must be after READY on the same boot;
+B API ts minus pipeline_snapshot_age_s must conservatively be at/after READY wall.
+API/counter structures are asynchronous. This is a conservative cached-snapshot
+bound, not atomic observation or a causal learning/speed/gradient proof.
+
+Identity/epoch/freshness/partition/unavailable/regression/stall guards and all
+optimizer/logical/all-five physical reporting retain f1fa semantics. Admission
+accounting is applied*4096; AMP denominator is applied+skipped, excluding pending.
+The new insertion gate is DQN+epsilon only; expert/eval/unattributed remain in
+separate physical totals and never satisfy this 8M learner-insertion threshold.
+
+Only the first fresh BOTH observation is LATCH. Original event authority stays0.
+Only the original exact event bytes+paired actual file AND directory fsync
+completion <=new root cutoff can grant one candidate request. Late or failed
+publication grants0 and may never replace/reanchor the first terminal decision.
+Raw NaN in unrelated API fields is preserved; required counters/clocks/recipe
+remain finite. The root's publisher must create the exact encoded bytes once and
+return authentic PINs. Synthetic guard callbacks do not claim real fsync proof.
+No owner ceiling/retirement action is inferred. Missing/invalid/incomplete windows
+are not license to resave or choose a later peak. Quality/science decisions remain
+separate future root operations.
+
+Six metadata guards are AUTHORED and UNEXECUTED. They check READY/boot/phase/B
+binding; new8+8 vs old6 threshold/other sources; pending/AMP/common B reporting;
+epoch/regression/stall/cutoff; original durable-once/late/failure; finite source
+preservation and no action imports. Root may run, after authorized release:
+ROOT_VERIFIED_CP312 -I -B -m unittest discover -s THIS_DIRECTORY -p test_observer.py -v
+The module imports only copy/hashlib/json/math. No project or numerical imports.
+No runtime selector/controller is implemented here; runtime_review owns the
+separate future concrete Snapshot/candidate+CPU job consumer seam.

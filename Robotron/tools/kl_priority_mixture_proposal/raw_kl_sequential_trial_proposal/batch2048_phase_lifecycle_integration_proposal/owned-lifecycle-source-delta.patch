@@ -1,0 +1,76 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision4/run_live8_maintenance.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_proposal/owned_lifecycle.py
+@@ -581,8 +581,10 @@
+         fcntl.flock(self.lease_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+         self.host.metric_host.configure_logs(current["bindings"]["logs"])
+         snapshot = self.host.capture()
+-        local = dict(batch_size=4096, replay_cap=8, initial_snapshot=dict(csv=self.job["baseline_csv"]),
+-            exposure_identity={kind:self.metrics.exposure_key(snapshot["exposure"][kind]) for kind in ("optimizer", "replay")})
++        local = self.batch_boundary.csv_guard_plan(self.job['batch_boundary'], 'before',
++            self.job['baseline_csv'],
++            {kind:self.metrics.exposure_key(snapshot['exposure'][kind]) for kind in ('optimizer','replay')},
++            current['environment'])
+         require(all(value["process_id"] == self.insured["pid"] for value in local["exposure_identity"].values())
+             and not self.metrics.api_issues(snapshot, local)
+             and all(snapshot[key] >= self.floor[key] for key in CLOCKS), "Initial actualAPI/recipe/clock guards failed")
+@@ -962,54 +964,9 @@
+ 
+ 
+ def main(argv=None):
+-    parser = argparse.ArgumentParser(description=__doc__)
+-    parser.add_argument("--launch", action="store_true")
+-    parser.add_argument("--job", type=Path)
+-    parser.add_argument("--expected-job-sha256")
+-    parser.add_argument("--expected-controller-sha256")
+-    args = parser.parse_args(argv)
+-    if not args.launch:
+-        print("PLAN_ONLY: new root-bound live8 maintenance; no files/imported helpers/runtime queries/output/actions")
+-        return 0
+-    output = None
+-    runtime = None
+-    try:
+-        require(not any(name == "torch" or name.startswith(("torch.", "numpy", "dqn")) for name in sys.modules), "Fresh stdlib-only parent required")
+-        job, job_record = read_job(args)
+-        output = Path(job["output_directory"])
+-        output.mkdir(mode=0o700)
+-        publish(output / "root-job.json", job)
+-        backups = output / "sources"
+-        backups.mkdir(mode=0o700)
+-        runtime = Runtime(job, output)
+-        events = [0]
+-        def emit(value):
+-            events[0] += 1
+-            require(events[0] <= 32, "Maintenance event budget exceeded")
+-            publish(output / ("event-%02d.json" % events[0]), value)
+-        operation = Maintenance(runtime, Sources(job["sources"], backups), emit)
+-        with runtime.metrics.interrupt_handlers():
+-            result, primary = operation.run()
+-        result.update(root_job=job_record, finished_unix_s=time.time())
+-        publish(output / "result.json", result)
+-        print(json.dumps(dict(status=result["status"], manual_recovery_required=result["manual_recovery_required"],
+-            capture_complete=result["capture_complete"], output=str(output)), indent=2))
+-        return 0 if result["status"] == "COMPLETE" and not result["manual_recovery_required"] else 1
+-    except BaseException as error:
+-        if output is not None:
+-            try:
+-                publish(output / "controller-error.json", dict(error=repr(error), traceback=traceback.format_exc()))
+-            except BaseException:
+-                pass
+-        try:
+-            traceback.print_exc()
+-        except BaseException:
+-            pass
+-        return 1
+-    finally:
+-        if runtime is not None:
+-            runtime.close()
+-
+-
+-if __name__ == "__main__":
+-    raise SystemExit(main())
++    raise RuntimeError('UNCONSUMED primitive copy: invoke only through the pinned CE batch adapter')
++
++
++if __name__ == '__main__':
++    raise SystemExit('UNCONSUMED OWNED PRIMITIVE COPY: no direct execution')
++

@@ -1,0 +1,292 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/dashboard-JSON-production-continuity-main-inputs-original01-preparation-20261022/sources-original01/handoff_poststop_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/stop-sources/current227_poststop_only_v1.py
+@@ -20,7 +20,7 @@
+ 
+ 
+ CLOCKS = ('training_steps','optimized_samples','learner_frame_count','frame_count')
+-VERIFIER_SHA = '14942da97b06c3c2870ac5d3109a2a5b76acefc1523e9b23b9e510c0994152b5'
++VERIFIER_SHA = '08c165ed917b8633ab658a8efbc915f81e37adff21c1330cd5806cd3148f4051'
+ CONTROLLER_SHA = '218e7f861deb82c340527d218ed9f92ef5c5836c8cb9d32452c0598e61ff9a14'
+ 
+ 
+@@ -232,6 +232,26 @@
+         return dict(status='retired_listener_child_removed_by_original_unit_GC')
+ 
+ 
++def release_retired_empty_dashboard(linux, owner, case):
++    """Remove only this case's empty HTTP child after actual exit0."""
++    value = linux.show(owner['unit'])
++    require(linux.process_start(owner['pid']) is None and value.get('MainPID') == '0'
++            and value.get('InvocationID') == owner['invocation_id']
++            and value.get('ExecMainPID') == str(owner['pid']) and value.get('ExecMainCode') == '1'
++            and value.get('ExecMainStatus') == '0' and value.get('NRestarts') == '0',
++            'Only actual retired exit0 permits HTTP child cleanup')
++    child = Path('/sys/fs/cgroup'+owner['cgroup'])/('dashboard-'+case)
++    if not child.exists():
++        return dict(status='retired_HTTP_child_already_absent')
++    require(child.resolve(strict=True) == child and child.stat().st_uid == os.getuid()
++            and (child/'cgroup.type').read_text().strip() == 'threaded'
++            and not (child/'cgroup.threads').read_text().strip()
++            and dict(line.split() for line in (child/'cgroup.events').read_text().splitlines())['populated'] == '0',
++            'Retired HTTP child is foreign or populated')
++    (child/'cgroup.freeze').write_text('0\n'); child.rmdir()
++    return dict(status='retired_empty_HTTP_child_removed_before_game_listener_child')
++
++
+ def startup_save_owned_child(owner,pid):
+     """Prove a current leaf member descends from the captured original owner."""
+     first=None;selected=pid
+@@ -315,13 +335,13 @@
+         self.linux = load_linux(backend.job)
+         self.config = json.loads(self.linux.checked(backend.job['poststop_inputs']))
+         c = self.config
+-        require(c['schema'] == 'robotron-score-carry-poststop-inputs-v1'
++        require(c['schema'] == 'robotron-current227-stop-only-poststop-inputs-v1'
+                 and c['case'] == backend.job['case'] and c['original_owner'] == backend.owner,
+                 'Post-stop inputs belong to another case/owner')
+         for entry in c['pins']:
+             self.linux.checked(entry)
+         require(c['verifier']['sha256'] == VERIFIER_SHA and c['cpu_controller']['sha256'] == CONTROLLER_SHA,
+-                'Use the original strict149 verifier and C218 lifecycle')
++                'Use the reviewed strictLR125 verifier08c and C218 lifecycle')
+         for name in ('verifier','cpu_controller','cpu_template','boot_CPU_report','original_phase_record',
+                      'bank_helper','archive_checker','settings_archive','phase_dropin','boot_replay_snapshot'):
+             self.linux.checked(c[name])
+@@ -331,12 +351,19 @@
+         self.boot_report = json.loads(self.linux.checked(c['boot_CPU_report']))
+         self.boot_replay = json.loads(self.linux.checked(c['boot_replay_snapshot']))
+         self.expected = expected_phase(self.boot_report,c['original_phase_record'])
++        require(c['boot_checkpoint']['sha256'] ==
++                    'ef618c93edbcea3ab76b173146c6d9eb1004241fc610b52aefbf1d5114a35893'
++                and c['original_phase_record']['sha256'] ==
++                    '1404e95858218d3d443eadab8c8c66e329d027d57f42e51c362568909cdc4782'
++                and c['boot_replay_snapshot']['sha256'] ==
++                    'bba6645baad52d07467e739ae4a0c5612b3ec633b627d198289bd3fbe6e1dfb5',
++                'Exact current3615927 original boot/phase/6MR3 replay lineage required')
+         require(c['boot_checkpoint']['sha256'] == self.boot_report['sha256']
+                 and c['boot_checkpoint']['bytes'] == self.boot_report['bytes'], 'Actual original boot differs')
+         phase = json.loads(self.linux.checked(c['original_phase_record']))
+         require(phase['checkpoint'] == c['boot_checkpoint'] and phase['action'] == 'resume',
+                 'Current process startup record differs from actual boot')
+-        require(self.template['source_control_context']['held_recipe_context']['optimizer_lr'] == 1.25e-5
++        require(self.template['source_control_context']['held_recipe_context']['optimizer_lr'] == 6.25e-6
+                 and self.template['source_control_context']['held_recipe_context']['max_samples_per_frame'] == 8,
+                 'The full recipe must remain unchanged')
+         for pair in self.template['phase_snapshot']['sources'].values():
+@@ -476,6 +503,7 @@
+         b,l = self.b,self.linux
+         self.absent_original()
+         self.fleet_held()
++        dashboard_cleanup = release_retired_empty_dashboard(l,b.owner,b.job['case'])
+         listener_cleanup = release_retired_empty_listener(l,b.owner,b.job['case'])
+         b.accept_held = False
+         b.state()
+@@ -502,168 +530,25 @@
+             replay_bank_consistency_verified=True,checkpoint=source,report=proof,CPU_closure=closure,
+             ring_and_banks=bank_pin,ring_continuity=ring,original_terminal_archive=terminal_archive,
+             bank_intent_fulfillment=bank_fulfillment,
+-            retired_listener_cleanup=listener_cleanup,
++            retired_listener_cleanup=listener_cleanup, retired_dashboard_cleanup=dashboard_cleanup,
+             clocks=clock_floor(report['clocks']))
+         b.state()
+         return self.saved
+ 
+     def install(self,context,retired,saved):
+-        b,l = self.b,self.linux
+-        self.absent_original()
+-        self.fleet_held()
+-        l.checked(saved['checkpoint'])
+-        source = l.GAME/'Scripts/dqn/metrics_dashboard.py'
+-        source_pin = l.full_pin(source)
+-        require(source_pin['sha256'] == l.OLD_SOCKET_SHA,'Original parser changed before installation')
+-        changed = {str(source),str(l.CONTROL),str(l.MODEL/'game_settings.json')}
+-        for path,sha in b.main['held_hashes'].items():
+-            if path not in changed:
+-                require(l.full_pin(path)['sha256'] == sha,'An unselected held input changed: '+path)
+-        installed = l.atomic_owned_replace(source,source_pin,l.checked(b.prepared['proposed_source']),suffix=b.job['case'])
+-        require(installed['sha256'] == l.NEW_SOCKET_SHA,'Selected parser bytes were not installed')
+-        settings = l.MODEL/'game_settings.json'
+-        l.atomic_owned_replace(settings,l.full_pin(settings),l.checked(self.config['settings_archive']),suffix=b.job['case'])
+-        b.control_pin = l.atomic_owned_replace(l.CONTROL,b.control_pin,b.control_bytes,suffix=b.job['case'])
+-        report = json.loads(l.checked(saved['report']))
+-        phase = report['saved_priority_metric_phase']
+-        self.phase_pin = b.event('resume-phase-record.json',dict(schema='robotron-priority-metric-start-v1',
+-            phase_id=phase['phase_id'],metric='ce',action='resume',previous_metric='ce',
+-            checkpoint={k:saved['checkpoint'][k] for k in ('path','sha256','bytes')},model_dir=str(l.MODEL),
+-            root_precommit_sha256=phase['root_precommit_sha256']))
+-        dropin = self.config['phase_dropin']
+-        old = self.config['original_phase_record']
+-        content = l.checked(dropin).decode()
+-        require(content.count(old['path']) == content.count(old['sha256']) == 1,'Original phase binding differs')
+-        content = content.replace(old['path'],self.phase_pin['path']).replace(old['sha256'],self.phase_pin['sha256'])
+-        new_dropin = l.atomic_owned_replace(dropin['path'],dropin,content.encode(),suffix=b.job['case'])
+-        self.command(['systemctl','--user','daemon-reload'])
+-        l.checked(saved['checkpoint'])
+-        self.installed = dict(exact_selected_parser=True,only_selected_source_changed=True,
+-            newest_checkpoint_unchanged=True,parser=installed,phase_record=self.phase_pin,phase_dropin=new_dropin)
+-        b.state()
+-        return self.installed
++        raise RuntimeError('Stop-only CURRENT adapter cannot install, start, thaw or reconnect')
+ 
+     def start_once(self,context,saved,installed):
+-        b,l = self.b,self.linux
+-        self.absent_original()
+-        self.fleet_held()
+-        require(not self.start_requested,'One replacement start only')
+-        l.checked(saved['checkpoint'])
+-        l.checked(installed['parser'])
+-        self.start_requested = True
+-        b.state()
+-        self.command(['systemctl','--user','start','--no-block',b.owner['unit']])
+-        def born():
+-            value = l.show(b.owner['unit'])
+-            pid = int(value.get('MainPID','0'))
+-            if not pid:
+-                return None
+-            require(value['InvocationID'] != b.owner['invocation_id'] and pid != b.owner['pid'],
+-                    'The expected new incarnation did not start')
+-            owner = dict(pid=pid,starttime_ticks=l.process_start(pid),unit=b.owner['unit'],
+-                         invocation_id=value['InvocationID'],cgroup=value['ControlGroup'])
+-            l.live_owner(owner)
+-            b.replacement = owner
+-            b.state()
+-            b.event('actual-replacement-birth.json',owner)
+-            return owner
+-        return b.wait(born,20,'The single replacement has not exposed its original live identity')
++        raise RuntimeError('Stop-only CURRENT adapter cannot install, start, thaw or reconnect')
+ 
+     def verify_startup(self,replacement,saved,installed):
+-        b,l = self.b,self.linux
+-        def ready():
+-            l.live_owner(replacement)
+-            try:
+-                api = b.api(observe_startup=True)
+-            except (OSError,ValueError,KeyError):
+-                return None
+-            if api is None:
+-                return None
+-            require(api['client_count'] == 0, 'Input arrived before the original frozen fleet was admitted')
+-            graphs = api['host_pipeline']['inference_graphs']
+-            if not (api['memory_buffer_size'] == 6000000 and graphs['ready'] is True
+-                    and graphs['capture_count'] == 128 and graphs['postload_validations'] == 1):
+-                return None
+-            return api
+-        api = b.wait(ready,600,'The same replacement has not exposed its actual dashboard')
+-        require(api['client_count'] == 0 and api['memory_buffer_size'] == 6000000
+-                and api['training_enabled'] is True and api['measurement_active'] is False,
+-                'Zero-client startup/replay state differs')
+-        graphs = api['host_pipeline']['inference_graphs']
+-        require(graphs['ready'] is True and graphs['capture_count'] == 128 and graphs['postload_validations'] == 1,
+-                'Actual exact-graph restoration is not ready')
+-        delta = startup_delta(api,saved['clocks'])
+-        self.banks.assert_unchanged(self.bank_snapshot,self.config['bank_spec'])
+-        maps = b.event('actual-startup-shared-replay-maps.json',self.banks.verify_maps(replacement['pid'],self.bank_snapshot))
+-        # A current startup snapshot is acquired and CPU-verified by the same
+-        # supported save slot. No protected or historical model is substituted.
+-        report,proof = self.startup_snapshot(replacement,saved)
+-        delta = startup_delta(report['clocks'],saved['clocks'])
+-        require(clock_floor(b.api()) == clock_floor(report['clocks']), 'Startup clocks moved after strict CPU proof')
+-        self.banks.assert_unchanged(self.bank_snapshot,self.config['bank_spec'])
+-        l.checked(installed['parser'])
+-        return dict(same_original_replacement=True,newest_state_preserved=True,
+-            replay_storage_and_bank_identity_verified=True,CPU_report=proof,shared_maps=maps,**delta)
++        raise RuntimeError('Stop-only CURRENT adapter cannot install, start, thaw or reconnect')
+ 
+     def startup_snapshot(self,owner,saved):
+-        # Stage immutable request bytes, then capture the actual canonical PIN
+-        # during one independently recoverable brief pause of this exact owner.
+-        b,l = self.b,self.linux
+-        slot = l.MODEL/'managed_save.request.json.completed'
+-        request = l.MODEL/'managed_save.request.json'
+-        tag = b.job['case']+'-startup'
+-        require(len(tag) <= 80 and not request.exists(),'A save request/tag is already owned')
+-        source = l.MODEL/'managed-checkpoints'/(tag+'.pt')
+-        require(not source.exists(),'The startup tag was already consumed')
+-        before_time = time.time()
+-        before = None if not slot.exists() else dict(actual_pin=l.full_pin(slot),archive=archive(l,slot,b.out/'startup-slot-before.json'))
+-        staging = request.with_name(request.name+'.'+b.job['case']+'.tmp')
+-        require(not staging.exists(),'The owned save staging path already exists')
+-        raw = (json.dumps(dict(tag=tag))+'\n').encode()
+-        l.publish(staging,raw)
+-        request_archive = b.event('startup-request-archive.json',raw)
+-        # The canonical request PIN is captured inside one exact-owner kernel
+-        # freeze. Independent rescue releases only this recorded replacement.
+-        with startup_save_pause(self,owner):
+-            request_pin = publish_request_exclusive(l,staging,request)
+-            requested_at = time.time()
+-        def completed():
+-            l.live_owner(owner)
+-            return slot.exists() and json.loads(slot.read_bytes()) == dict(tag=tag) and not request.exists() and source.exists()
+-        b.wait(completed,60,'The same replacement startup save request is pending')
+-        after_time = time.time()
+-        after = dict(actual_pin=l.full_pin(slot),archive=archive(l,slot,b.out/'startup-slot-after.json'))
+-        # Keep the normal producer mode; cpu() archives a separate444 copy.
+-        expected = expected_phase(json.loads(l.checked(saved['report'])),self.phase_pin)
+-        transition = dict(before=before,request=dict(actual_pin=request_pin,archive=request_archive),after=after,
+-            before_unix_s=before_time,request_unix_s=requested_at,after_unix_s=after_time)
+-        report,proof,_,_ = self.cpu('startup',source,owner,self.phase_pin,
+-            {k:saved['checkpoint'][k] for k in ('path','sha256','bytes')},saved['report'],expected,
+-            dict(tag=tag,completed_slot_transition=transition,stopped_absence=None),saved['clocks'])
+-        return report,proof
++        raise RuntimeError('Stop-only CURRENT adapter cannot install, start, thaw or reconnect')
+ 
+     def verify_progress(self,context,replacement,startup):
+-        b,l = self.b,self.linux
+-        baseline = b.api()
+-        def progressing():
+-            l.live_owner(replacement)
+-            for actor in b.fleet['original192_actors']:
+-                require(l.process_start(actor['pid']) == actor['starttime_ticks']
+-                        and sorted(os.sched_getaffinity(actor['pid'])) == actor['mask'],'Original emulator changed after thaw')
+-            api = b.api()
+-            if api['client_count'] != 192:
+-                return None
+-            require({row['client_slot'] for row in api['client_rows']} == set(range(192)),'Reconnected slots differ')
+-            if (api['learner_frame_count'] <= baseline['learner_frame_count']
+-                    or api['optimized_samples'] <= baseline['optimized_samples']):
+-                return None
+-            require(api['training_enabled'] is True and api['measurement_active'] is False
+-                    and 0 <= time.time()-(l.MODEL/'robotron_dqn_latest.pt').stat().st_mtime <= 360,
+-                    'Learning/checkpoint health is not restored')
+-            return dict(original192_identities_preserved=True,training_progress_verified=True,pipeline_errors=0,
+-                owner=replacement,learner_frame_count=api['learner_frame_count'],optimized_samples=api['optimized_samples'],
+-                fleet_fps=api['fps'],quality_qualification=False,learning_speed_gain_verified=False)
+-        return b.wait(progressing,150,'The original192 actors have not reconnected with healthy learning')
++        raise RuntimeError('Stop-only CURRENT adapter cannot install, start, thaw or reconnect')
+ 
+ 
+ def bank_metadata_semantics(banks,reader):
+@@ -704,6 +589,23 @@
+     alive = l.process_start(owner['pid']) == owner['starttime_ticks']
+     if alive:
+         l.live_owner(owner)
++        dashboard_release = None
++        if state.get('dashboard_accept_held'):
++            recovery = l.module(job['recovery_source'], '_committed_HTTP_shutdown_recovery')
++            # Observe this SAME pending original stop, never send another
++            # signal. The source-owned return marker unlocks httpd.shutdown.
++            deadline = time.monotonic()+240
++            while l.process_start(owner['pid']) == owner['starttime_ticks'] and time.monotonic() < deadline:
++                dashboard_release = recovery.release_HTTP_if_save_function_returned(job,state,l)
++                if dashboard_release is not None:
++                    break
++                time.sleep(.2)
++        if l.process_start(owner['pid']) != owner['starttime_ticks']:
++            return dict(status='COMMITTED_FORWARD_RECOVERY_REQUIRED', original_handle_preserved=False,
++                actual_unit=l.show(base['owner']['unit']), poststop=state.get('poststop'),
++                HTTP_release_after_save_return=dashboard_release, restart_retry=False,
++                replacement_terminated=False, source_rollback=False, protected_policy_loaded=False,
++                replay_cleared=False, errors=[])
+         paused = state.get('poststop',{}).get('startup_save_paused_owner')
+         if paused is not None:
+             require(paused == state.get('replacement'),'Only the captured save-publication owner may be resumed')
+@@ -711,7 +613,8 @@
+         return dict(status='SAME_REPLACEMENT_HANDLE_OBSERVATION_PENDING' if state.get('replacement') else
+                     'SAME_ORIGINAL_HANDLE_OBSERVATION_PENDING',owner=owner,original_handle_preserved=True,
+                     observation_pending=observation_pending,restart_retry=False,replacement_terminated=False,
+-                    source_rollback=False,protected_policy_loaded=False,replay_cleared=False,errors=[])
++                    source_rollback=False,protected_policy_loaded=False,replay_cleared=False,
++                    HTTP_release_after_save_return=dashboard_release, errors=[])
+     # A controller loss after a committed stop requires a distinct forward
+     # continuation bound to the actual newest checkpoint/CPU/source/CPU handle.
+     # Preserve these exact inputs; never infer a successful start or retry here.

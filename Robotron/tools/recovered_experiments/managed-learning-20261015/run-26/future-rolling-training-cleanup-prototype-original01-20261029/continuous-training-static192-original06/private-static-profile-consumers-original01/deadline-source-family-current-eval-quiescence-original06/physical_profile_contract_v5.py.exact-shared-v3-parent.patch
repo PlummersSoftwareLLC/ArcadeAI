@@ -1,0 +1,198 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/physical_profile_contract_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/physical_profile_contract_v5.py
+@@ -1,4 +1,4 @@
+-"""Source-only static-main inventory/domain joins; no import-time actions.
++"""Source-only current-EVAL-quiescence inventory/domain joins; no import-time actions.
+ 
+ Root must create actual immutable inventory after the owned same-state mode
+ transition. This file cannot create an authority or qualify a current case.
+@@ -20,10 +20,10 @@
+ 
+ 
+ def validate_inventory(binding, h):
+-    require(binding['schema'] == 'robotron-continuous-physical-original192-health-case-v2',
++    require(binding['schema'] == 'robotron-original192-live-pidfd-current-eval-quiescence-case-v5',
+             'New typed static-original192 case required')
+     authority = read(binding['input_inventory_authority'], h)
+-    require(authority['schema'] == 'robotron-root-continuous-static192-input-inventory-v1'
++    require(authority['schema'] == 'robotron-root-original192-live-pidfd-current-eval-quiescence-input-inventory-v5'
+             and authority['status'] == 'ROOT_SELECTED_EXACT_HELD_INPUTS'
+             and authority['mode'] == 'CONTINUOUS_TRAIN155_EVAL37_ONCE'
+             and authority['source_authority'] == binding['continuous']['source_authority']
+@@ -34,6 +34,37 @@
+     parent = read(authority['parent_case'], h)
+     require(parent['schema'] == 'robotron-round-main-health-case-v1' and len(parent['inputs']) == 247,
+             'Actual historical247-input predecessor must remain explicit')
++    prior = read(authority['prior_physical_case'], h)
++    immediate = read(authority['immediate_prior_case'], h)
++    require(prior['schema'] == 'robotron-continuous-physical-original192-health-case-v2'
++            and len(prior['inputs']) == 348 and authority['all_prior348_paths_retained'] is True
++            and immediate['schema'] == 'robotron-physical-original192-immutable-bootstrap-live-pidfd-health-case-v4'
++            and len(immediate['inputs']) == 365 and authority['all_v4_paths_retained'] is True
++            and set(parent['inputs']) <= set(prior['inputs']) <= set(immediate['inputs']) <= set(binding['inputs'])
++            and authority['prior348_replacements'] == {p:dict(before=v,after=binding['inputs'][p])
++                for p,v in prior['inputs'].items() if v != binding['inputs'][p]}
++            and authority['immediate_prior_replacements'] == {p:dict(before=v,after=binding['inputs'][p])
++                for p,v in immediate['inputs'].items() if v != binding['inputs'][p]},
++            'Every247/348/365 historical path and exact current transition must remain explicit')
++    readiness_parent = read(authority['readiness120_parent_case'], h)
++    readiness_inventory = read(authority['readiness120_parent_inventory'], h)
++    overlay = binding['observer_client_readiness_overlay']
++    require(readiness_parent['schema'] == binding['schema'] and len(readiness_parent['inputs']) == 382
++            and readiness_parent['input_inventory_authority'] == authority['readiness120_parent_inventory']
++            and readiness_inventory['inputs'] == readiness_parent['inputs']
++            and authority['all_prior382_paths_retained'] is True and authority['prior382_replacements'] == {}
++            and set(readiness_parent['inputs']) <= set(binding['inputs'])
++            and all(binding['inputs'][p] == v for p,v in readiness_parent['inputs'].items())
++            and overlay['schema'] == 'robotron-HC5-client-readiness120-case-overlay-v1'
++            and overlay['parent_case'] == authority['readiness120_parent_case']
++            and overlay['parent_inventory'] == authority['readiness120_parent_inventory']
++            and overlay['initial_samples'] == 100 and overlay['readiness_wait_s'] == 120
++            and overlay['case_profile_and_protocol_unchanged'] is True,
++            'Exact unchanged HC5 parent382 and selected readiness120 source overlay required')
++    for value in (overlay['family'],overlay['source_map'],overlay['source_peer'],overlay['client']):
++        require(binding['inputs'].get(value['path']) == dict(sha256=value['sha256'],identity=value['identity']),
++                'Readiness overlay must remain a fully held source input')
++        h.checked(value)
+     old, current = parent['inputs'], binding['inputs']
+     require(set(old) <= set(current), 'New mode silently dropped a historical held input')
+     changed = {path: dict(before=old[path], after=current[path]) for path in old if old[path] != current[path]}
+@@ -46,10 +77,11 @@
+ 
+ 
+ def same_domain(proved, current):
+-    require(proved['schema'] == current['schema'] == 'robotron-continuous-physical-original192-health-case-v2'
++    require(proved['schema'] == current['schema'] == 'robotron-original192-live-pidfd-current-eval-quiescence-case-v5'
+             and proved['inputs'] == current['inputs'] and proved['slot_eval'] == current['slot_eval']
+             and proved['continuous'] == current['continuous']
+             and proved['input_inventory_authority'] == current['input_inventory_authority']
++            and proved['observer_client_readiness_overlay'] == current['observer_client_readiness_overlay']
+             and all(proved[key] == current[key] for key in
+                     ('recipe', 'actor_environment', 'actor_command', 'actor_executable', 'actor_affinity'))
+             and proved.get('experiment') == current.get('experiment'),
+@@ -75,9 +107,11 @@
+     health replay already checked every current TCP and retirement witness.
+     """
+     expected=set(map(str,range(192)));status=sample['status'];c=binding['continuous']
+-    require(binding['schema']=='robotron-continuous-physical-original192-health-case-v2'
+-            and sample['schema']=='robotron-continuous-physical-original192-main-health-snapshot-v2'
+-            and status['schema']=='robotron-continuous-training-static192-snapshot-v2'
++    require(binding['schema']=='robotron-original192-live-pidfd-current-eval-quiescence-case-v5'
++            and sample['schema']=='robotron-original192-live-pidfd-current-eval-quiescence-snapshot-v5'
++            and status['schema']=='robotron-original192-immutable-bootstrap-projection-v4'
++            and status['historical_bootstrap_only'] is True and status['current_health_claimed'] is False
++            and status['initial_admission']['immutable_all192_barrier']==c['initial_barrier']
+             and status['mode']=='CONTINUOUS_TRAIN155_EVAL37_ONCE'
+             and status['epoch']==c['epoch'] and status['original_membership']==c['original_membership']
+             and set(status['slots'])==set(c['original_slots'])==expected,
+@@ -99,5 +133,110 @@
+             'Replayed proof omits an original TRAIN or lacks its validated independent EVAL natural evidence')
+ 
+ 
++def normalize_capture_fullpin(value):
++    """Normalize only the capture writer's integer permission representation.
++
++    Full identity/SHA fields are preserved. This never refreshes an identity or
++    reads a file. The result is compatible with the ordinary full8 verifier.
++    """
++    require(type(value) is dict and set(value) == {'path','sha256','bytes','identity'}
++            and type(value['identity']) is dict
++            and set(value['identity']) == {'device','inode','bytes','mtime_ns','ctime_ns','mode','uid','nlink'},
++            'Exact capture full8 source/control pin required')
++    require(all(type(value['identity'][key]) is int and value['identity'][key] >= 0
++                for key in ('device','inode','bytes','mtime_ns','ctime_ns','uid','nlink'))
++            and type(value['path']) is str and value['path'].startswith('/')
++            and '/..' not in value['path'] and '/./' not in value['path'],
++            'Typed unchanged full8 capture identity and absolute source path required')
++    out = json.loads(json.dumps(value,allow_nan=False)); mode = out['identity']['mode']
++    require((type(mode) is int and 0 <= mode <= 0o777)
++            or (type(mode) is str and mode.startswith('0o') and 0 <= int(mode,8) <= 0o777),
++            'Typed capture permissions required')
++    if type(mode) is int:
++        out['identity']['mode'] = oct(mode)
++    require(out['identity']['mode'] == oct(int(out['identity']['mode'],8))
++            and type(out['bytes']) is int and out['bytes'] == out['identity']['bytes']
++            and type(out['sha256']) is str and len(out['sha256']) == 64
++            and all(c in '0123456789abcdef' for c in out['sha256']),
++            'Exact capture byte count and SHA required')
++    return out
++
++
++def validate_fresh_capture_association(association_pin, *, plan_pin, result_pin,
++                                     plan, case, case_pin, engineering_joint_pin, h):
++    """Current-context/source join only; this does not qualify a capture CPU.
++
++    The selected profile constructor separately validates original numerical
++    CPU and observer terminal/release evidence before accepting the immutable
++    original_capture_qualification. The plan and its own counts are never
++    rewritten, extended, or treated as a prior measurement retry.
++    """
++    authority = read(association_pin,h)
++    require(authority['schema'] == 'robotron-root-fresh-capture-current-quiescence-context-association-v5'
++            and authority['status'] == 'ACTUAL_CLOSED_FRESH_CAPTURE_ASSOCIATED_WITH_CURRENT_QUALIFIED_CONTEXT'
++            and authority['capture_plan'] == plan_pin and authority['capture_result'] == result_pin
++            and authority['capture_root_selection'] == normalize_capture_fullpin(plan['root_selection'])
++            and authority['current_main_case'] == case_pin
++            and authority['current_input_inventory'] == case['input_inventory_authority']
++            and authority['current_engineering_joint'] == engineering_joint_pin
++            and authority['capture_plan_or_window_mutated'] is False
++            and authority['prior_window_counts_or_old_scores_reused'] is False
++            and authority['capture_guard_only_supplement_grants_runtime_source_authority'] is False,
++            'Explicit closed fresh-window/current-qualified-context association required')
++    qualification = read(authority['original_capture_qualification'],h)
++    require(qualification['schema'] == 'robotron-root-original-valid-capture-qualification-v1'
++            and qualification['status'] == 'CAPTURE_CPU_VERIFIED_AND_ORIGINAL_SCOPE_CLOSED'
++            and qualification['capture_plan'] == plan_pin and qualification['capture_result'] == result_pin
++            and type(qualification['actual_original_exit']) is int and qualification['actual_original_exit'] == 0
++            and qualification['original_scope_released'] is True,
++            'Exact original closed fresh-capture qualification must remain explicit')
++    context = plan['continuous_context']; c = case['continuous']; trainer = c['trainer']
++    owner = dict(pid=trainer['pid'],birth_ticks=trainer['birth'],invocation_id=trainer['invocation_id'])
++    require(plan['owner'] == context['owner'] == owner
++            and context['server_stamp'] == c['server_stamp']
++            and context['policy_generation'] == c['policy_generation']
++            and context['slot_eval'] == case['slot_eval']
++            and context['environment'] == {'DQN_BATCH_SIZE':'4096','DQN_N_STEP':'3',
++                'DQN_MAX_SAMPLES_PER_FRAME':'8','DQN_PER_PRIORITY_METRIC':'ce',
++                'ROBOTRON_CONTINUOUS_TRAINING_MODE':'1'}
++            and all(case['owners']['trainer']['process']['environment'].get(k) == v
++                    for k,v in context['environment'].items())
++            and all(plan['expected_exposure_lineage'][kind] == {key:case['exposure'][kind][key]
++                for key in ('process_id','instance_monotonic_ns','epoch','epoch_reason')}
++                for kind in ('optimizer','replay')),
++            'Fresh capture and current case original owner/source/role/recipe/epoch differ')
++    full = [normalize_capture_fullpin(value) for value in context['source_and_control_inputs']]
++    require(full and len({p['path'] for p in full}) == len(full),'Distinct complete capture source/control holds required')
++    shared = {}; supplemental = []
++    only_supplement = '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/test_training_round.py'
++    for value in full:
++        h.checked(value)
++        path = value['path']; thin = dict(sha256=value['sha256'],identity=value['identity'])
++        if path in case['inputs']:
++            require(case['inputs'][path] == thin,'Capture held source/control changed in current case')
++            shared[path] = thin
++        else:
++            require(path == only_supplement,'Unheld capture source is not the exact supplemental test-only guard')
++            supplemental.append(value)
++    required = {'/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/'+name for name in
++        ('__init__.py','agent.py','main.py','socket_server.py','metrics_dashboard.py',
++         'learning_exposure.py','model.py','config.py','replay_buffer.py')}
++    required.add('/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/learning_control.json')
++    require(required <= set(shared) and authority['shared_source_control_inputs'] == shared
++            and authority['supplemental_capture_guard_inputs'] == supplemental,
++            'Every capture hold must join current case or remain an explicit test-only supplement')
++    joint = read(engineering_joint_pin,h)
++    require(joint['status'] == 'ENGINEERING_PASS_AT_RECORDED_OBSERVED_LOAD_ONLY'
++            and joint['case'] == case_pin and joint['input_inventory_authority'] == case['input_inventory_authority']
++            and joint['source_family'] == case['observer_client_readiness_overlay']['family']
++            and joint['main_health_profile'] == 'PHYSICAL_ORIGINAL192_LIVE_PIDFD_CURRENT_EVAL_QUIESCENCE_V5'
++            and joint['current_once_only_EVAL_quiescence_with_historical_error_and_ready_false_preserved_verified'] is True
++            and joint['original_cleanup_deadline_handoff_CID_reuse_or_refill_success_from_exception_claimed'] is False
++            and joint['all_three_modes_are_fresh_originals_for_this_physical_case'] is True
++            and joint['all_original_engineering_scopes_closed_at_recorded_closer'] is True,
++            'Exact current readiness120 three-scope engineering association required')
++    return authority
++
++
+ if __name__ == '__main__':
+     print('SOURCE_ONLY_INERT_NO_AUTHORITY_OUTPUTS_OR_ACTIONS')

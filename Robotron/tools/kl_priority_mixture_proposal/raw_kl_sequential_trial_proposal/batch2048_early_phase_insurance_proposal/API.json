@@ -1,0 +1,108 @@
+{
+  "class_name": "EarlyPhaseInsurance",
+  "consumer": {
+    "function": "phase_insurance_floor(base,result_pin,expected_owner,expected_phase_record,profile)",
+    "future_return_field": "phase_early_insurance_result FULLPIN",
+    "legacy_aliases": false,
+    "returns": [
+      "owner",
+      "clock_floor",
+      "tag",
+      "phase_record",
+      "report",
+      "source",
+      "role=early_insurance",
+      "legacy_7d_insurance=false",
+      "eligible_quality_candidate=false"
+    ]
+  },
+  "expectation_scope": "Derived and immutably published AFTER actual new owner READY using known-owner read-only observation+selected env/rootboot; local spec copy, never unknown newowner in precommitted immutable outerjob.",
+  "methods": [
+    "start()->PENDING|FAILED/raise",
+    "tick()->PENDING|PASS|FAILED (small request bookkeeping +one background dispatch)",
+    "result()->copied state",
+    "registration/adopt_cpu/record_terminal/record_release: original exact scanner contract"
+  ],
+  "producer_expectation": {
+    "argv": null,
+    "boot_id": null,
+    "cwd": null,
+    "environment": null,
+    "exe": null,
+    "owner": null,
+    "schema": "robotron-root-CE2048-producer-expectation-v1"
+  },
+  "runtime_requirements": [
+    "Actual current owned treatment CE2048 runtime, after192 API+inspect and phase/source metadata primitives",
+    "Existing bounded registered model/source/managed-slot copy dispatch; dynamic numeric report uses adapter.archive_metadata instead",
+    "New controller scanner includes a331 basename and permits only registered exact argv/unit/PID/start/inv/terminal evidence",
+    "Controller enforces earlytag distinctstartup+selectedcandidate and continues1Hz horizon while background runs"
+  ],
+  "schema": "robotron-CE2048-early-phase-insurance-API-v1",
+  "signature": "(adapter,base,runtime,spec,output,executor=None,spawn=None,clock=monotonic,wall=time,run=command)",
+  "sources": {
+    "COLLECTOR_BINDING": {
+      "manifest": {
+        "bytes": 3499,
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_producer_collector_proposal/preparation-manifest.json",
+        "sha256": "193b3956f6808cd4813527e369b8b30552d5d940dbc6d0bc352630a1d4dfa1fd"
+      },
+      "script": {
+        "bytes": 23824,
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_producer_collector_proposal/collect_producer.py",
+        "sha256": "b6a338297ca91f39b1270db8179fac06cd3ba3d6ef5fb175df46968ca6c3bcfb"
+      }
+    },
+    "CPU_FAMILY": {
+      "script": {
+        "bytes": 37695,
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/verify_phase_snapshot_2048.py",
+        "sha256": "a331b550191a48ab219cf92f2e1c42fc394e038c93609ecac4fb9a722b75e5cd"
+      },
+      "strict_base": {
+        "bytes": 33727,
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/strict_phase_base_2048.py",
+        "sha256": "47677509f170c4c3b6a1c03918e02ab13996af1ceafffac29b7536c2fad61f80"
+      }
+    },
+    "EXECUTION_KIND": "phase_early_insurance2048",
+    "PROFILE": {
+      "bytes": 764,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json",
+      "sha256": "e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50"
+    },
+    "RESULT_SCHEMA": "robotron-batch2048-early-phase-insurance-result-v1"
+  },
+  "spec_keys": [
+    "tag",
+    "cpu_unit",
+    "save_timeout_s=60",
+    "cpu_timeout_s=120",
+    "profile FULLPIN",
+    "collector{script,manifest}FULLPINs",
+    "python_identity{argv_path,link_target,link_identity,executable,pyvenv_cfg,library_context}",
+    "producer_expectation FULLPIN"
+  ],
+  "success_fields": [
+    "schema",
+    "status",
+    "role",
+    "tag",
+    "owner",
+    "phase_cpu_report",
+    "saved_receipt",
+    "phase_cpu_job",
+    "cpu_provenance",
+    "python_identity",
+    "python",
+    "frozen",
+    "producer_capture",
+    "producer_observation",
+    "phase",
+    "profile",
+    "eligible_quality_candidate=false",
+    "legacy_7d_insurance=false",
+    "result_pin(return only)"
+  ],
+  "whole_trial_ready": false
+}

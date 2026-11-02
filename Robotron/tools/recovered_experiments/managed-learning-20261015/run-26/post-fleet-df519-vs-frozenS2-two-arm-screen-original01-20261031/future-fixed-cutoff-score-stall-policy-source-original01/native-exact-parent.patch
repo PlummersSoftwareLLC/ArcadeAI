@@ -1,0 +1,71 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-fleet-df519-vs-frozenS2-two-arm-screen-original01-20261031/selected-source/run_newer_policy_vs_frozenS2_screen_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-fleet-df519-vs-frozenS2-two-arm-screen-original01-20261031/future-fixed-cutoff-score-stall-policy-source-original01/run_newer_policy_vs_frozenS2_fixed_cutoff_liveness_v2.py
+@@ -29,6 +29,7 @@
+ PARENT=D.parent/'quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/run_cold_slot64_prefix_v1.py'
+ PARENT_SHA='9f6820ea3633d8e411f4408846d0aaef7a9b9bde1393b16975293315a32ca25d'
+ REFERENCE_SHA='06558cbc185b76b2b44229ddfe469d2a92037e70f89de2481e8fb055f2c736ad'
++PRIVATE_LUA_SHA='a631f02980b2e7cdddd2fc15066b74ee5d5ebfac3de90a40a5833b0a5d48b66d'
+ SLOTS=tuple(range(4096,4128))
+ PORTS={slot:20000+slot-4096 for slot in SLOTS}
+ GPU='GPU-b549355c-78bb-53d8-04a6-da34d45e1dd0'
+@@ -64,6 +65,9 @@
+             job['wall_limit_s']==4200 and job['cleanup_limit_s']==60 and
+             job['inflight_drain_bound_ns']==3_500_000_000,'Exact selected32/60-minute/native bounds required')
+     require(job['private_client_idle_timeout_s']==4260,'Explicit matched private idle setting required')
++    require(type(job['private_score_stall_timeout_s'])is int and job['private_score_stall_timeout_s']==0
++        and type(job['private_lua_score_stall_timeout_s'])is int and job['private_lua_score_stall_timeout_s']==4260
++        and job['lua']['sha256']==PRIVATE_LUA_SHA,'Exact matched private score-stall policy and Lua required')
+     require(job['resources']==dict(cpu_cores=12,memory_bytes=24<<30,tasks_max=512,runtime_max_s=4260)
+             and job['observer_resources']==dict(cpu_cores=2,memory_bytes=4<<30,tasks_max=128,runtime_max_s=4260)
+             and job['controller_observation_s']==4320,'Exact selected durable resources required')
+@@ -113,6 +117,10 @@
+         and selected['status']=='ROOT_SELECTED_NOT_LAUNCHED'and selected['ordered_legs']==['R1','C1']
+         and selected['screen_only']is True and selected['promotion']is False
+         and selected['reference']['checkpoint']['sha256']==REFERENCE_SHA,'Exact prospective paired screen selection required')
++    require(type(selected['private_score_stall_timeout_s'])is int and selected['private_score_stall_timeout_s']==0
++        and type(selected['private_lua_score_stall_timeout_s'])is int and selected['private_lua_score_stall_timeout_s']==4260
++        and selected['private_protocol_sources']==dict(runtime=job['runtime'],lua=job['lua']),
++        'Both fresh arms must select the same declared private liveness protocol')
+     policy=selected['reference'if job['leg']=='R1'else'candidate']
+     require(job['checkpoint']==policy['checkpoint']and job['expected_policy_clocks']==policy['expected_policy_clocks']
+         and job['policy_authority']==policy['authority']and job['current_main']==selected['current_main'],
+@@ -211,7 +219,7 @@
+     lease=owned.PrivateLease(job['lease']);lease_entry=None;released=False
+     policy_before=policy_after=acquisition=library_entry=compile_before=None
+     anchor_pin=seal_pin=cleanup_pin=restoration=None;barrier=None
+-    all_threads_stopped=False;child_reap=None;source_unchanged=False
++    all_threads_stopped=False;child_reap=None;source_unchanged=False;private_score_stall_override_applied=False
+     started=time.monotonic();native_deadline=started+4200
+     previous={sig:signal.signal(sig,lambda *_:stopped.set()) for sig in (signal.SIGTERM,signal.SIGINT)}
+     gate=modules['hooks'].DeadlineExchangeGate();recorder=modules['recorder'].DeadlineScoreRecorder()
+@@ -252,6 +260,10 @@
+         from dqn.socket_server import SocketServer,parse_frame_data,CLIENT_IDLE_TIMEOUT_S
+         require(CLIENT_IDLE_TIMEOUT_S==4260.0,'Actual private idle timeout differs from prospective matched config')
+         torch.set_num_threads(2);torch.set_num_interop_threads(1);config.RL_CONFIG.inference_batch_max_size=16
++        # Private process config only: scoring progress is not transport/game liveness.
++        config.RL_CONFIG.client_stall_timeout_s=job['private_score_stall_timeout_s']
++        require(config.RL_CONFIG.client_stall_timeout_s==0,'Private score-only server watchdog remains enabled')
++        private_score_stall_override_applied=True
+         source=h.checked(job['checkpoint']);checkpoint=output/'checkpoint.pt'
+         import shutil
+         with source.open('rb') as incoming,checkpoint.open('xb') as outgoing:
+@@ -377,6 +389,8 @@
+                     anchor=anchor,n_selected_first_games=len(registration.registered),n_scored=n_scored,n_completed=n_completed,
+                     n_unfinished=32-n_completed,n_censored=None,n_emulators_stopped=len(registration.closed),n_emulators_active=32-len(registration.closed),
+                     parked_origin_connections_are_not_active_emulators=True,
++                    declared_score_stall_timeout_s=job['private_score_stall_timeout_s'],declared_lua_score_stall_timeout_s=job['private_lua_score_stall_timeout_s'],
++                    private_score_stall_override_applied=private_score_stall_override_applied,score_progress_required_for_liveness=False,
+                     deadline_scores_sealed=False,lifecycle=lifecycle.status(),errors=list(errors),
+                     slots={str(s):dict(pid=r['child'].pid,birth=r['birth'],sequence=r['proxy'].sequence,
+                         prefix_verified=r['proxy'].prefix_verified.is_set(),ledger=r['proxy'].ledger.summary()) for s,r in actors.items()})
+@@ -502,7 +516,9 @@
+         lease=lease_entry,original_lease_released=released,socket_wait_library=library_entry,
+         immutable_inputs_unchanged=source_unchanged,full_game_quality_qualified=False,
+         deadline_metric_independently_qualified=False,improvement_qualified=False,
+-        main_runtime_changed=False,promotion_gates_changed=False,screen_only=True,promotion=False))
++        main_runtime_changed=False,promotion_gates_changed=False,screen_only=True,promotion=False,
++        declared_score_stall_timeout_s=job['private_score_stall_timeout_s'],declared_lua_score_stall_timeout_s=job['private_lua_score_stall_timeout_s'],
++        private_score_stall_override_applied=private_score_stall_override_applied,score_progress_required_for_liveness=False))
+     print(json.dumps(dict(result=result,complete=complete)),flush=True);return 0 if complete else 1
+ 
+ 

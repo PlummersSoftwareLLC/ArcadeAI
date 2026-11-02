@@ -1,0 +1,168 @@
+{
+  "schema": "robotron-recovered-CE543-quality-source-preparation-v1",
+  "status": "SOURCE_ONLY_UNEXECUTED_PEER_PENDING",
+  "files": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/BINDING_API.txt",
+      "sha256": "6906356141396df63cff233d011593c98196217330a846651622f2a6b2be25b3",
+      "bytes": 1482,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/PREPARATION.txt",
+      "sha256": "92d3415decba215bd6d44b8081ad717d41526583e9ff70d09bc01a367b0edd00",
+      "bytes": 2798,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/audit_completed_leg.py",
+      "sha256": "cbfee2947710b4ea8ffb2afeb8761f0d2658ad6eb222731d3baaed2158ce7698",
+      "bytes": 34094,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/audit_completed_leg.py.patch",
+      "sha256": "d1bb06329a405fd012b31987b4613c1d462b5d075ae91755227118b041720966",
+      "bytes": 1138,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/binding-job.template.json",
+      "sha256": "e977334af10dccdceb92e1ce0a2636133dddf01ad7840c27f34375a384c95df2",
+      "bytes": 4792,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/collect_readiness.py",
+      "sha256": "2006bacb6f0e75d3ade82138b133f6ba5479b177f06f62a60f01c5775a66487c",
+      "bytes": 8495,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/future-argv.json",
+      "sha256": "9c4f36a288417b15e2b14068baddac97812174871769908af41fff2d4e9815d9",
+      "bytes": 5956,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/quality_bindings.py",
+      "sha256": "2396f8247143945b6ea70dcfff2684f709f5092ee4c775822d7f47f9f4cae176",
+      "bytes": 23171,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/quality_bindings.py.patch",
+      "sha256": "aea23aa8e19a7850533e306a590c59d2b50e4f6b62a3655b2b4bf4e90d9133a2",
+      "bytes": 13569,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/readiness-job.template.json",
+      "sha256": "941044a1bd876d65bb8ded3b5b68bd5a0b748041421c65e488d1544db0937bbc",
+      "bytes": 292,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/root_quality_carrier.py",
+      "sha256": "4f3a0444c071781a09349a2020d0575bd12f95c78e56f4b3efbcdeaaa15d658d",
+      "bytes": 23582,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/root_quality_carrier.py.patch",
+      "sha256": "06d344a5861e9dfea0197b4348920d7d056a691d836dab2a7649feb4e20df491",
+      "bytes": 743,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/source-lock.json",
+      "sha256": "0f427ac52a734bf7d52e1d03fc42304d8adf2511763587a4874a0430ba5c0c91",
+      "bytes": 3226,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/source-preservation.json",
+      "sha256": "aed5cf650a0309e22ff34ad0403f3aadd2e3b7569417c0741ef26d8ff1fb75c6",
+      "bytes": 535,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/template-audit-source.py",
+      "sha256": "2576d4449b12d6b4a3b17898ab9938c6ff8c762829f61a29e3d510f73d585c21",
+      "bytes": 37008,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/test_quality_bindings.py",
+      "sha256": "7a56dec7580127007d4713f9ea6a96c0b93f9408e81e35fa1e598f4a1c19b018",
+      "bytes": 23239,
+      "mode": "0o444"
+    }
+  ],
+  "upstreams": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_reviewed2_proposal/preparation-manifest.json",
+      "sha256": "7b5738fa857301278bd571f19b72eb3f775003d25f1821b9485346ea9e12fd39",
+      "bytes": 7622
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_reviewed2_proposal/quality_bindings.py",
+      "sha256": "ecbe6ae896172ae7d44130de0004df7f25f33544b421106cdc325daa78f8cc59",
+      "bytes": 19573
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_reviewed2_proposal/root_quality_carrier.py",
+      "sha256": "6f6d0386e85a98f22fda3dacc55747d13f0f4978f0b8ce4c4906bba33bc1cfc5",
+      "bytes": 23582
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_reviewed2_proposal/audit_completed_leg.py",
+      "sha256": "734999b906973d8742e28c734bf3f2d704cc3fa1765c0e30a906caaeb5eb176d",
+      "bytes": 34094
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_reviewed2_proposal/test_quality_bindings.py",
+      "sha256": "82aaefb679ce6373694a2b1e78d7d21f3e5509f950a312f7db2a9d8144ac4a15",
+      "bytes": 17602
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_live_ce_candidate_capture_proposal/preparation-manifest.json",
+      "sha256": "832fdfc62398203a8fb0045635cdfb954309273bb3ddd2bf62d68315c1628af3",
+      "bytes": 5496
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_live_ce_candidate_capture_proposal/capture_live_CE_candidate.py",
+      "sha256": "7be0eaf012e208299548f131fd42651239740692d58b8a6d997a6eee6733e46c",
+      "bytes": 34762
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/verify_phase_snapshot.py",
+      "sha256": "b2e732dc731b2b601f7499d2cafd5841896daf2b0713d496b98cb6b8d7279519",
+      "bytes": 21460
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/strict_phase_base.py",
+      "sha256": "9ef38e17e1b9eee3f6c43e40005812f2ebe3cff16d08bf61d3e820c2d41134c8",
+      "bytes": 33634
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/run_quality_campaign.py",
+      "sha256": "574e56f28499c751c639ee8a3474eecd5ca8de8c896da3dd44d5e4fc2fe60128",
+      "bytes": 21373
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/run_frozen_sidecar.py",
+      "sha256": "cd034413c2fd8a56bb9d22f8df86889939edfad041ee4e2e0210a831b5f9fe90",
+      "bytes": 32886
+    }
+  ],
+  "authored_tests": 12,
+  "actual_candidate": null,
+  "actual_created_campaign_plan": null,
+  "actual_guard_execution": null,
+  "evaluator_and_scoring_unchanged": true,
+  "default_read_free": true,
+  "imports_or_tests_or_runtime_or_PT_by_author": false,
+  "installed_or_canonical_edits": false,
+  "scope": "Explicit actual protected543 reference and recovered CE4096 owner; capture/strictCPU/baseline actual bytes late-bound. Same four-leg evaluator/fulltail/one-attempt/individual5%-mean+median gates. Root alone launches/reviews/releases/publishes."
+}

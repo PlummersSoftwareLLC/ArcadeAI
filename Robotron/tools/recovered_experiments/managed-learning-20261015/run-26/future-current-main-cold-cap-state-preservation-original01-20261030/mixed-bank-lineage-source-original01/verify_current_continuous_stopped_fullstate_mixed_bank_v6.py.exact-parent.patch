@@ -1,0 +1,46 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/verify_current_continuous_stopped_fullstate_cold_bank_v5.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/verify_current_continuous_stopped_fullstate_mixed_bank_v6.py
+@@ -102,7 +102,7 @@
+     """Bind one actual cold incarnation; no old owner/boot/phase is relabelled."""
+     global OWNER, FLEET, PHASE_ANCHOR_SHA, BOOT_SHA, RECORD_SHA
+     entry=job['current_inputs_source']
+-    require(entry['path']==str(Path(__file__).with_name('current_main_preservation_inputs_cold_bank_v2.py')),
++    require(entry['path']==str(Path(__file__).with_name('current_main_preservation_inputs_mixed_bank_v3.py')),
+             'Exact selected current preservation metadata source required')
+     helper=load('_current_continuous_preservation_inputs',entry)
+     selection=helper.read(job['current_selection'])
+@@ -349,7 +349,9 @@
+             and (bank['captured_adds']>=prior['captured_adds']if origin is None else bank['captured_adds']==local_adds),
+             'Final synchronous bank save did not fulfill its sealed RAM revision/geometry: '+name)
+         if origin is not None:
+-            scalar=final_scalars[name];old=origin['scalars'][name]
++            scalar=final_scalars[name];old=origin['scalars'][name];basis=origin['bank_origins'][name]
++            delta=local_adds-basis['age_base_adds']
++            require(type(delta)is int and delta>=0,'Per-bank captured add-clock exceeded final sealed local clock')
+             require(json.dumps(prior,sort_keys=True,allow_nan=False)==json.dumps(origin['banks'][name],sort_keys=True,allow_nan=False)and type(target)is int and target>=1
+                 and bank['selector']['previous']==prior['selector']['generation']
+                 and bank['selector']['generation']!=prior['selector']['generation']
+@@ -358,18 +360,18 @@
+                 and all(type(scalar[k])is int and scalar[k]>=0 for k in('stale_age','stale_age_normal')),
+                 'Fresh final generation must carry exact sealed local revision/add clock')
+             if not intent['dirty_at_seal'][name]:
+-                require(target==1 and scalar['stale_age']==old['stale_age']+local_adds
+-                    and scalar['stale_age_normal']==old['stale_age_normal']+local_adds,
++                require(target==basis['saved_local_revision']and scalar['stale_age']==old['stale_age']+delta
++                    and scalar['stale_age_normal']==old['stale_age_normal']+delta,
+                     'Clean loaded bank relative admission ages changed')
+             else:
+-                require(target>1 and 0<=scalar['stale_age']<=local_adds
++                require(target>basis['saved_local_revision']and 0<=scalar['stale_age']<=delta
+                     and scalar['stale_age_normal']>=scalar['stale_age']
+-                    and (scalar['stale_age_normal']<=local_adds or scalar['stale_age_normal']==old['stale_age_normal']+local_adds),
++                    and (scalar['stale_age_normal']<=delta or scalar['stale_age_normal']==old['stale_age_normal']+delta),
+                     'Dirty bank ages are not reachable by source-local admissions')
+         if not intent['dirty_at_seal'][name]:
+             left,right=old_semantics[name],new_semantics[name]
+             moving={'captured_adds.npy','stale_age.npy','stale_age_normal.npy'}
+-            if origin is not None:moving.add('mutation_generation.npy')
++            if origin is not None and basis['kind']=='INHERITED_BOOT_DISK':moving.add('mutation_generation.npy')
+             require(set(left)==set(right)and all(left[key]==right[key]for key in set(left)-moving)
+                 and bank['transitions']==prior['transitions']
+                 and all(json.dumps(prior['arrays'][key]['header'],sort_keys=True,allow_nan=False)==json.dumps(bank['arrays'][key]['header'],sort_keys=True,allow_nan=False)

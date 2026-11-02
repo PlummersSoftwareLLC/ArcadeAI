@@ -1,0 +1,14 @@
+--- Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/static_profile_contract_v1.py
++++ Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/static_profile_contract_v2.py
+@@ -48,7 +48,10 @@
+     require(proved['schema'] == current['schema'] == 'robotron-continuous-static192-health-case-v1'
+             and proved['inputs'] == current['inputs'] and proved['slot_eval'] == current['slot_eval']
+             and proved['continuous'] == current['continuous']
+-            and proved['input_inventory_authority'] == current['input_inventory_authority'],
++            and proved['input_inventory_authority'] == current['input_inventory_authority']
++            and all(proved[key] == current[key] for key in
++                    ('recipe', 'actor_environment', 'actor_command', 'actor_executable', 'actor_affinity'))
++            and proved.get('experiment') == current.get('experiment'),
+             'Readiness belongs to another original static physical/source/role authority')
+     fields = ('pid', 'starttime_ticks', 'parent_pid', 'cgroup', 'command',
+               'environment', 'affinity', 'uids', 'executable')

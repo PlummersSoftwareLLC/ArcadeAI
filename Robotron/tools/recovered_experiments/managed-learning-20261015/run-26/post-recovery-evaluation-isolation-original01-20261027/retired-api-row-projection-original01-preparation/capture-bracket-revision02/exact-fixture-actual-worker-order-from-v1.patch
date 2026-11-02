@@ -1,0 +1,111 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/test_retired_API_projection_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/test_retired_API_projection_v2.py
+@@ -10,9 +10,10 @@
+ import json
+ from pathlib import Path
+ import unittest
++import types
+ 
+ Q=Path(__file__).resolve().parent
+-I=Q.parent
++I=Q.parent.parent
+ S=I/'durable-e078b0da-launcher-mmap-study-original01'
+ O=S/'R1/deadline-output-original01'
+ 
+@@ -22,8 +23,9 @@
+     spec.loader.exec_module(value);return value
+ 
+ 
+-api=load('_test_retired_API',Q/'api_cached_projections_v2.py')
+-health=load('_test_retired_transport',Q/'round_health_transport_retired_API_v3.py')
++api=load('_test_retired_API',Q/'api_cached_projections_v3.py')
++health=load('_test_retired_transport',Q/'round_health_transport_retired_API_v4.py')
++worker=load('_test_final_worker_collect',Q/'round_observer_retired_API_v4.py')
+ old=load('_test_original_transport',I/'declared-launcher-census-original34-preparation/readonly-mmap-source-validation-original02/round_health_transport_launcher_mmap_v2.py')
+ 
+ 
+@@ -46,16 +48,31 @@
+ 
+ 
+ def prospective():
+-    case,before,sample,lines=fixture();calls=[];original=api._pid_probe
++    case,before,sample,lines=fixture();calls=[]
++    # Reproduce the REAL unchanged worker.collect ordering: health evidence is
++    # captured first, then TCP/raw-status checks, then final unix/mono retiming.
++    original_probe,original_clock=api._pid_probe,api.time
++    original_worker_clock,original_worker_read=worker.time,worker.read
++    mono,wall=sample['monotonic_s'],sample['unix_s']
+     def synthetic_positive_absence(pid):
+         calls.append(pid)
+         return dict(path='/proc/%d/stat'%pid,pid=pid,absent=True,current_birth=None,state=None,
+-            before_monotonic_s=sample['monotonic_s']+.00001,after_monotonic_s=sample['monotonic_s']+.00002)
++            before_monotonic_s=mono+.00001,after_monotonic_s=mono+.00002)
++    class HistoricalHealth:
++        def collect(self,case,previous=None):
++            return api.collect_retired(case,sample,previous,journal_lines=lines)
++        def base(self):return health.base()
+     try:
+         api._pid_probe=synthetic_positive_absence
+-        api.collect_retired(case,sample,before,journal_lines=lines)
+-    finally:api._pid_probe=original
++        api.time=types.SimpleNamespace(monotonic=iter([mono+.000001,mono+.00003]).__next__)
++        worker.time=types.SimpleNamespace(monotonic=iter([mono-.0001,mono+.00004]).__next__,time=lambda:wall+.00004)
++        worker.read=lambda path:copy.deepcopy(sample['status'])
++        sample=worker.collect(HistoricalHealth(),case,previous=before)
++    finally:
++        api._pid_probe,api.time=original_probe,original_clock
++        worker.time,worker.read=original_worker_clock,original_worker_read
+     assert calls==[4002052]
++    assert sample['retired_API_projection']['capture_ended_monotonic_s']<sample['monotonic_s']
+     return case,before,sample
+ 
+ 
+@@ -79,7 +96,8 @@
+ 
+     def test_identity_PID_TCP_and_registration_fail_closed(self):
+         for damage in ('live','new_birth','wrong_anchor_birth','wrong_CID','CID_conflict','role','unknown_extra',
+-                       'missing_active','old_TCP_live','epoch','owner','source','raw_wire','round','probe_stale'):
++                       'missing_active','old_TCP_live','epoch','owner','source','raw_wire','round','probe_stale',
++                       'probe_future','probe_reversed','capture_future','capture_stale'):
+             case,before,sample=prospective();entry=sample['retired_API_projection']['entries']['46']
+             row=next(row for row in sample['api']['client_rows']if row['client_slot']==46)
+             if damage=='live':entry['PID_absence'].update(absent=False,current_birth=12198541,state='S')
+@@ -98,7 +116,11 @@
+             elif damage=='source':sample['owners']['trainer']['process']['executable']['path']='foreign'
+             elif damage=='raw_wire':sample['api']['client_count']-=1
+             elif damage=='round':sample['status']['round']+=1
+-            else:entry['PID_absence']['before_monotonic_s']=sample['monotonic_s']-1
++            elif damage=='probe_stale':entry['PID_absence']['before_monotonic_s']=sample['monotonic_s']-1
++            elif damage=='probe_future':entry['PID_absence']['after_monotonic_s']=sample['monotonic_s']+1
++            elif damage=='probe_reversed':entry['PID_absence']['before_monotonic_s']=entry['PID_absence']['after_monotonic_s']+.0001
++            elif damage=='capture_future':sample['retired_API_projection']['capture_ended_monotonic_s']=sample['monotonic_s']+1
++            else:sample['retired_API_projection']['capture_started_monotonic_s']=sample['monotonic_s']-.500001
+             with self.subTest(damage=damage),self.assertRaises((ValueError,KeyError)):
+                 api.project_retired(case,sample,before)
+ 
+@@ -127,7 +149,9 @@
+         delta=end+.49-later['unix_s'];later['unix_s']+=delta;later['monotonic_s']+=delta
+         later['api']['ts']=later['unix_s']-.1;sync_wire(later)
+         probe=later['retired_API_projection']['entries']['46']['PID_absence']
+-        probe.update(before_monotonic_s=later['monotonic_s']+.00001,after_monotonic_s=later['monotonic_s']+.00002)
++        later['retired_API_projection'].update(capture_started_monotonic_s=later['monotonic_s']-.00003,
++            capture_ended_monotonic_s=later['monotonic_s']-.000005)
++        probe.update(before_monotonic_s=later['monotonic_s']-.00002,after_monotonic_s=later['monotonic_s']-.00001)
+         self.assertEqual(api.project_retired(case,later,first)['api']['client_count'],36)
+         expired=copy.deepcopy(later);expired['unix_s']+=.010001;expired['monotonic_s']+=.010001
+         expired['api']['ts']=expired['unix_s']-.1;sync_wire(expired)
+@@ -138,10 +162,12 @@
+     def test_original_reconnect_and_physical_TCP_predicate_AST_remain_exact(self):
+         parent=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/api_reconnect_projection_v1.py')
+         def functions(path):return {n.name:ast.dump(n,include_attributes=False)for n in ast.parse(path.read_text()).body if isinstance(n,ast.FunctionDef)}
+-        a,b=functions(parent),functions(Q/'api_cached_projections_v2.py')
++        a,b=functions(parent),functions(Q/'api_cached_projections_v3.py')
+         for name in a:self.assertEqual(a[name],b[name])
+         original=I/'declared-launcher-census-original34-preparation/readonly-mmap-source-validation-original02/round_health_transport_launcher_mmap_v2.py'
+-        self.assertEqual(functions(original)['validate_transport'],functions(Q/'round_health_transport_retired_API_v3.py')['validate_transport'])
++        self.assertEqual(functions(original)['validate_transport'],functions(Q/'round_health_transport_retired_API_v4.py')['validate_transport'])
++        original_worker=I/'declared-launcher-census-original34-preparation/readonly-mmap-source-validation-original02/round_observer_launcher_mmap_v2.py'
++        self.assertEqual(functions(original_worker)['collect'],functions(Q/'round_observer_retired_API_v4.py')['collect'])
+ 
+ 
+ if __name__=='__main__':unittest.main()

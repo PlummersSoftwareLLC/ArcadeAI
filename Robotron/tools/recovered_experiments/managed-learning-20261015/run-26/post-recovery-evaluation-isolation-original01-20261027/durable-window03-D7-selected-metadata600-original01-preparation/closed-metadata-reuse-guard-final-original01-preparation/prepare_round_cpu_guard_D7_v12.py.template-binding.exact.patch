@@ -1,0 +1,24 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-selected-metadata600-original01-preparation/closed-metadata-reuse-guard-template-original01-preparation/prepare_round_cpu_guard_D7_v12.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-selected-metadata600-original01-preparation/closed-metadata-reuse-guard-final-original01-preparation/prepare_round_cpu_guard_D7_v12.py
+@@ -9,9 +9,9 @@
+ HERE = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
+ LOCAL = Path(__file__).resolve().parent
+ REUSE = LOCAL
+-SOURCE_CONTRACT_SHA = None  # UNFILLED; this template cannot qualify or prepare a guard.
+-DRIVER_SHA = None  # UNFILLED; this template cannot qualify or prepare a guard.
+-SHIM_SHA = None  # UNFILLED; this template cannot qualify or prepare a guard.
++SOURCE_CONTRACT_SHA = '5eb7f9b8cdb10be8635b839dbb0eb762ef87cfea8a7e90d6648b5f716b2e090a'
++DRIVER_SHA = 'b072b64470b3c6084a8886f24d7d036177e123de5bf878731e1801b8d3c00276'
++SHIM_SHA = '7390cea683ae09ffb16ee82c2dcfec7f71bbdc69438dde3a72141cfd65f97a27'
+ 
+ 
+ def load(name, path):
+@@ -82,7 +82,7 @@
+     witness = json.loads(h.checked(old['interpreter_symlink_binding']).read_bytes())
+     large[witness['source_pin']['path']] = witness['source_pin']
+     assert study['engineering_only'] is False
+-    unit = 'robotron-round-four-exact-contexts-CPU-study-retired-api-reuse-' + study_pin['sha256'][:16] + '-original01-20261029.service'
++    unit = 'robotron-round-four-exact-contexts-CPU-study-proof2s-reuse-' + study_pin['sha256'][:16] + '-original01-20261029.service'
+     job = dict(schema='robotron-deadline32-four-actual-jobs-CPU-guard-v2', unit=unit,
+         output=str(output/'output-original01'), prepared_manifest=study_pin, helpers=old['helpers'],
+         new_native_chain_tests=old['new_native_chain_tests'], interpreter_symlink_binding=old['interpreter_symlink_binding'],

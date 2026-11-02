@@ -1,0 +1,19 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/generic-entry-and-owned-source-transition-original01/exec_declared_preview_entry_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/accepted-RAW-preview-declared-subset-source-original01/exec_declared_raw_preview_entry_v1.py
+@@ -1,4 +1,4 @@
+-"""Default-inert entry for the reviewed accepted-preview transform.
++"""Default-inert entry for the reviewed accepted RAW-preview transform.
+ 
+ No install, publication, stop, retry, batch or claim. Explicit execution requires
+ an actual ROOT accepted one-slot benchmark, fresh-parent plan and owned physical
+@@ -16,8 +16,8 @@
+     'base': 'bfff44be287802cc226470050594bf4231051db4f35f087ddaca2bb3be69becc',
+     'fuse': 'b5fdc64b6777e6db2541f7c535be2fc49e47f5b565dcd714086cdb33d6041723',
+     'collector': '1f41d360fa23632cb26d6dee33d3c822bec7f9cf79fdbb75e47f3418059ca5f0',
+-    'core': '47dd609018b9f9dbf175f11caf8da2a5e87f8c9e66d43ee0b79c87aa0eb96cd5',
+-    'accepted': '9a8fe7c08e1e941e2d26a2cc3c65124b27129b9f470a0020453e33010bf32027',
++    'core': '81110aa15102c03184d62b30d7862749c2ee6868ea54ed7176b8af99d9a9d39d',
++    'accepted': '34b752774a1a50b48d8d9128c232b690d718be093ebad30d86214a8cbbd3ecd1',
+     'roles': '4d70789d61a7227cc78949df212940379b6e71eb2f7ee0df9e7ce22634404bb6',
+     'transition': '8447849e5a6a3e1f7e4eba8c58f38a8b213426745066aa7ad5e0590e062c1363',
+ }

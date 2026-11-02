@@ -1,0 +1,30 @@
+UNCONSUMED CE BATCH PHASE BOUNDARY — REVIEWED2 SOURCE CORRECTION
+
+Two narrow changes: (1) startup belongs to AFTER producer; ending candidate and
+newest_stopped belong to BEFORE producer, with candidate allowed only during
+return_batch4096. (2)2048 job/result schemas select the exact reviewed2 CPU family
+e1c7/a331/base476. Original4096 b2e schemas and e755 profile are unchanged.
+
+Old84b boundary and22101 adapter remain byte-for-byte intact. Their candidate
+routing was a source-only defect; the original matrix test mirrored that
+formula. Those packages were never launched/consumed. This package records a
+source correction, not an actual runtime failure or numerical verification.
+source-preservation.json provides finite replacements and reverse byte equality;
+patches compare only the preserved predecessor files.
+
+Eleven stdlib guards are AUTHORED, UNEXECUTED by author. They preserve the ten
+original scopes and explicitly assert returncandidate2048, returnstartup4096
+and refusal of activationcandidate. The separate real adapter bundle adds a
+post_stop_ending->actual cpu_phase->actual job publisher guard, avoiding a copied
+formula as proof. Exact selected future classes/limits are in future-argv.json.
+
+Actual roots must authenticate pinned profile/metadata, not treat pure function
+inputs as observations. Before/startup0/after192 CSV scopes remain honest:
+activation startup0 may bind archived4096 baseline; all other2048 producer roles
+need actual2048 provenance. No observer/controller/recipe/math/evaluator/source
+installation or current owner/checkpoint/phase/deadline is created here.
+
+This boundary is PARTIAL, UNACTIVATED. Actual producer collector, legacy2048
+maintenance insurance, private CE2048 numerical readiness and a future root
+precommit remain missing. Existing quality/source freeze is held; current4096
+and old KL evidence are preserved. No imports/tests/PT/runtime/actions by author.

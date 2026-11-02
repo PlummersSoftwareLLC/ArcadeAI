@@ -1,0 +1,20 @@
+{
+  "schema": "robotron-LR125-phase-CPU-verifier-prospective-source-v1",
+  "status": "PREPARED_NOT_NUMERICALLY_EXECUTED",
+  "recipe_source_sha256": "063c41f3717023098738ac8549f4b682b16ad775a1f5d11a8fc9e1fe52e3b1f4",
+  "wrapper_source_sha256": "08c165ed917b8633ab658a8efbc915f81e37adff21c1330cd5806cd3148f4051",
+  "tests_source_sha256": "817b085727e5fc6551294bcd5ab987346cb9284c6d2a934d803b7d828dedd0bd",
+  "effective_strict125_sha256": "596bd60f42fbbd95601790e359e66435bddcf05decc1a9a4d56dd3967050c70b",
+  "original_recipe_sha256": "f11e4c8d6725c04c4495b416318713f675ba9305ffe6f7c4009a3bff9b860d0e",
+  "original_wrapper_sha256": "14942da97b06c3c2870ac5d3109a2a5b76acefc1523e9b23b9e510c0994152b5",
+  "original_tests_sha256": "91b405d8d1824ca99036dbde26c3216e3ce537c5eb7d65e450e5ab40084674fc",
+  "changes": [
+    "Reviewed .25 specialization becomes .125 and actual expected Adam LR becomes6.25e-6; historical .5 raw context and strict source container stay intact.",
+    "Common recipe source pin updated; effective-source provenance filename identifies125.",
+    "CPU guards specialize the same new value and pins; no tolerance or checkpoint predicate is weakened."
+  ],
+  "actual_checkpoint_job_created": false,
+  "actual_checkpoint_CPU_verified": false,
+  "quality_qualified": false,
+  "production_changed": false
+}

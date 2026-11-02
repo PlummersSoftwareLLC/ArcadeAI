@@ -1,0 +1,180 @@
+{
+  "schema": "robotron-first-LATCH-policy-followup-test-fixture-correction-source-manifest-v1",
+  "status": "SOURCE_ONLY_TEST_FIXTURE_ESSENTIAL_PEER_PASS_UNEXECUTED",
+  "prepared_utc": "2026-10-17T21:55:28.689001+00:00",
+  "files": {
+    "test_quality_bindings.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_followup_quality_guard_fixture_reviewed2_proposal/test_quality_bindings.py",
+      "sha256": "9dc83d9188677d8c15c54bc152edfd271a7961411edb38300471c5eefa213c4a",
+      "bytes": 24379,
+      "identity": {
+        "device": 2304,
+        "inode": 86245427,
+        "bytes": 24379,
+        "mtime_ns": 1792274080568248533,
+        "ctime_ns": 1792274128687698804,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "upstream": {
+    "original_binding_manifest": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_binding_proposal/preparation-manifest.json",
+      "sha256": "355c29775306297466e09095fcaee906c76dbb61b380e7453304c273b4f1cf66",
+      "bytes": 33307,
+      "identity": {
+        "device": 2304,
+        "inode": 86245423,
+        "bytes": 33307,
+        "mtime_ns": 1792273744963739732,
+        "ctime_ns": 1792273744963739732,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "original_test": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_binding_proposal/test_quality_bindings.py",
+      "sha256": "6b6ffc230be1bc8b8fa656ad7ff7371a5fdddf51717d68df193681f2bceb30a9",
+      "bytes": 24033,
+      "identity": {
+        "device": 2304,
+        "inode": 86245407,
+        "bytes": 24033,
+        "mtime_ns": 1792273709565695107,
+        "ctime_ns": 1792273744949386277,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "original_binder": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_binding_proposal/quality_bindings.py",
+      "sha256": "fadbcef10e5f54d708a409740cdcc7909d3ae0dabcc6a49900c0f8af5666a20d",
+      "bytes": 49070,
+      "identity": {
+        "device": 2304,
+        "inode": 86245409,
+        "bytes": 49070,
+        "mtime_ns": 1792273527515406571,
+        "ctime_ns": 1792273744940386248,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "original_auditor": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_binding_proposal/audit_completed_leg.py",
+      "sha256": "cf64e229a4e02042f43bc458c0c36936da00a8decc4df23babd153679fe7ea31",
+      "bytes": 34238,
+      "identity": {
+        "device": 2304,
+        "inode": 86245408,
+        "bytes": 34238,
+        "mtime_ns": 1792273550396283628,
+        "ctime_ns": 1792273744933386225,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "original_carrier_manifest": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_carrier_proposal/preparation-manifest.json",
+      "sha256": "06db6cfc4c5004e4aa46de9ad711992ceb41a6e35bc3ee0fce2036cf0016e4c7",
+      "bytes": 10758,
+      "identity": {
+        "device": 2304,
+        "inode": 86245425,
+        "bytes": 10758,
+        "mtime_ns": 1792273803933579504,
+        "ctime_ns": 1792273803933579504,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "original_carrier": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_carrier_proposal/root_quality_carrier.py",
+      "sha256": "4159ef7818d2bd90c82682d007dcaabf2ea9ae3b74e3c707ba77d9496f7915c2",
+      "bytes": 24084,
+      "identity": {
+        "device": 2304,
+        "inode": 86245411,
+        "bytes": 24084,
+        "mtime_ns": 1792273633360510817,
+        "ctime_ns": 1792273803930579494,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "actual_original_guard_failure_preserved": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-first-LATCH-followup-quality20-guards-root-execution-reviewed2-20261017/root-result-review-and-release.json",
+    "sha256": "946d0604d497ddc96fc66262ea91761d01c957a4bb48ab7477738f05631df7e6",
+    "bytes": 2235,
+    "identity": {
+      "device": 2304,
+      "inode": 81160510,
+      "bytes": 2235,
+      "mtime_ns": 1792274008457418191,
+      "ctime_ns": 1792274008457418191,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "exact_delta": [
+    "HERE explicitly selects original sealed binding directory355c.",
+    "actual_followup_metadata adds decision from genuine FINAL precommit.evidence.original_first_LATCH and durability from original_first_durability, with both values decoded through existing b.read."
+  ],
+  "reverse_text_exact_after_removing_only_declared_delta": true,
+  "production_binder_auditor_carrier_unchanged": true,
+  "guard_class": "CE2048QualityContracts",
+  "guard_methods": 16,
+  "guard_execution": null,
+  "focused_method": "test_actual_final_precommit_and_complete_relabel_alternate_or_relaxed_gate_refuse",
+  "guard_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_followup_quality_guard_fixture_reviewed2_proposal",
+    "-p",
+    "test_quality_bindings.py",
+    "-v"
+  ],
+  "focused_guard_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_followup_quality_guard_fixture_reviewed2_proposal",
+    "-p",
+    "test_quality_bindings.py",
+    "-k",
+    "test_actual_final_precommit_and_complete_relabel_alternate_or_relaxed_gate_refuse",
+    "-v"
+  ],
+  "constraints": {
+    "CPUQuota": "100%",
+    "MemoryMax": "512M",
+    "MemorySwapMax": 0,
+    "RuntimeMaxSec": 60,
+    "CUDA_VISIBLE_DEVICES": "",
+    "unset_environment": [
+      "LD_PRELOAD",
+      "PYTHONPATH"
+    ]
+  },
+  "essential_source_peer": "learning_review independently reversed exact2-field fixture delta; same16 methods and genuine144e/3fbb metadata; final receipt follows manifest",
+  "author_scope": "Source/AST/digest/savedJSON only; no imports/tests/runtime/API/process/systemd/GPU/PT/canonical or installed/source changes. No cohort/numerical rerun or scientific gate change."
+}

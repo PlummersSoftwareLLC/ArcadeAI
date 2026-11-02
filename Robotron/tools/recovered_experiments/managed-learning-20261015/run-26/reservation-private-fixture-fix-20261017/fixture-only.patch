@@ -1,0 +1,48 @@
+--- before/test_cpu_reservation_trial.py
++++ after/test_cpu_reservation_trial.py
+@@ -52,6 +52,9 @@
+     """Exact logical identities and masks, never real PIDs/TIDs or syscalls."""
+     def __init__(self):
+         self.host = FakeHost(treatment_rate=18)
++        # Reservation phase_start records the real Host's armed log offsets.
++        # The shared older single-thread fixture does not use that attribute.
++        self.host.log_offsets = {}
+         actor = dict(pid=201, starttime_ticks=44, client_slot=0)
+         self.host.binding['actors'] = [actor]
+         self.owners = [dict(kind='trainer', identity=copy.deepcopy(self.host.binding['worker']['trainer'])),
+@@ -376,8 +379,12 @@
+             system.before_set = precommitted
+             with patch.object(trial, 'Journal', return_value=journal), patch.object(trial.signal, 'sigpending', return_value=set()):
+                 result = trial.run_trial(system, plan, original)
+-            self.assertEqual(result['state'], 'complete')
++            self.assertEqual(result['state'], 'complete', result.get('error'))
++            self.assertEqual([row['phase'] for row in result['results']], ['A', 'B', 'Areturn'])
+             self.assertEqual([row['duration_s'] for row in result['results']], [300, 300, 300])
++            starts = [row for row in journal.rows if row['kind'] == 'phase_start']
++            self.assertEqual([row['phase'] for row in starts], ['A', 'B', 'Areturn'])
++            self.assertTrue(all(row['log_offsets'] == {} for row in starts))
+             self.assertEqual(result['decision']['outcome'], 'qualified')
+             self.assertFalse(result['decision']['automatic_promotion'])
+             self.assert_all_broad(system)
+@@ -420,15 +427,21 @@
+     def test_final_status_failure_cannot_leave_qualified_decision(self):
+         with tempfile.TemporaryDirectory() as directory:
+             system = FakeSystem(); output = Path(directory) / 'new'
++            complete_publications = []
+             def fail(path, value):
+                 if path.name == 'status.json' and value.get('state') == 'complete':
++                    complete_publications.append(copy.deepcopy(value))
+                     raise OSError('final durable recovery publication failed')
+             system.commit_failure = fail
+             with patch.object(trial, 'Journal', return_value=MemoryJournal()), \
+                     patch.object(trial.signal, 'sigpending', return_value=set()), contextlib.redirect_stderr(io.StringIO()):
+                 result = trial.run_trial(system, system.plan(output), system.originals())
++            self.assertEqual(len(complete_publications), 1)
++            self.assertEqual(complete_publications[0]['decision']['outcome'], 'qualified')
++            self.assertEqual([row['phase'] for row in complete_publications[0]['results']], ['A', 'B', 'Areturn'])
+             self.assertEqual(result['state'], 'failed')
+             self.assertEqual(result['decision']['outcome'], 'invalid')
++            self.assertIn('final durable recovery publication failed', result['status_publication_error'])
+             self.assertTrue(result['restoration']['manual_recovery_required'])
+             self.assert_all_broad(system)
+ 

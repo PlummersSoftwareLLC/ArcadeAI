@@ -1,0 +1,72 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window02-D6-R1-owned-launch-original01-preparation/project_owned_R1_window02_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-R1-owned-launch-original01-preparation/project_owned_R1_window03_v1.py
+@@ -1,4 +1,4 @@
+-"""Default inert. Passive window02 D6 R1 display; no launch, control or qualification.
++"""Default inert. Passive window03 D7 R1 display; no launch, control or qualification.
+ 
+ Read scores only through the existing display function after an independent
+ qualification exists. An absent wrapper without a terminal record is unresolved.
+@@ -15,7 +15,7 @@
+ G=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ I=G/'logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027'
+ A=Path(__file__).resolve().parent
+-S=I/'durable-window02-D6-fixed-RCRC-study-original01'
++S=I/'durable-window03-D7-fixed-RCRC-study-original01'
+ ORDER=['R1','C1','R2','C2']
+ 
+ 
+@@ -36,7 +36,7 @@
+ 
+ 
+ def atomic(path,value):
+-    temporary=path.with_name(path.name+'.window02-D6-R1-projection-next')
++    temporary=path.with_name(path.name+'.window03-D7-R1-projection-next')
+     with temporary.open('x')as f:
+         json.dump(value,f,separators=(',',':'),allow_nan=False);f.write('\n');f.flush()
+         os.fchmod(f.fileno(),0o664);os.fsync(f.fileno())
+@@ -49,28 +49,30 @@
+     path=G/'tools/post_recovery_evaluation/project_deadline_study_v3.py'
+     require(hashlib.sha256(path.read_bytes()).hexdigest()=='5e2732552e58b5f081159525ad1470844f0ba965a8388b7c8b512c5d8abff7db',
+         'Original display-only score disclosure guard changed')
+-    spec=importlib.util.spec_from_file_location('_window02_D6_qualified_display',path)
++    spec=importlib.util.spec_from_file_location('_window03_D7_qualified_display',path)
+     display=importlib.util.module_from_spec(spec);spec.loader.exec_module(display)
+     helpers=G/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py'
+     require(hashlib.sha256(helpers.read_bytes()).hexdigest()=='2b6902933b502ac20dacbd444fbf786315d6c960fcad1d5b5bf223dd569708c1',
+         'Selected immutable metadata helpers differ')
+-    hs=importlib.util.spec_from_file_location('_window02_display_helpers',helpers)
++    hs=importlib.util.spec_from_file_location('_window03_display_helpers',helpers)
+     h=importlib.util.module_from_spec(hs);hs.loader.exec_module(h)
+     selected_pin=h.pin(args.launch_selection.resolve())
+     require(selected_pin['sha256']==args.launch_selection_sha256 and selected_pin['identity']['mode']=='0o444',
+         'Exact immutable R1 launch selection required')
+     selected=json.loads(h.checked(selected_pin).read_bytes())
+-    require(selected['schema']=='robotron-window02-D6-original-R1-launch-selection-v1'
++    require(selected['schema']=='robotron-window03-D7-original-R1-launch-selection-v1'
+         and selected['sources']['projector']==h.pin(Path(__file__).resolve()), 'Actual selected passive source differs')
+     mp=selected['prepared_manifest']
+-    require(mp['path']==str(S/'prepared-four-legs-NOT-LAUNCH-QUALIFIED.json'), 'Exact window02 manifest path required')
++    require(mp['path']==str(S/'prepared-four-legs-NOT-LAUNCH-QUALIFIED.json'), 'Exact window03 manifest path required')
+     manifest=json.loads(h.checked(mp).read_bytes());study=json.loads(h.checked(manifest['study_precommit']).read_bytes())
+     require([c['leg']for c in manifest['cases']]==study['ordered_legs']==ORDER
+         and manifest['engineering_only']is False and manifest['study_precommit']==selected['study_precommit']
+-        and study['policies']['candidate']['checkpoint']['sha256']==selected['candidate_sha256']=='862fb4cde4ecb146b5b23a83b77ccbf1675a980bc310f6c2a6a8806d87b7c81e'
++        and study['policies']['candidate']['checkpoint']['sha256']==selected['candidate_sha256']
++        and selected['candidate_capture']['result']in study['prospective_capture_evidence']
++        and json.loads(h.checked(selected['candidate_capture']['result']).read_bytes())['endpoint']['sha256']==selected['candidate_sha256']
+         and study['policies']['reference']['checkpoint']['sha256']=='b23152ece3bb614831a278fe0572c07433f1bee59c5accef5a1ab7d3007af883',
+         'Exact fresh fixed RCRC study required')
+-    unit='robotron-window02-retired-api-'+manifest['study_precommit']['sha256'][:16]+'-r1-passive-display-original01-20261029.service'
++    unit='robotron-window03-proof2s-'+manifest['study_precommit']['sha256'][:16]+'-r1-passive-display-original01-20261029.service'
+     require(selected['projector_unit']==unit, 'Exact fresh passive display namespace required')
+     fields=dict(v.split('=',1)for v in subprocess.check_output(['systemctl','--user','show',unit],text=True,timeout=5).splitlines()if'='in v)
+     expected=dict(Id=unit,MainPID=str(os.getpid()),InvocationID=os.environ.get('INVOCATION_ID'),
+@@ -82,7 +84,7 @@
+     require(active.get('directory')==str(S)and active.get('current_leg',1)in(1,'R1'),
+         'Root must register this original R1 before display publication')
+     epath=G/'html/next-policy-evaluation.json'
+-    backup=A/'next-policy-evaluation-before-window02-R1-display01.exact.json'
++    backup=A/'next-policy-evaluation-before-window03-R1-display01.exact.json'
+     with backup.open('xb')as f:
+         f.write(epath.read_bytes());f.flush();os.fchmod(f.fileno(),0o444);os.fsync(f.fileno())
+     legs=[dict(index=k+1,role='reference'if leg.startswith('R')else'candidate',

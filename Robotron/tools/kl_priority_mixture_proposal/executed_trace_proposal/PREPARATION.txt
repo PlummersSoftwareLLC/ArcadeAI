@@ -1,0 +1,172 @@
+EIGHT CONSUMED CE ATTEMPTS — SOURCE-ONLY FOLLOW-ON PROTOTYPE, 2026-10-17
+
+IMPLEMENTED PROPOSAL, UNEXECUTED, UNAPPLIED. Root authorized only NEW files in
+this subdirectory during the live320M quality freeze. The sealed parent sampler
+manifestff93d797, sampler candidateb659cd7b, prior design/locks/receipts and all
+production/evaluator/control/unit sources remain unchanged. No imports, syntax
+compilation, test/default/helper execution, numerical workload, sampling, model/
+checkpoint/replay reads, runtime/API/proc/GPU/service query or capture occurred.
+This advances calibration preparation; it does not establish deployment or KL
+learning-trial readiness.
+
+Patch boundary and startup contract
+-----------------------------------
+The overlay files are copied actual source, not replacement learning algorithms.
+Apply order for a FUTURE reviewed private source tree only:
+1) Original replay28556797 + sealed sampler patch99900858 -> candidateb659cd7b.
+2) This unapplied.patch against that sampler candidate and the pinned actual
+   agent/prefetch/training/loss files, adding executed_ce_trace.py.
+No apply/check command has run. The complete overlay replay_buffer.py is also
+provided for isolated copied-package testing; old sealed files are not rebuilt.
+
+OFF: DQN_EXECUTED_CE_TRACE_DIR absent/empty. Agent imports no observer; ordinary
+sample/sample_into are used, the ten-field batch/eight staged tensors and the
+four-output TrainingLoss ABI remain unchanged. No added sampler/forward/RNG or
+loss/priority/optimizer calculation is introduced on the OFF path. Exact bytes,
+RNG, objective/gradient and actual current CUDA compiler parity remain untested.
+
+ON: an explicit NEW absolute ce-executed-trace-* directory at startup enables
+the observer before either producer or learner starts. Batch4096/51atoms, actual
+optimizer exposure counters and existing1..3 prefetch slots are required; missing
+exposure, incompatible size, non-CE metric context or reused directory fail at
+startup. No hot control/toggle is added. This does not identify the metric of
+historical stored leaves; separate caller/run provenance remains required.
+Both compiled diagnostic variants are rebuilt with a static fifth payload.
+Constructor compile warmup never calls the observer or consumes a trace ordinal.
+After eight consumed attempts, draw observations cease, but the ON compiled
+five-output graph remains until a separately owned restart/rebuild. No training
+pause/restart, fallback, optimizer/scaler/LR or recipe change is automated.
+
+Exact acquisition boundary and ownership
+---------------------------------------
+Count FIRST EIGHT CONSUMED train_step attempts AFTER enabled/replay-pressure/
+minimum-replay/batch guards, BEFORE transfer/wait_on_current_stream. This clock
+is distinct from optimizer attempts/admissions/applied counters. Transfer,
+forward, nonfinite-loss, optimizer, readback, priority or later learner failures
+remain in those eight and prevent a full valid acquisition; no ninth favorable
+attempt replaces them. A genuine learner exception is safely observed and then
+re-raised unchanged, preserving the original learner exception handling.
+
+The actual background path rejects stale leases under its existing training
+lock before calling train_step. Queued/discarded/invalidated/guard-rejected
+batches do not reserve an ordinal. Arbitrary direct callers of train_step with
+an already stale lease are outside that caller contract: begin records the
+consumption and invalidates its evidence. It does not relabel a stale lease as a
+valid background execution or silently omit a bad consumed attempt.
+
+ON sampler metadata is attached to the actual PreparedBatch BEFORE tuple(batch)
+conversion and publication. Synchronous batches use a ten-element tuple subclass.
+The session records actual lease epoch, owner epoch/currentness at consumption,
+draw-to-consume age and existing staging timings. It retains only detached small
+metadata and scalar epoch evidence, never PreparedBatch/slot/owner/state views.
+Same-execution outputs are copied before the training wrapper releases the lease.
+Direct-fill pinned state reuse therefore cannot overwrite retained metadata.
+
+Bounded retention means eight consumed rows plus fixed producer slots and the
+producer's transient local old/new allocation overlap. It does NOT mean only
+8+depth observations will ever be drawn: invalidated/guard-rejected batches can
+be observed repeatedly until eight are consumed. No such observation is claimed
+to be an executed attempt. A future operator needs an external bounded capture
+window; this prototype adds no watchdog, service, actor or process controller.
+
+Same-forward values and unchanged CE mathematics
+------------------------------------------------
+Static ON payload returns existing executed projected/smoothed target, taken
+joint-action log-probs, raw per-row BC/Q-policy/margin values where available,
+target action probabilities/unclipped support and actual three auxiliary loss
+contribution scalars. Existing terms are named once on ON; arithmetic/order is
+preserved. Eager inactive auxiliaries are explicitly unavailable rather than
+recomputed. No second forward, entropy/KL priority selection, target renormalizing,
+sampling, RNG call or gradient/optimizer math is added. OFF retains original
+expressions and four outputs.
+
+Detached host copies retain CE, weighted loss, BC loss, exact draw fields, actual
+schedule values, original tensor dtypes and logical model/target/inference/LR
+clocks. A metrics-lock frame context is labelled as one observation, not a
+coherent replay/model snapshot. Required shapes are checked before bounded
+float32 copies; nonfinite arrays remain in the archive with an invalid flag.
+Full states/next states are omitted. No model/checkpoint hash or coherent anchor
+is invented from these clocks; external immutable run/source/checkpoint binding
+is still necessary before interpreting a real trace.
+
+Outcome evidence and observer-fault containment
+----------------------------------------------
+The existing optimizer exposure finish runs first, using its real packed
+found_inf readback. Only then does the observer record that mode/host value,
+actual owner/epoch/finished ticket and before/after exposure deltas. Exactly one
+recorded same-owner/same-epoch available outcome is required. AMP skips remain
+recorded and follow the unchanged CE priority update. An already known outcome
+survives a later learner/priority/storage failure; that attempt is still invalid
+or incomplete. 'Applied_admission' is only the existing counter's scope, never
+proof of parameter movement/Adam step advancement. Private no-step checks and
+mock counter injections do not validate actual applied optimizer behavior.
+
+Observer failures are caught only around observer operations. Replay metadata
+copy failures are marked inside the SAME original draw, with a preallocated
+error key, before returning its original batch. Post-draw small-field failures
+are isolated likewise. No resample or whole-sampler suppression. A real sampler
+exception is globally noted and re-raised unchanged before consumption. Session
+locks, logging/formatting, file writes and device copies stay outside replay.lock.
+Producer-side observer errors do not falsely attach to a different consumer row.
+Public training observer hooks cannot leak ordinary observer faults into the
+compile-disable/fallback handler. Missing observer-only kernel output invalidates
+the trace while retaining usable first four CE outputs. Real kernel failures
+still use the original learner path; current CUDA parity remains a blocker.
+
+Faults latch bounded in-memory errors, incomplete status and best-effort console
+diagnostics. Disk-full/reporting failure cannot stop CE; a preallocated reporting
+failure flag prevents later complete status. Startup creation errors are fatal
+before training threads, rather than silently disabling an enabled trace. Severe
+process termination/OOM/filesystem failure can prevent durable diagnostics; no
+crash-exact continuation, complete snapshot or automatic recovery is promised.
+
+Storage: at most64MiB copied loss tensors, bounded4096-row draw metadata for the
+eight rows and fixed producer slots (plus transient local overlap), and128MiB
+conservative cumulative observer writes. No full-state/ring copy or asynchronous
+writer is introduced. Files are context/status JSON plus create-only per-attempt
+NPZ/JSON. They are observations, not a model/replay/optimizer recovery anchor.
+The temporary copy/sync/write overhead alters timing and must not be sold as an
+unperturbed throughput or quality measurement.
+
+Unexecuted validation sources and remaining blockers
+---------------------------------------------------
+test_trace_protocol.py:11 stdlib/mock contracts use actual privately copied
+scalar OptimizerExposure, reservation-before-fault, skips/failures/no-ninth,
+identity/unfinished/unavailable outcomes, observer and disk faults, exactly-one
+draw, producer/consumer attribution and actual training wrapper exception/release
+semantics. Mock found_inf/admission is a protocol input, NOT actual CPU/CUDA AMP.
+
+test_trace_cpu_boundaries.py:5 proposed future CPU tests load pinned actual
+private replay/native modules, this replay/prefetch/kernel overlay and small
+synthetic tensors. They cover metadata and post-draw faults with exact real
+sampler bytes/RNG parity, real CPU prefetch epoch/lease/invalidation/lifetime,
+base/OFF4/ON5 same objective/gradients/payload with eager and CPU-dynamo-eager
+routes, and detached tensor archive I/O with explicitly injected counters.
+Width8 synthetic replay and small CPU policy are not actual Rainbow11128 or
+production4096 CUDA/AMP/fused optimizer validation.
+
+ALL16 tests and ALL syntax/import/private-source/native/compiler/device/runtime
+contracts remain UNEXECUTED. Source review is pending; no correctness/readiness
+PASS can be inferred. Candidate loader construction, actual whole train_step,
+current CUDA4096 eager/compiled CE control and ON parity, real AMP outcome joins,
+maintenance/deployment/capture ownership and externally bound source/checkpoint/
+population provenance need separate review and validation after quality release.
+
+Prospective targeted tests, ONLY after explicit root CPU-work authorization,
+in two separate fresh interpreters from /home/dave/source/repos/ArcadeAI:
+
+env -u LD_PRELOAD -u PYTHONPATH CUDA_VISIBLE_DEVICES='' DQN_PER_PRIORITY_METRIC=ce \
+ OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+ .venv-gb300/bin/python -B -m unittest \
+ Robotron.tools.kl_priority_mixture_proposal.executed_trace_proposal.test_trace_protocol -v
+
+env -u LD_PRELOAD -u PYTHONPATH CUDA_VISIBLE_DEVICES='' DQN_PER_PRIORITY_METRIC=ce \
+ OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+ .venv-gb300/bin/python -B -m unittest \
+ Robotron.tools.kl_priority_mixture_proposal.executed_trace_proposal.test_trace_cpu_boundaries -v
+
+No tests are authorized by these written commands. No executable live launcher,
+new sampling/forward/optimizer experiment, source application or KL switch is
+included. After verified capture, the original design's emitted/freshCE/freshKL
+same-row weight comparison still requires separate offline analysis; these
+sources alone contain no real eight-batch observations or learning evidence.

@@ -1,0 +1,158 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/LR9375-vs-frozenS2-fixedcutoff-screen-original01-20261031/future-Root-complete-pair-summary-source-only-original01/collect_closed_LR9375_pair_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/LR9375-vs-frozenS2-fixedcutoff-screen-original01-20261031/future-Root-R1-summary-source-only-original01/produce_closed_LR9375_R1_summary_v1.py
+@@ -1,11 +1,11 @@
+-"""Root-only, offline sealed-metadata comparison. Never imports runtime code.
+-
+-Run only after Root independently observes original tool session 2024 exit 0,
+-the original outer/report thread closed, and the original owners absent. These
+-live facts are an explicit Root prerequisite, not inferred from file absence.
+-This program authenticates bounded closed JSON/text only, never model bytes,
+-raw actor/journal/lifecycle evidence, individual Main/API sample paths, CONTROL,
+-PUBLIC or APIs. Embedded Main summaries in sealed result.json are discarded.
++"""Root-only R1 reference summary from sealed closed metadata.
++
++Run only after Root separately verifies this case's original R1 native and all32
++actors absent and its service/timer resources positively closed. The paired
++outer and C1 may remain active. No outer result or C1 runtime path is read.
++The unchanged parent arm/reader kernels authenticate bounded R1 JSON/text;
++embedded Main summaries in result.json are discarded without following samples.
++No model/raw actor/journal/API/proc/CONTROL/PUBLIC access or runtime imports.
+ """
+ import argparse
+ import collections
+@@ -20,7 +20,6 @@
+ 
+ CASE = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/LR9375-vs-frozenS2-fixedcutoff-screen-original01-20261031')
+ PREPARED_SHA = '3722a9834fb33ad5cbf8ab151a5d8e4d3972bdbb606e0af2b97f96e0d0b59cc3'
+-REFERENCE_SUMMARY_SHA = 'ROOT_PENDING_FINAL_F_R1_SUMMARY_SHA256'
+ NATIVE_SHA = '8c8b95fb12c2d12cc118c708bc2a379459ef3a7128b88b9330e974064e2b5fb3'
+ LUA_SHA = 'a631f02980b2e7cdddd2fc15066b74ee5d5ebfac3de90a40a5833b0a5d48b66d'
+ CONTROLLER_SHA = '81d4f779d299ba4160c3ae8d74f8a0582cf90f3fd9638b9528c3164e8b61e094'
+@@ -391,14 +390,8 @@
+     return summary, subject, tokens
+ 
+ 
+-def collect():
++def collect_reference():
+     reader = ClosedReader()
+-    outer_path = CASE / 'Root-controller-runtime-original01/result.json'
+-    outer = reader.read(outer_path)
+-    require(outer['actual_exit'] == 0 and type(outer['actual_exit']) is int and outer['error'] is None
+-            and outer['reporter_thread_closed'] is True and outer['report_update_errors'] == []
+-            and outer['legs'] == ['R1', 'C1'] and outer['native_or_original_controller_retried'] is False
+-            and outer['screen_only'] is True and outer['promotion'] is False, 'Original outer must be terminal0 and reporter closed')
+     prepared_path = CASE / 'prepared-matched-fixed-cutoff-two-arm-DATA-NOT-LAUNCHED-v1.json'
+     prepared = reader.read(prepared_path)
+     require(reader.pin(prepared_path)['sha256'] == PREPARED_SHA, 'Exact frozen current-case DATA')
+@@ -410,76 +403,60 @@
+     require(all(source[k] == full_source[k] for k in ('path', 'sha256', 'bytes'))
+             and all(full_source['identity'][k] == v for k, v in source['identity'].items())
+             and configs['ordered_legs'] == ['R1', 'C1'], 'Exact selected original controller catalogue, reduced5/full8 join')
+-    require(selected['ordered_legs'] == ['R1', 'C1'] and selected['reference']['checkpoint']['sha256'] == REFERENCE_SHA
++    require(selected['ordered_legs'] == ['R1', 'C1'] and selected['screen_only'] is True and selected['promotion'] is False
++            and selected['reference']['checkpoint']['sha256'] == REFERENCE_SHA
+             and selected['candidate']['checkpoint']['sha256'] == CANDIDATE_SHA, 'Exact fresh reference/candidate policy selection')
+     for key, sha in (('native', NATIVE_SHA), ('lua', LUA_SHA), ('controller', CONTROLLER_SHA), ('outer', OUTER_SHA)):
+         pin = prepared['selected_sources'][key]
+         require(pin['sha256'] == sha, 'Exact selected source role: ' + key)
+         reader.read(pin['path'], pin, text=True, source=True)
+-    plan = selected['assessment_plan']
+-    require(plan['minimum_mean_ratio_each_ordered_pair'] == 1.05 and plan['minimum_median_ratio_each_ordered_pair'] == 1.02
+-            and plan['severe_regression_mean_or_median_ratio_at_or_below'] == .95
+-            and plan['automatic_promotion'] is plan['IID_or_confidence_claim'] is False, 'Preselected material screen gate only')
+-    reference, r_subject, r_tokens = arm(reader, 'R1', prepared, selected, configs)
+-    candidate, c_subject, c_tokens = arm(reader, 'C1', prepared, selected, configs)
+-    require(len(r_tokens) == len(c_tokens) == 64 and r_tokens.isdisjoint(c_tokens), 'Fresh disjoint64 transport tokens per arm')
+-    require(reference['deadline_monotonic_ns'] < candidate['anchor_monotonic_ns']
+-            and outer['ended_unix_s'] >= candidate['original_controller_ended_unix_s'], 'Serial original arms closed before outer completion')
+-    summary_path = CASE / 'Root-complete-S2-reference-summary-original01.json'
+-    old_reference = reader.read(summary_path)
+-    require(reader.pin(summary_path)['sha256'] == REFERENCE_SUMMARY_SHA and old_reference['native_result'] == {k:r_subject['native_result'][k] for k in ('path', 'sha256', 'bytes')}
+-            and old_reference['score_sum'] == reference['score_sum'] and old_reference['mean_score'] == reference['mean']
+-            and old_reference['median_score'] == reference['median'], 'Previously sealed current R1 reference remains exact')
+-    for leg in ('R1', 'C1'):
+-        require(outer['port_gates'][leg]['status'] == 'PORTS_FREE_BEFORE_LAUNCH'
+-                and outer['port_gates'][leg]['probe_sockets_released'] is True, 'Original port-gate closure metadata')
+-    mean_ratio = candidate['mean']/reference['mean']; median_ratio = candidate['median']/reference['median']
+-    require(math.isfinite(mean_ratio) and math.isfinite(median_ratio), 'Finite comparison ratios')
+-    require(outer['comparison']['reference_mean'] == reference['mean'] and outer['comparison']['candidate_mean'] == candidate['mean']
+-            and abs(outer['comparison']['candidate_mean_change_fraction']-(mean_ratio-1)) < 1e-12, 'Outer summary independently recomputed')
++    reference, subject, tokens = arm(reader, 'R1', prepared, selected, configs)
++    require(len(tokens) == 64, 'All64 original R1 session/connection tokens required')
+     reader.finish()
+-    changes = dict(mean=mean_ratio-1, median=median_ratio-1, first_game_frames=candidate['first_game_frame_exposure']/reference['first_game_frame_exposure']-1,
+-                   gain_per_first_game_frame=candidate['gain_per_first_game_frame']/reference['gain_per_first_game_frame']-1)
+-    return dict(schema='robotron-offline-closed-LR9375-pair-metadata-comparison-v1', status='PASS_CLOSED_METADATA_AND_ALL64_SCORE_ARITHMETIC',
+-                observed_unix_s=time.time(), case=str(CASE), original_outer_tool_session=2024,
+-                subjects=dict(prepared_DATA=reader.pin(prepared_path), outer_result=reader.pin(outer_path), reference=r_subject, candidate=c_subject),
+-                reference=reference, candidate=candidate, candidate_change_fractions=changes,
+-                management_gate=dict(mean_floor=reference['mean']*1.05, median_floor=reference['median']*1.02,
+-                    material_5pct_mean_AND_2pct_median=mean_ratio >= 1.05 and median_ratio >= 1.02,
+-                    severe_mean_OR_median_at_or_below95pct=mean_ratio <= .95 or median_ratio <= .95),
+-                source_and_named_metadata_inventory=list(reader.seen.values()),
+-                scope=dict(all64_fixed_cutoff_scores_included=True, source_immutable_flags_and_owned_closure_metadata_joined=True,
+-                    completed_before_cutoff_requires_authentic_STOP_metadata_and_child0=True, pending_postcutoff_child0_or_minus15_codes_preserved=True,
+-                    gain_per_frame_is_descriptive_not_Main_learning_FPS_or_causal_LR_estimate=True, full_game_quality_or_IID_confidence_or_promotion_claim=False,
+-                    raw_metric_independent_qualification=False, model_raw_evidence_CONTROL_PUBLIC_or_live_runtime_access=False,
+-                    individual_Main_or_API_sample_paths_followed=False, embedded_Main_summary_rows_discarded=True,
+-                    Root_must_separately_verify_original_tool_terminal0_and_owners_absent=True))
++    summary = dict(reference)
++    summary['mean_score'] = summary.pop('mean')
++    summary['median_score'] = summary.pop('median')
++    summary.update(schema='robotron-offline-closed-LR9375-S2-reference-summary-v1',
++        status='PASS_SEALED_R1_ALL32_SCORE_ARITHMETIC_AND_OWNED_CLOSURE',
++        observed_unix_s=time.time(), case=str(CASE), leg='R1', original_outer_tool_session=2024,
++        native_result={k:subject['native_result'][k] for k in ('path', 'sha256', 'bytes')},
++        score_seal=subject['score_seal'], original_C218=subject['original_C218'],
++        prepared_DATA=reader.pin(prepared_path), source_and_named_metadata_inventory=list(reader.seen.values()),
++        Root_R1_native32actors_and_service_timer_closed_owners_absent_attested=True,
++        scope=dict(Root_owner_absence_is_explicit_prerequisite_not_live_checked_by_producer=True,
++            all32_fixed_cutoff_scores_included=True, source_immutable_flags_and_owned_closure_metadata_joined=True,
++            completed_before_cutoff_requires_authentic_STOP_metadata_and_child0=True,
++            pending_postcutoff_child0_or_minus15_codes_preserved=True,
++            original_outer_may_remain_active=True, outer_result_read=False, C1_runtime_read=False,
++            pair_comparison_or_candidate_verdict=False, full_game_quality_or_IID_confidence_or_promotion_claim=False,
++            raw_metric_independent_qualification=False, model_raw_evidence_CONTROL_PUBLIC_or_live_runtime_access=False,
++            individual_Main_or_API_sample_paths_followed=False, embedded_Main_summary_rows_discarded=True))
++    return summary
+ 
+ 
+ def main():
+     parser = argparse.ArgumentParser(description=__doc__)
+-    parser.add_argument('--Root-confirmed-original-session2024-terminal0-and-owners-absent', action='store_true')
++    parser.add_argument('--Root-confirmed-R1-native32actors-and-service-timer-closed-and-owners-absent', action='store_true')
+     parser.add_argument('--source-sha256', required=True)
+-    parser.add_argument('--output-directory', required=True)
+     args = parser.parse_args()
+-    require(args.Root_confirmed_original_session2024_terminal0_and_owners_absent, 'Explicit Root terminal/owner prerequisite required')
+-    require(hashlib.sha256(Path(__file__).read_bytes()).hexdigest() == args.source_sha256, 'Exact collector source SHA required')
+-    output = Path(args.output_directory)
+-    require(output.parent == CASE and output.name.startswith('Root-offline-complete-pair-collection-') and not output.exists()
+-            and output.parent.resolve() == CASE, 'Fresh dedicated case-child report directory required')
+-    report = collect()  # No output creation on any missing, live, failed or inconsistent input.
++    require(args.Root_confirmed_R1_native32actors_and_service_timer_closed_and_owners_absent,
++            'Root must first verify original R1 native/32actors absent and service/timer closed')
++    require(hashlib.sha256(Path(__file__).read_bytes()).hexdigest() == args.source_sha256, 'Exact R1 producer source SHA required')
++    output = CASE / 'Root-complete-S2-reference-summary-original01.json'
++    require(output.parent.resolve() == CASE and not output.exists(), 'Fresh exact reference-summary output required')
++    report = collect_reference()  # No output on absent/live/failed/inconsistent R1 metadata.
+     raw = (json.dumps(report, sort_keys=True, separators=(',', ':'), allow_nan=False)+'\n').encode()
+-    require(len(raw) <= 128 << 10, 'Bounded metadata comparison report')
+-    output.mkdir(mode=0o700)
+-    fd = os.open(output/'report.json', os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW, 0o600)
++    require(len(raw) <= 128 << 10, 'Bounded R1 reference-summary report')
++    fd = os.open(output, os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW, 0o600)
+     with os.fdopen(fd, 'wb') as stream:
+         stream.write(raw); stream.flush(); os.fsync(stream.fileno()); os.fchmod(stream.fileno(), 0o444)
+-    directory_fd = os.open(output, os.O_RDONLY|os.O_DIRECTORY)
++    directory_fd = os.open(CASE, os.O_RDONLY|os.O_DIRECTORY)
+     try:
+         os.fsync(directory_fd)
+     finally:
+         os.close(directory_fd)
+-    print(json.dumps(dict(status=report['status'], report=str(output/'report.json'), sha256=hashlib.sha256(raw).hexdigest(), bytes=len(raw), management_gate=report['management_gate']), sort_keys=True))
++    print(json.dumps(dict(status=report['status'], summary=str(output), sha256=hashlib.sha256(raw).hexdigest(),
++        bytes=len(raw), score_sum=report['score_sum'], mean_score=report['mean_score'], median_score=report['median_score']), sort_keys=True))
+     return 0
+ 
+ 

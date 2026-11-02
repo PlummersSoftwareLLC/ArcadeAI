@@ -1,0 +1,169 @@
+--- RAW-cbd810-parent.lua
++++ RAW-phase-timing-slot163.lua
+@@ -100,6 +100,76 @@
+         end
+     end
+ end
++-- Selected actor diagnostics only. No file, socket, gameplay or telemetry wire.
++local PREVIEW_PROFILE_SLOT = 163
++local PREVIEW_PROFILE_WINDOW_S = 5.0
++local preview_profile_enabled = CLIENT_SLOT == PREVIEW_PROFILE_SLOT and socket_clock_kind == "host_wall"
++local preview_profile_names = {"frame_period", "capture_total", "snapshot_size", "snapshot_pixels", "convert", "serialize", "socket_write", "action_wait"}
++local function preview_profile_empty()
++    local stats = {}
++    for _, name in ipairs(preview_profile_names) do stats[name] = {0, 0, 0, 0, 0} end
++    return stats
++end
++local preview_profile_stats = preview_profile_empty()
++local preview_profile_window_wall, preview_profile_window_cpu = nil, nil
++local preview_profile_last_frame_wall, preview_profile_last_frame_cpu = nil, nil
++local preview_profile_backwards = 0
++
++if CLIENT_SLOT == PREVIEW_PROFILE_SLOT then
++    print(string.format("[PREVIEW_PHASE_V1_BEGIN] slot=%d lua_version=%q wall_clock=%s enabled=%s window_target_s=%.1f process_cpu_scope=all_process_threads",
++        CLIENT_SLOT, tostring(_VERSION), tostring(socket_clock_kind), tostring(preview_profile_enabled), PREVIEW_PROFILE_WINDOW_S))
++end
++
++local function preview_profile_record(name, wall_s, cpu_s)
++    local row = preview_profile_stats[name]
++    row[1] = row[1] + 1
++    row[2] = row[2] + wall_s
++    row[3] = row[3] + cpu_s
++    row[4] = math.max(row[4], wall_s)
++    row[5] = math.max(row[5], cpu_s)
++    if wall_s < 0 or cpu_s < 0 then preview_profile_backwards = preview_profile_backwards + 1 end
++end
++
++local function preview_profile_mark()
++    if preview_profile_enabled then return socket_time_now(), os.clock() end
++    return nil, nil
++end
++
++local function preview_profile_finish(name, wall_start, cpu_start)
++    if not preview_profile_enabled then return end
++    local wall_now, cpu_now = socket_time_now(), os.clock()
++    preview_profile_record(name, wall_now - wall_start, cpu_now - cpu_start)
++end
++
++local function preview_profile_frame_begin()
++    if not preview_profile_enabled then return end
++    local wall_now, cpu_now = socket_time_now(), os.clock()
++    if preview_profile_last_frame_wall ~= nil then
++        preview_profile_record("frame_period", wall_now - preview_profile_last_frame_wall, cpu_now - preview_profile_last_frame_cpu)
++    end
++    preview_profile_last_frame_wall, preview_profile_last_frame_cpu = wall_now, cpu_now
++    if preview_profile_window_wall == nil then
++        preview_profile_window_wall, preview_profile_window_cpu = wall_now, cpu_now
++        return
++    end
++    if wall_now - preview_profile_window_wall < PREVIEW_PROFILE_WINDOW_S then return end
++    local fields = {string.format("[PREVIEW_PHASE_V1] slot=%d window_wall_s=%.6f window_cpu_s=%.6f preview_enabled=%s clock_backwards=%d",
++        CLIENT_SLOT, wall_now - preview_profile_window_wall, cpu_now - preview_profile_window_cpu,
++        tostring(preview_stream_enabled == true), preview_profile_backwards)}
++    for _, name in ipairs(preview_profile_names) do
++        local row = preview_profile_stats[name]
++        local denominator = math.max(1, row[1])
++        fields[#fields + 1] = string.format("%s_n=%d %s_wall_sum_ms=%.6f %s_cpu_sum_ms=%.6f %s_wall_mean_ms=%.6f %s_cpu_mean_ms=%.6f %s_wall_max_ms=%.6f %s_cpu_max_ms=%.6f",
++            name, row[1], name, row[2] * 1000, name, row[3] * 1000,
++            name, row[2] * 1000 / denominator, name, row[3] * 1000 / denominator,
++            name, row[4] * 1000, name, row[5] * 1000)
++    end
++    print(table.concat(fields, " "))
++    preview_profile_stats = preview_profile_empty()
++    preview_profile_window_wall, preview_profile_window_cpu = wall_now, cpu_now
++    preview_profile_backwards = 0
++end
++
+ local socket_receive_timeout_count = 0
+ local socket_timeout_last_logged_count = 0
+ local socket_timeout_last_log_unix_s = nil
+@@ -2911,12 +2981,17 @@
+     end
+     last_preview_capture_time_s = now_s - ((now_s - last_preview_capture_time_s) % PREVIEW_MIN_INTERVAL_S)
+ 
++    local capture_profile_wall, capture_profile_cpu = preview_profile_mark()
+     local ok, result = pcall(function()
++        local size_profile_wall, size_profile_cpu = preview_profile_mark()
+         local vw, vh = manager.machine.video:snapshot_size()
++        preview_profile_finish("snapshot_size", size_profile_wall, size_profile_cpu)
+         if not vw or not vh or vw <= 0 or vh <= 0 then
+             return nil
+         end
++        local pixels_profile_wall, pixels_profile_cpu = preview_profile_mark()
+         local src = manager.machine.video:snapshot_pixels()
++        preview_profile_finish("snapshot_pixels", pixels_profile_wall, pixels_profile_cpu)
+         if not src or #src < (vw * vh * 4) then
+             return nil
+         end
+@@ -2938,7 +3013,9 @@
+         local tw = preview_target_w
+         local th = preview_target_h
+ 
++        local convert_profile_wall, convert_profile_cpu = preview_profile_mark()
+         local blob = preview_rgb565_bytes(src, vw, vh, tw, th)
++        preview_profile_finish("convert", convert_profile_wall, convert_profile_cpu)
+         local fmt = PREVIEW_FORMAT_RGB565
+         if PREVIEW_TRY_RLE and #blob >= 4096 then
+             local rle = rle_compress_rgb565_words(blob)
+@@ -2959,6 +3036,7 @@
+         pending_preview_fmt = result.fmt or PREVIEW_FORMAT_RGB565
+         pending_preview_blob = result.blob
+     end
++    preview_profile_finish("capture_total", capture_profile_wall, capture_profile_cpu)
+ end
+ 
+ local function frame_done_callback()
+@@ -3622,11 +3700,13 @@
+         trace_log(frame_idx, "socket_open_ok", "socket ready")
+     end
+ 
++    local write_profile_wall, write_profile_cpu = preview_profile_mark()
+     local write_ok, write_err = pcall(function()
+         trace_log(frame_idx, "socket_write_begin", "payload_bytes=" .. tostring(#frame_payload))
+         local length_header = string.pack(">I4", #frame_payload)
+         current_socket:write(length_header .. frame_payload)
+     end)
++    preview_profile_finish("socket_write", write_profile_wall, write_profile_cpu)
+ 
+     if not write_ok then
+         trace_log(frame_idx, "socket_write_error", tostring(write_err))
+@@ -3636,6 +3716,7 @@
+     end
+     trace_log(frame_idx, "socket_write_ok", "payload sent")
+ 
++    local wait_profile_wall, wait_profile_cpu = preview_profile_mark()
+     local read_ok, read_result = pcall(function()
+         trace_log(frame_idx, "socket_read_begin", "waiting for 3-byte or 5-byte action")
+         local started = socket_time_now()
+@@ -3733,6 +3814,7 @@
+         return nil
+     end)
+ 
++    preview_profile_finish("action_wait", wait_profile_wall, wait_profile_cpu)
+     if not read_ok then
+         trace_log(frame_idx, "socket_read_error", tostring(read_result))
+         print("Socket read error: " .. tostring(read_result))
+@@ -3978,6 +4060,7 @@
+ end
+ 
+ function frame_callback()
++    preview_profile_frame_begin()
+     if not mem or not controls then
+         return true
+     end
+@@ -4025,6 +4108,7 @@
+ 
+     local preview = capture_preview_payload()
+ 
++    local serialize_profile_wall, serialize_profile_cpu = preview_profile_mark()
+     local ok_payload, payload_or_err = pcall(
+         serialize_frame,
+         frame.player_alive, frame.score, frame.replay_level, frame.num_lasers, frame.wave_number,
+@@ -4042,6 +4126,7 @@
+         preview.w, preview.h, preview.fmt, preview.blob,
+         wire_lives_track(frame.score, frame.replay_level, rewards.done)
+     )
++    preview_profile_finish("serialize", serialize_profile_wall, serialize_profile_cpu)
+     if not ok_payload then
+         trace_log(frame_counter, "serialize_frame_error", tostring(payload_or_err), true)
+         return true

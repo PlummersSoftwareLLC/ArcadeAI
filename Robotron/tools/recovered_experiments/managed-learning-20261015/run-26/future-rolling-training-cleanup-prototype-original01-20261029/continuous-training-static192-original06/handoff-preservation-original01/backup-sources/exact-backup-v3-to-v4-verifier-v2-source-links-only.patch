@@ -1,0 +1,13 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/backup-sources/copy_verified_stopped_training_state_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/backup-sources/copy_verified_stopped_training_state_v4.py
+@@ -21,8 +21,8 @@
+ G=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ B=G/'logs/managed-learning-20261015/run-26'
+ H=B/'future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01'
+-VERIFIER=H/'state-sources/verify_stopped_full_training_state_v1.py'
+-VERIFIER_SHA='d5cdf4a7cdf6f939a6f9989b12a298a24d89e19dc31037a745a09ca06518247d'
++VERIFIER=H/'state-sources/verify_stopped_full_training_state_v2.py'
++VERIFIER_SHA='560bdf7dc1045252949c02afebd3ae8f8d45f34f7809e7b2d4025145388a8f88'
+ ARCHIVE=G/'tools/eval_capacity_proposal/review_original_pilot_raw_API_v1.py'
+ ARCHIVE_SHA='2ed5fde26fe50a23bc9572965e483ae6634b31ffbe5d4147c9f5bc338396d445'
+ DESCRIPTORS=G/'tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision4/bank_state_revision2.py'

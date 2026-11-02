@@ -1,0 +1,88 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/closed-metadata-reuse-guard-exact-resume-original04-preparation/closed_metadata_readiness_reuse_prefix_physical192_v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-namespace1200-guard-original02/closed_metadata_readiness_reuse_namespace1200_v6.py
+@@ -24,7 +24,7 @@
+     return value
+ 
+ 
+-SOURCE_CONTRACT_SHA = '128f8db839ddc4cff84887cbe11f2b4d0ea390fe1ccdbc05fc8fed4701671fcc'
++SOURCE_CONTRACT_SHA = '33397c4b09c79fcfd4bfec1249105f4ff3d841c86a5e5d73f19d0a5edc44df9a'
+ 
+ 
+ class ClosedMetadataReadiness:
+@@ -39,22 +39,23 @@
+                 'Exact selected physical source contract required')
+         policy = self.read(policy_pin)
+         require(policy['schema'] == 'robotron-physical192-prospective-closed-metadata-guard-source-contract-v1'
+-                and policy['physical_source_family']['sha256'] == 'eb5070a9ea134c5b16e553e024c554a948d70f469d862d93b7867ae9e9d675bd'
+-                and policy['physical_health_source_family']['sha256'] == '5a901e68e16270f7985f907964d46cc0ceb7b6e17dd1834009a5d616b88fcecd'
++                and policy['physical_source_family']['sha256'] == '997ca21fabf6fd2a1edc183ff6857ee60d97119b2ff352580632a609e7260e26'
++                and policy['physical_health_source_family']['sha256'] == '22245530f82299b2a3f634d07ba828a91678dc67a6ad5bd869a780d6d4a62651'
+                 and policy['actual_new_binding_complete'] is True
+-                and type(policy['raw_samples']) is int and policy['raw_samples'] >= 3000 and policy['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1' and policy['maximum_gap_s'] == 2.0 and policy['full_main_input_count'] == 348
+-                and policy['main_health_profile'] == 'PHYSICAL_ORIGINAL192_TRAIN_CURRENT_TCP_EVAL_ORIGINAL_ONCE',
++                and type(policy['raw_samples']) is int and policy['raw_samples'] >= 3000 and policy['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1' and policy['maximum_gap_s'] == 2.0 and policy['full_main_input_count'] == 390
++                and policy['main_health_profile'] == 'PHYSICAL_ORIGINAL192_LIVE_PIDFD_CURRENT_EVAL_QUIESCENCE_V5',
+                 'physical source selection differs')
+         for key in ('physical_source_family', 'core_source_peer', 'physical_health_source_family', 'joint_engineering',
+                     'physical_private_source_peer', 'shared_profile_helper', 'metadata_driver', 'metadata_preparer', 'metadata_contract', 'metadata_closer',
+                     'raw_review', 'raw_reviewer', 'lifecycle', 'worker_job', 'outcome', 'reader', 'archive',
+                     'physical_main_case', 'physical_input_inventory', 'observer_source_map', 'metadata_assembler',
+                     'metadata_controller', 'metadata_resource_packet', 'engineering_finalizer', 'engineering_closer',
+-                    'metadata_cache', 'metadata_singleproof_source_peer', 'metadata_guard_preparer'):
++                    'metadata_cache', 'metadata_singleproof_source_peer', 'metadata_guard_preparer',
++                    'metadata_preparer_parent', 'metadata_namespace_overlay'):
+             require(a[key] == policy[key], 'Selected new source differs: ' + key)
+             h.checked(a[key])
+         joint = self.read(a['joint_engineering'])
+-        require(joint['schema'] == 'robotron-continuous-physical192-joint-engineering-readiness-v1'
++        require(joint['schema'] == 'robotron-original192-immutable-bootstrap-live-pidfd-joint-engineering-readiness-v4'
+                 and joint['status'] == 'ENGINEERING_PASS_AT_RECORDED_OBSERVED_LOAD_ONLY'
+                 and joint['source'] == policy['engineering_finalizer']
+                 and joint['case'] == policy['physical_main_case']
+@@ -96,7 +97,7 @@
+         close = self.read(a['metadata_closeout'])
+         require(close['status'] == 'PASS_ENGINEERING_ONLY' and close['actual_exit'] == 0
+                 and close['actual_CPU_cores'] == 2 and close['actual_memory_bytes'] == 4 << 30
+-                and close['actual_runtime_limit_s'] == 600
++                and close['actual_runtime_limit_s'] == 1200
+                 and close['all_six_original_descriptors_and_resources_argv_birth_unit_timer_cgroup_and_owned_release_verified'] is True,
+                 'Actual closed original metadata scope required')
+         for key, original in [('metadata_report', 'actual_report'), ('metadata_job', 'original_job'),
+@@ -143,7 +144,10 @@
+                     'TRAIN155_original_physical_and_current_TCP_verified',
+                     'EVAL37_original_connection_and_strict_retirement_evidence_verified',
+                     'EVAL_closed_slots_have_positive_normal0_reap_and_cleanup_verified',
+-                    'prior_completed_EVAL_prefix_and_current_suffix_verified'))
++                    'prior_completed_EVAL_prefix_and_current_suffix_verified','immutable_original192_bootstrap_certificate_verified',
++                    'fresh_original_keeper_pidfd_census_verified','authentic_published_normal0_exit_facts_and_monotone_coverage_verified',
++                    'current_once_only_EVAL_quiescence_with_historical_error_and_ready_false_preserved_verified'))
++                and self.raw['original_cleanup_deadline_handoff_CID_reuse_or_refill_success_from_exception_claimed'] is False
+                 and self.raw['accepted_evidence_and_projection_gaps_verified'] is True and self.raw['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1' and self.raw['verified_maximum_gap_s'] == 2.0,
+                 'Actual full raw readiness predicates required')
+         life = self.read(a['lifecycle'])
+@@ -173,6 +177,25 @@
+                     == policy['metadata_guard_preparer']
+                 and policy['metadata_guard_preparer'] in metadata_job['inputs'],
+                 'Exact selected early and final metadata guard constructor required')
++        require(metadata_job['metadata_study_preparer'] == report['metadata_study_preparer']
++                    == policy['metadata_preparer']
++                and metadata_job['metadata_namespace_overlay'] == report['metadata_namespace_overlay']
++                    == policy['metadata_namespace_overlay']
++                and policy['metadata_namespace_overlay'] in metadata_job['inputs']
++                and policy['metadata_preparer_parent'] in metadata_job['inputs'],
++                'Exact new metadata-only namespace overlay and parent must be held')
++        overlay = self.read(policy['metadata_namespace_overlay'])
++        require(overlay['selected_preparer'] == policy['metadata_preparer']
++                and overlay['parent_preparer'] == policy['metadata_preparer_parent']
++                and overlay['parent_family'] == policy['physical_source_family']
++                and overlay['parent_source_peer'] == policy['physical_private_source_peer']
++                and overlay['unchanged_native_controller'] == policy['native_controller'],
++                'Selected metadata-only namespace correction differs from unchanged private source graph')
++        namespace = load('_closed_guard_metadata_namespace_preflight', h.checked(policy['metadata_assembler']))
++        require(report['metadata_namespace_preparation_preflight']
++                    == metadata_job['metadata_namespace_preparation_preflight']
++                    == namespace.namespace_preflight(h, self.read(policy['physical_source_family'])),
++                'Exact one-prefix producer/controller namespace preflight must hold for this closed metadata scope')
+         classifier = load('_closed_guard_exact_resume_classifier', h.checked(policy['metadata_guard_preparer']))
+         require(report['held_input_classification_preflight'] == classifier.preflight_held_inputs(metadata_job['inputs']),
+                 'Recorded early preflight must classify the complete unchanged selected held-input domain')

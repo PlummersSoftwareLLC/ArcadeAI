@@ -1,0 +1,18 @@
+[Unit]
+Description=Local Robotron MAME fleet
+Requires=robotron-trainer.service
+After=robotron-trainer.service
+[Service]
+Type=simple
+KillSignal=SIGINT
+WorkingDirectory=/home/dave/source/repos/ArcadeAI/Robotron
+Environment=SDL_VIDEODRIVER=dummy
+Environment=MAME_BIN=/usr/games/mame
+ExecStartPre=/usr/bin/python3 /home/dave/source/repos/ArcadeAI/Robotron/Scripts/wait_for_trainer.py
+ExecStart=/home/dave/source/repos/ArcadeAI/Robotron/startmame.sh 16 novideo --supervise
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=650
+TimeoutStopSec=5
+[Install]
+WantedBy=default.target

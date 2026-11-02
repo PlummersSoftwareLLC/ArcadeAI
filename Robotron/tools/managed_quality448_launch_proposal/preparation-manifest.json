@@ -1,0 +1,96 @@
+{
+  "schema": "robotron-fixed448-quality-root-carrier-source-preparation-v1",
+  "status": "SOURCE_READY_PENDING_EXACT_PEER_AND_ROOT_ACTUAL_DEFAULT",
+  "files": {
+    "PREPARATION.txt": {
+      "sha256": "6ec21de79ef339338883da8fe19f6c52679ed3db23432e031b4934316f6de194",
+      "bytes": 5204,
+      "mode": "0o444"
+    },
+    "READINESS.txt": {
+      "sha256": "1b5b419ebd5df38f855c34ae5b2144505cb18dcead27a06d35be06e0f22f3b4a",
+      "bytes": 3409,
+      "mode": "0o444"
+    },
+    "planned-argv.json": {
+      "sha256": "6af7959d91980a0774c50994db51a4210e14e332f528bc47cda8a88b81a22e20",
+      "bytes": 1943,
+      "mode": "0o444"
+    },
+    "root_quality448_carrier.py": {
+      "sha256": "70a1f05746edd76a708df7bf0e14abaa85b799f9ac441acda445541bc81a8437",
+      "bytes": 24262,
+      "mode": "0o444"
+    },
+    "test_quality448_bindings.py": {
+      "sha256": "679e17b8acc7c6cd36dc09963db86178c1a4456f112f83f8cf5bae6a586d174f",
+      "bytes": 8311,
+      "mode": "0o444"
+    }
+  },
+  "carrier_sha256": "70a1f05746edd76a708df7bf0e14abaa85b799f9ac441acda445541bc81a8437",
+  "authored_unexecuted_tests": 6,
+  "author_executed": false,
+  "protocol": {
+    "reference": "protected384/ac8b",
+    "candidate": "actual448 SHA/bytes/rootjob+ea6PASS+matchingoriginalCPU0/release mandatory",
+    "order": [
+      "reference",
+      "candidate",
+      "reference",
+      "candidate"
+    ],
+    "cohort_s": 1200,
+    "timeout_s": 2400,
+    "diagnostics_all4": true,
+    "actors": 16,
+    "slots": [
+      4096,
+      4097,
+      4098,
+      4099,
+      4100,
+      4101,
+      4102,
+      4103,
+      4104,
+      4105,
+      4106,
+      4107,
+      4108,
+      4109,
+      4110,
+      4111
+    ],
+    "min50": true,
+    "all_admitted_fulltails": true,
+    "max_attempts": 1,
+    "automatic_retry": false,
+    "automatic_promotion": false,
+    "learning_changes": false
+  },
+  "reuse": "Actual384 rootlaunch sequence; fixedactualpreview/sourcearchive +three bound reviews +detached3stimer +originalobservedidentity/terminal archive, no release",
+  "essential_fixes": [
+    "CPU completion binds exactjob/reportpath/reportSHA andoriginal0/archive/releasedowner",
+    "Planreview binds explicitpreviewSHA/actualinputs; canonical saveddefaultargv must equal reviewed generated list",
+    "Concrete actual readiness observedtimestamp/owner/candidate/source/control/unit/env/resource schema checked, directquickchecks repeated",
+    "Owned inference taskmembership/start before globalTID affinity; actualGPU1c0c5sourceconstant",
+    "Late timer observer uses originalstartmonotonic after actualcarrierreap; preserve actualstartedowner/terminalhonestly, never retry"
+  ],
+  "source_dependencies": {
+    "campaign": "574e56f28499c751c639ee8a3474eecd5ca8de8c896da3dd44d5e4fc2fe60128",
+    "sidecar": "cd034413c2fd8a56bb9d22f8df86889939edfad041ee4e2e0210a831b5f9fe90",
+    "genericCPUwrapper": "ea6ccfcd62e2683641475634ba1647856a988691a6cede3dbeda629dd03ba56b",
+    "prioractual384plan": "81210cb86ad7cd78b3f9a7f4c764b83aad3364d0d8f0e382e29f340245a54704",
+    "held60runtime_baseline": "27cbecb43b76ff4e01b0b268bc2c1404b83ee708aaaa55a51ebfba91bda83a2c"
+  },
+  "root_actual_plan": null,
+  "root_actual_launch": null,
+  "source_review": "AuditorSOURCE-only PASS functionalf061; finaldelta adds only sourcecopy fsync, no branch/scientific changes. Exactallfilepeer external.",
+  "limitations": [
+    "No actualhelpers/default/tests/framework/imports/PT/runtime/actions by author",
+    "Source preparation is not actualcandidate/plan/launch/quality qualification",
+    "Onlyroot may run futureexplicitexecute; current source-only checklist is never a live readinessPASS",
+    "Actualcampaignplan must match preview exceptcreated_unix_s; all4 originalrow/serving/boot/source audits remain required"
+  ]
+}

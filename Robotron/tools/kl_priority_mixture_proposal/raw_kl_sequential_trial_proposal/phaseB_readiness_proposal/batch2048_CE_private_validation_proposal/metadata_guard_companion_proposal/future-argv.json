@@ -1,0 +1,14 @@
+{
+  "status": "UNEXECUTED_STDLIB_METADATA_GUARDS_ONLY",
+  "argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/batch2048_CE_private_validation_proposal/metadata_guard_companion_proposal/test_CE2048_contract.py",
+    "-v"
+  ],
+  "expected_methods": 9,
+  "actual_execution": null,
+  "CUDA_VISIBLE_DEVICES": "",
+  "numerical_imports": false
+}

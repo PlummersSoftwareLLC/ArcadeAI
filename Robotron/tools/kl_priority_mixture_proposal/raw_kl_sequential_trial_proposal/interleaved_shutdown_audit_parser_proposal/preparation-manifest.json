@@ -1,0 +1,71 @@
+{
+  "schema": "robotron-exact-interleaved-shutdown-parser-source-preparation-v1",
+  "status": "SOURCE_ONLY_FROZEN_UNEXECUTED_PEER_PENDING",
+  "files": {
+    "PREPARATION.txt": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/interleaved_shutdown_audit_parser_proposal/PREPARATION.txt",
+      "sha256": "16eb6acc812e1f768f325a8e86a9d6a3516192f685f165354aab2b57630b0d85",
+      "bytes": 4433,
+      "mode": "0o444"
+    },
+    "expected_shutdown.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/interleaved_shutdown_audit_parser_proposal/expected_shutdown.py",
+      "sha256": "556fa65b161861c7a3cf39a7d7731fcdfc6d171fa83c5fcbb0977eba861e117c",
+      "bytes": 6098,
+      "mode": "0o444"
+    },
+    "fixture-C1-console.log": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/interleaved_shutdown_audit_parser_proposal/fixture-C1-console.log",
+      "sha256": "46f71927b6bb85b90bb1ea5346f33bc3b36d8c6f9ded87bc31561367c3837304",
+      "bytes": 8569,
+      "mode": "0o444"
+    },
+    "fixture-C1-receipt-projection.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/interleaved_shutdown_audit_parser_proposal/fixture-C1-receipt-projection.json",
+      "sha256": "5a56d9500297ffa9f16891611938b3615bdc2dba4c1b3cdc0b8a0f1ae9c24407",
+      "bytes": 4565,
+      "mode": "0o444"
+    },
+    "future-auditor-unapplied.patch": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/interleaved_shutdown_audit_parser_proposal/future-auditor-unapplied.patch",
+      "sha256": "985716eb94e71045acacef5718664b22ad12d37c371b5761bd47ea6c396f56a0",
+      "bytes": 2531,
+      "mode": "0o444"
+    },
+    "future-plan.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/interleaved_shutdown_audit_parser_proposal/future-plan.json",
+      "sha256": "b8ea8251d95d5ea39f5721b2d9fa3cb9bf87b498358162d19bef846c5f9f4c9d",
+      "bytes": 985,
+      "mode": "0o444"
+    },
+    "source-lock.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/interleaved_shutdown_audit_parser_proposal/source-lock.json",
+      "sha256": "fca096d41e16eebb51fa3b14deccd6d10f5f1c5f00882ed5f7dfca4ed990ef3c",
+      "bytes": 4321,
+      "mode": "0o444"
+    },
+    "test_expected_shutdown.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/interleaved_shutdown_audit_parser_proposal/test_expected_shutdown.py",
+      "sha256": "d958e117874fde6dc786c14fb7f4e83d85f6c1e68bcde1277f26bb5fd353b325",
+      "bytes": 5246,
+      "mode": "0o444"
+    }
+  },
+  "original_auditor_sha256": "734999b906973d8742e28c734bf3f2d704cc3fa1765c0e30a906caaeb5eb176d",
+  "original_C1_audit_sha256": "cfaef0d54fbc319a7eb4d66239d3b69b12c73793047daec4a4730c398b536579",
+  "original_C1_audit_exit": 2,
+  "original_C1_execution_sha256": "b56b4313a6002e6395b093d277b6524efeb8a3aecf9c28c5c5664564c04e96b5",
+  "original_C1_manual_review_sha256": "ae17b406d605a8afec90fde077df6083de8a054de4999e46246975b924d6492d",
+  "authored_pure_stdlib_methods": 12,
+  "actual_guard_execution": null,
+  "actual_parser_execution": null,
+  "actual_future_auditor": null,
+  "actual_future_bindings": null,
+  "actual_future_argv": null,
+  "current_audit_rerun": false,
+  "installed_or_consumed_source_modified": false,
+  "source_freeze_released": false,
+  "playing_gates_changed": false,
+  "author_application_imports_tests_PT_runtime_actions": false,
+  "qualification_pass": false
+}

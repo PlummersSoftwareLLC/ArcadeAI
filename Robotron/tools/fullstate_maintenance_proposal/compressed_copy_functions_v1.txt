@@ -1,0 +1,95 @@
+def verify_compressed_file(target, source_bytes, source_sha256, compressed_sha256):
+    """Independently reread the sealed file, bounding decompression memory."""
+    before=source_identity(target)
+    require(before['mode']=='0o444','Compressed destination is not sealed')
+    decoder=zlib.decompressobj();raw_hash=hashlib.sha256();packed_hash=hashlib.sha256()
+    raw_count=packed_count=0;limit=4<<20
+    with os.fdopen(os.open(target,os.O_RDONLY|os.O_NOFOLLOW),'rb')as stream:
+        require(identity(os.fstat(stream.fileno()))==before,'Compressed readback open race')
+        while True:
+            block=stream.read(65536)
+            if not block:break
+            require(not decoder.eof,'Trailing data after compressed stream')
+            packed_hash.update(block);packed_count+=len(block);pending=block
+            while True:
+                raw=decoder.decompress(pending,limit);pending=decoder.unconsumed_tail
+                raw_count+=len(raw);require(raw_count<=source_bytes,'Decompressed size exceeds selected original')
+                raw_hash.update(raw)
+                require(not decoder.unused_data,'Trailing compressed member/data refused')
+                if not pending and (len(raw)<limit or decoder.eof):break
+        require(decoder.eof and not decoder.unconsumed_tail and not decoder.unused_data,
+            'Truncated or unconsumed compressed stream')
+        require(raw_count==source_bytes and raw_hash.hexdigest()==source_sha256,
+            'Independent decompressed payload size/hash differs')
+        require(packed_count==before['bytes']and packed_hash.hexdigest()==compressed_sha256,
+            'Independent compressed bytes/hash differs')
+        require(identity(os.fstat(stream.fileno()))==before==source_identity(target),
+            'Compressed file changed during independent readback')
+    return dict(destination_payload_reread_hash_performed=True,
+        independent_decompressed_bytes=raw_count,independent_decompressed_sha256=raw_hash.hexdigest(),
+        independent_compressed_bytes=packed_count,independent_compressed_sha256=packed_hash.hexdigest())
+
+
+def copy_file(entry,output,progress,update):
+    source=Path(entry['source']);before=source_identity(source)
+    require(before==entry['identity'],'Stopped source identity changed before compression: '+str(source))
+    relative=Path(entry['relative'])
+    require(not relative.is_absolute()and relative.parts and all(p not in('.','..')for p in relative.parts),
+        'Safe exclusive relative compressed path required')
+    target=output/'files'/(str(relative)+'.zlib');target.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
+    require(target.resolve(strict=False)==target and not target.exists(),'Exclusive physical compressed backup required')
+    digest=hashlib.sha256();packed_digest=hashlib.sha256();copied=packed=0;last=0.0
+    compressor=zlib.compressobj(level=1);source_fd=os.open(source,os.O_RDONLY|os.O_NOFOLLOW);target_fd=None
+    def write_packed(payload):
+        nonlocal packed
+        require(progress['compressed_bytes_written']+len(payload)<=progress['maximum_compressed_bytes'],
+            'Precommitted compressed backup byte budget exceeded')
+        free=os.statvfs(output);require(free.f_bavail*free.f_frsize>=progress['required_free_margin']+len(payload),
+            'Compressed backup free-space reserve would be exhausted')
+        view=memoryview(payload)
+        while view:
+            count=os.write(target_fd,view);require(count>0,'Compressed write made no progress')
+            packed_digest.update(view[:count]);packed+=count;progress['compressed_bytes_written']+=count;view=view[count:]
+    try:
+        target_fd=os.open(target,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+        require(identity(os.fstat(source_fd))==before,'Stopped source open race')
+        require((os.fstat(target_fd).st_dev,os.fstat(target_fd).st_ino)!=(before['device'],before['inode'])
+            and os.fstat(target_fd).st_nlink==1,'Independent compressed destination required')
+        while True:
+            block=os.read(source_fd,4<<20)
+            if not block:break
+            digest.update(block);copied+=len(block);write_packed(compressor.compress(block))
+            now=time.monotonic()
+            if now-last>=5:
+                progress.update(active_file=entry['relative'],active_file_bytes=copied,
+                    active_compressed_bytes=packed,active_file_prefix_sha256=digest.hexdigest(),active_file_complete=False)
+                update();last=now
+        write_packed(compressor.flush())
+        require(copied==before['bytes']and os.fstat(target_fd).st_size==packed,'Incomplete compressed source copy')
+        require(identity(os.fstat(source_fd))==before==source_identity(source),'Stopped source changed during compression')
+        if entry['expected_sha256']is not None:require(digest.hexdigest()==entry['expected_sha256'],'Verified original source hash changed')
+        os.fchmod(target_fd,0o444);os.fsync(target_fd)
+        result=dict(relative=entry['relative'],source=str(source),source_identity_before=before,
+            source_identity_after=source_identity(source),destination=str(target),destination_identity=identity(os.fstat(target_fd)),
+            codec='zlib-level1',bytes_copied=copied,compressed_bytes=packed,stream_sha256=digest.hexdigest(),
+            compressed_sha256=packed_digest.hexdigest(),complete=False,fsync_completed=True,
+            expected_source_sha256=entry['expected_sha256'])
+    except BaseException:
+        progress.update(active_file=entry['relative'],active_file_bytes=copied,active_compressed_bytes=packed,
+            active_file_prefix_sha256=digest.hexdigest(),active_file_complete=False)
+        try:update()
+        except BaseException:pass
+        raise
+    finally:
+        try:
+            if target_fd is not None:
+                try:
+                    if stat.S_IMODE(os.fstat(target_fd).st_mode)!=0o444:os.fchmod(target_fd,0o444)
+                    os.fsync(target_fd)
+                finally:os.close(target_fd)
+        finally:os.close(source_fd)
+    fd=os.open(target.parent,os.O_RDONLY|os.O_DIRECTORY)
+    try:os.fsync(fd)
+    finally:os.close(fd)
+    result.update(verify_compressed_file(target,copied,digest.hexdigest(),packed_digest.hexdigest()),complete=True)
+    return result

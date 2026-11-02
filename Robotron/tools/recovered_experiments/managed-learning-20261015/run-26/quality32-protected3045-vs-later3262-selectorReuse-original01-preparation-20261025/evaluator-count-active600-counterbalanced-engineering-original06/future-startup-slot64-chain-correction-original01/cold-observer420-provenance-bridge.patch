@@ -1,0 +1,50 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/review_cold_slot64_prefix_v1.before-observer420-provenance-bridge.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/review_cold_slot64_prefix_v1.py
+@@ -81,6 +81,35 @@
+     summary = {name: dict(count=len(items), maximum_wall_s=max((r['wall_s'] for r in items)), total_wall_s=sum((r['wall_s'] for r in items)), total_thread_cpu_s=sum((r['thread_cpu_s'] for r in items)), quota_throttled_periods=sum((r['quota_throttled_periods'] for r in items)), slowest=sorted(items, key=lambda r: r['wall_s'], reverse=True)[:10]) for name, items in by_stage.items()}
+     return dict(events=len(rows), stages=len(stages), GC_events=len(gc), raw_samples=len(samples), maximum_gap_s=max((r['gap_s'] for r in gaps)), stage_summary=summary, largest20_gap_intervals=top, instrumentation_has_some_cost=True, previous_failed_case_cause_reproduced=False, no_scientific_fix_or_reliability_claim=True, quality_qualified=False)
+ 
++def validate_observer420_derivation(historical_family, family, read):
++    pin = family['observer_bound420_derivation']
++    assert pin['sha256'] == 'bb362cf27cdfc065b275fb393706940cd29af7bd5a4b00c9d73d5ee8f556fe9a'
++    derivation = read(pin)
++    assert derivation['schema'] == 'robotron-cold64-observer-bounded420-source-derivation-v1'
++    assert derivation['old_sources_changed'] is derivation['launched'] is False
++    parents, selected = derivation['source_parents'], derivation['selected_sources']
++    assert set(parents) == set(selected) == {'client', 'worker', 'controller', 'reviewer', 'protocol'}
++    assert historical_family['main_observer'] == parents
++    assert family['main_observer'] == selected
++    assert parents['protocol'] == selected['protocol']
++    assert selected['protocol']['sha256'] == '0ec8510b82783b6d47cad99ba63c59045f32e5b9acf6dbfa128b308f9641d2b9'
++    for role in ('client', 'worker', 'controller', 'reviewer'):
++        before = read(parents[role], False).decode()
++        after = read(selected[role], False).decode()
++        if role == 'client':
++            expected = before.replace('12e479b0eb0545dab32da1d8f8130be3622670207c79ecaf0a164b812fa0ec5a', '2b6cd5a25c66f99011621385616efad6adaaa792ef0eab28300ba18a0f6466c7').replace('22260', '420').replace('22320', '480')
++        elif role == 'worker':
++            expected = before.replace('in (180,22260)', 'in (420,)').replace("{180:'3min',22260:'6h 11min'}", "{420:'7min'}")
++        elif role == 'controller':
++            expected = before.replace("'22260'", "'420'").replace("22320<=c['observation_s']<=22380", "480<=c['observation_s']<=480")
++        else:
++            expected = before.replace('22260', '420').replace('22320', '480').replace("'6h 11min'", "'7min'")
++        assert expected != before and after == expected, 'Unexpected observer420 source/predicate delta: ' + role
++    return dict(derivation=pin, historical_sources=parents, selected_bounded420_sources=selected,
++                exact_only_watchdog_observation_and_client_controller_pin_delta_verified=True,
++                historical_coalescing_CPU_proof_preserved_at_original_node=True,
++                selected_protocol_and_health_algorithms_unchanged=True)
++
+ def validate_protocol_provenance(family, read):
+     """Verify historical derivations at their own nodes, then the selected codec.
+ 
+@@ -167,9 +196,10 @@
+     stats = actual['running_projection_publication_stats']
+     assert stats['attempts'] == stats['published'] + stats['coalesced_busy_reader'] == actual['original_raw_main_samples']
+     assert stats['published'] > 0 and stats['coalesced_busy_reader'] > 0 and stats['errors'] == 0
+-    assert read(actual['component_family'])['main_observer'] == family['main_observer']
++    observer420 = validate_observer420_derivation(read(actual['component_family']), family, read)
+     return dict(historical_RAM_codec=RAM_provenance['codec'], historical_serialized_codec=provenance['prospective_protocol'],
+                 selected_protocol=selected, coalescing_protocol_CPU=cpupin, current_context_observer_CPU=actualpin,
++                observer420_historical_to_selected_bridge=observer420,
+                 all_historical_derivations_and_retained_function_AST_verified=True,
+                 selected_running_publisher_exact_source_and_guarded_behavior_verified=True,
+                 raw_runtime_ROM_quality_and_rate_checks_unchanged=True)

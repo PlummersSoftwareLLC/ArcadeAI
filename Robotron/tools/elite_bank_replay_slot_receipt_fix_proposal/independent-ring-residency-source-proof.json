@@ -1,0 +1,241 @@
+{
+  "schema": "robotron-independent-ring-residency-source-proof-v1",
+  "status": "SOURCE_ONLY_CONDITIONAL_INVARIANT_PROOF_UNAPPLIED_UNEXECUTED",
+  "author": "runtime_review",
+  "scope": "Held-source mutation/caller inventory and conditional process-local receipt proof. This is not a complete candidate patch signoff, executed test, runtime occurrence/frequency claim, adoption, or quality/speed claim.",
+  "held_sources": {
+    "replay_buffer.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/replay_buffer.py",
+      "sha256": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f",
+      "bytes": 113613,
+      "identity": {
+        "device": 2304,
+        "inode": 79724825,
+        "bytes": 113613,
+        "mtime_ns": 1792224696813330592,
+        "ctime_ns": 1792224696813836930,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "agent.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/agent.py",
+      "sha256": "865a0df717b39951b7f7c516e4a962e3d48cf4d3dc11295ff266e58653e6c74b",
+      "bytes": 98429,
+      "identity": {
+        "device": 2304,
+        "inode": 79724997,
+        "bytes": 98429,
+        "mtime_ns": 1792239930859030766,
+        "ctime_ns": 1792239930859896369,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "socket_server.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py",
+      "sha256": "f44ddfe31408b77b6d622e1d4ec4cda60a03999dc984d9e11b5aeac38911a9ed",
+      "bytes": 140517,
+      "identity": {
+        "device": 2304,
+        "inode": 79696030,
+        "bytes": 140517,
+        "mtime_ns": 1792306967914113042,
+        "ctime_ns": 1792306967928089640,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "training.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/training.py",
+      "sha256": "90b847856f810cb4f52513a4bd0625b2d15d4801107bff398060faae25bc4be4",
+      "bytes": 35009,
+      "identity": {
+        "device": 2304,
+        "inode": 79724954,
+        "bytes": 35009,
+        "mtime_ns": 1792239930867116846,
+        "ctime_ns": 1792239930867585104,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "prefetch.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/prefetch.py",
+      "sha256": "02871bc515ba23f8d353131e9b6b6b4e390692803578febee7c8d643dd308a27",
+      "bytes": 15674,
+      "identity": {
+        "device": 2304,
+        "inode": 79724949,
+        "bytes": 15674,
+        "mtime_ns": 1792224696820475550,
+        "ctime_ns": 1792224696820913184,
+        "mode": "0o644",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "main.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/main.py",
+      "sha256": "61fa053eea882e7e9ca1d95cd8dc081c45dec75677b12c51231aa95f51da0282",
+      "bytes": 67287,
+      "identity": {
+        "device": 2304,
+        "inode": 79724950,
+        "bytes": 67287,
+        "mtime_ns": 1792195091103306284,
+        "ctime_ns": 1792195091104044623,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "learning_exposure.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/learning_exposure.py",
+      "sha256": "30d9191e9fc845d80e52a7a891244fcf0c7041cf60529f6559b15e6d47ac5c7f",
+      "bytes": 9123,
+      "identity": {
+        "device": 2304,
+        "inode": 79725073,
+        "bytes": 9123,
+        "mtime_ns": 1792150127797845409,
+        "ctime_ns": 1792150127797845409,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "related_unapplied_patch": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/unapplied.patch",
+    "sha256": "b1207e309366b4b454c076918d792855fa2ddcbaac29a2e9838a58f57420840a",
+    "bytes": 52007,
+    "identity": {
+      "device": 2304,
+      "inode": 81297758,
+      "bytes": 52007,
+      "mtime_ns": 1792335205642286356,
+      "ctime_ns": 1792335205643044759,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "proof": {
+    "state": "C=fixed positive capacity; E=unique opaque epoch belonging to this buffer instance; A=next-write pointer when E begins; T=number of normally completed adds in E. Receipt (i,E,s) uses the actual insertion index i and successful serial s.",
+    "per_receipt_validity_under_same_replay_lock": [
+      "receipt epoch is E by identity; integer s satisfies 1 <= s <= T",
+      "0 <= T-s < C",
+      "i == (A+s-1) % C",
+      "tree.data_ptr == (A+T) % C",
+      "self.size == tree.size; 0 <= self.size <= C; 0 <= tree.data_ptr < C; i is in the current live range; tree and buffer capacities agree"
+    ],
+    "induction": "Every completed add writes the current next pointer exactly once and advances it once. Thus serial s occupies (A+s-1) mod C; that same slot is next reused at s+C. Age C-1 remains resident; age C is stale. Epoch inequality rejects clear/load/rebind ABA. A pointer consistency check detects some unmediated changes but does not detect an unhooked full-cycle ABA.",
+    "complexity": "Constant extra epoch/origin/serial state and O(1) validity per receipt. Resolving/validating k episode or lookback receipts is O(k), including existing vector conversion/copy; whole-episode admission is not O(1).",
+    "successful_clock": "Increment T for every completed add, including legacy callers that do not request a receipt. A receipt is minted/returned while the insertion lock is held, after successful payload/metadata completion and before unlock. Do not reconstruct it from the pointer later.",
+    "why_not_adds_total": "replay_buffer.py:422 increments _adds_total before conversion, tree movement and payload writes. A prewrite failure can increase this clock without moving the pointer; a partial failure can advance the pointer and alter only some fields. The clock is also retained across destructive operations. It cannot supply the exact successful-serial/pointer invariant or generation identity. A prewrite failed attempt alone can conservatively over-age a token; clear/load ABA and untracked partial mutation are the stronger correctness hazards. Preserve this existing bank staleness clock unchanged.",
+    "assumptions": [
+      "All in-scope ring mutations use the enumerated buffer methods and the same plain replay lock. No unmediated public-array/tree writes, external mmap writer, capacity replacement, or concurrent mutation outside that lock.",
+      "Epochs are process-local opaque identities, unique per buffer/reinitialization, never persisted, reconstructed from bare indices, or shared across distinct buffers. Loaded historical rows receive no retroactive ingestion receipts.",
+      "Destructive/rebind operations invalidate the old epoch inside the lock before first live mutation; success and error paths re-anchor to the actual final pointer or remain unready/refusing before unlock. Partial add failures invalidate before unlock, issue no receipt and re-raise the original failure. This fences provenance; it does not repair partially corrupted storage."
+    ]
+  },
+  "mutation_inventory": [
+    {
+      "source": "replay_buffer.py:198",
+      "case": "constructor / SumTree creation",
+      "facts": "Plain threading.Lock at201, ring arrays209-217 and SumTree219; SumTree.add108-117 advances pointer before caller payload writes. Initialize a new instance epoch before publication; no outer lock is needed for an unpublished constructor."
+    },
+    {
+      "source": "replay_buffer.py:418",
+      "case": "normal insertion and partial failure",
+      "facts": "add holds lock421; attempted clock422; recycled counts440-445; tree.add446; payload447-470; counters471-478; exposure480-481. All successful callers advance the new clock. Catch partial/conversion/exposure failures inside the lock, invalidate before unlock and preserve the exception."
+    },
+    {
+      "source": "replay_buffer.py:483",
+      "case": "clear",
+      "facts": "Lock497; tree leaves/pointer/size and eligibility state mutate501-511. Fence before mutation and re-anchor after success/error; keep permanent banks and existing _adds_total behavior."
+    },
+    {
+      "source": "replay_buffer.py:1811",
+      "case": "ensure_live_mmap",
+      "facts": "Early metadata validation/returns precede live mutation. Lock1845; sequential array rebind1865 and _mmap_dir1873 can fail partway. Fence before the first locked rebind, and again/re-anchor on every exit while still locked."
+    },
+    {
+      "source": "replay_buffer.py:1889",
+      "case": "_promote_to_live_mmap",
+      "facts": "Lock1904; per-field allocation/copy/rebind1912, _mmap_dir1923. Even a logically identical successful copy is conservatively a new epoch. Partial rebinding must not preserve old tokens."
+    },
+    {
+      "source": "replay_buffer.py:1931",
+      "case": "_try_adopt_mmap_directory",
+      "facts": "Maps/validates candidate files before lock1962; live array rebind1967, tree replacement1969 and restored pointer1971. Fence before rebind, not merely after; final anchor must use restored actual pointer, not the old pointer. Do not issue receipts for imported rows."
+    },
+    {
+      "source": "replay_buffer.py:2024",
+      "case": "_restore_from_arrays",
+      "facts": "Initial shape/size validation precedes mutation. Lock2048; bulk payload2055-2074; tree size/pointer2079-2080; totals/eligibility2096-2101. Fence before bulk writes and on partial-error/success completion."
+    },
+    {
+      "source": "replay_buffer.py:2221",
+      "case": "flush (destructive clear)",
+      "facts": "Lock2223; tree replacement2227, size/caches2228-2235 and all payload fills2236-2244. Fence before first mutation and re-anchor on every exit. This method is not a persistence-only flush."
+    },
+    {
+      "source": "replay_buffer.py:1765",
+      "case": "load dispatch",
+      "facts": "_load_directory1765, _load_npz2001 and load2186 dispatch to adoption/restore and optionally promotion. Fence the actual mutating methods, including direct callers; an outer load-only fence misses them. agent.py:1585 load failures can be caught by the caller."
+    },
+    {
+      "source": "replay_buffer.py:1078",
+      "case": "same occupant priority / reward / eligibility edits",
+      "facts": "update_priorities lock1089/tree write1104; boost lock1124/write1132; pre-death penalty lock1151/reward write1190; mark_interesting lock1218/label writes1239-1241. These edit the same occupant, so do not advance occupancy serial or epoch. Receipt-bearing callbacks must validate and perform the relevant read/write within this same method lock."
+    },
+    {
+      "source": "replay_buffer.py:2110",
+      "case": "load-time interesting sanitation / cache rebuild",
+      "facts": "Sanitation writes labels2122/2164/2166 and rebuild2173; these run within the enclosing bulk-load mutation fence. _interesting_bank is a current-eligibility index cache; sampling513-538 rechecks current bounds and label. Do not mistake it for historical episode provenance."
+    },
+    {
+      "source": "replay_buffer.py:1571",
+      "case": "bank-only load / disk persistence",
+      "facts": "_load_bank lock1615 changes permanent bank arrays/metadata, not ring occupants. save1652 and _flush_live_mmaps_locked412 persist/copy/flush existing live storage; they do not replace it. Neither ordinary bank load nor persistence-only flush requires a ring-occupancy epoch bump. Keep independent bank revision/load epochs and on-disk formats."
+    }
+  ],
+  "atomic_delayed_callbacks": {
+    "agent_return_race": "agent.py:1076/1079 calls memory.add, then1083 derives pointer-1 after the add lock has been released. A concurrent add can change that pointer. The opt-in API must receive (actual idx,epoch,serial) from the insertion transaction. Preserve legacy add return None and legacy agent.step integer behavior; no second insertion/fallback retry.",
+    "plain_lock": "replay_buffer.py:201 is threading.Lock, not an RLock despite the class docstring. Never hold it then call a public method that acquires it again. Resolve receipts through a locked helper within each original locking method.",
+    "whole_bank_admission": "_bank_admit564 takes lock585. Keep recent score offers587 even when refusing, but validate the complete supplied episode before _bank_span594, bank episode counters610 or copied payload638-646. Reject all on stale/unknown/incomplete input; filtering the surviving subset cannot certify a whole episode. HOF671 and EpHOF763 are separate admissions.",
+    "elite_actor_kind": "socket_server.py:878-883 reads current actor_kind under mem.lock to decide learner fraction. Receipt resolution and the actor-kind copy must be in that same lock; a separate prior check followed by unlocked bare-index use is insufficient.",
+    "other_delayed_mutators": "Pre-death reward/priority callbacks800-816 and elite priority/interesting callbacks911-912 need independent atomic validation inside each actual buffer lock. A validation in one callback does not authorize a later callback after unlock. Preserve score/level statistics847-848 and FIFO history clearing, including refusal/error paths."
+  },
+  "history_and_shutdown": {
+    "bounded_history": "socket_server.py:775-786 stores per-client lookback and episode deques; episode maxlen65536 does not prove residency under global writes from all actors. Detect prefix eviction, insertion failure/unknown receipt, and epoch changes with an existing prefix as incompleteness. Whole-bank admission requires a known complete segment with every receipt resident; bounded tail eligibility has a separately declared scope.",
+    "reset": "FIFO reset_client791-794 removes both histories before acknowledging. Clear/discard must reset epoch/completeness consistently; legacy/unknown lists or deques must refuse safely and still clear without assuming added attributes.",
+    "held_stop_defect": "Held stop921 sets running False then drains while the worker may still process its prefetched batch, and drain steps call agent.step without history recording; join is only after the drain at941. Thus held shutdown does not prove one-consumer FIFO or complete tracked episodes.",
+    "proposal_stop_scope": "Related b120 proposal adds a stop-only lock, joins the consumer before caller drain, refuses to drain if the worker remains alive, and shares recorded-step handling between normal consumption and drain. This addresses concurrent consumers and missing drain bookkeeping. It does not establish producer quiescence.",
+    "late_producer_limit": "_enqueue_preserving724-730 checks running before queue.put(timeout=.1). A producer already inside put can publish after stop flips running False, possibly after the drain observes empty. SocketServer.stop2686 sets shutdown and stops inference/replay but does not join client producer threads first; accept-loop finally2684, main.py:324 and1264 can request stop. A stop-only lock serializes stop callers, not publication. No assertion that every previously attempted enqueue was drained, acknowledged, or recorded is justified without a separate producer/publication fence. That queue redesign is outside this proof and the approved narrow proposal."
+  },
+  "explicit_separate_scope": {
+    "sample_to_PER": "training.py:212 samples ring indices (or takes prefetched data), does GPU work, then544/547 updates priorities with bare indices. prefetch.py:236-247 can extend that delay. Ingestion/episode receipts do not fix this delayed ordinary sample-to-PER path. It remains a separate, explicitly excluded issue; do not widen training/prefetch ABI without selection.",
+    "diagnostic_capture_id": "sample_with_metadata819 documents diagnostic capture_id; it is not a persisted row-generation identity or an optimizer/ingestion receipt.",
+    "unmediated_mutation": "Public arrays/tree and externally writable mmap storage permit writes outside these hooks. Source searches found no such production write in the listed agent/socket/main/training/prefetch callers; tests do direct writes. The proof assumes their absence and cannot detect arbitrary direct payload edits or an unhooked full pointer cycle.",
+    "noninterference": "Do not repurpose _adds_total, ReplayInsertExposure counts/epochs, bank revision/load clocks, checkpoint/bank/ring formats, sampling RNG/quotas, rewards, optimizer/Adam/scaler/schedules or wire/API schemas. learning_exposure.py:28-71 counts normally completed adds under replay.lock and is distinct from row-occupancy receipts. New metadata fences alone prove no runtime benefit."
+  },
+  "review_actions": {
+    "source_text_read": true,
+    "source_hash_and_identity_only": true,
+    "new_artifact_only": true,
+    "candidate_applied": false,
+    "project_imports": false,
+    "AST_or_compile": false,
+    "tests_or_target_execution": false,
+    "runtime_or_live_queries": false,
+    "model_PT_or_replay_contents_read_or_statted": false,
+    "scientific_campaign_or_quality_claim": false
+  }
+}

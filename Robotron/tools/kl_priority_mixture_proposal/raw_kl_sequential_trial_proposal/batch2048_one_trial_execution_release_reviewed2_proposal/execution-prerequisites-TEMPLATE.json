@@ -1,0 +1,179 @@
+{
+  "known_originals_not_consumed_until_readonly_copied": {
+    "launch_manifest": {
+      "bytes": 40216,
+      "identity": {
+        "bytes": 40216,
+        "ctime_ns": 1792258854215536368,
+        "device": 2304,
+        "inode": 81016174,
+        "mode": "0o664",
+        "mtime_ns": 1792258854215536368,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-private-training-readiness-reviewed1-20261017/launch-manifest.json",
+      "sha256": "d3e9d5d4bfefe383b12fc94ba3b6213f69249a1d9892447c47f720368b0cddea"
+    },
+    "result": {
+      "bytes": 102126,
+      "identity": {
+        "bytes": 102126,
+        "ctime_ns": 1792259497457422557,
+        "device": 2304,
+        "inode": 81036035,
+        "mode": "0o664",
+        "mtime_ns": 1792259497457422557,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-private-training-readiness-reviewed1-20261017/result.json",
+      "sha256": "b0d1924a313267e70b2ace0e0e6c19a0025fcb07be34e4f6e5dde07ca04d05b8"
+    }
+  },
+  "status": "KNOWN_ORIGINALS_WITH_UNBOUND_READONLY_RESULT_AND_LAUNCH_COPIES_NOT_AN_ACTUAL_PREREQUISITE",
+  "value": {
+    "guards": {
+      "controller": {
+        "bytes": 2388,
+        "identity": {
+          "bytes": 2388,
+          "ctime_ns": 1792259329815775046,
+          "device": 2304,
+          "inode": 81148137,
+          "mode": "0o444",
+          "mtime_ns": 1792259329815775046,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/batch2048-one-trial-controller8-guards-root-20261017/original-guard-inline-execution.json",
+        "sha256": "386dda2c87acb3bc9c69a5a8f4dc82b38989ff514e1d5f3b0085283615c53767"
+      },
+      "early": {
+        "bytes": 2403,
+        "identity": {
+          "bytes": 2403,
+          "ctime_ns": 1792259329591042981,
+          "device": 2304,
+          "inode": 81148129,
+          "mode": "0o444",
+          "mtime_ns": 1792259329591042981,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/batch2048-early-phase-insurance14-guards-root-20261017/original-guard-inline-execution.json",
+        "sha256": "8ab73e38b57db5e764cbfde885822d0fde5a6ca599b39e97d40898fa38f7dcfa"
+      },
+      "transition": {
+        "bytes": 2461,
+        "identity": {
+          "bytes": 2461,
+          "ctime_ns": 1792259329686115983,
+          "device": 2304,
+          "inode": 81148133,
+          "mode": "0o444",
+          "mtime_ns": 1792259329686115983,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/batch2048-reviewed3-phase-transport7-guards-root-20261017/original-guard-inline-execution.json",
+        "sha256": "7566c3ea2182f7f920f15cb6d704b89489f212cf52834caede30684d0f05e643"
+      }
+    },
+    "numeric": {
+      "launch_manifest": null,
+      "observed_owner": {
+        "bytes": 1550,
+        "identity": {
+          "bytes": 1550,
+          "ctime_ns": 1792258853749637351,
+          "device": 2304,
+          "inode": 81016112,
+          "mode": "0o444",
+          "mtime_ns": 1792258853749637351,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-private-readiness-GPU-root-execution-reviewed1-20261017/root-original-parent-identity.json",
+        "sha256": "fa2fd91789efec4cad2a506ec2a420e1c562229e31ca2721c9de8ce80584297f"
+      },
+      "original_terminal_archive": {
+        "bytes": 27587,
+        "identity": {
+          "bytes": 27587,
+          "ctime_ns": 1792259701173514119,
+          "device": 2304,
+          "inode": 80249478,
+          "mode": "0o444",
+          "mtime_ns": 1792259701173514119,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-private-readiness-owned-cleanup-root-reviewed1-20261017/original-terminal-archive.json",
+        "sha256": "e24340c9801b155e5b4eddf894cb02be2a6ae6eb4964a63141482a04320d13fd"
+      },
+      "owned_cleanup": {
+        "bytes": 16478,
+        "identity": {
+          "bytes": 16478,
+          "ctime_ns": 1792259701579159586,
+          "device": 2304,
+          "inode": 80249495,
+          "mode": "0o444",
+          "mtime_ns": 1792259701579159586,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-private-readiness-owned-cleanup-root-reviewed1-20261017/root-owned-cleanup-and-release.json",
+        "sha256": "a1772a143ad361dc30a6767dbe802105a77327724a1637ac4eb8cfceb266b95e"
+      },
+      "preparation_manifest": {
+        "bytes": 4186,
+        "identity": {
+          "bytes": 4186,
+          "ctime_ns": 1792257444910595936,
+          "device": 2304,
+          "inode": 83917066,
+          "mode": "0o444",
+          "mtime_ns": 1792257444910595936,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/batch2048_CE_private_validation_proposal/preparation-manifest.json",
+        "sha256": "9a1b0189a6dc5ae552bd16404d745227202a9da24c9dfd7e4654725fce8914c7"
+      },
+      "result": null,
+      "source_lock": {
+        "bytes": 14754,
+        "identity": {
+          "bytes": 14754,
+          "ctime_ns": 1792257444901801000,
+          "device": 2304,
+          "inode": 83894497,
+          "mode": "0o444",
+          "mtime_ns": 1792257444901801000,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/batch2048_CE_private_validation_proposal/source-lock.json",
+        "sha256": "d7b2365efafc637bb094895b92fccd0e7d10a5af7564535cb006006b73079639"
+      }
+    },
+    "profile": {
+      "bytes": 764,
+      "identity": {
+        "bytes": 764,
+        "ctime_ns": 1792254423401979979,
+        "device": 2304,
+        "inode": 84803605,
+        "mode": "0o444",
+        "mtime_ns": 1792254423401979979,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json",
+      "sha256": "e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50"
+    },
+    "schema": "robotron-ce2048-actual-execution-prerequisites-v1"
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "status": "UNSELECTED_UNEXECUTED",
+  "source_pins": {
+    "replay_buffer.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/replay_buffer.py",
+      "sha256": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f",
+      "bytes": 113613,
+      "identity": {
+        "device": 2304,
+        "inode": 79724825,
+        "bytes": 113613,
+        "mtime_ns": 1792224696813330592,
+        "ctime_ns": 1792224696813836930,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "agent.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/agent.py",
+      "sha256": "865a0df717b39951b7f7c516e4a962e3d48cf4d3dc11295ff266e58653e6c74b",
+      "bytes": 98429,
+      "identity": {
+        "device": 2304,
+        "inode": 79724997,
+        "bytes": 98429,
+        "mtime_ns": 1792239930859030766,
+        "ctime_ns": 1792239930859896369,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "socket_server.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py",
+      "sha256": "f44ddfe31408b77b6d622e1d4ec4cda60a03999dc984d9e11b5aeac38911a9ed",
+      "bytes": 140517,
+      "identity": {
+        "device": 2304,
+        "inode": 79696030,
+        "bytes": 140517,
+        "mtime_ns": 1792306967914113042,
+        "ctime_ns": 1792306967928089640,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "model.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/model.py",
+      "sha256": "bcd174f05610c6f773ca8c53f9155206eba4f7b6a11383516ddd71f3b513eeb4",
+      "bytes": 42429,
+      "identity": {
+        "device": 2304,
+        "inode": 79696088,
+        "bytes": 42429,
+        "mtime_ns": 1791931870132810020,
+        "ctime_ns": 1791931870132810020,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "actor_tags.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/actor_tags.py",
+      "sha256": "fc5b868a7fb68d4ab7ba65ba872ea0e845759af6143edfe648239d57cb7f1591",
+      "bytes": 153,
+      "identity": {
+        "device": 2304,
+        "inode": 79725280,
+        "bytes": 153,
+        "mtime_ns": 1792119887012144236,
+        "ctime_ns": 1792119887012144236,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "selected_nodes": {
+    "replay_buffer.py": {
+      "SumTree": [
+        "__init__",
+        "_propagate",
+        "total",
+        "add",
+        "batch_update"
+      ],
+      "PrioritizedReplayBuffer": [
+        "__init__",
+        "actor_kind_from_name",
+        "add",
+        "_bank_span",
+        "_bank_admit",
+        "hof_admit",
+        "ephof_admit",
+        "_hof_rebuild_flat_locked",
+        "_ephof_rebuild_flat_locked",
+        "boost_priorities",
+        "apply_pre_death_penalty"
+      ]
+    },
+    "agent.py": {
+      "RainbowAgent": [
+        "step"
+      ]
+    },
+    "socket_server.py": {
+      "AsyncReplayBuffer": [
+        "_consume",
+        "_do_elite_episode_boost",
+        "_do_boost"
+      ]
+    },
+    "model.py": {
+      "module": [
+        "combine_action"
+      ]
+    }
+  },
+  "scope": "Root future tests parse authenticated source AST and execute only selected exact methods with explicit isolated dependencies; authors have not parsed/compiled/imported/executed target source."
+}

@@ -1,0 +1,29 @@
+{
+  "schema": "robotron-trial02-root-closure-assembly-future-cli-v1",
+  "status": "SOURCE_ONLY_TEMPLATE_NOT_EXECUTED",
+  "argv_template": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/quality_trial02_closure_job_assembly_proposal/assemble_closure_job.py",
+    "--execute",
+    "--source-sha256",
+    "fb937a565142d22af5fbbde16417fd862c3273a3b385cd4360a53306edf181d0",
+    "--known-inputs",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/quality_trial02_closure_job_assembly_proposal/known-inputs.json",
+    "--known-inputs-sha256",
+    "0d2ba78a06cfac54566a05b747b0ca6aa84725fd57dadba11fe350a5dba72e8a",
+    "--late-bindings",
+    "ACTUAL_NEW_ROOT_LATE_BINDING_PATH",
+    "--late-bindings-sha256",
+    "ACTUAL_ROOT_LATE_BINDING_SHA256"
+  ],
+  "unbound": [
+    "root_acceptance",
+    "preparation_directory",
+    "closure_output_directory"
+  ],
+  "no_closure_job_generated": true,
+  "no_acceptance_generated": true,
+  "no_runtime_actions": true
+}

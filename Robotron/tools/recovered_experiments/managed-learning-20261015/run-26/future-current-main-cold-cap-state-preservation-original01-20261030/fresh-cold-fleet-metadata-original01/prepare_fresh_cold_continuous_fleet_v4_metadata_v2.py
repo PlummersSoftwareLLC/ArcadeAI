@@ -1,0 +1,252 @@
+"""Prepare one fresh cold-owner fleet-v4 config/drop-in DATA; never install or launch.
+
+The original failed cohort remains history. This program only reads bounded
+source/metadata and writes exclusive files inside its own selected output.
+The live trainer, models, replay, Lua, actor recipe and unit files are untouched.
+"""
+import argparse
+import copy
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import stat
+
+FIXED={'base_config': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/live-original01/startup-repair-original02/Root-prepared-fleet-v4-new-cohort-original01/continuous-supervisor-job.json', 'sha256': '15162bb5c3b239358e845d0e4fba8fb4e623ea09968b9021f4f74221106466b0', 'bytes': 33285, 'identity': {'device': 2304, 'inode': 85328246, 'bytes': 33285, 'mtime_ns': 1793294765576109707, 'ctime_ns': 1793294765576109707, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}, 'base_applied_dropin': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/live-original01/startup-repair-original02/Root-actual-fleet95-original02-applied.conf', 'sha256': '4dc3fc59f611d9106070b3bff550125561ccb8509422a49ec5712a53fb1b3c2d', 'bytes': 808, 'identity': {'device': 2304, 'inode': 85226758, 'bytes': 808, 'mtime_ns': 1793282588203822277, 'ctime_ns': 1793282588203822277, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}, 'supervisor_source': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/continuous_training_fleet_v4.py', 'sha256': 'bc2f11eafa974b693d767ca5291a69655b37e79cb5d47f0db03ee10135dc77d1', 'bytes': 36204, 'identity': {'device': 2304, 'inode': 85235752, 'bytes': 36204, 'mtime_ns': 1793294287369521367, 'ctime_ns': 1793294406988263416, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}, 'supervisor_source_peer': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/independent-continuous-fleet-v4-bounded-errors-and-journal-source-peer-v1.json', 'sha256': '89e69d6e770545725f3ae308ee32b2beca75a8577713e7919b799ae5cfba4557', 'bytes': 5073, 'identity': {'device': 2304, 'inode': 85235756, 'bytes': 5073, 'mtime_ns': 1793294453636623859, 'ctime_ns': 1793294453636623859, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}, 'unit_base': {'path': '/home/dave/.config/systemd/user/robotron-mame.service', 'sha256': '44e666804c47c6b3ca24370cf10f6a5611155d554add2d472b9ae2b6392bf0af', 'bytes': 572, 'identity': {'device': 2304, 'inode': 79724892, 'bytes': 572, 'mtime_ns': 1791933574937576166, 'ctime_ns': 1791933574937576166, 'mode': '0o664', 'uid': 1001, 'nlink': 1}}, 'unit90': {'path': '/home/dave/.config/systemd/user/robotron-mame.service.d/90-power-recovery.conf', 'sha256': '72cdfddc652ad30f956b980603ea3fb91526fda5bad11c06ef1089f01bbbbfd7', 'bytes': 1638, 'identity': {'device': 2304, 'inode': 79725289, 'bytes': 1638, 'mtime_ns': 1793130275525069460, 'ctime_ns': 1793130275525069460, 'mode': '0o664', 'uid': 1001, 'nlink': 1}}, 'bridge_reference': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-cold-resume-startup-cap-witness-source-only-original01-20261029/continuous_startup_bridge_cap_witness_v3.py', 'sha256': '47efc654e1a46f281a094b43a8e55802b5f76cbdb62e830b5769a2f6d6e790f4', 'bytes': 24581, 'identity': {'device': 2304, 'inode': 81397752, 'bytes': 24581, 'mtime_ns': 1793320807908216310, 'ctime_ns': 1793321293104867289, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}, 'bridge_source_peer': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-cold-resume-startup-cap-witness-source-only-original01-20261029/independent-cold-start-existing-baseline-cap-witness-source-and-fixture-peer-v1.json', 'sha256': 'd92d3226f9d70eae60b8b58518f5036517e7c26453ff74ed8a429ae48ee05791', 'bytes': 8843, 'identity': {'device': 2304, 'inode': 81397762, 'bytes': 8843, 'mtime_ns': 1793321428379183605, 'ctime_ns': 1793321428379183605, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}}
+LIMIT=2_000_000
+OVERRIDDEN={'ROBOTRON_CLIENT_SLOT','ROBOTRON_ACTOR_ROUND','ROBOTRON_EVAL_MODE',
+            'ROBOTRON_PREVIEW_FPS','ROBOTRON_RETIRE_AFTER_GAME'}
+
+
+def require(ok,reason):
+    if not ok:raise ValueError(reason)
+
+
+def identity(s):
+    return dict(device=s.st_dev,inode=s.st_ino,bytes=s.st_size,mtime_ns=s.st_mtime_ns,
+        ctime_ns=s.st_ctime_ns,mode=oct(stat.S_IMODE(s.st_mode)),uid=s.st_uid,nlink=s.st_nlink)
+
+
+def pin(path):
+    path=Path(path);require(path.is_absolute()and path.resolve(strict=True)==path
+        and not path.is_symlink(),'Canonical regular metadata/source path required')
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW)
+    try:
+        before=identity(os.fstat(fd));require(stat.S_ISREG(os.fstat(fd).st_mode)
+            and before['bytes']<=LIMIT,'Bounded source/metadata required; no model or array bodies')
+        with os.fdopen(os.dup(fd),'rb')as f:raw=f.read(LIMIT+1)
+        require(len(raw)==before['bytes']and identity(os.fstat(fd))==before
+            and identity(path.lstat())==before,'Source/metadata changed during read')
+    finally:os.close(fd)
+    return dict(path=str(path),sha256=hashlib.sha256(raw).hexdigest(),bytes=len(raw),identity=before)
+
+
+def raw(entry,immutable=True):
+    require(pin(entry['path'])==entry and entry['identity']['uid']==os.getuid()
+        and entry['identity']['nlink']==1
+        and(not immutable or entry['identity']['mode']=='0o444'),'Exact selected owned source/metadata required')
+    data=Path(entry['path']).read_bytes()
+    require(hashlib.sha256(data).hexdigest()==entry['sha256']and pin(entry['path'])==entry,
+            'Selected metadata changed')
+    return data
+
+
+def read(entry):return json.loads(raw(entry))
+
+
+def put(path,value=None,data=None):
+    require((value is None)!=(data is None),'One exact data payload required')
+    b=data if data is not None else(json.dumps(value,indent=2,sort_keys=True,allow_nan=False)+'\n').encode()
+    require(len(b)<=LIMIT,'Bounded prepared DATA required')
+    with path.open('xb')as f:f.write(b);f.flush();os.fchmod(f.fileno(),0o444);os.fsync(f.fileno())
+    fd=os.open(path.parent,os.O_RDONLY|os.O_DIRECTORY)
+    try:os.fsync(fd)
+    finally:os.close(fd)
+    return pin(path)
+
+
+def validate_new_startup(selected,base):
+    """Read bounded actual cold-start metadata only; never inspect model/replay."""
+    authority=read(selected['new_startup_authority'])
+    require(authority['schema']=='robotron-root-continuous-main-startup-qualified-v1'
+        and authority['all_model_optimizer_replay_banks_clocks_preserved']is True
+        and authority['new_mode_source_and_CPU_qualified']is True
+        and type(authority['actual_CPU_scope_closeouts'])is list and authority['actual_CPU_scope_closeouts'],
+        'Actual new Root-qualified startup/source authority required')
+    trainer=authority['trainer'];old=base['trainer']
+    require(set(trainer)==set(old)and trainer['unit']==old['unit']=='robotron-trainer.service'
+        and trainer['uid']==old['uid']==os.getuid()==1001
+        and type(trainer['pid'])is int and trainer['pid']>1 and type(trainer['birth'])is int and trainer['birth']>0
+        and re.fullmatch('[0-9a-f]{32}',trainer['invocation_id'])is not None
+        and (trainer['pid'],trainer['birth'],trainer['invocation_id'])!=(old['pid'],old['birth'],old['invocation_id'])
+        and trainer['cgroup']==old['cgroup'] and trainer['source']==old['source']
+        and trainer['server_stamp']==dict(pid=trainer['pid'],birth=trainer['birth'],
+            source_sha256=old['server_stamp']['source_sha256']), 'Exact NEW trainer owner and unchanged Main/server source required')
+    raw(trainer['source'],immutable=False)
+    for entry in authority['actual_CPU_scope_closeouts']:
+        close=read(entry)
+        require(type(close['actual_exit'])is int and close['actual_exit']==0
+            and close['status']=='PASS_ENGINEERING_ONLY','Actual closed CPU qualification required')
+    require(selected['new_startup_authority']!=base['source_authority'],'Old startup authority is history only')
+    job=read(selected['new_startup_job']);held=read(selected['new_held_report'])
+    release=read(selected['new_Root_release']);consumed=read(selected['new_release_consumed'])
+    owner={key:trainer[key]for key in('pid','birth','unit','invocation_id','cgroup','uid')}
+    require(job['schema']=='robotron-continuous-main-before-update-startup-hold-job-v1'
+        and job['mode']=='CONTINUOUS_TRAIN155_EVAL37_ONCE'and job['original_attempt']==1 and job['no_retry']is True
+        and job['unit']==trainer['unit']and type(job['expected_startup_cap'])is int and job['expected_startup_cap']in(8,12),
+        'Exact new cold held-startup job required')
+    require(held['schema']=='robotron-continuous-main-held-exact-restoration-report-v1'
+        and held['status']=='VERIFIED_HELD_BEFORE_FIRST_UPDATE'and held['owner']==owner
+        and held['original_job']==selected['new_startup_job']and held['checkpoint']==job['checkpoint']
+        and held['restoration_manifest']==job['restoration_manifest']and held['stopped_CPU_report']==job['stopped_CPU_report']
+        and held['all_online_target_Adam_scaler_payloads_equal']is True
+        and held['optimizer_implementation_flags_exactly_equal']is True
+        and held['training_and_memory_locks_held_until_Root_release']is True
+        and held['dashboard_and_GAME_listener_not_created']is True
+        and type(held['optimizer_attempts_before_release'])is int and held['optimizer_attempts_before_release']==0
+        and type(held['new_replay_inserts_before_release'])is int and held['new_replay_inserts_before_release']==0,
+        'Same new owner/full restoration/zero-work held proof required')
+    budget=held['startup_budget']
+    require(budget['schema']=='robotron-cold-start-existing-budget-witness-v1'
+        and budget['expected_startup_cap']==job['expected_startup_cap']
+        and budget['process_startup_environment_cap']==str(job['expected_startup_cap'])
+        and budget['runtime_cap']==job['expected_startup_cap']
+        and budget['fresh_per_boot_baseline_verified']is True and budget['anchor_installed_or_rebased']is False
+        and budget['model_optimizer_scaler_replay_or_lifetime_clock_changed']is False,
+        'Actual selected startup cap and existing fresh baseline witness required')
+    require(release['schema']=='robotron-root-continuous-startup-one-use-release-v1'
+        and release['owner']==owner and release['original_job']==selected['new_startup_job']
+        and release['held_report']==selected['new_held_report']and release['checkpoint']==job['checkpoint']
+        and release['allow_training']is True and release['expected_startup_cap']==job['expected_startup_cap']
+        and release['startup_budget']==budget, 'Exact new one-use Root release required')
+    require(consumed['schema']=='robotron-continuous-startup-release-consumed-v1'
+        and consumed['owner']==owner and consumed['original_job']==selected['new_startup_job']
+        and consumed['held_report']==selected['new_held_report']and consumed['Root_release']==selected['new_Root_release']
+        and consumed['no_optimizer_or_replay_work_before_release']is True and consumed['startup_budget']==budget,
+        'Same new owner actual release-consumed proof required')
+    bridge=selected['installed_startup_bridge']
+    require(bridge['path']=='/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/continuous_startup_bridge.py'
+        and bridge['sha256']==FIXED['bridge_reference']['sha256']
+        and raw(bridge,immutable=False)==raw(FIXED['bridge_reference'])
+        and [value for value in job['source_pins']if value['path']==bridge['path']]==[bridge],
+        'Exact actually installed47ef bridge and held-job source pin required')
+    metrics=selected['metrics_dashboard_source'];ui=read(selected['metrics_dashboard_UI_change_proof'])
+    prior_metrics=[value for value in base['inputs']if value['path']==metrics['path']]
+    require(metrics['path']=='/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/metrics_dashboard.py'
+        and len(prior_metrics)==1 and prior_metrics[0]['sha256']=='b80ac9494b98ef8c824d8e07ee0b748c20967e26a164d6e501ef781744c7a222'
+        and metrics!=prior_metrics[0] and ui['schema']=='robotron-root-metrics-dashboard-HTML-only-source-change-v1'
+        and ui['original_source']==prior_metrics[0] and ui['current_source']==metrics
+        and ui['only_existing_HTML_or_JS_template_changed']is True
+        and ui['Python_API_and_training_model_behavior_unchanged']is True,
+        'Explicit Root-reviewed metrics HTML/JS-only source change required')
+    raw(metrics,immutable=False)
+    require([value for value in job['source_pins']if value['path']==metrics['path']]==[metrics],
+        'Actual new held startup must bind the reviewed metrics source')
+    return trainer,authority
+
+
+def prepare(selection_path,selection_sha,expected_source_sha):
+    own=pin(Path(__file__).resolve());require(own['sha256']==expected_source_sha
+        and own['identity']['mode']=='0o444','Exact frozen metadata constructor required')
+    selection=pin(Path(selection_path).resolve());require(selection['sha256']==selection_sha
+        and selection['identity']['mode']=='0o444','Exact immutable Root DATA selection required')
+    selected=read(selection)
+    require(set(selected)=={'schema','new_startup_authority','new_startup_job','new_held_report','new_Root_release',
+        'new_release_consumed','installed_startup_bridge','metrics_dashboard_source','metrics_dashboard_UI_change_proof',
+        'current_fleet_dropin95','metadata_output','cohort_output'}
+        and selected['schema']=='robotron-root-fresh-cold-fleet-v4-DATA-selection-v1','Explicit fresh Root owner/install/drop-in selection required')
+    base=read(FIXED['base_config']);source=FIXED['supervisor_source']
+    peer=read(FIXED['supervisor_source_peer']);raw(source)
+    raw(FIXED['bridge_source_peer'])
+    require(peer['source']==source and peer['status'].startswith('SOURCE_ABI_GO'),'Exact independent unchanged v4 source peer required')
+    require(base['schema']=='robotron-continuous-training-supervisor-job-v1'
+        and base['mode']=='CONTINUOUS_TRAIN155_EVAL37_ONCE'and base['unit']=='robotron-mame.service'
+        and base['original_attempt']==1 and base['no_retry']is True,'Actual47-input base config ABI differs')
+    require(len(base['inputs'])==47 and len({v['path']for v in base['inputs']})==47,'Exact prior47 held-input domain required')
+    trainer,authority=validate_new_startup(selected,base)
+    roles=read(base['rolemap'])['slot_eval'];require(set(roles)==set(map(str,range(192)))
+        and all(type(v)is bool for v in roles.values())and sum(roles.values())==37,'Exactly155TRAIN/37EVAL roles required')
+    require(not OVERRIDDEN.intersection(base['parent_environment'])and OVERRIDDEN<=set(base['input_environment_keys']),
+        'Parent environment collides with literal per-slot spawn kwargs')
+    require(base['launch_argv'][1:]==base['mame_argv'][1:]and base['mame_argv'][0]=='/usr/games/mame'
+        and base['launch_argv'][0].endswith('/mame_with_roles.sh'),'Unchanged role-wrapper/MAME tail required')
+    held={v['path']:v for v in base['inputs']};lua=held[base['mame_argv'][-1]]
+    require(lua['sha256'].startswith('2d478'),'Selected existing actual Lua differs')
+    bridge=selected['installed_startup_bridge'];replaced=[];inputs=[]
+    for value in base['inputs']:
+        if value['path']==bridge['path']:
+            require(value['sha256']=='62e8fdce2221e084945594e35a965a6f7643887d56f8679894e307949a4c5096',
+                'Only the explicitly selected old installed bridge may change')
+            raw(bridge,immutable=False);inputs.append(bridge);replaced.append(dict(prior=value,current=bridge))
+        elif value['path']==selected['metrics_dashboard_source']['path']:
+            current=selected['metrics_dashboard_source'];raw(current,immutable=False)
+            inputs.append(current);replaced.append(dict(prior=value,current=current,
+                Root_UI_only_change_proof=selected['metrics_dashboard_UI_change_proof']))
+        else:
+            raw(value,immutable=False);inputs.append(value)
+    require(len(replaced)==2,'Exactly the declared bridge and reviewed UI source replacements required')
+    dropinpin=selected['current_fleet_dropin95']
+    require(dropinpin['path']=='/home/dave/.config/systemd/user/robotron-mame.service.d/95-continuous-training.conf',
+        'Select actual pre-install MAME95 only, not a trainer drop-in or generated future definition')
+    unitfiles={key:raw(FIXED[key],immutable=False)for key in('unit_base','unit90')}
+    unitfiles['unit95']=raw(dropinpin,immutable=False);before95=unitfiles['unit95'].decode()
+    lines=before95.splitlines();positions=[i for i,line in enumerate(lines)if line.startswith('ExecStart=')and line!='ExecStart=']
+    require(len(positions)==1 and 'ExecStart='in lines and 'Type=exec'in lines and 'Restart=no'in lines,
+        'Actual current MAME95 shape differs')
+    directory=Path(selected['metadata_output']).absolute();cohort=Path(selected['cohort_output']).absolute()
+    require(directory.parent.resolve(strict=True)==directory.parent and not directory.exists()
+        and cohort.parent.resolve(strict=True)==cohort.parent and not cohort.exists()
+        and cohort!=Path(base['output'])and directory!=cohort and directory not in cohort.parents
+        and cohort not in directory.parents,'Exclusive separate metadata/cohort paths required')
+    for path in(directory,cohort,Path(source['path'])):
+        require(re.fullmatch(r'[A-Za-z0-9_./-]+',str(path))is not None,'Unit argv paths must need no escaping')
+    directory.mkdir(mode=0o700)
+    archives={key:put(directory/('previous-'+key+'.exact'),data=data)for key,data in unitfiles.items()}
+    inputs += [source,FIXED['supervisor_source_peer'],FIXED['base_config'],own,selection,
+        FIXED['bridge_reference'],FIXED['bridge_source_peer'],
+        selected['metrics_dashboard_UI_change_proof'],
+        *[selected[key]for key in('new_startup_authority','new_startup_job','new_held_report','new_Root_release','new_release_consumed')],
+        *archives.values()]
+    cfg=copy.deepcopy(base);cfg.update(trainer=trainer,source_authority=selected['new_startup_authority'],
+        output=str(cohort),inputs=list({v['path']:v for v in inputs}.values()))
+    changed={'trainer','source_authority','output','inputs'}
+    require(all(cfg[key]==base[key]for key in base if key not in changed),'Every actor/role/env/watchdog/journal/helper field must remain exact')
+    config=put(directory/'continuous-supervisor-job.json',value=cfg)
+    argv=['/usr/bin/python3.12','-I','-B',source['path'],'--execute','--config',config['path'],
+        '--config-sha256',config['sha256'],'--source-sha256',source['sha256']]
+    lines[positions[0]]='ExecStart='+' '.join(argv)
+    dropin=put(directory/'95-continuous-training.conf',data=('\n'.join(lines)+'\n').encode())
+    return put(directory/'prepared-fresh-cold-fleet-v4-DATA-NOT-LAUNCHED.json',value=dict(
+        schema='robotron-root-fresh-cold-fleet-v4-metadata-preparation-v1',status='DATA_PREPARED_NOT_LAUNCH_AUTHORITY',
+        source=own,Root_selection=selection,base_config=FIXED['base_config'],selected_startup_authority=selected['new_startup_authority'],
+        installed_startup_bridge=bridge,explicit_prior47_input_replacements=replaced,
+        all_other45_prior_inputs_exact=True,original_prior47_inputs_history_only=base['inputs'],
+        metrics_dashboard_UI_only_change_proof=selected['metrics_dashboard_UI_change_proof'],
+        prepared_config=config,prepared_dropin95=dropin,previous_actual_dropin95=dropinpin,original_unit_source_archives=archives,
+        supervisor_source=source,supervisor_source_peer=FIXED['supervisor_source_peer'],
+        new_cohort_output=str(cohort),selected_new_trainer=trainer,role_count=dict(TRAIN=155,EVAL=37),
+        exact_unchanged_fields=[key for key in base if key not in changed],new_supervisor_owner_and_invocation=None,
+        actual_new_actor_births_barrier_or_health=None,Root_payload_argv=argv,
+        Root_install_target='/home/dave/.config/systemd/user/robotron-mame.service.d/95-continuous-training.conf',
+        Root_only_actions_required=['Verify actual stopped-state/full restore CPU and new held/release-consumed authority',
+            'Verify old supervisor/all children are positively closed and old connection cleanup is complete',
+            'Verify actual new trainer source/owner/API readiness and unchanged selected journal directory',
+            'Install only prepared MAME95 and launch unchanged supervisorbc2 once as a NEW cohort',
+            'Capture new owner/all192 births/membership/barrier/EVAL anchors and construct a fresh Main case; no old390/462 adoption'],
+        live_queries_controls_units_models_replay_Lua_or_Main_writes_performed=False,
+        service_or_actor_launch_performed=False,engineering_scientific_or_quality_qualification=False))
+
+
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--prepare',action='store_true')
+    p.add_argument('--selection',type=Path);p.add_argument('--selection-sha256');p.add_argument('--expected-source-sha256')
+    a=p.parse_args()
+    if not a.prepare:print('SOURCE_ONLY_INERT_NO_READS_OUTPUTS_IMPORTS_OR_ACTIONS');return
+    require(a.selection and a.selection_sha256 and a.expected_source_sha256,'Exact fresh Root DATA selection/source required')
+    print(json.dumps(prepare(a.selection,a.selection_sha256,a.expected_source_sha256)),flush=True)
+
+
+
+if __name__=='__main__':main()

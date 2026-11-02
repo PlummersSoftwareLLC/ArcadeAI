@@ -1,0 +1,119 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/startup-bridge-sources/test_continuous_startup_bridge_actual_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/startup-bridge-sources/test_continuous_startup_bridge_actual_v3.py
+@@ -8,6 +8,9 @@
+ """
+ import ast
+ import copy
++from collections import deque
++from dataclasses import dataclass, field
++from typing import Deque, Optional
+ from contextlib import contextmanager
+ import hashlib
+ import importlib.util
+@@ -24,11 +27,16 @@
+ from unittest.mock import patch
+ 
+ HERE=Path(__file__).resolve().parent
+-BRIDGE=HERE/'continuous_startup_bridge_v1.py'
+-BRIDGE_SHA='ca6fc0b6406c88f79861b01717477dcbf5b2589940a1d761ef486dcd20fc0190'
++BRIDGE=HERE/'continuous_startup_bridge_v2.py'
++BRIDGE_SHA='62e8fdce2221e084945594e35a965a6f7643887d56f8679894e307949a4c5096'
+ TOOLS=HERE.parent/'state-sources/restoration_manifest_tools_v1.py'
+ TOOLS_SHA='3ab7c6a018afce917bd1199ec9d09b5d3041936d638cdf17f91514006685faf7'
+ ENGINE_VERSION=28
++CONFIG=Path('/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/config.py')
++CONFIG_SHA='ef26db6aa19fe67ec9e1e15f8227b4e24bbc853b05d0ea00c450b290bf80b249'
++ORIGINAL_BRIDGE=HERE/'continuous_startup_bridge_v1.py'
++ORIGINAL_BRIDGE_SHA='ca6fc0b6406c88f79861b01717477dcbf5b2589940a1d761ef486dcd20fc0190'
++_METRICS_CLASS=None
+ 
+ 
+ def pin(path):
+@@ -67,6 +75,30 @@
+         for name,previous in before.items():
+             if previous is missing:sys.modules.pop(name,None)
+             else:sys.modules[name]=previous
++
++
++def actual_metrics_class(np):
++    """Compile the entire actual dataclass and real tiny-ring factory, not API fields.
++
++    The selected config module is never imported: only three literal window
++    constants, _new_metric_ring and MetricsData definitions execute. Remaining
++    method collaborators are deliberately unused. RL_CONFIG supplies only the
++    two scalar dataclass defaults; real CPU NumPy owns the metric ring arrays.
++    """
++    global _METRICS_CLASS
++    if _METRICS_CLASS is not None:return _METRICS_CLASS
++    raw=CONFIG.read_bytes()
++    if hashlib.sha256(raw).hexdigest()!=CONFIG_SHA:raise ValueError('Exact real MetricsData source required')
++    tree=ast.parse(raw);names={'SCORE_1M_WINDOW_FRAMES','LEVEL_1M_WINDOW_FRAMES','EVAL_SCORE_1M_WINDOW_FRAMES'}
++    body=[n for n in tree.body if (isinstance(n,ast.Assign)and any(isinstance(x,ast.Name)and x.id in names for x in n.targets))
++        or(isinstance(n,ast.FunctionDef)and n.name=='_new_metric_ring')or(isinstance(n,ast.ClassDef)and n.name=='MetricsData')]
++    module=ModuleType('_synthetic_actual_MetricsData');module.__dict__.update(np=np,deque=deque,Deque=Deque,
++        Optional=Optional,dataclass=dataclass,field=field,threading=threading,time=time,
++        RL_CONFIG=SimpleNamespace(epsilon_start=.1,expert_ratio_start=.1))
++    with module_bindings({module.__name__:module}):
++        exec(compile(ast.Module(body=body,type_ignores=[]),str(CONFIG),'exec'),module.__dict__)
++    _METRICS_CLASS=module.MetricsData
++    return _METRICS_CLASS
+ 
+ 
+ class ToyAgent(SimpleNamespace):pass
+@@ -100,9 +132,14 @@
+             lr_anchor_step=0.,lr_gear='climb',state_size=2,loaded_training_steps=100,loaded_optimized_samples=409600,
+             _training_lock=threading.RLock(),_continuous_startup_held=True,training_enabled=False,memory=self.memory,
+             _learning_optimizer_exposure=SimpleNamespace(snapshot=lambda:copy.deepcopy(self.optimizer_observation)))
+-        self.metrics=SimpleNamespace(lock=threading.RLock(),training_enabled=False,measurement_active=False,ratchet_frozen=False,
+-            frame_count=1000,learner_frame_count=500,measurement_frame_count=17,total_training_steps=100,
+-            expert_ratio=.1,epsilon=.1,loaded_frame_count=1000,loaded_measurement_frame_count=17,loaded_optimized_samples=409600)
++        self.metrics=actual_metrics_class(np)()
++        # Real Agent.load assigns the two dynamic measurement frame anchors.
++        # It does NOT create measurement_active: that flag belongs to actual
++        # ManagedMeasurement.enter, which continuous MAIN never calls.
++        for name,value in dict(training_enabled=False,frame_count=1000,learner_frame_count=500,
++            measurement_frame_count=17,total_training_steps=100,expert_ratio=.1,epsilon=.1,
++            loaded_frame_count=1000,loaded_measurement_frame_count=17,loaded_optimized_samples=409600).items():
++            setattr(self.metrics,name,value)
+         self.cfg=SimpleNamespace(single_frame_state_size=2,frame_stack=1)
+         self.resume=immutable(self.root/'resume.json',dict(SYNTHETIC_only=True))
+         phase=dict(schema='robotron-priority-metric-phase-v1',metric='ce',valid=True,phase_id='SYNTHETIC',
+@@ -251,8 +288,18 @@
+         return Harness(self.root/str(self.counter),self.torch,self.np,self.tools,self.ns)
+ 
+     def test_actual_zero_before_outcome_exposure_ABI_and_negative_work(self):
+-        h=self.toy();self.ns['no_training_attempts'](h.agent,h.metrics)
+-        for fault in('available','attempt','outcome','unavailable','replay_insert','epoch','hold','metrics_enabled'):
++        h=self.toy()
++        self.assertIsInstance(h.metrics,actual_metrics_class(self.np))
++        self.assertFalse(hasattr(h.metrics,'measurement_active'))
++        self.assertIs(h.metrics.ratchet_frozen,False)
++        # Exact original source reproduces the real pre-hold startup failure.
++        unused,original=actual_functions(ORIGINAL_BRIDGE,ORIGINAL_BRIDGE_SHA,{'require','no_training_attempts'})
++        with self.assertRaises(AttributeError):original['no_training_attempts'](h.agent,h.metrics)
++        self.ns['no_training_attempts'](h.agent,h.metrics)
++        h.metrics.measurement_active=False
++        self.ns['no_training_attempts'](h.agent,h.metrics)
++        for fault in('available','attempt','outcome','unavailable','replay_insert','epoch','hold','metrics_enabled',
++                     'measurement_active','ratchet_frozen'):
+             h=self.toy()
+             if fault=='available':h.optimizer_observation['available']=True
+             elif fault=='attempt':h.optimizer_observation['total']['attempts_started']=1
+@@ -261,6 +308,8 @@
+             elif fault=='replay_insert':h.replay_observation['accepted_total']=1
+             elif fault=='epoch':h.replay_observation['epoch']=2
+             elif fault=='hold':h.agent._continuous_startup_held=False
++            elif fault=='measurement_active':h.metrics.measurement_active=True
++            elif fault=='ratchet_frozen':h.metrics.ratchet_frozen=True
+             else:h.metrics.training_enabled=True
+             with self.subTest(fault=fault),self.assertRaises(RuntimeError):self.ns['no_training_attempts'](h.agent,h.metrics)
+ 
+@@ -326,7 +375,7 @@
+             self.assertTrue(h.memory.lock.acquire(blocking=False));h.memory.lock.release()
+ 
+     def test_actual_source_hold_order_precedes_workers_listeners_and_normalization(self):
+-        packet=json.loads((HERE/'prepared-continuous-before-update-startup-hold-SOURCE-ONLY-NOT-QUALIFIED-v1.json').read_bytes())
++        packet=json.loads((HERE/'prepared-continuous-before-update-startup-hold-metrics-ABI-v2-SOURCE-ONLY-NOT-QUALIFIED.json').read_bytes())
+         for row in packet['source_files'].values():self.assertEqual(pin(row['path']),row)
+         agent=Path(packet['source_files']['agent']['path']).read_text()
+         main=Path(packet['source_files']['main']['path']).read_text()

@@ -1,0 +1,153 @@
+--- owned_training_refill_join_candidate_v1.py
++++ owned_training_refill_join_candidate_v2.py
+@@ -7,6 +7,7 @@
+ import hashlib
+ import json
+ import os
++import secrets
+ from pathlib import Path
+ import socket
+ import subprocess
+@@ -107,22 +108,94 @@
+         self.records={}
+         self.completed=[]
+         self.sealed=False
++        self.spawn_claims={}
++        self.pending_children=[]
+ 
+     def seal(self):
+         # Stop admission only. No actor signals, terminations or queue actions.
+         self.sealed=True
+ 
+-    def observe_original(self, slot, generation, child, cid, read_active, *, prior_ticket=None):
++    def _require_fresh_policy(self, snapshot, began, ended, expected_generation):
++        require(type(snapshot)is dict and snapshot.get('server_stamp')==self.server
++            and snapshot.get('measurement_active')is False
++            and type(snapshot.get('measurement_generation'))is int
++            and snapshot['measurement_generation']==expected_generation
++            and snapshot.get('replay_admission_open')is True
++            and snapshot.get('replay_consumer_healthy')is True
++            and snapshot.get('cleanup_error')is None
++            and type(snapshot.get('observed_monotonic_ns'))is int
++            and began<=snapshot['observed_monotonic_ns']<=ended
++            and ended-began<=2_000_000_000,
++            'Fresh inactive unchanged-generation replay-ready healthy policy required')
++
++    def prepare_training_spawn(self, slot, generation, prior_ticket, read_terminal):
++        """Consume eligibility BEFORE caller Popen or an actual blocked-child release.
++
++        This method does not prove that ordering or atomic admission. A real
++        caller must hold its reviewed measurement/control admission fence across
++        this check and Popen/release. An existing running actor is never called
++        unadmitted by this method. No process is launched or released here.
++        """
+         require(not self.sealed and type(slot)is int and str(slot)in self.roles
++            and not self.roles[str(slot)] and slot in self.records,
++            'Only an unsealed original TRAIN slot can request spawn eligibility')
++        previous=self.records[slot]
++        require(previous['retired'] and type(generation)is int
++            and generation==previous['generation']+1 and previous['ticket']is not None
++            and prior_ticket==previous['ticket'],'Exact unused previous-generation eligibility ticket required')
++        require(len(self.completed)+sum(not r['retired']for r in self.records.values())
++            +sum(not r['observed']for r in self.spawn_claims.values())<self.maximum_generations,
++            'Bounded future generation budget exhausted before ticket consumption')
++        proof=previous['retirement_proof'];old=proof['actual_cleanup'];row=proof['durable_terminal']
++        began=time.monotonic_ns()
++        fresh=json.loads(json.dumps(read_terminal(row['client_id'],slot,row['journal_game_id']),allow_nan=False))
++        ended=time.monotonic_ns()
++        self._require_fresh_policy(fresh,began,ended,old['measurement_generation'])
++        require(not self.sealed and fresh.get('ready_for_external_join')is True
++            and all(fresh.get(k)==old.get(k)for k in ('schema','token','server_cleanup_incarnation',
++                'client_id','client_slot','eval_only','connection_ns','socket_endpoints',
++                'terminal_receipt','terminal_line_sha256')),
++            'Exact previous original terminal/connection cleanup and open admission required')
++        value=dict(schema='robotron-prospective-training-pre-spawn-eligibility-v1',
++            slot=slot,generation=generation,claim_nonce=secrets.token_hex(16),
++            consumed_ticket_sha256=prior_ticket,measurement_generation=fresh['measurement_generation'],
++            fresh_previous_cleanup=fresh,created_monotonic_ns=ended,
++            expires_monotonic_ns=ended+2_000_000_000,
++            scope='ELIGIBILITY_ONLY_NOT_ACTOR_ADMISSION_PROOF',admission_proved=False,
++            pre_spawn_or_actual_gate_release_order_proved=False,
++            caller_pre_spawn_or_actual_gate_release_and_policy_fence_required=True)
++        previous['ticket']=None  # Burn once; no rearm after a later failure.
++        self.spawn_claims[slot]=dict(value=value,observed=False,child=None)
++        return json.loads(json.dumps(value,allow_nan=False))
++
++    def observe_original(self, slot, generation, child, cid, read_active, *, spawn_claim=None):
++        require(type(slot)is int and str(slot)in self.roles
+             and type(generation)is int and generation>=1 and isinstance(child,subprocess.Popen)
+-            and child.args==self.launch_argv and child.poll()is None,'Exact original live owned Popen required')
++            and child.args==self.launch_argv,'Exact original owned Popen required')
++        # This Popen already exists and may already be acting. Retain it for
++        # physical tracking/quarantine before any policy or evidence failure.
++        pending=next((r for r in self.pending_children if r['child']is child),None)
++        if pending is None:
++            require(len(self.pending_children)<self.maximum_generations,
++                    'Auxiliary tracking capacity exhausted; caller must retain original Popen')
++            pending=dict(slot=slot,generation=generation,child=child,
++                physical_tracking_complete=False,requires_caller_admission_or_quarantine=True)
++            self.pending_children.append(pending)
++        require(pending['slot']==slot and pending['generation']==generation,
++                'Original Popen cannot be rebound to another generation')
++        require(child.poll()is None,'Original actor already retired; caller retains its reap obligation')
+         previous=self.records.get(slot)
+         if previous is None:
+-            require(generation==1 and prior_ticket is None,'Original first generation only')
++            require(generation==1 and spawn_claim is None,'Original first generation only')
+         else:
+-            require(not self.roles[str(slot)] and previous['retired']
+-                and generation==previous['generation']+1 and prior_ticket==previous['ticket']
+-                and previous['ticket']is not None,'TRAIN-only exact previous completed-generation ticket required')
++            claim=self.spawn_claims.get(slot)
++            require(not self.sealed and not self.roles[str(slot)] and previous['retired']
++                and generation==previous['generation']+1 and claim is not None
++                and spawn_claim==claim['value'] and not claim['observed'],
++                'Exact fresh pre-spawn TRAIN eligibility claim required; this is physical tracking only')
++            if claim['child']is None:
++                claim['child']=child
++            require(claim['child']is child,'Spawn claim already belongs to another original Popen')
+         require(len(self.completed)+len([r for r in self.records.values()if not r['retired']])
+             <self.maximum_generations,'Future generation budget exhausted; no history overwritten')
+         began=time.monotonic_ns()
+@@ -139,17 +212,30 @@
+             and connection['client_slot']==slot and connection['eval_only']is self.roles[str(slot)]
+             and connection['original_handler_stopped']is False and connection['terminal_receipt']is None
+             and connection['training_refill_candidate']is False,'Exact active server connection differs')
++        if previous is not None:
++            self._require_fresh_policy(connection,began,time.monotonic_ns(),
++                spawn_claim['measurement_generation'])
++            require(time.monotonic_ns()<=spawn_claim['expires_monotonic_ns'],
++                    'Pre-spawn eligibility claim expired; existing actor remains tracked for quarantine')
+         tcp=tcp_binding(child.pid,connection['socket_endpoints'])
+         ended=time.monotonic_ns()
+         after=actor(child.pid)
+-        require(not self.sealed and observed==after and child.poll()is None
++        require((previous is None or not self.sealed
++                 and ended<=spawn_claim['expires_monotonic_ns'])and observed==after and child.poll()is None
+             and began<=connection['observed_monotonic_ns']<=ended and ended-began<=2_000_000_000,
+             'Fresh same original actor/socket/connection bracket required')
+         # Retain only controlled environment, not unrelated process secrets.
+         observed['environment']={k:observed['environment'][k]for k in expected}
+         evidence=dict(slot=slot,generation=generation,actor=observed,connection=connection,
+             process_owned_TCP=tcp,observation_start_monotonic_ns=began,observation_end_monotonic_ns=ended,
+-            observed_unix_s=time.time(),physical_actor_connected_proved=True)
++            observed_unix_s=time.time(),physical_actor_connected_proved=True,
++            observation_scope='PHYSICAL_TRACKING_ONLY_ACTOR_MAY_ALREADY_BE_ACTING',
++            admission_proved=False,pre_spawn_or_actual_gate_release_order_proved=False,
++            requires_external_caller_admission_or_quarantine=True,
++            spawn_eligibility_claim=spawn_claim)
++        if previous is not None:
++            self.spawn_claims[slot]['observed']=True
++        pending['physical_tracking_complete']=True
+         self.records[slot]=dict(child=child,generation=generation,evidence=evidence,
+             retired=False,ticket=None)
+         return json.loads(json.dumps(evidence,allow_nan=False))
+@@ -204,7 +290,7 @@
+             EVAL_role_preserved=self.roles[str(slot)],runtime_integration_qualified=False,
+             rolling_membership_protocol_qualified=False,safe_refill_qualified=False)
+         ticket=hashlib.sha256(json.dumps(proof,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()if refill else None
+-        current.update(retired=True,ticket=ticket)
++        current.update(retired=True,ticket=ticket,retirement_proof=proof)
+         self.completed.append(proof)
+         return dict(proof=json.loads(json.dumps(proof,allow_nan=False)),next_generation_ticket=ticket)
+ 

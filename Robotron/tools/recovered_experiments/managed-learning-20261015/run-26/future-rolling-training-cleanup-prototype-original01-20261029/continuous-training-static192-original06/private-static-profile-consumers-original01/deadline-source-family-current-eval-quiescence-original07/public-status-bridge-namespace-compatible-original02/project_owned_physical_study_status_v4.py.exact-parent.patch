@@ -1,0 +1,20 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/public-status-bridge-original01/project_owned_physical_study_status_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/public-status-bridge-namespace-compatible-original02/project_owned_physical_study_status_v4.py
+@@ -154,7 +154,7 @@
+     manifest=json.loads(h.checked(selection['prepared_manifest']).read_bytes())
+     study=json.loads(h.checked(selection['study_precommit']).read_bytes())
+     require(selection['schema']=='robotron-generic-physical-original-R1-launch-selection-v1'
+-        and selection['source']['sha256']=='e089e6f45ae8cc26813d589fbc36eab281fd20bec091e5f5f6151ed4e2c7337d'
++        and selection['source']['sha256']=='5701b99c08bb7a7e16e4052daa45d2fae3bd6ba257a8592dd460804347d6320d'
+         and selection['candidate_sha256']==study['policies']['candidate']['checkpoint']['sha256']=='c0acc8ad3aa411a00928b6f242b2e4a6299780b5a2991c75225d334c21af60f0'
+         and study['policies']['reference']['checkpoint']['sha256']=='b23152ece3bb614831a278fe0572c07433f1bee59c5accef5a1ab7d3007af883'
+         and [c['leg']for c in manifest['cases']]==ORDER
+@@ -166,7 +166,7 @@
+         and selection['study_precommit']['path']==str(S/'study-precommit.json'), 'Actual canonical study paths required')
+     first=json.loads(h.checked(cfg['first_review_source_preparation']).read_bytes())
+     require(first['schema']=='robotron-generic-owned-first-physical-R1-review-source-family-v1'
+-        and first['source']['sha256']=='4a03ae27135b77c592f4e7a59672cec5547227c4b05b83ad46b6153c604b6f65'
++        and first['source']['sha256']=='7f6471c57d64f589c66bd63b2500f99ca40920905dd05606fd08508bd46a51d7'
+         and first['selected_R1_source_preparation']==selection['source_preparation'], 'Same actual R1 first-review source contract required')
+     FIRST_REVIEW=Path(h.checked(first['source'])).parent
+     require(cfg['sequence_source']['sha256']=='d821a0121ad4b2cdec82877299d5666aecee56b42aa11c5ce70c738096cc80f9', 'Exact generic continuation source required')

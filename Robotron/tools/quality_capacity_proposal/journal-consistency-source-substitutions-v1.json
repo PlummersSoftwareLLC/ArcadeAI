@@ -1,0 +1,61 @@
+{
+  "package_old": "3ee43f9bd95fdda8f02abc048999a84513da71125dfd6b2e6558f45d2de6caf9",
+  "package_new": "41acc755d6daa728fa0b8291d27e60da8f4e80e7d55ab8a2110bcb8b377d85af",
+  "sources": [
+    {
+      "old": "quality32_acquisition_v2.py",
+      "new": "quality32_acquisition_v3.py",
+      "oldsha": "d53d84ee10aa05e5ee0e5c988ecff6993f28b06d73ff381e5345211c78d770f5",
+      "newsha": "ce183ba553a244bb93db11ff3679a3ea509d539f97c6142241db308cede23a62"
+    },
+    {
+      "old": "prepare_quality32_candidate_CPU_v3.py",
+      "new": "prepare_quality32_candidate_CPU_v4.py",
+      "oldsha": "f8fad20f21925e576a877100dd3edf300f9a93d7eae3ed33305a6b8094753cb5",
+      "newsha": "f5f14c3ae50a8acb09ab1613906413a0734d9df419c5014f712ddf0dd35889f5"
+    },
+    {
+      "old": "audit_quality32_evidence_v2.py",
+      "new": "audit_quality32_evidence_v3.py",
+      "oldsha": "41623f7bb71cb4e7d821333bc90d705285cd32d7d036dc567939eb8c3f8cb398",
+      "newsha": "aebf9ab768b0cbe0523233c1a2d714b5d0883233b40ce1dd5dcc4887fcc0d120"
+    },
+    {
+      "old": "review_closed_quality32_v6.py",
+      "new": "review_closed_quality32_v7.py",
+      "oldsha": "e6c402b778aaca214a5a4533b6ffa8c5f010e2866a6afeda619970f35e2f92cb",
+      "newsha": "40e465b8cd0a38395e722c7361bb912446b663926d2650ba25cce0c69e0ca991"
+    },
+    {
+      "old": "protect_quality32_winner_v4.py",
+      "new": "protect_quality32_winner_v5.py",
+      "oldsha": "fcbf6549daaf58b8bdedc0420e2005ca35fedafa33e8d5a0f4890420d564f83a",
+      "newsha": "571161db25e16282f28d2067a289202ae7e0b8b40d062e15e94c617c0cbbef2f"
+    },
+    {
+      "old": "quality32_runtime_guard_v6.py",
+      "new": "quality32_runtime_guard_v7.py",
+      "oldsha": "acade462044aad43c00d2207709e9e7ad75abcc53141582ac5b954b468cc808e",
+      "newsha": "860032e95c999634370df73153ef058bf36d6cd8d6c9ef44246065afc2a64157"
+    },
+    {
+      "old": "prepare_quality32_campaign_v5.py",
+      "new": "prepare_quality32_campaign_v6.py",
+      "oldsha": "6b258e4d0052b3013eee093f2231aa893b69d149fc8b259daf13ba30b47b411a",
+      "newsha": "7f679cfc39387de625f729fe51c0186f6f196e936d10e1ad7e2a2d8610b8ccda"
+    },
+    {
+      "old": "monitor_supervised_quality32_v3.py",
+      "new": "monitor_supervised_quality32_v4.py",
+      "oldsha": "7d75601d6512afc982393080a6c398b4061f4f944bbfa571d46debca3003ee1a",
+      "newsha": "fcb0082c815e775fd2219ac09218388076bf8b259d0686fb00e164243ff45b4f"
+    },
+    {
+      "old": "prepare_supervised_quality32_monitor_v3.py",
+      "new": "prepare_supervised_quality32_monitor_v4.py",
+      "oldsha": "ed14fb7879343d56e05a2ead7dade2336c7b17a64b90fc16f77d74b13d411929",
+      "newsha": "1b49ad69e8d58bc0d5b56384566deb62761ef2a721ba557211aecfda487a9c15"
+    }
+  ],
+  "source_selected_for_science": false
+}

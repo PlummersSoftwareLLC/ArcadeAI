@@ -1,0 +1,73 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/server-cleanup-integration-original04/run_actual_cleanup_integration_CPU_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/run_continuous_episode_boundaries_CPU_v1.py
+@@ -1,4 +1,4 @@
+-"""Default inert; one Root-operated actual cleanup integration CPU qualification."""
++"""Default inert; one Root-operated continuous-training episode_boundaries CPU qualification."""
+ import argparse
+ import hashlib
+ import importlib.util
+@@ -34,16 +34,32 @@
+     source=pin(Path(__file__).resolve());require(source['sha256']==args.source_sha256,'Exact CPU driver required')
+     jp=pin(Path(args.job).resolve());require(jp['sha256']==args.job_sha256,'Exact original CPU job required')
+     job=json.loads(Path(jp['path']).read_bytes())
+-    require(job['schema']=='robotron-server-cleanup-integration-original-CPU-job-v1'
++    require(job['schema']=='robotron-continuous-episode-original-CPU-job-v1'
+         and job['source']==source and job['original_attempt']==1 and job['no_retry']is True,
+         'One exact original prospective CPU fixture job required')
+     for value in job['inputs']:
+         require(pin(value['path'])==value,'Selected original fixture source changed')
++    witness=json.loads(Path(job['interpreter_symlink_binding']['path']).read_bytes())
++    require(pin(job['interpreter_symlink_binding']['path'])==job['interpreter_symlink_binding'],
++        'Exact interpreter witness required')
++    require(witness['schema']=='robotron-exact-known-free314-interpreter-symlink-binding-v1'
++        and sys.executable==witness['path']=='/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python'
++        and pin(sys.executable)==witness['source_pin']
++        and str(Path(sys.executable).resolve(strict=True))==witness['resolved_target']
++        and len(witness['links'])==2,'Exact selected interpreter chain required')
++    for row in witness['links']:
++        q=Path(row['path']);v=q.lstat()
++        identity=dict(device=v.st_dev,inode=v.st_ino,bytes=v.st_size,mtime_ns=v.st_mtime_ns,
++            ctime_ns=v.st_ctime_ns,mode=oct(stat.S_IMODE(v.st_mode)),uid=v.st_uid,nlink=v.st_nlink)
++        require(q.is_symlink() and os.readlink(q)==row['readlink']
++            and identity==row['lstat_identity'],'Exact selected interpreter link differs')
+     output=Path(job['output']);require(not output.exists(),'Fresh original CPU output only')
+     output.mkdir(mode=0o700);started=time.monotonic()
+     def audit(event,arguments):
+         if event=='import' and arguments[0].split('.')[0]in('torch','tensorflow','cupy'):
+             raise RuntimeError('No GPU/model library import in focused fixture')
++        # NumPy imports stdlib ctypes.PyDLL(None); permit only that process handle.
++        if event=='ctypes.dlopen' and arguments==(None,):return
+         if event in ('subprocess.Popen','os.system','socket.__new__','ctypes.dlopen'):
+             raise RuntimeError('No service/process/socket/native launch in focused fixture')
+         if event=='open' and isinstance(arguments[0],(str,bytes,os.PathLike)):
+@@ -52,23 +68,22 @@
+                 raise RuntimeError('No model/ROM/MAME body access in focused fixture')
+     sys.addaudithook(audit)
+     fixture=job['fixture'];require(pin(fixture['path'])==fixture,'Exact fixture file required')
+-    spec=importlib.util.spec_from_file_location('_actual_cleanup_integration_fixture',fixture['path'])
++    spec=importlib.util.spec_from_file_location('_continuous_episode_fixture',fixture['path'])
+     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+     suite=unittest.defaultTestLoader.loadTestsFromTestCase(module.Tests)
+-    require(suite.countTestCases()==6,'Six actual integration edge groups required; no inherited suite rerun')
+-    print(json.dumps(dict(phase='ACTUAL_SERVER_CLEANUP_INTEGRATION_EDGES',methods=6)),flush=True)
++    require(suite.countTestCases()==6,'Six focused episode groups required; no inherited suite rerun')
++    print(json.dumps(dict(phase='CONTINUOUS_EPISODE_EDGES',methods=6)),flush=True)
+     result=unittest.TextTestRunner(stream=sys.stdout,verbosity=2).run(suite)
+     for value in job['inputs']:
+         require(pin(value['path'])==value,'Fixture source changed during original CPU run')
+     require('torch'not in sys.modules,'Torch unexpectedly imported')
+-    report=dict(schema='robotron-server-cleanup-integration-original-CPU-report-v1',status='PASS'if result.wasSuccessful()else'FAIL',
++    report=dict(schema='robotron-continuous-episode-original-CPU-report-v1',status='PASS'if result.wasSuccessful()else'FAIL',
+         original_job=jp,actual_PID=os.getpid(),source=source,fixture=fixture,
+         tests_run=result.testsRun,failures=[str(t)for t,_ in result.failures],errors=[str(t)for t,_ in result.errors],
+         elapsed_s=time.monotonic()-started,Torch_imported=False,GPU_or_MAME_launched=False,
+-        actual_AsyncReplayBuffer_methods_with_synthetic_agent_and_owned_threads=True,
+-        actual_handler_finally_handshake_reset_and_HTTP_AST_exercised=True,
+-        real_temporary_GameJournal_durable_terminal_hash_exercised=True,
+-        receipt_definitions_exercised=True,production_server_imported=False,
++        actual_Journal_server_NStep_and_FIFO_AST_with_synthetic_collaborators=True,
++        same_connection_positive_and_zero_games_and_EVAL_retirement_exercised=True,
++        real_temporary_durable_game_rows_and_FIFO_episode_indices_exercised=True,production_server_imported=False,
+         server_or_supervisor_runtime_integration_qualified=False,
+         rolling_refill_qualified=False,
+         scientific_launch_qualified=False,quality_qualified=False,promotion=False)

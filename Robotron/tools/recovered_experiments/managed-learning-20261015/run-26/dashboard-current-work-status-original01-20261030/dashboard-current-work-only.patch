@@ -1,0 +1,125 @@
+--- metrics_dashboard.before.exact.py
++++ metrics_dashboard.current-work-status.exact.py
+@@ -1868,7 +1868,9 @@
+     <section class="activity-panel" aria-label="Training and evaluation activity">
+       <div class="activity-head"><strong id="mTrainingStatus">Waiting for live training data…</strong><span id="mActivityUpdated">Connecting…</span></div>
+       <div class="activity-metrics"><span>Learner frames <strong id="mLearnerFrames">—</strong></span><span>Optimizer samples <strong id="mOptimizedSamples">—</strong></span><span>Training clients <strong id="mTrainingClients">—</strong></span><span>Frames/sec <strong id="mTrainingFps">—</strong></span></div>
+-      <div class="activity-note" id="mCampaignStatus">Checking A/B experiment progress…</div>
++      <div class="activity-head" id="mWorkStage">Reading current work…</div>
++      <div class="activity-legs" id="mWorkDetails"></div>
++      <div class="activity-note" id="mCampaignStatus">Checking experiment results…</div>
+       <div class="activity-legs" id="mCampaignLegs"></div>
+     </section>
+     <section class="preview-stage">
+@@ -4977,6 +4979,86 @@
+       }
+     }
+ 
++    let currentWorkStatus = null;
++    let workStatusRequestBusy = false;
++    let workStatusReadFailed = false;
++    let workStatusRenderKey = "";
++
++    function workStatusView(payload, nowMs = Date.now()) {
++      if (!payload || payload.schema !== "robotron-prepared-policy-screening-status-v1") return null;
++      const work = payload.next_work;
++      if (!work || typeof work !== "object" || Array.isArray(work)) return null;
++      const text = value => typeof value === "string" ? value.trim() : "";
++      const stage = text(work.current_stage) || text(work.state).replaceAll("_", " ");
++      if (!stage) return null;
++      const stamp = Number.isFinite(work.updated_unix_s) ? work.updated_unix_s : payload.updated_unix_s;
++      const hasStamp = Number.isFinite(stamp) && stamp > 0;
++      const age = hasStamp ? Math.max(0, nowMs / 1000 - stamp) : null;
++      let when = text(work.eta) || "No completion estimate has been published yet.";
++      const estimate = work.estimated_completion_unix_s;
++      if (Number.isFinite(estimate) && estimate > 0) {
++        const minutes = Math.max(0, Math.ceil((estimate * 1000 - nowMs) / 60000));
++        when += minutes > 0 ? " About " + minutes + " min remaining at the observed rate." :
++          " The previous estimate has been reached; waiting for a progress update.";
++      }
++      return {stage, why: text(work.detail) || text(payload.detail) || "Details have not been published yet.",
++        waiting: text(work.waiting_for) || "No dependency has been reported.",
++        next: text(work.next_stage) || "The next step has not been published yet.", when,
++        updated: hasStamp ? new Date(stamp * 1000).toLocaleTimeString() : "time unavailable",
++        stale: age === null || age > 90};
++    }
++
++    function renderWorkStatus() {
++      const view = workStatusView(currentWorkStatus);
++      const stage = document.getElementById("mWorkStage");
++      const details = document.getElementById("mWorkDetails");
++      if (!view) {
++        stage.textContent = "Current work status is unavailable · retrying";
++        return;
++      }
++      const delayed = view.stale || workStatusReadFailed;
++      const label = "Current work: " + view.stage + " · updated " + view.updated +
++        (delayed ? " · refresh delayed; showing the last reported status" : "");
++      const key = JSON.stringify([label, view.why, view.waiting, view.next, view.when]);
++      if (key === workStatusRenderKey) return;
++      workStatusRenderKey = key;
++      stage.textContent = label;
++      details.replaceChildren(...[["Why", view.why], ["Waiting for", view.waiting],
++        ["Next", view.next], ["When", view.when]].map(([title, value]) => {
++        const card = document.createElement("div");
++        card.className = "activity-leg";
++        const heading = document.createElement("strong");
++        heading.textContent = title;
++        const body = document.createElement("div");
++        body.textContent = value;
++        card.append(heading, body);
++        return card;
++      }));
++    }
++
++    async function fetchWorkStatus() {
++      if (workStatusRequestBusy) return;
++      workStatusRequestBusy = true;
++      const controller = new AbortController();
++      const timer = setTimeout(() => controller.abort(), 5000);
++      try {
++        const response = await fetch("/api/html/next-policy-evaluation.json?t=" + Date.now(),
++          {cache: "no-store", signal: controller.signal});
++        if (!response.ok) throw new Error("Work status unavailable");
++        const payload = await response.json();
++        if (!workStatusView(payload)) throw new Error("Work status is incomplete");
++        currentWorkStatus = payload;
++        workStatusReadFailed = false;
++      } catch (error) {
++        workStatusReadFailed = true;
++      } finally {
++        clearTimeout(timer);
++        workStatusRequestBusy = false;
++        if (latestNow) renderActivity(latestNow);
++        else renderWorkStatus();
++      }
++    }
++
+     function renderActivity(now) {
+       const put = (id, value) => { document.getElementById(id).textContent = value; };
+       const age = Math.max(0, Date.now() / 1000 - Number(now.ts || 0));
+@@ -4988,10 +5070,11 @@
+       put("mOptimizedSamples", fmtInt(now.optimized_samples));
+       put("mTrainingClients", fmtInt(now.client_count));
+       put("mTrainingFps", fmtInt(now.fps));
++      renderWorkStatus();
+       const campaign = now.quality_campaign || {};
+       const container = document.getElementById("mCampaignLegs");
+       if (!campaign.available) {
+-        put("mCampaignStatus", campaign.read_error ? "A/B status temporarily unavailable · retrying" : "No A/B campaign is currently registered");
++        put("mCampaignStatus", campaign.read_error ? "Experiment results are temporarily unavailable · retrying" : "");
+         container.replaceChildren();
+         return;
+       }
+@@ -5164,9 +5247,11 @@
+ 
+     fetchNow().catch(() => {});
+     fetchHistory().catch(() => {});
++    fetchWorkStatus().catch(() => {});
+     previewPumpLoop().catch(() => {});
+     setInterval(fetchNow, DASH_REFRESH_MS);
+     setInterval(heartbeat, 1000);
++    setInterval(fetchWorkStatus, 10000);
+     window.addEventListener("resize", () => {
+       renderCurrent();
+       // Force gauge repaint since canvas dimensions changed

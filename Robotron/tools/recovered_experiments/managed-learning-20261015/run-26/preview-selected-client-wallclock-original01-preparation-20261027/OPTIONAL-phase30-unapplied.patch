@@ -1,0 +1,16 @@
+--- a/Robotron/Scripts/main.lua
++++ b/Robotron/Scripts/main.lua
+@@ -2801,11 +2801,11 @@
+         clear_pending_preview()
+         return
+     end
+-    local now_s = os.clock()
++    local now_s = socket_time_now()
+     if (now_s - last_preview_capture_time_s) < PREVIEW_MIN_INTERVAL_S then
+         return
+     end
+-    last_preview_capture_time_s = now_s
++    last_preview_capture_time_s = now_s - ((now_s - last_preview_capture_time_s) % PREVIEW_MIN_INTERVAL_S)
+ 
+     local ok, result = pcall(function()
+         local vw, vh = manager.machine.video:snapshot_size()

@@ -1,0 +1,17 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/qualify_round_study_cpu_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original06/qualify_round_study_cpu_v6.py
+@@ -209,8 +209,13 @@
+                     proof=native.round_contract().validate_launch(subject,ctx,h)
+                 self.assertTrue(proof['raw_API_and_TCP_and_retirement_snapshots_replayed'])
+                 self.assertTrue(proof['accepted_evidence_and_projection_gaps_verified'])
+-                self.assertEqual(proof['main_health_profile'],'PHYSICAL_ORIGINAL192_TRAIN_CURRENT_TCP_EVAL_ORIGINAL_ONCE')
++                self.assertEqual(proof['main_health_profile'],'PHYSICAL_ORIGINAL192_LIVE_PIDFD_CURRENT_EVAL_QUIESCENCE_V5')
+                 self.assertTrue(proof['prior_completed_EVAL_prefix_and_current_suffix_verified'])
++                self.assertTrue(proof['immutable_original192_bootstrap_certificate_verified'])
++                self.assertTrue(proof['fresh_original_keeper_pidfd_census_verified'])
++                self.assertTrue(proof['authentic_published_normal0_exit_facts_and_monotone_coverage_verified'])
++                self.assertTrue(proof['current_once_only_EVAL_quiescence_with_historical_error_and_ready_false_preserved_verified'])
++                self.assertFalse(proof['original_cleanup_deadline_handoff_CID_reuse_or_refill_success_from_exception_claimed'])
+                 self.assertEqual(proof['verified_maximum_gap_s'],2.0)
+                 self.assertEqual(proof['proof_gap_contract'],'robotron-main-proof-gap-2s-v1')
+                 self.assertEqual(proof['full_main_input_count'],len(ctx['main_binding']['inputs']))

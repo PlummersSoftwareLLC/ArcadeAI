@@ -1,0 +1,63 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/assess_fullgame_study_v8.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original02-linked-preparation/assess_fullgame_study_v8.py
+@@ -10,11 +10,12 @@
+ import sys
+ import time
+ 
+-HERE=Path(__file__).resolve().parent
++HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
++LOCAL=Path(__file__).resolve().parent
+ 
+ 
+ def pipeline():
+-    spec=importlib.util.spec_from_file_location('_fullgame_study_assessment_pipeline',HERE/'fullgame_review_pipeline_v7.py')
++    spec=importlib.util.spec_from_file_location('_fullgame_study_assessment_pipeline',LOCAL/'fullgame_review_pipeline_v7.py')
+     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
+ 
+ 
+@@ -24,14 +25,14 @@
+     p.require(commit['schema']=='robotron-four-fullgame-independent-review-precommit-v1'and commit['engineering_only']is False,
+         'Engineering reviews cannot qualify a production fullgame study')
+     p.require(commit['ordered_legs']==[case['leg']for case in commit['cases']]==p.ORDER
+-        and commit['assessor']==h.pin(Path(__file__).resolve())and commit['pipeline']==h.pin(HERE/'fullgame_review_pipeline_v7.py')
+-        and commit['leg_reviewer']==h.pin(HERE/'review_fullgame_rounds_v7.py')
+-        and commit['review_entry']==h.pin(HERE/'fullgame_review_entry_v6.py')
++        and commit['assessor']==h.pin(Path(__file__).resolve())and commit['pipeline']==h.pin(LOCAL/'fullgame_review_pipeline_v7.py')
++        and commit['leg_reviewer']==h.pin(LOCAL/'review_fullgame_rounds_v7.py')
++        and commit['review_entry']==h.pin(LOCAL/'fullgame_review_entry_v6.py')
+         and commit['current_boot_id']==Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
+         'Exact original sources/order/boot precommit required')
+     prepared=p.read(commit['native_prepared'])
+     p.require(prepared['engineering_only']is False and prepared['ordered_legs']==p.ORDER,'Production native study required')
+-    producer=p.load('_fullgame_final_eligibility',HERE/'prepare_fullgame_study_v6.py')
++    producer=p.load('_fullgame_final_eligibility',LOCAL/'prepare_fullgame_study_v6.py')
+     producer.eligible_screen(prepared['screen_assessment'],prepared['reference_epoch'],h)
+     pair=p.read(prepared['pair'])
+     p.require(pair['engineering_only']is False and pair['minimum_complete_games_each']==64
+@@ -40,7 +41,7 @@
+     publication=p.read(commit['CPU_guard_publication'])
+     p.require(publication['status']=='PASS'and publication['prepared']==commit['native_prepared']
+         and [case['leg']for case in publication['cases']]==p.ORDER,'Exact four-job CPU guard publication required')
+-    reviewer=p.load('_fullgame_final_actual_reviewer',HERE/'review_fullgame_rounds_v7.py')
++    reviewer=p.load('_fullgame_final_actual_reviewer',LOCAL/'review_fullgame_rounds_v7.py')
+     contract=reviewer.round_contract();legs=[];scope_proofs=[];main_domain=None;previous_end=0;all_transports=set()
+     for case,review_case,guard in zip(prepared['cases'],commit['cases'],publication['cases']):
+         role=case['leg'];root=Path(case['native_job']['path']).parent
+@@ -62,7 +63,7 @@
+         p.validate_packet(case,packet,review_cfg,h)
+         for cfg_pin in (packet['controller_config'],review_case['review_config']):
+             cfg=p.read(cfg_pin)
+-            controller=p.cpu_controller(h)if cfg_pin==review_case['review_config']else p.load('_fullgame_final_native_control',HERE/'control_fullgame_rounds_v6.py')
++            controller=p.cpu_controller(h)if cfg_pin==review_case['review_config']else p.load('_fullgame_final_native_control',LOCAL/'control_fullgame_rounds_v6.py')
+             for pin in cfg['pins']:p.require(controller.pin(pin['path'])==pin,'Original scoped launch input changed')
+         ns=p.owned_scope(packet['controller_config'],h,native=True);rs=p.owned_scope(review_case['review_config'],h)
+         p.require(commit['created_monotonic_s']<=ns['interval'][0]and previous_end<=ns['interval'][0]
+@@ -131,7 +132,7 @@
+     output=output.resolve();p.require(output.is_relative_to(p.BASE)and not output.exists(),'Fresh original fullgame assessment output required')
+     return h.put(output,dict(schema='robotron-recovered-round-fullgame-study-assessment-v1',status='FOUR_ORIGINAL_COMPLETE_GAME_LEGS_QUALIFIED',
+         review_precommit=commit_pin,native_prepared=commit['native_prepared'],pair=prepared['pair'],original_scopes=scope_proofs,
+-        source=h.pin(Path(__file__).resolve()),pipeline=h.pin(HERE/'fullgame_review_pipeline_v7.py'),
++        source=h.pin(Path(__file__).resolve()),pipeline=h.pin(LOCAL/'fullgame_review_pipeline_v7.py'),
+         unchanged_numeric_source=h.pin(p.NUMERIC),created_unix_s=time.time(),**decision))
+ 
+ 

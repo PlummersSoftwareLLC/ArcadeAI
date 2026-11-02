@@ -1,0 +1,83 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-original03/prepare_round_study_v10.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-physical-original04/prepare_round_study_v10.py
+@@ -166,15 +166,15 @@
+ 
+ def capture_binding(template_pin, h):
+     template = read(template_pin, h)
+-    require(template['schema'] == 'robotron-continuous-static192-health-case-v1',
++    require(template['schema'] == 'robotron-continuous-physical-original192-health-case-v2',
+             'Actual postbarrier static-original192 case required')
+-    health = load('_prepare_static_health', Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_transport_v1.py'))
+-    collector = load('_prepare_static_raw_API', Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/observe_continuous_static192_v1.py'))
++    health = load('_prepare_static_health', Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_transport_v2.py'))
++    collector = load('_prepare_static_raw_API', Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/observe_continuous_physical192_v2.py'))
+     health.check_inputs(template, full=True)
+     deadline = time.monotonic()+30
+     while True:
+         case = copy.deepcopy(template)
+-        case['source_guard'] = '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_health_v1.py'
++        case['source_guard'] = '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_health_v2.py'
+         try:
+             baseline = collector.collect(health, case)
+             health.validate(case, baseline)
+@@ -215,7 +215,7 @@
+             'Explicit future Root post-mode selection required; engineering never prepares scientific study')
+     h = load('_round_study_helpers', ROOT/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py')
+     selected = read(selection_pin, h)
+-    require(selected['schema'] == 'robotron-root-continuous-static192-fresh-comparison-selection-v1'
++    require(selected['schema'] == 'robotron-root-continuous-physical192-fresh-comparison-selection-v2'
+             and selected['status'] == 'ACTUAL_POST_MODE_CONTEXT_SELECTED'
+             and selected['mode'] == 'CONTINUOUS_TRAIN155_EVAL37_ONCE',
+             'Actual new Root-qualified post-mode context selection required')
+@@ -224,7 +224,7 @@
+         reference_profile=reference_profile, candidate_profile=candidate_profile),
+         'Exact newly qualified current-runtime profile pair must be Root-selected')
+     selected_case = read(selected['main_case'], h)
+-    require(selected_case['schema'] == 'robotron-continuous-static192-health-case-v1',
++    require(selected_case['schema'] == 'robotron-continuous-physical-original192-health-case-v2',
+             'Selected actual main case must have new typed profile')
+     old_ref = read(h.pin(PREVIOUS/'R1/job.json'), h)
+     old_candidate = read(h.pin(PREVIOUS/'C2/job.json'), h)
+@@ -270,10 +270,10 @@
+     native = load('_prepare_actual_round_native', Path(runtime['path']))
+     control = load('_prepare_actual_round_controller', Path(controller['path']))
+     contract = native.round_contract()
+-    protocol = h.put(output/'main-health-protocol.json', dict(schema='robotron-native-continuous-static192-main-health-proof2s-protocol-v1',
++    protocol = h.put(output/'main-health-protocol.json', dict(schema='robotron-native-continuous-physical-original192-main-health-proof2s-protocol-v2',
+         case=binding, raw_API_required=True, close_requires_final_sample=True, hot_max_gap_s=2.0, initial_samples=100,
+-        raw_queue_protocol='pending-byte-digest-v2', volatile_live_tmpfs=True,source_bound_retired_API_projection=True,source_bound_completed_original192_bootstrap=True,source_bound_static_original192_partition=True))
+-    observer = {'registry': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_registry_v1.py')), 'health_base': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_health_v1.py')), 'health': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_transport_v1.py')), 'worker': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/observe_continuous_static192_v1.py')), 'client': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_observer_client_v1.py')), 'durability': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/buffered_raw_writer_v2.py')), 'control': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/volatile_live_control_v1.py')), 'interpreter': h.pin(Path('/usr/bin/python3.12'))}
++        raw_queue_protocol='pending-byte-digest-v2', volatile_live_tmpfs=True,source_bound_retired_API_projection=True,source_bound_original192_physical_bootstrap=True,source_bound_physical_original192_partition=True))
++    observer = {'registry': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_registry_v2.py')), 'health_base': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_health_v2.py')), 'health': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_transport_v2.py')), 'worker': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/observe_continuous_physical192_v2.py')), 'client': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_observer_client_v2.py')), 'durability': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/buffered_raw_writer_v2.py')), 'control': h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/volatile_live_control_v1.py')), 'interpreter': h.pin(Path('/usr/bin/python3.12'))}
+     old_family = read(old_candidate['source_family_manifest'], h)
+     study = h.put(output/'study-precommit.json', dict(schema='robotron-deadline32-fixed-fresh-RCRC-study-v1',
+         created_unix_s=time.time(), ordered_legs=list(LEGS), horizon_ns=old_ref['horizon_ns'],
+@@ -292,7 +292,7 @@
+         directory.mkdir(mode=0o700)
+         role = 'reference' if leg.startswith('R') else 'candidate'
+         selected = reference if role == 'reference' else candidate
+-        namespace = 'deadline32-static192-proof2s-'+study['sha256'][:16]+'-'+leg.lower()+'-original01-20261029'
++        namespace = 'deadline32-physical192-proof2s-'+study['sha256'][:16]+'-'+leg.lower()+'-original01-20261029'
+         native_unit = 'robotron-'+namespace+'.service'
+         job = copy.deepcopy(old_ref if role == 'reference' else old_candidate)
+         job.update(unit=native_unit, lease=restored['restored_lease'], runtime=runtime, output=str(directory/'deadline-output-original01'), leg=leg,
+@@ -310,8 +310,8 @@
+                     token = secrets.token_hex(16)
+                 fresh.add(token)
+                 job[key][str(slot)] = token
+-        family = dict(schema='robotron-deadline32-static192-proof2s-source-family-v1', runtime=runtime,
+-            reviewer=reviewer, main_observer=observer, round_observer_reviewer=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/review_continuous_static192_observer_v1.py')),
++        family = dict(schema='robotron-deadline32-physical192-proof2s-source-family-v2', runtime=runtime,
++            reviewer=reviewer, main_observer=observer, round_observer_reviewer=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/review_continuous_physical192_observer_v2.py')),
+             main_health_finalizer=old_family['main_health_finalizer'], deadline_components=job['components'],
+             private_parent_job=h.pin(PREVIOUS/'C2/job.json'), current_main_binding=binding,
+             lease_recovery_authority=lease_recovery, main_domain_hot_review=main_proof, native_launch_qualified=not engineering,
+@@ -321,7 +321,7 @@
+         job['source_family_manifest'] = family_pin
+         inputs = [*job['inputs'], runtime, reviewer, controller, contract_pin, study, protocol, binding,
+             baseline_pin, family_pin, main_proof, lease_recovery, restored['restored_lease'], reference_profile, candidate_profile,
+-            h.pin(Path(__file__).resolve()), h.pin(LOCAL.parent/'static_profile_contract_v2.py'),
++            h.pin(Path(__file__).resolve()), h.pin(LOCAL.parent/'physical_profile_contract_v3.py'),
+             case['input_inventory_authority'], h.pin(HERE/'round_main_health_v7.py'), h.pin(HERE/'round_health_transport_v4.py'), *observer.values(), family['round_observer_reviewer'],
+             family['main_health_finalizer'], family['private_parent_job'], selected['checkpoint'],
+             selected['immutable_numerical_or_protection_authority'], *evidence, *prior]

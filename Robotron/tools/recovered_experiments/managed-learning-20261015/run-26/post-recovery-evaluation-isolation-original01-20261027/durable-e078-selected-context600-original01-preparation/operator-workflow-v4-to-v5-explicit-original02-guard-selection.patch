@@ -1,0 +1,107 @@
+--- Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-selected-context600-original01-preparation/prepare_e078_selected_workflow_v4.py
++++ Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-selected-context600-original01-preparation/prepare_e078_selected_workflow_v5.py
+@@ -21,6 +21,11 @@
+ CTX=M/'actual-current-main-engineering-contexts-original02'
+ META=L/'actual-metadata-preparation-original01'
+ STUDY=I/'durable-e078b0da-launcher-mmap-study-original01'
++GUARD=L/'guard247-source-correction-original01'
++NEW_GUARD_ROOT=STUDY/'four-exact-contexts-CPU-original02'
++GUARD_OVERRIDE=NEW_GUARD_ROOT/'selected-guard-packet-override-original02.json'
++GUARD_DRIVER_SHA='44d5e726d0163a8e33d2589bbb9ffab20b81a782baaa5d125b6db7adc81c56fc'
++GUARD_PREPARER_SHA='d5d7578cbe3d0b3f5390af1fbb497c10d8f7c6e8bcd3e230fb26564f295ede6f'
+ ENDPOINT='e078b0da4ce4e25146fab7484f8489f590e1086370746cb392afcd7f5f8adef5'
+ CONTROL=G/'tools/quality_capacity_proposal/control_quality32_review_v1.py'
+ CONTROL_SHA='218e7f861deb82c340527d218ed9f92ef5c5836c8cb9d32452c0598e61ff9a14'
+@@ -147,21 +152,63 @@
+     return report
+ 
+ 
++def prepare_guard_override(h):
++    metadata_inputs(h)
++    report=closed_metadata(h)
++    old=report['exact_CPU_packet'];before=json.loads(h.checked(old).read_bytes())
++    old_cfg=json.loads(h.checked(before['config']).read_bytes())
++    require(not Path(old_cfg['output']).exists(), 'Old unlaunched guard execution must remain unused')
++    control=module('_E078_guard_original_controller',CONTROL,CONTROL_SHA)
++    require(control.show(old_cfg['unit'])['LoadState']=='not-found', 'Old guard original unit was already used')
++    require(not NEW_GUARD_ROOT.exists(), 'New guard override is one original preparation only')
++    module('_E078_corrected_guard_driver',GUARD/'qualify_round_study_cpu_v6.py',GUARD_DRIVER_SHA)
++    preparer=module('_E078_corrected_guard_preparer',GUARD/'prepare_round_cpu_guard_v9.py',GUARD_PREPARER_SHA)
++    replacement=preparer.prepare(Path(report['native_prepared']['path']),NEW_GUARD_ROOT)
++    value=json.loads(h.checked(replacement).read_bytes())
++    require(value['native_prepared_manifest']==report['native_prepared']
++        and value['driver']['sha256']==GUARD_DRIVER_SHA, 'Corrected packet must bind the same four actual native jobs')
++    override=h.put(GUARD_OVERRIDE,dict(schema='robotron-explicit-unlaunched-four-guard-packet-replacement-v1',
++        original_metadata_closeout=h.pin(META/'independent-original-CPU-scope-closeout.json'),
++        original_metadata_report=h.pin(META/'runtime/report.json'), original_unlaunched_guard_packet=old,
++        replacement_guard_packet=replacement, native_prepared=report['native_prepared'],
++        corrected_driver=h.pin(GUARD/'qualify_round_study_cpu_v6.py'),
++        corrected_preparer=h.pin(GUARD/'prepare_round_cpu_guard_v9.py'),
++        old_guard_execution_unused=True, same_four_native_jobs_preserved=True,
++        correction='Only actual full_main_input_count assertion243 to247; no scientific retry or native source change.',
++        source=h.pin(Path(__file__).resolve()),CPU_launched=False,scientific_payload_launched=False))
++    return dict(override=override,Root_next_controller_argv=controller_argv(CONTROL,CONTROL_SHA,value['config']))
++
++
+ def guard_packet(h):
+-    report=closed_metadata(h);packet=report['exact_CPU_packet'];value=json.loads(h.checked(packet).read_bytes())
++    report=closed_metadata(h);override,_=sealed(h,GUARD_OVERRIDE)
++    require(override['schema']=='robotron-explicit-unlaunched-four-guard-packet-replacement-v1'
++        and override['original_metadata_report']==h.pin(META/'runtime/report.json')
++        and override['original_metadata_closeout']==h.pin(META/'independent-original-CPU-scope-closeout.json')
++        and override['original_unlaunched_guard_packet']==report['exact_CPU_packet']
++        and override['native_prepared']==report['native_prepared']
++        and override['old_guard_execution_unused']is override['same_four_native_jobs_preserved']is True,
++        'Root-selected immutable replacement guard packet required')
++    require(h.pin(GUARD/'qualify_round_study_cpu_v6.py')==override['corrected_driver']
++        and override['corrected_driver']['sha256']==GUARD_DRIVER_SHA
++        and h.pin(GUARD/'prepare_round_cpu_guard_v9.py')==override['corrected_preparer']
++        and override['corrected_preparer']['sha256']==GUARD_PREPARER_SHA, 'Corrected guard sources differ')
++    packet=override['replacement_guard_packet'];value=json.loads(h.checked(packet).read_bytes())
++    require(value['native_prepared_manifest']==report['native_prepared']
++        and value['driver']==override['corrected_driver'], 'Actual same-four-job selected guard binding differs')
+     return packet,value
+ 
+ 
+ def prepare_reviews(h):
+     selected_D4_inputs=metadata_inputs(h)  # Before importing or writing any review metadata.
+-    report=closed_metadata(h);guardroot=STUDY/'four-exact-contexts-CPU-original01'
++    report=closed_metadata(h);guard_packet(h);guardroot=NEW_GUARD_ROOT
+     guards,_=sealed(h,guardroot/'all-four-exact-native-guard-receipts.json')
+     require(guards['status']=='PASS' and len(guards['guards'])==4,'Actual exactfourjobguard closeout required')
+     p=module('_E078_actual_review_preparer',D/'prepare_deadline_independent_review_v4.py')
+     rp=p.precommit(Path(report['native_prepared']['path']),guardroot/'all-four-exact-native-guard-receipts.json',STUDY/'review-precommit-original01')
+     packet=json.loads(h.checked(rp).read_bytes());driver=h.pin(D/'check_deadline_review_preparation_cpu_v3.py')
+     root=STUDY/'deadline-review-preparation-CPU-original01';require(not root.exists(),'Fresh original reviewCPU path required');root.mkdir(mode=0o700)
+-    values=selected_D4_inputs+[rp,report['native_prepared'],h.pin(guardroot/'all-four-exact-native-guard-receipts.json')]
++    values=selected_D4_inputs+[rp,report['native_prepared'],h.pin(guardroot/'all-four-exact-native-guard-receipts.json'),
++        h.pin(GUARD_OVERRIDE),h.pin(GUARD/'qualify_round_study_cpu_v6.py'),h.pin(GUARD/'prepare_round_cpu_guard_v9.py')]
+     for case in packet['cases']:
+         job=json.loads(h.checked(case['native_job']).read_bytes());values += [case['native_job'],case['native_config'],case['guard'],*job['inputs']]
+     inputs=list({value['path']:value for value in values}.values())
+@@ -179,7 +226,7 @@
+ 
+ def main(argv=None):
+     p=argparse.ArgumentParser(description=__doc__);g=p.add_mutually_exclusive_group()
+-    for name in ['prepare-metadata','close-metadata','print-four-guard-command','close-four-guards','prepare-review-precommit']:
++    for name in ['prepare-metadata','close-metadata','prepare-guard-override','print-four-guard-command','close-four-guards','prepare-review-precommit']:
+         g.add_argument('--'+name,action='store_true')
+     a=p.parse_args(argv)
+     if not any(vars(a).values()):print('PLAN_ONLY: no reads, outputs, controls, models or CPU launches');return
+@@ -187,6 +234,7 @@
+     if a.prepare_metadata:out=prepare_metadata(h)
+     elif a.close_metadata:
+         out=module('_E078_actual_metadata600_close',L/'close_metadata600_v1.py',CLOSE600_SHA).close(META)
++    elif a.prepare_guard_override:out=prepare_guard_override(h)
+     elif a.print_four_guard_command:
+         pp,value=guard_packet(h);out=dict(prepared=pp,Root_next_controller_argv=controller_argv(CONTROL,CONTROL_SHA,value['config']))
+     elif a.close_four_guards:
+@@ -194,7 +242,7 @@
+         out=closer.close(pp['path'],pp['sha256'],h.pin(D/'close_round_study_cpu_v6.py')['sha256'])
+     else:out=prepare_reviews(h)
+     if out is None and a.close_four_guards:
+-        out=dict(status='EXACT_FOUR_GUARDS_CLOSED',publication=h.pin(STUDY/'four-exact-contexts-CPU-original01/all-four-exact-native-guard-receipts.json'))
++        out=dict(status='EXACT_FOUR_GUARDS_CLOSED',publication=h.pin(NEW_GUARD_ROOT/'all-four-exact-native-guard-receipts.json'))
+     print(json.dumps(out),flush=True)
+ 
+ 

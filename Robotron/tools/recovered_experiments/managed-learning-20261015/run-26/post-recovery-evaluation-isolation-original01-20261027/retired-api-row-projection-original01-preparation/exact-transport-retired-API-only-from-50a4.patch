@@ -1,0 +1,32 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/readonly-mmap-source-validation-original02/round_health_transport_launcher_mmap_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/round_health_transport_retired_API_v3.py
+@@ -14,8 +14,8 @@
+ import sys
+ import time
+ 
+-BASE = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/readonly-mmap-source-validation-original02/round_main_health_launcher_mmap_v2.py')
+-BASE_SHA = '6953c0a7a11fc08886cf99b69fa19968606e2252c68bde9bcc94e5400171565a'
++BASE = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/round_main_health_retired_API_v3.py')
++BASE_SHA = '8fc46d3eb84fe0e49c1e52ce569a416c96b3c979e8b3b70421aeff2b853e3ea1'
+ PORT = 9998
+ 
+ 
+@@ -26,7 +26,7 @@
+ 
+ def base():
+     require(hashlib.sha256(BASE.read_bytes()).hexdigest() == BASE_SHA, 'Round reader source changed')
+-    name = '_pinned_round_transport_declared_launchers_v1'
++    name = '_pinned_round_transport_retired_API_v3'
+     if name not in sys.modules:
+         spec = importlib.util.spec_from_file_location(name, BASE)
+         module = importlib.util.module_from_spec(spec)
+@@ -141,7 +141,8 @@
+ 
+ def validate(case, sample, previous=None):
+     base().validate(case, sample, previous=previous)
+-    validate_transport(sample)
++    projected=base().api_projection().project_retired(case,sample,previous)
++    validate_transport(projected)
+     api = sample['api']
+     require(math.isclose(api['epsilon'], .1, rel_tol=0, abs_tol=1e-12)
+             and math.isclose(api['expert_ratio'], .1, rel_tol=0, abs_tol=1e-12),

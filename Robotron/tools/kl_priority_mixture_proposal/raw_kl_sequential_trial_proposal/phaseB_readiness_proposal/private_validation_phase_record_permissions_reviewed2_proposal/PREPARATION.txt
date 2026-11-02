@@ -1,0 +1,41 @@
+StageB readonly role-metadata publication correction, reviewed2 source preparation
+
+SOURCE ONLY; no author imports/tests/PT/tensor/model/replay reads, runtime queries,
+services, numerical execution or production changes. Root owns actual execution.
+Original2053218b StageB bundle remains immutable. Its actual first parent375050 /
+inv96ddff00c19b4aa9a855c9e09d2a8957 exited1 before any child/training: default writable
+phase-record publication was immediately passed to strict readonly stable_file.
+Original archive4cc6c141 and failure metadata are pinned in the companion manifest.
+This original infrastructure failure is retained; no prior numerical result is
+reclassified and no candidate readiness is inferred.
+
+The narrow parent change adds publish(read_only=True) only for phase-record.json
+and role-input.json in prepare_role_inputs, before their strict readonly consumers.
+Both paths share all three roles kl18/resume/return_ce. The generic publisher still
+creates exclusively and fsyncs; the requested seal opens the newly owned metadata
+with O_NOFOLLOW, checks regular/owner/nlink1/bound/FDpath identity, fchmod0444, fsyncs
+the FD, rechecks full sealed FD/path identity, and fsyncs its parent directory.
+Other publish calls/default permissions are unchanged. A sealing fault propagates;
+no permissions gate is relaxed and no worker is launched for incomplete inputs.
+
+Worker0e779fd5, lock8edbe008, candidate5 science, original448 source/CPU proofs, actual
+18-call schedule/no19th rule, AMP/Adam/native/phase criteria and all budgets remain
+byte-identical or unchanged. Per-role600s/total2100s,2CPU16GiBhost/12allocator/
+13processGPU/6artifacts/128MiBtmpfs/128tasks remain the precommit. The three roles
+remain kl18/resume/return_ce; later roles load newest saved private post-step bytes.
+
+The original role fixture already wrote0444 JSON, hiding this publication mismatch.
+Two new stdlib private-file contracts use a genuine0644 publisher: every role's
+record/input must become0444 before its real strict readers succeed; an injected
+fchmod failure preserves the original exception and prevents role-input creation.
+There are84 authored methods:18 process+25 storage+17 parent+12 worker stdlib+
+12 tiny CPU. None was executed by the author. Exact selected sibling classes/argv
+are in future-argv.json; do not run the original82 path by mistake.
+
+Original source/docs/manifest are retained as ancestor-* and original-preparation-
+manifest.json; the original directory is untouched. PROTOCOL.txt and worker/test
+scientific sources remain byte-exact. Root must use a NEW owned output/unit and
+preserve its actual first original invocation/exit before release. The GPU service
+must include Delegate=cpu memory pids and DelegateSubgroup=snapshot-supervisor,
+with CUDAhidden parent and the reviewed retained original-exit lifecycle. No actual
+GPU/CPU launch, readiness claim, adoption or loop is supplied by this source bundle.

@@ -1,0 +1,55 @@
+{
+  "schema": "robotron-bounded-host-clock-cosampling-proposal-v1",
+  "created_unix_s": 1793051305.3703532,
+  "status": "ROOT_ALGORITHM_APPROVED_COMPONENT_TESTED_NOT_YET_AUTHORITY_INTEGRATED",
+  "files": {
+    "clock_cosampling_v1.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/startup_clock_cosampling_proposal_20261026/clock_cosampling_v1.py",
+      "sha256": "4846a6c74e9d07fb4ebe9c31be9920b539179915940b679928b323703874cab1",
+      "bytes": 10520,
+      "mode": "0o444"
+    },
+    "test_clock_cosampling_v1.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/startup_clock_cosampling_proposal_20261026/test_clock_cosampling_v1.py",
+      "sha256": "5e5b37be6765b5436010d96c7cdbeedb948c30ddfaeac3ef140d66a218df4c35",
+      "bytes": 10091,
+      "mode": "0o444"
+    },
+    "actual-free314-CPU-test-receipt.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/startup_clock_cosampling_proposal_20261026/actual-free314-CPU-test-receipt.json",
+      "sha256": "cb2efa42e2c790cff419d9206d9abc3ab017cf52921dfc14d5c21e643637dd8d",
+      "bytes": 896,
+      "mode": "0o444"
+    }
+  },
+  "policy": {
+    "max_attempts": 3,
+    "max_span_ns": 1000000,
+    "max_total_ns": 1000000000,
+    "coherence_tolerance_ns": 50000000
+  },
+  "deadline": "Mandatory existing absolute actiondeadline; effective=min(parentdeadline,first_attempt_begin+1s); never allocate/extendcallerbudget; immediatepairs only/no sleeps.",
+  "witness": "Everyattemptclock,span,gap,status +selectedinteger-midpoint/ceil(span/2)uncertainty; failures retainallattempts andcannotbeusedasproof.",
+  "coherence": "abs(deltaWall-deltaMidpointMono)+u_lower+u_upper <= unchanged50000000ns; conservative, no wider threshold.",
+  "three_required_sites": [
+    "before_authorization",
+    "after_accepted_frame",
+    "before_journal_handoff"
+  ],
+  "integration": "SamplelowerBEFOREsend, issuanceupperAFTERactualacceptedframe; handoffthirdpairAFTERevidence andBEFOREjournaloperation. Checklower->issue ANDlower->handoff. Recordcompletewitnesses inNEWprivateprotocol/certificate/rawhostlog; do notonlyreplaceclockcallbackswithfabricatedvalues.",
+  "API": [
+    "sample_pair(phase, *, deadline_mono_ns, monotonic_ns=..., wall_ns=..., max_attempts=3, max_span_ns=1000000, max_total_ns=1000000000)",
+    "validate_pair(witness)",
+    "check_coherence(lower,upper) -> conservativeproof plusfourlegacycertificate_clock_fields"
+  ],
+  "tests": {
+    "final_free314_passed": true,
+    "methods": 15,
+    "stress_or_native_or_GPU": false,
+    "real_wall_step_negative_means": "Deterministicclockmodelactualoffsetjump versus mereschedulingpreemption; hostwallclockneverchanged."
+  },
+  "old_cold_original_remains_invalid": true,
+  "existing_production_or_prototype_sources_changed": false,
+  "native_launched": false,
+  "quality_or_learning_gain": false
+}

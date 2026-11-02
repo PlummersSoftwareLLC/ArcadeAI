@@ -1,0 +1,242 @@
+{
+  "status": "SOURCE_ONLY_UNSELECTED_UNEXECUTED",
+  "source_reversals": [
+    {
+      "filename": "quality_bindings.py",
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/quality_bindings.py",
+        "sha256": "c50dae942b52a68f293c2567f5a8c822de0e7d05018eb251332676681ac48556",
+        "bytes": 49461,
+        "identity": {
+          "device": 2304,
+          "inode": 81288112,
+          "bytes": 49461,
+          "mtime_ns": 1792325725930205124,
+          "ctime_ns": 1792325725930205124,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "selected_sha256": "888f05060527f79ece09892394543ae07375bd3c400374bdb3fd320ac576b774",
+      "replacements": [
+        {
+          "before": "PHASE=Path(__file__).with_name('verify_recipe_phase_snapshot.py')",
+          "after": "PHASE=GAME/'tools/live_lr_recipe_continuation_proposal/verify_recipe_phase_snapshot.py'"
+        },
+        {
+          "before": "SELECTOR=Path(__file__).with_name('capture_candidate.py')",
+          "after": "SELECTOR=GAME/'tools/live_lr_recipe_continuation_proposal/capture_candidate.py'"
+        },
+        {
+          "before": "OBSERVER=Path(__file__).with_name('observer.py')",
+          "after": "OBSERVER=GAME/'tools/live_lr_recipe_continuation_proposal/observer.py'"
+        },
+        {
+          "before": "    require(released['schema']=='robotron-root-retained-original-result-and-release-v1' and\n        released['original_exec_code']==1 and released['original_exit']==0 and released['original_result']=='success' and\n        released['original_archived_before_release'] is True and released['unit_released'] is True and\n        payload_matches and result_pin['path']==str(Path(case['output_directory'])/'result.json'),'Original successful capture/archive/release required')\n",
+          "after": "    if released['schema']=='robotron-root-audit-original-result-and-GC-aware-owned-release-v1':\n        require(released['status']=='ORIGINAL_AUDIT_EXIT0_ARCHIVED_AND_RELEASED' and\n            type(released['original_exec_code']) is int and released['original_exec_code']==1 and\n            type(released['original_exit']) is int and released['original_exit']==0 and released['original_result']=='success' and\n            released['lifecycle_complete'] is True and released['all_six_original_archive_commands_succeeded'] is True and\n            released['error'] is None and released['payload_retried'] is False and released['audit_success'] is True and\n            released['unit_released'] is True and released['original_archived_before_release'] is True and\n            payload_matches and result_pin['path']==str(Path(case['output_directory'])/'result.json'),\n            'Only complete genuine GC-aware capture0 with all six successful archives is eligible')\n    else:\n        require(released['schema']=='robotron-root-retained-original-result-and-release-v1' and\n            released['original_exec_code']==1 and released['original_exit']==0 and released['original_result']=='success' and\n            released['original_archived_before_release'] is True and released['unit_released'] is True and\n            payload_matches and result_pin['path']==str(Path(case['output_directory'])/'result.json'),'Original successful capture/archive/release required')\n"
+        }
+      ],
+      "reverse_exact": true,
+      "unchanged_whole_nodes": [
+        "require",
+        "identity",
+        "read_bytes",
+        "four",
+        "flat",
+        "triple",
+        "owner",
+        "check_reference",
+        "terminal",
+        "read",
+        "read_raw",
+        "same_raw",
+        "finite",
+        "load_observer",
+        "load_selector",
+        "check_historical_sources",
+        "check_diagnostic_sources",
+        "check_CPU_command",
+        "candidate_descriptor",
+        "check_cpu",
+        "archived_bytes",
+        "archive_text",
+        "check_window",
+        "check_CPU_release",
+        "check_transition",
+        "validate"
+      ],
+      "changed_whole_nodes": [
+        "check_root_capture"
+      ]
+    },
+    {
+      "filename": "root_quality_carrier.py",
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/root_quality_carrier.py",
+        "sha256": "57b87d0ec0275ef9f945109b1209d1c63e60f1271bac32c4b3e6c647c2923dc6",
+        "bytes": 24188,
+        "identity": {
+          "device": 2304,
+          "inode": 81288113,
+          "bytes": 24188,
+          "mtime_ns": 1792325725931128968,
+          "ctime_ns": 1792325725931128968,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "selected_sha256": "c961d55b55495dd139b961e431e3a49ef8926204d7d0397c35a8796a4820b3a1",
+      "replacements": [
+        {
+          "before": "c50dae942b52a68f293c2567f5a8c822de0e7d05018eb251332676681ac48556",
+          "after": "888f05060527f79ece09892394543ae07375bd3c400374bdb3fd320ac576b774"
+        }
+      ],
+      "reverse_exact": true,
+      "unchanged_whole_nodes": [
+        "require",
+        "sha",
+        "write",
+        "call",
+        "show",
+        "pinned_json",
+        "inputs",
+        "default_argv",
+        "launch_argv",
+        "validate_plan",
+        "source_checks",
+        "prepare",
+        "readiness_contract",
+        "fast_runtime",
+        "launch",
+        "observe",
+        "archive",
+        "configure",
+        "main"
+      ],
+      "changed_whole_nodes": []
+    },
+    {
+      "filename": "collect_quality_readiness.py",
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/collect_quality_readiness.py",
+        "sha256": "faddfd422483a23f24fc2a942f4ce57bfd1e8533dae7d5942d284fadab573809",
+        "bytes": 20691,
+        "identity": {
+          "device": 2304,
+          "inode": 81288115,
+          "bytes": 20691,
+          "mtime_ns": 1792325725931761898,
+          "ctime_ns": 1792325725931761898,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "selected_sha256": "d22b568f64a96a9c187d75cf8cd428f5a6dd3e5e6757311d5f710dbd563d792b",
+      "replacements": [
+        {
+          "before": "c50dae942b52a68f293c2567f5a8c822de0e7d05018eb251332676681ac48556",
+          "after": "888f05060527f79ece09892394543ae07375bd3c400374bdb3fd320ac576b774"
+        },
+        {
+          "before": "SELECTOR=Path(__file__).with_name('capture_candidate.py')",
+          "after": "SELECTOR=GAME/'tools/live_lr_recipe_continuation_proposal/capture_candidate.py'"
+        }
+      ],
+      "reverse_exact": true,
+      "unchanged_whole_nodes": [
+        "require",
+        "load",
+        "collect",
+        "main"
+      ],
+      "changed_whole_nodes": []
+    },
+    {
+      "filename": "audit_completed_leg.py",
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/audit_completed_leg.py",
+        "sha256": "9967c1f4b68b7049c02c579f79772b97af806258d61bd5bdb3079ce83e6d1f71",
+        "bytes": 34322,
+        "identity": {
+          "device": 2304,
+          "inode": 81288114,
+          "bytes": 34322,
+          "mtime_ns": 1792325725932476685,
+          "ctime_ns": 1792325725932476685,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "selected_sha256": "4823ced08c9174a8b37d6f67c78ba9c14ca46719392244a4693f836da672dab0",
+      "replacements": [
+        {
+          "before": "c50dae942b52a68f293c2567f5a8c822de0e7d05018eb251332676681ac48556",
+          "after": "888f05060527f79ece09892394543ae07375bd3c400374bdb3fd320ac576b774"
+        },
+        {
+          "before": "CPU_VERIFIER = Path(__file__).with_name('verify_recipe_phase_snapshot.py')",
+          "after": "CPU_VERIFIER = GAME / 'tools/live_lr_recipe_continuation_proposal/verify_recipe_phase_snapshot.py'"
+        }
+      ],
+      "reverse_exact": true,
+      "unchanged_whole_nodes": [
+        "require",
+        "digest",
+        "unique_object",
+        "decode",
+        "lines",
+        "indexed",
+        "immutable",
+        "validate_future_plan",
+        "validate_cpu_proof",
+        "validate_original_context",
+        "classify_actor_lines",
+        "audit",
+        "configure",
+        "main"
+      ],
+      "changed_whole_nodes": []
+    }
+  ],
+  "required_local_assets": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_gcaware_capture_binding_proposal/template-audit-source.py",
+      "sha256": "2576d4449b12d6b4a3b17898ab9938c6ff8c762829f61a29e3d510f73d585c21",
+      "bytes": 37008,
+      "identity": {
+        "device": 2304,
+        "inode": 81290143,
+        "bytes": 37008,
+        "mtime_ns": 1792327302487068230,
+        "ctime_ns": 1792327302487068230,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_gcaware_capture_binding_proposal/README.txt",
+      "sha256": "42bc216dee3d7c298737c0ebb7c30acdead263e198bfa463cc4c2fd7aef88807",
+      "bytes": 2551,
+      "identity": {
+        "device": 2304,
+        "inode": 81290521,
+        "bytes": 2551,
+        "mtime_ns": 1792327515325155985,
+        "ctime_ns": 1792327515325155985,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  ],
+  "legacy_predicate_preserved": true,
+  "all_common_six_archive_and_release_predicates_preserved": true,
+  "numerical_or_scientific_changes": false,
+  "selected_or_active_files_changed": false
+}

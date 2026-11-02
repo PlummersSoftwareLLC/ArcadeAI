@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-reviewed-continuation-original01-preparation/project_owned_W03_continuation_status_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-reviewed-continuation-original01-preparation/project_owned_W03_continuation_status_v4.py
+@@ -72,7 +72,7 @@
+         and b['members']==32 and b['horizon_ns']==3600000000000
+         and b['deadline_monotonic_ns']-b['anchor_monotonic_ns']==b['horizon_ns'], 'Original per-leg fixed anchor differs')
+     before=time.monotonic_ns();wall=time.time_ns();after=time.monotonic_ns()
+-    value=dict(anchor=b,policy_sha256=job['checkpoint']['sha256'],source='original-deadline-anchor.json',candidate_sha256=candidate,leg=leg)
++    value=dict(schema='robotron-fixed-deadline-display-timing-v1',anchor_monotonic_ns=b['anchor_monotonic_ns'],deadline_monotonic_ns=b['deadline_monotonic_ns'],members=b['members'],horizon_ns=b['horizon_ns'],derived_from_original_anchor=True,anchor=b,policy_sha256=job['checkpoint']['sha256'],source='original-deadline-anchor.json',candidate_sha256=candidate,leg=leg)
+     if after-before<=1000000:
+         offset=wall-(before+after)//2
+         value.update(started_unix_s=(b['anchor_monotonic_ns']+offset)/1e9,deadline_unix_s=(b['deadline_monotonic_ns']+offset)/1e9,

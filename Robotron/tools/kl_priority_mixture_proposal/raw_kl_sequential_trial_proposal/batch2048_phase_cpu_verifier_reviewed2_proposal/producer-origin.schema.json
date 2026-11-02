@@ -1,0 +1,274 @@
+{
+  "$defs": {
+    "identity": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "ctime_ns": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "device": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "inode": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "mode": {
+          "pattern": "^0o[0-7]+$",
+          "type": "string"
+        },
+        "mtime_ns": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "nlink": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "uid": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "device",
+        "inode",
+        "bytes",
+        "mtime_ns",
+        "ctime_ns",
+        "mode",
+        "uid",
+        "nlink"
+      ],
+      "type": "object"
+    },
+    "owner": {
+      "additionalProperties": false,
+      "properties": {
+        "cgroup": {
+          "pattern": "^/user.slice/",
+          "type": "string"
+        },
+        "invocation_id": {
+          "pattern": "^[0-9a-f]{32}$",
+          "type": "string"
+        },
+        "pid": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "starttime_ticks": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "unit": {
+          "pattern": "^robotron-managed-[A-Za-z0-9_.-]+-trainer\\.service$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pid",
+        "starttime_ticks",
+        "unit",
+        "invocation_id",
+        "cgroup"
+      ],
+      "type": "object"
+    },
+    "pin": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "identity": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "ctime_ns": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "device": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "inode": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "mode": {
+              "pattern": "^0o[0-7]+$",
+              "type": "string"
+            },
+            "mtime_ns": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "nlink": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "uid": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "device",
+            "inode",
+            "bytes",
+            "mtime_ns",
+            "ctime_ns",
+            "mode",
+            "uid",
+            "nlink"
+          ],
+          "type": "object"
+        },
+        "path": {
+          "pattern": "^/",
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "bytes",
+        "identity"
+      ],
+      "type": "object"
+    },
+    "sha": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "$id": "robotron-root-batch2048-producer-CSV-origin-v2",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Archived facts from future actual root collector; consumer never opens live CSV. Existing startup-only baseline4096 origin is a distinct unchanged schema.",
+  "properties": {
+    "csv_archive": {
+      "$ref": "#/$defs/pin"
+    },
+    "environment_after": {
+      "$ref": "#/$defs/pin"
+    },
+    "environment_before": {
+      "$ref": "#/$defs/pin"
+    },
+    "header_bytes": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "header_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "observed_after_unix_s": {
+      "exclusiveMinimum": 0,
+      "type": "number"
+    },
+    "observed_before_unix_s": {
+      "exclusiveMinimum": 0,
+      "type": "number"
+    },
+    "owner_after": {
+      "$ref": "#/$defs/owner"
+    },
+    "owner_before": {
+      "$ref": "#/$defs/owner"
+    },
+    "row_end_offset": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "row_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "row_start_offset": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "schema": {
+      "const": "robotron-root-batch2048-producer-CSV-origin-v2"
+    },
+    "source_csv": {
+      "additionalProperties": false,
+      "properties": {
+        "fd_after": {
+          "$ref": "#/$defs/identity"
+        },
+        "fd_before": {
+          "$ref": "#/$defs/identity"
+        },
+        "opened_nofollow": {
+          "const": true
+        },
+        "path": {
+          "pattern": "^/",
+          "type": "string"
+        },
+        "path_after": {
+          "$ref": "#/$defs/identity"
+        },
+        "path_before": {
+          "$ref": "#/$defs/identity"
+        },
+        "regular_file": {
+          "const": true
+        }
+      },
+      "required": [
+        "path",
+        "regular_file",
+        "opened_nofollow",
+        "fd_before",
+        "path_before",
+        "fd_after",
+        "path_after"
+      ],
+      "type": "object"
+    },
+    "unit_after": {
+      "$ref": "#/$defs/pin"
+    },
+    "unit_before": {
+      "$ref": "#/$defs/pin"
+    }
+  },
+  "required": [
+    "environment_before",
+    "environment_after",
+    "unit_before",
+    "unit_after",
+    "csv_archive",
+    "schema",
+    "owner_before",
+    "owner_after",
+    "source_csv",
+    "header_bytes",
+    "row_start_offset",
+    "row_end_offset",
+    "header_sha256",
+    "row_sha256",
+    "observed_before_unix_s",
+    "observed_after_unix_s"
+  ],
+  "type": "object"
+}

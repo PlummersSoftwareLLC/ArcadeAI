@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/Scripts/main.lua
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/fleet-wide-multiple-reconnect-overlap-quarantine-original01-20261031/future-Main-RPC-backpressure-source-only-original01/main_rpc_backpressure120_v1.lua
+@@ -24,7 +24,7 @@
+ if string.sub(SOCKET_ADDRESS, 1, 7) ~= "socket." then
+     SOCKET_ADDRESS = "socket." .. SOCKET_ADDRESS
+ end
+-SOCKET_READ_TIMEOUT_S = 3.5
++SOCKET_READ_TIMEOUT_S = 120.0
+ CONNECTION_RETRY_INTERVAL_S = 1.0
+ SAVE_INTERVAL_S = 300
+ unpack = table.unpack or unpack

@@ -1,0 +1,58 @@
+{
+  "schema": "robotron-cuda-process-scan-revision-source-preparation-v1",
+  "status": "SOURCE_ONLY_FROZEN_UNEXECUTED",
+  "date_utc": "2026-10-17",
+  "base_revision_manifest_sha256": "5572396f25c0ee64943f75c4bc65cc994c02be2ddb18f2b897ea95893803176d",
+  "base_parent_sha256": "077420acc0d643f345225c66b0e8430d7f30f49b45a80c136153be57916ea470",
+  "base_bundle_preserved": true,
+  "files": {
+    "cuda_trace_parent.py": {"sha256": "38fab41957a4b3ff53f878f477e18b741497e34b4836fcde444aa4c1be851abe", "bytes": 34636},
+    "cuda_trace_worker.py": {"sha256": "ba0039d406676f092309c6bf2248ddcf169af8960f60ed18b698ece1ea602f93", "bytes": 50300},
+    "source-lock.json": {"sha256": "d6ffdaae63d97bce24a18d1b11ed165b9e12484d17d65365415aab3c08beb13b", "bytes": 6659},
+    "test_process_scan.py": {"sha256": "35b28282c15015bfa9eb5c8a6895cbebc6d70c8a757450e5688c8d2e1415c361", "bytes": 18053},
+    "test_storage_watcher.py": {"sha256": "ca16a7f31dcb17d7fe24d8be7fb6658389b7676d2234e2f359f575513181f5d2", "bytes": 23383},
+    "PREPARATION.txt": {"sha256": "9ca033ba8658b4982978c64ecfd69c0d54c40e13a7d9ac43242233c372a2789c", "bytes": 6690},
+    "unapplied-parent.patch": {"sha256": "b73b091ff0a87fdd9945e3cb8d4770efb05e1b7ce573e7459918d60c94276e6d", "bytes": 5866}
+  },
+  "preserved_archive": {
+    "original-storage-source-archive/cuda_trace_parent.py": "077420acc0d643f345225c66b0e8430d7f30f49b45a80c136153be57916ea470",
+    "original-storage-source-archive/cuda_trace_worker.py": "ba0039d406676f092309c6bf2248ddcf169af8960f60ed18b698ece1ea602f93",
+    "original-storage-source-archive/source-lock.json": "d6ffdaae63d97bce24a18d1b11ed165b9e12484d17d65365415aab3c08beb13b",
+    "original-storage-source-archive/test_storage_watcher.py": "ca16a7f31dcb17d7fe24d8be7fb6658389b7676d2234e2f359f575513181f5d2",
+    "original-storage-source-archive/PREPARATION.txt": "fc35788a7ee00f93ef05f4390b5df8aefbbb18238fa4bd6c4cd2b8f4e68ab599",
+    "original-storage-source-archive/unapplied-parent.patch": "6cd361ed61abba34f7510c5a554cbf06adc5936568c967ea749cbd922c3e89b4",
+    "original-storage-source-archive/revision-manifest.json": "5572396f25c0ee64943f75c4bc65cc994c02be2ddb18f2b897ea95893803176d"
+  },
+  "correction": {
+    "only_skipped_io": "ENOENT or ESRCH from initial unclassified cmdline open/read",
+    "unchanged": ["exact allowed PID bypass", "all argv/module/benchmark predicate", "source lock", "worker", "numerical protocol", "GPU guards", "bounds", "deadlines", "storage watcher", "owned lifecycle"],
+    "fatal": ["classified identity failure", "directory enumeration failure", "decode failure", "permission error", "other I/O errno"],
+    "counter_scope": "Each helper instance is process local; parent-labelled receipt snapshots and PID-labelled change logs do not represent a combined parent/worker total"
+  },
+  "prepared_tests": {
+    "process_scan_methods": 18,
+    "unchanged_storage_methods": 25,
+    "author_execution": false,
+    "command": "env -u LD_PRELOAD -u PYTHONPATH CUDA_VISIBLE_DEVICES='' PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest Robotron.tools.kl_priority_mixture_proposal.cuda_trace_validation_proposal.process_scan_revision.test_process_scan Robotron.tools.kl_priority_mixture_proposal.cuda_trace_validation_proposal.process_scan_revision.test_storage_watcher",
+    "actual_result": null,
+    "separate_root_authorization_required": true
+  },
+  "source_reviews": [
+    {"reviewer": "root", "scope": "Full new parent diff and all18 process fixtures", "parent_sha256": "38fab41957a4b3ff53f878f477e18b741497e34b4836fcde444aa4c1be851abe", "test_sha256": "35b28282c15015bfa9eb5c8a6895cbebc6d70c8a757450e5688c8d2e1415c361", "outcome": "SOURCE_ONLY_PASS", "tests_executed_by_this_review": false},
+    {"reviewer": "learning_review", "scope": "Narrow initial read catch, unchanged predicate/allowlist, fatal classified identity, bounded process-local counters, all18 private fixture methods", "parent_sha256": "38fab41957a4b3ff53f878f477e18b741497e34b4836fcde444aa4c1be851abe", "test_sha256": "35b28282c15015bfa9eb5c8a6895cbebc6d70c8a757450e5688c8d2e1415c361", "outcome": "SOURCE_ONLY_PASS", "tests_executed_by_this_review": false}
+  ],
+  "historical_operational_evidence": {
+    "directory": "Robotron/logs/managed-learning-20261015/run-26/cuda-trace-parity-storage-reviewed2-independent-runtime-review-20261017",
+    "terminal-cleanup-review.json": "6c9daf13c166a08cad1bc44eea9f47cac9e499431061b553e6594f7e6e787eaf",
+    "unit-GC-scope-addendum.json": "d21fc590a54aa0d3720df2695db3c594a4b60fde2f6fbdd7e96ea0e562a861a8",
+    "scope": "Failed previous attempt, not a parity qualification; original failed service exit retained separately by root"
+  },
+  "handoff_policy": {
+    "all_bundle_files_mode": "0444",
+    "no_author_candidate_import_compile_default_test": true,
+    "no_author_live_query_model_read_service_signal_affinity_gpu": true,
+    "future_actual_test_results": "Retain separately without rewriting this source-only manifest",
+    "future_gpu": "Fresh root authorization, exclusive preflight and all BASE/OFF/ON variants from fresh inputs; no partial result reuse",
+    "manifest_self_hash": "Reported separately; this file intentionally does not hash itself"
+  }
+}

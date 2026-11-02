@@ -1,0 +1,85 @@
+{
+  "schema": "robotron-continuous-guard-same-lr25-reviewed2-source-preparation-note-v1",
+  "status": "SOURCE_PREPARED_UNSELECTED_UNEXECUTED",
+  "original_f255_source_blocked": true,
+  "original_15_guards_executed": false,
+  "original_packet_and_root_config039e_unchanged": true,
+  "core_capture_and_binder_unchanged": true,
+  "issues": [
+    {
+      "scope": "production auditor ABI",
+      "finding": "Companion c3a2 producer writes two additional leg-plan fields; original auditor stock-shaped equality refused every future valid leg.",
+      "correction": "Expected equality includes exact plan effective_implementation and canonical_source_hashes_are_base_provenance=True; no row, classifier, cleanup or scoring change."
+    },
+    {
+      "scope": "fixture dependency",
+      "finding": "Global mocked C.fingerprint polluted original C.pinned(invalid_peer), causing incidental positive failure.",
+      "correction": "Actual immutable invalid-peer JSON preloaded before patch scope and returned by deepcopy; existing positive and epoch-negative now exercise intended path."
+    }
+  ],
+  "selected_auditor": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/audit_completed_leg_reviewed2.py",
+    "sha256": "61b299b327fe6156571646aa809e38563f7bf71de980a48b36272c9f555551d2",
+    "bytes": 36228,
+    "identity": {
+      "device": 2304,
+      "inode": 82575542,
+      "bytes": 36228,
+      "mtime_ns": 1792352229713075471,
+      "ctime_ns": 1792352229713075471,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "selected_guards": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/test_continuous_guard_metadata_reviewed2.py",
+    "sha256": "3011c8585919c3bbfefa35807a1977f40c61df00f6900380f06d71a4605400d5",
+    "bytes": 42501,
+    "identity": {
+      "device": 2304,
+      "inode": 82575543,
+      "bytes": 42501,
+      "mtime_ns": 1792352229714719989,
+      "ctime_ns": 1792352229714719989,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "expected_tests": 16,
+  "guard_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal",
+    "-p",
+    "test_continuous_guard_metadata_reviewed2.py",
+    "-v"
+  ],
+  "README_count_and_original_test_command_are_historical_f255": true,
+  "source_preservation": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/source-preservation-reviewed2.json",
+    "sha256": "63d5215b8905937c39a8d5ca6f16ac1a856755a4156fb7fd2475964beaf038b5",
+    "bytes": 8984,
+    "identity": {
+      "device": 2304,
+      "inode": 82575544,
+      "bytes": 8984,
+      "mtime_ns": 1792352280734133142,
+      "ctime_ns": 1792352280734133142,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "limitations": [
+    "Authored only; neither original15 nor corrected16 executed by authors.",
+    "The16th future guard executes exact two extracted pinned pure metadata statements with strict fake write_json/job.plan/decode/require; no producer run, auditor body, project/model/socket/GPU import or host fallback.",
+    "No current/future campaign output was read; both corrections derive fixed source/closed JSON only."
+  ]
+}

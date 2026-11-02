@@ -1,0 +1,30 @@
+--- exec_declared_preview_entry_v1.py
++++ exec_declared_preview_entry_v2.py
+@@ -35,6 +35,13 @@
+     return module
+ 
+ 
++def stable_source_identity(value):
++    # Access time changes on a legitimate read; the exact same eight stable
++    # fields as the already-reviewed base reader remain authoritative.
++    return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns,
++            value.st_ctime_ns, stat.S_IMODE(value.st_mode), value.st_uid, value.st_nlink)
++
++
+ def small_frozen_path(path, expected_sha):
+     """Bootstrap only: immutable source, canonical regular owned full identity."""
+     path = Path(path)
+@@ -45,10 +52,10 @@
+             and 0 < before.st_size <= 2_000_000, 'Small immutable owned file required')
+     with path.open('rb') as stream:
+         opened = os.fstat(stream.fileno())
+-        require(opened == before, 'Frozen source changed before open')
++        require(stable_source_identity(opened) == stable_source_identity(before), 'Frozen source changed before open')
+         raw = stream.read(2_000_001)
+-        require(os.fstat(stream.fileno()) == before, 'Frozen source changed during read')
+-    require(path.lstat() == before and len(raw) == before.st_size
++        require(stable_source_identity(os.fstat(stream.fileno())) == stable_source_identity(before), 'Frozen source changed during read')
++    require(stable_source_identity(path.lstat()) == stable_source_identity(before) and len(raw) == before.st_size
+             and hashlib.sha256(raw).hexdigest() == expected_sha, 'Frozen source SHA/identity differs')
+     return raw, before
+ 

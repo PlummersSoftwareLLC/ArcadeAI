@@ -1,0 +1,22 @@
+--- preserved6a/run_one_trial.py
++++ reviewed2/run_one_trial.py
+@@ -23,8 +23,8 @@
+ SCHEMA = 'robotron-one-ce-batch2048-trial-job-v1'
+ EXECUTION_BLOCKERS = ()  # Actual proof validation below replaces the preserved unconditional refusal.
+ 
+-ADAPTER = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_proposal/run_CE_batch_transition.py')
+-ADAPTER_SHA = 'bbdbce10635cc9c729c6805e101f3d1c492f15ce24edb06eb95e53dc0c6d1739'
++ADAPTER = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_reviewed2_proposal/run_CE_batch_transition.py')
++ADAPTER_SHA = '479b4b4da50de7c78cb94a730a12a4603e3e6c2281fffac1533a5a4a22822202'
+ HORIZON = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/horizon_observer2048.py')
+ HORIZON_SHA = 'e8809615c3a837da3400f56d58ecdbfd59b13b83c574c65643731afe8b13a124'
+ EARLY_PATH = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_early_phase_insurance_proposal/early_phase_insurance.py')
+@@ -35,7 +35,7 @@
+ 
+ 
+ 
+-RELEASE_VALIDATOR = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_proposal/execution_readiness.py')
++RELEASE_VALIDATOR = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_reviewed2_proposal/execution_readiness.py')
+ RELEASE_VALIDATOR_SHA = 'c01e71f00345f64996b469ff7b7a257a2e73e7d8e016914bc8225d3647df321f'
+ 
+ def execution_readiness():

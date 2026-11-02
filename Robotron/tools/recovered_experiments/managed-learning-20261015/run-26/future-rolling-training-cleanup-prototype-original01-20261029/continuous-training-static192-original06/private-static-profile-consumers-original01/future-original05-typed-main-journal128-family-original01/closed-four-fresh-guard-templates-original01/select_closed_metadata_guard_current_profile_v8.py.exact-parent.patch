@@ -1,0 +1,31 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-current-profile-guard-original04/select_closed_metadata_guard_current_profile_v8.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/future-original05-typed-main-journal128-family-original01/closed-four-fresh-guard-templates-original01/select_closed_metadata_guard_current_profile_v8.py
+@@ -10,8 +10,8 @@
+ from pathlib import Path
+ 
+ LOCAL = Path(__file__).resolve().parent
+-GENERATOR_SHA = '916569eb0f02bd028138e67326254d1c86d9a6079cadd0f605c90265f95c1469'
+-PREPARER_SHA = 'f2b740d77bdbe7548fcb2cf3e0b2c6e731ea8d8a5aa3b8111f2800446fa08067'
++GENERATOR_SHA = '815d4c0eb975b952b72b7f22aa66343d75c740ed06eee252b6dd9948761b594b'
++PREPARER_SHA = '8fea4d625080a4bdbd84183754d91a1dc3426633163fed553a2bdbf52f1c8968'
+ CLOSER_SHA = '2afa743774550aa613703aab64f82ec0da6f539509978e82744c7b9a7d99110a'
+ 
+ 
+@@ -70,7 +70,7 @@
+     source = h.pin(LOCAL/'prepare_round_cpu_guard_current_profile_v8.py')
+     require(source['sha256'] == PREPARER_SHA, 'Actual prospective guard preparer differs')
+     preparer = load('_prefix_physical192_selected_closed_guard_preparer', h.checked(source))
+-    root = LOCAL.parent/'actual-closed-metadata-current-profile-guard-original04'
++    root = LOCAL.parent/'actual-four-fresh-guard-original01'
+     require(not root.exists(), 'One exclusive original guard preparation only')
+     packet = preparer.prepare(Path(a['native_prepared']['path']), root, authority_pin)
+     closer = h.pin(LOCAL/'close_round_study_cpu_closed_metadata_current_profile_v8.py')
+@@ -82,7 +82,7 @@
+         selected_guard_preparer=source, selected_guard_closer=closer,
+         native_guard_destinations_unchanged=True, default_guard_executed=False,
+         CPU_qualified=False, native_launch_qualified=False, source=h.pin(Path(__file__).resolve()))
+-    return h.put(LOCAL.parent/'selected-closed-metadata-current-profile-guard-original04.json', result)
++    return h.put(LOCAL.parent/'selected-four-fresh-guard-original01.json', result)
+ 
+ 
+ def selected(path, expected_sha):

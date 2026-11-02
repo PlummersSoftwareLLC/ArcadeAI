@@ -1,0 +1,57 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/metrics_display.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/main-response-phase-telemetry-original01-preparation-20261027/sources/metrics_display.py
+@@ -23,6 +23,12 @@
+ except ImportError:
+     from run_telemetry import pipeline_console_columns
+ 
++try:
++    from .response_telemetry import interval_summary, format_interval_row, report_fields
++except ImportError:
++    from response_telemetry import interval_summary, format_interval_row, report_fields
++
++_response_previous = None
+ _run_report = None
+ row_counter = 0
+ 
+@@ -269,6 +275,7 @@
+         f"{'IBat':>5} {'IHost L/S/R':>20} {'RefHost A/T':>15} {'BankLk':>7}"
+     )
+     _print_line(hdr, is_header=True)
++    _print_line('[RESPONSE]   Nsel  RespW  RespC  Cache   CLw    CLh    Jnl    Met   Prev    Enq    Inf    Out  RQnow RQmax* (ms; nested spans; *cumulative)', is_header=True)
+     try:
+         now = time.time()
+         with metrics.lock:
+@@ -488,7 +495,17 @@
+         f"{avg_inf_ms:>7.2f} {steps_per_sec:>8.1f} "
+         f"{replay_ratio} {metrics.last_grad_norm:>8.3f} {q_range:>14} {ovest_str:>7} {mem_k:>8}k {hof_bar_str:>13} {lr_str:>9} {metrics.replay_dropped_steps:>7,} {train_ms:>17}"
+     )
+-    global _run_report
++    global _run_report, _response_previous
++    response_snapshot = dict(schema='robotron-socket-response-pipeline-v1', available=False)
++    try:
++        server = getattr(metrics, 'global_server', None)
++        getter = getattr(server, 'response_timing_snapshot', None)
++        if callable(getter): response_snapshot = getter()
++    except Exception as exc:
++        response_snapshot['observer_error'] = str(exc)[:256]
++    response_summary = interval_summary(response_snapshot, _response_previous)
++    _response_previous = response_snapshot
++    response_fields = report_fields(response_snapshot, response_summary)
+     try:
+         if _run_report is None:
+             from .run_telemetry import create_report
+@@ -551,7 +568,8 @@
+             transfer_host_ms=float(metrics.last_train_transfer_ms),
+             compute_host_ms=float(metrics.last_train_compute_ms),
+             priority_and_readback_ms=float(metrics.last_train_priority_ms),
+-            gpu_compute_ms=float(getattr(metrics, 'last_train_gpu_compute_ms', 0))), agent=agent)
++            gpu_compute_ms=float(getattr(metrics, 'last_train_gpu_compute_ms', 0)),
++            **response_fields), agent=agent)
+         row += ' ' + extra + f" {getattr(metrics, 'last_train_gpu_compute_ms', 0):>7.1f}"
+         row += f" {game_summary.get('count', 0):>6} {game_summary.get('mean', 0):>9,.0f} {game_summary.get('se', 0):>8,.0f}"
+     except Exception as exc:
+@@ -559,3 +577,4 @@
+     row += f" {run_mode:>7} {getattr(metrics, 'learner_frame_count', 0):>11,}"
+     row += ' ' + pipeline_console_columns(getattr(_run_report, 'last_pipeline_fields', {}))
+     _print_line(row)
++    _print_line(format_interval_row(response_summary))

@@ -1,0 +1,17 @@
+--- connection_cleanup_receipts_candidate_v3.py
++++ connection_cleanup_receipts_continuous_candidate_v1.py
+@@ -149,6 +149,14 @@
+                     or row['recorded'] or not handler.is_alive()):
+                 raise ValueError('Stale or mismatched connection producer token')
+ 
++    def lookup_token(self, token):
++        if type(token) is not str or not 1 <= len(token) <= 128:
++            raise ValueError('Exact original connection token required')
++        with self.lock:
++            if token not in self.records:
++                raise ValueError('Unknown original connection token')
++        return self.snapshot(token)
++
+     def lookup_active(self, cid, slot):
+         if type(cid) is not int or type(slot) is not int:
+             raise ValueError('Exact active connection lookup required')

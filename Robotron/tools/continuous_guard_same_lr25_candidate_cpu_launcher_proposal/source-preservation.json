@@ -1,0 +1,159 @@
+{
+  "actual_capture": null,
+  "actual_case": null,
+  "actual_execution": null,
+  "actual_numerical_job": null,
+  "author_AST_compile_import_test_execution": false,
+  "base": {
+    "bytes": 25023,
+    "identity": {
+      "bytes": 25023,
+      "ctime_ns": 1792343664965659595,
+      "device": 2304,
+      "inode": 81536006,
+      "mode": "0o444",
+      "mtime_ns": 1792343664965659595,
+      "nlink": 1,
+      "uid": 1001
+    },
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/same_lr25_candidate_cpu_launcher_proposal/run_candidate_cpu.py",
+    "sha256": "24e81273f99fa540bdebd3a1d3eb7fab85f5e5e4af2c2fdaab8bfa74996b53f3"
+  },
+  "explicit_unchanged": [
+    "All imports and original149 PHASE/PHASE_SHA absolute source",
+    "recipe SHA9bc9; source differs only by its new containing package path",
+    "Outer CPU six-field structure and all healthy metadata/PASS gates",
+    "check_report_job_file flat10/FULL8 function entire bytes",
+    "check_CPU_semantics function entire bytes",
+    "All native numerical12argv/env7/CPU200/8G/Swap0/256/120/Stop5/owned identity/archives/release/failure implementation",
+    "No known originalFAIL exception or metadata-only admission route introduced"
+  ],
+  "normalized_literal_region_count": 11,
+  "normalized_replacements": [
+    {
+      "new": "\"\"\"Dormant root-only continuous-guard SAME-.25 candidate CPU launcher. Default PLAN reads nothing.",
+      "old": "\"\"\"Dormant root-only SAME-.25 prospective candidate CPU launcher. Default PLAN reads nothing."
+    },
+    {
+      "new": "PACK = ROOT/'Robotron/tools/continuous_guard_same_lr25_continuation_proposal'",
+      "old": "PACK = ROOT/'Robotron/tools/same_lr25_prospective_continuation_proposal'"
+    },
+    {
+      "new": "BINDER_SHA = '2934df1534c1ff82fdd30e0dec930146fdeb74c2589547abd76967df3fe40989'",
+      "old": "BINDER_SHA = 'fe7764fdbf7ebd26be459aa74012dcfcd1c4a490601b4dd69b2969363cd64d4c'"
+    },
+    {
+      "new": "SELECTOR = ROOT/'Robotron/tools/continuous_guard_same_lr25_continuation_proposal/capture_candidate.py'",
+      "old": "SELECTOR = ROOT/'Robotron/tools/same_lr25_prospective_continuation_proposal/capture_candidate.py'"
+    },
+    {
+      "new": "SELECTOR_SHA = 'ca6b29903f0330d2c7c989bf2e881b41f1af3fe3bf14ce4b010827b8d57e0eed'",
+      "old": "SELECTOR_SHA = '32fe0841936f25db8254afdc7c4a63dc1081504850313a0f0144a29b3d6eb909'"
+    },
+    {
+      "new": "RESULT_PATH = RUN/'continuous-guard-same-LR25-continuation-capture-trial01-20261018/result.json'",
+      "old": "RESULT_PATH = RUN/'same-LR25-continuation-capture-trial01-20261018/result.json'"
+    },
+    {
+      "new": "CAPTURE_RELEASE_PATH = RUN/'continuous-guard-same-LR25-continuation-capture-original01-root-execution-20261018/root-original-result-and-owned-release.json'",
+      "old": "CAPTURE_RELEASE_PATH = RUN/'same-LR25-continuation-capture-original01-root-execution-20261018/root-original-result-and-owned-release.json'"
+    },
+    {
+      "new": "UNIT = 'robotron-continuous-guard-same-LR25-candidate-CPU-original01-20261018.service'",
+      "old": "UNIT = 'robotron-same-LR25-continuation-candidate-CPU-original01-20261018.service'"
+    },
+    {
+      "new": "CASE_SCHEMA = 'robotron-root-continuous-guard-same-LR25-candidate-CPU-launch-case-v1'",
+      "old": "CASE_SCHEMA = 'robotron-root-same-LR25-candidate-CPU-launch-case-v1'"
+    },
+    {
+      "new": "assert result['schema'] == 'robotron-continuous-guard-same-lr25-continuation-result-v1'",
+      "old": "assert result['schema'] == 'robotron-live-ce-lr-continuation-result-v1'"
+    },
+    {
+      "new": "assert out.name == 'continuous-guard-same-LR25-candidate-CPU-original01-root-execution-20261018'",
+      "old": "assert out.name == 'same-LR25-continuation-candidate-CPU-original01-root-execution-20261018'"
+    }
+  ],
+  "originals_preserved": true,
+  "reverse_byte_exact": true,
+  "schema": "robotron-continuous-guard-same-LR25-CPU-launcher-source-preservation-v1",
+  "source": {
+    "bytes": 25113,
+    "identity": {
+      "bytes": 25113,
+      "ctime_ns": 1792351738345504700,
+      "device": 2304,
+      "inode": 82575529,
+      "mode": "0o444",
+      "mtime_ns": 1792351738344926170,
+      "nlink": 1,
+      "uid": 1001
+    },
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_candidate_cpu_launcher_proposal/run_candidate_cpu.py",
+    "sha256": "c8ac082766f60be072c070990777451470dd786600c5196c7e4c3b9fa85e1b70"
+  },
+  "status": "SOURCE_ONLY_UNSELECTED_UNEXECUTED",
+  "typed_family_core": [
+    {
+      "bytes": 37704,
+      "identity": {
+        "bytes": 37704,
+        "ctime_ns": 1792351626766086706,
+        "device": 2304,
+        "inode": 82575515,
+        "mode": "0o444",
+        "mtime_ns": 1792351626765245167,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/capture_candidate.py",
+      "sha256": "ca6b29903f0330d2c7c989bf2e881b41f1af3fe3bf14ce4b010827b8d57e0eed"
+    },
+    {
+      "bytes": 52654,
+      "identity": {
+        "bytes": 52654,
+        "ctime_ns": 1792351626768214234,
+        "device": 2304,
+        "inode": 82575520,
+        "mode": "0o444",
+        "mtime_ns": 1792351626767344727,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/quality_bindings.py",
+      "sha256": "2934df1534c1ff82fdd30e0dec930146fdeb74c2589547abd76967df3fe40989"
+    },
+    {
+      "bytes": 10318,
+      "identity": {
+        "bytes": 10318,
+        "ctime_ns": 1792351626764086699,
+        "device": 2304,
+        "inode": 82575514,
+        "mode": "0o444",
+        "mtime_ns": 1792351197116932938,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/recipe.py",
+      "sha256": "9bc9a24f5f36c5dbe4f6385c1f47a5698bcda0bd6178f7546b263ee136aa1c3a"
+    },
+    {
+      "bytes": 18564,
+      "identity": {
+        "bytes": 18564,
+        "ctime_ns": 1792351626764086699,
+        "device": 2304,
+        "inode": 82575511,
+        "mode": "0o444",
+        "mtime_ns": 1792351605140051301,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/effective_provenance.py",
+      "sha256": "f157895d90707fc725bda2381c9422c6e9ac22ab924597551d0d4d1f2d973556"
+    }
+  ]
+}

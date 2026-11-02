@@ -1,0 +1,77 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/prepare_fullgame_study_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original01-preparation/prepare_fullgame_study_v6.py
+@@ -13,9 +13,10 @@
+ import tempfile
+ import time
+ 
+-ROOT=Path(__file__).resolve().parents[2]
++ROOT=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ BASE=ROOT/'logs/managed-learning-20261015/run-26'
+-HERE=Path(__file__).resolve().parent
++HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
++LOCAL=Path(__file__).resolve().parent
+ ORDER=('R1','C1','R2','C2')
+ 
+ 
+@@ -99,17 +100,17 @@
+             and not state['optimization_goal'].get('performance_job_running'),'Another scientific/performance job is active')
+     output=output.resolve()
+     require(output.is_relative_to(BASE)and output.parent.is_dir()and not output.exists(),'Exclusive fresh run-26 study output required')
+-    contract=load('_fullgame_selected_contract',HERE/'fullgame_round_contract_v7.py')
+-    native=load('_fullgame_selected_native',HERE/'run_fullgame_rounds_v7.py')
+-    control=load('_fullgame_selected_controller',HERE/'control_fullgame_rounds_v6.py')
+-    reviewer=load('_fullgame_selected_reviewer',HERE/'review_fullgame_rounds_v7.py')
+-    derivation=contract.validate_derivation(HERE/'run_fullgame_rounds_v7.py',HERE/'review_fullgame_rounds_v7.py')
++    contract=load('_fullgame_selected_contract',LOCAL/'fullgame_round_contract_v7.py')
++    native=load('_fullgame_selected_native',LOCAL/'run_fullgame_rounds_v7.py')
++    control=load('_fullgame_selected_controller',LOCAL/'control_fullgame_rounds_v6.py')
++    reviewer=load('_fullgame_selected_reviewer',LOCAL/'review_fullgame_rounds_v7.py')
++    derivation=contract.validate_derivation(LOCAL/'run_fullgame_rounds_v7.py',LOCAL/'review_fullgame_rounds_v7.py')
+     template=read(h.pin(contract.TEMPLATE),h)
+     source_study=read(assessment['prepared_manifest'],h)
+     previous_job=read(source_study['cases'][0]['native_job'],h)
+     case=read(previous_job['main_binding'],h)
+-    health=load('_fullgame_prepare_live_health',HERE/'round_health_transport_v7.py')
+-    observer=load('_fullgame_prepare_live_raw',HERE/'fullgame_round_observer_v6.py')
++    health=load('_fullgame_prepare_live_health',Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/round_health_transport_launcher_v1.py'))
++    observer=load('_fullgame_prepare_live_raw',LOCAL/'fullgame_round_observer_v6.py')
+     deadline=time.monotonic()+15
+     while True:
+         try:
+@@ -140,15 +141,15 @@
+         no_scientific_retry=True,each_mean_ratio_min=[105,100],each_median_preserved=True,engineering_only=False,
+         screen_assessment=assessment_pin,protected_reference_epoch=epoch_pin,reference_score_pool=None,
+         fresh_reference_R1_R2_required=True,previous_candidate_scores_not_reused_as_reference=True,**policies))
+-    runtime=h.pin(HERE/'run_fullgame_rounds_v7.py');reviewer_pin=h.pin(HERE/'review_fullgame_rounds_v7.py');controller=h.pin(HERE/'control_fullgame_rounds_v6.py')
+-    observer_sources=dict(client=h.pin(HERE/'fullgame_round_observer_client_v8.py'),worker=h.pin(HERE/'fullgame_round_observer_v6.py'),
+-        health=h.pin(HERE/'round_health_transport_v7.py'),health_base=h.pin(HERE/'round_main_health_v7.py'),API_projection=h.pin(HERE/'api_reconnect_projection_v1.py'),round_admission=h.pin(HERE/'round_admission_proof_v2.py'),durability=h.pin(HERE/'buffered_raw_writer_v2.py'),control=h.pin(HERE/'volatile_live_control_v1.py'),interpreter=h.pin(Path('/usr/bin/python3').resolve()))
+-    protocol=h.put(output/'main-health-protocol.json',dict(schema='robotron-native-fullgame-round-main-health-protocol-v6',
+-        case=binding,raw_API_required=True,close_requires_final_sample=True,hot_max_gap_s=.5,initial_samples=100,raw_queue_protocol='pending-byte-digest-v2',volatile_live_tmpfs=True,source_bound_API_reconnect_projection=True,source_bound_natural_round_admission=True))
++    runtime=h.pin(LOCAL/'run_fullgame_rounds_v7.py');reviewer_pin=h.pin(LOCAL/'review_fullgame_rounds_v7.py');controller=h.pin(LOCAL/'control_fullgame_rounds_v6.py')
++    observer_sources=dict(client=h.pin(LOCAL/'fullgame_round_observer_client_v8.py'),worker=h.pin(LOCAL/'fullgame_round_observer_v6.py'),
++        health=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/round_health_transport_launcher_v1.py')),health_base=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/round_main_health_launcher_v1.py')),API_projection=h.pin(HERE/'api_reconnect_projection_v1.py'),round_admission=h.pin(HERE/'round_admission_proof_v2.py'),launcher_census=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/launcher_census_v1.py')),durability=h.pin(HERE/'buffered_raw_writer_v2.py'),control=h.pin(HERE/'volatile_live_control_v1.py'),interpreter=h.pin(Path('/usr/bin/python3').resolve()))
++    protocol=h.put(output/'main-health-protocol.json',dict(schema='robotron-native-fullgame-round-main-health-declared-launcher-protocol-v1',
++        case=binding,raw_API_required=True,close_requires_final_sample=True,hot_max_gap_s=.5,initial_samples=100,raw_queue_protocol='pending-byte-digest-v2',volatile_live_tmpfs=True,source_bound_API_reconnect_projection=True,source_bound_natural_round_admission=True,source_bound_declared_launcher_census=True))
+     finalizer=next(pin for pin in previous_job['inputs']if pin['sha256']=='64c4001e3a46dd1f620bfa28b088f500bf8e9d3788a463d324cc408d7a42e6ee')
+-    family=h.put(output/'source-family.json',dict(schema='robotron-recovered-round-fullgame-family-v6',runtime=runtime,
+-        leg_reviewer=reviewer_pin,contract=h.pin(HERE/'fullgame_round_contract_v7.py'),main_observer=observer_sources,
+-        main_observer_reviewer=h.pin(HERE/'review_fullgame_round_observer_v7.py'),main_health_finalizer=finalizer,
++    family=h.put(output/'source-family.json',dict(schema='robotron-recovered-round-fullgame-declared-launcher-family-v1',runtime=runtime,
++        leg_reviewer=reviewer_pin,contract=h.pin(LOCAL/'fullgame_round_contract_v7.py'),main_observer=observer_sources,
++        main_observer_reviewer=h.pin(LOCAL/'review_fullgame_round_observer_v7.py'),main_health_finalizer=finalizer,
+         private_parent_job=h.pin(contract.TEMPLATE),current_main_binding=binding,lease_recovery_authority=lease_pin,
+         engineering_only=False,native_launch_qualified=True,main_domain_hot_review=hot_pin))
+     records=[];fresh=set()
+@@ -167,9 +168,9 @@
+                 token=secrets.token_hex(16)
+                 while token=='0'*32 or token in seen or token in fresh:token=secrets.token_hex(16)
+                 fresh.add(token);job[key][str(slot)]=token
+-        values=[*nested_pins(job),h.pin(Path(__file__).resolve()),h.pin(HERE/'round_health_transport_v4.py'),h.pin(HERE/'fullgame_round_adaptation_delta_v7.json'),
+-                h.pin(HERE/'fullgame_round_contract_v7.py'),reviewer_pin,controller,*observer_sources.values(),finalizer,
+-                h.pin(HERE/'review_fullgame_round_observer_v7.py'),baseline_pin,lease_pin,hot_pin,assessment_pin,epoch_pin,*prior]
++        values=[*nested_pins(job),h.pin(Path(__file__).resolve()),h.pin(HERE/'round_health_transport_v4.py'),h.pin(LOCAL/'fullgame_round_adaptation_delta_v7.json'),
++                h.pin(LOCAL/'fullgame_round_contract_v7.py'),reviewer_pin,controller,*observer_sources.values(),finalizer,
++                h.pin(LOCAL/'review_fullgame_round_observer_v7.py'),baseline_pin,lease_pin,hot_pin,assessment_pin,epoch_pin,*prior]
+         job['inputs']=list({pin['path']:pin for pin in values}.values());jp=h.put(directory/'job.json',job)
+         context=native.validate_completed_context(job,h)
+         try:contract.validate_launch(job,jp,context,h)

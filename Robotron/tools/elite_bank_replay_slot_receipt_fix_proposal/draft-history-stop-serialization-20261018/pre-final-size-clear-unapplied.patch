@@ -1,0 +1,959 @@
+--- a/Robotron/Scripts/dqn/replay_buffer.py
++++ b/Robotron/Scripts/dqn/replay_buffer.py
+@@ -217,6 +217,7 @@
+         self.interesting = np.zeros(self.capacity, dtype=np.float32)
+ 
+         self.tree = SumTree(self.capacity)
++        self._invalidate_ring_receipts_locked()
+         self.size = 0
+         self._n_expert = 0          # O(1) expert tracking
+         self._n_actor = np.zeros(ACTOR_KIND_COUNT, dtype=np.int64)
+@@ -415,70 +416,125 @@
+             if self._is_memmap_array(arr):
+                 arr.flush()
+ 
++    def _invalidate_ring_receipts_locked(self):
++        """New process-local occupancy identity; caller owns lock/publication."""
++        self._ring_receipt_epoch = object()
++        self._ring_receipt_serial = 0
++        self._ring_receipt_origin = int(self.tree.data_ptr)
++
++    def _indices_from_receipts_locked(self, serials, receipt_context):
++        """Resolve ALL serials atomically or refuse; never infer a lost token.
++
++        Context is (opaque epoch, complete flag). These are process-local
++        ingestion receipts, unrelated to exposure or persisted bank epochs.
++        Caller holds the SAME lock through subsequent row copy/mutation.
++        """
++        if (type(receipt_context) is not tuple or len(receipt_context) != 2
++                or receipt_context[0] is not self._ring_receipt_epoch
++                or receipt_context[1] is not True):
++            return None
++        current = self._ring_receipt_serial
++        if self.tree.data_ptr != (self._ring_receipt_origin + current) % self.capacity:
++            return None
++        serials = list(serials)
++        if any(type(s) is not int or s <= 0 or not 0 <= current - s < self.capacity for s in serials):
++            return None
++        indices = np.asarray([(self._ring_receipt_origin + s - 1) % self.capacity for s in serials], dtype=np.int64)
++        if np.any(indices >= self.size):
++            return None
++        return indices
++
+     def add(self, state, action: int, reward: float, next_state, done: bool,
+             horizon: int = 1, expert: int = 0, priority_hint: float = 0.0,
+             interest: float = 0.0, actor_kind: int | None = None, source_actor: str | None = None):
++        return self._add_record(state, action, reward, next_state, done, horizon, expert,
++                                priority_hint, interest, actor_kind, source_actor, _receipt=False)
++
++    def add_with_receipt(self, state, action: int, reward: float, next_state, done: bool,
++            horizon: int = 1, expert: int = 0, priority_hint: float = 0.0,
++            interest: float = 0.0, actor_kind: int | None = None, source_actor: str | None = None):
++        return self._add_record(state, action, reward, next_state, done, horizon, expert,
++                                priority_hint, interest, actor_kind, source_actor, _receipt=True)
++
++    def _add_record(self, state, action: int, reward: float, next_state, done: bool,
++            horizon: int = 1, expert: int = 0, priority_hint: float = 0.0,
++            interest: float = 0.0, actor_kind: int | None = None, source_actor: str | None = None, *, _receipt=False):
+         with self.lock:
+-            self._adds_total += 1   # bank starvation/staleness clock
+-            kind = int(actor_kind) if actor_kind is not None else self.actor_kind_from_name(None, expert)
+-            kind = max(0, min(ACTOR_KIND_COUNT - 1, kind))
+-            priority = self.tree.max_priority
+-            cap_mult = float(getattr(RL_CONFIG, "per_new_priority_cap_multiplier", 0.0))
+-            mean_pri = 0.0
+-            if cap_mult > 0.0 and self.size > 0:
+-                mean_pri = self.tree.total() / max(1, self.size)
+-                if mean_pri > 0.0:
++            if self.tree.data_ptr != (self._ring_receipt_origin + self._ring_receipt_serial) % self.capacity:
++                self._invalidate_ring_receipts_locked()
++            try:
++                self._adds_total += 1   # bank starvation/staleness clock
++                kind = int(actor_kind) if actor_kind is not None else self.actor_kind_from_name(None, expert)
++                kind = max(0, min(ACTOR_KIND_COUNT - 1, kind))
++                priority = self.tree.max_priority
++                cap_mult = float(getattr(RL_CONFIG, "per_new_priority_cap_multiplier", 0.0))
++                mean_pri = 0.0
++                if cap_mult > 0.0 and self.size > 0:
++                    mean_pri = self.tree.total() / max(1, self.size)
++                    if mean_pri > 0.0:
++                        priority = min(priority, mean_pri * cap_mult)
++                if priority_hint != 0.0:
++                    hint_pri = abs(priority_hint) ** self.alpha
++                    if hint_pri > priority:
++                        priority = hint_pri
++                if cap_mult > 0.0 and mean_pri > 0.0:
+                     priority = min(priority, mean_pri * cap_mult)
+-            if priority_hint != 0.0:
+-                hint_pri = abs(priority_hint) ** self.alpha
+-                if hint_pri > priority:
+-                    priority = hint_pri
+-            if cap_mult > 0.0 and mean_pri > 0.0:
+-                priority = min(priority, mean_pri * cap_mult)
+-            priority = max(1e-6, float(priority))
+-            # If buffer is full, undo the expert flag of the slot being recycled
+-            if self.tree.size >= self.capacity:
+-                self._n_expert -= int(self.is_expert[self.tree.data_ptr])
+-                old_kind = int(self.actor_kind[self.tree.data_ptr])
+-                if 0 <= old_kind < ACTOR_KIND_COUNT:
+-                    self._n_actor[old_kind] -= 1
+-                self._n_interesting -= int(self.interesting[self.tree.data_ptr] > 0.0)
+-            idx = self.tree.add(priority)
+-            self.states[idx]      = np.asarray(state, dtype=np.float32)
+-            self.next_states[idx] = np.asarray(next_state, dtype=np.float32)
+-            self.actions[idx]     = int(action)
+-            self.rewards[idx]     = float(reward)
+-            self.dones[idx]       = 1.0 if done else 0.0
+-            self.horizons[idx]    = max(1, int(horizon))
+-            self.is_expert[idx]   = int(expert)
+-            self.actor_kind[idx]  = np.uint8(kind)
+-            min_interest = float(getattr(RL_CONFIG, "interesting_replay_min_score", 0.35))
+-            interest_val = max(0.0, min(1.0, float(interest)))
+-            if interest_val < min_interest:
+-                interest_val = 0.0
+-            elif self.size > 0:
+-                max_frac = max(0.0, min(1.0, float(getattr(RL_CONFIG, "max_interesting_replay_fraction", 1.0))))
+-                max_keep = max(1, int(max_frac * max(1, self.size))) if max_frac > 0.0 else 0
+-                # Hard cap: once the interesting pool is full, admit nothing new.
+-                # A once-rare "over-cap" escape hatch (admit any score >= 0.95)
+-                # let a mastered agent's constant deep-wave score bursts flood the
+-                # pool past 60%, destroying the rare-event upsampling the quota is
+-                # for.  New rare events still get in continuously as flagged slots
+-                # recycle out and the count drops back below the cap.
+-                if max_keep <= 0 or self._n_interesting >= max_keep:
++                priority = max(1e-6, float(priority))
++                # If buffer is full, undo the expert flag of the slot being recycled
++                if self.tree.size >= self.capacity:
++                    self._n_expert -= int(self.is_expert[self.tree.data_ptr])
++                    old_kind = int(self.actor_kind[self.tree.data_ptr])
++                    if 0 <= old_kind < ACTOR_KIND_COUNT:
++                        self._n_actor[old_kind] -= 1
++                    self._n_interesting -= int(self.interesting[self.tree.data_ptr] > 0.0)
++                idx = self.tree.add(priority)
++                self.states[idx]      = np.asarray(state, dtype=np.float32)
++                self.next_states[idx] = np.asarray(next_state, dtype=np.float32)
++                self.actions[idx]     = int(action)
++                self.rewards[idx]     = float(reward)
++                self.dones[idx]       = 1.0 if done else 0.0
++                self.horizons[idx]    = max(1, int(horizon))
++                self.is_expert[idx]   = int(expert)
++                self.actor_kind[idx]  = np.uint8(kind)
++                min_interest = float(getattr(RL_CONFIG, "interesting_replay_min_score", 0.35))
++                interest_val = max(0.0, min(1.0, float(interest)))
++                if interest_val < min_interest:
+                     interest_val = 0.0
+-            self.interesting[idx] = interest_val
+-            self._n_expert += int(expert)
+-            self._n_actor[kind] += 1
+-            if interest_val > 0.0:
+-                self._n_interesting += 1
+-                self._interesting_bank[self._interesting_bank_ptr] = idx
+-                self._interesting_bank_ptr = (self._interesting_bank_ptr + 1) % len(self._interesting_bank)
+-                self._interesting_bank_count = min(self._interesting_bank_count + 1, len(self._interesting_bank))
+-            self.size = self.tree.size
+-            exposure = getattr(self, "_insert_exposure", None)
+-            if exposure is not None:
+-                exposure.accepted(source_actor, expert, kind)
++                elif self.size > 0:
++                    max_frac = max(0.0, min(1.0, float(getattr(RL_CONFIG, "max_interesting_replay_fraction", 1.0))))
++                    max_keep = max(1, int(max_frac * max(1, self.size))) if max_frac > 0.0 else 0
++                    # Hard cap: once the interesting pool is full, admit nothing new.
++                    # A once-rare "over-cap" escape hatch (admit any score >= 0.95)
++                    # let a mastered agent's constant deep-wave score bursts flood the
++                    # pool past 60%, destroying the rare-event upsampling the quota is
++                    # for.  New rare events still get in continuously as flagged slots
++                    # recycle out and the count drops back below the cap.
++                    if max_keep <= 0 or self._n_interesting >= max_keep:
++                        interest_val = 0.0
++                self.interesting[idx] = interest_val
++                self._n_expert += int(expert)
++                self._n_actor[kind] += 1
++                if interest_val > 0.0:
++                    self._n_interesting += 1
++                    self._interesting_bank[self._interesting_bank_ptr] = idx
++                    self._interesting_bank_ptr = (self._interesting_bank_ptr + 1) % len(self._interesting_bank)
++                    self._interesting_bank_count = min(self._interesting_bank_count + 1, len(self._interesting_bank))
++                self.size = self.tree.size
++                exposure = getattr(self, "_insert_exposure", None)
++                if exposure is not None:
++                    exposure.accepted(source_actor, expert, kind)
++                self._ring_receipt_serial += 1
++                serial = self._ring_receipt_serial
++                if (idx != (self._ring_receipt_origin + serial - 1) % self.capacity
++                        or self.tree.data_ptr != (self._ring_receipt_origin + serial) % self.capacity):
++                    raise RuntimeError("Ring pointer/write-serial invariant failed")
++                if _receipt:
++                    return (idx, self._ring_receipt_epoch, serial)
++            except BaseException:
++                # Conversion/partial write/exposure failure: no token escapes;
++                # re-anchor actual pointer before unlock, preserving the error.
++                self._invalidate_ring_receipts_locked()
++                raise
+ 
+     def clear(self):
+         """Wipe all transitions in place (collapse-watchdog recovery).
+@@ -495,20 +551,24 @@
+         permanence is its entire reason to exist.
+         """
+         with self.lock:
+-            exposure = getattr(self, "_insert_exposure", None)
+-            if exposure is not None:
+-                exposure.new_epoch("clear_begin")
+-            self.tree.tree[:] = 0.0
+-            self.tree.data_ptr = 0
+-            self.tree.size = 0
+-            self.tree.max_priority = 1.0
+-            self.size = 0
+-            self._n_expert = 0
+-            self._n_actor[:] = 0
+-            self._n_interesting = 0
+-            self._interesting_bank[:] = -1
+-            self._interesting_bank_ptr = 0
+-            self._interesting_bank_count = 0
++            self._invalidate_ring_receipts_locked()
++            try:
++                exposure = getattr(self, "_insert_exposure", None)
++                if exposure is not None:
++                    exposure.new_epoch("clear_begin")
++                self.tree.tree[:] = 0.0
++                self.tree.data_ptr = 0
++                self.tree.size = 0
++                self.tree.max_priority = 1.0
++                self.size = 0
++                self._n_expert = 0
++                self._n_actor[:] = 0
++                self._n_interesting = 0
++                self._interesting_bank[:] = -1
++                self._interesting_bank_ptr = 0
++                self._interesting_bank_count = 0
++            finally:
++                self._invalidate_ring_receipts_locked()
+ 
+     def _sample_interesting_indices(self, count: int) -> np.ndarray:
+         if count <= 0 or self._n_interesting <= 0 or self._interesting_bank_count <= 0:
+@@ -563,7 +623,7 @@
+ 
+     def _bank_admit(self, bank: str, indices, score: float, floor: float,
+                     per_game_cap: int, stride: int, max_eps: int,
+-                    game_uid: int, level: int) -> bool:
++                    game_uid: int, level: int, *, receipt_context=None) -> bool:
+         """Shared admission engine for the 'hof' and 'ephof' banks.
+ 
+         Admission is ABSOLUTE (static floor + replace-the-minimum once
+@@ -587,6 +647,10 @@
+             offers.append(float(score))
+             if score < floor:
+                 return False
++            if receipt_context is not None:
++                indices = self._indices_from_receipts_locked(indices, receipt_context)
++                if indices is None:
++                    return False  # Whole episode refused; offers/stats still advance.
+             idxs = np.asarray(list(indices), dtype=np.int64)
+             idxs = idxs[(idxs >= 0) & (idxs < self.size)]
+             if idxs.size < 32:
+@@ -668,7 +732,7 @@
+                 m = max(m, int(self.ephof_ep_game[:self.ephof_ep_count].max()))
+             return max(0, m)
+ 
+-    def hof_admit(self, indices, game_score: int, game_uid: int = -1, level: int = 0) -> bool:
++    def hof_admit(self, indices, game_score: int, game_uid: int = -1, level: int = 0, *, receipt_context=None) -> bool:
+         """Admit an episode to the hall of fame, keyed on CUMULATIVE game
+         score at episode end.  See _bank_admit for the admission contract."""
+         if not self._hof_enabled:
+@@ -677,7 +741,7 @@
+             "hof", indices, float(game_score),
+             float(getattr(RL_CONFIG, "hof_min_game_score", 50_000)),
+             max(1, int(getattr(RL_CONFIG, "hof_max_per_game", 2))),
+-            self._hof_stride, self._hof_max_eps, int(game_uid), int(level))
++            self._hof_stride, self._hof_max_eps, int(game_uid), int(level), receipt_context=receipt_context)
+ 
+     def hof_admission_bar(self):
+         """Current hall-of-fame admission bar (dashboard HOF column).
+@@ -760,7 +824,7 @@
+                  for ep in range(self.hof_ep_count) if self.hof_ep_len[ep] > 0]
+         self._hof_flat = np.concatenate(parts) if parts else np.empty(0, dtype=np.int64)
+ 
+-    def ephof_admit(self, indices, episode_score: int, game_uid: int = -1, level: int = 0) -> bool:
++    def ephof_admit(self, indices, episode_score: int, game_uid: int = -1, level: int = 0, *, receipt_context=None) -> bool:
+         """Admit a life to the per-life hall of fame, keyed on the score
+         earned WITHIN that single life.  See _bank_admit for the contract."""
+         if not self._ephof_enabled:
+@@ -769,7 +833,7 @@
+             "ephof", indices, float(episode_score),
+             float(getattr(RL_CONFIG, "ephof_min_episode_score", 25_000)),
+             max(1, int(getattr(RL_CONFIG, "ephof_max_per_game", 3))),
+-            self._ephof_stride, self._ephof_max_eps, int(game_uid), int(level))
++            self._ephof_stride, self._ephof_max_eps, int(game_uid), int(level), receipt_context=receipt_context)
+ 
+     def _bank_quota_scale_for(self, bank: str) -> float:
+         """Staleness scale for a bank's replay quota.  A bank still FILLING
+@@ -1113,7 +1177,7 @@
+                     replay_update_host_ms=(time.perf_counter() - started) * 1000.0,
+                 )
+ 
+-    def boost_priorities(self, indices, factor: float):
++    def boost_priorities(self, indices, factor: float, *, receipt_context=None):
+         """Multiply existing priorities of the given indices by *factor*.
+ 
+         Used for pre-death lookback: frames leading up to a death get their
+@@ -1122,6 +1186,10 @@
+         if factor <= 1.0 or len(indices) == 0:
+             return
+         with self.lock:
++            if receipt_context is not None:
++                indices = self._indices_from_receipts_locked(indices, receipt_context)
++                if indices is None:
++                    return
+             idxs = np.asarray(indices, dtype=np.int64)
+             idxs = idxs[(idxs >= 0) & (idxs < self.size)]
+             if idxs.size <= 0:
+@@ -1131,7 +1199,7 @@
+             boosted = self.tree.tree[tree_idx] * float(factor)
+             self.tree.batch_update(idxs, boosted)
+ 
+-    def apply_pre_death_penalty(self, indices):
++    def apply_pre_death_penalty(self, indices, *, receipt_context=None):
+         """Add danger-weighted negative reward to recent learner frames before death.
+ 
+         Priority makes fatal lead-up frames more visible, but reward is what tells
+@@ -1149,6 +1217,10 @@
+             return 0
+ 
+         with self.lock:
++            if receipt_context is not None:
++                indices = self._indices_from_receipts_locked(indices, receipt_context)
++                if indices is None:
++                    return 0
+             idxs = np.asarray(list(indices)[-lookback:], dtype=np.int64)
+             idxs = idxs[(idxs >= 0) & (idxs < self.size)]
+             if idxs.size <= 0:
+@@ -1209,13 +1281,17 @@
+         self._interesting_bank_ptr = end % bank_len
+         self._interesting_bank_count = min(self._interesting_bank_count + int(idxs.size), bank_len)
+ 
+-    def mark_interesting(self, indices, interest: float):
++    def mark_interesting(self, indices, interest: float, *, receipt_context=None):
+         """Mark existing replay entries as interesting for quota sampling."""
+         interest_val = max(0.0, min(1.0, float(interest)))
+         min_interest = float(getattr(RL_CONFIG, "interesting_replay_min_score", 0.35))
+         if interest_val < min_interest or len(indices) == 0:
+             return
+         with self.lock:
++            if receipt_context is not None:
++                indices = self._indices_from_receipts_locked(indices, receipt_context)
++                if indices is None:
++                    return
+             idxs = np.asarray(indices, dtype=np.int64)
+             idxs = idxs[(idxs >= 0) & (idxs < self.size)]
+             if idxs.size <= 0:
+@@ -1843,34 +1919,39 @@
+                 _sh.rmtree(tmp_dir, ignore_errors=True)
+                 print(f"  Removed stale replay tmp dir: {tmp_dir}")
+             with self.lock:
+-                for name, (attr, dtype, shape) in self._storage_specs().items():
+-                    path = os.path.join(abs_path, f"{name}.npy")
+-                    arr = None
+-                    if os.path.isfile(path):
+-                        candidate = np.load(path, mmap_mode="r+")
+-                        if candidate.dtype == dtype and candidate.shape == shape:
+-                            arr = candidate
+-                    if arr is None:
+-                        arr = np.lib.format.open_memmap(path, mode="w+", dtype=dtype, shape=shape)
+-                        created_paths.append(path)
+-                        # Reserve the FULL file now (tmpfs honors fallocate).
+-                        # Sparse files defer allocation to page-fault time, so
+-                        # an over-committed tmpfs kills the trainer with a
+-                        # silent SIGBUS hours in — at the worst possible
+-                        # moment, when the ring finally fills.  Reserving at
+-                        # boot converts that into an immediate, loud error.
+-                        with open(path, "r+b") as fh:
+-                            nbytes = int(np.prod(shape)) * dtype.itemsize + 4096
+-                            os.posix_fallocate(fh.fileno(), 0, nbytes)
+-                    setattr(self, attr, arr)
+-                pri_path = os.path.join(abs_path, "priorities.npy")
+-                if not os.path.isfile(pri_path):
+-                    pri = np.lib.format.open_memmap(pri_path, mode="w+", dtype=np.float64, shape=(self.capacity,))
+-                    del pri
+-                tmp_meta = meta_path + ".tmp.npy"
+-                np.save(tmp_meta, np.array([0, 0, 1.0]))
+-                os.replace(tmp_meta, meta_path)
+-                self._mmap_dir = abs_path
++                self._invalidate_ring_receipts_locked()
++                try:
++                    for name, (attr, dtype, shape) in self._storage_specs().items():
++                        path = os.path.join(abs_path, f"{name}.npy")
++                        arr = None
++                        if os.path.isfile(path):
++                            candidate = np.load(path, mmap_mode="r+")
++                            if candidate.dtype == dtype and candidate.shape == shape:
++                                arr = candidate
++                        if arr is None:
++                            arr = np.lib.format.open_memmap(path, mode="w+", dtype=dtype, shape=shape)
++                            created_paths.append(path)
++                            # Reserve the FULL file now (tmpfs honors fallocate).
++                            # Sparse files defer allocation to page-fault time, so
++                            # an over-committed tmpfs kills the trainer with a
++                            # silent SIGBUS hours in — at the worst possible
++                            # moment, when the ring finally fills.  Reserving at
++                            # boot converts that into an immediate, loud error.
++                            with open(path, "r+b") as fh:
++                                nbytes = int(np.prod(shape)) * dtype.itemsize + 4096
++                                os.posix_fallocate(fh.fileno(), 0, nbytes)
++                        setattr(self, attr, arr)
++                    pri_path = os.path.join(abs_path, "priorities.npy")
++                    if not os.path.isfile(pri_path):
++                        pri = np.lib.format.open_memmap(pri_path, mode="w+", dtype=np.float64, shape=(self.capacity,))
++                        del pri
++                    tmp_meta = meta_path + ".tmp.npy"
++                    np.save(tmp_meta, np.array([0, 0, 1.0]))
++                    os.replace(tmp_meta, meta_path)
++                    self._mmap_dir = abs_path
++                finally:
++                    self._invalidate_ring_receipts_locked()
++
+             if verbose:
+                 print(f"  Replay buffer live-mmap backing at {abs_path} (saves are flushes)")
+             return True
+@@ -1902,25 +1983,30 @@
+         try:
+             os.makedirs(abs_path, exist_ok=True)
+             with self.lock:
+-                n = int(self.size)
+-                for name, (attr, dtype, shape) in self._storage_specs().items():
+-                    path = os.path.join(abs_path, f"{name}.npy")
+-                    mm = np.lib.format.open_memmap(path, mode="w+", dtype=dtype, shape=shape)
+-                    cur = getattr(self, attr)
++                self._invalidate_ring_receipts_locked()
++                try:
++                    n = int(self.size)
++                    for name, (attr, dtype, shape) in self._storage_specs().items():
++                        path = os.path.join(abs_path, f"{name}.npy")
++                        mm = np.lib.format.open_memmap(path, mode="w+", dtype=dtype, shape=shape)
++                        cur = getattr(self, attr)
++                        if n > 0:
++                            mm[:n] = cur[:n]
++                        setattr(self, attr, mm)   # old RAM array drops -> frees RAM
++                    pri = np.lib.format.open_memmap(
++                        os.path.join(abs_path, "priorities.npy"),
++                        mode="w+", dtype=np.float64, shape=(self.capacity,))
+                     if n > 0:
+-                        mm[:n] = cur[:n]
+-                    setattr(self, attr, mm)   # old RAM array drops -> frees RAM
+-                pri = np.lib.format.open_memmap(
+-                    os.path.join(abs_path, "priorities.npy"),
+-                    mode="w+", dtype=np.float64, shape=(self.capacity,))
+-                if n > 0:
+-                    pri[:n] = self.tree.tree[self.tree.capacity:self.tree.capacity + n]
+-                del pri
+-                meta = np.array([self.tree.data_ptr, n, self.tree.max_priority])
+-                tmp_meta = os.path.join(abs_path, "_meta.npy.tmp.npy")
+-                np.save(tmp_meta, meta)
+-                os.replace(tmp_meta, os.path.join(abs_path, "_meta.npy"))
+-                self._mmap_dir = abs_path
++                        pri[:n] = self.tree.tree[self.tree.capacity:self.tree.capacity + n]
++                    del pri
++                    meta = np.array([self.tree.data_ptr, n, self.tree.max_priority])
++                    tmp_meta = os.path.join(abs_path, "_meta.npy.tmp.npy")
++                    np.save(tmp_meta, meta)
++                    os.replace(tmp_meta, os.path.join(abs_path, "_meta.npy"))
++                    self._mmap_dir = abs_path
++                finally:
++                    self._invalidate_ring_receipts_locked()
++
+             if verbose:
+                 print(f"  Replay buffer promoted to live-mmap ({abs_path}) — future saves are flushes")
+             return True
+@@ -1960,37 +2046,41 @@
+             self._progress_bar("  Replay load", 0.40)
+ 
+         with self.lock:
+-            exposure = getattr(self, "_insert_exposure", None)
+-            if exposure is not None:
+-                exposure.new_epoch("directory_adopt_begin")
+-            for name, (attr, _, _) in specs.items():
+-                setattr(self, attr, mapped[name])
+-
+-            self.tree = SumTree(self.capacity)
+-            self.tree.size = n
+-            self.tree.data_ptr = data_ptr if 0 <= int(data_ptr) < self.capacity else n % self.capacity
+-            self.tree.max_priority = max_priority
+-            self.tree.tree[self.tree.capacity:self.tree.capacity + n] = np.asarray(priorities[:n], dtype=np.float64)
+-            if n < self.capacity:
+-                self.tree.tree[self.tree.capacity + n:] = 0.0
+-
+-            total_nodes = max(1, self.tree.capacity - 1)
+-            update_every = max(1, total_nodes // 64)
+-            for i in range(self.tree.capacity - 1, 0, -1):
+-                self.tree.tree[i] = self.tree.tree[2 * i] + self.tree.tree[2 * i + 1]
+-                if verbose and ((self.tree.capacity - i) % update_every == 0):
+-                    rebuilt = self.tree.capacity - i
+-                    frac = 0.40 + (0.50 * (rebuilt / total_nodes))
+-                    self._progress_bar("  Replay load", frac)
+-
+-            self.size = n
+-            self._n_expert = int(self.is_expert[:n].sum())
+-            self._n_actor[:] = 0
+-            counts = np.bincount(self.actor_kind[:n].astype(np.int64), minlength=ACTOR_KIND_COUNT)
+-            self._n_actor[:ACTOR_KIND_COUNT] = counts[:ACTOR_KIND_COUNT]
+-            self._sanitize_interesting_after_load_locked(n, verbose)
+-            self._rebuild_interesting_bank_locked(n)
+-            self._mmap_dir = os.path.abspath(dirpath)
++            self._invalidate_ring_receipts_locked()
++            try:
++                exposure = getattr(self, "_insert_exposure", None)
++                if exposure is not None:
++                    exposure.new_epoch("directory_adopt_begin")
++                for name, (attr, _, _) in specs.items():
++                    setattr(self, attr, mapped[name])
++
++                self.tree = SumTree(self.capacity)
++                self.tree.size = n
++                self.tree.data_ptr = data_ptr if 0 <= int(data_ptr) < self.capacity else n % self.capacity
++                self.tree.max_priority = max_priority
++                self.tree.tree[self.tree.capacity:self.tree.capacity + n] = np.asarray(priorities[:n], dtype=np.float64)
++                if n < self.capacity:
++                    self.tree.tree[self.tree.capacity + n:] = 0.0
++
++                total_nodes = max(1, self.tree.capacity - 1)
++                update_every = max(1, total_nodes // 64)
++                for i in range(self.tree.capacity - 1, 0, -1):
++                    self.tree.tree[i] = self.tree.tree[2 * i] + self.tree.tree[2 * i + 1]
++                    if verbose and ((self.tree.capacity - i) % update_every == 0):
++                        rebuilt = self.tree.capacity - i
++                        frac = 0.40 + (0.50 * (rebuilt / total_nodes))
++                        self._progress_bar("  Replay load", frac)
++
++                self.size = n
++                self._n_expert = int(self.is_expert[:n].sum())
++                self._n_actor[:] = 0
++                counts = np.bincount(self.actor_kind[:n].astype(np.int64), minlength=ACTOR_KIND_COUNT)
++                self._n_actor[:ACTOR_KIND_COUNT] = counts[:ACTOR_KIND_COUNT]
++                self._sanitize_interesting_after_load_locked(n, verbose)
++                self._rebuild_interesting_bank_locked(n)
++                self._mmap_dir = os.path.abspath(dirpath)
++            finally:
++                self._invalidate_ring_receipts_locked()
+ 
+         elapsed = time.time() - t0
+         if verbose:
+@@ -2046,60 +2136,64 @@
+             self._progress_bar("  Replay load", 0.40)
+ 
+         with self.lock:
+-            exposure = getattr(self, "_insert_exposure", None)
+-            if exposure is not None:
+-                exposure.new_epoch("array_restore_begin")
+-            if verbose:
+-                self._progress_bar("  Replay load", 0.45)
+-
+-            self.states[:n]      = arch["states"][offset:offset + n]
+-            self.next_states[:n] = arch["next_states"][offset:offset + n]
+-            self.actions[:n]     = arch["actions"][offset:offset + n]
+-            self.rewards[:n]     = arch["rewards"][offset:offset + n]
+-            self.dones[:n]       = arch["dones"][offset:offset + n]
+-            self.horizons[:n]    = arch["horizons"][offset:offset + n]
+-            self.is_expert[:n]   = arch["is_expert"][offset:offset + n]
+-            if "actor_kind" in arch:
+-                self.actor_kind[:n] = np.clip(
+-                    arch["actor_kind"][offset:offset + n], 0, ACTOR_KIND_COUNT - 1
+-                ).astype(np.uint8, copy=False)
+-            else:
+-                self.actor_kind[:n] = np.where(self.is_expert[:n] > 0, ACTOR_EXPERT, ACTOR_DQN).astype(np.uint8)
+-            if "interesting" in arch:
+-                self.interesting[:n] = arch["interesting"][offset:offset + n]
+-            else:
+-                self.interesting[:n] = 0.0
+-            if n < self.capacity:
+-                self.actor_kind[n:] = 0
+-                self.interesting[n:] = 0.0
+-            if verbose:
+-                self._progress_bar("  Replay load", 0.62)
+-
+-            priorities = np.asarray(arch["priorities"][offset:offset + n], dtype=np.float64)
+-            self.tree.size = n
+-            self.tree.data_ptr = data_ptr if offset == 0 else n % self.capacity
+-            self.tree.max_priority = max_priority
+-
+-            self.tree.tree[self.tree.capacity:self.tree.capacity + n] = priorities
+-            if n < self.capacity:
+-                self.tree.tree[self.tree.capacity + n:] = 0.0
+-
+-            total_nodes = max(1, self.tree.capacity - 1)
+-            update_every = max(1, total_nodes // 64)
+-            for i in range(self.tree.capacity - 1, 0, -1):
+-                self.tree.tree[i] = self.tree.tree[2 * i] + self.tree.tree[2 * i + 1]
+-                if verbose and ((self.tree.capacity - i) % update_every == 0):
+-                    rebuilt = self.tree.capacity - i
+-                    frac = 0.62 + (0.33 * (rebuilt / total_nodes))
+-                    self._progress_bar("  Replay load", frac)
+-
+-            self.size = n
+-            self._n_expert = int(self.is_expert[:n].sum())
+-            self._n_actor[:] = 0
+-            counts = np.bincount(self.actor_kind[:n].astype(np.int64), minlength=ACTOR_KIND_COUNT)
+-            self._n_actor[:ACTOR_KIND_COUNT] = counts[:ACTOR_KIND_COUNT]
+-            self._sanitize_interesting_after_load_locked(n, verbose)
+-            self._rebuild_interesting_bank_locked(n)
++            self._invalidate_ring_receipts_locked()
++            try:
++                exposure = getattr(self, "_insert_exposure", None)
++                if exposure is not None:
++                    exposure.new_epoch("array_restore_begin")
++                if verbose:
++                    self._progress_bar("  Replay load", 0.45)
++
++                self.states[:n]      = arch["states"][offset:offset + n]
++                self.next_states[:n] = arch["next_states"][offset:offset + n]
++                self.actions[:n]     = arch["actions"][offset:offset + n]
++                self.rewards[:n]     = arch["rewards"][offset:offset + n]
++                self.dones[:n]       = arch["dones"][offset:offset + n]
++                self.horizons[:n]    = arch["horizons"][offset:offset + n]
++                self.is_expert[:n]   = arch["is_expert"][offset:offset + n]
++                if "actor_kind" in arch:
++                    self.actor_kind[:n] = np.clip(
++                        arch["actor_kind"][offset:offset + n], 0, ACTOR_KIND_COUNT - 1
++                    ).astype(np.uint8, copy=False)
++                else:
++                    self.actor_kind[:n] = np.where(self.is_expert[:n] > 0, ACTOR_EXPERT, ACTOR_DQN).astype(np.uint8)
++                if "interesting" in arch:
++                    self.interesting[:n] = arch["interesting"][offset:offset + n]
++                else:
++                    self.interesting[:n] = 0.0
++                if n < self.capacity:
++                    self.actor_kind[n:] = 0
++                    self.interesting[n:] = 0.0
++                if verbose:
++                    self._progress_bar("  Replay load", 0.62)
++
++                priorities = np.asarray(arch["priorities"][offset:offset + n], dtype=np.float64)
++                self.tree.size = n
++                self.tree.data_ptr = data_ptr if offset == 0 else n % self.capacity
++                self.tree.max_priority = max_priority
++
++                self.tree.tree[self.tree.capacity:self.tree.capacity + n] = priorities
++                if n < self.capacity:
++                    self.tree.tree[self.tree.capacity + n:] = 0.0
++
++                total_nodes = max(1, self.tree.capacity - 1)
++                update_every = max(1, total_nodes // 64)
++                for i in range(self.tree.capacity - 1, 0, -1):
++                    self.tree.tree[i] = self.tree.tree[2 * i] + self.tree.tree[2 * i + 1]
++                    if verbose and ((self.tree.capacity - i) % update_every == 0):
++                        rebuilt = self.tree.capacity - i
++                        frac = 0.62 + (0.33 * (rebuilt / total_nodes))
++                        self._progress_bar("  Replay load", frac)
++
++                self.size = n
++                self._n_expert = int(self.is_expert[:n].sum())
++                self._n_actor[:] = 0
++                counts = np.bincount(self.actor_kind[:n].astype(np.int64), minlength=ACTOR_KIND_COUNT)
++                self._n_actor[:ACTOR_KIND_COUNT] = counts[:ACTOR_KIND_COUNT]
++                self._sanitize_interesting_after_load_locked(n, verbose)
++                self._rebuild_interesting_bank_locked(n)
++            finally:
++                self._invalidate_ring_receipts_locked()
+ 
+         elapsed = time.time() - t0
+         if verbose:
+@@ -2221,25 +2315,30 @@
+     def flush(self):
+         """Clear the entire replay buffer."""
+         with self.lock:
+-            exposure = getattr(self, "_insert_exposure", None)
+-            if exposure is not None:
+-                exposure.new_epoch("flush_begin")
+-            self.tree = SumTree(self.capacity)
+-            self.size = 0
+-            self._n_expert = 0
+-            self._n_actor.fill(0)
+-            self._n_interesting = 0
+-            self._interesting_bank.fill(-1)
+-            self._interesting_bank_ptr = 0
+-            self._interesting_bank_count = 0
+-            # Zero the storage arrays so stale data can't leak
+-            self.states.fill(0)
+-            self.next_states.fill(0)
+-            self.actions.fill(0)
+-            self.rewards.fill(0)
+-            self.dones.fill(0)
+-            self.horizons.fill(1)
+-            self.is_expert.fill(0)
+-            self.actor_kind.fill(0)
+-            self.interesting.fill(0)
++            self._invalidate_ring_receipts_locked()
++            try:
++                exposure = getattr(self, "_insert_exposure", None)
++                if exposure is not None:
++                    exposure.new_epoch("flush_begin")
++                self.tree = SumTree(self.capacity)
++                self.size = 0
++                self._n_expert = 0
++                self._n_actor.fill(0)
++                self._n_interesting = 0
++                self._interesting_bank.fill(-1)
++                self._interesting_bank_ptr = 0
++                self._interesting_bank_count = 0
++                # Zero the storage arrays so stale data can't leak
++                self.states.fill(0)
++                self.next_states.fill(0)
++                self.actions.fill(0)
++                self.rewards.fill(0)
++                self.dones.fill(0)
++                self.horizons.fill(1)
++                self.is_expert.fill(0)
++                self.actor_kind.fill(0)
++                self.interesting.fill(0)
++            finally:
++                self._invalidate_ring_receipts_locked()
++
+         print("  Replay buffer flushed.")
+--- a/Robotron/Scripts/dqn/agent.py
++++ b/Robotron/Scripts/dqn/agent.py
+@@ -1060,6 +1060,12 @@
+ 
+     # ── Step (add experience) ───────────────────────────────────────────
+     def step(self, state, action, reward, next_state, done, actor="dqn", horizon=1, priority_reward=None, interest=0.0):
++        return self._step_record(state, action, reward, next_state, done, actor, horizon, priority_reward, interest, _receipt=False)
++
++    def step_with_receipt(self, state, action, reward, next_state, done, actor="dqn", horizon=1, priority_reward=None, interest=0.0):
++        return self._step_record(state, action, reward, next_state, done, actor, horizon, priority_reward, interest, _receipt=True)
++
++    def _step_record(self, state, action, reward, next_state, done, actor="dqn", horizon=1, priority_reward=None, interest=0.0, *, _receipt=False):
+         if isinstance(action, (tuple, list)) and len(action) >= 2:
+             action_idx = combine_action(action[0], action[1])
+         else:
+@@ -1072,12 +1078,15 @@
+             boost = float(getattr(RL_CONFIG, "death_priority_boost", 0.0))
+             if boost > 0:
+                 pri = max(abs(pri), boost) * (-1.0 if pri < 0 else 1.0)
++        insert = self.memory.add_with_receipt if _receipt else self.memory.add
+         if getattr(self.memory, "_insert_exposure", None) is None:
+-            self.memory.add(state, action_idx, float(reward), next_state, bool(done), int(horizon), is_expert,
++            receipt = insert(state, action_idx, float(reward), next_state, bool(done), int(horizon), is_expert,
+                     priority_hint=pri, interest=interest, actor_kind=actor_kind)
+         else:
+-            self.memory.add(state, action_idx, float(reward), next_state, bool(done), int(horizon), is_expert,
++            receipt = insert(state, action_idx, float(reward), next_state, bool(done), int(horizon), is_expert,
+                     priority_hint=pri, interest=interest, actor_kind=actor_kind, source_actor=actor)
++        if _receipt:
++            return receipt
+         # Return the index of the just-written transition for pre-death tracking
+         try:
+             return int(self.memory.tree.data_ptr - 1) % self.memory.capacity
+--- a/Robotron/Scripts/dqn/socket_server.py
++++ b/Robotron/Scripts/dqn/socket_server.py
+@@ -681,15 +681,29 @@
+ 
+ 
+ # ── Async buffer (queues step() calls to avoid blocking the frame loop) ─────
++class _ReplayReceiptHistory(deque):
++    """Bounded serials with one epoch/completeness marker per history."""
++    __slots__ = ("epoch", "complete")
++
++    def __init__(self, epoch, maxlen):
++        super().__init__(maxlen=maxlen)
++        self.epoch = epoch
++        self.complete = True
++
++
+ class AsyncReplayBuffer:
+     def __init__(self, agent, batch_size=100, max_queue_size=64000):
+         self.agent = agent
++        self._step_with_receipt = getattr(agent, "step_with_receipt", None)
++        if not callable(self._step_with_receipt):
++            raise TypeError("Async replay requires atomic insertion receipts")
+         self.batch_size = batch_size
+         self.queue = queue.Queue(maxsize=max_queue_size)
+         self.running = True
++        self._stop_lock = threading.Lock()
+         self._lookback = int(getattr(RL_CONFIG, "pre_death_lookback", 120))
+         self._client_indices = {}          # client_id -> deque(maxlen=lookback)
+-        self._episode_indices = {}         # client_id -> replay indices for current episode
++        self._episode_indices = {}         # client_id -> receipt serials for current episode
+         # Rolling per-episode stats for the adaptive elite gate (consumer
+         # thread only — no locking needed).
+         _ew = max(10, int(getattr(RL_CONFIG, "elite_adaptive_window", 200)))
+@@ -755,6 +769,35 @@
+         self._enqueue_preserving(("barrier", None, None, {"event": acknowledged}))
+         return acknowledged
+ 
++    def _record_step(self, client_id, args, kwargs):
++        receipt = self._step_with_receipt(*args, **kwargs)
++        if (type(receipt) is not tuple or len(receipt) != 3
++                or type(receipt[0]) is not int or type(receipt[2]) is not int
++                or receipt[1] is None or receipt[2] <= 0
++                or not 0 <= receipt[0] < self.agent.memory.capacity):
++            raise RuntimeError("Replay insertion did not return a genuine receipt")
++        if client_id is None:
++            return
++        _, epoch, serial = receipt
++        lookback = self._client_indices.get(client_id)
++        if lookback is None or getattr(lookback, "epoch", None) is not epoch:
++            lookback = _ReplayReceiptHistory(epoch, self._lookback)
++            self._client_indices[client_id] = lookback
++        episode = self._episode_indices.get(client_id)
++        if episode is None:
++            episode = _ReplayReceiptHistory(epoch, 65_536)
++            self._episode_indices[client_id] = episode
++        elif getattr(episode, "epoch", None) is not epoch:
++            previous_complete = getattr(episode, "complete", False)
++            had_prefix = bool(episode)
++            episode = _ReplayReceiptHistory(epoch, 65_536)
++            episode.complete = previous_complete and not had_prefix
++            self._episode_indices[client_id] = episode
++        if len(episode) == episode.maxlen:
++            episode.complete = False  # Never label an evicted prefix whole.
++        lookback.append(serial)
++        episode.append(serial)
++
+     def _consume(self):
+         while self.running:
+             try:
+@@ -770,20 +813,7 @@
+             for cmd, cid, a, kw in batch:
+                 try:
+                     if cmd == "step":
+-                        idx = self.agent.step(*a, **kw)
+-                        if cid is not None and idx is not None and idx >= 0:
+-                            if cid not in self._client_indices:
+-                                self._client_indices[cid] = deque(maxlen=self._lookback)
+-                            self._client_indices[cid].append(idx)
+-                            if cid not in self._episode_indices:
+-                                # Bounded: bank admission reads these slots at
+-                                # episode END — for a marathon life the OLDEST
+-                                # slots may have been recycled by ring turnover
+-                                # (foreign transitions).  64K newest frames is
+-                                # far fresher than one ring turnover and still
+-                                # whole-episode for any realistic life.
+-                                self._episode_indices[cid] = deque(maxlen=65_536)
+-                            self._episode_indices[cid].append(idx)
++                        self._record_step(cid, a, kw)
+                     elif cmd == "boost":
+                         self._do_boost(cid)
+                     elif cmd == "elite":
+@@ -801,8 +831,9 @@
+         indices = self._client_indices.get(client_id)
+         if not indices:
+             return
++        context = (getattr(indices, "epoch", None), True)
+         try:
+-            self.agent.memory.apply_pre_death_penalty(list(indices))
++            self.agent.memory.apply_pre_death_penalty(list(indices), receipt_context=context)
+         except Exception as e:
+             print(f"  Pre-death reward penalty error: {e}")
+         boost = float(getattr(RL_CONFIG, "pre_death_priority_boost", 2.0))
+@@ -810,7 +841,7 @@
+             indices.clear()
+             return
+         try:
+-            self.agent.memory.boost_priorities(list(indices), boost)
++            self.agent.memory.boost_priorities(list(indices), boost, receipt_context=context)
+         except Exception as e:
+             print(f"  Pre-death boost error: {e}")
+         indices.clear()
+@@ -848,6 +879,8 @@
+         self._recent_ep_levels.append(int(level))
+         if not indices:
+             return
++        epoch = getattr(indices, "epoch", None)
++        context = (epoch, getattr(indices, "complete", False))
+         # Hall-of-fame admission is INDEPENDENT of the elite gate: absolute
+         # criteria only (static floor + all-time top-N inside hof_admit), so
+         # a declining run can never certify its own play into permanence.
+@@ -857,14 +890,14 @@
+                 # Silent by design: admissions surface via the HOF dashboard
+                 # column (bank bar) and the b-key buffer report.
+                 self.agent.memory.hof_admit(list(indices), int(score),
+-                                            game_uid=int(game_uid), level=int(level))
++                                            game_uid=int(game_uid), level=int(level), receipt_context=context)
+             except Exception as e:
+                 print(f"  HOF admission error: {e}")
+         # EpHOF: same indices, keyed by the score earned WITHIN this life.
+         if bool(getattr(RL_CONFIG, "ephof_enabled", False)) and int(ep_score) > 0:
+             try:
+                 self.agent.memory.ephof_admit(list(indices), int(ep_score),
+-                                              game_uid=int(game_uid), level=int(level))
++                                              game_uid=int(game_uid), level=int(level), receipt_context=context)
+             except Exception as e:
+                 print(f"  EpHOF admission error: {e}")
+         try:
+@@ -878,8 +911,9 @@
+             try:
+                 mem = self.agent.memory
+                 with mem.lock:
+-                    idxs = np.asarray(indices, dtype=np.int64)
+-                    idxs = idxs[(idxs >= 0) & (idxs < mem.size)]
++                    idxs = mem._indices_from_receipts_locked(indices, (epoch, True))
++                    if idxs is None:
++                        idxs = np.empty(0, dtype=np.int64)
+                     kinds = mem.actor_kind[idxs].copy() if idxs.size > 0 else np.empty(0, dtype=np.uint8)
+                 if idxs.size > 0:
+                     learner_frac = float(np.mean(kinds != ACTOR_EXPERT))
+@@ -908,38 +942,44 @@
+                     float(getattr(RL_CONFIG, "elite_episode_interest_score", 1.0)) if elite else 0.0,
+                     float(getattr(RL_CONFIG, "learner_elite_interest_score", 1.0)) if learner_elite else 0.0,
+                 )
+-                self.agent.memory.boost_priorities(tail, boost)
+-                self.agent.memory.mark_interesting(tail, interest)
++                self.agent.memory.boost_priorities(tail, boost, receipt_context=(epoch, True))
++                self.agent.memory.mark_interesting(tail, interest, receipt_context=(epoch, True))
+         except Exception as e:
+             print(f"  Elite episode boost error: {e}")
+         finally:
+             indices.clear()
++            if isinstance(indices, _ReplayReceiptHistory):
++                indices.complete = True
+ 
+     def remove_client(self, client_id):
+         return self.reset_client_async(client_id)
+ 
+     def stop(self):
+-        self.running = False
+-        while True:
+-            try:
+-                cmd, cid, a, kw = self.queue.get_nowait()
+-                if cmd == "step" and a is not None:
+-                    self.agent.step(*a, **kw)
+-                elif cmd == "boost":
+-                    self._do_boost(cid)
+-                elif cmd == "elite":
+-                    self._do_elite_episode_boost(cid, *(a or (0, 0, 0.0, 0)))
+-                elif cmd == "reset_client":
+-                    self._client_indices.pop(cid, None)
+-                    self._episode_indices.pop(cid, None)
+-                    kw["event"].set()
+-                elif cmd == "barrier":
+-                    kw["event"].set()
+-            except queue.Empty:
+-                break
+-            except Exception:
+-                pass
+-        self._thread.join(timeout=5.0)
++        with self._stop_lock:
++            self.running = False
++            # Finish any already-batched commands before a caller drains the queue.
++            self._thread.join(timeout=5.0)
++            if self._thread.is_alive():
++                raise TimeoutError("Replay consumer still owns commands; refusing concurrent drain")
++            while True:
++                try:
++                    cmd, cid, a, kw = self.queue.get_nowait()
++                    if cmd == "step" and a is not None:
++                        self._record_step(cid, a, kw)
++                    elif cmd == "boost":
++                        self._do_boost(cid)
++                    elif cmd == "elite":
++                        self._do_elite_episode_boost(cid, *(a or (0, 0, 0.0, 0)))
++                    elif cmd == "reset_client":
++                        self._client_indices.pop(cid, None)
++                        self._episode_indices.pop(cid, None)
++                        kw["event"].set()
++                    elif cmd == "barrier":
++                        kw["event"].set()
++                except queue.Empty:
++                    break
++                except Exception:
++                    pass
+ 
+ 
+ class _InferenceRequest:

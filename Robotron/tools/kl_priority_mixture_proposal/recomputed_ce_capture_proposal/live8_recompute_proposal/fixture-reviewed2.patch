@@ -1,0 +1,11 @@
+--- Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_recompute_proposal/test_reconstruction_contract.py	2026-10-17 03:33:33.135354874 -0500
++++ Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_recompute_proposal/test_reconstruction_contract_reviewed2.py	2026-10-17 03:38:35.164165050 -0500
+@@ -154,7 +154,7 @@
+             events.append('saved');Path(path).write_text('retained raw before interpretation')
+             return dict(path=str(path),sha256='raw',bytes=1)
+         ctx=SimpleNamespace(attempted_forward_indices=[],agent=SimpleNamespace(device='cuda:0'),
+-            torch=SimpleNamespace(autocast=lambda **_:nullcontext(),cuda=SimpleNamespace(synchronize=lambda _:events.append('sync'))),
++            torch=SimpleNamespace(float16='float16',autocast=lambda **_:nullcontext(),cuda=SimpleNamespace(synchronize=lambda _:events.append('sync'))),
+             science=SimpleNamespace(rng_state=lambda _:dict(state='after'),finite=lambda *_:finite),
+             conditional=SimpleNamespace(forbidden_offline_updates=forbidden,save_payload=save))
+         payload=dict(actual=dict(ce='original'))

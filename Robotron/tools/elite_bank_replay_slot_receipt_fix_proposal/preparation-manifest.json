@@ -1,0 +1,316 @@
+{
+  "schema": "robotron-elite-bank-ring-receipt-unapplied-fix-preparation-v1",
+  "status": "SOURCE_ONLY_UNSELECTED_UNAPPLIED_UNEXECUTED",
+  "files": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/README.txt",
+      "sha256": "e5ef3d7c4c0326ccf1ce9020a1a95f208d2e89a688e23dbc10a4d77b6969f4e6",
+      "bytes": 7613,
+      "identity": {
+        "device": 2304,
+        "inode": 81297747,
+        "bytes": 7613,
+        "mtime_ns": 1792335467820889044,
+        "ctime_ns": 1792335467820889044,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/independent-ring-residency-source-proof.json",
+      "sha256": "af24a1adaf8b98cb3a2b9682e02e2741e50a1b31ad32f7e3d93d78d08274c548",
+      "bytes": 17132,
+      "identity": {
+        "device": 2304,
+        "inode": 81297748,
+        "bytes": 17132,
+        "mtime_ns": 1792335319427804687,
+        "ctime_ns": 1792335319427804687,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/source-preservation.json",
+      "sha256": "8f9ca8dd8ac4579a34f26bc5765e1409855bf457d803ce04bddad2f193ccfb92",
+      "bytes": 22439,
+      "identity": {
+        "device": 2304,
+        "inode": 81297752,
+        "bytes": 22439,
+        "mtime_ns": 1792335205651092848,
+        "ctime_ns": 1792335205651846675,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/test-source-contract.json",
+      "sha256": "9b56d24d8b826fd208ebdedde6ef179b8a3bc7cea4e33e6ac1d2af82aa8155a5",
+      "bytes": 3891,
+      "identity": {
+        "device": 2304,
+        "inode": 81297753,
+        "bytes": 3891,
+        "mtime_ns": 1792335205653018583,
+        "ctime_ns": 1792335205653630872,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/test_receipt_fix_deferred.py",
+      "sha256": "e4673cb26bd43c7d4a9ce8f652f3be539e28840f4921a4840717d03c054b8f58",
+      "bytes": 21890,
+      "identity": {
+        "device": 2304,
+        "inode": 81297760,
+        "bytes": 21890,
+        "mtime_ns": 1792335322485140238,
+        "ctime_ns": 1792335322485140238,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/unapplied.patch",
+      "sha256": "b1207e309366b4b454c076918d792855fa2ddcbaac29a2e9838a58f57420840a",
+      "bytes": 52007,
+      "identity": {
+        "device": 2304,
+        "inode": 81297758,
+        "bytes": 52007,
+        "mtime_ns": 1792335205642286356,
+        "ctime_ns": 1792335205643044759,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  ],
+  "draft_history_files": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/draft-history-stop-serialization-20261018/pre-final-fixture-class-save-scope.py",
+      "sha256": "c60c3097e660229945bdfcc3deb9d64f3c0d6478e2dc79b46e6ee474d865444f",
+      "bytes": 21878,
+      "identity": {
+        "device": 2304,
+        "inode": 81297759,
+        "bytes": 21878,
+        "mtime_ns": 1792335322484031402,
+        "ctime_ns": 1792335322484031402,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/draft-history-stop-serialization-20261018/pre-final-size-clear-source-preservation.json",
+      "sha256": "483dae1363ff45224f5ec8b419ff10dab5f183b688328833e176e3e33583a5cc",
+      "bytes": 4218,
+      "identity": {
+        "device": 2304,
+        "inode": 81297755,
+        "bytes": 4218,
+        "mtime_ns": 1792335205629857421,
+        "ctime_ns": 1792335205629857421,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/draft-history-stop-serialization-20261018/pre-final-size-clear-test-source-contract.json",
+      "sha256": "7aa95c5725d8dd917754b1c56f395e81c2511777668d8fef04465adaca4d28b1",
+      "bytes": 3889,
+      "identity": {
+        "device": 2304,
+        "inode": 81297757,
+        "bytes": 3889,
+        "mtime_ns": 1792335205631245713,
+        "ctime_ns": 1792335205631245713,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/draft-history-stop-serialization-20261018/pre-final-size-clear-test_receipt_fix_deferred.py",
+      "sha256": "b03b74f059b0a73db5393272762014d99e64bd3925721b4f83894a666b9e3457",
+      "bytes": 21718,
+      "identity": {
+        "device": 2304,
+        "inode": 81297756,
+        "bytes": 21718,
+        "mtime_ns": 1792335205630593167,
+        "ctime_ns": 1792335205630593167,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/draft-history-stop-serialization-20261018/pre-final-size-clear-unapplied.patch",
+      "sha256": "98059a284d3ce053c4064665f4d278c107e68bfbca491529195cf50a2e5e1197",
+      "bytes": 51573,
+      "identity": {
+        "device": 2304,
+        "inode": 81297749,
+        "bytes": 51573,
+        "mtime_ns": 1792335205627848294,
+        "ctime_ns": 1792335205627848294,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/draft-history-stop-serialization-20261018/source-preservation.json",
+      "sha256": "712b4ff16ffa5baf435ade1fb22875973179e9fc12d17552a685888abb85be49",
+      "bytes": 2764,
+      "identity": {
+        "device": 2304,
+        "inode": 81297751,
+        "bytes": 2764,
+        "mtime_ns": 1792334662623332941,
+        "ctime_ns": 1792334662623332941,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/draft-history-stop-serialization-20261018/unapplied.patch",
+      "sha256": "69215e64f8f482173f6640a913835f1792d0eb93962a7d952104ae00088aa71c",
+      "bytes": 50204,
+      "identity": {
+        "device": 2304,
+        "inode": 81297750,
+        "bytes": 50204,
+        "mtime_ns": 1792334662620767239,
+        "ctime_ns": 1792334662620767239,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  ],
+  "baseline_characterization_manifest": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_freshness_proposal/preparation-manifest.json",
+    "sha256": "1e487838f00e202f757a4065299efa91a106e4ce1e9058858402e32bed3ec73d",
+    "bytes": 4721,
+    "identity": {
+      "device": 2304,
+      "inode": 81295420,
+      "bytes": 4721,
+      "mtime_ns": 1792332403856813573,
+      "ctime_ns": 1792332403857085030,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "baseline_source_peer": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/elite-bank-replay-slot-freshness-independent-source-review-20261018/source-review-receipt.json",
+    "sha256": "02a9774af0c03e970a72399604f65c5242e203d86508ead3b5e03eac3c5f8d28",
+    "bytes": 18936,
+    "identity": {
+      "device": 2304,
+      "inode": 81295421,
+      "bytes": 18936,
+      "mtime_ns": 1792332532132642638,
+      "ctime_ns": 1792332532132642638,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "independent_invariant_proof": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/independent-ring-residency-source-proof.json",
+    "sha256": "af24a1adaf8b98cb3a2b9682e02e2741e50a1b31ad32f7e3d93d78d08274c548",
+    "bytes": 17132,
+    "identity": {
+      "device": 2304,
+      "inode": 81297748,
+      "bytes": 17132,
+      "mtime_ns": 1792335319427804687,
+      "ctime_ns": 1792335319427804687,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "expected_tests": 11,
+  "guard_argv": [
+    "/usr/bin/env",
+    "-u",
+    "LD_PRELOAD",
+    "-u",
+    "PYTHONPATH",
+    "CUDA_VISIBLE_DEVICES=",
+    "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal",
+    "-p",
+    "test_receipt_fix_deferred.py",
+    "-v"
+  ],
+  "recommended_caps": {
+    "CPUQuota": "100%",
+    "MemoryMax": "512M",
+    "MemorySwapMax": "0",
+    "TasksMax": "128",
+    "RuntimeMaxSec": "60",
+    "TimeoutStopSec": "5"
+  },
+  "changed_existing_runtime_sources": [
+    "replay_buffer.py",
+    "agent.py",
+    "socket_server.py"
+  ],
+  "new_runtime_sources": [],
+  "candidate_sources": {
+    "replay_buffer.py": {
+      "sha256": "b71590df855beb86f53eaaccbe21e12eb26a7c831c4534ddb467b8877bdec070",
+      "bytes": 120222
+    },
+    "agent.py": {
+      "sha256": "eaf7f9f8454b87fb4e27b766f227b142118af9154d8680efe0d6921237ea53a5",
+      "bytes": 99107
+    },
+    "socket_server.py": {
+      "sha256": "50ba62a6e55a786c3980ce0cdceabe059473ef75bbe4714add323afd7307826b",
+      "bytes": 142428
+    }
+  },
+  "text_forward_reverse": true,
+  "unchanged_function_entries": 184,
+  "future_gate": "Entire current nativequality terminal/scientific disposition/full ownedclosure/explicit source-workload freeze release; original baseline6 before patch11; incidence/cost proof before deployment.",
+  "actual_tests": null,
+  "actual_apply": null,
+  "actual_deployment": null,
+  "actual_incidence": null,
+  "actual_learning_benefit": null,
+  "author_actions": {
+    "new_proposal_files_only": true,
+    "source_text_reads": true,
+    "AST": false,
+    "compile": false,
+    "imports": false,
+    "tests": false,
+    "runtime": false,
+    "live_or_growing_reads": false,
+    "PT_model_replay_reads": false
+  }
+}

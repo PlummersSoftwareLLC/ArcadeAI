@@ -1,0 +1,19 @@
+SOURCE ONLY — ADDITIVE REVIEWED2 BEFORE ANY NEW CE QUALITY PREPARE/LAUNCH
+
+Original a073 bundle remains immutable, including its9 guards and source history.
+Root caught a stale original_executions lookup before any new carrier prepare or
+launch: the CE binding schema intentionally has no former KL parent/deadline pair.
+This sibling changes ONE carrier line to query only its own future service/timer.
+No basename/global helper exemption or resource guard is removed. The existing
+mandatory fresh readiness.resources.capture_and_CPU_units_released=true and
+actual6d509 prior closure/freeze release remain unchanged.
+
+Binder ecbe, auditor7349 and original16083B row/tail/scoring suffix are byteexact.
+All evaluator/gates/profile/source/candidate/reference/phase/CPU guards unchanged.
+The single added test calls real launch() with the actual new CE schema through
+its two not-found own-unit checks, real canonical default argv and durable
+precommit files, then mocked scheduling/retained waiting observations. The old
+stale lookup would raise KeyError before scheduling. It issues no real command.
+Ten authored stdlib guard methods are selected in future-argv.json. They remain
+unexecuted by author. No import/test/runtime/PT/quality action occurred here.
+Root alone will validate actual candidate/job/readiness and run tools.

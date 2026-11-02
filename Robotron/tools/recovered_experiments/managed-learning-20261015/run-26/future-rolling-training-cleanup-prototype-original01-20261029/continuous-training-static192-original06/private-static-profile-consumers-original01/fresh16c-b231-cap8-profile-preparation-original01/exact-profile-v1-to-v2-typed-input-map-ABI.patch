@@ -1,0 +1,36 @@
+--- prepare_fresh_static8_policy_profiles_v1.py
++++ prepare_fresh_static8_policy_profiles_v2.py
+@@ -57,6 +57,15 @@
+         and observer['after_release']['LoadState']=='not-found','Original completed observer closure differs')
+     return result,cpu
+ 
++def case_input_pins(case,h):
++    require(isinstance(case['inputs'],dict) and case['inputs'],'Exact typed-case input map required')
++    result=[]
++    for path,row in case['inputs'].items():
++        entry=dict(path=path,sha256=row['sha256'],bytes=row['identity']['bytes'],identity=row['identity'])
++        h.checked(entry)
++        result.append(entry)
++    return result
++
+ def selection(path,sha,h):
+     sp=h.pin(Path(path).resolve());require(sp['sha256']==sha,'Exact fresh Root selection required');s=read(sp,h)
+     require(s['schema']=='robotron-root-static-cap8-fresh16c-profile-selection-v1'
+@@ -70,7 +79,7 @@
+         and c['mode']=='CONTINUOUS_TRAIN155_EVAL37_ONCE' and c['accepted_profile']=='STATIC_ORIGINAL192_NO_FAULT_ADOPTION'
+         and set(case['slot_eval'])==set(map(str,range(192))) and all(type(v)is bool for v in case['slot_eval'].values())
+         and sum(case['slot_eval'].values())==37,'Actual postbarrier original192 context required')
+-    for entry in case['inputs']:h.checked(entry)
++    case_input_pins(case,h)
+     for entry in (c['source_authority'],c['original_membership'],c['initial_barrier'],case['input_inventory_authority']):read(entry,h)
+     cap=read(s['cap8_runtime_authority'],h)
+     require(cap['schema']=='robotron-root-current-static-cap8-profile-context-v1'
+@@ -127,7 +136,7 @@
+         and directory.resolve()==directory and not directory.exists(),'Exact fresh selected profile directory required')
+     require(profile_root!=Path(FIXED['capture_result']['path']).parent and Path(FIXED['capture_result']['path']).parent not in profile_root.parents,'New context must not write inside historical capture')
+     job=dict(checkpoint=checkpoint,benchmark=FIXED['benchmark'],output=str(directory/'runtime'))
+-    inputs=[checkpoint,FIXED['benchmark'],sp,s['main_case'],s['cap8_runtime_authority'],read(s['cap8_runtime_authority'],h)['retained_unit_environment'],*case['inputs'],case['input_inventory_authority'],case['continuous']['source_authority'],policy['authority'],h.pin(Path(__file__).resolve()),*FIXED.values()]
++    inputs=[checkpoint,FIXED['benchmark'],sp,s['main_case'],s['cap8_runtime_authority'],read(s['cap8_runtime_authority'],h)['retained_unit_environment'],*case_input_pins(case,h),case['input_inventory_authority'],case['continuous']['source_authority'],policy['authority'],h.pin(Path(__file__).resolve()),*FIXED.values()]
+     if mode=='canonical':argv=[FIXED['benchmark']['path'],'--cpu-facts','--checkpoint',checkpoint['path'],'--directory',job['output']]
+     else:
+         authority=h.pin(Path(canonical_closeout).resolve());closed=read(authority,h)

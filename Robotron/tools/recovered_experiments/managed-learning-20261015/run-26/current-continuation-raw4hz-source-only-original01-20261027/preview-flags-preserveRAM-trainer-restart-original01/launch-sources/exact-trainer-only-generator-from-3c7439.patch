@@ -1,0 +1,133 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/launch-sources/prepare_same_state_continuation_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/preview-flags-preserveRAM-trainer-restart-original01/launch-sources/prepare_same_state_trainer_only_v1.py
+@@ -12,19 +12,28 @@
+ import stat
+ 
+ G = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+-C = G / 'logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027'
++PARENT = G / 'logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027'
++C = PARENT / 'preview-flags-preserveRAM-trainer-restart-original01'
+ LIVE = C / 'live-original01'
+ PYTHON = '/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python'
+-TAG = 'managed-run-26-continuation-raw4hz-original01-20261027'
++TAG = 'managed-run-26-previewflags-preserveRAM-original01-20261027'
+ TRAINER = 'robotron-' + TAG + '-trainer.service'
+-FLEET = 'robotron-' + TAG + '-fleet.service'
+ VERIFIER_SHA = '08c165ed917b8633ab658a8efbc915f81e37adff21c1330cd5806cd3148f4051'
+ VERIFIER = G / 'tools/lr125_phase_cpu_verifier_proposal_20261023/verify_recipe_phase_snapshot.py'
+ CLOCKS = ('training_steps', 'optimized_samples', 'learner_frame_count', 'frame_count')
+-OLD = dict(pid=3615927, starttime_ticks=78856521,
+-    unit='robotron-managed-run-26-d3b365c9-trainer.service',
+-    invocation_id='8fdf9768e04641a1858114861ccde8aa',
+-    cgroup='/user.slice/user-1001.slice/user@1001.service/app.slice/robotron-managed-run-26-d3b365c9-trainer.service')
++OLD = dict(pid=1062324, starttime_ticks=117468652,
++    unit='robotron-managed-run-26-continuation-raw4hz-original01-20261027-trainer.service',
++    invocation_id='429ceaf754ca49b495056180a0350411',
++    cgroup='/user.slice/user-1001.slice/user@1001.service/app.slice/robotron-managed-run-26-continuation-raw4hz-original01-20261027-trainer.service')
++PRODUCERS = dict(
++    fleet=dict(pid=1073404, starttime_ticks=117607824,
++        unit='robotron-managed-run-26-continuation-raw4hz-original01-20261027-fleet.service',
++        invocation_id='f791a854723b4f90ab5fa8a637a13868',
++        cgroup='/user.slice/user-1001.slice/user@1001.service/app.slice/robotron-managed-run-26-continuation-raw4hz-original01-20261027-fleet.service'),
++    supplemental0=dict(pid=1122536, starttime_ticks=117687032,
++        unit='robotron-managed-run-26-continuation-raw4hz-original01-20261027-slot0-owned-recovery-original01.service',
++        invocation_id='ccdd44624bd142db8effc98139940e7d',
++        cgroup='/user.slice/user-1001.slice/user@1001.service/app.slice/robotron-managed-run-26-continuation-raw4hz-original01-20261027-slot0-owned-recovery-original01.service'))
+ 
+ 
+ def require(value, message):
+@@ -103,7 +112,7 @@
+ 
+ 
+ def prepare(spec):
+-    require(spec['schema'] == 'robotron-root-same-state-continuation-data-selection-v1', 'Explicit Root data selection required')
++    require(spec['schema'] == 'robotron-root-same-state-trainer-only-data-selection-v1', 'Explicit Root data selection required')
+     stop = read(spec['actual_stop_result'])
+     require(stop['status'] == 'CURRENT_TRAINER_STOPPED_AND_FULL_STATE_HOT_REPLAY_PRESERVED'
+         and stop['trainer_stopped'] is True and stop['replacement_started'] is False
+@@ -123,16 +132,24 @@
+         and closure['original_trainer'] == OLD and closure['old_trainer_birth_absent'] is True
+         and closure['exact_old_unit_closed'] is True
+         and closure['actual_stop_result'] == spec['actual_stop_result']
+-        and closure['strict_CPU_replay_bank_PASS'] is True, 'Root exact stopped install authority required')
++        and closure['strict_CPU_replay_bank_PASS'] is True
++        and closure['preserved_producer_owners'] == PRODUCERS
++        and closure['same192_actor_births_preserved'] is True
++        and closure['both_producer_cgroups_positive_frozen'] is True,
++        'Root exact stopped install authority and original192 preserved dual-producer scope required')
+     require(read(saved['ring_and_banks'])['spec'] == dict(
+         ring='/dev/shm/robotron_dqn_latest_replay', model_dir=str(G/'models_dqn'),
+         capacity=6000000, state_size=11128, episode_capacity=192,
+         bank_strides=dict(hof=1536,ephof=2048)), 'Actual six-million R3 geometry differs')
+     stat_checkpoint(saved['checkpoint'])
+-    env = read(spec['original_trainer_environment'])['environment']
++    original = read(spec['original_trainer_environment'])
++    require(original['owner'] == OLD, 'Actual original1062324 environment authority required')
++    env = original['environment']
+     require(env['DQN_BATCH_SIZE'] == '4096' and env['DQN_N_STEP'] == '3'
+         and env['DQN_MAX_SAMPLES_PER_FRAME'] == '8'
+-        and env['CUDA_VISIBLE_DEVICES'] == 'GPU-c0c5d295-6f07-aab5-bbde-b592ea426ec1', 'Original recipe/GPU environment differs')
++        and env['CUDA_VISIBLE_DEVICES'] == 'GPU-c0c5d295-6f07-aab5-bbde-b592ea426ec1'
++        and env['CUDA_DEVICE_ORDER'] == 'PCI_BUS_ID'
++        and env['PYTHONUNBUFFERED'] == '1', 'Original recipe/GPU/unbuffered environment differs')
+     require(not LIVE.exists(), 'Fresh RUN_DIR must not exist before phase preparation')
+     record = resume_record(saved, report)
+     LIVE.mkdir(mode=0o700)
+@@ -150,32 +167,11 @@
+         stopped_clocks=saved['clocks'], stopped_checkpoint=saved['checkpoint'],
+         trainer_argv=args, startup_expected_clients=0, actual_new_trainer=None,
+         startup_CPU_acquisition=None, startup_CPU_report=None, startup_CPU_closure=None,
+-        fresh_fleet_argv=None, actual_new_fleet=None,
++        preserved_producer_owners=PRODUCERS, fresh_fleet_launch_authorized=False,
+         admission='Root must verify installed source pins, actual restore, unchanged ring/banks/maps, '
+-            '0-or-1 startup update and independent08c startup CPU/owned closure before fresh fleet.')
++            '0-or-1 startup update and independent08c startup CPU/owned closure before thawing both '
++            'original producer groups. All192 MAME births/RAM must remain unchanged; no fresh fleet launch.')
+     return publish(LIVE/'prepared-command-data-NOT-EXECUTED.json', result)
+-
+-
+-def prepare_fleet_data(manifest_pin):
+-    path = C/'fresh-fleet-rolemap/exec_fresh_fleet_roles_v1.py'
+-    require(small_pin(path)['sha256'] == 'faa8e5f76564df21048f32a172105ddc59fc4f944c33be80019795991b922c25',
+-        'Reviewed fresh fleet helper differs')
+-    loader = importlib.util.spec_from_file_location('_fresh_roles_launch_data', path)
+-    helper = importlib.util.module_from_spec(loader); loader.loader.exec_module(helper)
+-    manifest = helper.read(manifest_pin)
+-    helper.validate_manifest(manifest)
+-    helper.verify_rendered_wrapper(manifest_pin, manifest)
+-    require(LIVE.is_dir(), 'Trainer data preparation must precede fleet data')
+-    args = ['systemd-run','--user','--unit='+FLEET,'--working-directory='+str(G),
+-        '--property=Type=simple','--property=Restart=no','--property=SendSIGKILL=no',
+-        '--property=StandardOutput=append:'+str(LIVE/'fleet-console.log'),'--property=StandardError=inherit']
+-    args += ['--setenv='+key+'='+value for key,value in sorted(manifest['parent_environment'].items())]
+-    args += ['--'] + manifest['parent_argv']
+-    return publish(LIVE/'prepared-fleet-command-data-NOT-EXECUTED.json', dict(
+-        schema='robotron-fresh192-fleet-command-data-v1', commands_executed=False,
+-        actual_manifest=manifest_pin, actual_installed_wrapper=small_pin(manifest['wrapper_path']),
+-        fleet_argv=args, actual_new_fleet=None,
+-        admission='Root must qualify startup08c CPU and old fleet positive closure before executing'))
+ 
+ 
+ def prepare_startup_CPU_data(spec):
+@@ -230,20 +226,14 @@
+     parser=argparse.ArgumentParser(description=__doc__)
+     parser.add_argument('--prepare-data', action='store_true')
+     parser.add_argument('--selection'); parser.add_argument('--selection-sha256')
+-    parser.add_argument('--prepare-fleet-data', action='store_true')
+-    parser.add_argument('--manifest'); parser.add_argument('--manifest-sha256')
+     parser.add_argument('--prepare-startup-CPU-data', action='store_true')
+     args=parser.parse_args()
+-    require(sum((args.prepare_data,args.prepare_fleet_data,args.prepare_startup_CPU_data)) <= 1,
++    require(sum((args.prepare_data,args.prepare_startup_CPU_data)) <= 1,
+         'Select one metadata preparation mode')
+     if args.prepare_startup_CPU_data:
+         pin=small_pin(args.selection)
+         require(pin['sha256'] == args.selection_sha256, 'Actual startup selection SHA differs')
+         print(json.dumps(prepare_startup_CPU_data(read(pin)), indent=2)); return
+-    if args.prepare_fleet_data:
+-        pin=small_pin(args.manifest)
+-        require(pin['sha256'] == args.manifest_sha256, 'Actual manifest SHA differs')
+-        print(json.dumps(prepare_fleet_data(pin), indent=2)); return
+     if not args.prepare_data:
+         print('INERT: no read of checkpoint, no install, no launch; --prepare-data writes exclusive metadata only')
+         return

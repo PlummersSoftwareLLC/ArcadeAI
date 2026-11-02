@@ -1,0 +1,52 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/power_recovery/launch_resume.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-cap12-full-state-continuation-source-only-original01-preparation/launch_resume_cap12_v1.py
+@@ -14,7 +14,7 @@
+ import sys
+ import time
+ 
+-G=Path(__file__).resolve().parents[2]
++G=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ 
+ def digest(path):
+     with path.open('rb')as stream:return hashlib.file_digest(stream,'sha256').hexdigest()
+@@ -45,7 +45,7 @@
+     sys.path.insert(0,str(G/'Scripts'))
+     from dqn.config import RL_CONFIG
+     from dqn.model import RainbowNet
+-    assert RL_CONFIG.batch_size==4096 and RL_CONFIG.n_step==3 and RL_CONFIG.max_samples_per_frame==8
++    assert RL_CONFIG.batch_size==4096 and RL_CONFIG.n_step==3 and RL_CONFIG.max_samples_per_frame==12
+     model=RainbowNet(saved['state_size'])
+     summaries={}
+     for key in ['online_state_dict','target_state_dict']:
+@@ -79,6 +79,10 @@
+     replay=None if not meta.exists()else np.load(meta,allow_pickle=False).tolist()
+     control=json.loads((G/'models_dqn/learning_control.json').read_bytes())
+     result=dict(schema='robotron-power-recovery-checkpoint-CPU-verification-v1',checkpoint=spec['checkpoint'],resume_record=pin,phase_id=phase['phase_id'],priority_phase_preserved=True,saved_clocks={k:saved[k]for k in ['training_steps','optimized_samples','learner_frame_count','frame_count']},model=summaries,Adam_state_parameters=len(optimizer.state),Adam_step_min=min(steps),Adam_step_max=max(steps),saved_optimizer_lrs=[p['lr']for p in optimizer.param_groups],selected_lr_scale=control['lr_scale'],replay_meta=replay,CUDA_initialized=False,created_unix_s=time.time())
++    result.update(prospective_cap=12,cap_changed_only_via_new_process_environment=True,
++        rng_state_preserved_by_existing_checkpoint=False,full_rng_continuity_verified=False,
++        full_replay_and_bank_integrity_verified_by_this_launcher=False,
++        exact_full_state_continuity_qualified=False,learning_benefit_qualified=False)
+     if report:immutable(report,result)
+     print(json.dumps(result),flush=True)
+     return pin
+@@ -86,10 +90,19 @@
+ def main():
+     parser=argparse.ArgumentParser(description=__doc__)
+     parser.add_argument('--verify-only',action='store_true')
++    parser.add_argument('--resume-cap12',action='store_true')
++    parser.add_argument('--expected-source-sha256')
+     parser.add_argument('--checkpoint',type=Path,default=G/'models_dqn/robotron_dqn_latest.pt')
+     parser.add_argument('--records',type=Path,default=G/'models_dqn/resume-records')
+     parser.add_argument('--report',type=Path)
+-    args=parser.parse_args();env=dict(os.environ)
++    args=parser.parse_args()
++    if not(args.verify_only or args.resume_cap12):
++        print('SOURCE_ONLY: no checkpoint, replay, CPU verification or trainer action');return
++    assert args.verify_only != args.resume_cap12
++    assert digest(Path(__file__).resolve())==args.expected_source_sha256
++    assert os.environ.get('DQN_MAX_SAMPLES_PER_FRAME')=='12'
++    assert os.environ.get('DQN_PRIORITY_METRIC','').strip().lower()=='ce'
++    env=dict(os.environ)
+     os.environ['CUDA_VISIBLE_DEVICES']=''
+     pin=prepare(args.checkpoint.resolve(strict=True),args.records.resolve(),args.report)
+     if args.verify_only:return

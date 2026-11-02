@@ -1,0 +1,103 @@
+{
+  "activation_authorized": false,
+  "actual_future_job": null,
+  "actual_guard_execution": null,
+  "actual_numerical_execution": null,
+  "actual_producer": null,
+  "author_tests_imports_PT_runtime_actions": false,
+  "authored_stdlib_guard_methods": 15,
+  "base_unchanged_sha256": "47677509f170c4c3b6a1c03918e02ab13996af1ceafffac29b7536c2fad61f80",
+  "changed_existing_wrapper_functions": [
+    "check_batch2048_context",
+    "main"
+  ],
+  "collector_implementation": null,
+  "files": {
+    "PREPARATION.txt": {
+      "bytes": 4954,
+      "mode": "0o444",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/PREPARATION.txt",
+      "sha256": "be43c0949da863d4e1829e996539313172200a06c02a7f8fa1855058ba1a13f0"
+    },
+    "future-plan.json": {
+      "bytes": 1792,
+      "mode": "0o444",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/future-plan.json",
+      "sha256": "4f6b218f5d4fbfb9d94f525b7b940198e0015143a9e7f679035460c4b665788c"
+    },
+    "job.schema.json": {
+      "bytes": 12160,
+      "mode": "0o444",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/job.schema.json",
+      "sha256": "304cdd7b59ee455731a7471af4974e889707079e56898d8ff7b22000deab0bff"
+    },
+    "producer-evidence-TEMPLATE.json": {
+      "bytes": 1594,
+      "mode": "0o444",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/producer-evidence-TEMPLATE.json",
+      "sha256": "9a0424a9b3db597398c6c21fb7bcfc87de98e96787d236ca46b77bbfc1acafcf"
+    },
+    "producer-origin.schema.json": {
+      "bytes": 5978,
+      "mode": "0o444",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/producer-origin.schema.json",
+      "sha256": "8ae6a7de65c9278614239c397f97bed167098555e9961d1bc5603355596c727e"
+    },
+    "root-job-TEMPLATE.json": {
+      "bytes": 1184,
+      "mode": "0o444",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/root-job-TEMPLATE.json",
+      "sha256": "a2bc03ba1fc731c8ce24c7e7f371d243d0f91c369bb6c0ffc0271b8abd441482"
+    },
+    "source-delta.patch": {
+      "bytes": 12859,
+      "mode": "0o444",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/source-delta.patch",
+      "sha256": "ec5ee05d9314a8584b29d5960537bcd8ab0b9573ace46febecdf7ef4b153e8b1"
+    },
+    "source-lock.json": {
+      "bytes": 5471,
+      "mode": "0o444",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/source-lock.json",
+      "sha256": "b8eefd5543c90e0108235b842511f81c482bdb686b6fcf77058044bdda01ed28"
+    },
+    "strict_phase_base_2048.py": {
+      "bytes": 33727,
+      "mode": "0o444",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/strict_phase_base_2048.py",
+      "sha256": "47677509f170c4c3b6a1c03918e02ab13996af1ceafffac29b7536c2fad61f80"
+    },
+    "test_batch2048_context.py": {
+      "bytes": 17205,
+      "mode": "0o444",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/test_batch2048_context.py",
+      "sha256": "e58c2ba2f28554c002189407878c85fbdd768652ccbb969435a77b6a7db17da7"
+    },
+    "verify_phase_snapshot_2048.py": {
+      "bytes": 37695,
+      "mode": "0o444",
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/verify_phase_snapshot_2048.py",
+      "sha256": "a331b550191a48ab219cf92f2e1c42fc394e038c93609ecac4fb9a722b75e5cd"
+    }
+  },
+  "known_capability_only_sha256": "747809500c941fb83f0dd5e9d54b3a676a7bae60ca2482f77704f37dcba8c10a",
+  "legacyinsurance_lifecycle_integration": null,
+  "new_metadata_functions": [
+    "precise_unit",
+    "check_producer_csv_origin"
+  ],
+  "original_manifest_sha256": "81fdb6ee39e81b0da3f8cea91c4fc7519b5cdf4abf25a722a1deaeb6607b8f6c",
+  "schema": "robotron-batch2048-phase-CPU-reviewed2-preparation-v1",
+  "scope": "Strengthened producer2048 CSV origin only. Original81 andresults immutable; no new learning/numerical criteria or arbitrary CSV-age threshold. Existing startup-only historical4096 exception remains truthful. Requires actual future collector and profile-aware activation integration.",
+  "source_freeze_release": false,
+  "source_peer_receipt": "PENDING_SEPARATE_RECEIPT",
+  "status": "SOURCE_ONLY_UNCONSUMED_PARTIAL_METADATA_READINESS",
+  "unchanged_wrapper_functions": [
+    "load_base",
+    "read_job",
+    "immutable",
+    "historical_archive",
+    "check_acquisition",
+    "verify_phase"
+  ]
+}

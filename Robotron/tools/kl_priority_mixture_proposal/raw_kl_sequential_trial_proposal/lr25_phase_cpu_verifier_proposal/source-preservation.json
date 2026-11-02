@@ -1,0 +1,35 @@
+{
+  "status": "UNSELECTED_SOURCE_ONLY",
+  "base_ancestor": "/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/strict_phase_base.py",
+  "base_ancestor_sha256": "9ef38e17e1b9eee3f6c43e40005812f2ebe3cff16d08bf61d3e820c2d41134c8",
+  "base_replacements": [
+    [
+      "learning_control_lr_scale=.5",
+      "learning_control_lr_scale=.25"
+    ],
+    [
+      "optimizer_lr=2.5e-5",
+      "optimizer_lr=1.25e-5"
+    ],
+    [
+      "control['lr_scale'] == .5",
+      "control['lr_scale'] == .25"
+    ]
+  ],
+  "base_addition": "Direct CLI execute refuses; only new phase wrapper may execute it with LR25 context.",
+  "numerical_validate_checkpoint_function_byte_exact": true,
+  "phase_functions_byte_exact": [
+    "check_acquisition",
+    "verify_phase",
+    "immutable",
+    "historical_archive"
+  ],
+  "wrapper_additions": [
+    "Distinct job/result schema; exact additional lr25_context field.",
+    "Reverse-byte validation against sealed9ef then original7d optional callback provenance.",
+    "check_lr25_context after unchanged acquisition and before single numerical load."
+  ],
+  "production_or_held_source_edited": false,
+  "tests_executed": false,
+  "project_imports": false
+}
