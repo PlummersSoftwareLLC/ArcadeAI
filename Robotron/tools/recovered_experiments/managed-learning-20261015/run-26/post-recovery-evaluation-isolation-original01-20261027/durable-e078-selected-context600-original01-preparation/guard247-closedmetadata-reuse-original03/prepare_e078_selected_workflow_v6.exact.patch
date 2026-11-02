@@ -1,0 +1,158 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-selected-context600-original01-preparation/prepare_e078_selected_workflow_v5.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-selected-context600-original01-preparation/prepare_e078_selected_workflow_v6.py
+@@ -21,11 +21,17 @@
+ CTX=M/'actual-current-main-engineering-contexts-original02'
+ META=L/'actual-metadata-preparation-original01'
+ STUDY=I/'durable-e078b0da-launcher-mmap-study-original01'
+-GUARD=L/'guard247-source-correction-original01'
+-NEW_GUARD_ROOT=STUDY/'four-exact-contexts-CPU-original02'
+-GUARD_OVERRIDE=NEW_GUARD_ROOT/'selected-guard-packet-override-original02.json'
+-GUARD_DRIVER_SHA='44d5e726d0163a8e33d2589bbb9ffab20b81a782baaa5d125b6db7adc81c56fc'
+-GUARD_PREPARER_SHA='d5d7578cbe3d0b3f5390af1fbb497c10d8f7c6e8bcd3e230fb26564f295ede6f'
++GUARD=L/'guard247-closedmetadata-reuse-original03'
++REUSE=L/'closed-metadata-readiness-reuse-original03-preparation'
++AUTHORITY_SHA='5e83e9db759c1844c0236f2b60c14dd56995e63e0f3436387ddfc12190fe4ee3'
++SHIM_SHA='cf693756eb5059dc268f91df0b6d91ec10e4dcc0f13f21daa66512ec806a2b37'
++FAILED_ROOT=STUDY/'four-exact-contexts-CPU-original02'
++FAILED_SHA='445680bc53a832152f68788befd59b5c4010b3f246617e97475c15b47cc926c9'
++GUARD_CLOSE_SHA='2afa743774550aa613703aab64f82ec0da6f539509978e82744c7b9a7d99110a'
++NEW_GUARD_ROOT=STUDY/'four-exact-contexts-CPU-original03'
++GUARD_OVERRIDE=NEW_GUARD_ROOT/'selected-guard-packet-override-original03.json'
++GUARD_DRIVER_SHA='85e8bfed0594561036f7dae24b3ccf9aab180591d80ae9a92a5be968c9add8dc'
++GUARD_PREPARER_SHA='507c899e91d9a79111f6e4bb8441faab59ff3587510a616c0816ec9d813330f6'
+ ENDPOINT='e078b0da4ce4e25146fab7484f8489f590e1086370746cb392afcd7f5f8adef5'
+ CONTROL=G/'tools/quality_capacity_proposal/control_quality32_review_v1.py'
+ CONTROL_SHA='218e7f861deb82c340527d218ed9f92ef5c5836c8cb9d32452c0598e61ff9a14'
+@@ -152,49 +158,85 @@
+     return report
+ 
+ 
++def failed_guard(h):
++    failure,pin=sealed(h,FAILED_ROOT/'ROOT-timeout-owned-closure-original01/ROOT-original-timeout-guard-owned-release.json',FAILED_SHA)
++    require(failure['schema']=='robotron-original-CPU-guard-timeout-positive-owned-closure-v1'
++        and failure['actual_original_ExecMainCode']==2 and failure['actual_original_signal']==15
++        and failure['actual_original_Result']=='timeout' and failure['normal_exit_not_claimed']is True
++        and failure['all_original_service_timer_birth_and_cgroup_absent']is True
++        and failure['CPU_report_absent']is True and failure['qualification']is False,
++        'Original02 timeout must remain failed and positively closed')
++    control=module('_E078_failed_guard_controller',CONTROL,CONTROL_SHA)
++    for unit in (failure['original_owner']['unit'],failure['original_owner']['timer']):
++        require(control.show(unit)['LoadState']=='not-found','Failed original02 scope remains')
++    proc=Path('/proc')/str(failure['original_owner']['pid'])/'stat'
++    require(not proc.exists()or int(proc.read_text().rsplit(')',1)[1].split()[19])!=failure['original_owner']['starttime_ticks'],
++        'Failed original02 birth remains')
++    require(not (FAILED_ROOT/'output-original01/report.json').exists(),'Failed original02 unexpectedly has a qualification report')
++    return pin
++
++
+ def prepare_guard_override(h):
+     metadata_inputs(h)
+-    report=closed_metadata(h)
+-    old=report['exact_CPU_packet'];before=json.loads(h.checked(old).read_bytes())
+-    old_cfg=json.loads(h.checked(before['config']).read_bytes())
+-    require(not Path(old_cfg['output']).exists(), 'Old unlaunched guard execution must remain unused')
+-    control=module('_E078_guard_original_controller',CONTROL,CONTROL_SHA)
+-    require(control.show(old_cfg['unit'])['LoadState']=='not-found', 'Old guard original unit was already used')
+-    require(not NEW_GUARD_ROOT.exists(), 'New guard override is one original preparation only')
+-    module('_E078_corrected_guard_driver',GUARD/'qualify_round_study_cpu_v6.py',GUARD_DRIVER_SHA)
+-    preparer=module('_E078_corrected_guard_preparer',GUARD/'prepare_round_cpu_guard_v9.py',GUARD_PREPARER_SHA)
++    report=closed_metadata(h);failure_pin=failed_guard(h)
++    prior,prior_pin=sealed(h,FAILED_ROOT/'selected-guard-packet-override-original02.json',
++        'eae628eabfca438cda67216d01376f755ac731e3aafbf1a3005ba94ef1d177be')
++    require(prior['native_prepared']==report['native_prepared'],'Failed original02 must bind the same four native jobs')
++    authority,authority_pin=sealed(h,REUSE/'actual-closed-metadata-readiness-authority-original01.json',AUTHORITY_SHA)
++    require(authority['native_prepared']==report['native_prepared']
++        and authority['metadata_report']==h.pin(META/'runtime/report.json')
++        and authority['metadata_closeout']==h.pin(META/'independent-original-CPU-scope-closeout.json'),
++        'Closed metadata readiness authority must bind the same completed original preparation')
++    require(not NEW_GUARD_ROOT.exists(),'New guard03 is one original preparation only')
++    module('_E078_closed_metadata_guard_driver',REUSE/'qualify_round_study_cpu_closed_metadata_v7.py',GUARD_DRIVER_SHA)
++    require(h.pin(REUSE/'closed_metadata_readiness_reuse_v1.py')['sha256']==SHIM_SHA,'Selected readiness reuse shim differs')
++    preparer=module('_E078_closed_metadata_guard_preparer',GUARD/'prepare_round_cpu_guard_v10.py',GUARD_PREPARER_SHA)
+     replacement=preparer.prepare(Path(report['native_prepared']['path']),NEW_GUARD_ROOT)
+     value=json.loads(h.checked(replacement).read_bytes())
+     require(value['native_prepared_manifest']==report['native_prepared']
+-        and value['driver']['sha256']==GUARD_DRIVER_SHA, 'Corrected packet must bind the same four actual native jobs')
+-    override=h.put(GUARD_OVERRIDE,dict(schema='robotron-explicit-unlaunched-four-guard-packet-replacement-v1',
++        and value['driver']['sha256']==GUARD_DRIVER_SHA
++        and value['closed_metadata_readiness_authority']==authority_pin
++        and value['failed_original02_owned_timeout_closure']==failure_pin,
++        'New packet must bind exact same jobs, closed metadata predicates and failed original02 history')
++    override=h.put(GUARD_OVERRIDE,dict(schema='robotron-explicit-closed-metadata-readiness-guard-packet-selection-v1',
+         original_metadata_closeout=h.pin(META/'independent-original-CPU-scope-closeout.json'),
+-        original_metadata_report=h.pin(META/'runtime/report.json'), original_unlaunched_guard_packet=old,
+-        replacement_guard_packet=replacement, native_prepared=report['native_prepared'],
+-        corrected_driver=h.pin(GUARD/'qualify_round_study_cpu_v6.py'),
+-        corrected_preparer=h.pin(GUARD/'prepare_round_cpu_guard_v9.py'),
+-        old_guard_execution_unused=True, same_four_native_jobs_preserved=True,
+-        correction='Only actual full_main_input_count assertion243 to247; no scientific retry or native source change.',
++        original_metadata_report=h.pin(META/'runtime/report.json'), original_unlaunched_guard_packet=report['exact_CPU_packet'],
++        failed_original02_selection=prior_pin, failed_original02_owned_timeout_closure=failure_pin,
++        replacement_guard_packet=replacement,native_prepared=report['native_prepared'],
++        corrected_driver=h.pin(REUSE/'qualify_round_study_cpu_closed_metadata_v7.py'),
++        corrected_preparer=h.pin(GUARD/'prepare_round_cpu_guard_v10.py'),
++        closed_metadata_readiness_authority=authority_pin,readiness_reuse_shim=value['readiness_reuse_shim'],
++        original02_timeout_not_qualified=True,same_four_native_jobs_preserved=True,
++        correction='Reuse exact closed metadata/raw semantic predicates; fresh full raw SHA and identity per exact job. No native/scoring/source change or scientific retry.',
+         source=h.pin(Path(__file__).resolve()),CPU_launched=False,scientific_payload_launched=False))
+     return dict(override=override,Root_next_controller_argv=controller_argv(CONTROL,CONTROL_SHA,value['config']))
+ 
+ 
+ def guard_packet(h):
+-    report=closed_metadata(h);override,_=sealed(h,GUARD_OVERRIDE)
+-    require(override['schema']=='robotron-explicit-unlaunched-four-guard-packet-replacement-v1'
++    report=closed_metadata(h);override,_=sealed(h,GUARD_OVERRIDE);failure_pin=failed_guard(h)
++    require(override['schema']=='robotron-explicit-closed-metadata-readiness-guard-packet-selection-v1'
+         and override['original_metadata_report']==h.pin(META/'runtime/report.json')
+         and override['original_metadata_closeout']==h.pin(META/'independent-original-CPU-scope-closeout.json')
+         and override['original_unlaunched_guard_packet']==report['exact_CPU_packet']
+         and override['native_prepared']==report['native_prepared']
+-        and override['old_guard_execution_unused']is override['same_four_native_jobs_preserved']is True,
+-        'Root-selected immutable replacement guard packet required')
+-    require(h.pin(GUARD/'qualify_round_study_cpu_v6.py')==override['corrected_driver']
++        and override['failed_original02_owned_timeout_closure']==failure_pin
++        and override['original02_timeout_not_qualified']is override['same_four_native_jobs_preserved']is True,
++        'Root-selected new03 packet and failed original02 history required')
++    require(h.pin(REUSE/'qualify_round_study_cpu_closed_metadata_v7.py')==override['corrected_driver']
+         and override['corrected_driver']['sha256']==GUARD_DRIVER_SHA
+-        and h.pin(GUARD/'prepare_round_cpu_guard_v9.py')==override['corrected_preparer']
+-        and override['corrected_preparer']['sha256']==GUARD_PREPARER_SHA, 'Corrected guard sources differ')
++        and h.pin(GUARD/'prepare_round_cpu_guard_v10.py')==override['corrected_preparer']
++        and override['corrected_preparer']['sha256']==GUARD_PREPARER_SHA
++        and h.pin(REUSE/'closed_metadata_readiness_reuse_v1.py')==override['readiness_reuse_shim']
++        and override['readiness_reuse_shim']['sha256']==SHIM_SHA
++        and h.pin(REUSE/'actual-closed-metadata-readiness-authority-original01.json')==override['closed_metadata_readiness_authority']
++        and override['closed_metadata_readiness_authority']['sha256']==AUTHORITY_SHA,
++        'Selected guard03 source/authority pins differ')
+     packet=override['replacement_guard_packet'];value=json.loads(h.checked(packet).read_bytes())
+     require(value['native_prepared_manifest']==report['native_prepared']
+-        and value['driver']==override['corrected_driver'], 'Actual same-four-job selected guard binding differs')
++        and value['driver']==override['corrected_driver']
++        and value['closed_metadata_readiness_authority']==override['closed_metadata_readiness_authority']
++        and value['readiness_reuse_shim']==override['readiness_reuse_shim'],
++        'Actual same-four-job selected guard03 binding differs')
+     return packet,value
+ 
+ 
+@@ -208,7 +250,9 @@
+     packet=json.loads(h.checked(rp).read_bytes());driver=h.pin(D/'check_deadline_review_preparation_cpu_v3.py')
+     root=STUDY/'deadline-review-preparation-CPU-original01';require(not root.exists(),'Fresh original reviewCPU path required');root.mkdir(mode=0o700)
+     values=selected_D4_inputs+[rp,report['native_prepared'],h.pin(guardroot/'all-four-exact-native-guard-receipts.json'),
+-        h.pin(GUARD_OVERRIDE),h.pin(GUARD/'qualify_round_study_cpu_v6.py'),h.pin(GUARD/'prepare_round_cpu_guard_v9.py')]
++        h.pin(GUARD_OVERRIDE),h.pin(REUSE/'qualify_round_study_cpu_closed_metadata_v7.py'),h.pin(GUARD/'prepare_round_cpu_guard_v10.py'),
++        h.pin(REUSE/'closed_metadata_readiness_reuse_v1.py'),h.pin(REUSE/'actual-closed-metadata-readiness-authority-original01.json'),
++        h.pin(GUARD/'close_round_study_cpu_v7.py')]
+     for case in packet['cases']:
+         job=json.loads(h.checked(case['native_job']).read_bytes());values += [case['native_job'],case['native_config'],case['guard'],*job['inputs']]
+     inputs=list({value['path']:value for value in values}.values())
+@@ -238,8 +282,8 @@
+     elif a.print_four_guard_command:
+         pp,value=guard_packet(h);out=dict(prepared=pp,Root_next_controller_argv=controller_argv(CONTROL,CONTROL_SHA,value['config']))
+     elif a.close_four_guards:
+-        pp,value=guard_packet(h);closer=module('_E078_exact_four_guard_close',D/'close_round_study_cpu_v6.py')
+-        out=closer.close(pp['path'],pp['sha256'],h.pin(D/'close_round_study_cpu_v6.py')['sha256'])
++        pp,value=guard_packet(h);closer=module('_E078_exact_four_guard_close',GUARD/'close_round_study_cpu_v7.py',GUARD_CLOSE_SHA)
++        out=closer.close(pp['path'],pp['sha256'],GUARD_CLOSE_SHA)
+     else:out=prepare_reviews(h)
+     if out is None and a.close_four_guards:
+         out=dict(status='EXACT_FOUR_GUARDS_CLOSED',publication=h.pin(NEW_GUARD_ROOT/'all-four-exact-native-guard-receipts.json'))

@@ -1,0 +1,271 @@
+{
+  "schema": "robotron-raw-KL-live-activation-lifecycle-source-proposal-v1",
+  "status": "SOURCE_ONLY_CONTRACT_NOT_EXECUTION_READY",
+  "created_utc": "2026-10-17T10:30:04.139662+00:00",
+  "decision": "Reuse reviewed v4 ownership/source/settings/bank primitives in a narrow additive transition adapter; do not invoke v4 live8 main/run/recover unchanged and do not create another orchestration framework.",
+  "source_pins": {
+    "maintenance_v4": {
+      "run_live8_maintenance.py": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision4/run_live8_maintenance.py",
+        "sha256": "fdf7c8bfb123b494252acf83d724a51acda95bb7f00877eace28b60d0377ed18",
+        "bytes": 62971
+      },
+      "bank_state_revision2.py": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision4/bank_state_revision2.py",
+        "sha256": "e0c69fb38f5fec86e117edf42b4ff1ce2ff44b82b979c5240116121a7a1ce54f",
+        "bytes": 16047
+      },
+      "preparation-manifest.json": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision4/preparation-manifest.json",
+        "sha256": "06d9a0cdf53bf26a5145a0b9fa701aa40bd6df7652721a3d2bd88245b6189f58",
+        "bytes": 6524
+      }
+    },
+    "candidate_five": {
+      "agent.py": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/agent.py",
+        "sha256": "865a0df717b39951b7f7c516e4a962e3d48cf4d3dc11295ff266e58653e6c74b",
+        "bytes": 98429
+      },
+      "training.py": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/training.py",
+        "sha256": "90b847856f810cb4f52513a4bd0625b2d15d4801107bff398060faae25bc4be4",
+        "bytes": 35009
+      },
+      "loss_kernel.py": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/loss_kernel.py",
+        "sha256": "23eb8fc0d8409c9f31ef26ec4596da9c2257e3985abbbfa7d5fbdcb337e21f67",
+        "bytes": 9373
+      },
+      "config.py": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/config.py",
+        "sha256": "19abcbde4d08cf8465b82185ac6dd52eb8965adb8611584e0677c4c7ff21d1fd",
+        "bytes": 117528
+      },
+      "priority_phase.py": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/priority_phase.py",
+        "sha256": "ee3c0d02bc1eab55e92ffd605c3736fe5a0ef905a8a8ee242c687301ea2b7c5b",
+        "bytes": 8049
+      }
+    },
+    "base_CPU_verifier": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-maintenance-checkpoint-CPU-verifier-proposal-20261017/verify_maintenance_checkpoint.py",
+      "sha256": "7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead",
+      "bytes": 33521
+    },
+    "managed_save_consumer": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/managed_driver.py",
+      "sha256": "05407642f75a5dc883ba7f45512f36711ffb66f29bce41fc860aba182644dc36",
+      "bytes": 5639
+    },
+    "main_loop": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/main.py",
+      "sha256": "61fa053eea882e7e9ca1d95cd8dc081c45dec75677b12c51231aa95f51da0282",
+      "bytes": 67287
+    }
+  },
+  "required_actual_prerequisites": {
+    "raw_candidate_bundle": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/preparation-manifest.json",
+      "sha256": "1144139f168292b7c0648fcc76d24a945d7d7f295ec14d5f304f70d5ca5dfe11",
+      "bytes": 5202
+    },
+    "raw_fixture_companion": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/preparation-manifest-reviewed2.json",
+      "sha256": "2f083c4327540380498f10f7e3274b7cd1c9a1c2d4c54d9f5f8262cfbb2afd9a",
+      "bytes": 7032
+    },
+    "stage_A_selected": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/cuda_numeric_validation_timeout_reviewed2_proposal/preparation-manifest-reviewed3.json",
+      "sha256": "b56fdd5c4551502429430860cd9a1e594d6a96fe766c7ceb0d7ceb8cb4f25942",
+      "bytes": 7788
+    },
+    "stage_B_selected": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/private_validation_proposal/preparation-manifest.json",
+      "sha256": "2053218ba39354f6321e255abc493d7804a9f9cbe2f75de1948a69133d6012f2",
+      "bytes": 7246
+    },
+    "actual_stage_A_CPU_GPU_PASS": null,
+    "actual_stage_B_CPU_GPU_PASS": null,
+    "current_quality_all_four_terminal_audits_finalization_and_cleanup": null
+  },
+  "fresh_root_scope": [
+    "Root alone prepares actual jobs, captures current owners/units/192 original actors and masks/source/control/API/resource bindings, writes canonical state and performs every action.",
+    "After quality terminal/final audits/finalization/cleanup and actual StageA+StageB CPU/GPU passes, obtain NEW unique model-only insurance for the exact then-current owner and strict current finite CPU proof. No old-owner insurance adoption.",
+    "Use the actual then-protected incumbent descriptor/history as an untouched qualification reference; neither protected nor insurance bytes are a rollback boot input.",
+    "Resolve owned waiters/carriers/saves/exclusive leases only at root-owned boundary, preserving their original invocation/exit and any original deadline. All actual identities remain unknown in this source proposal."
+  ],
+  "reusable_API_contract": {
+    "Sources.stage/reconcile": "Stage exact pinned before/after bytes; reconcile only whole known states while exact owner absent; preserve unique owned temp/error evidence; no unknown file overwrite or mixed-source boot.",
+    "SettingsLifecycle": "Keep v4 initial fullidentity and exact six typed settings/content/mode/device/uid/nlink checks; adopt a same-byte shutdown replacement only after registered known stop+absence, once per retirement.",
+    "Runtime.stop_owned/confirm_retired": "Pre-register exact retirement candidate before stop; record retired owner before post-stop checks; unknown replacement and failed-PID0 stay manual; no SIGKILL/adoption.",
+    "Runtime.stopped_checkpoint": "Independent0444nlink1 newest-latest copy; same-owner CPU ledger attempted once per retired owner; >=actual insurance saved four clocks; keep failed/incomplete verification fatal with no retry/rollback.",
+    "LiveHost.pause/start/bank_load_proof": "Register every exact actor before SIGSTOP; adopted starts require durable request before start and exact new identity afterward; stdout boundary/new log inode and loader/ring/both bank generation/header/count evidence precede resume.",
+    "bank_state_revision2": "Retain exact selected generations/fullstat/NPY headers, nine ring maps by PIDstart/dev/inode/rw-s and source-derived padding acceptance. No full replay copy or bank RAM equality claim.",
+    "resume_all": "Attempt every eligible registered original actor on every exception, retaining failed-SIGCONT records for later undo; preserve complete initial/final resume results.",
+    "verifier": "Reuse venv argv symlink/target/config/library+successful execution provenance binding and original strict finite/model/Adam/scaler validator; per-phase context must pin actual current config source."
+  },
+  "minimal_required_deltas": [
+    {
+      "where": "read_job/NAMES/new-file rule",
+      "change": "Use exactly agent.py/training.py/loss_kernel.py/config.py/priority_phase.py, allowing only priority_phase.py initially absent. Existing dormant recomputed observer/replay/prefetch remain held source, not removal targets."
+    },
+    {
+      "where": "before environment",
+      "change": "Fresh exact baseline may retain only the known completed8 capture flag/session, as saved v4 event04/05 demonstrate for4140916. Bind its sealed complete8/no9 evidence; reject unknown/incomplete capture. Both capture flags are explicitly unset for every new phase boot."
+    },
+    {
+      "where": "held_boot_paths/source and verifier contexts",
+      "change": "Keep modeldir/latest/ratchet0/exactgraph path checks; select an explicit pinned config hash for before versus candidate source phase instead of literal f279 for all phases. Build immutable CPU model-package contexts from the current source phase (config19ab after install); do not keep mutable before config paths in static pins."
+    },
+    {
+      "where": "dropin/start record",
+      "change": "Replace capture-directory override with dedicated Restart=no plus metric/phase record/path/hash and explicit captureflag unsets. Do not restore original automatic-restart policy on completion: each later intentional restart needs a fresh record for newest bytes."
+    },
+    {
+      "where": "ready",
+      "change": "Keep original owner/held API/source/control/192/masks/native/noerrors/128graphs/loader/bothbanks/9maps checks. Remove live8 attempt01/capture_complete gate; add unique postboot model-only startup save and strict same-load CPU phase projection before actorsresume, with observed API exposure epochs/overshoot kept separate from saved boot clocks."
+    },
+    {
+      "where": "managed-save slot",
+      "change": "Archive authentic prior.completed before one unique startup request. Permit only that exact registered pending request while waiting; validate exact tag/newowner/source context and completion, then durably adopt this owned completed-slot transition. An insurance completed slot cannot remain a static same-inode pin across the known overwrite."
+    },
+    {
+      "where": "CPU startup proof",
+      "change": "Add a narrow phase-snapshot mode/wrapper around the existing strict validator, with oneCPUload plus phase projection. Current7d insurance requires192-trigger and stopped_latest requires absence, so neither schema may be relabelled for live client0 startup proof. No sixth production overlay or telemetry field is needed."
+    },
+    {
+      "where": "recover/return",
+      "change": "Before any tagged newest state, only whole known before-source recovery is eligible. Once newest is tagged, keep candidate5 and perform explicit forward CE start from newest finite CPU-verified latest; never invoke v4 before-source recovery blindly. Any invalid CPU/unknown owner or uncertain state remains manual."
+    }
+  ],
+  "acyclic_binding": [
+    "Immutable trial core pins source/budgets/guards/horizon policy and intended new phase ID, excluding unknown future record hashes/newowner/startup proof.",
+    "Phase record.root_precommit_sha256 binds trial core SHA; create record only after stopped-latest CPU proof supplies exact checkpoint triple.",
+    "Durable owned start request binds record PIN/core SHA and timestamp before systemd start.",
+    "Adopt exact requested new owner; unique postboot startup-save CPU proof plus source/API/bank/graph evidence yields activation receipt.",
+    "Learning-owned horizon watcher job binds activation receipt and actual observed start/exposure identities. It never backfills future proof into the immutable core."
+  ],
+  "phase_record_exact_schema": {
+    "schema": "robotron-priority-metric-start-v1",
+    "phase_id": "<ROOT_UNIQUE_ID>",
+    "metric": "kl|ce",
+    "action": "start|resume",
+    "previous_metric": "actual CPU-read predecessor metric or unknown",
+    "checkpoint": {
+      "path": "<ACTUAL_NEWEST_LATEST_ABSOLUTE>",
+      "sha256": "<ACTUAL_STOPPED_CPU_VERIFIED_SHA>",
+      "bytes": null
+    },
+    "model_dir": "<ACTUAL_HELD_MODEL_DIR>",
+    "root_precommit_sha256": "<IMMUTABLE_PHASE_TRIAL_CORE_SHA>"
+  },
+  "phase_transitions": {
+    "activate_kl": "NEW KL phase/actionstart. previous_metric comes from actual newest checkpoint phase, unknown if untagged; never assume historical CE-tagged leaves. Candidate5 installed once while owner absent.",
+    "resume_kl": "Only a valid saved KL phase; SAME phase_id and original root_precommit_sha256, NEW record tied to newest stopped checkpoint SHA. Not an automatic trial retry or extended horizon.",
+    "return_ce": "Keep SAME candidate5 source, NEW CE phase/actionstart/previous_metrickl tied to newest stopped-latest CPU proof. NEW CE root precommit and explicit record; candidate freezes for later quality remain independent immutable files.",
+    "future_restart": "Restart=no remains through both metrics. Any intentional restart creates a new newest-bound record; CE tagged checkpoints also require explicit record. Original old source would ignore unknown phase metadata, while candidate CE without record explicitly refuses it; neither is an acceptable silent phase rollback."
+  },
+  "ordered_transition": [
+    "Authenticate fresh job/prerequisites/current exact source-control-owner/insurance/192masks; stage known source bytes and keep undo armed.",
+    "Register+pause192 originals; stop only exact current owner; verify absence/settings same-byte transition; independently copy newest latest and perform one strict stopped CPU check.",
+    "Capture selected ring/bothbank metadata/header/generation snapshot; atomically reconcile complete candidate5 for initial activation only; create immutable phase record from actual checked newest bytes.",
+    "Write dedicated Restart=no phase override; persist start request then request start/adopt only exact returned owner; wait successful strict load/compile/native/128graphs and zero connected actors.",
+    "Create ONE unique postboot startup managed save; archive old completion, capture exact request/completion and independent readonly checkpoint copy, run strict finite/phase CPU inspection with no claim of zero postload updates.",
+    "Require startup phase schema/id/metric/valid/rootprecommit/record SHA and started_from exact boot checkpoint triple+saved four clocks, plus actual owner/API epochs/advancing clocks and original source/control/banks/9maps/128graphs.",
+    "Persist pre-admission observation and phase load proof; attempt-all resume originals, require actual192/source/recipe/masks/API health; persist activation receipt used by horizon watcher.",
+    "On return-CE use fresh current-owner insurance/newest CPU/phase-start semantics above; never reload protected/insurance/phase-start bytes. Keep all trial failure and overshoot evidence; root alone clears/updates canonical state."
+  ],
+  "startup_managed_save_handshake": {
+    "applicable_before_actor_resume": true,
+    "source_evidence": "main loop1084-1087 consumes save requests after server start regardless of client_count; consume_save_request validates tag, saves with save_replay=False, then request->.completed. Candidate save holds training lock and calls PriorityPhase.snapshot, which requires finish_load.",
+    "clock_semantics": "Boot CPU4clocks and phase.started_from4clocks must match exactly. Startup checkpoint current4clocks may advance; retain actual overshoot. API current clocks are observed bounds, not invented exact loaded-clock fields.",
+    "phase_CPU_projection_fields": [
+      "schema",
+      "phase_id",
+      "metric",
+      "valid",
+      "root_precommit_sha256",
+      "phase_record_sha256",
+      "last_resume_record_sha256",
+      "started_from",
+      "predecessor",
+      "priority_update_calls",
+      "ring_rows_submitted",
+      "last_diagnostics",
+      "last_rejected_diagnostics",
+      "invalid_reason"
+    ],
+    "no_new_forward_or_optimizer_for_proof": true,
+    "request_retry": "No automatic repeat on failed/ambiguous completed save or CPU inspection; retain first result and forward/manual recovery only."
+  },
+  "activation_result_contract": {
+    "schema": "robotron-raw-KL-maintenance-transition-result-v1",
+    "mode": "activate_kl|resume_kl|return_ce",
+    "status": "READY|FAILED|MANUAL_RECOVERY_REQUIRED",
+    "actual_root_job_PIN": null,
+    "trial_core_PIN": null,
+    "original_and_retired_owner_ID": null,
+    "durable_start_request_PIN": null,
+    "adopted_new_owner_ID": null,
+    "newest_stopped_latest_and_CPU_PIN_saved_four_clocks": null,
+    "installed_five_and_source_control_bindings": null,
+    "phase_record_PIN_and_exact_spec": null,
+    "startup_unique_request_completed_checkpoint_copy_CPU_phase_PIN": null,
+    "raw_API_before_resume_and_after192_PINs": null,
+    "observed_exposure_identity_fields": [
+      "schema",
+      "process_id",
+      "instance_monotonic_ns",
+      "epoch",
+      "epoch_reason"
+    ],
+    "observed_optimizer_counters": "Exact total/since_epoch/availability; full snapshots retained.",
+    "observed_replay_counters": [
+      "accepted_total",
+      "accepted_learner_total",
+      "accepted_by_source_total",
+      "accepted_since_epoch",
+      "accepted_learner_since_epoch"
+    ],
+    "loader_graphs_bank_generations_9maps_and_resume_proofs": null,
+    "separate_clock_labels": [
+      "CPU_saved_boot_four_clocks",
+      "persisted_phase_started_from_four_clocks",
+      "startup_save_current_four_clocks_and_overshoot",
+      "observed_API_clock_samples"
+    ],
+    "qualification_pass": false
+  },
+  "required_focused_tests_before_future_execution": [
+    "Known completed8 BEFORE flag accepted only with exact dormant session proof; unknown/incomplete capture refused and both flags unset in new expected env.",
+    "Exactly candidate5/priority_phase-new and phase-aware config contexts; partial install can recover known whole states without mixed boot.",
+    "KL resume samephase/core versus NEW CE return; stale record/checkpoint/source/currentowner rejected; oldsource/no-record rollback never selected after tagged latest.",
+    "Unique startup save with client0 archives priorcompletion, validates authentic tag/newowner and postboot CPU phase, retains overshoot; wrong predecessor/id/root/core/started_from rejected.",
+    "No automatic restart-policy restore; new record required afterlatest changes. Retain v4 actor all-undo, retirement/settings and noCPUretry failure contracts."
+  ],
+  "unknown_actuals": {
+    "current_owner_at_activation": null,
+    "fresh_insurance": null,
+    "newest_checkpoint": null,
+    "startup_save": null,
+    "activation_result": null,
+    "trial_watcher": null,
+    "return_CE_result": null
+  },
+  "actions": {
+    "candidate_imports": false,
+    "tests": false,
+    "numerical_or_model_body_reads": false,
+    "runtime_queries": false,
+    "source_installation": false,
+    "unit_or_state_actions": false,
+    "activation_or_return_authorized_now": false
+  },
+  "limits": [
+    "Ordinary shutdown/save may omit optimizer/FIFO/bank tails; no coherent replay/actor/RNG anchor.",
+    "Disk/header/map bank evidence is not live RAM byte equality.",
+    "StageB private adapter does not prove real-ring/serving coexistence or policy benefit.",
+    "No future448 winner, new quality qualification or trial outcome is inferred."
+  ]
+}

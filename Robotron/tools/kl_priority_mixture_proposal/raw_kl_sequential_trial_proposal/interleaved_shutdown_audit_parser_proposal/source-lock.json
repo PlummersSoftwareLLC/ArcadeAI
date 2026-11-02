@@ -1,0 +1,76 @@
+{
+  "schema": "robotron-interleaved-shutdown-parser-source-provenance-v1",
+  "sources": {
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_reviewed2_proposal/audit_completed_leg.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_reviewed2_proposal/audit_completed_leg.py",
+      "sha256": "734999b906973d8742e28c734bf3f2d704cc3fa1765c0e30a906caaeb5eb176d",
+      "bytes": 34094,
+      "mode": "0o444"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-quality-original-row-leg02-audit/review-receipt.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-quality-original-row-leg02-audit/review-receipt.json",
+      "sha256": "cfaef0d54fbc319a7eb4d66239d3b69b12c73793047daec4a4730c398b536579",
+      "bytes": 20542,
+      "mode": "0o444"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-quality-original-row-leg02-audit/receipt.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-quality-original-row-leg02-audit/receipt.json",
+      "sha256": "baea6cf6b3ed6abdb82e40ae90ac15f8bf8f334846ad6aa5416fc08ffabeb716",
+      "bytes": 662309,
+      "mode": "0o444"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-quality-original-row-leg02-audit/evaluator-console.log": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-quality-original-row-leg02-audit/evaluator-console.log",
+      "sha256": "46f71927b6bb85b90bb1ea5346f33bc3b36d8c6f9ded87bc31561367c3837304",
+      "bytes": 8569,
+      "mode": "0o444"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-quality-original-row-leg02-audit/bound-source-07-socket_server.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-quality-original-row-leg02-audit/bound-source-07-socket_server.py",
+      "sha256": "d99dd2782fc3e8f67670aefb398ed0dfdc1fd859432e24c8bd8dea4da2825214",
+      "bytes": 134879,
+      "mode": "0o444"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-quality-original-row-leg02-audit/bound-source-00-run_frozen_sidecar.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-quality-original-row-leg02-audit/bound-source-00-run_frozen_sidecar.py",
+      "sha256": "cd034413c2fd8a56bb9d22f8df86889939edfad041ee4e2e0210a831b5f9fe90",
+      "bytes": 32886,
+      "mode": "0o444"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-quality-C1-original-rows-narrow-shutdown-independent-saved-review-20261017/review-receipt.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-quality-C1-original-rows-narrow-shutdown-independent-saved-review-20261017/review-receipt.json",
+      "sha256": "ae17b406d605a8afec90fde077df6083de8a054de4999e46246975b924d6492d",
+      "bytes": 19182,
+      "mode": "0o444"
+    }
+  },
+  "fixture_receipt_projection": {
+    "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE543M-quality-original-row-leg02-audit/receipt.json",
+    "unchanged_top_fields": [
+      "complete",
+      "valid",
+      "active",
+      "pending",
+      "abandoned",
+      "reason",
+      "server_error",
+      "inference_error",
+      "cleanup_errors",
+      "invalidity_reasons",
+      "count",
+      "started",
+      "timeout_snapshot_unix_s",
+      "actor_timeout_logs",
+      "boundary",
+      "label",
+      "mean"
+    ],
+    "rows_projection": "All59 original end_unix_s values, preserving original order; upstream fullrow/registry/life validation remains mandatory."
+  },
+  "original_auditor_exit": 2,
+  "original_auditor_valid": false,
+  "original_failure_preserved": true,
+  "actual_parser_execution": null,
+  "future_auditor_source": null,
+  "future_bindings": null
+}

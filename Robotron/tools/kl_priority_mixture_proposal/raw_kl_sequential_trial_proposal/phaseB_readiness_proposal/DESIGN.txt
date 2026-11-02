@@ -1,0 +1,161 @@
+Raw-KL Stage B — minimal remaining readiness, SOURCE ONLY
+
+No implementation, imports, tests, payload/model reads, runtime queries, GPU
+work, trial activation or live edits. Existing448 quality has priority. Stage A
+is being prepared separately: original4/defaultCE4/KL5 same-PRE loss/gradient
+controls, no optimizer. This note neither assumes it passed nor repairs the
+original eight failed live-vs-recomputed CE comparisons.
+
+What is still needed
+
+Exercise the real current4096 training body, real Rainbow nets and constructor,
+loaded fused CUDA Adam/GradScaler, actual packed outcome, ordered native replay
+priority write and persisted phase/load path. No full ring copy or matched
+learning anchor is needed for this correctness test or an explicitly sequential
+policy search. A private fixture does not reproduce the live sampling population.
+
+Fixed inputs/recipe
+
+Use the independently CPU-verified448 checkpoint1e085a128e237c2bb0636b073e5053dd8bf5be932bcbd8249543b3af20e23021,
+275181008bytes, through a new root-owned readonly independent copy. Restore its
+actual online/target/full Adam81 slots/scaler1048576 and growthtracker243,
+logical2156883/samples7387004928/learner452630871/frame905164910; Adam2155894.
+Keep the gap989 descriptive. Use exact genuine live8 attempt01 FP32 input arrays,
+actions/reward/done/horizon/expert/actor/indices/weights and captured RNG as a
+DECLARED reused regression input with NEW448 weights. Never relabel it a new
+draw/current448 trajectory, restore its older model, or infer an exact anchor.
+Stage A's old PRE fixture and Stage B's448 fixture are deliberately distinct.
+
+Keep model11128/51/81, AMP, fused Adam, native batch update1, direct staging1,
+three staging slots, compile factory/default mode, current LR/expert schedules,
+nstep and saved clocks. Remove both capture flags. No smaller batch, forced
+scale, new input, clock rewind, changed diagnostic interval, optimizer warmup,
+fresh Adam or post-failure fixture/tolerance rescue. Bind all source/fixture/
+record/CPU-proof identities before numerical import using existing owned guards.
+
+Bounded replay dependency (explicit adapter, not full ReplayBuffer)
+
+An actual held ring+both bank constructor would reserve hundreds of GB. Instead
+inject ONE named test-owned replay factory into the actual RainbowAgent module;
+the agent class/constructor/net/optimizer/scaler/loss/train_step stay actual.
+The adapter owns actual replay.SumTree(capacity6000000): its float64 tree is
+96000000bytes. It binds the actual unmodified
+PrioritizedReplayBuffer.update_priorities method to its lock/alpha/capacity/tree.
+Keep original indices/order/duplicates and bank namespace, including EpHOF base
+6000000+192*1536=6294912. Do not modulo/remap indices or implement another tree.
+Its bounded fixed-input sample/sample_into provider only copies the genuine
+tuple to real ReplayPrefetcher buffers; no sampling/RNG/population claim.
+
+The adapter's eligible-length value is explicitly synthetic metadata. It owns
+only fixed input/at most128 validation rows, not6M state rows. Its no-ring load
+must remain visibly unexercised/False; no fake positive ring/bank restoration.
+It records constructor storage hook calls without mapping any live/model-adjacent
+ring. Native capability/batch_enabled must actually be true; wrap only to record
+the real native call/result, fail on fallback. Seed selected native leaves with
+declared synthetic values and retain them; they are not historical CE leaves.
+
+After each actual update, independently check selected leaves equal ordered
+last-write (abs(returned priority FP32 cast to FP64)+1e-6)**.7. Bank sentinels
+must be filtered, untouched leaves/internal sums consistent and duplicates kept
+in their native order. No fresh sampler distribution or bank quota proof follows.
+Retain exact priority values, native calls, selected before/after leaves and
+tree root/max. The existing real-sampler fixtures already cover quota mechanics.
+
+Actual constructor versus isolated learner
+
+Construct the real candidate RainbowAgent against private MODEL_DIR/settings/
+control files and an explicit root phase record. Keep metrics training disabled
+and exact-graph-loaded false so no uncounted update occurs. Exercise its real
+compile warmups, exact128 graph construction and actual448 load/postload checks.
+Stop/join the real TrainWorker/initial producer while still disabled, clear the
+closed producer reference before load's pause hooks, and prove zero admissions.
+Bind all initialized Adam tensors/scaler/clocks and phase loaded state to448.
+
+GPU0 has16GB. Saved held GB300 graph-owned memory is9018243072bytes; prior
+isolated GPU0 learner reserved peak5240782848bytes. These are different devices/
+lifetimes and not an additive OOM proof, but simultaneous current serving and
+learning cannot be promised within12GiB allocator/13GiB process bounds.
+Therefore retain graph/load proof, then explicitly release this PRIVATE serving
+graph cache under its lock/synchronization before the learner limb. Record the
+release and absence of serving/background threads. Keep the real constructed
+agent/net/optimizer/scaler and rebuild only a real owned ReplayPrefetcher for the
+fixed-input adapter. Call actual train_step on its consumed PreparedBatch leases.
+This is actual-constructor/load plus isolated learner validation, NOT full held
+serving concurrency, full replay startup or main process lifecycle equivalence.
+
+Natural packing coverage and outcomes
+
+The448 logical clock2156883 first reaches diagnostic_due at2156900. The smallest
+consecutive held-clock run including ordinary and diagnostic full-body packing
+is18 attempts, each4096, same declared input repeatedly. Reserve exactly these
+18 ordinals before transfer, retain real skips/errors and stop fatal structural,
+nonfinite, unsupported outcome/native, persistence or resource failures; never
+replace one with a success. This is a new proposed fixed protocol, not an
+extension/retry of any old diagnostic. No arbitrary phase clock/interval change.
+
+Observe actual preclip gradients using a transparent recording hook; call the
+original clip/optimizer/scaler exactly once. For each completed attempt join
+the real exposure ticket and packed binary found_inf. Applied requires finite
+preclip gradients, matching per-parameter Adam advancement for actual gradients,
+some online/moment progress and finite persistent state. Proven AMP skip requires
+every online/Adam-step/moment unchanged and finite decreased actual scaler;
+no skip inferred solely from bad gradients. Initial exposure availableFalse at
+zero outcomes is normal. Unavailable/unsupported outcome remains failure.
+Logical/sample advances and priority writes on skips retain existing semantics.
+Source counters are submitted visits, not unique converted leaves/inserts.
+
+Retain full PRE448 fixture and final private checkpoint plus ordinary/first
+diagnostic raw gradients/priority vectors; per-attempt exact slot maps, model/
+moment/scaler/state hashes and numeric progress summaries bound intermediate
+states. Avoid18 complete checkpoint copies. At least one genuine applied update
+must be proven before applied-optimizer readiness; if all18 skip, record partial
+coverage, no smaller scale or extra attempt. Do not inject a CUDA skip to obtain
+coverage. Real CPU scaler skip tests already passed but are not CUDA proof.
+
+Save/restart limbs
+
+Use actual agent.save(save_replay=False) for the post-step checkpoint and phase
+metadata. In fresh owned processes: (1) actual constructor/load same-phase
+resume from that exact checkpoint and current resume record, no optimization;
+(2) actual constructor/load explicit NEW return-to-CE phase from those newest
+same bytes, original CE4, no optimization. Verify online/target/all initialized
+Adam/scaler/clocks/phase/start ancestry and graph postload checks. Return-to-CE
+must never load old448/insurance/protected bytes automatically. CPU21 already
+covers invalid phase/record cases; do not duplicate a large failure matrix.
+
+Reuse existing GPU0 ownership/token/private-package/process/storage/cleanup
+guards. Proposed three sequential roles: kl18, resume, return_ce;180s each,
+600s total; CPU2/host16GiB/allocator12GiB/process13GiB/artifacts6GiB. Constructor
+capture/compile cost and GPU0 memory remain UNKNOWN. Resource failure preserves
+that limb, without dropping128 shapes/raising caps to claim full readiness.
+Actual source/kernel/outcome failures remain failures. Parent must precommit
+the concrete worker/proof layout before any launch. No launcher is supplied.
+
+Future treatment end and confirmation (not current448)
+
+The earlier60-minute suggestion was never a user constraint or activated trial
+budget. A future root trial must freeze its own exposure targets/deadline/stops
+before launch. A practical first screen is BOTH+8M learnerframes and+6M physical
+accepted ring insertions, with owner/epoch/start/end clocks and actual overshoot
+reported. A deadline before both targets means stop/abort, not a longer search.
+Ordinary shutdown can overshoot a requested boundary and omit model/FIFO tails;
+no exact hard optimizer cutoff or zero-loss restart is claimed.
+
+When the candidate is frozen by one unique model-only managed save, end the KL
+phase via owned stop/latest verification/explicit CE restart BEFORE preparing
+the new R/C/R/C plan. Continue from newest state, not the frozen candidate as an
+automatic rollback. Preserve protected policy and record mixed-tree CE phase.
+Only after192 healthy/source/load proof prepare the new fixed-quality campaign;
+hold that main owner, source/control/profile through all four full tails. The
+two-hour confirmation is excluded from KL training exposure; it is ordinary
+declared CE continuation with a frozen evaluation candidate. No hidden3h KL.
+
+Source fact:574e check_precommit/load_leg and cd03 result validation bind source,
+boot, sidecar job/checkpoint/actors/runtime, NOT main PID. A main-only restart is
+not directly rejected by those files, but rewriting config.py is an evaluator
+source mismatch; external main/isolation guarantees are separate. This absence
+is not authorization for a restart midcampaign. Plan the CE return first and
+freeze source pins; no hot metric change or midcohort maintenance is proposed.
+Both independent fresh candidate cohorts must pass the existing5% mean and
+nonlower-median gates against both new references. No matched-speed, actual old
+entropy/KL, causal benefit or replay-population claim follows from this screen.

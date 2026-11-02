@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original04-mmap-preparation/assess_fullgame_study_v8.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original05-retired-API-preparation/assess_fullgame_study_v8.py
+@@ -107,7 +107,7 @@
+         health=report['main_observer_independently_verified'];life=p.read(result['main_observer_lifecycle'])
+         p.require(health==report['main_health_raw_replay']and health['status']=='PASS'
+             and health['lifecycle']==result['main_observer_lifecycle']and health['original_job']==life['worker_job']
+-            and health['original_sources']==ctx['family']['main_observer']and health['full_main_input_count']==243
++            and health['original_sources']==ctx['family']['main_observer']and health['full_main_input_count']==247
+             and report['main_health_engine']==packet['sources']['main_health_engine']
+             and report['source_family_manifest']==subject['source_family_manifest']
+             and report['main_health_case_roles']==p.ORDER[:len(legs)+1], 'Independent original raw main-health joins differ')

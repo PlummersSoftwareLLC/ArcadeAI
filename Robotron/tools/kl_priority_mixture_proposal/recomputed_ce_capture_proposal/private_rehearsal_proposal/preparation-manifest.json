@@ -1,0 +1,112 @@
+{
+  "actual_harness_test_result": null,
+  "actual_private_CUDA_result": null,
+  "author_actions": {
+    "candidate_import_compile_or_default": false,
+    "numerical_model_or_tensor_reads": false,
+    "production_or_old_sealed_source_edits": false,
+    "runtime_queries": false,
+    "services_signals_affinity_GPU": false,
+    "source_reads_writes_hashes": true,
+    "tests": false
+  },
+  "automatic_launch_or_adoption": false,
+  "files": {
+    "PREPARATION.txt": {
+      "bytes": 10192,
+      "sha256": "26255e0c3fb060679569fdc93f10b485e40cc4c6f18d5a8098a70a4beef7b1a8"
+    },
+    "cuda_trace_parent.py": {
+      "bytes": 38490,
+      "sha256": "90e31926cd3222e32ae7aa5890d47ad65737f3241f3327d96751f2a22e1f5749"
+    },
+    "cuda_trace_parent.py.source-diff": {
+      "bytes": 9256,
+      "sha256": "e14546be337c916f8467dd735b39295d95f6a15dc9b0f6844e24ecffeeba68b3"
+    },
+    "cuda_trace_worker.py": {
+      "bytes": 34551,
+      "sha256": "53ab48313f79bc6cdae6ba2ab70969a229ec478ff94b7d52a331c8c64dd37464"
+    },
+    "reference-sources/cuda_trace_parent.py": {
+      "bytes": 36555,
+      "sha256": "f06355d1a84770124ab8798c2a6ff234a4a204b687ac3667446087790077c4f1"
+    },
+    "reference-sources/cuda_trace_worker.py": {
+      "bytes": 25473,
+      "sha256": "59b3e81dead476bae25637b848b8c880043ca1b7f9b817e1d1b7c83846e4320c"
+    },
+    "reference-sources/source-lock.json": {
+      "bytes": 8968,
+      "sha256": "20057c290b1a9f121a03dfb5e81d33c67170a2d51807c0c149e295f393fa359e"
+    },
+    "reference-sources/test_process_scan.py": {
+      "bytes": 18984,
+      "sha256": "f478c37876f04398f06c2c96ee9fd57402d3e4c2afb9e199195fe0cd19956b06"
+    },
+    "reference-sources/test_storage_watcher.py": {
+      "bytes": 23551,
+      "sha256": "7dc6fd2b8b9f18daaf55ef6a0c0551388add771b27c0b4b159de117a31930d8d"
+    },
+    "source-lock.json": {
+      "bytes": 9202,
+      "sha256": "28870c3cf7594cc0ac8f73eb3760e3665d5d4448668f4bf9010268427ec80dd3"
+    },
+    "test_process_scan.py": {
+      "bytes": 19075,
+      "sha256": "6d3a7f02148cfa796f91ab275bbe671a47204c93ea2f6e61f42a209e0854f787"
+    },
+    "test_process_scan.py.source-diff": {
+      "bytes": 2196,
+      "sha256": "434d3cafbfd1d623d935a117ed82ce822d5641ac7a33ec2eae50b462dab98054"
+    },
+    "test_rehearsal_contract.py": {
+      "bytes": 10755,
+      "sha256": "62a668f556bf26588bf0e12f28d4bc933418fceb236d1f71f68e04288b2f4954"
+    },
+    "test_storage_watcher.py": {
+      "bytes": 23543,
+      "sha256": "b1591d7bd9d92540255021572f4d3e7a4106527e2352650ff37872a2e8e4cdec"
+    },
+    "test_storage_watcher.py.source-diff": {
+      "bytes": 1193,
+      "sha256": "4ba8cee9e59b7b6204827062c55731bf3d76714e0f8e3f953887f849855e96f0"
+    }
+  },
+  "observer_revision_manifest_sha256": "356b8b0999b05d3d4cd6e2addfcbee832c7365c9c31f9c08506f8714c0dfeaa2",
+  "offline_loss_sha256": "ce527c840f1b0cce3f77fece52923c7023519605db92d7c5e691b1b573ee6d2f",
+  "original_loss_sha256": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a",
+  "prior_observer_actual_test_evidence": {
+    "receipt_sha256": "a228e383eca3c59cf3f8de41f54a03bf0124fd39bc254d4fb32c334d0c9f14a4",
+    "scope": "root-reported separate actual20CPU tests; not new harness result"
+  },
+  "qualification_pass": false,
+  "result_scope": "One actual private original4 attempt plus fresh grad-enabled conditional5 forward; no parity/learning/lifecycle claim",
+  "runtime_priority": "388629023 checkpoint and fresh384M quality; no GPU rehearsal window requested",
+  "schema": "robotron-recomputed-ce-private-rehearsal-preparation-v1",
+  "source_lock_sha256": "28870c3cf7594cc0ac8f73eb3760e3665d5d4448668f4bf9010268427ec80dd3",
+  "source_peer_review": {
+    "audit_quality_result": {
+      "contract_test_sha256": "62a668f556bf26588bf0e12f28d4bc933418fceb236d1f71f68e04288b2f4954",
+      "finding": "No remaining scientific/source blocker; actual execution/runtime readiness not reviewed",
+      "parent_sha256": "90e31926cd3222e32ae7aa5890d47ad65737f3241f3327d96751f2a22e1f5749",
+      "scope": "SOURCE_ONLY_NO_EXECUTION",
+      "worker_sha256": "53ab48313f79bc6cdae6ba2ab70969a229ec478ff94b7d52a331c8c64dd37464"
+    },
+    "learning_review": {
+      "findings_addressed": [
+        "production compile factory flags",
+        "actual owned offline update guards",
+        "CE-only comparison scope"
+      ],
+      "scope": "SOURCE_ONLY_IN_PROGRESS_FINAL_ALL_FILE_CHECK_PENDING"
+    }
+  },
+  "status": "SOURCE_ONLY_UNEXECUTED",
+  "test_methods_authored_unexecuted": {
+    "process_scan": 18,
+    "rehearsal_contract": 9,
+    "storage_watcher": 25,
+    "total": 52
+  }
+}

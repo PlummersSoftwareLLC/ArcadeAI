@@ -1,4 +1,13 @@
 .DS_Store
+__pycache__/
+.pytest_cache/
+.venv-*/
+*.so
+*.o
+*.whl
+/Robotron/requirements-local.lock
+# Machine-local training logs, evaluation artifacts, and per-actor runtime files.
+/Robotron/logs/
 Scripts/models
 Scripts/models_dqn
 Scripts/models

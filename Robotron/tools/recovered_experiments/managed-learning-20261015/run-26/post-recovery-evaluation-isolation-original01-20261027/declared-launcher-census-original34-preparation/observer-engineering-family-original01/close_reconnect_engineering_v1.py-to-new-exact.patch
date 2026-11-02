@@ -1,0 +1,20 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/close_reconnect_engineering_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/observer-engineering-family-original01/close_declared_launcher_engineering_v1.py
+@@ -11,7 +11,7 @@
+ from pathlib import Path
+ import subprocess
+ 
+-ROOT=Path(__file__).resolve().parents[2]
++ROOT=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ 
+ 
+ def require(value,message):
+@@ -41,7 +41,7 @@
+     require(ip['sha256']==expected_sha,'Exact original engineering launch index required')
+     immutable=load('_reconnect_engineering_close_reader',ROOT/'tools/confirmed_game_boundary_proposal/protect_confirmed_winner_reviewed4.py')
+     def read(pin):return immutable.read_pin(pin)
+-    packet=read(ip);require(packet['schema']=='robotron-reconnect-four-original-engineering-launches-v1','Original launch index schema differs')
++    packet=read(ip);require(packet['schema']=='robotron-declared-launcher-two-original-engineering-launches-v1','Original launch index schema differs')
+     records=[row for row in packet['records']if row['kind']==kind and row['mode']==mode]
+     require(len(records)==1,'One exact original engineering scope required')
+     record=records[0];out=Path(record['output']);owner=read(record['original_live_owner']);intent=read(record['intent'])

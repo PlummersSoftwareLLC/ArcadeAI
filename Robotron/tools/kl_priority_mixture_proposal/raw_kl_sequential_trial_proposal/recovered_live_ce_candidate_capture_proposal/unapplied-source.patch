@@ -1,0 +1,226 @@
+--- a/live_ce_candidate_capture_helper_proposal/capture_live_CE_candidate.py
++++ b/recovered_live_ce_candidate_capture_proposal/capture_live_CE_candidate.py
+@@ -6,6 +6,7 @@
+ import argparse
+ from contextlib import contextmanager
+ import copy
++import fcntl
+ import hashlib
+ import importlib.util
+ import json
+@@ -248,9 +249,170 @@
+     return files.read_json(pin)
+ 
+ 
++def recovery_context(job, files):
++    """Consume the genuine forward-repair shape; never relabel it as CE_return."""
++    require(set(job['recovery']) == {'result','job','release'}, 'Exact recovery evidence required')
++    rec, repair, release = (sealed(files,job['recovery'][key]) for key in ('result','job','release'))
++    require(rec['status']=='READY_CE_FORWARD_REPAIR' and rec['original_trial_failed'] is True and
++        rec['trial_retried'] is False and rec['manual_recovery_required'] is False and
++        rec['recovery_target_batch_size']==4096 and rec['qualification_pass'] is False,
++        'Actual successful forward CE4096 repair required')
++    require(rec['root_job']==job['recovery']['job'] and release['status']=='PASS' and
++        triple(release['result'])==triple(job['recovery']['result']) and release['owner']==rec['owner']==job['expected_owner'] and
++        release['original_exit']==0 and release['original_exec_code']==1 and release['original_result']=='success' and
++        release['original_archived_before_release'] is True and release['unit_released'] is True and
++        len(release['owned_release'])==2 and all(x['returncode']==0 and x['final_LoadState']=='not-found' for x in release['owned_release']),
++        'Original successful repair/release/owner join differs')
++    activation=sealed(files,repair['activation_job'])
++    require(job['experiment']==activation['experiment'] and job['startup_tag']==repair['startup_tag'],
++        'Actual experiment/startup tag differs')
++    startup=rec['startup'];phase=copy.deepcopy(startup['phase']);record=sealed(files,phase['record'])
++    proof=sealed(files,startup['phase_CPU_readonly_archive'])
++    require(triple(release['actual_startup_CPU'])==triple(startup['phase_CPU_readonly_archive']) and
++        proof['status']=='PASS' and proof['phase_metadata_verified'] is True and
++        proof['held_recipe_context']['batch_size']==4096 and proof['root_job']['phase_snapshot']['owner']==rec['owner'] and
++        proof['root_job']['phase_snapshot']['observed_clients']==0 and
++        proof['root_job']['phase_snapshot']['phase_record']==phase['record'] and
++        proof['root_job']['phase_snapshot']['expected_phase']==phase['expected'],
++        'Actual CE4096 startup CPU/phase proof differs')
++    expected=phase['expected'];saved=proof['saved_priority_metric_phase']
++    require(record['action']=='start' and record['metric']==record['previous_metric']=='ce' and
++        record['phase_id']==repair['phase_id']==expected['phase_id'] and
++        record['checkpoint']==phase['boot_checkpoint']==triple(rec['boot_checkpoint']['source']) and
++        record['root_precommit_sha256']==repair['repair_intent']['sha256']==expected['root_precommit_sha256'] and
++        phase['record']['sha256']==expected['founder_phase_record_sha256'] and
++        expected['last_resume_record_sha256'] is None and expected['valid'] is True and
++        all(saved[k]==expected[k] for k in ('metric','phase_id','root_precommit_sha256','started_from','valid')) and
++        saved['phase_record_sha256']==phase['record']['sha256'] and saved['last_resume_record_sha256'] is None,
++        'Recovered CE founder/boot/intent lineage differs')
++    boot=sealed(files,phase['boot_verification'])
++    require(boot['status']=='PASS' and boot['sha256']==phase['boot_checkpoint']['sha256'] and
++        boot['bytes']==phase['boot_checkpoint']['bytes'] and expected['started_from']==dict(phase['boot_checkpoint'],clocks=four(boot['clocks'])),
++        'Original actual recovery boot proof differs')
++    binding=rec['healthy192']['binding'];original=activation['before']
++    require(len(binding['bindings']['actors'])==192 and binding['bindings']['actors']==original['bindings']['actors'] and
++        binding['bindings']['source_hashes']==original['bindings']['source_hashes'] and
++        binding['bindings']['control_hashes']==original['bindings']['control_hashes'] and
++        binding['fleet']['MainPID']==original['fleet']['MainPID'] and
++        binding['supervisor_start_ticks']==original['supervisor_start_ticks'] and
++        binding['environment']['DQN_BATCH_SIZE']=='4096' and binding['environment']['DQN_PER_PRIORITY_METRIC']=='ce' and
++        binding['environment']['DQN_PRIORITY_PHASE_RECORD']==phase['record']['path'] and
++        binding['environment']['DQN_PRIORITY_PHASE_RECORD_SHA256']==phase['record']['sha256'],
++        'Recovered actor/source/control/environment anchor differs')
++    require(rec['final_resume']['all_matching_actors_resumed'] is True and not rec['final_resume']['failures'],
++        'Repair did not undo every actor pause')
++    return dict(recovery=rec,repair=repair,release=release,phase=phase,phase_proof=proof,binding=binding,
++        actor_masks=activation['actor_masks'],worker_mask=activation['worker_mask'],fleet_unit=activation['fleet_unit'])
++
++
++def current_ce_and_resources(ops, context, record):
++    """Original resource checks, bound to the genuine recovered CE anchor."""
++    show,process_start,actual_process=ops.show,ops.process_start,ops.actual_process
++    read_file,cgroup_empty,identity=ops.read_file,ops.cgroup_empty,ops.identity
++    command,GPU_UUIDS,CLOCKS=ops.command,ops.GPU_UUIDS,ops.CLOCKS
++    EARLY_UNIT,BLOCKED=ops.EARLY_UNIT,ops.BLOCKED
++    rec=context['recovery'];owner=rec['owner'];binding=context['binding'];original=binding
++    phase_proof=context['phase_proof']
++    current,_=show(owner['unit'])
++    require(current['MainPID']==str(owner['pid']) and current['InvocationID']==owner['invocation_id'] and
++        current['ControlGroup']==owner['cgroup'] and current['ActiveState']=='active' and
++        current['SubState']=='running' and current['Restart']=='no','Recovered CE owner not retained/running')
++    for released in context['release']['owned_release']:
++        state,_=show(released['unit']);require(state['LoadState']=='not-found','Repair helper unit remains loaded')
++    masks = {str(actor['pid']): actual_process(actor, original['bindings']['fleet_cgroup'])
++        for actor in original['bindings']['actors']}
++    require(len(masks) == 192 and masks == context['actor_masks'], 'Original192 masks changed')
++    worker = binding['bindings']['worker']; main_mask = actual_process(worker['trainer'], owner['cgroup'])
++    require(main_mask == context['worker_mask'], 'Main affinity changed')
++    fleet, _ = show(context['fleet_unit'])
++    require(fleet['MainPID'] == original['fleet']['MainPID']
++        and fleet['ControlGroup'] == original['fleet']['ControlGroup']
++        and process_start(int(fleet['MainPID'])) == original['supervisor_start_ticks'], 'Fleet supervisor changed')
++    environment = dict(os.fsdecode(part).split('=',1) for part in
++        Path('/proc',str(owner['pid']),'environ').read_bytes().split(b'\0') if b'=' in part)
++    require(all(environment.get(key) == value for key,value in binding['environment'].items())
++        and environment.get('DQN_PER_PRIORITY_METRIC') == 'ce'
++        and not any(environment.get(key) for key in ('DQN_RECOMPUTED_CE_CAPTURE_DIR','DQN_EXECUTED_CE_TRACE_DIR')),
++        'Actual CE environment changed')
++    tid = worker['thread']; require(process_start(tid['tid']) == tid['starttime_ticks'], 'Inference TID changed')
++    inference = sorted(os.sched_getaffinity(tid['tid']))
++    require(inference == context['worker_mask']
++        and Path('/proc', str(owner['pid']), 'task', str(tid['tid'])).exists(), 'Inference membership/mask changed')
++    hashes = {}
++    for path, digest in dict(binding['bindings']['source_hashes'], **original['bindings']['control_hashes']).items():
++        _, pin = read_file(path); require(pin['sha256'] == digest, 'Held source/control changed: '+path); hashes[path] = digest
++    for label, files in original['unit_files'].items():
++        for path, digest in files.items():
++            _, pin = read_file(path); require(pin['sha256'] == digest, 'Held unit source changed')
++    for unit in (EARLY_UNIT, EARLY_UNIT.removesuffix('.service')+'.timer'):
++        value, _ = show(unit); require(value['LoadState'] == 'not-found', 'Early CPU unit still loaded')
++    observed_actors = set()
++    for entry in Path('/proc').iterdir():
++        if not entry.name.isdecimal() or int(entry.name) == os.getpid():
++            continue
++        try:
++            argv = (entry/'cmdline').read_bytes().split(b'\0')
++        except OSError as error:
++            if error.errno in (2, 3): continue
++            raise
++        require(not any(os.path.basename(os.fsdecode(arg)) in BLOCKED for arg in argv if arg),
++            'Parent/private numerical helper remains: '+entry.name)
++        if argv and os.path.basename(os.fsdecode(argv[0])) == 'mame' and b'robotron' in argv:
++            observed_actors.add(int(entry.name))
++    require(observed_actors == {actor['pid'] for actor in original['bindings']['actors']},
++        'Global Robotron MAME inventory is not exactly the original192')
++    private = list(Path('/dev/shm').glob('robotron-snapshot-smoke-*'))
++    require(not any(p.is_dir() for p in private), 'Private tmpfs remains')
++    app = Path('/sys/fs/cgroup')/owner['cgroup'].lstrip('/')
++    for group in app.parent.glob('robotron-snapshot-smoke-*'):
++        cgroup_empty('/'+str(group.relative_to('/sys/fs/cgroup')))
++    cgroup_empty('/user.slice/user-%s.slice/user@%s.service/app.slice/%s' % (os.getuid(), os.getuid(), EARLY_UNIT))
++    for table in ('tcp', 'tcp6'):
++        for line in Path('/proc/net', table).read_text().splitlines()[1:]:
++            row = line.split(); require(not (row[3] == '0A' and int(row[1].rsplit(':',1)[1],16) == 9999), 'Port9999 listener remains')
++    lease = Path('/dev/shm/robotron-snapshot-smoke-gpu0.lock')
++    before = lease.lstat(); require(stat.S_ISREG(before.st_mode) and before.st_uid == os.getuid(), 'Lease identity differs')
++    fd = os.open(lease, os.O_RDONLY | os.O_NOFOLLOW)
++    try:
++        require(identity(os.fstat(fd)) == identity(before) == identity(lease.lstat()), 'Lease open race')
++        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
++    finally:
++        os.close(fd)
++    gpu = command(['nvidia-smi', '--query-gpu=index,uuid', '--format=csv,noheader,nounits'])
++    apps = command(['nvidia-smi', '--query-compute-apps=pid,gpu_uuid', '--format=csv,noheader,nounits'])
++    require(gpu['returncode'] == apps['returncode'] == 0, 'GPU observation failed')
++    gpu_map = {int(row.split(',')[0].strip()):row.split(',')[1].strip() for row in gpu['stdout'].splitlines() if row.strip()}
++    app_rows = [(int(row.split(',')[0].strip()),row.split(',')[1].strip()) for row in apps['stdout'].splitlines() if row.strip()]
++    require(gpu_map == GPU_UUIDS and app_rows == [(owner['pid'], GPU_UUIDS[1])],
++        'Known GPU mapping differs/GPU0 not free/main not sole GPU1 process')
++    record('GPU-index-map', gpu); record('GPU-processes', apps)
++    # API values can legitimately contain a NaN grad_norm for a recorded AMP skip.
++    # Preserve raw response bytes; no parser or gradient-value rewrite.
++    import urllib.request
++    with urllib.request.urlopen('http://127.0.0.1:8771/api/now', timeout=3) as response:
++        raw = response.read(2 << 20)
++    api = json.loads(raw); pipeline = api['host_pipeline']; graphs = pipeline['inference_graphs']
++    require(api['client_count'] == 192 and api['training_enabled'] is True
++        and 0 <= time.time()-float(api['ts']) <= 5
++        and pipeline['learning_exposure']['optimizer']['process_id'] == owner['pid']
++        and pipeline['learning_exposure']['replay']['process_id'] == owner['pid']
++        and graphs['ready'] and graphs['capture_count'] == 128 and graphs['validation_replay_count'] == 640
++        and graphs['postload_validations'] >= 1 and graphs['runtime_capture_count'] == graphs['fallback_count'] == 0
++        and graphs['fatal_error'] is None and all(pipeline[key]['errors'] == 0 for key in
++            ('inference','actor_refresh','target_refresh','learner_priority'))
++        and all(api[key] >= phase_proof['clocks'][key] for key in CLOCKS),
++        'Current CE192/graphs/API owner differs')
++    after, _ = show(owner['unit'])
++    require(process_start(owner['pid']) == owner['starttime_ticks'] and after['MainPID'] == str(owner['pid'])
++        and after['InvocationID'] == owner['invocation_id'], 'CE owner changed during cleanup proof')
++    return dict(owner=owner, actor_masks=masks, main_mask=main_mask, inference_mask=inference,
++        source_control_hashes=hashes, GPU0_free=True, sole_main_on_GPU1=True,
++        lease_unheld=True, port9999_unused=True, no_private_tmpfs_or_helpers=True), raw
++
++
+ def run(job,job_pin,ops,snapmod,phase,files):
+     fields={'schema','experiment','model_dir','output_directory','tag','startup_tag','save_timeout_s',
+-        'expected_owner','root_release','history','cpu_python'}
++        'expected_owner','root_release','recovery','cpu_python'}
+     require(set(job)==fields and job['schema']==SCHEMA and job['save_timeout_s']==60,'Exact capture job/budget schema required')
+     model=Path(job['model_dir']);out=Path(job['output_directory'])
+     require(model==GAME/'models_dqn' and out.is_absolute() and out==out.resolve(strict=False)
+@@ -261,25 +423,24 @@
+     require(set(release)=={'source_freeze_released','quality_cleanup','freeze_release'} and release['source_freeze_released'] is True,
+         'Root must explicitly release the completed quality source freeze before capture')
+     released=sealed(files,release['freeze_release'])
+-    require(released['schema']=='robotron-quality-campaign-root-source-freeze-release-v1' and
+-        released['source_freeze_released'] is True and str(released['status']).startswith('PASS') and
+-        released['actual_quality_cleanup']==triple(release['quality_cleanup']), 'Actual root freeze release/cleanup join differs')
++    require(released['source_freeze_released'] is True and released['owned_cleanup_complete'] is True and
++        released['status']=='PASS_ROOT_EXPLICIT_CURRENT_CE543M_SOURCE_FREEZE_RELEASE' and
++        released['actual_owned_closure']==release['quality_cleanup'] and
++        released['actual_plan_sha256']=='25aaded11bf956b715cc5fb58be1901d236a30444e74253594461f8d11c00d75' and
++        released['current_campaign']=='quality-448M-vs-CE543M-20261017' and
++        released['all69_original_owned_processes_absent'] is True and released['original_parent_exit']==0 and
++        released['original_audit_exits_preserved']==[0,2,0,0], 'Actual root freeze release/cleanup join differs')
+     cleanup=sealed(files,release['quality_cleanup'])
+     require(cleanup['status']=='PASS_ORIGINAL_QUALITY_ARCHIVED_OWNED_CLEANUP_COMPLETE' and cleanup['owned_cleanup_complete'] is True,
+         'Actual completed original quality cleanup required')
+-    require(set(job['history'])=={'outer_job','activation_job','activation','CE_return'},'Exact authentic resource context required')
+-    old={k:sealed(files,v) for k,v in job['history'].items()}
+-    ce=old['CE_return'];current_phase=copy.deepcopy(ce['startup_phase_proof']['phase'])
+-    require(ce['status']=='READY' and ce['owner']==job['expected_owner'] and current_phase['expected']['metric']=='ce'
+-        and ce['manual_recovery_required'] is False,'Actual retained current CE lineage required')
+-    require(job['experiment']==old['activation_job']['experiment'],'Held experiment differs')
++    context=recovery_context(job,files);rec=context['recovery'];current_phase=context['phase']
+     out.mkdir(mode=0o700);files.fsync_directory(out.parent)
+     commands=[];result=dict(schema=RESULT_SCHEMA,status='STARTING',qualification_pass=False,
+         cpu_verification=None,root_job=job_pin,source_freeze_released=True,raw_commands=commands)
+     def record(name,raw):
+         p=files.publish(out/('%03d-'%len(commands)+name+'-command.json'),raw);commands.append(p);return p
+     def health():
+-        return ops.current_ce_and_resources(old['outer_job'],old['activation_job'],old['activation'],ce,record)
++        return current_ce_and_resources(ops,context,record)
+     snapshot=None
+     try:
+         before,raw=health();require(before['owner']==job['expected_owner'],'Fresh actual owner differs')
+@@ -305,7 +466,7 @@
+             src,archive=files.exclusive_copy(GAME/'Scripts/dqn'/name,metadata/name)
+             sources[name]=dict(current=src,archive=archive)
+         _,control=files.exclusive_copy(model/'learning_control.json',metadata/'learning_control.json')
+-        unit=ops.command(['systemctl','--user','cat',ce['owner']['unit']]);require(unit['returncode']==0,'Current trainer unit cat failed')
++        unit=ops.command(['systemctl','--user','cat',rec['owner']['unit']]);require(unit['returncode']==0,'Current trainer unit cat failed')
+         unit_pin=ops.write_bytes(metadata/'trainer-unit.txt',unit['stdout'].encode('utf-8','surrogateescape'))
+         _,boot_archive=files.exclusive_copy(current_phase['boot_verification']['path'],metadata/'boot-CPU-proof.json')
+         require(boot_archive['sha256']==current_phase['boot_verification']['sha256'] and

@@ -1,0 +1,159 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/power_recovery/watch_learning_window_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-continuous-fresh-candidate-20261029-original04-preparation/watch_learning_window_continuous_v3.py
+@@ -10,6 +10,7 @@
+ import os
+ from pathlib import Path
+ import shutil
++import stat
+ import subprocess
+ import time
+ import traceback
+@@ -66,6 +67,100 @@
+         return json.load(response)
+ 
+ 
++
++# This adapter is configured only by a new Root-selected exposure plan. It
++# confers no scientific main-observer, private-evaluation, or quality proof.
++_CONTEXT = None
++
++def configure(plan):
++    global _CONTEXT
++    assert _CONTEXT is None, 'Configure exactly once per original process'
++    context = plan['continuous_context']
++    assert context['owner'] == plan['owner']
++    assert context['server_stamp'] == dict(pid=654315, birth=16564768,
++        source_sha256='a076501b0601a637b91269a41572be60496754ad1da4b04385d77c51b9f34423')
++    assert context['owner'] == dict(pid=654315, birth_ticks=16564768,
++        invocation_id='c9a7ad073c8043af8b9499acb4ae4372')
++    assert type(context['policy_generation']) is int and context['policy_generation'] >= 0
++    roles = context['slot_eval']
++    assert set(roles) == {str(slot) for slot in range(192)}
++    assert all(type(v) is bool for v in roles.values()) and sum(roles.values()) == 37
++    assert context['environment'] == {
++        'DQN_BATCH_SIZE':'4096','DQN_N_STEP':'3','DQN_MAX_SAMPLES_PER_FRAME':'8',
++        'DQN_PER_PRIORITY_METRIC':'ce','ROBOTRON_CONTINUOUS_TRAINING_MODE':'1'}
++    lineage = plan['expected_exposure_lineage']
++    assert set(lineage) == {'optimizer','replay'}
++    assert all(set(v) == set(FIELDS) and v['process_id'] == 654315 and v['epoch'] == 1
++               and type(v['instance_monotonic_ns']) is int and v['instance_monotonic_ns'] > 0
++               for v in lineage.values())
++    assert lineage['optimizer']['epoch_reason'] == 'optimizer_restore_begin'
++    assert lineage['replay']['epoch_reason'] == 'directory_adopt_begin'
++    _CONTEXT = json.loads(json.dumps(context,allow_nan=False))
++    check_context_inputs()
++
++
++def check_context_inputs():
++    assert _CONTEXT is not None, 'Explicit current continuous exposure plan required'
++    for value in _CONTEXT['source_and_control_inputs']:
++        path=Path(value['path']);before=path.lstat()
++        assert stat.S_ISREG(before.st_mode) and not path.is_symlink()
++        identity=lambda s:dict(device=s.st_dev,inode=s.st_ino,bytes=s.st_size,
++            mtime_ns=s.st_mtime_ns,ctime_ns=s.st_ctime_ns,mode=stat.S_IMODE(s.st_mode),
++            uid=s.st_uid,nlink=s.st_nlink)
++        assert identity(before) == value['identity'] and before.st_uid == os.getuid()
++        assert before.st_nlink == 1 and before.st_size <= 2*1024*1024
++        data=path.read_bytes();after=path.lstat()
++        assert identity(after) == value['identity'] and len(data) == value['bytes']
++        assert hashlib.sha256(data).hexdigest() == value['sha256']
++
++
++def continuous_roster(sample):
++    assert _CONTEXT is not None
++    rows=sample['client_rows'];roles=_CONTEXT['slot_eval']
++    if (sample['training_round'] is not None or type(sample['client_count']) is not int
++            or len(rows) != sample['client_count'] or not 155 <= len(rows) <= 192):return False
++    slots=[row['client_slot'] for row in rows]
++    if (any(type(slot) is not int or not 0 <= slot < 192 for slot in slots)
++            or len(set(slots)) != len(slots)):return False
++    if any(type(row['eval']) is not bool or row['eval'] != roles[str(row['client_slot'])]
++           for row in rows):return False
++    # All continuous TRAIN slots must be represented. Absent EVAL rows are not
++    # interpreted as completed/reaped/qualified; this is only an exposure census.
++    return {str(row['client_slot']) for row in rows if not row['eval']} == {
++        slot for slot,is_eval in roles.items() if not is_eval}
++
++
++def capture_continuous_policy():
++    before=time.monotonic()
++    with urllib.request.urlopen('http://127.0.0.1:8771/api/continuous_training_policy',timeout=5) as response:
++        data=response.read(65537)
++    after=time.monotonic()
++    assert len(data) <= 65536, 'Bounded current policy metadata required'
++    return dict(before_monotonic_s=before,after_monotonic_s=after,
++        raw_wire=data.decode('utf-8'),value=json.loads(data))
++
++
++def validate_continuous_policy(capture):
++    assert _CONTEXT is not None
++    value=capture['value']
++    assert json.loads(capture['raw_wire']) == value
++    before=capture['before_monotonic_s'];after=capture['after_monotonic_s']
++    assert 0 <= before <= after <= time.monotonic() and after-before <= 5
++    assert value['schema'] == 'robotron-continuous-main-policy-v1'
++    assert value['server_stamp'] == _CONTEXT['server_stamp']
++    assert value['continuous_training_mode'] is True
++    assert value['main_measurement_entry_disabled'] is True
++    assert value['measurement_active'] is False and value['ratchet_frozen'] is False
++    assert type(value['measurement_generation']) is int
++    assert value['measurement_generation'] == _CONTEXT['policy_generation']
++    assert value['training_enabled'] is True and value['replay_admission_open'] is True
++    assert value['consumer_error'] is None
++    assert math.isfinite(value['observed_unix_s']) and 0 <= time.time()-value['observed_unix_s'] <= 5
++    assert type(value['observed_monotonic_ns']) is int
++    assert before <= value['observed_monotonic_ns']/1e9 <= after
++    return value
++
++
+ def observe(expected_owner, directory=None, expected_lineage=None):
+     """Accept only a balanced exposure sample; re-poll the same live owner.
+ 
+@@ -75,11 +170,15 @@
+     """
+     deadline = time.monotonic() + 30
+     while True:
++        check_context_inputs()
++        assert expected_owner == _CONTEXT['owner']
+         assert owner() == expected_owner, 'Original trainer identity changed'
+         sample = None
+         reason = 'API response unavailable'
+         try:
+             sample = api()
++            sample['_continuous_policy_capture'] = capture_continuous_policy()
++            assert owner() == expected_owner, 'Original trainer changed during policy read'
+         except (OSError, ValueError) as error:
+             reason = repr(error)
+         if sample is not None:
+@@ -96,10 +195,10 @@
+             assert pending in (0, 1), 'Invalid optimizer in-flight count'
+             balanced = (pending == 0 and counters['optimizer']['available'] is True
+                         and counters['replay']['available'] is True)
+-            round_status = sample['training_round']
++            validate_continuous_policy(sample['_continuous_policy_capture'])
+             fresh = (0 <= time.time() - sample['ts'] <= 5
+                      and 0 <= sample['pipeline_snapshot_age_s'] <= 5)
+-            coherent_round = sample['client_count'] <= round_status['active']
++            coherent_round = continuous_roster(sample)
+             if balanced and fresh and coherent_round:
+                 return sample
+             reason = ('in_flight_optimizer_attempt' if pending else
+@@ -123,14 +222,10 @@
+     assert abs(sample['epsilon'] - .1) < 1e-12 and abs(sample['expert_ratio'] - .1) < 1e-12
+     assert math.isfinite(sample['ts']) and 0 <= time.time() - sample['ts'] <= 5
+     assert 0 <= sample['pipeline_snapshot_age_s'] <= 5
+-    round_status = sample['training_round']
+-    assert round_status['total'] == 192
+-    assert round_status['retired'] + round_status['active'] == 192
+-    assert 0 <= round_status['retired'] <= round_status['completed'] <= 192
+-    rows = sample['client_rows']
+-    assert len(rows) == sample['client_count'] and len({x['client_slot'] for x in rows}) == len(rows)
+-    assert all(0 <= x['client_slot'] < 192 for x in rows)
+-    assert sample['client_count'] <= round_status['active']
++    check_context_inputs()
++    assert expected_owner == _CONTEXT['owner']
++    validate_continuous_policy(sample['_continuous_policy_capture'])
++    assert continuous_roster(sample), 'Current continuous TRAIN155 census or None-round contract differs'
+     counters = exposure(sample)
+     for key in ['optimizer', 'replay']:
+         assert counters[key]['available'] is True and counters[key]['enabled'] is True

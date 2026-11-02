@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original07-proof2s-preparation/source-family-original01/prepare_round_cpu_guard_v9.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-original01/prepare_round_cpu_guard_v9.py
+@@ -56,7 +56,7 @@
+             small[str(path)] = value
+     witness = json.loads(h.checked(old['interpreter_symlink_binding']).read_bytes())
+     large[witness['source_pin']['path']] = witness['source_pin']
+-    unit = 'robotron-round-four-exact-contexts-CPU-' + ('engineering' if study['engineering_only'] else 'study') + '-proof2s-' + study_pin['sha256'][:16] + '-original01-20261029.service'
++    unit = 'robotron-round-four-exact-contexts-CPU-' + ('engineering' if study['engineering_only'] else 'study') + '-static192-proof2s-' + study_pin['sha256'][:16] + '-original01-20261029.service'
+     job = dict(schema='robotron-deadline32-four-actual-jobs-CPU-guard-v2', unit=unit,
+         output=str(output/'output-original01'), prepared_manifest=study_pin, helpers=old['helpers'],
+         new_native_chain_tests=old['new_native_chain_tests'], interpreter_symlink_binding=old['interpreter_symlink_binding'],

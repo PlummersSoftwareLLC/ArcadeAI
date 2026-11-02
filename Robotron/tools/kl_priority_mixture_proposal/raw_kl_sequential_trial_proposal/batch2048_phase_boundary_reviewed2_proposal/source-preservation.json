@@ -1,0 +1,82 @@
+{
+  "changes": [
+    {
+      "after": {
+        "bytes": 11696,
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_boundary_reviewed2_proposal/profile_boundary.py",
+        "sha256": "1953eb12dcb20bfafdbed2986026e20b8c25d0bd89e2c26820b8cd841946d1af"
+      },
+      "before": {
+        "bytes": 11358,
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_boundary_proposal/profile_boundary.py",
+        "sha256": "29786c0e759bdfb518361f903117b301bcc11a3620202e4bec29775f157e18a6"
+      },
+      "finite_replacements": [
+        {
+          "after": "producer_batch(spec, purpose):\n    \"\"\"Transition scope: endingcandidate/newest precede this new boot.\"\"\"\n    spec = checked_spec(spec)\n    require(purpose in ('startup', 'candidate', 'newest_stopped'),\n            'Early insurance is not a phase-CPU purpose; separate adapter required')\n    require(purpose != 'candidate' or spec['mode'] == 'return_batch4096',\n            'Endingcandidate is supported only during the declared return transition')\n    return spec['after_batch_size'] if purpose == 'startup' else spec['before_batch_size']\n\n\ndef phase_",
+          "before": "",
+          "new_offset": 9372,
+          "old_offset": 9372
+        },
+        {
+          "after": "bat",
+          "before": "spe",
+          "new_offset": 10242,
+          "old_offset": 9691
+        },
+        {
+          "after": "h",
+          "before": "",
+          "new_offset": 10246,
+          "old_offset": 9695
+        },
+        {
+          "after": "",
+          "before": " checked_spec(spec)\n    require(purpose in ('startup', 'candidate', 'newest_stopped'),\n            'Early insurance is not a",
+          "new_offset": 10249,
+          "old_offset": 9697
+        },
+        {
+          "after": "_producer_batch(spec,",
+          "before": "-CPU",
+          "new_offset": 10255,
+          "old_offset": 9827
+        },
+        {
+          "after": "",
+          "before": "; separate adapter required'",
+          "new_offset": 10284,
+          "old_offset": 9839
+        },
+        {
+          "after": "",
+          "before": "\n    batch = spec['before_batch_size'] if purpose == 'newest_stopped' else spec['after_batch_size']",
+          "new_offset": 10285,
+          "old_offset": 9868
+        },
+        {
+          "after": "reviewed2-",
+          "before": "",
+          "new_offset": 11129,
+          "old_offset": 10811
+        },
+        {
+          "after": "-reviewed2",
+          "before": "",
+          "new_offset": 11222,
+          "old_offset": 10894
+        }
+      ],
+      "restored_sha256": "29786c0e759bdfb518361f903117b301bcc11a3620202e4bec29775f157e18a6",
+      "reverse_reconstruction_byte_equal": true
+    }
+  ],
+  "old_packages_unchanged": true,
+  "predecessor_manifest": {
+    "bytes": 4387,
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_boundary_proposal/preparation-manifest.json",
+    "sha256": "84b683262708d2a7aa97d2566b40b591e8ba20c6e15b43da76a0d8dc0885d270"
+  },
+  "schema": "robotron-unconsumed-reviewed2-source-delta-v1",
+  "status": "SOURCE_TEXT_ONLY_NO_EXECUTION"
+}

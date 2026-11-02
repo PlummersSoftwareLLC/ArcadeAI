@@ -1,0 +1,56 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original06/prepare_round_study_v10.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/prepare_round_study_v10.py
+@@ -51,6 +51,31 @@
+     actual = h.pin(value['path'])
+     require(all(actual[key] == expected for key, expected in value.items()), 'Attested bytes/identity changed')
+     require(actual['identity']['mode'] == '0o444', 'Selected artifact is not immutable')
++    return actual
++
++
++def capture_input_pin(value, h):
++    """Convert one ordinary THIN3 window source pin to an exact current full8.
++
++    Unlike immutable checkpoint/CPU artifacts, canonical source/control files
++    may be mode0664. The64 original FULL8 context holds are independently
++    validated by the current-context association, never confused with these77
++    THIN3 plan inputs. No historical-plan source is refreshed in PRIOR mode.
++    """
++    require(type(value) is dict and set(value) == {'path','sha256','bytes'}
++            and type(value['path']) is str and type(value['bytes']) is int
++            and 0 < value['bytes'] <= 2_000_000
++            and type(value['sha256']) is str and len(value['sha256']) == 64
++            and all(c in '0123456789abcdef' for c in value['sha256']),
++            'Exact bounded THIN3 capture source/control pin required')
++    path = Path(value['path'])
++    require(path.is_absolute() and path.resolve(strict=True) == path
++            and not path.is_symlink() and path.is_file(),
++            'Canonical regular capture source/control input required')
++    actual = h.pin(path)
++    require(all(actual[key] == expected for key,expected in value.items())
++            and actual['identity']['uid'] == os.getuid() and actual['identity']['nlink'] == 1,
++            'Selected capture source/control bytes or identity differ')
+     return actual
+ 
+ 
+@@ -122,10 +147,9 @@
+             and all(result['added'][key] >= value for key, value in plan['thresholds'].items()),
+             'All three prospective thresholds must be met without borrowing old counts')
+     require(sum(result['added']['by_source'].values()) == result['added']['replay_inserts'], 'Exposure attribution differs')
++    capture_inputs = []
+     if selection_mode == 'FRESH_POST_MODE_CAPTURE':
+-        for value in plan['inputs']:
+-            subset = h.pin(value['path'])
+-            require(all(subset[key] == expected for key, expected in value.items()), 'Current fresh capture source/recipe changed')
++        capture_inputs = [capture_input_pin(value,h) for value in plan['inputs']]
+     # Prior valid capture inputs are historical facts certified by its exact
+     # original closed qualification above. They need not remain installed in
+     # the changed MAIN runtime. Fresh current-runtime profile proofs below
+@@ -166,7 +190,7 @@
+         training_experiment='CE4096-LR125-survival32M-original01-20261023',
+         immutable_numerical_or_protection_authority=authority), [result_pin, plan_pin, authority,
+         h.pin(CAPTURE/'CPU-original-owner.json'), h.pin(CAPTURE/'CPU-original-terminal.json'),
+-        h.pin(CAPTURE/'CPU-owned-release.json'), *[subset_pin(value,h) for value in plan['inputs']], *reuse_evidence]
++        h.pin(CAPTURE/'CPU-owned-release.json'), *capture_inputs, *reuse_evidence]
+ 
+ 
+ def capture_binding(template_pin, h):

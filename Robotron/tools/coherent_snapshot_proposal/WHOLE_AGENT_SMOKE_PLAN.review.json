@@ -1,0 +1,25 @@
+{
+  "status": "PREPARATORY_PLAN_ONLY",
+  "utc": "2026-10-16T22:31:06.939681+00:00",
+  "plan_file": "WHOLE_AGENT_SMOKE_PLAN.txt",
+  "plan_sha256": "7c2c97c635a47a69e4c0d934301817bed6d7f91461b1aab9d37001f2ef9bbbcf",
+  "unchanged_production_patch_sha256": "31dd8553f505f383c21b3df5631efb5a8064dab73c4503b30176940f15f70717",
+  "independent_reviewer": "/root/audit_quality_result",
+  "independent_result": "Ready as preparatory plan; no blocker or overclaim found",
+  "harness_implemented": false,
+  "harness_executed": false,
+  "live_processes_changed": false,
+  "gpu_work_launched": false,
+  "production_patch_applied": false,
+  "required_next_work": [
+    "Implement standard-library default-dry-run/explicit-launch guards and negative tests",
+    "Parent review and post-campaign exclusive GPU0 scheduling decision",
+    "Only then run bounded isolated actual-agent CUDA smoke"
+  ],
+  "deferred_coverage": [
+    "Actual MAME frame-handler/n-step/settings lifecycle",
+    "Large storage I/O and full-size archives",
+    "Compiled paths and combined parallel-replay proposal",
+    "Whole production trainer launch/runtime restoration"
+  ]
+}

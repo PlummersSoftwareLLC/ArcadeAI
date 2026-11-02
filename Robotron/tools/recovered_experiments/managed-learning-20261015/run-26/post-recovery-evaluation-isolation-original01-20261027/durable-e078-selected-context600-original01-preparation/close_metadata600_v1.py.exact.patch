@@ -1,0 +1,49 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/close_engineering_cpu_scope_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-selected-context600-original01-preparation/close_metadata600_v1.py
+@@ -1,4 +1,4 @@
+-"""Independently close a passed metadata-only2CPU/4GiB/180s engineering scope."""
++"""Independently close a passed metadata-only2CPU/4GiB/600s engineering scope."""
+ import argparse
+ import importlib.util
+ import json
+@@ -6,7 +6,7 @@
+ from pathlib import Path
+ import subprocess
+ 
+-ROOT=Path(__file__).resolve().parents[2]
++ROOT=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ 
+ 
+ def require(value,reason):
+@@ -21,10 +21,10 @@
+     h=load('_metadata_scope_helpers',ROOT/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py')
+     directory=directory.resolve();cfg_pin=h.pin(directory/'controller-config.json');cfg=json.loads(h.checked(cfg_pin).read_bytes())
+     job_pin=h.pin(directory/'job.json');job=json.loads(h.checked(job_pin).read_bytes())
+-    control=load('_metadata_scope_control',ROOT/'tools/quality_capacity_proposal/control_quality32_review_v1.py')
++    control=load('_metadata_scope_control',Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-selected-context600-original01-preparation/control_metadata600_v1.py'))
+     require(control.checked_config(cfg_pin['path'])==cfg,'Actual selected CPU configuration differs')
+-    require(cfg['properties']==['CPUQuota=200%','MemoryMax=4G','MemorySwapMax=0','RuntimeMaxSec=180','TasksMax=128','TimeoutStopSec=5','SendSIGKILL=no']
+-            and cfg['observation_s']==240,'Exact bounded CPU declaration required')
++    require(cfg['properties']==['CPUQuota=200%','MemoryMax=4G','MemorySwapMax=0','RuntimeMaxSec=600','TasksMax=128','TimeoutStopSec=5','SendSIGKILL=no']
++            and cfg['observation_s']==660,'Exact bounded CPU declaration required')
+     require(cfg['unit']==job['unit']and cfg['argv'][0:3]==['/usr/bin/python3','-I','-B']
+             and cfg['argv'][4:8]==['--execute','--job',job_pin['path'],'--job-sha256']
+             and cfg['argv'][8]==job_pin['sha256'],'Actual job/argv differs')
+@@ -39,7 +39,7 @@
+     terminal=archive.archived_closure(closure,owner,read,exit_zero=True)
+     live_command=read(h.pin(root/'original-first-observed-show-command.json'))
+     live=dict(line.split('=',1)for line in read(live_command['stdout'],False).decode().splitlines()if'='in line)
+-    expected=dict(Id=cfg['unit'],MainPID=str(owner['pid']),InvocationID=owner['invocation_id'],CPUQuotaPerSecUSec='2s',MemoryMax=str(4<<30),MemorySwapMax='0',RuntimeMaxUSec='3min',TasksMax='128',TimeoutStopUSec='5s',SendSIGKILL='no',Restart='no',NRestarts='0')
++    expected=dict(Id=cfg['unit'],MainPID=str(owner['pid']),InvocationID=owner['invocation_id'],CPUQuotaPerSecUSec='2s',MemoryMax=str(4<<30),MemorySwapMax='0',RuntimeMaxUSec='10min',TasksMax='128',TimeoutStopUSec='5s',SendSIGKILL='no',Restart='no',NRestarts='0')
+     require(all(live.get(k)==v for k,v in expected.items()),'Actual original live owner/resources differ')
+     require(all(token in terminal['ExecStart']for token in cfg['argv'])and'CUDA_VISIBLE_DEVICES='in terminal['ExecStart'],'Actual source/CPU isolation/argv differs')
+     proc=Path('/proc',str(owner['pid']),'stat')
+@@ -52,7 +52,7 @@
+     require(report.get('quality_qualified',False)is report.get('promotion',False)is False,'Engineering cannot qualify or promote')
+     return h.put(directory/'independent-original-CPU-scope-closeout.json',dict(schema='robotron-engineering-original-CPU-independent-closeout-v1',status='PASS_ENGINEERING_ONLY',
+         original_job=job_pin,original_config=cfg_pin,original_owner=owner_pin,original_closure=closure_pin,actual_report=report_pin,
+-        actual_exit=0,actual_CPU_cores=2,actual_memory_bytes=4<<30,actual_runtime_limit_s=180,
++        actual_exit=0,actual_CPU_cores=2,actual_memory_bytes=4<<30,actual_runtime_limit_s=600,
+         all_six_original_descriptors_and_resources_argv_birth_unit_timer_cgroup_and_owned_release_verified=True,
+         source=h.pin(Path(__file__).resolve()),scientific_launch_qualified=False,quality_qualified=False,promotion=False))
+ 

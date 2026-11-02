@@ -1,0 +1,135 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/hot-LR625-applied30k-replay10M-learner8M-original01-20261031/Root-observe-LR625-dose-v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/hot-LR625-applied30k-replay10M-learner8M-original01-20261031/future-expert05-observer-source-original01/Root-observe-expert05-LR625-dose-v1.py
+@@ -1,4 +1,4 @@
+-"""Root one-shot dose observation and CONTROL report; never changes learning controls."""
++"""Prospective expert5% dose observation and CONTROL report; never changes learning controls. Run only after Root owns CONTROL following the prior outer closure."""
+ import csv
+ import hashlib
+ import importlib.util
+@@ -11,9 +11,9 @@
+ 
+ R = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ B = R / 'logs/managed-learning-20261015/run-26'
+-L = B / 'hot-LR625-applied30k-replay10M-learner8M-original01-20261031'
+-SOURCE = L / 'selected-source/analyze_LR625_dose_v1.py'
+-SHA = '92e205d416f5bd3c39414bd99e6dee739c19cc5901b62390ae8f954ec117b4b2'
++E = B / 'hot-expert05-LR625-applied60k-replay20M-learner16M-original01-20261031'
++SOURCE = E / 'selected-source/analyze_expert05_LR625_dose_v1.py'
++SHA = '07d3cd20f1ccc4a4c76f228c6796900f5a50eaafa87795cb9e641f376d63ef15'
+ 
+ 
+ def dump(path, value, *, exclusive=False):
+@@ -34,31 +34,31 @@
+ 
+ def main():
+     assert hashlib.sha256(SOURCE.read_bytes()).hexdigest() == SHA
+-    spec = importlib.util.spec_from_file_location('_Root_selected_LR625_dose', SOURCE)
++    spec = importlib.util.spec_from_file_location('_Root_selected_expert05_LR625_dose', SOURCE)
+     module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+-    raw_anchor = json.loads((L / 'Root-actual-LR625-dose-anchor-sample-original01.json').read_text())
++    raw_anchor = json.loads((E / 'Root-actual-expert05-LR625-dose-anchor-sample-original01.json').read_text())
+     exposure = raw_anchor['api_now']['host_pipeline']['learning_exposure']
+-    anchor = dict(schema='robotron-LR625-dose-anchor-v1', main_owner=raw_anchor['observed_main_owner'],
+-        expected_lr=6.25e-6, control_sha256=raw_anchor['observed_control_sha256'],
++    anchor = dict(schema='robotron-LR625-expert05-dose-anchor-v1', main_owner=raw_anchor['observed_main_owner'],
++        expected_lr=6.25e-6, expected_expert=0.05, expected_epsilon=0.1, control_sha256=raw_anchor['observed_control_sha256'],
+         observed_unix_s=raw_anchor['observed_unix_s'], api_ts=raw_anchor['api_now']['ts'],
+         optimizer_identity={k: exposure['optimizer'][k] for k in module.IDS},
+         replay_identity={k: exposure['replay'][k] for k in module.IDS},
+         base=module.counters(raw_anchor['api_now']), targets=dict(module.TARGETS))
+-    projection = L / 'Root-projected-LR625-dose-anchor-v1.json'
++    projection = E / 'Root-projected-expert05-LR625-dose-anchor-v1.json'
+     if not projection.exists(): dump(projection, anchor, exclusive=True)
+     else: assert json.loads(projection.read_text()) == anchor
+     started = time.time(); api = get('now'); policy = get('continuous_training_policy')
+     stat = Path('/proc/208501/stat')
+     birth = int(stat.read_text().rsplit(')', 1)[1].split()[19]) if stat.exists() else -1
+     control_sha = hashlib.sha256((R / 'models_dqn/learning_control.json').read_bytes()).hexdigest()
+-    sample = dict(schema='robotron-Root-hot-LR625-dose-observation-v1',
++    sample = dict(schema='robotron-Root-expert05-LR625-dose-observation-v1',
+         observed_unix_s=time.time(), observation_started_unix_s=started,
+         observed_main_owner=dict(pid=208501, birth=birth), observed_control_sha256=control_sha,
+         api_now=api, continuous_policy=policy, nonatomic_cached_API_snapshots=True)
+-    directory = L / 'dose-observations-original01'; directory.mkdir(exist_ok=True)
++    directory = E / 'dose-observations-original01'; directory.mkdir(exist_ok=True)
+     index = max([int(p.name.split('-')[0]) for p in directory.glob('*-sample.json')] or [0]) + 1
+     sample_ref = dump(directory / (f'{index:06d}-sample.json'), sample, exclusive=True)
+-    previous = L / 'last-valid-dose-counters.json'
++    previous = E / 'last-valid-dose-counters.json'
+     if previous.exists(): sample['previous'] = json.loads(previous.read_text())
+     result = module.analyze(anchor, sample)
+     if result['status'] == 'VALID':
+@@ -72,15 +72,17 @@
+                 break
+         if result['status'] == 'VALID' and policy.get('ratchet_frozen') is not False:
+             result = module.result('REJECTED', 'Main ratchet state changed')
++    settings = api.get('game_settings')
++    expert_pct = settings.get('expert_pct') if isinstance(settings, dict) else None
+     result.update(observed_unix_s=sample['observed_unix_s'], sample=sample_ref,
+-        source_sha256=SHA, actual_LR=api.get('lr'), actual_epsilon=api.get('epsilon'), actual_expert=api.get('expert_ratio'), Main_FPS=api.get('fps'),
++        source_sha256=SHA, actual_LR=api.get('lr'), actual_epsilon=api.get('epsilon'), actual_expert=api.get('expert_ratio'), actual_expert_ratio=api.get('expert_ratio'), actual_expert_pct=expert_pct, Main_FPS=api.get('fps'),
+         Main_clients=api.get('client_count'), Main_loss=api.get('loss'), Main_grad_norm=api.get('grad_norm'))
+     result_ref = dump(directory / (f'{index:06d}-analysis.json'), result, exclusive=True)
+     if result['status'] == 'VALID':
+         dump(previous, dict(counters=result['counters'], api_ts=result['api_ts']))
+-    dump(L / 'live-dose-status.json', result)
++    dump(E / 'live-dose-status.json', result)
+     row = {key: result.get(key) for key in ['observed_unix_s', 'status', 'reason', 'all_reached',
+-        'elapsed_s', 'estimated_remaining_s', 'actual_LR', 'Main_FPS', 'Main_clients', 'Main_loss', 'Main_grad_norm']}
++        'elapsed_s', 'estimated_remaining_s', 'actual_LR', 'actual_epsilon', 'actual_expert_ratio', 'actual_expert_pct', 'Main_FPS', 'Main_clients', 'Main_loss', 'Main_grad_norm']}
+     for group in ['deltas', 'remaining', 'rates_per_s']:
+         for key in module.TARGETS: row[group + '_' + key] = result.get(group, {}).get(key)
+     e = api['host_pipeline']['learning_exposure']; opt = e['optimizer']; replay = e['replay']
+@@ -94,7 +96,7 @@
+                 'gpu0_util', 'gpu1_util', 'gpu0_power_w', 'gpu1_power_w']:
+         row[key] = api.get(key)
+     row['c51_diagnostics_json'] = json.dumps(api.get('c51_diagnostics'), separators=(',', ':'))
+-    table = L / 'actual-training-dose-and-stability.csv'; first = not table.exists()
++    table = E / 'actual-training-dose-and-stability.csv'; first = not table.exists()
+     with table.open('a') as stream:
+         writer = csv.DictWriter(stream, fieldnames=list(row))
+         if first: writer.writeheader()
+@@ -104,31 +106,33 @@
+     if result['status'] == 'VALID':
+         d, left = result['deltas'], result['remaining']
+         if result['all_reached']:
+-            work.update(state='LR625_dose_reached_waiting_policy_publication',
+-                current_stage='LR625 training dose reached · preparing the later policy checkpoint',
++            work.update(state='expert05_dose_reached_waiting_policy_publication',
++                current_stage='Expert assistance5% dose reached · preparing the policy checkpoint',
+                 waiting_for='A published checkpoint saved after the completed dose, then CPU verification.',
+-                eta='All three training thresholds are met. The next checkpoint publication and verification are being checked.')
++                eta='All60,000 applied updates,20M replay additions and16M learner frames are reached. Checkpoint publication and CPU verification follow; two fresh frozen score tests then take about two hours plus setup. No score-test cutoff is asserted before actual admission.')
+         else:
+             estimate = result['estimated_remaining_s']
+-            work.update(state='LR625_training_dose_running',
+-                current_stage=f"LR625 trial · {d['applied_updates']:,}/30,000 applied updates · {d['learner_frames']/1e6:.2f}/8M learner frames",
++            work.update(state='expert05_training_dose_running',
++                current_stage=f"Expert assistance5% trial · {d['applied_updates']:,}/60,000 updates · {d['replay_additions']/1e6:.2f}/20M replay · {d['learner_frames']/1e6:.2f}/16M learner frames",
+                 waiting_for=f"{left['applied_updates']:,} more applied updates, {left['replay_additions']/1e6:.2f}M fresh replay additions and {left['learner_frames']/1e6:.2f}M learner frames; all three thresholds are required.",
+                 eta=('Waiting for enough measured progress to estimate the dose.' if estimate is None else
+-                     f'About {math.ceil(estimate/60)} minutes remaining in the training dose at the observed rate. Checkpoint publication, CPU verification and score tests follow; this estimate excludes those later steps.'))
++                     f'About {math.ceil(estimate/60)} minutes remaining in the training dose at the observed rate. Checkpoint publication, CPU verification and two fresh frozen score tests follow (about two hours plus setup after the dose); this estimate excludes those later steps.'))
+         work['learning_trial'].update(deltas=d, remaining=left, elapsed_s=result['elapsed_s'],
+             estimated_dose_remaining_s=result['estimated_remaining_s'])
+     else:
+-        work.update(state='LR625_counter_observation_pending' if result['status'] == 'PENDING' else 'LR625_trial_needs_review',
+-            current_stage='LR625 trial · ' + ('waiting for a fresh counter observation' if result['status'] == 'PENDING' else 'observation requires review'),
++        work.update(state='expert05_counter_observation_pending' if result['status'] == 'PENDING' else 'expert05_trial_needs_review',
++            current_stage='Expert assistance5% trial · ' + ('waiting for a fresh counter observation' if result['status'] == 'PENDING' else 'observation requires review'),
+             waiting_for=result['reason'], eta='Counter observation is being checked; no current completion estimate is asserted.')
+-    work.update(updated_unix_s=sample['observed_unix_s'], observation_unix_s=sample['observed_unix_s'],
++    work.update(detail='Test more independent DQN decisions with expert assistance5%, holding LR6.25e-6 and epsilon10% fixed. All60,000 applied updates,20M fresh replay additions and16M learner frames are required before the next frozen policy check.',
++        next_stage='Publish and independently copy a policy after the dose, CPU-verify it, then compare two fresh frozen S2/candidate cohorts (about two hours plus setup after the dose).',
++        updated_unix_s=sample['observed_unix_s'], observation_unix_s=sample['observed_unix_s'],
+         estimated_completion_unix_s=None, deadline_unix_s=None, main_training_continues=True,
+         actual_dose_observation=result_ref)
+     page['observation_unix_s'] = sample['observed_unix_s']
+     assert control.read_bytes() == old, 'Another CONTROL write occurred; preserve this observation'
+     dump(control, page)
+     print(json.dumps({key: result.get(key) for key in ['observed_unix_s', 'status', 'reason', 'all_reached',
+-        'deltas', 'remaining', 'estimated_remaining_s', 'actual_LR', 'actual_epsilon', 'actual_expert', 'Main_FPS', 'Main_clients', 'Main_loss', 'Main_grad_norm']}, allow_nan=False))
++        'deltas', 'remaining', 'estimated_remaining_s', 'actual_LR', 'actual_epsilon', 'actual_expert', 'actual_expert_ratio', 'actual_expert_pct', 'Main_FPS', 'Main_clients', 'Main_loss', 'Main_grad_norm']}, allow_nan=False))
+ 
+ 
+ if __name__ == '__main__':

@@ -1,0 +1,51 @@
+--- deployed/prepare_handoff_poststop_v1.py
++++ proposed/prepare_handoff_poststop_v1.py
+@@ -11,8 +11,8 @@
+ 
+ GAME = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ RUN = GAME/'logs/managed-learning-20261015/run-26'
+-PREPARED = RUN/'profile06-production-continuity-main-inputs-original01-preparation-20261021/prepared-inputs.json'
+-PREPARED_SHA = 'ac0f2ff0bd79e0fc6c780585fd8899f8ba1cfeb0c16fd001b7ad024af55e2a5a'
++PREPARED = RUN/'dashboard-JSON-production-continuity-main-inputs-original01-preparation-20261022/prepared-inputs.json'
++PREPARED_SHA = 'c27c57a591702df5c12a0dc563633d99b58a176130748a06b1e8e418e49d98ca'
+ 
+ 
+ def load(path,name):
+@@ -22,16 +22,16 @@
+     return module
+ 
+ 
+-def prepare(output, *, case='scorecarry-profile06-main-original01-20261021'):
++def prepare(output, *, case='scorecarry-dashboardJSON-main-original01-20261022'):
+     here = Path(__file__).parent
+     import re
+-    if re.fullmatch(r'scorecarry-profile06-main-original[0-9]{2}-20261021',case) is None:
++    if re.fullmatch(r'scorecarry-dashboardJSON-main-original[0-9]{2}-20261022',case) is None:
+         raise ValueError('One explicit bounded original handoff case required')
+     l = load(here/'handoff_linux_v1.py','_prepare_handoff_linux')
+     prepared_pin = l.full_pin(PREPARED)
+     l.require(prepared_pin['sha256'] == PREPARED_SHA,'The original handoff proposal changed')
+     prepared = json.loads(l.checked(prepared_pin))
+-    for name in ('original_main','original_fleet','original_listener','installed_before','proposed_socket'):
++    for name in ('original_main','original_fleet','original_listener','installed_before','proposed_source'):
+         l.checked(prepared[name])
+     main = json.loads(l.checked(prepared['original_main']))
+     guard_pin = l.full_pin(RUN/'capacity-original-full-reviewer-CPU-original01-preparation-20261019/immutable-main-hold-guard.py')
+@@ -90,7 +90,7 @@
+         poststop_inputs=config_pin,base_control_archive=control,base_control_sha256=control['sha256'],
+         prepared=prepared_pin,source_pins={path.name:l.full_pin(path) for path in here.glob('handoff_*_v1.py')},
+         current_original_owner=main['owner'],expected_original_phase=adapter.expected,
+-        full195_holds_and_original192_verified=True,production_changed=False,
++        full196_holds_and_original192_verified=True,production_changed=False,
+         live_job_selected=False,actual_newest_stopped_CPU_run=False,actual_replacement_started=False,
+         deployment_ready=False))
+ 
+@@ -99,7 +99,7 @@
+     parser = argparse.ArgumentParser(description=__doc__)
+     parser.add_argument('--prepare',action='store_true')
+     parser.add_argument('--output',type=Path)
+-    parser.add_argument('--case',default='scorecarry-profile06-main-original01-20261021')
++    parser.add_argument('--case',default='scorecarry-dashboardJSON-main-original01-20261022')
+     args = parser.parse_args()
+     if not args.prepare:
+         print('PLAN_ONLY: no reads, outputs, queries or runtime actions')

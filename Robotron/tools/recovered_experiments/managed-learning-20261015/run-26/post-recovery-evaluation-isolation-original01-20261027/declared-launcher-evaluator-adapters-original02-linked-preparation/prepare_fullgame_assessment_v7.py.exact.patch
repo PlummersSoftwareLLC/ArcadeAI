@@ -1,0 +1,29 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/prepare_fullgame_assessment_v7.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original02-linked-preparation/prepare_fullgame_assessment_v7.py
+@@ -8,11 +8,12 @@
+ import json
+ from pathlib import Path
+ 
+-HERE=Path(__file__).resolve().parent
++HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
++LOCAL=Path(__file__).resolve().parent
+ 
+ 
+ def pipeline():
+-    spec=importlib.util.spec_from_file_location('_fullgame_assessment_prepare_pipeline',HERE/'fullgame_review_pipeline_v7.py')
++    spec=importlib.util.spec_from_file_location('_fullgame_assessment_prepare_pipeline',LOCAL/'fullgame_review_pipeline_v7.py')
+     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
+ 
+ 
+@@ -21,9 +22,9 @@
+     p.require(commit['schema']=='robotron-four-fullgame-independent-review-precommit-v1'and commit['engineering_only']is False,
+         'Engineering precommit cannot prepare a production fullgame assessment')
+     p.require(commit['ordered_legs']==[row['leg']for row in commit['cases']]==p.ORDER
+-        and commit['assessor']==h.pin(HERE/'assess_fullgame_study_v8.py')and commit['pipeline']==h.pin(HERE/'fullgame_review_pipeline_v7.py'),
++        and commit['assessor']==h.pin(LOCAL/'assess_fullgame_study_v8.py')and commit['pipeline']==h.pin(LOCAL/'fullgame_review_pipeline_v7.py'),
+         'Exact final-assessment source/order precommit required')
+-    prepared=p.read(commit['native_prepared']);producer=p.load('_fullgame_final_prepare_eligibility',HERE/'prepare_fullgame_study_v6.py')
++    prepared=p.read(commit['native_prepared']);producer=p.load('_fullgame_final_prepare_eligibility',LOCAL/'prepare_fullgame_study_v6.py')
+     producer.eligible_screen(prepared['screen_assessment'],prepared['reference_epoch'],h)
+     publication=p.read(commit['CPU_guard_publication'])
+     p.require(prepared['engineering_only']is False and publication['status']=='PASS'

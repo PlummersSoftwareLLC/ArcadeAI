@@ -1,0 +1,10 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-continuous-fresh-candidate-20261029-original04-preparation/watch_learning_window_continuous_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-continuous-fresh-candidate-20261029-original04-preparation/watch_learning_window_continuous_v4.py
+@@ -180,6 +180,7 @@
+             sample['_continuous_policy_capture'] = capture_continuous_policy()
+             assert owner() == expected_owner, 'Original trainer changed during policy read'
+         except (OSError, ValueError) as error:
++            sample = None
+             reason = repr(error)
+         if sample is not None:
+             counters = exposure(sample)

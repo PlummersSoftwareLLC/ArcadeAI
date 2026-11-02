@@ -1,0 +1,38 @@
+--- a/FUTURE_SIBLING/audit_completed_leg.py
++++ b/FUTURE_SIBLING/audit_completed_leg.py
+@@ -6,6 +6,7 @@
+ policy, or decides a four-leg campaign. Its only writes are a NEW audit directory.
+ """
+ import argparse
++import importlib.util
+ from collections import Counter
+ from datetime import datetime, timezone
+ import hashlib
+@@ -442,6 +443,27 @@
+                 flagged.append(dict(line_number=number, text=line, classification=kind))
+                 if kind == "unclassified":
+                     unclassified.append(dict(line_number=number, text=line))
++        if unclassified:
++            # Future sibling only: exact source-bound known shutdown family, never a generic log waiver.
++            helper_path = Path(__file__).with_name('expected_shutdown.py')
++            helper_raw = capture(helper_path, 'expected-shutdown-source.py')
++            require(hashlib.sha256(helper_raw).hexdigest() == '556fa65b161861c7a3cf39a7d7731fcdfc6d171fa83c5fcbb0977eba861e117c', 'Shutdown helper source changed')
++            specification = importlib.util.spec_from_file_location('_exact_owned_shutdown', helper_path)
++            helper = importlib.util.module_from_spec(specification); specification.loader.exec_module(helper)
++            try:
++                accounted = helper.reconcile_expected_shutdown(console, receipt,
++                    socket_source=payloads[str(game / 'Scripts/dqn/socket_server.py')],
++                    sidecar_source=payloads[str(game / 'tools/run_frozen_sidecar.py')],
++                    expected_socket_path=str(game / 'Scripts/dqn/socket_server.py'))
++            except ValueError as error:
++                report['expected_shutdown_reconciliation'] = dict(accepted=False, error=str(error))
++            else:
++                report['expected_shutdown_reconciliation'] = accounted
++                accepted_lines = set(accounted['accounted_line_numbers'])
++                for entry in flagged:
++                    if entry['classification'] == 'unclassified' and entry['line_number'] in accepted_lines:
++                        entry['classification'] = 'exact_source_bound_interleaved_owned_shutdown'
++                unclassified = [entry for entry in unclassified if entry['line_number'] not in accepted_lines]
+         require(not unclassified, f"Unclassified evaluator log issues require review: {unclassified}")
+         excluded = [row for row in journal if row["journal_game_id"] not in admitted]
+         report.update(result="valid_completed_leg", valid=True, role=spec["role"],

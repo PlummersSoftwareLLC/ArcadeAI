@@ -1,0 +1,41 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/dashboard-current-work-status-original01-20261030/dashboard_work_status_observation_clock_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/dashboard-current-work-status-original01-20261030/dashboard_work_status_screen_readability_v3.py
+@@ -103,6 +103,30 @@
+     return stamp
+ 
+ 
++def format_score_screen_work(work):
++    """Display-only labels for the exact selected frozen two-arm screen."""
++    screen = work.get("score_screen")
++    if (work.get("state") != "score_screen_running" or not isinstance(screen, dict)
++            or screen.get("policy_scope") != "Frozen S2 versus protected b231; exploratory screen only, no automatic promotion"
++            or screen.get("leg") not in ("R1", "C1")):
++        return work
++    counts = screen.get("counts")
++    keys = ("n_scored", "n_completed", "n_emulators_active")
++    if (not isinstance(counts, dict) or any(type(counts.get(k)) is not int for k in keys)
++            or counts["n_scored"] != 32 or not 0 <= counts["n_completed"] <= 32
++            or not 0 <= counts["n_emulators_active"] <= 32):
++        return work
++    role = "Protected reference (b231)" if screen["leg"] == "R1" else "Frozen candidate (S2)"
++    stage = (f"{role}: 32 first-game scores tracked · {counts['n_completed']} finished"
++             f" · {counts['n_emulators_active']} playing")
++    why = "Compare frozen S2 with the protected reference using the same one-hour cutoff."
++    detail = work.get("detail")
++    if isinstance(detail, str) and detail.strip():
++        detail = detail.strip()
++        why = detail if detail.startswith(why) else why + " First completed comparison: " + detail
++    return dict(work, current_stage=stage, detail=why)
++
++
+ def main():
+     parser = argparse.ArgumentParser(description=__doc__)
+     parser.add_argument("--control", type=Path, required=True)
+@@ -125,6 +149,7 @@
+             public = read(args.public)
+             work = dict(public.get("next_work", {}))
+             work.update(control["next_work"])
++            work = format_score_screen_work(work)
+             work.pop("estimated_completion_unix_s", None)
+             if control.get("mode") == "offline_validation":
+                 public["offline_validation"] = benchmark_progress(control["benchmark"], work, now)

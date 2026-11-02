@@ -1,0 +1,17 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/state-sources/control_stopped_fullstate600_CPU_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/backup-sources/control_stopped_training_backup3600_v1.py
+@@ -56,12 +56,12 @@
+     require(re.fullmatch(r'robotron-[A-Za-z0-9_-]+\.service',c['unit']), 'Exact audit service name required')
+     props=dict(x.split('=',1) for x in c['properties'])
+     require(len(props)==len(c['properties']) and props.get('CPUQuota')=='200%' and
+-        props.get('MemoryMax')=='4G' and props.get('RuntimeMaxSec')=='600' and
++        props.get('MemoryMax')=='4G' and props.get('RuntimeMaxSec')=='3600' and
+         set(props)<= {'CPUQuota','MemoryMax','RuntimeMaxSec','MemorySwapMax','TasksMax','TimeoutStopSec','SendSIGKILL'} and
+         props.get('SendSIGKILL')=='no' and
+         props.get('MemorySwapMax','0')=='0' and props.get('TasksMax','128')=='128' and
+         props.get('TimeoutStopSec','5')=='5','Audit resource scope differs')
+-    require(type(c['observation_s']) is int and c['observation_s']==660,
++    require(type(c['observation_s']) is int and c['observation_s']==3660,
+             'Bounded original audit observation required')
+     require(isinstance(c['argv'],list) and c['argv'] and all(isinstance(x,str) for x in c['argv']),
+             'Explicit selected auditor argv required')

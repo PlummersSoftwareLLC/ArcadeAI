@@ -1,0 +1,43 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/review_continuous_static192_observer_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/review_continuous_physical192_observer_v2.py
+@@ -36,18 +36,18 @@
+     native = read(lifecycle['native_job'], h)
+     require(job['native_job'] == lifecycle['native_job'] and job['native_runtime'] == native['runtime'],
+             'Original native/worker job or runtime join differs')
+-    require(job['schema'] == 'robotron-continuous-static192-observer-proof2s-job-v1', 'Wrong declared observer protocol version')
++    require(job['schema'] == 'robotron-continuous-physical-original192-observer-proof2s-job-v2', 'Wrong declared observer protocol version')
+     require(job['interval_s'] == .2 and job['initial_samples'] == 100 and job['maximum_gap_s'] == 2.0
+             and job['work_s'] == 4200 and job['runtime_s'] == 4260 and job['attempt'] == 1
+             and job['no_retry'] is True, 'Observer bounds or original attempt differ')
+     require(job.get('source_bound_retired_API_projection') is True
+-            and job.get('source_bound_completed_original192_bootstrap') is True
+-            and job.get('source_bound_static_original192_partition') is True
++            and job.get('source_bound_original192_physical_bootstrap') is True
++            and job.get('source_bound_physical_original192_partition') is True
+             and set(job['sources']) == {'client','worker','health','health_base','registry','durability','control','interpreter'}
+-            and job['sources']['health_base'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_health_v1.py'))
+-            and job['sources']['registry'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_registry_v1.py'))
+-            and job['sources']['health'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_transport_v1.py')),
+-            'Exact source-bound static original192 observer dependencies required')
++            and job['sources']['health_base'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_health_v2.py'))
++            and job['sources']['registry'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_registry_v2.py'))
++            and job['sources']['health'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_transport_v2.py')),
++            'Exact source-bound physical original192 observer dependencies required')
+     require(lifecycle['native_deadline_monotonic_s'] == job['deadline_monotonic_s']
+             == lifecycle['native_started_monotonic_s'] + 4200, 'Native time bound differs')
+     for value in [job['native_runtime'], *job['sources'].values()]:
+@@ -215,9 +215,11 @@
+             and lifecycle['released_properties']['MainPID'] == '0'
+             and not Path('/sys/fs/cgroup' + owner['cgroup']).exists(), 'Original observer scope remains')
+     return dict(schema='robotron-round-observer-independent-raw-review-v1', status='PASS',
+-        main_health_profile='STATIC_ORIGINAL192_NO_FAULT_ADOPTION',
+-        source_bound_completed_original192_bootstrap_verified=True,
+-        TRAIN155_originals_and_EVAL37_once_partition_verified=True,
++        main_health_profile='PHYSICAL_ORIGINAL192_TRAIN_CURRENT_TCP_EVAL_ORIGINAL_ONCE',
++        source_bound_original192_physical_bootstrap_verified=True,
++        TRAIN155_original_physical_and_current_TCP_verified=True,
++        EVAL37_original_connection_and_strict_retirement_evidence_verified=True,
++        EVAL_closed_slots_have_positive_normal0_reap_and_cleanup_verified=True,
+         lifecycle=lifecycle_pin, original_job=job_pin, original_unit=job['unit'],
+         original_sources=job['sources'], accepted_samples=len(records),
+         raw_API_and_TCP_and_retirement_snapshots_replayed=True,

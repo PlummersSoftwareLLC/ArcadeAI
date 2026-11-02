@@ -1,0 +1,299 @@
+{
+  "base_sources": [
+    {
+      "bytes": 32915,
+      "identity": {
+        "bytes": 32915,
+        "ctime_ns": 1792309118271297342,
+        "device": 2304,
+        "inode": 79991634,
+        "mode": "0o664",
+        "mtime_ns": 1792309118270732796,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/run_frozen_sidecar.py",
+      "sha256": "db1fd0eac2c68b73425c77767ef0f842374291c855338f6b2ac05ee6b79dc04f"
+    },
+    {
+      "bytes": 21373,
+      "identity": {
+        "bytes": 21373,
+        "ctime_ns": 1792206492975135744,
+        "device": 2304,
+        "inode": 79964045,
+        "mode": "0o664",
+        "mtime_ns": 1792206492975135744,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/run_quality_campaign.py",
+      "sha256": "574e56f28499c751c639ee8a3474eecd5ca8de8c896da3dd44d5e4fc2fe60128"
+    }
+  ],
+  "candidates": [
+    {
+      "bytes": 44210,
+      "identity": {
+        "bytes": 44210,
+        "ctime_ns": 1792350512552904585,
+        "device": 2304,
+        "inode": 82575419,
+        "mode": "0o444",
+        "mtime_ns": 1792350254560546589,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/frozen_continuous_guard_evaluator_proposal/run_frozen_sidecar.py",
+      "sha256": "c3a2ef29245b9d6a2e8309520f67d3b1f92061c38b395fa4ef8773631287dea3"
+    },
+    {
+      "bytes": 24625,
+      "identity": {
+        "bytes": 24625,
+        "ctime_ns": 1792350512553904589,
+        "device": 2304,
+        "inode": 82575420,
+        "mode": "0o444",
+        "mtime_ns": 1792350254560940542,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/frozen_continuous_guard_evaluator_proposal/run_quality_campaign.py",
+      "sha256": "6d6fd8e4aa201d7099927af508742e8112cca3a5e6ca621731306664789ed8db"
+    }
+  ],
+  "limits": [
+    "No AST/compile/import/target execution by author; literal text reverse only",
+    "No binder/carrier/auditor family or actual root case authored",
+    "Original db1/574/canonical DQN files remain byte-exact; this packet does not authorize launch"
+  ],
+  "normalized_changed_regions": {
+    "run_frozen_sidecar.py": [
+      "honest companion docstring/imports/canonical GAME/support path",
+      "one exact guard selection/PIN/install/verify/stable-evidence helpers",
+      "two required guard Job/CLI fields; fixed2400/3600 and diagnosticsTRUE validation",
+      "leg plan mandatory effective declaration; canonical E13 explicitly BASE provenance",
+      "setup install after canonical socket import before actor/server construction",
+      "token/code/globals/config checks before serving and each existing protocol snapshot",
+      "postcleanup verification/source recheck invalidates on failure; truthful receipt/code fingerprint/local IDs"
+    ],
+    "run_quality_campaign.py": [
+      "honest docstring and authenticated explicit sibling evaluator import",
+      "two required guard Campaign/Job/CLI fields and argv propagation",
+      "actual companion/comparison execution paths; canonical E13 base plus separate effective declaration",
+      "precommit same exact declaration across4 and source reauthentication",
+      "load_leg requires successful effective verification; existing backend/game/source/boot rules retained",
+      "cross-leg equality adds stable effective selection/code/Python fingerprint, excludes local IDs/check counts"
+    ]
+  },
+  "ordered_exact_text_replacements": {
+    "run_frozen_sidecar.py": [
+      {
+        "count": 1,
+        "new": "\"\"\"UNSELECTED companion: one isolated cohort with an explicit effective guard.\n\nCanonical source hashes remain base provenance. The mandatory separately pinned\ninstaller replaces exactly one helper before server construction; effective\nimplementation evidence is additional and never relabels the canonical source.",
+        "old": "\"\"\"One isolated, inference-only 16-actor frozen cohort."
+      },
+      {
+        "count": 1,
+        "new": "import hashlib\nimport importlib.util\nimport marshal\n",
+        "old": "import hashlib\n"
+      },
+      {
+        "count": 1,
+        "new": "import shutil\nimport stat\n",
+        "old": "import shutil\n"
+      },
+      {
+        "count": 1,
+        "new": "GAME = Path(__file__).resolve().parents[2]\nCANONICAL_TOOLS = GAME / \"tools\"\n# These are stdlib-only support imports, never a DQN source override.\nif str(CANONICAL_TOOLS) not in sys.path:\n    sys.path.append(str(CANONICAL_TOOLS))\n",
+        "old": "GAME = Path(__file__).resolve().parents[1]\n"
+      },
+      {
+        "count": 1,
+        "new": "\n\n# Exactly one reviewed source selection; no generic plugin/override mechanism.\nGUARD_DIRECTORY = GAME / \"tools/continuous_zero_dip_wave2_proposal\"\nGUARD_MANIFEST = GUARD_DIRECTORY / \"preparation-reviewed2-manifest.json\"\nGUARD_MANIFEST_SHA = \"947981d64af6c3cfce1d7191f1a02ce40f8ca79b5273aaee0dcc7a43b1760fd4\"\nGUARD_INSTALLER = GUARD_DIRECTORY / \"effective_guard.py\"\nGUARD_INSTALLER_SHA = \"b9f90525cfd6366d595fdc8cc82646064197d7caee07169ce58e1e24b2118eb4\"\nGUARD_BODY = GUARD_DIRECTORY / \"effective_guard_body.py\"\nGUARD_BODY_SHA = \"f7a4d367162bafb87f4bc94ddad54573a76ab9159ae11e07540b2690c2c6eba4\"\nBASE_SOCKET = GAME / \"Scripts/dqn/socket_server.py\"\nBASE_SOCKET_SHA = \"f44ddfe31408b77b6d622e1d4ec4cda60a03999dc984d9e11b5aeac38911a9ed\"\nGUARD_NAME = \"_continuous_play_score_dip\"\nPIN_KEYS = {\"path\", \"sha256\", \"bytes\", \"identity\"}\nIDENTITY_KEYS = {\"device\", \"inode\", \"bytes\", \"mtime_ns\", \"ctime_ns\", \"mode\", \"uid\", \"nlink\"}\n\n\ndef require(value, message):\n    if not value:\n        raise ValueError(message)\n\n\ndef source_record(path, expected=None, *, readonly=True):\n    \"\"\"Bounded stable source read; never a checkpoint/model reader.\"\"\"\n    path = Path(path)\n    require(path.is_absolute() and path == path.resolve(strict=True), \"Canonical source path required\")\n    with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW), \"rb\") as stream:\n        before = os.fstat(stream.fileno())\n        raw = stream.read((512 << 10) + 1)\n        after = os.fstat(stream.fileno())\n    def identity(info):\n        return dict(device=info.st_dev, inode=info.st_ino, bytes=info.st_size,\n            mtime_ns=info.st_mtime_ns, ctime_ns=info.st_ctime_ns,\n            mode=oct(stat.S_IMODE(info.st_mode)), uid=info.st_uid, nlink=info.st_nlink)\n    fingerprint = identity(before)\n    require(stat.S_ISREG(before.st_mode) and before.st_uid == os.getuid()\n        and before.st_nlink == 1 and len(raw) == before.st_size <= 512 << 10\n        and fingerprint == identity(after) == identity(path.lstat())\n        and (not readonly or stat.S_IMODE(before.st_mode) == 0o444), \"Source identity/read-only bracket differs\")\n    digest = hashlib.sha256(raw).hexdigest()\n    require(expected is None or digest == expected, \"Source SHA differs\")\n    return raw, dict(path=str(path), sha256=digest, bytes=len(raw), identity=fingerprint)\n\n\ndef authenticate_source_pin(pin):\n    require(type(pin) is dict and set(pin) == PIN_KEYS\n        and type(pin[\"path\"]) is str and type(pin[\"sha256\"]) is str\n        and re.fullmatch(r\"[0-9a-f]{64}\", pin[\"sha256\"]) is not None\n        and type(pin[\"bytes\"]) is int and 0 < pin[\"bytes\"] <= 512 << 10\n        and type(pin[\"identity\"]) is dict and set(pin[\"identity\"]) == IDENTITY_KEYS\n        and all(type(pin[\"identity\"][key]) is int for key in IDENTITY_KEYS - {\"mode\"})\n        and type(pin[\"identity\"][\"mode\"]) is str, \"Exact FULL8 source PIN required\")\n    raw, actual = source_record(pin[\"path\"], pin[\"sha256\"])\n    require(actual == pin, \"Source PIN fields differ\")\n    return raw\n\n\ndef unique_object(pairs):\n    value = {}\n    for key, item in pairs:\n        require(key not in value, \"Duplicate guard-manifest JSON key\")\n        value[key] = item\n    return value\n\n\ndef guard_selection(manifest_path, manifest_sha256):\n    \"\"\"Authenticate declared source only; does not import/install the guard.\"\"\"\n    require(manifest_path is not None and Path(manifest_path) == GUARD_MANIFEST\n        and manifest_sha256 == GUARD_MANIFEST_SHA, \"Explicit exact selected guard manifest path/SHA required\")\n    raw, manifest_pin = source_record(GUARD_MANIFEST, GUARD_MANIFEST_SHA)\n    manifest = json.loads(raw, object_pairs_hook=unique_object,\n        parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))\n    require(type(manifest) is dict and type(manifest.get(\"files\")) is list,\n        \"Selected guard manifest file inventory required\")\n    files = manifest[\"files\"]\n    selected = {}\n    for path, expected in ((GUARD_INSTALLER, GUARD_INSTALLER_SHA), (GUARD_BODY, GUARD_BODY_SHA)):\n        matching = [pin for pin in files if type(pin) is dict and pin.get(\"path\") == str(path)]\n        require(len(matching) == 1 and matching[0].get(\"sha256\") == expected,\n            \"Exactly the selected installer/body PIN required\")\n        authenticate_source_pin(matching[0])\n        selected[path.name] = matching[0]\n    _, base_pin = source_record(BASE_SOCKET, BASE_SOCKET_SHA, readonly=False)\n    _, companion_pin = source_record(Path(__file__).resolve())\n    declaration = dict(schema=\"robotron-effective-continuous-guard-selection-v1\",\n        canonical_base_socket=base_pin, guard_manifest=manifest_pin,\n        installer=selected[GUARD_INSTALLER.name], effective_helper=selected[GUARD_BODY.name],\n        companion_evaluator=companion_pin, function=GUARD_NAME,\n        installation=\"one module-global helper before SocketServer construction; original module globals/RL_CONFIG\",\n        canonical_source_hashes_are_base_provenance=True)\n    declaration[\"stable_source_fingerprint\"] = hashlib.sha256(\n        json.dumps(declaration, sort_keys=True, separators=(\",\", \":\"), allow_nan=False).encode()).hexdigest()\n    return declaration\n\n\ndef install_guard(socket_module, selection):\n    \"\"\"One fixed installer in the newly isolated evaluator, with no fallback.\"\"\"\n    require(selection[\"canonical_base_socket\"][\"path\"] == str(BASE_SOCKET)\n        and Path(socket_module.__file__).resolve() == BASE_SOCKET,\n        \"Canonical imported socket module required\")\n    authenticate_source_pin(selection[\"installer\"])\n    authenticate_source_pin(selection[\"effective_helper\"])\n    name = \"_frozen_continuous_guard_installer\"\n    require(name not in sys.modules, \"Guard installer must be loaded once in a fresh evaluator\")\n    spec = importlib.util.spec_from_file_location(name, GUARD_INSTALLER)\n    require(spec is not None and spec.loader is not None, \"Guard installer loader unavailable\")\n    installer = importlib.util.module_from_spec(spec)\n    sys.modules[name] = installer\n    spec.loader.exec_module(installer)\n    token = installer.install(socket_module, expected_module_path=BASE_SOCKET,\n        expected_installer_sha256=GUARD_INSTALLER_SHA)\n    return installer, token\n\n\ndef verify_guard(installer, token, selection):\n    evidence = installer.verify(token)\n    require(evidence == dict(base_socket=selection[\"canonical_base_socket\"], installer=selection[\"installer\"],\n        effective_helper=selection[\"effective_helper\"], function_code_globals_config_identity=True,\n        only_one_module_global_replaced=True, effective_source_is_not_base_source=True),\n        \"Effective guard does not match the declared exact implementation\")\n    function = token.module.__dict__[GUARD_NAME]\n    return dict(runtime_code_sha256=hashlib.sha256(marshal.dumps(function.__code__)).hexdigest(),\n        python_version=sys.version, python_cache_tag=sys.implementation.cache_tag,\n        local_identity=dict(module=id(token.module), function=id(function), code=id(function.__code__),\n            globals=id(function.__globals__), RL_CONFIG=id(token.config)))\n\n\ndef stable_effective_implementation(evidence):\n    \"\"\"Cross-leg equality deliberately excludes object IDs and check counts.\"\"\"\n    return {key: evidence[key] for key in (\"selection\", \"runtime_code_sha256\", \"python_version\", \"python_cache_tag\")}\n\n\ndef sha256(path):",
+        "old": "\n\ndef sha256(path):"
+      },
+      {
+        "count": 1,
+        "new": "    game_boundary_diagnostics: bool = False\n    continuous_guard_manifest: Path | None = None\n    continuous_guard_manifest_sha256: str | None = None\n",
+        "old": "    game_boundary_diagnostics: bool = False\n"
+      },
+      {
+        "count": 1,
+        "new": "    def validate(self, *, require_boot_assets=False):\n        guard_selection(self.continuous_guard_manifest, self.continuous_guard_manifest_sha256)\n        require(self.cohort_s == 2400 and self.timeout_s == 3600, \"This companion preserves the fixed2400/3600 profile\")\n",
+        "old": "    def validate(self, *, require_boot_assets=False):\n"
+      },
+      {
+        "count": 1,
+        "new": "                    game_boundary_diagnostics=self.game_boundary_diagnostics,\n                    continuous_guard_manifest=str(self.continuous_guard_manifest),\n                    continuous_guard_manifest_sha256=self.continuous_guard_manifest_sha256,\n",
+        "old": "                    game_boundary_diagnostics=self.game_boundary_diagnostics,\n"
+      },
+      {
+        "count": 1,
+        "new": "    # Canonical E13 is BASE provenance; the mandatory effective implementation\n    # record separately authenticates this companion and the installed guard.\n    paths = [GAME / \"tools/run_frozen_sidecar.py\", GAME / \"tools/sidecar_boot.py\",",
+        "old": "    paths = [Path(__file__), GAME / \"tools/sidecar_boot.py\","
+      },
+      {
+        "count": 1,
+        "new": "    from dqn import socket_server as socket_module\n    SocketServer = socket_module.SocketServer\n    selected_guard = guard_selection(job.continuous_guard_manifest, job.continuous_guard_manifest_sha256)\n    guard_installer, guard_token = install_guard(socket_module, selected_guard)\n    guard_initial = verify_guard(guard_installer, guard_token, selected_guard)\n",
+        "old": "    from dqn.socket_server import SocketServer\n"
+      },
+      {
+        "count": 1,
+        "new": "    result, failure = {}, None\n    guard_checks, guard_pre_serve, guard_after_cleanup, guard_error = 0, None, None, None\n",
+        "old": "    result, failure = {}, None\n"
+      },
+      {
+        "count": 1,
+        "new": "        guard_pre_serve = verify_guard(guard_installer, guard_token, selected_guard)\n        require(guard_pre_serve == guard_initial, \"Effective guard changed before serving\")\n        guard_checks += 1\n        worker.start()\n",
+        "old": "        worker.start()\n"
+      },
+      {
+        "count": 1,
+        "new": "            current_guard = verify_guard(guard_installer, guard_token, selected_guard)\n            require(current_guard == guard_initial, \"Effective guard changed during protocol snapshot\")\n            guard_checks += 1\n            check_protocol(config, actor, checkpoint_signature, checkpoint)\n",
+        "old": "            check_protocol(config, actor, checkpoint_signature, checkpoint)\n"
+      },
+      {
+        "count": 1,
+        "new": "    try:\n        guard_after_cleanup = verify_guard(guard_installer, guard_token, selected_guard)\n        require(guard_after_cleanup == guard_initial, \"Effective guard changed after cleanup\")\n        require(guard_selection(job.continuous_guard_manifest, job.continuous_guard_manifest_sha256)\n                == selected_guard, \"Effective guard source declaration changed during evaluation\")\n        guard_checks += 1\n    except BaseException as error:\n        guard_error = f\"{type(error).__name__}: {error}\"\n    effective_guard = dict(selection=selected_guard, runtime_code_sha256=guard_initial[\"runtime_code_sha256\"],\n        python_version=guard_initial[\"python_version\"], python_cache_tag=guard_initial[\"python_cache_tag\"],\n        verified_before_serving=guard_pre_serve is not None, verified_after_cleanup=guard_error is None,\n        verification_count=guard_checks, verification_error=guard_error,\n        local_identity_before=guard_initial[\"local_identity\"],\n        local_identity_after=(guard_after_cleanup or {}).get(\"local_identity\"))\n    result.update(active=False, phase=\"finished\", job=job.plan(), checkpoint_sha256=identity,\n                  effective_implementation=effective_guard,\n                  source_hashes_scope=\"canonical E13 base; mandatory effective_implementation is additional\",\n",
+        "old": "    result.update(active=False, phase=\"finished\", job=job.plan(), checkpoint_sha256=identity,\n"
+      },
+      {
+        "count": 1,
+        "new": "    invalidity_reasons = []\n    if guard_error is not None:\n        invalidity_reasons.append(\"effective_guard_verification_failed\")\n",
+        "old": "    invalidity_reasons = []\n"
+      },
+      {
+        "count": 1,
+        "new": "    parser.add_argument(\"--continuous-guard-manifest\", type=Path, required=True)\n    parser.add_argument(\"--continuous-guard-manifest-sha256\", required=True)\n    parser.add_argument(\"--launch\", action=\"store_true\", help=\"start this isolated job; default prints a plan\")",
+        "old": "    parser.add_argument(\"--launch\", action=\"store_true\", help=\"start this isolated job; default prints a plan\")"
+      },
+      {
+        "count": 1,
+        "new": "              game_boundary_diagnostics=args.game_boundary_diagnostics,\n              continuous_guard_manifest=args.continuous_guard_manifest.resolve(),\n              continuous_guard_manifest_sha256=args.continuous_guard_manifest_sha256)\n",
+        "old": "              game_boundary_diagnostics=args.game_boundary_diagnostics)\n"
+      },
+      {
+        "count": 1,
+        "new": "    selected_guard = guard_selection(job.continuous_guard_manifest, job.continuous_guard_manifest_sha256)\n    write_json(job.directory / \"plan.json\", dict(job.plan(), checkpoint_sha256=identity,\n        effective_implementation=selected_guard, canonical_source_hashes_are_base_provenance=True))\n",
+        "old": "    write_json(job.directory / \"plan.json\", dict(job.plan(), checkpoint_sha256=identity))\n"
+      },
+      {
+        "count": 1,
+        "new": "        require(self.cohort_s == 2400 and self.timeout_s == 3600\n            and self.game_boundary_diagnostics is True, \"This companion preserves fixed2400/3600 and diagnosticsTRUE\")\n",
+        "old": "        require(self.cohort_s == 2400 and self.timeout_s == 3600, \"This companion preserves the fixed2400/3600 profile\")\n"
+      },
+      {
+        "count": 1,
+        "new": "    SocketServer = socket_module.SocketServer\n    require(guard_selection(job.continuous_guard_manifest, job.continuous_guard_manifest_sha256)\n            == selected_guard, \"Declared guard source changed before installation\")\n",
+        "old": "    SocketServer = socket_module.SocketServer\n    selected_guard = guard_selection(job.continuous_guard_manifest, job.continuous_guard_manifest_sha256)\n"
+      }
+    ],
+    "run_quality_campaign.py": [
+      {
+        "count": 1,
+        "new": "\"\"\"UNSELECTED companion: fixed RCRC with one explicitly pinned effective guard.\n\nThe canonical evaluator/DQN base files are unchanged. Every leg must install\nand verify the exact same one-helper implementation before serving frames.",
+        "old": "\"\"\"Precommit and run four fresh frozen cohorts: reference, candidate, reference, candidate."
+      },
+      {
+        "count": 1,
+        "new": "import hashlib\nimport importlib.util\n",
+        "old": "import hashlib\n"
+      },
+      {
+        "count": 1,
+        "new": "GAME = Path(__file__).resolve().parents[2]\nTOOLS = GAME / \"tools\"\n# Import exactly the authenticated sibling; no name-based evaluator fallback.\nSIDECAR = Path(__file__).resolve().with_name(\"run_frozen_sidecar.py\")\nSIDECAR_SHA = \"7bdd1f9a5375b3f5ef498cb3d39c117bdd659c6d0a0a441c79d06daa1fb99589\"\nif hashlib.sha256(SIDECAR.read_bytes()).hexdigest() != SIDECAR_SHA:\n    raise ValueError(\"Companion evaluator source differs\")\n_spec = importlib.util.spec_from_file_location(\"_frozen_continuous_guard_evaluator\", SIDECAR)\nif _spec is None or _spec.loader is None:\n    raise ValueError(\"Companion evaluator loader unavailable\")\nevaluator = importlib.util.module_from_spec(_spec)\nsys.modules[_spec.name] = evaluator\n_spec.loader.exec_module(evaluator)\nif str(TOOLS) not in sys.path:\n    sys.path.append(str(TOOLS))\nfrom compare_frozen_measurements import summarize\nfrom compare_sidecar_measurements import JOB_FIELDS, validate_backend\n",
+        "old": "try:\n    from . import run_frozen_sidecar as evaluator\n    from .compare_frozen_measurements import summarize\n    from .compare_sidecar_measurements import JOB_FIELDS, validate_backend\nexcept ImportError:\n    import run_frozen_sidecar as evaluator\n    from compare_frozen_measurements import summarize\n    from compare_sidecar_measurements import JOB_FIELDS, validate_backend\n"
+      },
+      {
+        "count": 1,
+        "new": "    game_boundary_diagnostics: bool = False\n    continuous_guard_manifest: Path | None = None\n    continuous_guard_manifest_sha256: str | None = None\n",
+        "old": "    game_boundary_diagnostics: bool = False\n"
+      },
+      {
+        "count": 1,
+        "new": "                game_boundary_diagnostics=self.game_boundary_diagnostics,\n                continuous_guard_manifest=self.continuous_guard_manifest,\n                continuous_guard_manifest_sha256=self.continuous_guard_manifest_sha256)))\n",
+        "old": "                game_boundary_diagnostics=self.game_boundary_diagnostics)))\n"
+      },
+      {
+        "count": 1,
+        "new": "        \"--boot-assets\", str(job.boot_assets),\n        \"--continuous-guard-manifest\", str(job.continuous_guard_manifest),\n        \"--continuous-guard-manifest-sha256\", job.continuous_guard_manifest_sha256, \"--launch\"]\n",
+        "old": "        \"--boot-assets\", str(job.boot_assets), \"--launch\"]\n"
+      },
+      {
+        "count": 1,
+        "new": "             TOOLS / \"compare_sidecar_measurements.py\",\n             TOOLS / \"compare_frozen_measurements.py\"]",
+        "old": "             Path(__file__).with_name(\"compare_sidecar_measurements.py\"),\n             Path(__file__).with_name(\"compare_frozen_measurements.py\")]"
+      },
+      {
+        "count": 1,
+        "new": "        evaluator_source_hashes=evaluator.source_hashes(), execution_source_hashes=execution_sources(),\n        effective_implementation=evaluator.guard_selection(campaign.continuous_guard_manifest, campaign.continuous_guard_manifest_sha256),\n",
+        "old": "        evaluator_source_hashes=evaluator.source_hashes(), execution_source_hashes=execution_sources(),\n"
+      },
+      {
+        "count": 1,
+        "new": "def check_precommit(plan):\n    first = plan[\"legs\"][0][\"job\"]\n    expected_guard = evaluator.guard_selection(first[\"continuous_guard_manifest\"], first[\"continuous_guard_manifest_sha256\"])\n    if plan[\"effective_implementation\"] != expected_guard or any(\n            spec[\"job\"][\"continuous_guard_manifest\"] != first[\"continuous_guard_manifest\"]\n            or spec[\"job\"][\"continuous_guard_manifest_sha256\"] != first[\"continuous_guard_manifest_sha256\"]\n            for spec in plan[\"legs\"]):\n        raise ValueError(\"Effective guard selection differs across the four planned legs\")\n",
+        "old": "def check_precommit(plan):\n"
+      },
+      {
+        "count": 1,
+        "new": "    effective = receipt.get(\"effective_implementation\", {})\n    if (receipt[\"job\"].get(\"continuous_guard_manifest\") != expected[\"continuous_guard_manifest\"]\n            or receipt[\"job\"].get(\"continuous_guard_manifest_sha256\") != expected[\"continuous_guard_manifest_sha256\"]\n            or effective.get(\"selection\") != plan[\"effective_implementation\"]\n            or effective.get(\"verified_before_serving\") is not True\n            or effective.get(\"verified_after_cleanup\") is not True\n            or effective.get(\"verification_error\") is not None\n            or type(effective.get(\"verification_count\")) is not int or effective[\"verification_count\"] < 2\n            or effective.get(\"local_identity_before\") != effective.get(\"local_identity_after\")\n            or not isinstance(effective.get(\"runtime_code_sha256\"), str)\n            or len(effective[\"runtime_code_sha256\"]) != 64):\n        raise ValueError(\"Exact effective guard runtime verification is missing or failed\")\n    if receipt[\"label\"] != expected[\"label\"]:\n",
+        "old": "    if receipt[\"label\"] != expected[\"label\"]:\n"
+      },
+      {
+        "count": 1,
+        "new": "                source_hashes=receipt[\"source_hashes\"], protocol=leg[\"protocol\"],\n                effective_implementation=evaluator.stable_effective_implementation(receipt[\"effective_implementation\"]),\n",
+        "old": "                source_hashes=receipt[\"source_hashes\"], protocol=leg[\"protocol\"],\n"
+      },
+      {
+        "count": 1,
+        "new": "    parser.add_argument(\"--continuous-guard-manifest\", type=Path, required=True)\n    parser.add_argument(\"--continuous-guard-manifest-sha256\", required=True)\n    parser.add_argument(\"--launch\", action=\"store_true\", help=\"run the precommitted campaign; default prints its plan\")",
+        "old": "    parser.add_argument(\"--launch\", action=\"store_true\", help=\"run the precommitted campaign; default prints its plan\")"
+      },
+      {
+        "count": 1,
+        "new": "        game_boundary_diagnostics=args.game_boundary_diagnostics,\n        continuous_guard_manifest=args.continuous_guard_manifest.resolve(),\n        continuous_guard_manifest_sha256=args.continuous_guard_manifest_sha256)\n",
+        "old": "        game_boundary_diagnostics=args.game_boundary_diagnostics)\n"
+      },
+      {
+        "count": 1,
+        "new": "SIDECAR_SHA = \"c3a2ef29245b9d6a2e8309520f67d3b1f92061c38b395fa4ef8773631287dea3\"",
+        "old": "SIDECAR_SHA = \"7bdd1f9a5375b3f5ef498cb3d39c117bdd659c6d0a0a441c79d06daa1fb99589\""
+      },
+      {
+        "count": 1,
+        "new": "import os\nimport re\n",
+        "old": "import os\n"
+      },
+      {
+        "count": 1,
+        "new": "            or re.fullmatch(r\"[0-9a-f]{64}\", effective[\"runtime_code_sha256\"]) is None):\n",
+        "old": "            or len(effective[\"runtime_code_sha256\"]) != 64):\n"
+      }
+    ]
+  },
+  "raw_text_reverse": {
+    "run_frozen_sidecar.py": {
+      "byte_exact_base": true,
+      "candidate_sha256": "c3a2ef29245b9d6a2e8309520f67d3b1f92061c38b395fa4ef8773631287dea3",
+      "ordered_replacements": 20,
+      "restored_sha256": "db1fd0eac2c68b73425c77767ef0f842374291c855338f6b2ac05ee6b79dc04f"
+    },
+    "run_quality_campaign.py": {
+      "byte_exact_base": true,
+      "candidate_sha256": "6d6fd8e4aa201d7099927af508742e8112cca3a5e6ca621731306664789ed8db",
+      "ordered_replacements": 16,
+      "restored_sha256": "574e56f28499c751c639ee8a3474eecd5ca8de8c896da3dd44d5e4fc2fe60128"
+    }
+  },
+  "schema": "robotron-frozen-effective-continuous-guard-companion-source-preservation-v1",
+  "status": "SOURCE_ONLY_UNSELECTED_UNEXECUTED",
+  "unchanged_science": [
+    "16slots4096..4111, private fleet ownership/cleanup and pacing commands",
+    "RCRC/min50/all admitted starts/full tails/no extension/retry/rescue and separate1.05mean/1.0median gates",
+    "Lua/boot/FP32/inductor/epsilon0/expert0/difficulty5/start1/replayFalse",
+    "Compiled policy construction/checkpoint restore/admission/mature-boundary handling/statistics",
+    "Classifier and cleanup allowlist untouched; handle_client/infer traceback files remain canonical socket f44"
+  ]
+}

@@ -1,0 +1,317 @@
+{
+  "$comment": "Immutable preactivation early_insurance.producer_expectation is null. After genuine READY/adoption the controller creates a local immutable actual-owner expectation and passes it only to a copied helper spec. Actual root core binds exact profile, mode and authorization. Entry points remain refused in this preserved proposal until a separate proof-validating release sibling is selected; no current job or owner is fabricated.",
+  "$defs": {
+    "owner": {
+      "additionalProperties": false,
+      "properties": {
+        "cgroup": {
+          "pattern": "^/",
+          "type": "string"
+        },
+        "invocation_id": {
+          "pattern": "^[0-9a-f]{32}$",
+          "type": "string"
+        },
+        "pid": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "starttime_ticks": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "unit": {
+          "pattern": "^robotron-managed-.*-trainer\\.service$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pid",
+        "starttime_ticks",
+        "unit",
+        "invocation_id",
+        "cgroup"
+      ],
+      "type": "object"
+    },
+    "pin": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "identity": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "ctime_ns": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "device": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "inode": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "mode": {
+              "pattern": "^0o[0-7]+$",
+              "type": "string"
+            },
+            "mtime_ns": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "nlink": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "uid": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "device",
+            "inode",
+            "bytes",
+            "mtime_ns",
+            "ctime_ns",
+            "mode",
+            "uid",
+            "nlink"
+          ],
+          "type": "object"
+        },
+        "path": {
+          "pattern": "^/",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "bytes",
+        "identity"
+      ],
+      "type": "object"
+    },
+    "tag": {
+      "pattern": "^[A-Za-z0-9_-]{1,80}$",
+      "type": "string"
+    }
+  },
+  "$id": "robotron-one-ce-batch2048-trial-job-v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "activation_job": {
+      "$ref": "#/$defs/pin"
+    },
+    "boot_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "candidate_tag": {
+      "$ref": "#/$defs/tag"
+    },
+    "deadlines": {
+      "const": {
+        "latch_s": 3240,
+        "owner_ceiling_s": 3600,
+        "stop_intent_s": 3310
+      }
+    },
+    "early_insurance": {
+      "additionalProperties": false,
+      "properties": {
+        "collector": {
+          "additionalProperties": false,
+          "properties": {
+            "manifest": {
+              "$ref": "#/$defs/pin"
+            },
+            "script": {
+              "$ref": "#/$defs/pin"
+            }
+          },
+          "required": [
+            "script",
+            "manifest"
+          ],
+          "type": "object"
+        },
+        "cpu_timeout_s": {
+          "const": 120
+        },
+        "cpu_unit": {
+          "pattern": "^robotron-[A-Za-z0-9_-]+\\.service$",
+          "type": "string"
+        },
+        "producer_expectation": {
+          "type": "null"
+        },
+        "profile": {
+          "$ref": "#/$defs/pin"
+        },
+        "python_identity": {
+          "additionalProperties": false,
+          "properties": {
+            "argv_path": {
+              "pattern": "^/",
+              "type": "string"
+            },
+            "executable": {
+              "$ref": "#/$defs/pin"
+            },
+            "library_context": {
+              "items": {
+                "$ref": "#/$defs/pin"
+              },
+              "maxItems": 4,
+              "minItems": 4,
+              "type": "array"
+            },
+            "link_identity": {
+              "type": "object"
+            },
+            "link_target": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "pyvenv_cfg": {
+              "$ref": "#/$defs/pin"
+            }
+          },
+          "required": [
+            "argv_path",
+            "link_target",
+            "link_identity",
+            "executable",
+            "pyvenv_cfg",
+            "library_context"
+          ],
+          "type": "object"
+        },
+        "save_timeout_s": {
+          "const": 60
+        },
+        "tag": {
+          "$ref": "#/$defs/tag"
+        }
+      },
+      "required": [
+        "tag",
+        "cpu_unit",
+        "save_timeout_s",
+        "cpu_timeout_s",
+        "profile",
+        "collector",
+        "python_identity",
+        "producer_expectation"
+      ],
+      "type": "object"
+    },
+    "observation_budget_bytes": {
+      "const": 33554432
+    },
+    "old_owner": {
+      "$ref": "#/$defs/owner"
+    },
+    "output_directory": {
+      "pattern": "^/",
+      "type": "string"
+    },
+    "profile": {
+      "$ref": "#/$defs/pin"
+    },
+    "return_intent": {
+      "additionalProperties": false,
+      "properties": {
+        "output_directory": {
+          "pattern": "^/",
+          "type": "string"
+        },
+        "phase_id": {
+          "pattern": "^[A-Za-z0-9_-]{1,100}$",
+          "type": "string"
+        },
+        "request_id": {
+          "pattern": "^[A-Za-z0-9_-]{1,120}$",
+          "type": "string"
+        },
+        "startup_tag": {
+          "$ref": "#/$defs/tag"
+        }
+      },
+      "required": [
+        "phase_id",
+        "request_id",
+        "startup_tag",
+        "output_directory"
+      ],
+      "type": "object"
+    },
+    "schema": {
+      "const": "robotron-one-ce-batch2048-trial-job-v1"
+    },
+    "sources": {
+      "additionalProperties": false,
+      "properties": {
+        "adapter": {
+          "$ref": "#/$defs/pin"
+        },
+        "controller": {
+          "$ref": "#/$defs/pin"
+        },
+        "deadline": {
+          "$ref": "#/$defs/pin"
+        },
+        "early_insurance": {
+          "$ref": "#/$defs/pin"
+        },
+        "horizon": {
+          "$ref": "#/$defs/pin"
+        }
+      },
+      "required": [
+        "controller",
+        "deadline",
+        "early_insurance",
+        "adapter",
+        "horizon"
+      ],
+      "type": "object"
+    },
+    "trial_core": {
+      "$ref": "#/$defs/pin"
+    }
+  },
+  "required": [
+    "schema",
+    "sources",
+    "activation_job",
+    "trial_core",
+    "old_owner",
+    "boot_id",
+    "output_directory",
+    "deadlines",
+    "observation_budget_bytes",
+    "early_insurance",
+    "candidate_tag",
+    "return_intent",
+    "profile"
+  ],
+  "title": "Unconsumed CE4096-to-CE2048-to-CE4096 one-trial boundary; launch refused",
+  "type": "object"
+}

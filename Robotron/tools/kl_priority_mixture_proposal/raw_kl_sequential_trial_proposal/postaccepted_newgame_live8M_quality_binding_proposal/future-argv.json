@@ -1,0 +1,102 @@
+{
+  "status": "SOURCE_ONLY_UNSELECTED_NO_ACTION",
+  "metadata_guard_argv": [
+    "ROOT_VERIFIED_CP312",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postaccepted_newgame_live8M_quality_binding_proposal",
+    "-p",
+    "test_quality_bindings.py",
+    "-v"
+  ],
+  "carrier_prepare": [
+    "ROOT_VERIFIED_CP312",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postaccepted_newgame_live8M_quality_binding_proposal/root_quality_carrier.py",
+    "--execute",
+    "--action",
+    "prepare",
+    "--binding-job",
+    null,
+    "--binding-job-sha256",
+    null,
+    "--expected-source-sha256",
+    "a73f2574025204630b34a9b83075a8618f4fcaf2fe28a2c367c05f90b20f5207"
+  ],
+  "carrier_launch_additional_flags": [
+    "--action",
+    "launch",
+    "--plan-sha256",
+    null,
+    "--plan-review",
+    null,
+    "--plan-review-sha256",
+    null,
+    "--runtime-readiness",
+    null,
+    "--runtime-readiness-sha256",
+    null
+  ],
+  "carrier_observe_archive_actions": [
+    "observe",
+    "archive"
+  ],
+  "original_leg_audit": [
+    "ROOT_VERIFIED_CP312",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postaccepted_newgame_live8M_quality_binding_proposal/audit_completed_leg.py",
+    "--execute",
+    "--game",
+    "/home/dave/source/repos/ArcadeAI/Robotron",
+    "--campaign",
+    null,
+    "--plan-sha256",
+    null,
+    "--source-sha256",
+    "9e0c8196e55130b64b9701867110614f5e4d7663fd38ed254942bd71b4d0d118",
+    "--binding-job",
+    null,
+    "--binding-job-sha256",
+    null,
+    "--leg",
+    null,
+    "--output",
+    null
+  ],
+  "auditor_legs": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "new_output_per_original_audit": true,
+  "actual_native_plan": null,
+  "actual_parent": null,
+  "actual_candidate": null,
+  "actual_CPU_report": null,
+  "actual_guard_outcome": null,
+  "prospective_profile": {
+    "cohort_s": 2400,
+    "timeout_s": 3600,
+    "actors": 16,
+    "min_full_games_each_leg": 50,
+    "order": [
+      "reference",
+      "candidate",
+      "reference",
+      "candidate"
+    ],
+    "mean_ratio_each": 1.05,
+    "median_ratio_each": 1.0,
+    "include_every_admitted_game": true,
+    "full_completion_tail": true,
+    "max_attempts_per_leg": 1,
+    "admission_extensions": false
+  }
+}

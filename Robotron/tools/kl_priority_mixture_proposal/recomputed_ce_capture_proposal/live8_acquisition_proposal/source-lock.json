@@ -1,0 +1,135 @@
+{
+  "actions": {
+    "candidate_import_compile_default_or_test": false,
+    "live_acquisition_commands": false,
+    "new_runbook_and_source_provenance_only": true,
+    "production_or_sealed_proposal_mutation": false,
+    "runtime_api_proc_gpu_service_or_model_replay_data": false,
+    "source_text_and_archived_json_reads": true
+  },
+  "actual_private_cuda_rehearsal": "UNEXECUTED at preparation; future result required",
+  "automatic_launch_or_adoption": false,
+  "consulted_source_and_archived_metadata": {
+    "Scripts/dqn/agent.py": {
+      "bytes": 93981,
+      "sha256": "28977d6b925a4606a61b76438595f45ae054fc81aaaad989ab93e00d98a05668"
+    },
+    "Scripts/dqn/config.py": {
+      "bytes": 116996,
+      "sha256": "f2794754a14e9f13c82b613aa131698246a08dc9021c18f1b78fda7c4b484498"
+    },
+    "Scripts/dqn/exact_inference_graphs.py": {
+      "bytes": 16644,
+      "sha256": "222d5b8ba06df940006fc2d4e1c152b1a44313ff056312c94c49fb6bae8145db"
+    },
+    "Scripts/dqn/loss_kernel.py": {
+      "bytes": 7957,
+      "sha256": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a"
+    },
+    "Scripts/dqn/main.py": {
+      "bytes": 67287,
+      "sha256": "61fa053eea882e7e9ca1d95cd8dc081c45dec75677b12c51231aa95f51da0282"
+    },
+    "Scripts/dqn/managed_driver.py": {
+      "bytes": 5639,
+      "sha256": "05407642f75a5dc883ba7f45512f36711ffb66f29bce41fc860aba182644dc36"
+    },
+    "Scripts/dqn/prefetch.py": {
+      "bytes": 14929,
+      "sha256": "a07cc84b6d411fd2536b1a17fa56c6b8b0f5ac9861740e44ea94878894a8d217"
+    },
+    "Scripts/dqn/replay_buffer.py": {
+      "bytes": 106436,
+      "sha256": "28556797d15e0acf9387030b87f9ccce0b18e1e3cfa629b63c2d7239a4206238"
+    },
+    "Scripts/dqn/socket_server.py": {
+      "bytes": 134879,
+      "sha256": "d99dd2782fc3e8f67670aefb398ed0dfdc1fd859432e24c8bd8dea4da2825214"
+    },
+    "Scripts/dqn/training.py": {
+      "bytes": 28993,
+      "sha256": "194081120faae4228b0af0d6127c1e12c6d6180acdfe7d7a6a8c7cbcf24b963f"
+    },
+    "logs/managed-learning-20261015/run-26/recomputed-capture-private-CPU20-reviewed2-20261017/root-result-review-and-release.json": {
+      "bytes": 7343,
+      "sha256": "a228e383eca3c59cf3f8de41f54a03bf0124fd39bc254d4fb32c334d0c9f14a4"
+    },
+    "logs/managed-learning-20261015/run-26/recomputed-rehearsal-CPU43-plus-corrected9-independent-results-review-20261017/review-receipt.json": {
+      "bytes": 14344,
+      "sha256": "879128135f01872b51b2653c81016523f20fcbadef9061cd3c7e8010b2d4301e"
+    },
+    "logs/managed-learning-20261015/run-26/recomputed-rehearsal-CPU43-plus-corrected9-root-review-20261017.json": {
+      "bytes": 2294,
+      "sha256": "5e0039786bc9af21b98c14f7bd2c2638d36e06786e5687d0680f936cea3dbcb6"
+    },
+    "tools/kl_priority_mixture_proposal/executed_trace_acquisition_proposal/ACQUISITION_RUNBOOK.txt": {
+      "bytes": 11769,
+      "sha256": "76c72f978730b9feb7619c82537fabf18340e0144aceb4ab07e0357ea6d1f09e"
+    },
+    "tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/private_rehearsal_proposal/preparation-manifest-v3.json": {
+      "bytes": 5188,
+      "sha256": "ac8e2749a6095af0bc35f3e248e53c84359c249ddad8cd5f597b5faaf9e00966"
+    },
+    "tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/revision2/DESIGN.txt": {
+      "bytes": 8757,
+      "sha256": "2571e936692d964158df174e7402ed82ad75d669e59c74dceb05b75fdec57537"
+    },
+    "tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/revision2/PREPARATION.txt": {
+      "bytes": 4956,
+      "sha256": "890f5659e7af57ac4b5439ae29b5e513c1bc6d303a4a3d9cb0e91bcfee633f7b"
+    },
+    "tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/revision2/agent.py": {
+      "bytes": 95163,
+      "sha256": "b885020db1c07e2a736d46f20c295dc71a461242f717bd324e1a3111379b5157"
+    },
+    "tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/revision2/manifest-source-review-v2.json": {
+      "bytes": 2391,
+      "sha256": "356b8b0999b05d3d4cd6e2addfcbee832c7365c9c31f9c08506f8714c0dfeaa2"
+    },
+    "tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/revision2/prefetch.py": {
+      "bytes": 15674,
+      "sha256": "02871bc515ba23f8d353131e9b6b6b4e390692803578febee7c8d643dd308a27"
+    },
+    "tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/revision2/recomputed_ce_capture.py": {
+      "bytes": 26538,
+      "sha256": "6c3ef3735342295154f24b37f7fe0f54c2f05bd13789629c856214441e087263"
+    },
+    "tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/revision2/replay_buffer.py": {
+      "bytes": 113613,
+      "sha256": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f"
+    },
+    "tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/revision2/training.py": {
+      "bytes": 31175,
+      "sha256": "16a327b08eeb0be829d92e46dd72eab014c5f8b8f5331a7cf043785979e842c5"
+    },
+    "tools/manage_learning.py": {
+      "bytes": 3824,
+      "sha256": "3dc81cb40b9c4794158f4ef3d2e5974c50949665ce1c6988f1d331bcddf4d938"
+    },
+    "tools/parallel_state_fill_trial.py": {
+      "bytes": 41220,
+      "sha256": "5555017afd066300554cc11097a5be3dbcfde956488d29d3e933b1421f59c54f"
+    }
+  },
+  "future_bindings": "UNKNOWN; no live ownership, state, checkpoint, replay or capture data was inspected",
+  "remaining": [
+    "completed and audited384M quality window",
+    "actual privately owned one-attempt CUDA capture and conditional recompute result with reviewed limits",
+    "root acceptance of ordinary shutdown model-update and replay-FIFO tails",
+    "fresh exact ownership/source/effective-env/save/load/ring/bank/graph/capture evidence",
+    "explicit root maintenance and acquisition authorization"
+  ],
+  "runbook": {
+    "bytes": 17525,
+    "sha256": "531f15baf49b13eefd3803ab16810338bf1e5026fc64030b75f86f493f1b11c0"
+  },
+  "schema": "robotron-recomputed-ce-live8-acquisition-source-runbook-v1",
+  "scope": [
+    "five overlays; byte-original loss and four-output live ABI",
+    "first8 consumed startup attempts; errors and AMP skips retained; no ninth replacement",
+    "640MiB raw snapshot and6GiB cumulative cooperative artifact budget; synchronous per-attempt fsync before release",
+    "ordinary persisted restart; no full ring copy or coherent learning anchor",
+    "offline CE-only conditional recomputation cannot bound missing live entropy/KL/rank"
+  ],
+  "status": "SOURCE_ONLY_BLOCKED_ON_ACTUAL_PRIVATE_CUDA_AND_POST384_MAINTENANCE_REVIEW"
+}

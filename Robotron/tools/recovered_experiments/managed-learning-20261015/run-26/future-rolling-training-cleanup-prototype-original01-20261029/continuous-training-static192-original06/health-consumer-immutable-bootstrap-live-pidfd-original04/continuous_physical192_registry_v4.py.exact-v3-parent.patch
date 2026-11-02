@@ -1,0 +1,88 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-v4-cohort-original03/continuous_physical192_registry_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/continuous_physical192_registry_v4.py
+@@ -13,8 +13,8 @@
+ import struct
+ 
+ MODE = 'CONTINUOUS_TRAIN155_EVAL37_ONCE'
+-SCHEMA = 'robotron-continuous-training-static192-snapshot-v2'
+-CASE_SCHEMA = 'robotron-continuous-physical-original192-health-case-v2'
++SCHEMA = 'robotron-original192-immutable-bootstrap-projection-v4'
++CASE_SCHEMA = 'robotron-physical-original192-immutable-bootstrap-live-pidfd-health-case-v4'
+ SLOTS = set(map(str, range(192)))
+ STATES = ('starting', 'active_train', 'active_eval', 'retiring_eval',
+           'closed_eval', 'fault_cleanup', 'quarantined')
+@@ -221,13 +221,13 @@
+     require(c['mode'] == MODE and set(c['original_slots']) == SLOTS
+             and set(c['input_environment_by_slot']) == SLOTS
+             and type(c['policy_generation']) is int and c['policy_generation'] >= 0
+-            and c['accepted_profile'] == 'PHYSICAL_ORIGINAL192_TRAIN_CURRENT_TCP_EVAL_ORIGINAL_ONCE'
++            and c['accepted_profile'] == 'PHYSICAL_ORIGINAL192_IMMUTABLE_BOOTSTRAP_LIVE_PIDFD_V4'
+             and c['maximum_proof_gap_s'] == 2.0 and c['narrow_API_exception_TTL_s'] == .5,
+             'Explicit prospective static-original192 profile required')
+     require(Path(c['snapshot_path']).is_absolute()
+             and Path(c['snapshot_path']).name == 'status.json'
+             and str(Path(c['snapshot_path']).parent) == case['round_root'],
+-            'Existing worker status path must select this exact continuous publisher')
++            'Historical supervisor output provenance must remain exact')
+     owner_join(c['supervisor'], case['owners']['fleet'])
+     owner_join(c['trainer'], case['owners']['trainer'])
+     require(case['owners']['trainer']['process']['environment']['ROBOTRON_CONTINUOUS_TRAINING_MODE'] == '1'
+@@ -329,6 +329,7 @@
+             'Historical-prefix cutoff is not the actual earliest new original spawn')
+     require(Path(c['eval_journal_directory']).is_absolute(), 'Exact ordinary main journal directory required')
+     witness=c.get('eval_exit_witness')
++    require(witness is not None, 'Explicit retained original37 pidfd authority required')
+     if witness is not None:
+         require(set(witness)=={'selection','source','anchors','output','holder'}
+                 and witness['source']['sha256']=='fe306753c9cbb20e715b76d60c116ef9ce47a768c1a1afe0b00c03eac02a095c',
+@@ -586,23 +587,37 @@
+     return value
+ 
+ 
++def bootstrap_projection(case):
++    """Historical bootstrap certificate; this never claims current liveness.
++
++    Current health comes only from the separately captured original processes,
++    owned TCP, source/role/epoch/API and strict EVAL natural/kernel cleanup proof.
++    No mutable publisher file or historical timestamp is a liveness authority.
++    """
++    c=case['continuous']
++    rows={}
++    for slot, original in c['original_slots'].items():
++        rows[slot]=dict(eval_only=original['eval_only'],incarnation=original['incarnation'],
++            state='active_eval' if original['eval_only'] else 'active_train',
++            original_pid=original['original_child']['pid'],original_birth=original['original_child']['birth'],
++            original_slot_sha256=original_digest(original),natural_result=None,closure=None,
++            prior_fault_closure=None,quarantine_reason=None,faults=0)
++    value=dict(schema=SCHEMA,mode=MODE,epoch=c['epoch'],historical_bootstrap_only=True,
++        current_health_claimed=False,supervisor=c['supervisor'],trainer=c['trainer'],
++        rolemap=c['rolemap'],source_authority=c['source_authority'],
++        original_membership=c['original_membership'],slots=rows,
++        initial_admission=dict(complete=True,slots_ever_bound=list(range(192)),
++            immutable_all192_barrier=c['initial_barrier']))
++    # Detached JSON values cannot alias/mutate the selected in-memory case.
++    return json.loads(json.dumps(value,sort_keys=True,separators=(',',':'),allow_nan=False))
++
++
+ def validate_snapshot(case, sample, previous=None):
+     """Physical TRAIN truth comes from raw actors/current handlers, never labels."""
+     c=case['continuous'];value=sample['status']
+     completed=validate_completed_prefix_capture(case,sample)
+-    require(value['schema']==SCHEMA and value['mode']==MODE and value['epoch']==c['epoch']
+-            and value['supervisor']==c['supervisor'] and value['trainer']==c['trainer']
+-            and value['rolemap']==c['rolemap'] and value['source_authority']==c['source_authority']
+-            and value['original_membership']==c['original_membership'] and set(value['slots'])==SLOTS,
+-            'Original publisher physical/source bootstrap authority changed')
+-    require(0<=number(sample['unix_s'])-number(value['updated_unix_s'])<=2
+-            and type(value['updated_monotonic_ns']) is int
+-            and 0<=sample['monotonic_s']-value['updated_monotonic_ns']/1e9<=2,
+-            'Original physical bootstrap publisher is future or stale')
+-    admission=value['initial_admission']
+-    require(admission['complete'] is True and admission['slots_ever_bound']==list(range(192))
+-            and admission['immutable_all192_barrier']==c['initial_barrier'],
+-            'No complete immutable original192 physical bootstrap')
++    require(value==bootstrap_projection(case),
++            'Historical original192 bootstrap certificate differs from held membership/barrier')
+     if previous is not None:
+         require(set(previous.get('EVAL_journal_evidence',{})) <= set(sample.get('EVAL_journal_evidence',{})),
+                 'A previously accepted original EVAL natural proof disappeared')

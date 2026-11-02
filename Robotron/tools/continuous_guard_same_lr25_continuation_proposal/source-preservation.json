@@ -1,0 +1,1133 @@
+{
+  "schema": "robotron-continuous-guard-same-lr25-family-source-preservation-v1",
+  "status": "SOURCE_ONLY_UNSELECTED_UNEXECUTED",
+  "source_family_base": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/same_lr25_prospective_continuation_proposal/preparation-manifest.json",
+    "sha256": "89832dd70397ecc8812e18754f45448454fc6ff76aa2c4a846a379bb09d01a0d",
+    "bytes": 41412,
+    "identity": {
+      "device": 2304,
+      "inode": 81536013,
+      "bytes": 41412,
+      "mtime_ns": 1792343808950150993,
+      "ctime_ns": 1792343808950150993,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "pairs": [
+    {
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/same_lr25_prospective_continuation_proposal/recipe.py",
+        "sha256": "9bc9a24f5f36c5dbe4f6385c1f47a5698bcda0bd6178f7546b263ee136aa1c3a",
+        "bytes": 10318,
+        "identity": {
+          "device": 2304,
+          "inode": 81535987,
+          "bytes": 10318,
+          "mtime_ns": 1792342979970663542,
+          "ctime_ns": 1792342979970663542,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "candidate": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/recipe.py",
+        "sha256": "9bc9a24f5f36c5dbe4f6385c1f47a5698bcda0bd6178f7546b263ee136aa1c3a",
+        "bytes": 10318,
+        "identity": {
+          "device": 2304,
+          "inode": 82575514,
+          "bytes": 10318,
+          "mtime_ns": 1792351197116932938,
+          "ctime_ns": 1792351626764086699,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "finite_text_regions": [],
+      "reverse_exact": true,
+      "exact_whole_nodes": [
+        {
+          "name": "require",
+          "sha256": "2a2fd2885f5415f9983519231e8706448cc5a271796f456f27fd09e22793eab8",
+          "bytes": 83
+        },
+        {
+          "name": "for_scale",
+          "sha256": "4508af639f927f6e11ee41a1d27a767d867f72da2707a830fa659b6d5806eec4",
+          "bytes": 313
+        },
+        {
+          "name": "check_recipe",
+          "sha256": "8e0317bd5fa6a1401ae74eeb9578946def451dfc9039f0b4f1a9ab36f8a45098",
+          "bytes": 371
+        },
+        {
+          "name": "held_context",
+          "sha256": "5fdc165480ec9d55c8f4c8f1dae90c3b1c1844a9ed5f93170b555941c9998606",
+          "bytes": 506
+        },
+        {
+          "name": "from_held",
+          "sha256": "b3a8509f14d85e5fc1d4bc672c1d66034cd853e9d9d8f06a912285576a421fe6",
+          "bytes": 404
+        },
+        {
+          "name": "check_control",
+          "sha256": "39db989eb1d5b29939ca63f32058461ca3709960f27ff770e4b4dac398c95475",
+          "bytes": 1123
+        },
+        {
+          "name": "release_wall_s",
+          "sha256": "379fb4f3fc6b08c0d6193655f38b69f039e21b7f207cd876174cfc59fc5147f0",
+          "bytes": 426
+        },
+        {
+          "name": "check_release",
+          "sha256": "55089050942842036cfe172ac7c6688e60203f78ba38e2a70fcd62eb7911e5e1",
+          "bytes": 4861
+        }
+      ],
+      "changed_or_added_nodes": []
+    },
+    {
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/same_lr25_prospective_continuation_proposal/capture_candidate.py",
+        "sha256": "32fe0841936f25db8254afdc7c4a63dc1081504850313a0f0144a29b3d6eb909",
+        "bytes": 36579,
+        "identity": {
+          "device": 2304,
+          "inode": 81535988,
+          "bytes": 36579,
+          "mtime_ns": 1792342979972843962,
+          "ctime_ns": 1792342979972843962,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "candidate": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/capture_candidate.py",
+        "sha256": "ca6b29903f0330d2c7c989bf2e881b41f1af3fe3bf14ce4b010827b8d57e0eed",
+        "bytes": 37704,
+        "identity": {
+          "device": 2304,
+          "inode": 82575515,
+          "bytes": 37704,
+          "mtime_ns": 1792351626765245167,
+          "ctime_ns": 1792351626766086706,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "finite_text_regions": [
+        {
+          "base_offset": 619,
+          "candidate_offset": 619,
+          "before": "SCHEMA='robotron-live-ce-lr-continuation-case-v1'\nRESULT_SCHEMA='robotron-live-ce-lr-continuation-result-v1'\n",
+          "after": "SCHEMA='robotron-continuous-guard-same-lr25-continuation-case-v1'\nRESULT_SCHEMA='robotron-continuous-guard-same-lr25-continuation-result-v1'\n"
+        },
+        {
+          "base_offset": 2693,
+          "candidate_offset": 2725,
+          "before": "",
+          "after": " 'guard':(Path(__file__).with_name('effective_provenance.py'),'f157895d90707fc725bda2381c9422c6e9ac22ab924597551d0d4d1f2d973556'),\n"
+        },
+        {
+          "base_offset": 13415,
+          "candidate_offset": 13578,
+          "before": "    require(case['source_freeze_release']==load('recipe').RELEASE_PIN,\n        'Only actual confirmed845 adoption/freeze release is continuation authority')\n    quality_release=pinned(case['source_freeze_release'])\n",
+          "after": "    # Confirmed845 is positive publication authority; invalid914M is a separate\n    # current terminal-disposition gate, never a normalized positive result.\n    quality_release=pinned(load('recipe').RELEASE_PIN)\n"
+        },
+        {
+          "base_offset": 13686,
+          "candidate_offset": 13846,
+          "before": "",
+          "after": "    previous=load('guard').prerequisites(pinned,owner)\n    require(case['source_freeze_release']==previous['release_pin'],\n        'Exact terminated invalid914M freeze release is the current prerequisite')\n"
+        },
+        {
+          "base_offset": 13854,
+          "candidate_offset": 14220,
+          "before": "    return dict(activation=rec,adoption=adoption,closure=release,quality_release=quality_release,phase=phase,owner=owner,historical_report=historical,\n",
+          "after": "    return dict(activation=rec,adoption=adoption,closure=release,quality_release=quality_release,previous_invalid=previous,phase=phase,owner=owner,historical_report=historical,\n"
+        },
+        {
+          "base_offset": 14954,
+          "candidate_offset": 15346,
+          "before": "    require(chosen==recipes.for_scale(.25), 'Only the prospective same-.25 recipe is admitted')\n",
+          "after": "    require(chosen==recipes.for_scale(.25) and case['experiment']==modules['guard'].EXPERIMENT,\n        'Only the explicit prospective continuous-guard same-.25 label is admitted')\n"
+        },
+        {
+          "base_offset": 15749,
+          "candidate_offset": 16226,
+          "before": "",
+          "after": "    previous=context['previous_invalid']['release']\n    modules['guard'].check_invalid_release(previous,pinned(context['previous_invalid']['peer']),context['owner'])\n"
+        },
+        {
+          "base_offset": 16168,
+          "candidate_offset": 16811,
+          "before": "        'Fresh baseline must retain released optimizer/replay identities')\n",
+          "after": "        'Fresh baseline must retain confirmed845 optimizer/replay identities')\n    require(all({k:entry_exposure[name+'_identity'][k] for k in ('process_id','instance_monotonic_ns','epoch')}\n        ==previous['optimizer_replay_identities'][name] for name in ('optimizer','replay')),\n        'Fresh baseline must retain the immediately released invalid914M exposure epochs')\n"
+        },
+        {
+          "base_offset": 20651,
+          "candidate_offset": 21594,
+          "before": "        ready['observed_unix_s']>=max(last_release,recipes.release_wall_s(release)) and all(ready[k]==baseline[k] for k in\n",
+          "after": "        ready['observed_unix_s']>=max(last_release,recipes.release_wall_s(release),recipes.release_wall_s(previous)) and all(ready[k]==baseline[k] for k in\n"
+        },
+        {
+          "base_offset": 27906,
+          "candidate_offset": 28882,
+          "before": "        recipe=copy.deepcopy(case['recipe']),hold_recipe_through_quality=True,restored_control=False)\n",
+          "after": "        recipe=copy.deepcopy(case['recipe']),hold_recipe_through_quality=True,restored_control=False,\n        evaluator_guard=context['previous_invalid']['guard_selection'],\n        previous_invalid_release=context['previous_invalid']['release_pin'])\n"
+        }
+      ],
+      "reverse_exact": true,
+      "exact_whole_nodes": [
+        {
+          "name": "require",
+          "sha256": "817d97d82b9b4292b185680fa74b2a31e7a436123b9341adf0e2e36b1dfcea4c",
+          "bytes": 74
+        },
+        {
+          "name": "fingerprint",
+          "sha256": "097cc10a38719e731a00529ca30199cbf199da8a33bc636e614510b34243065b",
+          "bytes": 908
+        },
+        {
+          "name": "pinned",
+          "sha256": "bb0c802fffb679f5e58657ebcc8f583bf09739eb7d2c84a879a01140e0a76364",
+          "bytes": 301
+        },
+        {
+          "name": "load",
+          "sha256": "aca68286062bfe766cdfe48a22ab695b27f1eb5f315171a984a3b9899a38ea30",
+          "bytes": 526
+        },
+        {
+          "name": "text",
+          "sha256": "05714d7e39429c5b2915e3805ab24c39bbd48c896bfe196f26da6ce527fa2482",
+          "bytes": 444
+        },
+        {
+          "name": "properties",
+          "sha256": "f5d9a342f0eddfd3782444963e396690836df3bff898ee1b336928c402034bd8",
+          "bytes": 102
+        },
+        {
+          "name": "Continuation",
+          "sha256": "e677bf3222b815e4ac0c8f708a81f48104fa9c4886b5cf6d069d3e6eef00fe2b",
+          "bytes": 2573
+        },
+        {
+          "name": "build_CPU_job",
+          "sha256": "c188cc80e027d1c76d9e13a779f067e05a3c24e64cf64e64f50e424822b6d5ac",
+          "bytes": 2299
+        },
+        {
+          "name": "main",
+          "sha256": "b172b69dfaa1b6f33b9400e95ea83119f27c9722bdbeca68e6a491516015609a",
+          "bytes": 2188
+        }
+      ],
+      "changed_or_added_nodes": [
+        "activation_context",
+        "run",
+        "validate"
+      ]
+    },
+    {
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/same_lr25_prospective_continuation_proposal/quality_bindings.py",
+        "sha256": "fe7764fdbf7ebd26be459aa74012dcfcd1c4a490601b4dd69b2969363cd64d4c",
+        "bytes": 50866,
+        "identity": {
+          "device": 2304,
+          "inode": 81535989,
+          "bytes": 50866,
+          "mtime_ns": 1792343053020975460,
+          "ctime_ns": 1792343053020975460,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "candidate": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/quality_bindings.py",
+        "sha256": "2934df1534c1ff82fdd30e0dec930146fdeb74c2589547abd76967df3fe40989",
+        "bytes": 52654,
+        "identity": {
+          "device": 2304,
+          "inode": 82575520,
+          "bytes": 52654,
+          "mtime_ns": 1792351626767344727,
+          "ctime_ns": 1792351626768214234,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "finite_text_regions": [
+        {
+          "base_offset": 555,
+          "candidate_offset": 555,
+          "before": "SCHEMA='robotron-live-ce-lr-continuation-quality-bindings-v1'\n",
+          "after": "SCHEMA='robotron-continuous-guard-same-lr25-continuation-quality-bindings-v1'\n"
+        },
+        {
+          "base_offset": 936,
+          "candidate_offset": 952,
+          "before": "SELECTOR=GAME/'tools/same_lr25_prospective_continuation_proposal/capture_candidate.py'\nSELECTOR_SHA='32fe0841936f25db8254afdc7c4a63dc1081504850313a0f0144a29b3d6eb909'\n",
+          "after": "SELECTOR=GAME/'tools/continuous_guard_same_lr25_continuation_proposal/capture_candidate.py'\nSELECTOR_SHA='ca6b29903f0330d2c7c989bf2e881b41f1af3fe3bf14ce4b010827b8d57e0eed'\n"
+        },
+        {
+          "base_offset": 1635,
+          "candidate_offset": 1656,
+          "before": "QUALITY_RELEASE_SHA='491de9ac25a8a95ff3330c818cae75250ec6d3df73608229a71be29ac04b535b'\nPREDECESSOR_PLAN_SHA='8ac7c5729ca5d53edcbf02ddd61e9e8377b8b1d7f4d43648c2fda7ab263b0c7d'\n",
+          "after": "QUALITY_RELEASE_SHA='bbb073f647c0dfcece6f29053daa0306eda400f1f1bb2d3cd57614442af5d39e'\nADOPTED_PLAN_SHA='8ac7c5729ca5d53edcbf02ddd61e9e8377b8b1d7f4d43648c2fda7ab263b0c7d'\nPREDECESSOR_PLAN_SHA='b61ef2cbdd1779e6491d1a181f60260e8474aa633a1a3da9c9a117c3744c7324'\n"
+        },
+        {
+          "base_offset": 2529,
+          "candidate_offset": 2634,
+          "before": "    'historical_invalid49_release','historical_invalid49_plan','control_transition','barrier'}\n",
+          "after": "    'historical_invalid49_release','historical_invalid49_plan','control_transition','barrier','historical_confirmed845_plan'}\n"
+        },
+        {
+          "base_offset": 3917,
+          "candidate_offset": 4053,
+          "before": "EXECUTION = {'/home/dave/source/repos/ArcadeAI/Robotron/tools/run_quality_campaign.py': '574e56f28499c751c639ee8a3474eecd5ca8de8c896da3dd44d5e4fc2fe60128', '/home/dave/source/repos/ArcadeAI/Robotron/tools/run_frozen_sidecar.py': 'db1fd0eac2c68b73425c77767ef0f842374291c855338f6b2ac05ee6b79dc04f', '/home/dave/source/repos/ArcadeAI/Robotron/tools/compare_sidecar_measurements.py': '879590b64e760037a81da2ff574d5994d9259cf1746b8e406177e2220d37c746', '/home/dave/source/repos/ArcadeAI/Robotron/tools/compare_frozen_measurements.py': '53f744737a722fec2760c0001dc5747b19b05e07a1de8699764c781f04da6be0'}\n",
+          "after": "HISTORICAL_EXECUTION = {'/home/dave/source/repos/ArcadeAI/Robotron/tools/run_quality_campaign.py': '574e56f28499c751c639ee8a3474eecd5ca8de8c896da3dd44d5e4fc2fe60128', '/home/dave/source/repos/ArcadeAI/Robotron/tools/run_frozen_sidecar.py': 'db1fd0eac2c68b73425c77767ef0f842374291c855338f6b2ac05ee6b79dc04f', '/home/dave/source/repos/ArcadeAI/Robotron/tools/compare_sidecar_measurements.py': '879590b64e760037a81da2ff574d5994d9259cf1746b8e406177e2220d37c746', '/home/dave/source/repos/ArcadeAI/Robotron/tools/compare_frozen_measurements.py': '53f744737a722fec2760c0001dc5747b19b05e07a1de8699764c781f04da6be0'}\nEXECUTION = {'/home/dave/source/repos/ArcadeAI/Robotron/tools/frozen_continuous_guard_evaluator_proposal/run_quality_campaign.py': '6d6fd8e4aa201d7099927af508742e8112cca3a5e6ca621731306664789ed8db', '/home/dave/source/repos/ArcadeAI/Robotron/tools/frozen_continuous_guard_evaluator_proposal/run_frozen_sidecar.py': 'c3a2ef29245b9d6a2e8309520f67d3b1f92061c38b395fa4ef8773631287dea3', '/home/dave/source/repos/ArcadeAI/Robotron/tools/compare_sidecar_measurements.py': '879590b64e760037a81da2ff574d5994d9259cf1746b8e406177e2220d37c746', '/home/dave/source/repos/ArcadeAI/Robotron/tools/compare_frozen_measurements.py': '53f744737a722fec2760c0001dc5747b19b05e07a1de8699764c781f04da6be0'}\n"
+        },
+        {
+          "base_offset": 11462,
+          "candidate_offset": 12293,
+          "before": "        and meta['plan_sha256']==PREDECESSOR_PLAN_SHA and meta['live_learner_restored'] is False,\n",
+          "after": "        and meta['plan_sha256']==ADOPTED_PLAN_SHA and meta['live_learner_restored'] is False,\n"
+        },
+        {
+          "base_offset": 14022,
+          "candidate_offset": 14849,
+          "before": "        predecessor['execution_source_hashes']==EXECUTION and\n",
+          "after": "        predecessor['execution_source_hashes']==HISTORICAL_EXECUTION and\n"
+        },
+        {
+          "base_offset": 41146,
+          "candidate_offset": 41984,
+          "before": "    require(case['schema']=='robotron-live-ce-lr-continuation-case-v1' and case['capture_authorized'] is True and\n        result['schema']=='robotron-live-ce-lr-continuation-result-v1' and result['status']=='CAPTURED_PENDING_ROOT_CPU' and\n",
+          "after": "    require(case['schema']=='robotron-continuous-guard-same-lr25-continuation-case-v1' and case['capture_authorized'] is True and\n        result['schema']=='robotron-continuous-guard-same-lr25-continuation-result-v1' and result['status']=='CAPTURED_PENDING_ROOT_CPU' and\n"
+        },
+        {
+          "base_offset": 42308,
+          "candidate_offset": 43178,
+          "before": "",
+          "after": "    guard=load_selector().load('guard')\n    guard.check_selection(result['evaluator_guard'],reader)\n    require(result['previous_invalid_release']==context['previous_invalid']['release_pin'],\n        'Current invalid914M release cannot be replaced by a positive predecessor')\n"
+        },
+        {
+          "base_offset": 49679,
+          "candidate_offset": 50825,
+          "before": "        'Exact adopted845 release/immediate8ac7 and historical invalid49 pointers required')\n",
+          "after": "        'Exact invalid914M release/immediateb61 and historical invalid49 pointers required')\n"
+        },
+        {
+          "base_offset": 49832,
+          "candidate_offset": 50978,
+          "before": "    check_historical_sources(predecessor,v['historical_invalid49_release'],v['historical_invalid49_plan'],\n",
+          "after": "    require(predecessor['evaluator_source_hashes']==EVALUATOR and\n        predecessor['execution_source_hashes']==HISTORICAL_EXECUTION and\n        predecessor['checkpoints']['reference']['sha256']==REFERENCE_SHA and\n        predecessor['checkpoints']['candidate']['sha256']=='05251260440f9f971c4bf08b7fdb1b6d969f5560dba39fecc1db90373a17f22f' and\n        e['historical_confirmed845_plan']['sha256']==ADOPTED_PLAN_SHA,\n        'Immediate invalidb61 E13/X4 history is separate from adopted8ac and current effective evaluator')\n    check_historical_sources(v['historical_confirmed845_plan'],v['historical_invalid49_release'],v['historical_invalid49_plan'],\n"
+        },
+        {
+          "base_offset": 50653,
+          "candidate_offset": 52345,
+          "before": "    return dict(cpu_job=job,proof=proof,completion=completion,capture=result,current_ce_phase=phase,window=window,baseline=baseline,predecessor=predecessor,activation=activated,activation_pins=case['activation'])\n",
+          "after": "    return dict(cpu_job=job,proof=proof,completion=completion,capture=result,current_ce_phase=phase,window=window,baseline=baseline,predecessor=predecessor,activation=activated,activation_pins=case['activation'],effective_implementation=result['evaluator_guard'],previous_invalid=context['previous_invalid'])\n"
+        }
+      ],
+      "reverse_exact": true,
+      "exact_whole_nodes": [
+        {
+          "name": "require",
+          "sha256": "8f98a8e34331345d23a885f1c2b47a8f70fd54ff373f9812dd2321902777f813",
+          "bytes": 82
+        },
+        {
+          "name": "identity",
+          "sha256": "fc47a5b9729e8d702b383b9b5b801d26d1f6d00d185fd14cabd66b4f77328c6b",
+          "bytes": 242
+        },
+        {
+          "name": "read_bytes",
+          "sha256": "516f83c38dbabbddf24d70184b52900c71223cb87a50aec56840d4cd2cc72be6",
+          "bytes": 1079
+        },
+        {
+          "name": "four",
+          "sha256": "5efaeaf1d88345461d20f79570b52c857c1b9d2af2f0e6332977b960dc6d9814",
+          "bytes": 193
+        },
+        {
+          "name": "flat",
+          "sha256": "2b512a5fe30b255f8bcfe8cb46f77732a6d6f2008a287cdc49091d3a7b36edbf",
+          "bytes": 91
+        },
+        {
+          "name": "triple",
+          "sha256": "fab5252af44d9f03b90369209decbee759add58a2494cfaee1f74bf5057d3040",
+          "bytes": 85
+        },
+        {
+          "name": "owner",
+          "sha256": "fab5cdcd3226300092867fcea35a20090f77d6e8d4a66a3e3802a66c73bc6403",
+          "bytes": 368
+        },
+        {
+          "name": "terminal",
+          "sha256": "25ab6e43bf7805ddd0e1596b9b06703c3534746fb0b401b2feef7289985b171c",
+          "bytes": 999
+        },
+        {
+          "name": "read",
+          "sha256": "0548d9f5a835c6cff3ce3fedf04ee9a3f1bc296c57f06f0fc467c660c8b14e5b",
+          "bytes": 124
+        },
+        {
+          "name": "read_raw",
+          "sha256": "c4b9449e7164d64dbed6c903b64c3d6189321f0770870bdc2a0077c1ff2b599d",
+          "bytes": 136
+        },
+        {
+          "name": "same_raw",
+          "sha256": "c99ce6c916f77d5a63d83a3f856d9d58f55355bf86acc144e680e260ee2ac7d0",
+          "bytes": 134
+        },
+        {
+          "name": "finite",
+          "sha256": "730152a8777a913c51adf79b52109dda75e078372c0eb571e88748a50c61213e",
+          "bytes": 137
+        },
+        {
+          "name": "load_observer",
+          "sha256": "9a03279ab0fee64ec1b3620f4474b47c0511cb78241ab4e5343f15f5a1098814",
+          "bytes": 396
+        },
+        {
+          "name": "load_selector",
+          "sha256": "3fe1b7c24b757ae448348b8d2d94aaf6f880e12acc601d02b29b0fc7aa91fa21",
+          "bytes": 341
+        },
+        {
+          "name": "check_diagnostic_sources",
+          "sha256": "9e73a531d6dafaa868cc732bf7d429a2fc7ab9cb4a6d28a640c205d2d3cebaf5",
+          "bytes": 697
+        },
+        {
+          "name": "check_CPU_command",
+          "sha256": "30acdcf3d33d11796b6e788e5bcd781aeb32a57e40d9495eede6ff3cbd90840e",
+          "bytes": 1683
+        },
+        {
+          "name": "candidate_descriptor",
+          "sha256": "87ff1cd3fdd1673f0404c80eeb894e1651926501cea5aa356e3825451af2fed0",
+          "bytes": 470
+        },
+        {
+          "name": "check_cpu",
+          "sha256": "b829282eab657523320719fa91902249f13426bec5d75312b880a772c5bc0a0c",
+          "bytes": 5314
+        },
+        {
+          "name": "archived_bytes",
+          "sha256": "9507b03dfda1af0476efb729e9bbf86f834a77af5a04a9161b35b9e1ad74db12",
+          "bytes": 1006
+        },
+        {
+          "name": "archive_text",
+          "sha256": "f2c899b1068f4f3aa449365f045e2f5ac509c8045815f918a7679573664847cf",
+          "bytes": 85
+        },
+        {
+          "name": "check_root_capture",
+          "sha256": "5e380de7070bdc2f0611543bad10d95b068b7ca4a1a974eec0d9b950655a26f0",
+          "bytes": 4950
+        },
+        {
+          "name": "check_window",
+          "sha256": "67f9dd19d499d36e999004f52ed1dc20dc2c5ab42cce5b0d3287383e7f83bee6",
+          "bytes": 3895
+        },
+        {
+          "name": "check_CPU_release",
+          "sha256": "7a951b632b4046d9e7dca1d7a8c29189513d0e6ce75503b033c175dce2a0ada5",
+          "bytes": 4129
+        },
+        {
+          "name": "check_transition",
+          "sha256": "ceb85e714a25632e84ad711fa6b8f912672185bb62f05950d8d976eeff3d4453",
+          "bytes": 2605
+        }
+      ],
+      "changed_or_added_nodes": [
+        "check_historical_sources",
+        "check_reference",
+        "validate"
+      ]
+    },
+    {
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/same_lr25_prospective_continuation_proposal/root_quality_carrier.py",
+        "sha256": "39f2db9b4527cc218fe917bffe19cbf08b364f9c13a6adc20210ad20be0b9b89",
+        "bytes": 24188,
+        "identity": {
+          "device": 2304,
+          "inode": 81535990,
+          "bytes": 24188,
+          "mtime_ns": 1792343053022202214,
+          "ctime_ns": 1792343053022202214,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "candidate": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/root_quality_carrier.py",
+        "sha256": "a24aca85015154504452fcde9bd674dba8845e749b876cc14b78b0f3c3b73b6a",
+        "bytes": 25325,
+        "identity": {
+          "device": 2304,
+          "inode": 82575521,
+          "bytes": 25325,
+          "mtime_ns": 1792351626768453147,
+          "ctime_ns": 1792351733509486556,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "finite_text_regions": [
+        {
+          "base_offset": 827,
+          "candidate_offset": 827,
+          "before": "CAMPAIGN=G/'tools/run_quality_campaign.py'\nCAMPAIGN_SHA='574e56f28499c751c639ee8a3474eecd5ca8de8c896da3dd44d5e4fc2fe60128'\nSIDECAR_SHA='db1fd0eac2c68b73425c77767ef0f842374291c855338f6b2ac05ee6b79dc04f'\n",
+          "after": "CAMPAIGN=G/'tools/frozen_continuous_guard_evaluator_proposal/run_quality_campaign.py'\nSIDECAR=G/'tools/frozen_continuous_guard_evaluator_proposal/run_frozen_sidecar.py'\nCAMPAIGN_SHA='6d6fd8e4aa201d7099927af508742e8112cca3a5e6ca621731306664789ed8db'\nSIDECAR_SHA='c3a2ef29245b9d6a2e8309520f67d3b1f92061c38b395fa4ef8773631287dea3'\n"
+        },
+        {
+          "base_offset": 1189,
+          "candidate_offset": 1315,
+          "before": "BINDINGS_SHA='fe7764fdbf7ebd26be459aa74012dcfcd1c4a490601b4dd69b2969363cd64d4c'\n",
+          "after": "BINDINGS_SHA='2934df1534c1ff82fdd30e0dec930146fdeb74c2589547abd76967df3fe40989'\n"
+        },
+        {
+          "base_offset": 3990,
+          "candidate_offset": 4116,
+          "before": "        predecessor_quality_plan=CFG['predecessor_quality_plan']),job\n",
+          "after": "        predecessor_quality_plan=CFG['predecessor_quality_plan'],effective_implementation=BUNDLE['effective_implementation'],\n        previous_invalid_release=BUNDLE['previous_invalid']['release_pin']),job\n"
+        },
+        {
+          "base_offset": 4729,
+          "candidate_offset": 4991,
+          "before": "",
+          "after": "        '--continuous-guard-manifest',BUNDLE['effective_implementation']['guard_manifest']['path'],\n        '--continuous-guard-manifest-sha256',BUNDLE['effective_implementation']['guard_manifest']['sha256'],\n"
+        },
+        {
+          "base_offset": 6176,
+          "candidate_offset": 6647,
+          "before": "",
+          "after": "    require(plan['effective_implementation']==BUNDLE['effective_implementation'],'Exact effective evaluator declaration required')\n"
+        },
+        {
+          "base_offset": 6951,
+          "candidate_offset": 7553,
+          "before": "",
+          "after": "        require(job['continuous_guard_manifest']==BUNDLE['effective_implementation']['guard_manifest']['path'] and\n            job['continuous_guard_manifest_sha256']==BUNDLE['effective_implementation']['guard_manifest']['sha256'],\n            'Every leg must select the same explicit effective guard')\n"
+        },
+        {
+          "base_offset": 6978,
+          "candidate_offset": 7883,
+          "before": "    require(sha(CAMPAIGN)==CAMPAIGN_SHA and sha(G/'tools/run_frozen_sidecar.py')==SIDECAR_SHA,'Frozen campaign/evaluator source changed')\n",
+          "after": "    require(sha(CAMPAIGN)==CAMPAIGN_SHA and sha(SIDECAR)==SIDECAR_SHA,'Frozen campaign/evaluator source changed')\n"
+        },
+        {
+          "base_offset": 7550,
+          "candidate_offset": 8431,
+          "before": "",
+          "after": "    BINDINGS.load_selector().load('guard').check_selection(plan['effective_implementation'],BINDINGS.read)\n"
+        },
+        {
+          "base_offset": 8045,
+          "candidate_offset": 9033,
+          "before": "    require(sha(CAMPAIGN)==CAMPAIGN_SHA and sha(G/'tools/run_frozen_sidecar.py')==SIDECAR_SHA,'Approved source differs')\n",
+          "after": "    require(sha(CAMPAIGN)==CAMPAIGN_SHA and sha(SIDECAR)==SIDECAR_SHA,'Approved source differs')\n"
+        },
+        {
+          "base_offset": 8671,
+          "candidate_offset": 9635,
+          "before": "",
+          "after": "    for key in ('guard_manifest','installer','effective_helper'):\n        asset=plan['effective_implementation'][key];sources[asset['path']]=asset['sha256']\n"
+        },
+        {
+          "base_offset": 9610,
+          "candidate_offset": 10731,
+          "before": "    require(value['schema']=='robotron-live-ce-lr-continuation-exclusive-readiness-v1' and value['status']=='PASS'\n",
+          "after": "    require(value['schema']=='robotron-continuous-guard-same-lr25-continuation-exclusive-readiness-v1' and value['status']=='PASS'\n"
+        }
+      ],
+      "reverse_exact": true,
+      "exact_whole_nodes": [
+        {
+          "name": "require",
+          "sha256": "a0462df7b779132c2b301cb87ec4c5ab48a3840fd4047875670f0bff00888eaa",
+          "bytes": 69
+        },
+        {
+          "name": "sha",
+          "sha256": "32a2360787849c874729c56bc9a8a720344faaa40b79bf5ecc6ec9366cbc5694",
+          "bytes": 114
+        },
+        {
+          "name": "write",
+          "sha256": "f4aa70336dd4195b6017c642bd9ab7070cf94c79feba39cccbe1f4026e9e24fe",
+          "bytes": 323
+        },
+        {
+          "name": "call",
+          "sha256": "6de7eac9a8dc20e7d94d4cf492f589b04cbc95d2ba45750d5398ddeb058148b2",
+          "bytes": 201
+        },
+        {
+          "name": "show",
+          "sha256": "f32a9299d56adc74c22d87803977d35e9197fb7a13d2aaeb97031dbb2a410c70",
+          "bytes": 217
+        },
+        {
+          "name": "pinned_json",
+          "sha256": "bfbde65608c6c2578b4717b9d270b5128de9461bb53d460331d4ee35c72a023e",
+          "bytes": 421
+        },
+        {
+          "name": "launch_argv",
+          "sha256": "5e153318ed02d07226469df0c5a2934ff8f155156ccdc4e414304eff5aa19d31",
+          "bytes": 159
+        },
+        {
+          "name": "fast_runtime",
+          "sha256": "7f64ae15f45d92dab8766e6995025a108b729da96294957e8df1adb91c9c214e",
+          "bytes": 4328
+        },
+        {
+          "name": "launch",
+          "sha256": "32e69a3bff53eb043c1f26f0aadcb00676d9ef4ce770edab81d43521a19b02aa",
+          "bytes": 3970
+        },
+        {
+          "name": "observe",
+          "sha256": "d2b8accb7d4543f6366b372fded350a808ccb9660abafdaa5a0107829d354108",
+          "bytes": 860
+        },
+        {
+          "name": "archive",
+          "sha256": "8a1085fc7c002a3aba0d8d5e43edac0b5081f2f7c3bdac595ae5216ed60152d4",
+          "bytes": 1033
+        },
+        {
+          "name": "configure",
+          "sha256": "0dd69a05b6deff1eb781fe589b8ca1ac179348dae0a37fdb485e7c4e354910b7",
+          "bytes": 1184
+        },
+        {
+          "name": "main",
+          "sha256": "61742cf015daef96a607d4aae41c9af31c4f0d559d23bdd000e11a61fda40e00",
+          "bytes": 1026
+        }
+      ],
+      "changed_or_added_nodes": [
+        "default_argv",
+        "inputs",
+        "prepare",
+        "readiness_contract",
+        "source_checks",
+        "validate_plan"
+      ]
+    },
+    {
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/same_lr25_prospective_continuation_proposal/collect_quality_readiness.py",
+        "sha256": "bce022589841beb6a3f09067a664cc80abe1d03390cd411be5cd446a1f4b5d57",
+        "bytes": 20720,
+        "identity": {
+          "device": 2304,
+          "inode": 81535991,
+          "bytes": 20720,
+          "mtime_ns": 1792343053022867879,
+          "ctime_ns": 1792343053022867879,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "candidate": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/collect_quality_readiness.py",
+        "sha256": "5ed6969160b7e24301e75463421232bdc867126bfb3cdc22c9da1b68a1e8cb7a",
+        "bytes": 21458,
+        "identity": {
+          "device": 2304,
+          "inode": 82575522,
+          "bytes": 21458,
+          "mtime_ns": 1792351626768634108,
+          "ctime_ns": 1792351733509486556,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "finite_text_regions": [
+        {
+          "base_offset": 618,
+          "candidate_offset": 618,
+          "before": "SELECTOR=GAME/'tools/same_lr25_prospective_continuation_proposal/capture_candidate.py'\nSELECTOR_SHA='32fe0841936f25db8254afdc7c4a63dc1081504850313a0f0144a29b3d6eb909'\n",
+          "after": "SELECTOR=GAME/'tools/continuous_guard_same_lr25_continuation_proposal/capture_candidate.py'\nSELECTOR_SHA='ca6b29903f0330d2c7c989bf2e881b41f1af3fe3bf14ce4b010827b8d57e0eed'\n"
+        },
+        {
+          "base_offset": 842,
+          "candidate_offset": 847,
+          "before": "BINDINGS_SHA='fe7764fdbf7ebd26be459aa74012dcfcd1c4a490601b4dd69b2969363cd64d4c'\n",
+          "after": "BINDINGS_SHA='2934df1534c1ff82fdd30e0dec930146fdeb74c2589547abd76967df3fe40989'\n"
+        },
+        {
+          "base_offset": 1118,
+          "candidate_offset": 1123,
+          "before": "SCHEMA='robotron-live-ce-lr-continuation-quality-runtime-case-v1'\nREADY_SCHEMA='robotron-live-ce-lr-continuation-exclusive-readiness-v1'\n",
+          "after": "SCHEMA='robotron-continuous-guard-same-lr25-continuation-quality-runtime-case-v1'\nREADY_SCHEMA='robotron-continuous-guard-same-lr25-continuation-exclusive-readiness-v1'\n"
+        },
+        {
+          "base_offset": 3683,
+          "candidate_offset": 3720,
+          "before": "    require(result['schema']=='robotron-live-ce-lr-continuation-result-v1' and\n",
+          "after": "    require(result['schema']=='robotron-continuous-guard-same-lr25-continuation-result-v1' and\n"
+        },
+        {
+          "base_offset": 5721,
+          "candidate_offset": 5774,
+          "before": "    modules={name:C.load(name) for name in ('entry','driver','ops','capture','observer','recipe')}\n",
+          "after": "    modules={name:C.load(name) for name in ('entry','driver','ops','capture','observer','recipe','guard')}\n"
+        },
+        {
+          "base_offset": 16771,
+          "candidate_offset": 16832,
+          "before": "",
+          "after": "    # Retained failed914M tombstone is checked separately from owned releases.\n    invalid=context['previous_invalid']['release'];prior=invalid['original']\n    def retained_invalid_idle():\n        modules['guard'].check_retained_terminal(obs.show(prior['unit']))\n        require(M.process_start(prior['pid'])!=prior['starttime_ticks'],'Original invalid native process remains')\n        require(obs.show(prior['unit'].removesuffix('.service')+'.timer')['LoadState']=='not-found',\n                'Original invalid native timer unexpectedly present')\n        M.cgroup_empty(str(Path(owner['cgroup']).parent/prior['unit']))\n    retained_invalid_idle()\n"
+        },
+        {
+          "base_offset": 18102,
+          "candidate_offset": 18812,
+          "before": "",
+          "after": "    retained_invalid_idle()\n"
+        }
+      ],
+      "reverse_exact": true,
+      "exact_whole_nodes": [
+        {
+          "name": "require",
+          "sha256": "4e57c948b2beac7302da113690a3a08cd91fd4074aa4259c231aedb9652720a0",
+          "bytes": 75
+        },
+        {
+          "name": "load",
+          "sha256": "118569043892bd7a634d0205a0f6539ec37cc4f9abd8c5c74f21fa467a71c67b",
+          "bytes": 401
+        },
+        {
+          "name": "main",
+          "sha256": "9664a82f036018bb55c7ad5e55b9fbbdd0b728cd2c1a7c7a3343c8cb2f89266f",
+          "bytes": 615
+        }
+      ],
+      "changed_or_added_nodes": [
+        "collect"
+      ]
+    },
+    {
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/same_lr25_prospective_continuation_proposal/collect_fresh_capture_case.py",
+        "sha256": "57e3bda11da06b60a392c03b0f01216dc5c4682962d080ee1d0d2c87a189ed3a",
+        "bytes": 16630,
+        "identity": {
+          "device": 2304,
+          "inode": 81535996,
+          "bytes": 16630,
+          "mtime_ns": 1792343160162181659,
+          "ctime_ns": 1792343160162181659,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "candidate": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/collect_fresh_capture_case.py",
+        "sha256": "238fc4a3030d3b1707f842d56c5bf3cbe809aa23688922ac456e8299e191e824",
+        "bytes": 17771,
+        "identity": {
+          "device": 2304,
+          "inode": 82575524,
+          "bytes": 17771,
+          "mtime_ns": 1792351626769280798,
+          "ctime_ns": 1792351733509486556,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "finite_text_regions": [
+        {
+          "base_offset": 432,
+          "candidate_offset": 432,
+          "before": "FAMILY=G/'tools/same_lr25_prospective_continuation_proposal'\nCAPTURE_SHA='32fe0841936f25db8254afdc7c4a63dc1081504850313a0f0144a29b3d6eb909'\nTEMPLATE_SHA='363255a9af364a919cd8517c5c988030fc6373d4c3b230c511952f81a545528c'\n",
+          "after": "FAMILY=G/'tools/continuous_guard_same_lr25_continuation_proposal'\nCAPTURE_SHA='ca6b29903f0330d2c7c989bf2e881b41f1af3fe3bf14ce4b010827b8d57e0eed'\nTEMPLATE_SHA='f70260e3ac51c9e7fc1ffac6e21e697e77ec2f3c565d0a9175980406b47ab227'\n"
+        },
+        {
+          "base_offset": 846,
+          "candidate_offset": 851,
+          "before": "OLD=R/'LR25-845M-quality-runtime-original01-20261018/runtime-baseline.json'\nOLD_SHA='1ca3bbb1b67c19fadd4bba598f1dfc40c35ce2d56576e00f5485a686f49f0381'\nBINDING=R/'LR25-continuation-original01-root-preparation-20261018/actual-LR25-845M-quality-binding.json'\nBINDING_SHA='b98dd3f00ef3961f36a2e9748b55c96751411e3945f740cee2b74d8c2bdd16c3'\nPREPARATION_SCHEMA='robotron-same-LR25-fresh-capture-case-preparation-v1'\n",
+          "after": "OLD=R/'same-LR25-914M-quality-runtime-original01-20261018/runtime-baseline.json'\nOLD_SHA='b0bef7656ad6215c364fc0caf521612b087ccc359f2a6460bfd4b046c2c893c9'\nBINDING=R/'same-LR25-continuation-original01-root-preparation-20261018/actual914M-quality-binding.json'\nBINDING_SHA='fde2f3b3a23f407f6473bb75594d326229da22cef15290ef2186c74e2680c232'\nPREPARATION_SCHEMA='robotron-continuous-guard-same-LR25-fresh-capture-case-preparation-v1'\n"
+        },
+        {
+          "base_offset": 3446,
+          "candidate_offset": 3472,
+          "before": "    modules={name:C.load(name) for name in ('entry','driver','ops','capture','observer','recipe')}\n",
+          "after": "    modules={name:C.load(name) for name in ('entry','driver','ops','capture','observer','recipe','guard')}\n"
+        },
+        {
+          "base_offset": 4363,
+          "candidate_offset": 4397,
+          "before": "    require(C.pinned(binding_pin)['runtime_baseline']==oldpin,'Closed .25 baseline must be bound by actual b98')\n",
+          "after": "    require(C.pinned(binding_pin)['runtime_baseline']==oldpin,'Closed .25 baseline must be bound by actual fde2')\n"
+        },
+        {
+          "base_offset": 4959,
+          "candidate_offset": 4994,
+          "before": "",
+          "after": "    floor['learner_frame_count']=max(floor['learner_frame_count'],context['previous_invalid']['release']['main_health']['learner_frame_count'])\n"
+        },
+        {
+          "base_offset": 12212,
+          "candidate_offset": 12391,
+          "before": "",
+          "after": "    # The exact failed914M service descriptor was deliberately retained. It is\n    # checked idle, not relabelled as released or silently stopped/reset here.\n    invalid=context['previous_invalid']['release'];prior=invalid['original']\n    require(M.process_start(prior['pid'])!=prior['starttime_ticks'],'Original invalid native parent is still live')\n    def retained_invalid_idle():\n        current=obs.show(prior['unit'])\n        modules['guard'].check_retained_terminal(current)\n        require(M.process_start(prior['pid'])!=prior['starttime_ticks'],'Original invalid native process reappeared')\n        require(obs.show(prior['unit'].removesuffix('.service')+'.timer')['LoadState']=='not-found',\n                'Original invalid timer unexpectedly present')\n        M.cgroup_empty(str(Path(owner['cgroup']).parent/prior['unit']))\n"
+        },
+        {
+          "base_offset": 12236,
+          "candidate_offset": 13251,
+          "before": "",
+          "after": "        retained_invalid_idle()\n"
+        },
+        {
+          "base_offset": 13628,
+          "candidate_offset": 14675,
+          "before": "        api['ts']>=modules['recipe'].release_wall_s(context['quality_release']),'Final API owner/time predates genuine current release')\n",
+          "after": "        api['ts']>=max(modules['recipe'].release_wall_s(context['quality_release']),modules['recipe'].release_wall_s(context['previous_invalid']['release'])),'Final API owner/time predates genuine current release')\n"
+        },
+        {
+          "base_offset": 14239,
+          "candidate_offset": 15364,
+          "before": "    ready=dict(schema='robotron-live-ce-lr-continuation-before-control-readiness-v1',status='PASS',observed_unix_s=time.time(),**anchor,\n",
+          "after": "    ready=dict(schema='robotron-continuous-guard-same-lr25-continuation-before-control-readiness-v1',status='PASS',observed_unix_s=time.time(),**anchor,\n"
+        }
+      ],
+      "reverse_exact": true,
+      "exact_whole_nodes": [
+        {
+          "name": "require",
+          "sha256": "4e57c948b2beac7302da113690a3a08cd91fd4074aa4259c231aedb9652720a0",
+          "bytes": 75
+        },
+        {
+          "name": "load",
+          "sha256": "a2e743e1ccbe1e526afe5fd91ce68871dcf6394040322149e60f27b4696c3ac8",
+          "bytes": 372
+        },
+        {
+          "name": "main",
+          "sha256": "0f98c644c7f2c1757634e36aed22d9327b5952b86f426152703c7e9da1e63954",
+          "bytes": 712
+        }
+      ],
+      "changed_or_added_nodes": [
+        "collect"
+      ]
+    },
+    {
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/same_lr25_prospective_continuation_proposal/audit_completed_leg.py",
+        "sha256": "cd1299f033dfc7b93addca5192ff3c95ee48639f4f6193ff34f7885c634ded80",
+        "bytes": 34346,
+        "identity": {
+          "device": 2304,
+          "inode": 81535992,
+          "bytes": 34346,
+          "mtime_ns": 1792343053023817097,
+          "ctime_ns": 1792343053023817097,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "candidate": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/audit_completed_leg.py",
+        "sha256": "c7f61c1cb538e70a8beb414e593cd1ae0e292678a5a3621e881fc08d4303a3d8",
+        "bytes": 36071,
+        "identity": {
+          "device": 2304,
+          "inode": 82575523,
+          "bytes": 36071,
+          "mtime_ns": 1792351626768767292,
+          "ctime_ns": 1792351733509486556,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "finite_text_regions": [
+        {
+          "base_offset": 1110,
+          "candidate_offset": 1110,
+          "before": "BINDINGS_SHA = 'fe7764fdbf7ebd26be459aa74012dcfcd1c4a490601b4dd69b2969363cd64d4c'\n",
+          "after": "BINDINGS_SHA = '2934df1534c1ff82fdd30e0dec930146fdeb74c2589547abd76967df3fe40989'\n"
+        },
+        {
+          "base_offset": 1773,
+          "candidate_offset": 1773,
+          "before": "EXECUTION_NAMES = {str(GAME/\"tools\"/name) for name in (\"run_quality_campaign.py\", \"run_frozen_sidecar.py\", \"compare_sidecar_measurements.py\", \"compare_frozen_measurements.py\")}\n",
+          "after": "EXECUTION_NAMES = {'/home/dave/source/repos/ArcadeAI/Robotron/tools/frozen_continuous_guard_evaluator_proposal/run_quality_campaign.py', '/home/dave/source/repos/ArcadeAI/Robotron/tools/frozen_continuous_guard_evaluator_proposal/run_frozen_sidecar.py', '/home/dave/source/repos/ArcadeAI/Robotron/tools/compare_sidecar_measurements.py', '/home/dave/source/repos/ArcadeAI/Robotron/tools/compare_frozen_measurements.py'}\n"
+        },
+        {
+          "base_offset": 4318,
+          "candidate_offset": 4559,
+          "before": "",
+          "after": "    BINDINGS.load_selector().load('guard').check_selection(plan['effective_implementation'],BINDINGS.read)\n"
+        },
+        {
+          "base_offset": 6180,
+          "candidate_offset": 6528,
+          "before": "",
+          "after": "        require(job['continuous_guard_manifest']==plan['effective_implementation']['guard_manifest']['path'] and\n            job['continuous_guard_manifest_sha256']==plan['effective_implementation']['guard_manifest']['sha256'],\n            'All four exact effective guard arguments required')\n"
+        },
+        {
+          "base_offset": 17218,
+          "candidate_offset": 17859,
+          "before": "        import run_quality_campaign as campaign\n",
+          "after": "        campaign_path=game/'tools/frozen_continuous_guard_evaluator_proposal/run_quality_campaign.py'\n        require(digest(campaign_path)==BINDINGS.EXECUTION[str(campaign_path)],'Selected companion campaign differs')\n        module_spec=importlib.util.spec_from_file_location('_audited_continuous_guard_campaign',campaign_path)\n        campaign=importlib.util.module_from_spec(module_spec);sys.modules[module_spec.name]=campaign\n        module_spec.loader.exec_module(campaign)\n"
+        },
+        {
+          "base_offset": 17703,
+          "candidate_offset": 18776,
+          "before": "",
+          "after": "        effective=BINDINGS.load_selector().load('guard').check_runtime(\n            receipt['effective_implementation'],plan['effective_implementation'],BINDINGS.read)\n        report['effective_implementation']=receipt['effective_implementation']\n        report['stable_effective_implementation']=effective\n        for key in ('guard_manifest','installer','effective_helper'):\n            asset=plan['effective_implementation'][key]\n            require(digest(asset['path'])==asset['sha256'],'Effective source changed')\n            capture(asset['path'],'effective-'+key+'-'+Path(asset['path']).name)\n            sources[asset['path']]=asset['sha256']\n"
+        }
+      ],
+      "reverse_exact": true,
+      "exact_whole_nodes": [
+        {
+          "name": "require",
+          "sha256": "2a2fd2885f5415f9983519231e8706448cc5a271796f456f27fd09e22793eab8",
+          "bytes": 83
+        },
+        {
+          "name": "digest",
+          "sha256": "d83ca856e697c7b7095fcc77d137aed5d0dfbfa0f05b1f653cb5bcec236cafe1",
+          "bytes": 127
+        },
+        {
+          "name": "unique_object",
+          "sha256": "25c4a555398767261638908c87193c7ff5ca0e96c5d459d22830039d8797176f",
+          "bytes": 184
+        },
+        {
+          "name": "decode",
+          "sha256": "15f1db86fde8b5dcf03cfd349d4900931d94f64a7800344291af7af89e52ae6c",
+          "bytes": 172
+        },
+        {
+          "name": "lines",
+          "sha256": "4a82919bcb6b98ecd07b3afbe6f94a4e575db69dbad08ed68122ca6615aa066f",
+          "bytes": 145
+        },
+        {
+          "name": "indexed",
+          "sha256": "b98431334766e5899781e0a774b6b49e545f21b37ae03e3e9f543f3ebfe27f79",
+          "bytes": 282
+        },
+        {
+          "name": "immutable",
+          "sha256": "20b3f287e445837291a9a1d3e0061dda1519f35f0708368c8bec135898bdfdcd",
+          "bytes": 366
+        },
+        {
+          "name": "validate_cpu_proof",
+          "sha256": "1f2971c796685a491ecc8bebfe049cc4edf8f2344f5dc2613ad8fe9a474fbe3d",
+          "bytes": 457
+        },
+        {
+          "name": "validate_original_context",
+          "sha256": "809d856fd4acb049496fa5b2b197445f8e8a2bd853eec7c6cd98345e30bc3933",
+          "bytes": 910
+        },
+        {
+          "name": "classify_actor_lines",
+          "sha256": "1a8eb14bf3ddb6712273fc62b94d78ddc5e90554ccad293ef3d01cb67baaaf6a",
+          "bytes": 2650
+        },
+        {
+          "name": "configure",
+          "sha256": "08e3fdca5c6962b6a61b4495dd78286b13ec6f2f51a796e559739d8d52545289",
+          "bytes": 1055
+        },
+        {
+          "name": "main",
+          "sha256": "1fb3f046e3450aef5ef2b77cd85cf01f5276f32c4cd44b58cc559d664af6c46b",
+          "bytes": 1056
+        }
+      ],
+      "changed_or_added_nodes": [
+        "audit",
+        "validate_future_plan"
+      ]
+    },
+    {
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/same_lr25_prospective_continuation_proposal/template-audit-source.py",
+        "sha256": "2576d4449b12d6b4a3b17898ab9938c6ff8c762829f61a29e3d510f73d585c21",
+        "bytes": 37008,
+        "identity": {
+          "device": 2304,
+          "inode": 81535993,
+          "bytes": 37008,
+          "mtime_ns": 1792343053024532714,
+          "ctime_ns": 1792343053024532714,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "candidate": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/template-audit-source.py",
+        "sha256": "2576d4449b12d6b4a3b17898ab9938c6ff8c762829f61a29e3d510f73d585c21",
+        "bytes": 37008,
+        "identity": {
+          "device": 2304,
+          "inode": 82575525,
+          "bytes": 37008,
+          "mtime_ns": 1792351197118341615,
+          "ctime_ns": 1792351733510486560,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "finite_text_regions": [],
+      "reverse_exact": true,
+      "exact_whole_nodes": [
+        {
+          "name": "require",
+          "sha256": "2a2fd2885f5415f9983519231e8706448cc5a271796f456f27fd09e22793eab8",
+          "bytes": 83
+        },
+        {
+          "name": "digest",
+          "sha256": "d83ca856e697c7b7095fcc77d137aed5d0dfbfa0f05b1f653cb5bcec236cafe1",
+          "bytes": 127
+        },
+        {
+          "name": "unique_object",
+          "sha256": "25c4a555398767261638908c87193c7ff5ca0e96c5d459d22830039d8797176f",
+          "bytes": 184
+        },
+        {
+          "name": "decode",
+          "sha256": "15f1db86fde8b5dcf03cfd349d4900931d94f64a7800344291af7af89e52ae6c",
+          "bytes": 172
+        },
+        {
+          "name": "lines",
+          "sha256": "4a82919bcb6b98ecd07b3afbe6f94a4e575db69dbad08ed68122ca6615aa066f",
+          "bytes": 145
+        },
+        {
+          "name": "indexed",
+          "sha256": "b98431334766e5899781e0a774b6b49e545f21b37ae03e3e9f543f3ebfe27f79",
+          "bytes": 282
+        },
+        {
+          "name": "immutable",
+          "sha256": "20b3f287e445837291a9a1d3e0061dda1519f35f0708368c8bec135898bdfdcd",
+          "bytes": 366
+        },
+        {
+          "name": "validate_future_plan",
+          "sha256": "5a46b331702040e1a7d44830cbcf3af21a4539603ad34ef1b9284d68101c59c3",
+          "bytes": 4005
+        },
+        {
+          "name": "validate_cpu_proof",
+          "sha256": "3ce03a22730a6aba9ad1e35fc9a7012f06bb915e24a0d5a7cdbfa2f3b7bc0b15",
+          "bytes": 2955
+        },
+        {
+          "name": "validate_original_context",
+          "sha256": "809d856fd4acb049496fa5b2b197445f8e8a2bd853eec7c6cd98345e30bc3933",
+          "bytes": 910
+        },
+        {
+          "name": "classify_actor_lines",
+          "sha256": "1a8eb14bf3ddb6712273fc62b94d78ddc5e90554ccad293ef3d01cb67baaaf6a",
+          "bytes": 2650
+        },
+        {
+          "name": "audit",
+          "sha256": "baada8bfaa4be80ccbf3f4bec399a07f6aab38345738fde3fdd80c3af2cdfe1a",
+          "bytes": 20743
+        },
+        {
+          "name": "main",
+          "sha256": "b9675e268e9a72505338390865988b5fa52d2814ed57dced2d5a5f3d91a02f51",
+          "bytes": 1688
+        }
+      ],
+      "changed_or_added_nodes": []
+    }
+  ],
+  "exact_whole_node_count": 85,
+  "text_boundary": "Top-level def/class start through next top-level def/class start; last node ends immediately before final if __name__ line. Raw text including trailing newlines; no AST normalization.",
+  "healthy_CPU_functions_unchanged": [
+    "terminal",
+    "check_cpu",
+    "check_CPU_command",
+    "check_CPU_release",
+    "check_window",
+    "check_transition"
+  ],
+  "observer_original_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/observer.py",
+    "sha256": "11380275b544eb7196d33d92b1fbe28a1ae057404120419a2cfa447410c7e430",
+    "bytes": 25378,
+    "identity": {
+      "device": 2304,
+      "inode": 81288104,
+      "bytes": 25378,
+      "mtime_ns": 1792325262797859775,
+      "ctime_ns": 1792325262797859775,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "numerical_source_unchanged": true,
+  "old_numeric_common_f11_unchanged": true,
+  "tests_executed": false,
+  "target_imports_AST_compile_executed": false,
+  "limitations": [
+    "Finite text preservation is source evidence only, not actual test or runtime proof.",
+    "None of the old invalid rows/results/failures or existing selected sources are modified."
+  ]
+}

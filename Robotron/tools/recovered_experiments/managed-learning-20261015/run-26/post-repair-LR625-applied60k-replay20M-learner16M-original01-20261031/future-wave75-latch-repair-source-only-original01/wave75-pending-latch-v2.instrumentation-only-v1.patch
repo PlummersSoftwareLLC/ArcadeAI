@@ -1,0 +1,38 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-repair-LR625-applied60k-replay20M-learner16M-original01-20261031/future-wave75-latch-repair-source-only-original01/main_wave75_pending_latch_candidate_v1.lua
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-repair-LR625-applied60k-replay20M-learner16M-original01-20261031/future-wave75-latch-repair-source-only-original01/main_wave75_pending_latch_candidate_v2.lua
+@@ -2371,6 +2371,7 @@
+ wavecap_prev_wave = nil
+ wavecap_prev_score = nil
+ wavecap_pending = false
++wavecap_pending_frame = nil
+ 
+ local function wavecap_check(frame_idx, wave, player_alive, score)
+     -- Arm only the original exact cap edge. A wave-clear inactive frame
+@@ -2383,10 +2384,12 @@
+         and wavecap_prev_score > 0 and s == 0
+     if not training or w < WAVE_RESET_CAP or observed_score_reset then
+         wavecap_pending = false
++        wavecap_pending_frame = nil
+     end
+     if training and not observed_score_reset
+         and wavecap_prev_wave == WAVE_RESET_CAP - 1 and w == WAVE_RESET_CAP then
+         wavecap_pending = true
++        wavecap_pending_frame = frame_idx
+     end
+     wavecap_prev_wave = w
+     wavecap_prev_score = s
+@@ -2394,10 +2397,12 @@
+         and (player_alive or 0) ~= 0 and s >= 50000
+     if fire then
+         -- Consume before the call: one attempt per edge, even if pcall fails.
++        local armed_frame = wavecap_pending_frame
+         wavecap_pending = false
++        wavecap_pending_frame = nil
+         print(string.format(
+-            "[WAVECAP] wave advance %d -> %d - soft reset (training-data rebalance)",
+-            WAVE_RESET_CAP - 1, WAVE_RESET_CAP))
++            "[WAVECAP] wave advance %d -> %d - soft reset request (training-data rebalance; armed_frame=%s fire_frame=%s delay_frames=%d current_wave=%d score=%d)",
++            WAVE_RESET_CAP - 1, WAVE_RESET_CAP, tostring(armed_frame), tostring(frame_idx), frame_idx - armed_frame, w, s))
+         pcall(function() manager.machine:soft_reset() end)
+     end
+ end

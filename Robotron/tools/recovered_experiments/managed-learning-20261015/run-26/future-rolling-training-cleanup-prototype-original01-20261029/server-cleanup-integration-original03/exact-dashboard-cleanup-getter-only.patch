@@ -1,0 +1,44 @@
+--- metrics_dashboard.py
++++ metrics_dashboard_cleanup_getter_candidate_v1.py
+@@ -5295,6 +5295,41 @@
+             if path == "/api/rejected_gaps":
+                 self._send(state.rejected_gap_body(), "application/json")
+                 return
++            if path == "/api/connection_cleanup":
++                # Read-only, uncached server-local connection evidence. This
++                # never admits a replacement actor or proves its Popen identity.
++                try:
++                    if (len(parsed.query) > 512
++                            or set(query) not in ({"client_id", "slot"},
++                                                  {"client_id", "slot", "journal_game_id"})
++                            or any(len(values) != 1 for values in query.values())):
++                        raise ValueError("Exact bounded cleanup query required")
++                    cid, slot = int(query["client_id"][0]), int(query["slot"][0])
++                    if not 0 <= cid < 4096 or not 0 <= slot < 192:
++                        raise ValueError("Connection/slot outside declared domain")
++                    jid = query.get("journal_game_id", [None])[0]
++                    if jid is not None and (not 1 <= len(jid) <= 128
++                            or any(c not in "0123456789:" for c in jid)):
++                        raise ValueError("Exact original journal identity required")
++                except (TypeError, ValueError, KeyError):
++                    self._send(b'{"available":false,"reason":"invalid cleanup query"}',
++                               "application/json", status=400)
++                    return
++                try:
++                    server = getattr(state.metrics, "global_server", None)
++                    getter = getattr(server, "connection_cleanup_snapshot", None)
++                    if not callable(getter):
++                        raise ValueError("Cleanup evidence is not enabled")
++                    value = getter(cid, slot, jid)
++                    body = json.dumps(value, allow_nan=False, separators=(",", ":")).encode()
++                    if len(body) > 70000:
++                        raise ValueError("Cleanup evidence exceeds response bound")
++                except (ValueError, KeyError):
++                    self._send(b'{"available":false,"reason":"no exact cleanup evidence"}',
++                               "application/json", status=404)
++                    return
++                self._send(body, "application/json")
++                return
+             if path == "/api/history":
+                 body = json.dumps(state.payload()).encode("utf-8")
+                 self._send(body, "application/json")

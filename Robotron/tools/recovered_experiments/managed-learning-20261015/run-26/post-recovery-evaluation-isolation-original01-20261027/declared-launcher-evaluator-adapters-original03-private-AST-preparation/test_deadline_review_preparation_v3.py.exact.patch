@@ -1,0 +1,13 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/test_deadline_review_preparation_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original03-private-AST-preparation/test_deadline_review_preparation_v3.py
+@@ -6,7 +6,9 @@
+ import subprocess
+ import unittest
+ 
+-from . import prepare_deadline_independent_review_v4 as p
++import importlib.util
++_spec=importlib.util.spec_from_file_location('_actual_launcher_review_preparer',Path(__file__).with_name('prepare_deadline_independent_review_v4.py'))
++p=importlib.util.module_from_spec(_spec);_spec.loader.exec_module(p)
+ 
+ 
+ class DeadlineReviewPreparationTests(unittest.TestCase):

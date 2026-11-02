@@ -1,0 +1,34 @@
+--- Scripts/dqn/socket_server.py
++++ CANDIDATE/socket_server.py
+@@ -2620,8 +2620,17 @@
+     def _calc_avg_game_state(self):
+         if getattr(metrics, "measurement_active", False):
+             return
++        # One deadline per server, shared by every handler. The outer check
++        # avoids client_lock on almost all calls; the locked check closes races.
++        if time.monotonic() < getattr(self, "_avg_game_state_next_monotonic", 0.0):
++            return
+         try:
+             with self.client_lock:
++                now = time.monotonic()
++                if (now < getattr(self, "_avg_game_state_next_monotonic", 0.0)
++                        or getattr(metrics, "measurement_active", False)):
++                    return
++                self._avg_game_state_next_monotonic = now + 0.250
+                 lvls = [
+                     s.get("level_number", 0)
+                     for s in self.client_states.values()
+--- Scripts/dqn/config.py
++++ CANDIDATE/config.py
+@@ -1812,6 +1812,11 @@
+                 self.peak_game_score = int(score)
+             self._push_score_1m_locked(float(score))
+             if level is not None and int(score) > 0:
++                # Keep transient accepted-frame peaks even though the live
++                # fleet-average scan is limited to one update per250ms.
++                level_int = int(level)
++                if level_int >= 0 and level_int > self.peak_level:
++                    self.peak_level = level_int
+                 self._push_level_1m_locked(float(level))
+             if score_delta is not None:
+                 self.rscr_bucket_frames += 1

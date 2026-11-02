@@ -1,0 +1,257 @@
+LIVE8 RECOMPUTED-CE INPUT CAPTURE — SOURCE-ONLY ACQUISITION PROPOSAL
+2026-10-17; no executor, commands, application or restart authorization
+
+Decision and evidence
+---------------------
+BLOCKED pending a root-reviewed actual private CUDA capture/recompute result,
+completed/audited384M quality and a separately approved owned maintenance window.
+The private CUDA rehearsal is UNEXECUTED at this document's preparation. Quality
+completion, rather than a requirement that384M win, has scheduling priority.
+Nothing here requests another checkpoint, changes a live flag, stops a process
+or grants authority to adopt these sources.
+
+Use revision2 manifest356b8b0999b05d3d4cd6e2addfcbee832c7365c9c31f9c08506f8714c0dfeaa2.
+Its actual20CPU test receipt is a228e383eca3c59cf3f8de41f54a03bf0124fd39bc254d4fb32c334d0c9f14a4.
+Private-harness root readiness receipt5e0039786bc9af21b98c14f7bd2c2638d36e06786e5687d0680f936cea3dbcb6
+records original43 guard passes plus the separately corrected9 contract passes;
+the original52 invocation remains51PASS/1fixtureERROR, not a retrospectively
+successful52 run. Final rehearsal preparation manifest is ac8e2749a6095af0bc35f3e248e53c84359c249ddad8cd5f597b5faaf9e00966.
+CPU fixture success does not validate real CUDA compilation, live lifecycle,
+capture pauses, full4096 production inputs or applied live optimizer behavior.
+
+This proposal observes the existing CE learner. It is not a KL treatment,
+throughput trial, coherent replay/model learning anchor or exact continuation.
+No267GB ring copy is required. The old six-file executed-target acquisition
+runbook76c72f978730b9feb7619c82537fabf18340e0144aceb4ab07e0357ea6d1f09e
+and every original failure/receipt remain unchanged and are not rollout inputs.
+
+Exact source and configuration scope
+------------------------------------
+Install only four replacements agent.py, training.py, replay_buffer.py,
+prefetch.py plus NEW recomputed_ce_capture.py from the pinned revision2. These
+are five overlays. There is NO loss_kernel.py replacement. Its production SHA
+de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a,
+original _setup_torch_compile, TrainingLoss construction, four-output call and
+unpack/backward/objective remain unchanged. Five-output loss is offline only.
+Revalidate all proposed and base bytes before installation; source drift needs
+a reviewed reconciliation, not silent application of this old patch.
+
+Startup flag is DQN_RECOMPUTED_CE_CAPTURE_DIR naming a NEW absolute private child
+with basename ce-recomputed-capture-UNIQUE. Parent directory must already exist;
+the child must not exist. DQN_EXECUTED_CE_TRACE_DIR must be absent. The enabled
+observer requires CE metric,4096 rows,51 atoms, full compilation and actual
+optimizer exposure. Flag validation runs before producer/learner construction.
+No hot arming, delayed capture after seeing outcomes, or reused capture directory.
+
+Retain the real MODEL_DIR/LATEST_MODEL_PATH, live replay_tmpfs_dir and the SAME
+intended ring/bank paths. Changing MODEL_DIR alone does not isolate the ring:
+the constructor uses replay_tmpfs_dir plus the model replay basename. HOF/EpHOF
+roots remain model-adjacent *_replay_hof / *_replay_ephof. Do not promote an
+insurance/protected/private fixture, reset/flush replay or alter CURRENT selectors.
+
+Preserve actual effective control/settings/unit/environment and the held recipe:
+engine28, state11128, frame_stack4,6M ring,500k minimum,4096 batch,512 schedule
+basis, LRscale0.5, epsilon0.1,n3,cap8,smoothing0, AMP/fusedAdam, nativebatch1,
+directfill1,three slots,full compile/default,diagnostic20,exposure counters,
+exact inference graphs and192 actors. The actual scheduled LR/scaler/Adam clocks
+come from the newly saved checkpoint and current schedule, not old320M constants.
+Keep the live GB300 placement and exact graph profile; the private display-GPU
+rehearsal is not main-hardware or actual RainbowAgent/server validation.
+
+Required future precommit — values currently UNKNOWN
+---------------------------------------------------
+Bind the actual trainer/fleet/supervisor units and invocation/cgroup/PID/start
+identities, all192 actor identities and original masks; source/base/proposed
+hashes; complete effective environment/control/settings/boot policy; stdout inode
+and offsets; model/ring/bank canonical paths; current saved/logged clocks; free
+artifact storage and capture path; relevant pending checkpoint-helper ownership.
+Bind actual private CUDA result and independent cleanup/scientific scope, plus
+the new run's restart/save/load evidence. No PID, checkpoint SHA, loaded counts,
+captured batch/source identity or future outcome is inferred from this document.
+If a gate is still waiting, root resolves only its exact owned identity and later
+rearms the same target/tag/output/remaining original deadline. A completed384M
+gate/checkpoint must not be overwritten, requested again or silently abandoned.
+
+Future owned maintenance sequence — separate root approval required
+------------------------------------------------------------------
+1. After frozen collection and audits finish, root binds the exclusive window,
+   current owners, source set and pending requests. No evaluator, performance
+   controller or competing maintenance may share this transition. Record current
+   faults so later reconnect/save/load warnings can be attributed precisely.
+
+2. Create one unique MODEL-ONLY insurance request through the existing managed
+   save path, after proving the request slot and destination are unowned/absent.
+   managed_driver consumes managed_save.request.json and saves with
+   save_replay=False; require its matching completion and actual saved file.
+   A .completed name or console line alone is not a finite-state verification.
+   Preserve an independent read-only model copy and separately bounded CPU
+   geometry/finite Adam/scaler/clocks verification. This is insurance only,
+   not a matching replay snapshot or the checkpoint selected for normal boot.
+
+3. Register each exact owned actor BEFORE its SIGSTOP, prove all192 stopped,
+   then stop ONLY the owned trainer via its existing SIGINT/240s/noForceKill
+   policy. Reuse reviewed LiveHost identity/pause/absence mechanics, not old
+   trial executors with fixed historical bindings. Do not stop the fleet unit,
+   invoke generic16-actor defaults, force-kill or adopt an automatic replacement.
+   Retain original stop result and stdout segment. On interruption/failure,
+   attempt recovery for every registered still-matching actor even if unrelated
+   health/log/journal checks fail; never signal a reused PID. Root owns a bounded
+   pause/recovery decision, not indefinite parked actors.
+
+4. Require the old trainer/children absent and service MainPID0. Inspect model,
+   replay and BOTH bank save/flush evidence, including deferred/background writer
+   warnings. Pin the stopped latest checkpoint identity/SHA/bytes and preserve
+   a read-only independent~275MB copy. Verify THIS actual final checkpoint, not
+   only the earlier insurance: online/target finite geometry, optimizer/scaler,
+   engine/state/frame-stack and saved clocks at least the verified insurance.
+   Retain small stopped ring metadata/priorities header/file identities and both
+   CURRENT selectors/selected generation manifests/counts. Do not load/copy/hash
+   all ring arrays. Swallowed bank/replay failures fail restart readiness even
+   if 'Final model & settings saved' appeared. Record any post-save progress;
+   do not equate last in-memory clocks to final saved clocks.
+
+5. With the trainer unable to import, durably back up the four exact original
+   files and the observer-absent marker, then install the new observer and four
+   known replacements. Verify the WHOLE five-file set and unchanged loss before
+   any startup. Reconcile partial installation only against known before/after
+   bytes while stopped; unknown edits need manual recovery. The old three-file
+   restoration tool is not an executor for this source set. Preserve original
+   source bytes and the exact owned runtime override for later cleanup.
+
+6. The only new effective environment value is the startup capture flag above;
+   exposure/profile/control already remain unchanged. Normal main must boot
+   the newly verified latest checkpoint. Confirm ratchet/boot policy remains
+   held and DQN_EXACT_GRAPH_CHECKPOINT resolves to main's actual latest boot
+   path; never redirect it to the earlier insurance. Start only the owned trainer
+   and record its new PID/start/invocation, stdout epoch and full effective env.
+   An automatic retry/replacement is not silently adopted; the create-only
+   capture directory intentionally makes a reused startup fail visibly.
+
+7. Before resuming actors, require matching loaded checkpoint path and saved
+   training/optimized/frame/learner clocks, successful online+target/Adam/scaler
+   restore, intended full ring mmap adoption, BOTH bank loads matching the stopped
+   selected generations/counts, and postload exact inference graph validation
+   for all128 actual sizes. Require the held fused/native/directfill/prefetch/
+   compile/GIL/device route. Reject fresh/partial/incompatible loads, optimizer
+   or scaler skips, replay/bank failures and unexpected warmup/clock reset. A
+   positive HOF/EpHOF count alone proves neither intended generation nor exact
+   contents; a printed model-load success is likewise insufficient.
+
+8. Resume every exact registered actor only after startup verification; verify
+   current192 ownership/masks, API epoch and learning/frame progress. Classify
+   new reconnect/deadline faults against the reviewed intentional restart,
+   not blanket suppression. If startup fails, root must choose safe rollback or
+   explicit recovery, attempt all eligible actor resumes, and record uncertainty;
+   no broad kill, mixed-source start, stale-checkpoint rewind or repeat capture.
+
+Why no pre-load capture, and why startup8 is not steady state
+------------------------------------------------------------
+For the held exact-graph resume route, constructor replay.size is0 and a saved
+nonempty mmap ring defers adoption to load. _exact_graph_loaded=False gates both
+producer and background learner. load holds the training RLock, pauses and
+invalidates prefetch before restoring model/Adam/scaler/clocks/ring/banks, then
+validates exact graphs on fixed128 replay rows before declaring loaded. It
+invalidates prefetch again before returning. No optimizer work on random
+pre-load weights follows on this route; compile warmups do not consume ordinals.
+Timeout, incompatible graph checkpoint, missing optimizer or failed graph parity
+is fatal on this profile. Replay/bank load errors can still be caught and logged
+while load returns True, so the separate intended-state proof above is necessary.
+
+After successful load, the pressure rule initially permits a4096 batch when
+sample/frame deltas are0. The first captured attempt can precede fleet resume.
+The fixed eight are the FIRST consumed eligible train_step attempts, after
+enable/replay/pressure/batch guards and BEFORE transfer. Not eight steady-state,
+post-resume, successful or applied updates. Guard-rejected/invalidated leases
+do not count; existing producer slots can draw more batches than get consumed.
+Transfer/forward/update/readback/priority failure retains its ordinal, and actual
+AMP skip is retained. Never replace a failed ordinal with a ninth attempt.
+
+Capture cost, binding and acceptance
+------------------------------------
+The existing training RLock and explicit owned-device sync cover PRE copies of
+online+target state and all eight exact staged tensors after stream wait/schedule
+preparation, before the unchanged loss forward. States/next_states remain FP32;
+actions retain their actual integer dtype. This adds no forward,
+backward, optimizer call or replay/RNG draw. Python/NumPy/CPU/owned-CUDA RNG are
+sequential observations, not an all-thread atomic replay/RNG learning anchor.
+Copied state is private; no Adam/inference snapshot or267GB replay copy is added.
+
+At most640MiB current raw tensor data is copied and synchronously serialized/
+fsynced before releasing that consumed lease. The eight4096x11128 state pairs
+alone total2,917,171,200 bytes; online+target snapshots add about1.1GB. The6GiB
+cumulative artifact bound includes serialization/JSON overhead. This is checked
+cooperative accounting, not an OS disk quota. Reserve actual free space and
+review filesystem latency before maintenance; do not lower precision/rows or
+change inputs to fit. Each synchronous drain can pause learner/inference sync
+and trigger live actor deadlines. The private rehearsal does not prove live
+fleet timing affordability. Retain measured copy/drain pauses and new socket
+faults; this observation window is not throughput evidence.
+
+Context and every artifact use create-only names: context.json,
+attempt-NN.entered.json, attempt-NN.payload.pt, attempt-NN.json,
+status-NNN.json, final.json. Files and directory are fsynced; partial files and
+failed publication remain evidence. No replacement/atomic-temp exception is
+needed. Require exactly ordinals1..8, final EIGHT_INPUT_CE_CAPTURES_COMPLETE,
+all eight capture_complete, matching capture/schema/source IDs, strict indices/
+small-field/FP32 weight joins and current consumed/pre_loss/exit lease epochs.
+Bind actual unchanged4 CE/loss/BC/diagnostic outputs and finished exposure/
+found_inf/outcome tickets. Applied_admission is admission classification, not
+proof every parameter moved. No observer error, missing receipt, partial raw
+file or unavailable outcome can be presented as a complete8 capture. A genuine
+learner error or observer INVALID remains failure evidence even if training
+continues under its original behavior. Do not retry or retrospectively relabel.
+
+The external acquisition receipt must bind all five installed/imported module
+hashes plus unchanged loss and whole source context, actual agent import/lifecycle,
+main invocation/GPU/effective env/control/settings, final stopped checkpoint SHA,
+load/ring/bank proof, first8 before/after clocks, outcomes and all artifact hashes.
+Population is live consecutive consumed startup draws; it is not a steady-state,
+unbiased, persisted-row-generation or matched learning population. Bank RAM
+revisions/load epochs do not recover per-row historical CURRENT generation IDs.
+
+Ordinary shutdown and recovery limits
+-------------------------------------
+main.finally saves latest with save_replay=True BEFORE server.stop drains/stops
+AsyncReplayBuffer and BEFORE agent.stop joins learner/prefetch. client_count0
+can precede disconnect reset enqueue. In-flight frames, a consumer's private
+batch, resets/n-step tails and bank admissions can occur after that save boundary.
+The training RLock serializes the model/Adam save, but the held non-ratchet path
+does not disable learning before it; further optimizer updates may occur before
+agent.stop too. Thus normal persistence need not include the very last replay
+tail OR every last in-memory update. Save/load bank errors can be swallowed.
+An msync-disabled mmap flush is not a new power-loss durability guarantee.
+
+This plan preserves the normal verified persisted state and insurance; it cannot
+promise zero tail loss, exact model/ring/bank correspondence, actor/game/RNG
+continuation or a coherent learning anchor. Existing managed-measurement acks
+are evaluation-specific, not a proven ordinary shutdown barrier. Root must
+accept these bounded ordinary-restart limits or stop this rollout and review a
+separate drain/save design. The old coherent snapshot patch is not implicit here.
+
+After eight and external offline work
+-------------------------------------
+Metadata requests and raw capture stop after eight. The loss ABI remains4 both
+during and after capture; there is no persistent ON5 kernel to remove. Observer
+objects/calls and five installed overlays remain in that process. Removing an
+environment file does not change a running process. Root may retain the dormant
+instrumentation to the next justified maintenance, or separately restore known
+original bytes/flag absence with a fresh owned save/restart preserving NEW
+current progress. No immediate automatic restart or pre-capture checkpoint rewind.
+
+Future root-authorized offline work loads PRE and exact consumed inputs in a
+separate owned process. Its five-output projected target/log-probabilities,
+entropy/KL/ranks/counterfactual weights are CONDITIONAL RECOMPUTED quantities.
+Only actual-vs-recomputed CE is tested at original rtol2e-4/atol2e-5; full weighted
+loss/BC/diagnostics are retained for descriptive audit, not a new parity gate.
+CE agreement does NOT bound missing live entropy, KL, rank or bank weights.
+Repeated reconstruction and next-action stability are empirical only. Near-floor,
+material-negative or rank ambiguity means interpretation not ready. Same-row
+emitted/fresh-recomputed-CE/fresh-recomputed-KL vectors with bank recoupling remain
+conditional sensitivity, not a live KL draw distribution or learning-rate factor.
+No source adoption, KL trial, full-five-output gradient/optimizer parity or
+learning gain follows from a private CE pass or complete live8 observation.
+
+Preparation actions: source text/archived metadata reads and NEW runbook/provenance
+only. No candidate import/compile/default/test, runtime/API/process/GPU/service
+queries, model/replay data, production/control/unit changes or commands were run
+for acquisition. Future identities/results remain unknown until externally bound.

@@ -1,0 +1,52 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/Scripts/main.lua
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-repair-LR625-applied60k-replay20M-learner16M-original01-20261031/future-wave75-latch-repair-source-only-original01/main_wave75_pending_latch_candidate_v1.lua
+@@ -2369,27 +2369,35 @@
+ -- ahead of ELvl1M's ceiling; slide with STRATIFIED_START_LEVELS in config.py.
+ WAVE_RESET_CAP = 75
+ wavecap_prev_wave = nil
++wavecap_prev_score = nil
++wavecap_pending = false
+ 
+ local function wavecap_check(frame_idx, wave, player_alive, score)
+-    -- EDGE-triggered only: fire exactly on the (cap-1) -> cap wave advance
+-    -- of a live, real game.  A level-triggered check here caused a reset
+-    -- loop (2026-07-27): soft_reset reloads this script (wiping any
+-    -- cooldown global) while the wave byte still holds the old deep value
+-    -- during boot/attract, so the cap re-fired every cycle.  Edge + score
+-    -- guard can't refire across a reset: after reload prev_wave is nil and
+-    -- a fresh game's score is far below the threshold.  Legacy marathons
+-    -- already past the cap are left to finish naturally.
++    -- Arm only the original exact cap edge. A wave-clear inactive frame
++    -- must not discard that edge before alive/score become valid.
++    -- Reloads and already-deep attachments have no edge and cannot arm.
+     local w = math.floor(wave or 0)
+-    local fire = WAVE_RESET_CAP > 0 and not SERVER_IS_EVAL and EVAL_MODE ~= 1
+-        and (player_alive or 0) ~= 0
+-        and wavecap_prev_wave == WAVE_RESET_CAP - 1
+-        and w == WAVE_RESET_CAP
+-        and math.floor(score or 0) >= 50000
++    local s = math.floor(score or 0)
++    local training = WAVE_RESET_CAP > 0 and not SERVER_IS_EVAL and EVAL_MODE ~= 1
++    local observed_score_reset = wavecap_prev_score ~= nil
++        and wavecap_prev_score > 0 and s == 0
++    if not training or w < WAVE_RESET_CAP or observed_score_reset then
++        wavecap_pending = false
++    end
++    if training and not observed_score_reset
++        and wavecap_prev_wave == WAVE_RESET_CAP - 1 and w == WAVE_RESET_CAP then
++        wavecap_pending = true
++    end
+     wavecap_prev_wave = w
++    wavecap_prev_score = s
++    local fire = training and wavecap_pending
++        and (player_alive or 0) ~= 0 and s >= 50000
+     if fire then
++        -- Consume before the call: one attempt per edge, even if pcall fails.
++        wavecap_pending = false
+         print(string.format(
+             "[WAVECAP] wave advance %d -> %d - soft reset (training-data rebalance)",
+-            WAVE_RESET_CAP - 1, w))
++            WAVE_RESET_CAP - 1, WAVE_RESET_CAP))
+         pcall(function() manager.machine:soft_reset() end)
+     end
+ end

@@ -1,0 +1,67 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_proposal/run_CE_batch_transition.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_reviewed2_proposal/run_CE_batch_transition.py
+@@ -25,7 +25,7 @@
+ 
+ SCHEMA = 'robotron-ce-batch-profile-transition-job-v1'
+ RESULT_SCHEMA = 'robotron-ce-batch-profile-transition-result-v1'
+-V4 = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_proposal/owned_lifecycle.py')
++V4 = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_reviewed2_proposal/owned_lifecycle.py')
+ V4_SHA = '6f961e5c724ae70bb4abf4641f7a3a6a27d55579e9acb2808ee15de08960d8ac'
+ PHASE = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/verify_phase_snapshot.py')
+ PHASE_SHA = 'b2e732dc731b2b601f7499d2cafd5841896daf2b0713d496b98cb6b8d7279519'
+@@ -45,12 +45,11 @@
+ HORIZON_SHA = 'e8809615c3a837da3400f56d58ecdbfd59b13b83c574c65643731afe8b13a124'
+ 
+ 
+-BOUNDARY = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_boundary_proposal/profile_boundary.py')
+-BOUNDARY_SHA = '29786c0e759bdfb518361f903117b301bcc11a3620202e4bec29775f157e18a6'
++BOUNDARY = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_boundary_reviewed2_proposal/profile_boundary.py')
++BOUNDARY_SHA = '1953eb12dcb20bfafdbed2986026e20b8c25d0bd89e2c26820b8cd841946d1af'
+ ORIGINAL_STRICT_SHA = '7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead'
+-CPU2048_BINDING = None  # Runtime peer is preparing a NEW provenance-reviewed wrapper.
++CPU2048_BINDING = {'script': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/verify_phase_snapshot_2048.py', 'sha256': 'a331b550191a48ab219cf92f2e1c42fc394e038c93609ecac4fb9a722b75e5cd', 'bytes': 37695}, 'strict_base': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/strict_phase_base_2048.py', 'sha256': '47677509f170c4c3b6a1c03918e02ab13996af1ceafffac29b7536c2fad61f80', 'bytes': 33727}}  # Exact frozen reviewed2 source triples.
+ DRAFT_BLOCKERS = (
+-    'reviewed2 CPU2048 source binding is unresolved',
+     'actual producer-observation collector is not implemented',
+     'legacy2048 maintenance-insurance/verifier provenance is unresolved',
+     'actual2048 numerical readiness and future root precommit are unbound',
+@@ -71,7 +70,7 @@
+ 
+ 
+ def require_execution_ready():
+-    require(not DRAFT_BLOCKERS and CPU2048_BINDING is not None,
++    require(not DRAFT_BLOCKERS,
+         'UNCONSUMED DRAFT: ' + '; '.join(DRAFT_BLOCKERS))
+ 
+ 
+@@ -365,7 +364,12 @@
+         'Actual before batch differs from declared transition')
+     require(job['helper_pins']['profile_boundary']['path'] == str(BOUNDARY) and
+         job['helper_pins']['profile_boundary']['sha256'] == BOUNDARY_SHA, 'Recurring boundary source differs')
+-    require_execution_ready()  # Never act with unknown CPU/producer/insurance readiness.
++    selected2048=job['phase_verifier2048']
++    require(set(selected2048)=={'script','strict_base'} and
++        {name:triple(selected2048[name]) for name in ('script','strict_base')}==CPU2048_BINDING,
++        'Wrong exact reviewed2 CPU2048 source family')
++    for value in selected2048.values():base.pin(value,base.MAX_SOURCE)
++    require_execution_ready()  # Collector/insurance/numerical prerequisites remain fatal.
+     validate_installed_phase(job,base,game,env)
+     capture = env.get(FLAGS[0])
+     require(not env.get(FLAGS[1]),'Unknown old trace session forbidden')
+@@ -588,12 +592,13 @@
+             require(ledger_key not in self.cpu_attempts,'Phase CPU already attempted; no retry')
+             root=self.output/label;root.mkdir(mode=0o700)
+             route=self.batch_boundary.phase_cpu_boundary(self.job['batch_boundary'],purpose,
+-                **({} if (self.job['batch_boundary']['before_batch_size'] if purpose=='newest_stopped' else self.job['batch_boundary']['after_batch_size'])==4096 else
++                **({} if self.batch_boundary.phase_producer_batch(self.job['batch_boundary'],purpose)==4096 else
+                     dict(profile_pin=self.job['batch_profile'],
+                          producer_observation=self.collect_producer_observation(label,purpose,owner,source,acquisition))))
+             family=self.job['phase_verifier'] if route['batch_size']==4096 else self.job['phase_verifier2048']
+-            require(route['batch_size']==4096 or CPU2048_BINDING is not None and family==CPU2048_BINDING,
+-                'Unresolved reviewed2 CPU2048 source binding')
++            require(route['batch_size']==4096 or
++                {name:triple(family[name]) for name in ('script','strict_base')}==CPU2048_BINDING,
++                'Exact reviewed2 CPU2048 source binding differs')
+             script=family['script'];strict=family['strict_base']
+             base.pin(script,base.MAX_SOURCE);base.pin(strict,base.MAX_SOURCE)
+             pairs,context=self.phase_sources(label)

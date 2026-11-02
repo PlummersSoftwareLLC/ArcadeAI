@@ -1,0 +1,30 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-selected-metadata600-original01-preparation/finalize_window03_D7_readiness_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-physical-original04/postguard-owned-operations-original01/finalize_physical_study_readiness_v1.py
+@@ -10,7 +10,7 @@
+ import time
+ 
+ ROOT=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+-HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original07-proof2s-preparation/source-family-original01')
++HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-physical-original04')
+ 
+ 
+ def load(name,path):
+@@ -59,7 +59,7 @@
+     worker=load('_selected_final_worker',h.checked(family['main_observer']['worker']));deadline=time.monotonic()+15
+     while True:
+         try:
+-            sample=worker.collect(health,case);health.validate(case,sample);health.check_inputs(case,full=True);break
++            sample=worker.collect(health,case);physical_validation=health.validate(case,sample);health.check_inputs(case,full=True);break
+         except (ValueError,OSError):
+             assert time.monotonic()<deadline,'No coherent original main census before launch'
+             time.sleep(.02)
+@@ -67,7 +67,8 @@
+     result=dict(previous,source=h.pin(Path(__file__).resolve()),original_resource_review=bp,
+         checked_unix_s=time.time(),status='READY',fresh_main=raw,raw_GPU_readback=gpu.stdout,GPU0_occupants=[],
+         review_precommit=pp,review_preparation_CPU=cp,exact_review_precommit_and_source_CPU_binding_verified=True,
+-        active=sample['observed_counts']['active'],completed=sample['observed_counts']['completed'],main_round=sample['status']['round'])
++        active=len(sample['actors']),completed=physical_validation['partition']['closed_eval'],main_round=None,
++        main_counts=physical_validation['partition'],main_health_profile=physical_validation['profile'])
+     return h.put(output.resolve(),result)
+ 
+ 

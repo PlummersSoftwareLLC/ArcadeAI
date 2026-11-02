@@ -1,0 +1,118 @@
+Actual-only CE/mixture analysis preparation, 2026-10-17
+
+SOURCE ONLY. No import, default invocation, compilation, test, model/payload read,
+sampling, runtime query or live action was performed by the author. Ten stdlib
+tiny-vector tests are authored and unexecuted. Independent source-only peer
+review by audit_quality_result passed for tool e4ffb0cb/test fff6e051; no actual
+PT decoding, test or resource validation was performed. The tool
+does not acquire data or authorize a future maintenance/CPU/GPU action.
+
+Purpose and next action
+The older executed_trace_analysis_proposal tool consumes the obsolete same-
+forward five-output NPZ schema. It cannot be relabelled to analyse revision2
+recomputed-CE PT payloads. This additive tool describes ONLY the retained actual
+four-output CE, original weights, sampler metadata and actual admission outcomes.
+It evaluates no network and reconstructs no projected target, entropy or KL.
+After source review, the smallest useful validation is the ten stdlib tests plus
+an explicit review of the PT/schema decoder before an owned CPU analysis of the
+first actual complete live8 acquisition. There are no actual live8 input pins.
+
+Minimum input schema: no new capture fields are needed
+1. A root-created0444 input-binding JSON with schema
+   robotron-actual-ce-observational-analysis-inputs-v1, population
+   live_consecutive_consumed_attempts and actual_target_entropy_or_KL_observed
+   false. Its producer_manifest pin must match full revision2 manifest356b8b09.
+2. maintenance_result, maintenance_root_job and acquisition_review file pins.
+   The first is an actual COMPLETE/capture_complete/no-manual-recovery controller
+   result, not a preparation receipt. Its root-job SHA must match the provided
+   root-job copy. All five actually selected overlay hashes must match revision2.
+   acquisition_review is externally hash-bound provenance: this analyser does
+   not independently reproduce that operational/scientific review.
+3. context/final pins to the actual capture directory. context declares the
+   authentic capture ID, original loss hashde9621e3, original four-output ABI,
+   4096 rows,51 atoms and no optimizer recipe change. final must declare exactly
+   eight complete attempts with no observer errors. No failed attempt may be
+   silently omitted, retried, replaced by a ninth or converted to a successful
+   numerical capture. Partial captures require a different honest analysis.
+4. attempts is an ordered eight-element list, each with receipt and payload pins.
+   A pin is exactly {path,sha256,bytes}. Metadata and payloads must be canonical,
+   owned0444 regular single-link files. If an original root review/job is0664,
+   root can provide a separately retained readonly copy of identical bytes;
+   its historical original remains unchanged. Trace-local files keep real paths.
+5. Each receipt must join final.rows and the payload's embedded pre-drain outcome
+   for its stable fields: index, session, before/at-loss/after clocks, actual
+   exposure delta and actual finished outcome ticket. The5-key initial lease
+   record and three3-key begin/pre-loss/exit checkpoints must share the same
+   current consumed epoch. Across8 attempts, exposure identity/totals and logical
+   step/sample clocks must be consecutive, and consumption time must increase.
+6. Small payload fields used: actual.{ce,weighted_loss,bc_loss,diagnostic_values},
+   inputs.{weights,actions,rewards,dones,horizons,is_expert}, schedule and
+   pre_context.{loss_sha256,config}; draw.{capture_id,schema,indices,
+   origin_boundaries,small_batch_fields,per_raw_leaves,per_clamped_leaves,
+   per_raw_weights_float64,supplied_weights_float64,supplied_weights_float32,
+   selected_per_raw_max_weight,size,capacity,tree_total,alpha,beta,banks,unknown,
+   lock_observation_finished_monotonic_ns}. Revision2 already retains all of them.
+   PRE online/target state, full states/next-states and RNG tensor contents are
+   not evaluated, reduced or copied by this analysis. The Torch deserializer
+   still parses all payload metadata; mmap=True maps its existing CPU storages.
+
+Descriptions and their limits
+- Actual origin boundaries define PER/interesting/recent/HOF/EPHOF; indices never
+  replace origins. All duplicate row observations are retained. No persistent
+  slot generation, bank CURRENT generation, conversion age or whole-tree minimum
+  is fabricated. The source's tree metric identity remains explicitly unknown;
+  held CE run provenance comes from the separately bound acquisition job.
+- Emitted FP32 weights must equal the consumed weights and the FP32 cast of the
+  captured FP64 weights. Selected-PER normalization uses the captured raw-weight
+  maximum and its original1e-12 denominator floor. Recent/interesting carry1;
+  bank rows carry a common same-batch mean PER weight. Float64 NumPy mean vs
+  Python fsum residual is reported, not used to invent a learner tolerance.
+  Original raw-weight formula residual is also descriptive metadata arithmetic.
+- sum(w_i*CE_i)/4096 describes Bellman objective contribution. sum(w_i)/4096 is
+  coefficient mass. (sum w)^2/sum(w^2) describes coefficient concentration; this
+  is neither an independently sampled population IS ESS nor a measured gradient
+  norm. Parameter Jacobians, vector directions and interactions remain unknown.
+- Expert/nonexpert, actor-kind bytes0/1/2, terminal/horizon/reward-sign strata and
+  the five origins are separate overlapping descriptive partitions. Origin
+  contributions and coefficient masses can be compared without treating actor
+  tags as an independently observed live action source (e.g. an eval label).
+- The known scalar BC contribution uses the executed bc_loss and existing
+  schedule/floor/expert fraction. Actual weighted loss also includes Q-policy
+  and margin terms. Their combined residual includes FP32/AMP reduction effects;
+  individual/per-row auxiliary contributions are NOT observed or attributed.
+- The ordinary loss route returns12 diagnostic zeros. If a selected attempt is
+  diagnostic_due, indices9/11 retain actual unweighted batch entropy/KL means;
+  even then no per-row target, entropy, KL or ranking is observed. No executed
+  per-row KL weight vector can be deduced from these batch means.
+- AMP skips remain in all-eight descriptions and are labelled separately.
+  applied_admission means the real call was admitted, not every parameter moved.
+  Eight startup attempts are not IID, a sustained-throughput baseline, a quality
+  comparison, a matched replay anchor or evidence of faster learning.
+
+Conditional reconstruction is separate
+Original conditional per-row CE tolerances remain rtol2e-4/atol2e-5. This tool
+does not apply or relax them: it performs no conditional recomputation/comparison.
+The existing private conditional5 reconstruction and independent CPU verifier
+remain separate. Even a future original-tolerance CE agreement cannot bound an
+unobserved live entropy/KL/rank, particularly near the KL floor. Such analysis
+must label outputs RECOMPUTED/conditional and report uncertainty/not-ready ranks.
+
+Future execution envelope (NOT invoked)
+Root should first approve actual immutable pins and a NEW output directory. Run
+under an owned retained unit with CUDA hidden,2CPU,3GiB MemoryMax,128tasks and120s
+work deadline, preserving its actual original exit and error output. Suggested:
+
+env -u LD_PRELOAD -u PYTHONPATH CUDA_VISIBLE_DEVICES='' OMP_NUM_THREADS=2 \
+  OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 NUMEXPR_NUM_THREADS=2 \
+  /home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python -Xgil=0 -I -B \
+  <THIS_DIRECTORY>/analyse_actual_ce.py --execute \
+  --binding <ACTUAL_READONLY_BINDING.json> --binding-sha256 <ACTUAL_SHA256> \
+  --tool-sha256 <ACTUAL_TOOL_SHA256> --output <NEW_OWNED_ANALYSIS_DIRECTORY>
+
+Default without --execute is a literal PLAN with no input reads or Torch import.
+Execution hashes only the selected retained payloads, at most640MiB each, loads
+one at a time with map_locationCPU/weights_only/mmap, and processes small vectors.
+It copies no replay or model artifact. Output is create-only small JSON, capped
+at8MiB per record; expected total is well below128MiB. Actual runtime/peak memory
+remain unvalidated. Timeout/OOM/schema/finite/pin failures retain an invalid
+partial analysis/error and are not rescued by fewer attempts or relaxed bounds.

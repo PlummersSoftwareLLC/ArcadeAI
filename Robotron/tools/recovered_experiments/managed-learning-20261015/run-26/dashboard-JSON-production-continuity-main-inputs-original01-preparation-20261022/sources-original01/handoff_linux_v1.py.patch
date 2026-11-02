@@ -1,0 +1,40 @@
+--- deployed/handoff_linux_v1.py
++++ proposed/handoff_linux_v1.py
+@@ -26,8 +26,8 @@
+ CONTROL = MODEL/'learning_control.json'
+ ROOT_CGROUP = Path('/sys/fs/cgroup')
+ MAIN_UNIT = 'robotron-managed-run-26-d3b365c9-trainer.service'
+-OLD_SOCKET_SHA = '84901c887437e99873d65c2348f18ca9e2f022a393f3c5282d68064c9f1fbf40'
+-NEW_SOCKET_SHA = 'b552b2e83a9cc10cf7e4125cef22f571abe9189bd2ad3e63c6f48aa7df0e4516'
++OLD_SOCKET_SHA = '3d1aa1950e6b1c5224ace3aecb9c837e433e5c36941b89465b414749f903da27'
++NEW_SOCKET_SHA = '33c9726addb57ea5e8b7b5087c2e75aa179f4035542f5a91bbe3dffdf273d30c'
+ WIRE_COUNT = 1890
+ WIRE_HEADER = '>HddBIBBBIBBB'
+ 
+@@ -214,13 +214,14 @@
+         self.prepared = json.loads(checked(job['prepared']))
+         require(self.prepared['status'] == 'PREPARED_IMMUTABLE_PROPOSAL_LIVE_CONTROLLER_NOT_SELECTED'
+                 and self.prepared['installed_before']['sha256'] == OLD_SOCKET_SHA
+-                and self.prepared['proposed_socket']['sha256'] == NEW_SOCKET_SHA,
++                and self.prepared['proposed_source']['sha256'] == NEW_SOCKET_SHA
++                and self.prepared['selected_source_relative'] == 'Scripts/dqn/metrics_dashboard.py',
+                 'Exact original/proposed parser transaction required')
+         self.main = json.loads(checked(self.prepared['original_main']))
+         self.owner = self.main['owner']
+-        require(self.owner['pid'] == 3170722 and self.owner['starttime_ticks'] == 52892579
++        require(self.owner['pid'] == 3295795 and self.owner['starttime_ticks'] == 64995335
+                 and self.owner['unit'] == MAIN_UNIT
+-                and self.owner['invocation_id'] == 'f2896a1cbb3c4a94a7568ab83120d21e',
++                and self.owner['invocation_id'] == '160d2b4b1f6e4e2f8839790658a7d01c',
+                 'Only the explicitly prepared original trainer is allowed')
+         self.listener = json.loads(checked(self.prepared['original_listener']))
+         self.fleet = json.loads(checked(self.prepared['original_fleet']))
+@@ -380,7 +381,7 @@
+         self.guard.healthy(api, self.reader.read_pin(self.main['baseline_API']), self.main['experiment'], time.time())
+         require(api['memory_buffer_size'] == 6000000 and not (MODEL/'managed_save.request.json').exists(),
+                 'Original replay/save slot changed')
+-        require(self.anchor['original_boot_saved_clocks']['optimized_samples'] == 20238235648
++        require(self.anchor['original_boot_saved_clocks']['optimized_samples'] == 27292198912
+                 and api['host_pipeline']['inference_graphs']['postload_validations'] == 1
+                 and api['host_pipeline']['learning_exposure']['optimizer']['epoch'] == 1,
+                 'Original replay-budget provenance no longer applies')

@@ -1,0 +1,120 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher192-usage-smoke-original01-preparation/run_owned192_usage_smoke_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher192-usage-smoke-original01-preparation/run_owned192_usage_smoke_v2.py
+@@ -18,14 +18,17 @@
+ RUN=ROOT/'logs/managed-learning-20261015/run-26'
+ I=RUN/'post-recovery-evaluation-isolation-original01-20261027'
+ HERE=Path(__file__).resolve().parent
+-UNIT='robotron-declared-launcher192-usage-smoke-original01-20261029.service'
++UNIT='robotron-declared-launcher192-usage-smoke-original02-20261029.service'
+ CASE=RUN/'post-natural-turnover-durable-next-candidate-20261029-original01/fresh-main-case.json'
+ P=I/'declared-launcher-census-original34-preparation'
+ PROBE=I/'declared-launcher-rolebranch-one-smoke-original01-20261029/result.json'
+ HEALTH=P/'round_main_health_launcher_v1.py'
+ HELPER=P/'launcher_census_v1.py'
+-GATE=HERE/'gate_original_usage_child_v1.py'
+-SCHEMA='robotron-owned192-rolebranch-usage-smoke-job-v1'
++GATE=HERE/'gate_original_usage_child_v2.py'
++SCHEMA='robotron-owned192-rolebranch-usage-smoke-job-v2'
++PRIOR_CLOSURE=HERE/'prepared-original01/ROOT-failed-original-parent-owned-release.json'
++PRIOR_CLOSURE_SHA='3066d31b9a68a8b5ed71bfe959fc2876b54c972150a0ae9c4871fe1fc46af8c5'
++DISAPPEARED='Process vanished or is no longer live'
+ STATIC=('parent_pid','cgroup','command','environment','affinity','uids','executable')
+ LIMITS=dict(CPUQuotaPerSecUSec='2s',MemoryMax=str(4<<30),MemorySwapMax='0',TasksMax='512',RuntimeMaxUSec='3min',Restart='no',NRestarts='0')
+ 
+@@ -115,6 +118,7 @@
+     raw=put(output/('capture-%06d.json'%index),dict(started_monotonic_s=started,ended_monotonic_s=ended,stable_stage_counts=stages,records=rows))
+     return dict(raw=raw,started_monotonic_s=started,ended_monotonic_s=ended,stable_stage_counts=stages,
+         archiving_ended_monotonic_s=time.monotonic(),actual_stable_MAME_slots=[r['slot']for r in rows if r.get('stage')=='mame'],
++        pending_disappearances=[dict(slot=r['slot'],pid=r['pid'],birth=r['birth'],reason=r['unaccepted_capture_disappearance'])for r in rows if'unaccepted_capture_disappearance'in r],
+         within5s_birth_age=sum(r.get('within_original5s_birth_age')is True for r in rows),outside5s_birth_age=sum(r.get('within_original5s_birth_age')is False for r in rows))
+ 
+ 
+@@ -128,8 +132,34 @@
+     return dict(before=[{k:r[k]for k in ('client_slot','client_id','eval')}for r in before['client_rows']],after=[{k:r[k]for k in ('client_slot','client_id','eval')}for r in after['client_rows']])
+ 
+ 
++def verify_prior_closure(value):
++    require(value['path']==str(PRIOR_CLOSURE)and value['sha256']==PRIOR_CLOSURE_SHA,'Exact preserved V1 failed closure required')
++    closed=read(value)
++    require(closed['schema']=='robotron-failed-original-engineering-parent-owned-release-v1'and closed['actual_original_exit']==1
++        and closed['original_parent_birth_and_unit_and_cgroup_absent']is True and closed['original192children_all_reaped_and_absent']is True
++        and closed['original_fixture_failed']is True and closed['scientific_qualified']is False,'V1 must remain failed and positively closed')
++
++
++def resolve_disappearances(attempts,terminal,usage):
++    resolved=[]
++    for capture in attempts:
++        for row in capture.get('pending_disappearances',[]):
++            slot=row['slot'];actual=terminal[slot];positive=usage[slot]
++            require(row['reason']==DISAPPEARED and row['pid']==actual['pid']and row['birth']==actual['birth']
++                and type(actual['actual_Popen_exit'])is int and actual['actual_Popen_exit']==0 and actual['original_birth_absent']is True
++                and positive['positive_installed_usage_output']is True and positive['stdout']['bytes']>1000,
++                'Unaccepted disappearance lacks exact own normal0/usage/reap proof')
++            stdout=checked(positive['stdout']).read_bytes()
++            require(len(stdout)>1000 and b'showusage'in stdout.lower(),'Resolved disappearance lacks actual pinned positive usage bytes')
++            resolved.append(dict(original_unaccepted_raw_capture=capture['raw'],slot=slot,pid=row['pid'],birth=row['birth'],
++                original_exception=row['reason'],actual_terminal=actual,positive_usage=positive,
++                disposition='UNACCEPTED_CAPTURE_RESOLVED_BY_ORIGINAL_NORMAL_USAGE_EXIT'))
++    return resolved
++
++
+ def prepare(output):
+     require(Path(output).parent.resolve(strict=True)==HERE and not Path(output).exists(),'New own preparation directory required')
++    prior_closure=pin(PRIOR_CLOSURE);verify_prior_closure(prior_closure)
+     proof=read(pin(PROBE));require(proof['status']=='OWNED_ROLE_BRANCH_USAGE_SMOKE_PASS'and proof['actual_exit']==0
+         and proof['same_PID_birth_MAME_observed']is True and proof['output_role_verified']is True,'Actual one-role no-game probe prerequisite required')
+     sources=dict(runner=pin(Path(__file__).resolve()),gate=pin(GATE),health=pin(HEALTH),launcher=pin(HELPER))
+@@ -139,7 +169,7 @@
+     env=dict(case['owners']['fleet']['process']['environment'],MAME_BIN=str(ROOT/'tools/power_recovery/mame_with_roles.sh'))
+     require(env['ROBOTRON_EVAL_MODE']=='0','Original INPUT role0 required')
+     Path(output).mkdir(mode=0o700)
+-    job=dict(schema=SCHEMA,attempt=1,no_retry=True,unit=UNIT,sources=sources,case=pin(CASE),one_probe=pin(PROBE),output=str(Path(output)/'execution-original01'),
++    job=dict(schema=SCHEMA,attempt=1,no_retry=True,prior_failed_fixture_closure=prior_closure,unit=UNIT,sources=sources,case=pin(CASE),one_probe=pin(PROBE),output=str(Path(output)/'execution-original01'),
+         slots=list(range(192)),parent_launch_environment=env,resources=LIMITS,gate_ready_s=60,exec_observation_s=30,cleanup_s=20,
+         work_s=120,actor_argument_suffix=['-showusage'],scientific_launch_qualified=False,controls_main_actors=False)
+     jp=put(Path(output)/'job.json',job)
+@@ -175,6 +205,7 @@
+         and job['sources']['launcher']['path']==str(HELPER)and job['sources']['launcher']['sha256']=='9da0759190ee2dc60393e293b707285168f35fe5a99c8707c10a8c0f834be26f'
+         and job['case']['path']==str(CASE)and job['one_probe']['path']==str(PROBE),'Actual selected source/case/one-probe differs')
+     for value in job['sources'].values():checked(value)
++    verify_prior_closure(job['prior_failed_fixture_closure'])
+     proof=read(job['one_probe']);require(proof['status']=='OWNED_ROLE_BRANCH_USAGE_SMOKE_PASS'and proof['actual_exit']==0
+         and proof['same_PID_birth_MAME_observed']is True and proof['output_role_verified']is True,'One-role usage prerequisite changed')
+     health=load('_usage_health',job['sources']['health']);launch=load('_usage_launch',job['sources']['launcher']);reader=health.linux()
+@@ -248,6 +279,7 @@
+                 except(OSError,KeyError)as failure:entry['unaccepted_capture']=repr(failure)
+                 except ValueError as failure:
+                     if str(failure)=='Original child exec raced pair':entry['unaccepted_capture']=repr(failure)
++                    elif str(failure)==DISAPPEARED:entry['unaccepted_capture_disappearance']=str(failure)
+                     else:
+                         entry['invalid_stable_identity']=repr(failure);sweep_rows.append(entry)
+                         attempts.append(commit_sweep(output,len(attempts),sweep,sweep_rows,stages));raise
+@@ -265,11 +297,15 @@
+     terminal={slot:dict(pid=c.pid,birth=births.get(slot),actual_Popen_exit=c.poll(),original_birth_absent=birth(c.pid)!=births.get(slot))for slot,c in children.items()}
+     put(output/'original-children-terminal-and-reap.json',dict(children=terminal,cleanup_actions=cleanup_actions,signals_received=signals));put(output/'original-process-attempts.json',attempts)
+     after=api();put(output/'after-main.raw.json',after);main_after=verify_main_owners(case,health,reader);put(output/'after-main-owners.json',main_after)
++    usage={};resolved_disappearances=[]
+     try:
+         require(not error and len(children)==192 and all_gates is not None and not cleanup_actions and not signals,'Original cohort failed or required forced cleanup')
+         require(all(v['actual_Popen_exit']==0 and v['original_birth_absent']for v in terminal.values()),'Every original usage child must exit0 and be reaped')
+         for slot in children:
+             path=output/('slot-%03d.stdout'%int(slot));require(path.stat().st_size<=1<<20,'Bounded usage stdout required');text=path.read_text(errors='replace');require(len(text)>1000 and'showusage'in text.lower(),'Every original child must positively emit installed MAME usage')
++            usage[slot]=dict(positive_installed_usage_output=True,stdout=pin(path))
++        put(output/'positive-original-usage-output-proofs.json',usage)
++        resolved_disappearances=resolve_disappearances(attempts,terminal,usage)
+         require(before['host_pipeline']['learning_exposure']['optimizer']['process_id']==after['host_pipeline']['learning_exposure']['optimizer']['process_id']==case['owners']['trainer']['process']['pid']
+             and birth(main_fleet['pid'])==main_fleet['starttime_ticks'],'Actual original training owner changed')
+         main_API_projection(case,before,after)
+@@ -277,7 +313,11 @@
+     except BaseException as failure:error=(error+'; 'if error else'')+repr(failure)
+     peaks={stage:max((row['stable_stage_counts'].get(stage,0)for row in attempts),default=0)for stage in ('gate_releasing','env','bash','python','mame')}
+     observed={slot for sweep in attempts for slot in sweep['actual_stable_MAME_slots']}
+-    result=dict(schema='robotron-owned192-rolebranch-usage-smoke-result-v1',status='OWNED192_USAGE_COHORT_CLOSED'if error is None else'ORIGINAL_FIXTURE_FAILED',error=error,
++    result=dict(schema='robotron-owned192-rolebranch-usage-smoke-result-v2',
++        pending_capture_disappearance_count=sum(len(row.get('pending_disappearances',[]))for row in attempts),
++        resolved_capture_disappearances=resolved_disappearances,
++        capture_disappearance_scope='Every exact disappearance remains an unaccepted raw capture; resolution is only exact original PID/birth, natural Popen0, positive usage stdout and completed reap. No synthetic accepted record is created.',
++        prior_failed_fixture_closure=job['prior_failed_fixture_closure'],status='OWNED192_USAGE_COHORT_CLOSED'if error is None else'ORIGINAL_FIXTURE_FAILED',error=error,
+         job=jp,owner=own,original_children=terminal,gate192_paired_capture_s=all_gates['paired_capture_s']if all_gates else None,
+         actual_peak_stable_stage_counts=peaks,slots_with_actual_stable_MAME_output_observed=sorted(observed,key=int),all192_MAME_outputs_observed=len(observed)==192,
+         actual_all192_MAME_simultaneous=None,sequential_sweep_had192_stable_MAME_records=peaks['mame']==192,actual_full500ms_qualification=False,

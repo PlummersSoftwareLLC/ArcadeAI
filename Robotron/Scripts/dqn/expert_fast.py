@@ -64,10 +64,9 @@ def _active_entities_fast(wire_state: np.ndarray):
 
         raw = pools_data[slot_start:slot_end].reshape(max_slots, feat_per_slot)
         is_vel = pool_name in _VEL_POOLS and feat_per_slot > 5
-        for slot_idx in range(max_slots):
+        active = (raw[:, 0] > 0.5) & np.isfinite(raw).all(axis=1)
+        for slot_idx in np.flatnonzero(active):
             slot = raw[slot_idx]
-            if slot[0] <= 0.5 or not np.isfinite(slot).all():
-                continue
 
             type_id = _slot_type(pool_name, slot)
             dx = _clamp11(float(slot[1])) if feat_per_slot > 1 else 0.0

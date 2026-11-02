@@ -1,0 +1,14 @@
+--- round_fleet_parent_actual.py:JournalTail
++++ owned_training_refill_join_candidate_v1.py:RawCompletionTail
+@@ -1,4 +1,4 @@
+-class JournalTail:
++class RawCompletionTail:
+     def __init__(self, path):
+         self.path = path
+         self.position = path.stat().st_size if path.exists() else 0
+@@ -22,4 +22,4 @@
+         self.pending = pieces.pop()
+         if len(self.pending) > 1_000_000:
+             raise RuntimeError("Completion journal line exceeded bound")
+-        return [json.loads(line) for line in pieces if line]
++        return [(json.loads(line), line+b"\n") for line in pieces if line]

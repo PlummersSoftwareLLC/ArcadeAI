@@ -1,0 +1,34 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/observer-engineering-family-original01/probe_declared_launcher_observer_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/readonly-mmap-source-validation-original02/probe_declared_launcher_observer_mmap_v2.py
+@@ -25,15 +25,15 @@
+     case = h.pin(args.case.resolve())
+     assert case['sha256'] == args.case_sha256
+     source = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
+-    selected = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/observer-engineering-family-original01')
+-    component = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation')
+-    sources = dict(client=h.pin(selected / 'round_observer_client_launcher_v1.py'),
+-        worker=h.pin(component / 'round_observer_launcher_v1.py'),
+-        health=h.pin(component / 'round_health_transport_launcher_v1.py'),
+-        health_base=h.pin(component / 'round_main_health_launcher_v1.py'),
++    selected = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/readonly-mmap-source-validation-original02')
++    component = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/readonly-mmap-source-validation-original02')
++    sources = dict(client=h.pin(selected / 'round_observer_client_launcher_mmap_v2.py'),
++        worker=h.pin(component / 'round_observer_launcher_mmap_v2.py'),
++        health=h.pin(component / 'round_health_transport_launcher_mmap_v2.py'),
++        health_base=h.pin(component / 'round_main_health_launcher_mmap_v2.py'),
+         API_projection=h.pin(source / 'api_reconnect_projection_v1.py'),
+         round_admission=h.pin(source / 'round_admission_proof_v2.py'),
+-        launcher_census=h.pin(component / 'launcher_census_v1.py'),
++        launcher_census=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/launcher_census_v1.py')),
+         durability=h.pin(source / 'buffered_raw_writer_v2.py'),
+         control=h.pin(source / 'volatile_live_control_v1.py'),
+         interpreter=h.pin(Path('/usr/bin/python3').resolve()))
+@@ -82,7 +82,7 @@
+     if args.mode == 'long':
+         errors.extend(result['errors'])
+         assert not errors and result['scope_complete'] and result['writer_stopped'], errors
+-        reviewer = load('_async_durability_actual_reviewer', selected / 'review_round_observer_launcher_v1.py')
++        reviewer = load('_async_durability_actual_reviewer', selected / 'review_round_observer_launcher_mmap_v2.py')
+         raw_review = reviewer.verify(guard.lifecycle, h)
+         h.put(directory / 'independent-raw-review.json', raw_review)
+     else:

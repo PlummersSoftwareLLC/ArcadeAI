@@ -1,0 +1,22 @@
+--- Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_recompute_proposal/test_process_scan.py
++++ Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/same_gpu_route_diagnostic_proposal/test_process_scan.py
+@@ -333,8 +333,8 @@
+         self.assertEqual(result['status'], 'PLAN_ONLY_UNEXECUTED')
+         self.assertFalse(result['runtime_queries'])
+         self.assertEqual(parent.GAME, Path(__file__).parents[4])
+-        self.assertEqual(parent.VARIANTS, ('recompute8',))
+-        self.assertEqual(result['attempts'], 8)
++        self.assertEqual(parent.VARIANTS, ('route1',))
++        self.assertEqual(result['attempts'], 1)
+         self.assertEqual(result['actual_training_attempts'], 0)
+         self.assertFalse(hasattr(parent, 'copy_fixture'))
+         self.assertEqual(result['compiled_loss_outputs'], 4)
+@@ -346,7 +346,7 @@
+             phase_timeout_s=180, total_timeout_s=600))
+         lock_bytes = (parent.HERE / 'source-lock.json').read_bytes()
+         self.assertEqual(hashlib.sha256(lock_bytes).hexdigest(),
+-                         '683278660704999645e93dfbc7aad1b20423a5755080a76ccad8f3af54c3c82f')
++                         'cb8874f65753b6f95a3c777b3dcd0d34e3af14227fd58a8c1feed0adcb2b97db')
+         lock = json.loads(lock_bytes)
+         frozen = lock['frozen_science_helpers']
+         self.assertEqual(frozen['sha256'],

@@ -1,0 +1,178 @@
+EXECUTED CE TRACE: NEXT WHOLE-STEP VALIDATION PREPARATION, 2026-10-17.
+
+ROOT AUTHORIZATION: NEW source/test/runbook authoring only. Nothing here has
+been imported, compiled, default-invoked or executed. No runtime/data/process/
+GPU/API/service query or production/state change was performed. The sealed
+executed_trace_proposal manifestd7fcb2e36a7b08d472341d8f7f294d384f2591f17225832da83d350bff4e3316,
+all its overlays/tests and sampler manifestff93d797 remain unchanged. Root
+reports their existing12sampler+11protocol+5CPU tests passed after quality;
+that evidence is separate from these NEW UNEXECUTED tests.
+
+Smallest next action, only after root's explicit serial-window GO:
+  Run the NEW8-method CPU suite in a fresh isolated interpreter, with real
+  stdout/stderr/exit captured in a NEW root-owned evidence directory. No actual
+  training/fleet/sidecar is created by this suite. Proposed command (NOT RUN):
+
+  cd /home/dave/source/repos/ArcadeAI
+  env -u LD_PRELOAD -u PYTHONPATH CUDA_VISIBLE_DEVICES='' \
+    PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+    OPENBLAS_NUM_THREADS=2 NUMEXPR_NUM_THREADS=2 ROBOTRON_ALLOW_WHOLE_STEP_CPU=1 \
+    /home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python -Xgil=0 -B \
+    -m unittest Robotron.tools.kl_priority_mixture_proposal.executed_trace_validation_proposal.test_whole_train_step -v
+
+  Parent must allow at most2CPU threads,4GiB working RAM,512MiB owned temporary
+  disk and180s wall time, reaping only its exact owned child if it times out.
+  These are proposed execution-envelope limits, not implemented/validated by
+  the unittest module. Its permission/CUDA-hidden checks precede NumPy/Torch.
+  Native sumtree compilation, if needed, occurs only inside writable private
+  copied packages. All private package module paths and source hashes checked.
+
+What the NEW CPU suite adds:
+  Whole copied production19408112 and candidatec10cf8de training.py modules are
+  imported. Both train_step and the ENTIRE _train_step_impl execute: guards,
+  actual sampler/prefetch transfer route, C51/expert losses, backward, clipping,
+  real CPU Adam, actual OptimizerExposure, packed CPU readback/CE reprioritization,
+  logical clocks, target/inference callbacks, metrics and observer finalization.
+  This is not the earlier AST-wrapper-only test. The tiny test-owned network,
+  LR/target/inference hooks and model.device dependency are explicit stubs;
+  no actual RainbowAgent constructor/server/background learner is imported.
+
+  Actual4096 rows/51atoms, synthetic state width8 and4joint actions with2fire
+  actions keep CPU work bounded. These test-only dimensions, pressure disabled,
+  target cadence and fixed auxiliary schedules do not represent production
+  state11128/81actions, source population or learning quality. The actual replay
+  quota/normalization/update algorithms are imported, not reimplemented. Native
+  priority batch-update remains OFF as in the sealed sampler fixture.
+
+  Eight meaningful methods:
+    1. production vs candidateOFF vs candidateON eager and static TrainingLoss
+       routes: equal scalar loss, gradient-norm/CE diagnostics, CPU Adam/model/
+       target/inference states, reprioritization indices/errors and NumPy RNG;
+       one training forward, actual Adam/online progress, same-executed target
+       and taken-log-probability CE reconstruction (cross-library sum tolerance).
+    2. actual CPU prefetch leases + real CPU GradScaler through full source
+       scaled branch: applied, deliberately nonfinite-gradient skip, original
+       forward/transfer exceptions, then remaining consumed attempts. No ninth
+       capture; actual Adam/moments/online unchanged on skip and scale halves;
+       CE reprioritization still occurs on skip. Leases release and producer
+       joins in cleanup. Numerical exceptions remain in first8 and incomplete.
+    3. disabled-training guard releases a real lease without consuming ordinal.
+    4. optimizer exception preserves original object, unavailable outcome and
+       unchanged weights/Adam/clocks.
+    5. priority exception AFTER actual Adam retains admission+parameter progress
+       while logical clocks have not advanced; row remains incomplete.
+    6. loss-observer entrypoint/disk faults stay invalid without changing the
+       real optimizer return path or replacing the configured kernel object.
+    7. injected nonfinite weighted loss consumes ordinal, returnsNone before
+       Adam/admission and stays incomplete.
+    8. deliberately unsupported outcome remains unavailable even if real CPU
+       Adam applied; no inference of application from logical counters.
+
+  CPU scaled-branch limitation: source uses AMP only when device.type=='cuda'.
+  A labelled adapter redirects only explicit device factories/autocast and the
+  found_inf identity boundary to CPU. Tensor math, CPU GradScaler and CPU Adam
+  really run; real CPU scaler found_inf controls skip. The production enum is
+  injected for the join contract. This DOES NOT validate production CUDA
+  autocast, capture_amp_found_inf's CUDA/type/version contract, fused Adam,
+  CUDA transfer/streams, compile backend or actual production agent callbacks.
+  A successful CPU run can close whole-body CPU/control-flow coverage only.
+
+FUTURE GPU0 CONTROL — RESOURCE PLAN ONLY, NO RUNNER/LAUNCH AUTHORIZATION:
+  Purpose: current real RainbowNet11128/81actions/51atoms, batch4096 and actual
+  fusedCUDA Adam + enabled realCUDA GradScaler, whole train_step OFF-vsON parity.
+  It is trace correctness, not a learning branch, live trace or priority switch.
+  Candidate source must be privately copied from pinned current bases plus
+  sealed sampler/trace overlays; source drift requires rebase/review, not a
+  hash bypass. Prefer3 fresh process variants: current base control, candidate
+  OFF (four-return ABI), candidateON (static fifth payload). No hot toggles.
+
+  Reuse reviewed stdlib owned-launch guards, not a new general launcher. Root
+  first closes/audits quality and any performance/forensic window; verifies no
+  competing sidecar/GPU0 compute/CPU benchmark and resolves its waiting384 gate
+  under its separate ownership protocol. No silent gate allowlist, interference
+  or broad kills. Require exact displayGPU0 UUID
+  GPU-b549355c-78bb-53d8-04a6-da34d45e1dd0 ONLY visible, count1/UUID checked;
+  mainGB300 trainer identity/ownership untouched. No imports/context until
+  explicit launch plus all identity/path/source/resource guards pass.
+
+  Dedicated delegated user-unit topology, supervisor sibling and owned child
+  cgroup as reviewed in the snapshot/forensic parents; no session-cgroup edits.
+  Detached --on-active=3s --timer-property=AccuracySec=100ms, NO --wait. Scheduling
+  carrier must exit before child guard; preserve actual invocation/PID/journal/
+  ExecMainCode+Status/exit timestamps and owned cleanup, not collected defaults.
+  Handled INT/TERM/HUP, parent-death guard/token, exact owned teardown only.
+
+  Proposed hard budgets for later runner review:2CPU,16GiB child memory.max,
+  pids.max128, max12GiB Torch allocator on16GiB displayGPU,6GiB artifact/cache
+  budget,180s per variant/600s aggregate wall. Peak GPU/RAM usage must be measured,
+  not inferred; compiler/driver allocations outside Torch allocator remain a
+  limitation. No test overlaps a fixed performance/quality window even onGPU0.
+
+  Capacity evidence from pinned source geometry (arithmetic, NOT measurements):
+    * one4096x11128 fp32 state=173.875MiB; state pair347.75MiB;
+      three existing GPU staging slots carry1043.25MiB of state pairs, plus the
+      analogous host staging allocation and small fields.
+    * one4096x81x51 policy tensor=32.27MiB fp16 or64.55MiB fp32.
+    * one4096x81x192 joint hidden activation=121.5MiB fp16/243MiB fp32;
+      one4096x81x256 joint context=162MiB fp16/324MiB fp32.
+    * one4096x112x128 object activation=112MiB fp16/224MiB fp32;
+      a materialized8head112x112 attention matrix would be784MiB fp16/
+      1568MiB fp32. Actual SDPA/compile materialization/workspaces unknown.
+    * network17,837,490 fp32 parameters~68.04MiB each; online/target/inference,
+      online gradients and2Adam moments are~408.27MiB before temporary states.
+  Multiple saved activations, next-state evaluations, compile/autotune/workspace
+  and caches can dominate. A16GiB fit is NOT established. On OOM/timeout/nonfinite
+  or unsupported telemetry, preserve failure; do not reduce batch/state/model,
+  split into microbatches, checkpoint activations, lower scaler or add retries
+  to claim this requirement passed. A separately scheduled larger owned GPU
+  might be required; no mainGPU access or interruption is authorized here.
+
+  Private input/control plan for the eventual runner (not yet implemented):
+    - private config/model/settings/control/run/cache/tmpfs paths BEFORE imports;
+      cfg.replay_tmpfs_dir must be a unique EXISTING directory, not just MODEL_DIR.
+      No actual fleet/HTTP/listener/constructor TrainWorker needed for this step.
+    - immutable explicitly selected already-verified trained checkpoint identity
+      for online/target/Adam/scaler, loaded into private owned objects; root binds
+      actual SHA/bytes and saved clocks. No future candidate chosen/read now.
+      Main live checkpoint/ring/banks/control never opened. This input is a test
+      fixture, NOT a coherent replay or exact continuing learning anchor.
+    - fixed private synthetic4096 state11128 fixture built by the actual sampler
+      and persisted returned batch+detached metadata, initially identical across
+      variants. Repeated fixed-batch updates deliberately test math/observation;
+      they do NOT acquire8 consecutive production sampler attempts or identify
+      actual live mixture/priority-age distributions. Metadata tree metric still
+      unknown except separately bound fixture caller/source context. Private
+      ring/bank dimensions and fixed-batch reuse must be recorded as overrides.
+    - same initial checkpoint/scaler/optimizer/RNG and exact persisted batch
+      across variants; runtime/numeric policy bound. Real same-device prefetch
+      leases and transfer order must additionally be exercised in a separate
+      controlled row because fixed-batch parity alone does not validate them.
+    - compile warmup invokes static kernel only; assert traceconsumed0 and no
+      Adam/exposure before first train_step. Real ON observer armed at startup;
+      first8 consumed calls include all actual skips/None/errors. Never a ninth
+      replacement; preserve original errors and known late outcomes.
+    - record real packed found_inf + exposure ticket, every81Adam slot step/
+      moment and online digest before/after each call, scaler state and finite
+      tensors/gradients. An applied admission needs actual slot advancement and
+      changed online weights; skip needs no slot/moment/online advancement and
+      consistent scaler/found_inf. No-step observations cannot certify this.
+    - compare original base vs candidateOFF, then OFF vsON same-forward losses,
+      targets/CE, auxiliary contributions, native gradients, priorities, weights,
+      optimizer/scaler/clocks/outcomes and RNG. Freeze numeric comparison
+      tolerances in the eventual reviewed runner BEFORE launch; CUDA atomic
+      projection/compiler numerical differences prevent an unexamined bitwise
+      equality promise. No broad tolerance learned from failing observations.
+    - record actualTorch/Python/CUDA/effectiveGIL/expertavailability, TF32/AMP/
+      backend/compile graph-break/recompile/fallback evidence and source hashes.
+      No disabling compile, forcing GIL changes or synthetic scaler recipes to
+      rescue an otherwise failed production-route comparison.
+
+Readiness still missing:
+  These8 source tests unexecuted/source-peer pending; actualCPU full-step result,
+  GPU runner implementation/owned guards/resource fit/numeric tolerance review,
+  actual current CUDA AMP+fusedAdam compiled4096 parity and real lease transfer,
+  and later independent actual8production-attempt trace capture/provenance.
+  Existing startup source assessment9a8b6b2b resolves the actual main's
+  load-before-consumption ordering; it is not a new generic architecture blocker.
+  No matched-learning branch, KL conversion, sampling-population claim, sample
+  efficiency or score/quality result follows from this validation preparation.

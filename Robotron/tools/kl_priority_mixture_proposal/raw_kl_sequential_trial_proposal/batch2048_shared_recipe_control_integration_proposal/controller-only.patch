@@ -1,0 +1,38 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_reviewed2_proposal/run_one_trial.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_control_integration_proposal/run_one_trial.py
+@@ -23,8 +23,9 @@
+ SCHEMA = 'robotron-one-ce-batch2048-trial-job-v1'
+ EXECUTION_BLOCKERS = ()  # Actual proof validation below replaces the preserved unconditional refusal.
+ 
+-ADAPTER = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_reviewed2_proposal/run_CE_batch_transition.py')
+-ADAPTER_SHA = '479b4b4da50de7c78cb94a730a12a4603e3e6c2281fffac1533a5a4a22822202'
++ADAPTER = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/run_CE_batch_transition.py')
++ADAPTER_SHA = 'c7374cec895b7d98470ef9d83590980200817f37b2e0745d98ab895148345ea5'
++SHARED_RECIPE_HELPERS = {'live_host': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/helpers/parallel_state_fill_trial.py', 'sha256': '0993ed57c6c32ad629b7ed078133e77fb0c54b211c8a324ef9bf7327d62b97f3', 'bytes': 43951}, 'metrics': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/helpers/inference_worker_affinity.py', 'sha256': '579dafd9410f9e97872074c444e5fb0e79b24a67e7476568c27faaf3341fd9ed', 'bytes': 34706}, 'identity': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/tools/cpu_affinity_pilot.py', 'sha256': 'ee1fa4f3018eccc479cfe4e484883505115aaeeb8778801657d2a37af6b071f0', 'bytes': 20930}, 'protection': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/tools/protect_quality_winner.py', 'sha256': 'e45965d3057ec8542ab2b05fd2250209e53986a0977fbb1294aa54f64a11f0f0', 'bytes': 9580}}
+ HORIZON = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/horizon_observer2048.py')
+ HORIZON_SHA = 'e8809615c3a837da3400f56d58ecdbfd59b13b83c574c65643731afe8b13a124'
+ EARLY_PATH = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_early_phase_insurance_proposal/early_phase_insurance.py')
+@@ -56,6 +57,15 @@
+ def require(value, message):
+     if not value:
+         raise RuntimeError(message)
++
++
++def validate_shared_recipe_helpers(activation):
++    """The shared lower recipe guard must be selected, not just the adapter."""
++    pins = activation['helper_pins']
++    require(all(isinstance(pins.get(name),dict) and
++        {key:pins[name].get(key) for key in ('path','sha256','bytes')} == expected
++        for name,expected in SHARED_RECIPE_HELPERS.items()),
++        'Exact selected shared-recipe LiveHost/metrics and canonical dependencies required')
+ 
+ 
+ def load(path, sha, name):
+@@ -721,6 +731,7 @@
+     activation = deadline.read_pin(trial['activation_job'])
+     require(activation['mode'] == 'activate_batch2048' and activation['trial_core'] == trial['trial_core']
+         and activation['boot_id'] == trial['boot_id'], 'Activation/core/boot binding differs')
++    validate_shared_recipe_helpers(activation)
+     core = deadline.read_pin(trial['trial_core'])
+     deadline.validate_authorization(core, activation)
+     require(trial['profile'] == core['batch_profile'] == trial['early_insurance']['profile']

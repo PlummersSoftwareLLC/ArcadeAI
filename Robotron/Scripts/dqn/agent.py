@@ -13,11 +13,13 @@ if __name__ == "__main__":
 
 import os, sys, time, random, math, threading, queue, traceback, shutil
 import select as _select
+from contextlib import nullcontext
 from typing import Tuple
 
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 
 # Optional terminal-control modules for the interactive keyboard handler.
@@ -32,24 +34,54 @@ except Exception:                                   # pragma: no cover - non-Win
 
 try:
     from .config import (RL_CONFIG, MODEL_DIR, LATEST_MODEL_PATH,
-                         metrics as config_metrics, RESET_METRICS, IS_INTERACTIVE,
+                         metrics as config_metrics, RESET_METRICS, IS_INTERACTIVE, learning_control,
                          decode_token_types, TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT)
     from .model import (device, _cuda_device, RainbowNet,
                         NUM_MOVE, NUM_FIRE, NUM_JOINT,
                         combine_action, split_joint_action)
-    from .training import train_step, _beta_schedule
+    from .training import train_step, _beta_schedule, replay_pressure_reached
     from .replay_buffer import PrioritizedReplayBuffer
+    from .native_sumtree import batch_update_status
+    from .prefetch import ReplayPrefetcher
+    from .learning_exposure import OptimizerExposure, exposure_enabled, disabled_snapshot as exposure_disabled_snapshot
+    from .pipeline_telemetry import PipelineTelemetry, unavailable_snapshot
+    from .exact_inference_graphs import ExactInferenceGraphs, ExactInferenceGraphError, disabled_snapshot
 except ImportError:
     from config import (RL_CONFIG, MODEL_DIR, LATEST_MODEL_PATH,
-                        metrics as config_metrics, RESET_METRICS, IS_INTERACTIVE,
+                        metrics as config_metrics, RESET_METRICS, IS_INTERACTIVE, learning_control,
                         decode_token_types, TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT)
     from model import (device, _cuda_device, RainbowNet,
                        NUM_MOVE, NUM_FIRE, NUM_JOINT,
                        combine_action, split_joint_action)
-    from training import train_step, _beta_schedule
+    from training import train_step, _beta_schedule, replay_pressure_reached
     from replay_buffer import PrioritizedReplayBuffer
+    from native_sumtree import batch_update_status
+    from prefetch import ReplayPrefetcher
+    from learning_exposure import OptimizerExposure, exposure_enabled, disabled_snapshot as exposure_disabled_snapshot
+    from pipeline_telemetry import PipelineTelemetry, unavailable_snapshot
+    from exact_inference_graphs import ExactInferenceGraphs, ExactInferenceGraphError, disabled_snapshot
 
 metrics = config_metrics
+
+
+def _with_training_lock(fn):
+    """Serialize model/optimizer snapshots with the background learner."""
+    def locked(self, *args, **kwargs):
+        with self._training_lock:
+            return fn(self, *args, **kwargs)
+    return locked
+
+
+def _with_training_paused(fn):
+    """Invalidate replay pipeline work around a checkpoint restoration."""
+    def paused(self, *args, **kwargs):
+        with self._training_lock:
+            try:
+                self._pause_prefetch()
+                return fn(self, *args, **kwargs)
+            finally:
+                self._resume_prefetch()
+    return paused
 
 ENGINE_VERSION = 28  # (2026-07-30) 4-frame stacking: state 2782 -> 11128
 # (2782 x 4), attacking the reflex bound (EScrF pinned 24-29 through every
@@ -90,13 +122,61 @@ class RainbowAgent:
         self.state_size = state_size
         self.device = device
         cfg = RL_CONFIG
+        # Graph mode is an explicit resume-only startup choice. Fail before
+        # allocation when main would skip load() and silently start fresh.
+        self._exact_inference_graphs = None
+        self._exact_graph_loaded = False
+        self._exact_graph_requested = os.getenv("DQN_EXACT_INFERENCE_GRAPHS", "0").strip().lower() in ("1", "true", "yes", "on")
+        self._exact_graph_checkpoint = None
+        if self._exact_graph_requested:
+            required = os.getenv("DQN_EXACT_GRAPH_CHECKPOINT", "").strip()
+            ratchet_on = bool(getattr(cfg, "ratchet_enabled", False)) or os.getenv("DQN_RATCHET", "").strip().lower() in ("1", "true", "yes", "on")
+            boot_path = LATEST_MODEL_PATH
+            incumbent = os.path.join(MODEL_DIR, "robotron_dqn_ratchet_incumbent.pt")
+            if ratchet_on and os.path.exists(incumbent):
+                boot_path = incumbent
+            if not required or not os.path.isfile(required) or os.path.realpath(required) != os.path.realpath(boot_path):
+                raise ExactInferenceGraphError("Graph resume requires an existing DQN_EXACT_GRAPH_CHECKPOINT matching main's boot path")
+            self._exact_graph_checkpoint = os.path.realpath(required)
+
+        self._priority_metric = str(getattr(cfg, "per_priority_metric", "ce"))
+        self._loss_priority_metric = self._priority_metric
+        self._priority_phase = None
+        if self._priority_metric == "kl" or os.getenv("DQN_PRIORITY_PHASE_RECORD", "").strip():
+            try:
+                from .priority_phase import PriorityPhase
+            except ImportError:
+                from priority_phase import PriorityPhase
+            if (not self._exact_graph_requested or not bool(getattr(cfg, "compile_full_loss", True))
+                    or not bool(getattr(cfg, "use_torch_compile", False))):
+                raise RuntimeError("Priority trial requires held resume-only full-loss compile profile")
+            self._priority_phase = PriorityPhase(self._priority_metric, self._exact_graph_checkpoint, MODEL_DIR)
 
         # Counters and locks (must be created before _sync_inference)
         self.training_steps = 0
         self.loaded_training_steps = 0
+        self.baseline_batch_size = max(1, int(getattr(cfg, "baseline_batch_size", 512)))
+        self.optimized_samples = 0
+        self.loaded_optimized_samples = 0
         self.last_inference_sync = 0
-        self._sync_lock = threading.Lock()
-        self.training_enabled = True
+        self.last_inference_sync_samples = 0
+        self.last_target_update_samples = 0
+        self._sync_lock = threading.RLock()
+        self._training_lock = threading.RLock()
+        self._pipeline_telemetry = PipelineTelemetry(sample_every=20)
+        self._learning_optimizer_exposure = OptimizerExposure() if exposure_enabled() else None
+        self._prefetch_paused = False
+        _startup_hold = os.getenv("ROBOTRON_CONTINUOUS_STARTUP_HOLD", "0")
+        if _startup_hold not in ("0", "1"):
+            raise ValueError("Explicit continuous startup hold0/1 required")
+        self._continuous_startup_held = _startup_hold == "1"
+        if self._continuous_startup_held and os.getenv("ROBOTRON_CONTINUOUS_TRAINING_MODE", "0") != "1":
+            raise RuntimeError("Controlled startup hold requires the continuous MAIN mode")
+        # Before networks, replay prefetch or TrainWorker exist. This flag
+        # stays false through load(); only the verified one-use bridge releases it.
+        self.training_enabled = not self._continuous_startup_held
+        if self._continuous_startup_held:
+            metrics.training_enabled = False
         self.behavior_locked = False   # ratchet: pin the fleet to the incumbent
         self.running = True
 
@@ -126,7 +206,7 @@ class RainbowAgent:
             and self.device.type == "cuda"
             and infer_dev.index == self.device.index
         ):
-            self._inference_stream = torch.cuda.Stream(device=infer_dev)
+            self._inference_stream = torch.cuda.Stream(device=infer_dev, priority=-1)
             self._sync_event = torch.cuda.Event()
 
         if self.use_separate_inference:
@@ -145,11 +225,25 @@ class RainbowAgent:
         # ── torch.compile placeholders (configured after AMP setup below) ──
         self.compiled_online_joint_dist = None
         self.compiled_online_q_joint = None
+        self.compiled_online_bc_logits = None
+        self.compiled_training_outputs = None
+        self.compiled_training_loss = None
+        self.compiled_training_loss_diagnostics = None
         self.compiled_target_joint_dist = None
         self.compiled_infer_q_joint = None
 
         # Optimizer
-        self.optimizer = optim.Adam(self.online_net.parameters(), lr=cfg.lr, eps=1.5e-4)
+        optimizer_kwargs = {"lr": cfg.lr, "eps": 1.5e-4}
+        if self.device.type == "cuda" and bool(getattr(cfg, "optimizer_fused", True)):
+            optimizer_kwargs["fused"] = True
+        try:
+            self.optimizer = optim.Adam(self.online_net.parameters(), **optimizer_kwargs)
+        except (TypeError, RuntimeError) as e:
+            if "fused" not in optimizer_kwargs:
+                raise
+            print(f"[WARN] fused Adam unavailable ({e}) — using standard Adam")
+            optimizer_kwargs.pop("fused")
+            self.optimizer = optim.Adam(self.online_net.parameters(), **optimizer_kwargs)
 
         # Replay
         self.memory = PrioritizedReplayBuffer(
@@ -205,6 +299,20 @@ class RainbowAgent:
         except Exception:
             self.grad_scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
 
+        # Separate startup-only observation. Original compiled loss source,
+        # construction, four-output ABI and math are unchanged in both modes.
+        self._recomputed_ce_capture = None
+        _capture_directory = os.getenv("DQN_RECOMPUTED_CE_CAPTURE_DIR", "").strip()
+        if _capture_directory:
+            if os.getenv("DQN_EXECUTED_CE_TRACE_DIR", "").strip():
+                raise ValueError("Recomputed capture and executed-target trace are mutually exclusive")
+            from .recomputed_ce_capture import RecomputedCECapture
+            self._recomputed_ce_capture = RecomputedCECapture(_capture_directory, cfg,
+                optimizer_exposure=self._learning_optimizer_exposure,
+                runtime=dict(torch=str(torch.__version__), cuda=torch.version.cuda,
+                    device=str(self.device), use_amp=bool(self.use_amp),
+                    fused_adam=bool(self.optimizer.defaults.get("fused", False))))
+
         # torch.compile: MUST complete before the background train thread or
         # socket server exist — all dynamo tracing has to happen serially on
         # this thread (executing a compiled fn while another thread traces
@@ -212,12 +320,43 @@ class RainbowAgent:
         if bool(getattr(cfg, "use_torch_compile", False)):
             self._setup_torch_compile()
 
+        # Startup-only capture, before either replay producer or learner exists.
+        # load() repeats exact parity under the existing paused/locked guard.
+        if self._exact_graph_requested:
+            self._setup_exact_inference_graphs()
+
+        self._prefetcher = None
+        if bool(getattr(cfg, "replay_prefetch", True)):
+            self._prefetcher = ReplayPrefetcher(
+                self.memory, int(cfg.batch_size),
+                beta_fn=lambda: _beta_schedule(metrics.frame_count),
+                device=self.device, use_amp=self.use_amp,
+                depth=max(1, int(getattr(cfg, "replay_prefetch_slots", 3))),
+                direct_state_fill=bool(getattr(cfg, "replay_direct_state_fill", False)),
+                min_replay_size=max(int(cfg.min_replay_to_train), int(cfg.batch_size)),
+                enabled_fn=lambda: self.running and self.training_enabled
+                and (not self._exact_graph_requested or self._exact_graph_loaded)
+                and not self._prefetch_paused and getattr(metrics, "training_enabled", True)
+                and not replay_pressure_reached(self),
+                trace_observer=self._recomputed_ce_capture,
+            )
+
         # Background training thread
         self._train_queue = queue.Queue(maxsize=8)
         self._train_thread = threading.Thread(target=self._background_train, daemon=True, name="TrainWorker")
         self._train_thread.start()
 
     # ── LR schedule ─────────────────────────────────────────────────────
+    @property
+    def schedule_steps(self) -> float:
+        """Learning schedule clock in original-batch equivalents."""
+        return float(self.optimized_samples) / float(self.baseline_batch_size)
+
+    def _legacy_target_update_samples(self) -> int:
+        """Recover the target-update phase from an older step-only checkpoint."""
+        period = max(1, int(RL_CONFIG.target_update_period))
+        return (int(self.training_steps) // period) * period * self.baseline_batch_size
+
     def shift_to_hold_gear(self, reason: str = ""):
         """One-way LR downshift: the automated form of the intervention that
         turned the 1.19M collapse into the 1.68M climb.  Re-anchors so the
@@ -225,7 +364,7 @@ class RainbowAgent:
         if getattr(self, "lr_gear", "climb") == "hold":
             return
         self.lr_gear = "hold"
-        self.lr_anchor_step = int(self.training_steps)
+        self.lr_anchor_step = self.schedule_steps
         print(f"[LR GEARBOX] downshift CLIMB -> HOLD at step {self.training_steps:,}"
               f"{' — ' + reason if reason else ''} (gentle pressure: "
               f"{RL_CONFIG.lr_hold:.1e} -> {RL_CONFIG.lr_hold_min:.1e})")
@@ -241,10 +380,10 @@ class RainbowAgent:
             lr_hi, lr_lo, period = cfg.lr, cfg.lr_min, cfg.lr_cosine_period
         # lr_anchor_step re-bases the warmup+cosine WITHOUT touching
         # training_steps (which the expert/BC schedules key on).
-        step = self.training_steps - int(getattr(self, "lr_anchor_step", 0))
+        step = self.schedule_steps - float(getattr(self, "lr_anchor_step", 0))
         # Manual override (keyboard 1/2/3): scales whatever the gearbox
         # schedule produces, so it composes with gear changes and warmup.
-        scale = float(getattr(self, "lr_manual_scale", 1.0))
+        scale = float(getattr(self, "lr_manual_scale", 1.0)) * learning_control.lr_scale
         if step < cfg.lr_warmup_steps:
             return lr_hi * (step + 1) / max(1, cfg.lr_warmup_steps) * scale
         decay_horizon = max(1, period)
@@ -260,10 +399,10 @@ class RainbowAgent:
         # Ratchet fresh-optimizer protocol: linear LR warmup at the start of a
         # candidate window (Adam with zeroed state takes ~sign(g)*lr steps on
         # its first iterations — unramped, that is itself a shock).
-        ws = int(getattr(self, "ratchet_warmup_start_step", -1))
+        ws = float(getattr(self, "ratchet_warmup_start_step", -1))
         wn = int(getattr(self, "ratchet_warmup_steps", 0))
         if ws >= 0 and wn > 0:
-            done = self.training_steps - ws
+            done = self.schedule_steps - ws
             if done < wn:
                 lr *= max(0.05, (done + 1) / float(wn))
         for pg in self.optimizer.param_groups:
@@ -277,8 +416,11 @@ class RainbowAgent:
         again; on accept the freshly-adapted moments ride along with the new
         incumbent snapshot."""
         with self._sync_lock:
+            exposure = getattr(self, "_learning_optimizer_exposure", None)
+            if exposure is not None:
+                exposure.new_epoch("ratchet_optimizer_clear_begin")
             self.optimizer.state.clear()
-        self.ratchet_warmup_start_step = int(self.training_steps)
+        self.ratchet_warmup_start_step = self.schedule_steps
         self.ratchet_warmup_steps = int(max(0, warmup_steps))
 
     # ── Inference ───────────────────────────────────────────────────────
@@ -311,37 +453,99 @@ class RainbowAgent:
                 pass
 
             print("torch.compile: compiling + warming all graphs (one-time)...")
-            self.compiled_online_joint_dist = torch.compile(self.online_net.joint_dist, dynamic=False)
-            self.compiled_online_q_joint = torch.compile(self.online_net.q_values_joint, dynamic=False)
-            self.compiled_target_joint_dist = torch.compile(self.target_net.joint_dist, dynamic=False)
+            # Capture is deliberately disabled: training and inference share a
+            # GPU and optimizer/weight-copy streams. Inductor still fuses point
+            # operations and tunes tensor-core GEMMs without graph lifetime or
+            # cross-stream output-buffer hazards.
+            compile_options = {"triton.cudagraphs": False}
+            if str(getattr(RL_CONFIG, "torch_compile_mode", "default")).startswith("max-autotune"):
+                compile_options["max_autotune"] = True
             infer_src = self.infer_net if self.use_separate_inference else self.online_net
-            self.compiled_infer_q_joint = torch.compile(infer_src.q_values_joint, dynamic=True)
+            self.compiled_infer_q_joint = torch.compile(
+                infer_src.q_values_joint, dynamic=True, options={"triton.cudagraphs": False})
 
             bsz = int(RL_CONFIG.batch_size)
             amp_on = bool(self.use_amp) and self.device.type == "cuda"
 
-            # Warm BOTH data-dependent branch variants (encode_tokens forks on
-            # all-objects-empty), otherwise the first real batch re-traces at
-            # runtime and can race a concurrent thread.
-            def _variants(b, dev):
-                empty = torch.zeros(b, self.state_size, device=dev)
-                popd = torch.rand(b, self.state_size, device=dev)
+            def _variants(b, dev, dtype=torch.float32):
+                empty = torch.zeros(b, self.state_size, device=dev, dtype=dtype)
+                popd = torch.rand(b, self.state_size, device=dev, dtype=dtype)
                 return (popd, empty)
 
-            # Training graphs: warm the exact prod variants — online train-mode
-            # log=True under autocast (+ backward), online/target eval-path
-            # no_grad calls.
             self.online_net.train()
             self.target_net.eval()
-            for train_states in _variants(bsz, self.device):
-                with torch.autocast("cuda", dtype=torch.float16, enabled=amp_on):
-                    logp = self.compiled_online_joint_dist(train_states, log=True)
-                    warm_loss = logp.float().mean()
-                warm_loss.backward()          # warm the compiled backward graph
-                self.online_net.zero_grad(set_to_none=True)
-                with torch.no_grad(), torch.autocast("cuda", dtype=torch.float16, enabled=amp_on):
-                    self.compiled_online_q_joint(train_states)
-                    self.compiled_target_joint_dist(train_states, log=False)
+            if bool(getattr(RL_CONFIG, "compile_full_loss", True)):
+                try:
+                    from .loss_kernel import TrainingLoss
+                except ImportError:
+                    from loss_kernel import TrainingLoss
+                # Compile the whole tensor loss so C51 projection, expert
+                # masks, diagnostics and their many small reductions do not
+                # dispatch through Python/GIL while the MAME fleet serves.
+                # Diagnostic mode is a static module flag, never a runtime
+                # Python branch inside the optimized graph.
+                if self._priority_metric == "kl":
+                    self.compiled_training_loss = torch.compile(
+                        TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=False, return_priorities=True),
+                        dynamic=False, options=compile_options)
+                    self.compiled_training_loss_diagnostics = torch.compile(
+                        TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=True, return_priorities=True),
+                        dynamic=False, options=compile_options)
+                else:
+                    self.compiled_training_loss = torch.compile(
+                        TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=False),
+                        dynamic=False, options=compile_options)
+                    self.compiled_training_loss_diagnostics = torch.compile(
+                        TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=True),
+                        dynamic=False, options=compile_options)
+                actions = torch.zeros(bsz, device=self.device, dtype=torch.long)
+                rewards = torch.zeros(bsz, device=self.device, dtype=torch.float32)
+                dones = torch.zeros_like(rewards)
+                horizons = torch.ones_like(rewards)
+                expert = torch.ones(bsz, device=self.device, dtype=torch.bool)
+                weights = torch.ones_like(rewards)
+                schedule = torch.tensor([1.0, 1.0, 1.0], device=self.device, dtype=torch.float32)
+                for loss_fn in (self.compiled_training_loss, self.compiled_training_loss_diagnostics):
+                    for train_states in _variants(bsz, self.device, torch.float32):
+                        next_states = train_states.clone()
+                        with torch.autocast("cuda", dtype=torch.float16, enabled=amp_on):
+                            if self._priority_metric == "kl":
+                                warm_loss, _, _, _, _ = loss_fn(
+                                    train_states, actions, rewards, next_states,
+                                    dones, horizons, expert, weights, schedule)
+                            else:
+                                warm_loss, _, _, _ = loss_fn(
+                                    train_states, actions, rewards, next_states,
+                                    dones, horizons, expert, weights, schedule)
+                        warm_loss.backward()
+                        self.online_net.zero_grad(set_to_none=True)
+            else:
+                # Portable opt-out keeps the independently compiled networks
+                # and the original Python-side tensor loss available.
+                self.compiled_online_joint_dist = torch.compile(
+                    self.online_net.joint_dist, dynamic=False, options=compile_options)
+                self.compiled_online_q_joint = torch.compile(
+                    self.online_net.q_values_joint, dynamic=False, options=compile_options)
+                self.compiled_training_outputs = torch.compile(
+                    self.online_net.training_outputs, dynamic=False, options=compile_options)
+                self.compiled_target_joint_dist = torch.compile(
+                    self.target_net.joint_dist, dynamic=False, options=compile_options)
+                for train_states in _variants(bsz, self.device, torch.float32):
+                    with torch.autocast("cuda", dtype=torch.float16, enabled=amp_on):
+                        joint_log_p, joint_logits, move_logits, fire_logits = self.compiled_training_outputs(train_states)
+                        actions = torch.zeros(bsz, device=self.device, dtype=torch.long)
+                        rows = torch.arange(bsz, device=self.device)
+                        selected_log_p = joint_log_p[rows, actions]
+                        dense_target = torch.full_like(selected_log_p, 1.0 / int(RL_CONFIG.num_atoms))
+                        warm_loss = -(dense_target * selected_log_p).sum(dim=1).mean()
+                        warm_loss = warm_loss + F.cross_entropy(joint_logits, actions, reduction="none").mean()
+                        warm_loss = warm_loss + F.cross_entropy(move_logits, actions, reduction="none").mean()
+                        warm_loss = warm_loss + F.cross_entropy(fire_logits, actions, reduction="none").mean()
+                    warm_loss.backward()
+                    self.online_net.zero_grad(set_to_none=True)
+                    with torch.no_grad(), torch.autocast("cuda", dtype=torch.float16, enabled=amp_on):
+                        self.compiled_online_q_joint(train_states)
+                        self.compiled_target_joint_dist(train_states, log=False)
             print(f"torch.compile: training graphs warm ({time.time() - t0:.0f}s)")
 
             # Inference graph: dynamic shapes, eval mode, no autocast.
@@ -355,117 +559,357 @@ class RainbowAgent:
                 torch.cuda.synchronize(self.inference_device)
             print(f"torch.compile: all graphs warm in {time.time() - t0:.0f}s")
         except Exception as e:
+            if self._priority_phase is not None:
+                raise  # Explicit phase cannot silently change the compiled recipe.
             print(f"torch.compile unavailable ({type(e).__name__}: {e}) — running eager")
             self.compiled_online_joint_dist = None
             self.compiled_online_q_joint = None
+            self.compiled_online_bc_logits = None
+            self.compiled_training_outputs = None
+            self.compiled_training_loss = None
+            self.compiled_training_loss_diagnostics = None
             self.compiled_target_joint_dist = None
             self.compiled_infer_q_joint = None
+
+    def _setup_exact_inference_graphs(self):
+        """Capture all exact sizes serially; no replay/optimizer construction here."""
+        if not self.use_separate_inference or self._inference_stream is None:
+            raise ExactInferenceGraphError("Exact graphs require the separate same-GPU inference stream")
+        try:
+            budget = int(os.getenv("DQN_EXACT_GRAPH_BUDGET_BYTES", str(10 * (1 << 30))))
+            self._exact_inference_graphs = ExactInferenceGraphs(
+                torch, self.infer_net, self.compiled_infer_q_joint,
+                stream=self._inference_stream, lock=self._sync_lock,
+                state_size=self.state_size, budget_bytes=budget)
+        except Exception as exc:
+            if isinstance(exc, ExactInferenceGraphError):
+                raise
+            raise ExactInferenceGraphError("Exact graph startup failed: " + str(exc)) from exc
+        return self._exact_inference_graphs
+
+    def _validate_exact_inference_graphs(self):
+        """All-shape checkpoint parity while load's learner/prefetch guard holds."""
+        graphs = getattr(self, "_exact_inference_graphs", None)
+        if graphs is None:
+            return
+        samples = None
+        memory = getattr(self, "memory", None)
+        if memory is not None:
+            # Fixed rows, never sample replay or advance its RNG/priorities.
+            with memory.lock:
+                count = min(128, len(memory))
+                if count:
+                    fixed = np.array(memory.states[:count], dtype=np.float32, copy=True)
+            if count:
+                samples = torch.from_numpy(np.tile(fixed, (math.ceil(128 / count), 1))[:128].copy())
+        graphs.validate(samples=samples)
+        self._exact_graph_loaded = True
 
     def _sync_inference(self, force=False):
         if not self.use_separate_inference:
             return
-        # Behavior lock (ratchet, 2026-07-15): when set, the fleet keeps acting
-        # on the weights already in the inference net (the measured INCUMBENT)
-        # while the online net trains candidate windows.  Without this, every
-        # train phase leaks candidate play into the replay ring; as rejected
-        # candidates degrade, the DATA degrades, and the next candidate trains
-        # on worse data — weights roll back, the ring never does.  Measured
-        # overnight 07-15: candidate quality fell 80K -> ~12K across ~100
-        # rejected epochs at IDENTICAL restored weights, purely through this
-        # data spiral.  With the lock, ring data is pegged to incumbent-quality
-        # play forever and every retry is a near-iid draw.  force=True (used by
-        # the ratchet's own freeze/restore transitions) still syncs.
         if not force and getattr(self, "behavior_locked", False):
             return
-        if not force and (self.training_steps - self.last_inference_sync < RL_CONFIG.inference_sync_steps):
+        sync_samples = int(RL_CONFIG.inference_sync_steps) * self.baseline_batch_size
+        if not force and self.optimized_samples - self.last_inference_sync_samples < sync_samples:
             return
-        with self._sync_lock:
-            same_cuda_device = (
-                self.device.type == "cuda"
-                and self.inference_device.type == "cuda"
-                and self.device.index == self.inference_device.index
-            )
-            if self.inference_device.type == "cpu":
-                sd = {k: v.detach().cpu() for k, v in self.online_net.state_dict().items()}
-            elif same_cuda_device:
-                sd = self.online_net.state_dict()
-            else:
-                sd = {k: v.detach().to(self.inference_device) for k, v in self.online_net.state_dict().items()}
-            self.infer_net.load_state_dict(sd, strict=False)
-            self.infer_net.eval()
-            self.last_inference_sync = self.training_steps
-            if self._sync_event is not None:
-                # PERF FIX cherry-picked onto the 415K-era code (2026-07-15).
-                # NOT a learning change — this only removes a stall that was
-                # corrupting the measurement.
-                #
-                # The old bare record() ran on THIS (training) thread's current
-                # device, so the event landed on GPU0's default stream BEHIND the
-                # entire queued training workload.  Every inference batch then
-                # waited ~100ms for training kernels before its ~3ms forward
-                # (measured live: AvgInf 105ms, FPS 4500->280).  The second-order
-                # damage is worse than the latency: frame collection craters while
-                # the trainer keeps stepping, so Rpl/F goes 5 -> 75 and the policy
-                # gets flogged ~75x per frame on a starved data stream.  The
-                # max_samples_per_frame=32 guard does NOT catch this — it averages
-                # cumulatively since load, so a transient stall never trips it.
-                #
-                # Record on the INFERENCE device's stream, after the weight copies
-                # have landed.  The training thread absorbs its own queue drain
-                # here — a cost it pays at its next sync point anyway.
-                if self.device.type == "cuda":
-                    torch.cuda.synchronize(self.device)
-                if self.inference_device.type == "cuda":
-                    torch.cuda.synchronize(self.inference_device)
-                    with torch.cuda.device(self.inference_device):
-                        self._sync_event.record()
-                else:
-                    self._sync_event.record()
-
-    def _infer_q_branched(self, states_t: torch.Tensor):
-        """Return (move_q, fire_q) expected Q-values from the inference net."""
-        net = self.infer_net if self.use_separate_inference else self.online_net
-        net.eval()
-        with torch.no_grad():
-            if self._inference_stream is not None:
-                self._inference_stream.wait_event(self._sync_event)
-                with torch.cuda.stream(self._inference_stream):
-                    return net.q_values_branched(states_t)
-            elif self.use_separate_inference:
+        # Protect CPU checkpoint mutations as well as GPU optimizer writes.
+        # Inference requests use their own stream; the training stream waits
+        # only for this occasional small weight copy, never a device drain.
+        telemetry = getattr(self, "_pipeline_telemetry", None)
+        timings = {} if telemetry is not None else None
+        started = time.perf_counter() if telemetry is not None else 0.0
+        succeeded = False
+        try:
+            with self._training_lock:
+                if timings is not None:
+                    sync_started = time.perf_counter()
+                    timings["training_lock_wait_ms"] = (sync_started - started) * 1000.0
                 with self._sync_lock:
-                    return net.q_values_branched(states_t)
-            return net.q_values_branched(states_t)
+                    if timings is not None:
+                        service_started = time.perf_counter()
+                        timings["sync_lock_wait_ms"] = (service_started - sync_started) * 1000.0
+                    try:
+                        if self._inference_stream is not None:
+                            training_stream = torch.cuda.current_stream(self.device)
+                            source_ready = torch.cuda.Event()
+                            source_ready.record(training_stream)
+                            with torch.cuda.stream(self._inference_stream):
+                                self._inference_stream.wait_event(source_ready)
+                                copy_started = time.perf_counter() if timings is not None else 0.0
+                                try:
+                                    self.infer_net.load_state_dict(self.online_net.state_dict(), strict=False)
+                                finally:
+                                    if timings is not None:
+                                        timings["copy_host_ms"] = (time.perf_counter() - copy_started) * 1000.0
+                                self._sync_event.record(self._inference_stream)
+                            # Do not let the next optimizer mutation alter source weights
+                            # while the inference stream is still copying them.
+                            training_stream.wait_event(self._sync_event)
+                        else:
+                            copy_started = time.perf_counter() if timings is not None else 0.0
+                            try:
+                                if self.inference_device.type == "cpu":
+                                    sd = {k: v.detach().cpu() for k, v in self.online_net.state_dict().items()}
+                                elif self.inference_device == self.device:
+                                    sd = self.online_net.state_dict()
+                                else:
+                                    sd = {k: v.detach().to(self.inference_device)
+                                          for k, v in self.online_net.state_dict().items()}
+                                self.infer_net.load_state_dict(sd, strict=False)
+                            finally:
+                                if timings is not None:
+                                    timings["copy_host_ms"] = (time.perf_counter() - copy_started) * 1000.0
+                        self.infer_net.eval()
+                        graphs = getattr(self, "_exact_inference_graphs", None)
+                        if graphs is not None:
+                            graphs.check_storage()
+                        self.last_inference_sync = self.training_steps
+                        self.last_inference_sync_samples = self.optimized_samples
+                        succeeded = True
+                    finally:
+                        if timings is not None:
+                            timings["service_host_ms"] = (time.perf_counter() - service_started) * 1000.0
+        finally:
+            if timings is not None:
+                timings["total_host_ms"] = (time.perf_counter() - started) * 1000.0
+                telemetry.record_actor_refresh(timings, error=not succeeded, forced=force)
 
-    def _infer_q_joint(self, states_t: torch.Tensor):
-        """Return joint expected Q-values from the inference net."""
+    def pipeline_telemetry_snapshot(self, reset=False):
+        """Return bounded cumulative host timings without taking model locks.
+
+        Inference measures the actual greedy subbatch entering _run_inference.
+        Durations include host waiting/enqueue/readback, not CUDA kernel timing.
+        Reporting uses reset=False; reset=True is an optional atomic drain.
+        """
+        telemetry = getattr(self, "_pipeline_telemetry", None)
+        snapshot = telemetry.snapshot(reset=reset) if telemetry is not None else unavailable_snapshot()
+        graphs = getattr(self, "_exact_inference_graphs", None)
+        snapshot["inference_graphs"] = graphs.snapshot() if graphs is not None else disabled_snapshot()
+        snapshot["native_batch_update"] = batch_update_status()
+        exposure = getattr(self, "_learning_optimizer_exposure", None)
+        optimizer_exposure = exposure.snapshot() if exposure is not None else exposure_disabled_snapshot()
+        memory = getattr(self, "memory", None)
+        getter = getattr(memory, "get_learning_exposure_snapshot", None)
+        replay_exposure = getter() if callable(getter) else exposure_disabled_snapshot()
+        snapshot["learning_exposure"] = dict(optimizer=optimizer_exposure, replay=replay_exposure)
+        return snapshot
+
+    def _validate_measurement_policy(self, state_dict):
+        """Require one complete compatible actor, never a partial warm load."""
+        if not self.use_separate_inference or self.infer_net is self.online_net:
+            raise RuntimeError("Frozen measurement requires a separate inference model")
+        expected = self.infer_net.state_dict()
+        if set(state_dict) != set(expected):
+            missing = sorted(set(expected) - set(state_dict))
+            unexpected = sorted(set(state_dict) - set(expected))
+            raise ValueError(f"Inference policy keys differ: missing={missing}, unexpected={unexpected}")
+        for name, value in state_dict.items():
+            if not isinstance(value, torch.Tensor) or value.shape != expected[name].shape:
+                raise ValueError(f"Inference policy tensor shape differs: {name}")
+            if value.dtype != expected[name].dtype:
+                raise ValueError(f"Inference policy tensor dtype differs: {name}")
+            if value.is_floating_point() and not bool(torch.isfinite(value).all()):
+                raise ValueError(f"Inference policy contains non-finite values: {name}")
+        if "support" in expected and not torch.equal(
+                state_dict["support"].detach().cpu(), expected["support"].detach().cpu()):
+            raise ValueError("Inference policy C51 support differs from the live actor")
+
+    @_with_training_lock
+    def capture_inference_policy(self):
+        """Copy current online actor weights without optimizer/clock mutation."""
+        if not self.use_separate_inference or self.infer_net is self.online_net:
+            raise RuntimeError("Frozen measurement requires a separate inference model")
+        state = {name: value.detach().clone().cpu()
+                 for name, value in self.online_net.state_dict().items()}
+        self._validate_measurement_policy(state)
+        return state
+
+    def prepare_inference_checkpoint(self, filepath):
+        """Validate a preserved actor on CPU before pausing the live learner."""
+        checkpoint = torch.load(filepath, map_location="cpu", weights_only=True)
+        if int(checkpoint.get("engine_version", -1)) != ENGINE_VERSION:
+            raise ValueError("Measurement checkpoint engine version differs")
+        if int(checkpoint.get("state_size", -1)) != int(self.state_size):
+            raise ValueError("Measurement checkpoint state size differs")
+        state = checkpoint.get("online_state_dict")
+        if not isinstance(state, dict):
+            raise ValueError("Measurement checkpoint has no online actor state")
+        self._validate_measurement_policy(state)
+        return state
+
+    def install_inference_policy(self, state_dict):
+        """Replace only existing actor tensor values while training is paused.
+
+        Keeping the infer_net object and its parameter storage preserves the
+        compiled callable's binding. No online/target parameters, optimizer,
+        schedule clocks, or inference-sync sample markers are changed.
+        """
+        with self._training_lock, self._sync_lock:
+            if self.training_enabled:
+                raise RuntimeError("Pause training before installing a measurement actor")
+            if not self.behavior_locked:
+                raise RuntimeError("Lock periodic actor sync before installing a measurement actor")
+            self._validate_measurement_policy(state_dict)
+            if self._inference_stream is not None:
+                self._inference_stream.synchronize()
+                with torch.cuda.stream(self._inference_stream):
+                    self.infer_net.load_state_dict(state_dict, strict=True)
+                    self._sync_event.record(self._inference_stream)
+                self._sync_event.synchronize()
+            elif self.inference_device.type == "cuda":
+                # A different inference GPU has no dedicated shared-GPU stream.
+                with torch.cuda.device(self.inference_device):
+                    torch.cuda.synchronize(self.inference_device)
+                    self.infer_net.load_state_dict(state_dict, strict=True)
+                    torch.cuda.synchronize(self.inference_device)
+            else:
+                self.infer_net.load_state_dict(state_dict, strict=True)
+            self.infer_net.eval()
+            graphs = getattr(self, "_exact_inference_graphs", None)
+            if graphs is not None:
+                graphs.check_storage()
+
+    def _run_inference(self, fn, states_t: torch.Tensor, return_cpu=False, *, graph_cpu=False):
+        """Dispatch on the dedicated stream with explicit tensor ownership.
+
+        CPU inputs are transferred on the inference stream so they do not
+        queue behind training. Live action selection also consumes results on
+        that stream, avoiding a wait inserted into the trainer's default
+        stream. GPU-returning diagnostic callers receive a stream dependency.
+        """
+        graphs = getattr(self, "_exact_inference_graphs", None) if graph_cpu else None
+        if graph_cpu and (graphs is None or not return_cpu or self._inference_stream is None):
+            raise ExactInferenceGraphError("Invalid exact-graph inference route")
+        telemetry = getattr(self, "_pipeline_telemetry", None)
+        sampled = telemetry.begin_inference() if telemetry is not None else False
+        timings = {"batch_size": int(states_t.shape[0])} if sampled else None
+        started = time.perf_counter() if sampled else 0.0
+        succeeded = False
+        train_guard = self._training_lock if not self.use_separate_inference else nullcontext()
+        try:
+            with train_guard:
+                if sampled:
+                    sync_started = time.perf_counter()
+                    if not self.use_separate_inference:
+                        timings["training_lock_wait_ms"] = (sync_started - started) * 1000.0
+                with self._sync_lock:
+                    if sampled:
+                        service_started = time.perf_counter()
+                        timings["sync_lock_wait_ms"] = (service_started - sync_started) * 1000.0
+                    try:
+                        with torch.no_grad():
+                            if self._inference_stream is None:
+                                transfer_started = time.perf_counter() if sampled else 0.0
+                                try:
+                                    inputs = states_t.to(self.inference_device)
+                                finally:
+                                    if sampled:
+                                        timings["input_transfer_host_ms"] = (time.perf_counter() - transfer_started) * 1000.0
+                                dispatch_started = time.perf_counter() if sampled else 0.0
+                                try:
+                                    result = fn(inputs)
+                                finally:
+                                    if sampled:
+                                        timings["dispatch_host_ms"] = (time.perf_counter() - dispatch_started) * 1000.0
+                                if return_cpu:
+                                    readback_started = time.perf_counter() if sampled else 0.0
+                                    try:
+                                        result = (tuple(x.detach().cpu() for x in result)
+                                                  if isinstance(result, tuple) else result.detach().cpu())
+                                    finally:
+                                        if sampled:
+                                            timings["cpu_readback_host_ms"] = (time.perf_counter() - readback_started) * 1000.0
+                            else:
+                                caller_stream = torch.cuda.current_stream(self.inference_device)
+                                if states_t.is_cuda:
+                                    self._inference_stream.wait_stream(caller_stream)
+                                with torch.cuda.stream(self._inference_stream):
+                                    transfer_started = time.perf_counter() if sampled else 0.0
+                                    try:
+                                        if graph_cpu:
+                                            inputs = graphs.prepare_input(states_t)
+                                        else:
+                                            inputs = states_t.to(self.inference_device)
+                                            if inputs.is_cuda:
+                                                inputs.record_stream(self._inference_stream)
+                                    finally:
+                                        if sampled:
+                                            timings["input_transfer_host_ms"] = (time.perf_counter() - transfer_started) * 1000.0
+                                    dispatch_started = time.perf_counter() if sampled else 0.0
+                                    try:
+                                        result = graphs.replay_prepared(inputs) if graph_cpu else fn(inputs)
+                                    finally:
+                                        if sampled:
+                                            timings["dispatch_host_ms"] = (time.perf_counter() - dispatch_started) * 1000.0
+                                    if return_cpu:
+                                        readback_started = time.perf_counter() if sampled else 0.0
+                                        try:
+                                            result = (tuple(x.detach().cpu() for x in result)
+                                                      if isinstance(result, tuple) else result.detach().cpu())
+                                            if graph_cpu:
+                                                graphs.complete_cpu_return()
+                                        finally:
+                                            if sampled:
+                                                timings["cpu_readback_host_ms"] = (time.perf_counter() - readback_started) * 1000.0
+                                if not return_cpu:
+                                    # Diagnostics need the existing stream dependency
+                                    # and ownership before returning CUDA outputs.
+                                    caller_stream.wait_stream(self._inference_stream)
+                                    outputs = result if isinstance(result, tuple) else (result,)
+                                    for output in outputs:
+                                        output.record_stream(caller_stream)
+                            succeeded = True
+                            return result
+                    except Exception as exc:
+                        if graph_cpu:
+                            raise graphs.fail(exc) from exc
+                        raise
+                    finally:
+                        if sampled:
+                            timings["service_host_ms"] = (time.perf_counter() - service_started) * 1000.0
+        finally:
+            # Do not nest this recorder lock inside the inference sync lock.
+            if sampled:
+                timings["total_host_ms"] = (time.perf_counter() - started) * 1000.0
+                telemetry.record_inference(timings, error=not succeeded)
+
+    def _infer_q_branched(self, states_t: torch.Tensor, return_cpu=False):
         net = self.infer_net if self.use_separate_inference else self.online_net
         net.eval()
-        fn = self.compiled_infer_q_joint or net.q_values_joint
-        with torch.no_grad():
+        return self._run_inference(net.q_values_branched, states_t, return_cpu=return_cpu)
+
+    def _infer_q_joint(self, states_t: torch.Tensor, return_cpu=False):
+        net = self.infer_net if self.use_separate_inference else self.online_net
+        net.eval()
+
+        graphs = getattr(self, "_exact_inference_graphs", None)
+        if graphs is not None and self.compiled_infer_q_joint is not graphs.compiled:
+            raise graphs.fail(ExactInferenceGraphError("Captured compiled actor callable changed"))
+        if graphs is not None and not getattr(self, "_exact_graph_loaded", False):
+            raise graphs.fail(ExactInferenceGraphError("Graph checkpoint has not passed post-load validation"))
+        if graphs is not None and return_cpu:
+            return self._run_inference(self.compiled_infer_q_joint, states_t,
+                                       return_cpu=True, graph_cpu=True)
+
+        def forward(inputs):
+            if graphs is not None:
+                graphs.note_compiled_diagnostic()
+            fn = self.compiled_infer_q_joint or net.q_values_joint
             try:
-                if self._inference_stream is not None:
-                    self._inference_stream.wait_event(self._sync_event)
-                    with torch.cuda.stream(self._inference_stream):
-                        return fn(states_t)
-                elif self.use_separate_inference:
-                    with self._sync_lock:
-                        return fn(states_t)
-                return fn(states_t)
+                return fn(inputs)
             except Exception as e:
-                if self.compiled_infer_q_joint is not None:
-                    # Transient (e.g. a rare re-trace racing another thread's
-                    # trace): serve this call eagerly, keep compiled for the
-                    # next one. Only disable permanently if it keeps failing.
-                    self._compiled_infer_failures = getattr(self, "_compiled_infer_failures", 0) + 1
-                    if self._compiled_infer_failures >= 20:
-                        print(f"[WARN] compiled inference failed {self._compiled_infer_failures}x "
-                              f"({type(e).__name__}: {e}) — disabling, eager from now on")
-                        self.compiled_infer_q_joint = None
-                    elif self._compiled_infer_failures <= 3:
-                        print(f"[WARN] compiled inference transient failure "
-                              f"({type(e).__name__}: {e}) — serving eagerly")
-                    return net.q_values_joint(states_t)
-                raise
+                if graphs is not None:
+                    raise graphs.fail(e) from e
+                if self.compiled_infer_q_joint is None:
+                    raise
+                # Disable the failing callable immediately: repeated retracing
+                # can contend with training compilation and worsen latency.
+                print(f"[WARN] compiled inference failed ({type(e).__name__}: {e}) — falling back to eager")
+                self.compiled_infer_q_joint = None
+                return net.q_values_joint(inputs)
+
+        return self._run_inference(forward, states_t, return_cpu=return_cpu)
 
     @staticmethod
     def _sample_from_scores(scores: np.ndarray, temperature: float) -> int:
@@ -561,8 +1005,8 @@ class RainbowAgent:
                 fr = max(0, min(NUM_FIRE - 1, int(locked_fire)))
             return mv, fr, is_eps
 
-        st = torch.from_numpy(state).float().unsqueeze(0).to(self.inference_device)
-        joint_q = self._infer_q_joint(st)
+        st = torch.from_numpy(state).float().unsqueeze(0)
+        joint_q = self._infer_q_joint(st, return_cpu=True)
         if locked_fire is not None:
             lf = max(0, min(NUM_FIRE - 1, int(locked_fire)))
             move_idx = int(joint_q.view(1, NUM_MOVE, NUM_FIRE)[0, :, lf].argmax().item())
@@ -577,8 +1021,8 @@ class RainbowAgent:
         Used to inspect whether the dueling advantage stream has collapsed
         (near-identical Q across actions ⇒ argmax is effectively random).
         """
-        st = torch.from_numpy(np.asarray(state, dtype=np.float32)).float().unsqueeze(0).to(self.inference_device)
-        joint_q = self._infer_q_joint(st).view(1, NUM_MOVE, NUM_FIRE)
+        st = torch.from_numpy(np.asarray(state, dtype=np.float32)).float().unsqueeze(0)
+        joint_q = self._infer_q_joint(st, return_cpu=True).view(1, NUM_MOVE, NUM_FIRE)
         move_q = joint_q.max(dim=2).values
         fire_q = joint_q.max(dim=1).values
         return move_q.squeeze(0).detach().cpu().tolist(), fire_q.squeeze(0).detach().cpu().tolist()
@@ -609,10 +1053,10 @@ class RainbowAgent:
 
         if greedy_idx:
             batch_np = np.asarray(greedy_states, dtype=np.float32)
-            st = torch.from_numpy(batch_np).to(self.inference_device)
-            joint_q = self._infer_q_joint(st)
-            joint_best = joint_q.argmax(dim=1).detach().cpu().tolist()
-            joint_q_np = joint_q.detach().cpu().numpy().reshape(len(greedy_idx), NUM_MOVE, NUM_FIRE)
+            st = torch.from_numpy(batch_np)
+            joint_q = self._infer_q_joint(st, return_cpu=True)
+            joint_q_np = joint_q.numpy().reshape(len(greedy_idx), NUM_MOVE, NUM_FIRE)
+            joint_best = joint_q_np.reshape(len(greedy_idx), NUM_JOINT).argmax(axis=1).tolist()
             for row, (pos, ji) in enumerate(zip(greedy_idx, joint_best)):
                 locked_fire = locked_fires[pos] if pos < len(locked_fires) else None
                 if locked_fire is not None:
@@ -638,8 +1082,12 @@ class RainbowAgent:
             boost = float(getattr(RL_CONFIG, "death_priority_boost", 0.0))
             if boost > 0:
                 pri = max(abs(pri), boost) * (-1.0 if pri < 0 else 1.0)
-        self.memory.add(state, action_idx, float(reward), next_state, bool(done), int(horizon), is_expert,
-                priority_hint=pri, interest=interest, actor_kind=actor_kind)
+        if getattr(self.memory, "_insert_exposure", None) is None:
+            self.memory.add(state, action_idx, float(reward), next_state, bool(done), int(horizon), is_expert,
+                    priority_hint=pri, interest=interest, actor_kind=actor_kind)
+        else:
+            self.memory.add(state, action_idx, float(reward), next_state, bool(done), int(horizon), is_expert,
+                    priority_hint=pri, interest=interest, actor_kind=actor_kind, source_actor=actor)
         # Return the index of the just-written transition for pre-death tracking
         try:
             return int(self.memory.tree.data_ptr - 1) % self.memory.capacity
@@ -648,8 +1096,12 @@ class RainbowAgent:
 
     # ── Background training ─────────────────────────────────────────────
     def _background_train(self):
-        pending_batch = None                  # prefetched batch for next step
         while self.running:
+            # Resume-only opt-in never optimizes random weights before load.
+            if getattr(self, "_exact_graph_requested", False) and not self._exact_graph_loaded:
+                time.sleep(0.01)
+                continue
+            pending_batch = None
             try:
                 try:
                     tok = self._train_queue.get_nowait()
@@ -659,61 +1111,119 @@ class RainbowAgent:
                     pass
 
                 if not self.training_enabled or not getattr(metrics, "training_enabled", True):
-                    pending_batch = None
                     time.sleep(0.01)
                     continue
 
                 did = False
                 for _ in range(RL_CONFIG.training_steps_per_cycle):
-                    loss = train_step(self, prefetched_batch=pending_batch)
-                    pending_batch = None      # consumed
+                    if not self.running:
+                        break
+                    if replay_pressure_reached(self):
+                        metrics.replay_pressure_waits = getattr(metrics, "replay_pressure_waits", 0) + 1
+                        break
+                    pending_batch = self._prefetch_batch()
+                    if self._prefetcher is not None and pending_batch is None:
+                        break
+                    with self._training_lock:
+                        if pending_batch is not None and not getattr(pending_batch, "is_current", True):
+                            pending_batch.release()
+                            pending_batch = None
+                            continue
+                        try:
+                            loss = train_step(self, prefetched_batch=pending_batch)
+                        finally:
+                            if pending_batch is not None and hasattr(pending_batch, "release"):
+                                pending_batch.release()
+                            pending_batch = None
                     if loss is None:
                         break
                     did = True
-                    pending_batch = self._prefetch_batch()
                 if not did:
-                    pending_batch = None
                     time.sleep(0.002)
             except Exception as e:
-                pending_batch = None
+                if pending_batch is not None and hasattr(pending_batch, "release"):
+                    pending_batch.release()
                 print(f"Training error: {e}")
+                if self._priority_phase is not None:
+                    self._priority_phase.invalidate(e)
+                    self.training_enabled = False
+                    traceback.print_exc()
+                    continue  # Retain compiler/outcome failure; no fallback/rescue.
                 traceback.print_exc()
-                if self.compiled_online_joint_dist is not None:
+                if (self.compiled_online_joint_dist is not None
+                        or self.compiled_training_outputs is not None
+                        or self.compiled_training_loss is not None):
                     print("[WARN] disabling torch.compile for training after error — falling back to eager")
                     self.compiled_online_joint_dist = None
                     self.compiled_online_q_joint = None
+                    self.compiled_online_bc_logits = None
+                    self.compiled_training_outputs = None
+                    self.compiled_training_loss = None
+                    self.compiled_training_loss_diagnostics = None
                     self.compiled_target_joint_dist = None
                 time.sleep(0.1)
 
     def _prefetch_batch(self):
-        """Pre-sample a batch from replay so it's ready for the next step."""
+        """Consume producer-prepared replay; retain a portable fallback."""
+        if self._prefetcher is not None:
+            try:
+                return self._prefetcher.get(timeout=0.05)
+            except Exception as e:
+                print(f"[WARN] replay prefetch failed ({e}) — falling back to synchronous sampling")
+                self._prefetcher.close()
+                self._prefetcher = None
         try:
             if len(self.memory) < max(RL_CONFIG.min_replay_to_train, RL_CONFIG.batch_size):
                 return None
             beta = _beta_schedule(metrics.frame_count)
-            t0 = time.time()
-            batch = self.memory.sample(RL_CONFIG.batch_size, beta=beta)
-            self._pending_batch_sample_ms = (time.time() - t0) * 1000.0
+            t0 = time.perf_counter()
+            if self._recomputed_ce_capture is None:
+                batch = self.memory.sample(RL_CONFIG.batch_size, beta=beta)
+            else:
+                batch = self._recomputed_ce_capture.sample(self.memory, RL_CONFIG.batch_size, beta)
+            self._pending_batch_sample_ms = (time.perf_counter() - t0) * 1000.0
             return batch
         except Exception:
             self._pending_batch_sample_ms = 0.0
             return None
 
+    def _pause_prefetch(self):
+        self._prefetch_paused = True
+        if self._prefetcher is not None:
+            if not self._prefetcher.invalidate(wait=True, timeout=10.0):
+                raise TimeoutError("Replay producer did not quiesce; refusing replay/checkpoint mutation")
+
+    def _resume_prefetch(self):
+        if self._prefetcher is not None:
+            if not self._prefetcher.invalidate(wait=True, timeout=10.0):
+                raise TimeoutError("Replay producer did not quiesce; leaving prefetch paused")
+        self._prefetch_paused = False
+
     # ── Target update ───────────────────────────────────────────────────
     def update_target(self, tau: float = None):
-        if tau is None:
-            tau = RL_CONFIG.target_tau
-        if tau >= 1.0:
-            self.target_net.load_state_dict(self.online_net.state_dict())
-        else:
-            for tp, op in zip(self.target_net.parameters(), self.online_net.parameters()):
-                tp.data.mul_(1.0 - tau).add_(op.data, alpha=tau)
-        self.target_net.eval()
+        telemetry = getattr(self, "_pipeline_telemetry", None)
+        started = time.perf_counter() if telemetry is not None else 0.0
+        succeeded = False
         try:
-            metrics.last_target_update_step = metrics.total_training_steps
-            metrics.last_target_update_time = time.time()
-        except Exception:
-            pass
+            if tau is None:
+                tau = RL_CONFIG.target_tau
+            if tau >= 1.0:
+                self.target_net.load_state_dict(self.online_net.state_dict())
+            else:
+                for tp, op in zip(self.target_net.parameters(), self.online_net.parameters()):
+                    tp.data.mul_(1.0 - tau).add_(op.data, alpha=tau)
+            self.target_net.eval()
+            self.last_target_update_samples = self.optimized_samples
+            try:
+                metrics.last_target_update_step = metrics.total_training_steps
+                metrics.last_target_update_time = time.time()
+            except Exception:
+                pass
+            succeeded = True
+        finally:
+            if telemetry is not None:
+                telemetry.record_target_refresh((time.perf_counter() - started) * 1000.0,
+                                                error=not succeeded)
 
     # ── Save / Load ─────────────────────────────────────────────────────
     @staticmethod
@@ -778,6 +1288,27 @@ class RainbowAgent:
             }
         return out
 
+    def _load_optimizer_state_dict(self, state_dict: dict):
+        """Keep this run's Adam implementation while restoring its moments.
+
+        Older checkpoints contain fused=None in their parameter groups; plain
+        load_state_dict would overwrite a newly selected fused CUDA optimizer.
+        Set implementation flags before loading so PyTorch also places Adam's
+        step counters on CUDA as required by its fused kernels.
+        """
+        fused = self.optimizer.defaults.get("fused", None)
+        foreach = False if fused else self.optimizer.defaults.get("foreach", None)
+        restored = dict(state_dict)
+        restored["param_groups"] = [
+            dict(group, fused=fused, foreach=foreach)
+            for group in state_dict.get("param_groups", [])
+        ]
+        exposure = getattr(self, "_learning_optimizer_exposure", None)
+        if exposure is not None:
+            exposure.new_epoch("optimizer_restore_begin")
+        self.optimizer.load_state_dict(restored)
+
+    @_with_training_lock
     def snapshot_training_state(self) -> dict:
         with self._sync_lock:
             return {
@@ -786,6 +1317,9 @@ class RainbowAgent:
                 "optimizer": self._optimizer_state_to_cpu(self.optimizer.state_dict()),
                 "scaler": (self.grad_scaler.state_dict() if self.grad_scaler is not None else None),
                 "training_steps": int(self.training_steps),
+                "optimized_samples": int(self.optimized_samples),
+                "baseline_batch_size": int(self.baseline_batch_size),
+                "last_target_update_samples": int(self.last_target_update_samples),
                 # Schedule clocks (review fix): expert/epsilon/BC schedules key
                 # off metrics counters, not agent.training_steps — a rollback
                 # that skips them would retrain every retry under a slightly
@@ -798,7 +1332,10 @@ class RainbowAgent:
         with metrics.lock:
             return {
                 "total_training_steps": int(getattr(metrics, "total_training_steps", 0)),
+                "total_optimized_samples": int(getattr(metrics, "total_optimized_samples", 0)),
                 "learner_frame_count": int(getattr(metrics, "learner_frame_count", 0)),
+                "measurement_frame_count": int(getattr(metrics, "measurement_frame_count", 0)),
+                "loaded_measurement_frame_count": int(getattr(metrics, "loaded_measurement_frame_count", 0)),
                 "expert_ratio": float(getattr(metrics, "expert_ratio", 0.0)),
                 "epsilon": float(getattr(metrics, "epsilon", 0.0)),
             }
@@ -812,6 +1349,7 @@ class RainbowAgent:
                 except Exception:
                     pass
 
+    @_with_training_paused
     def restore_training_state(self, snap: dict, sync_inference: bool = True):
         with self._sync_lock:
             # load_state_dict copies into the existing device tensors, and
@@ -819,13 +1357,15 @@ class RainbowAgent:
             # device/dtype — CPU-held snapshots restore cleanly onto CUDA.
             self.online_net.load_state_dict(snap["online"])
             self.target_net.load_state_dict(snap["target"])
-            self.optimizer.load_state_dict(snap["optimizer"])
+            self._load_optimizer_state_dict(snap["optimizer"])
             if snap.get("scaler") is not None and self.grad_scaler is not None:
                 try:
                     self.grad_scaler.load_state_dict(snap["scaler"])
                 except Exception:
                     pass
             self.training_steps = int(snap["training_steps"])
+            self.optimized_samples = int(snap.get("optimized_samples", self.training_steps * self.baseline_batch_size))
+            self.last_target_update_samples = int(snap.get("last_target_update_samples", self._legacy_target_update_samples()))
         clocks = snap.get("metrics_clocks")
         if clocks:
             self._restore_metrics_clocks(clocks)
@@ -837,34 +1377,42 @@ class RainbowAgent:
         if sync_inference:
             self._sync_inference(force=True)
 
+    @_with_training_lock
     def save(self, filepath, is_forced_save=False, show_status=True, save_replay=None):
         try:
             with metrics.lock:
                 fc = int(metrics.frame_count)
                 lfc = int(getattr(metrics, "learner_frame_count", 0))
+                mfc = int(getattr(metrics, "measurement_frame_count", 0))
                 ts = int(metrics.total_training_steps)
                 er = float(metrics.expert_ratio)
                 ep = float(metrics.epsilon)
         except Exception:
-            fc, lfc, ts, er, ep = 0, 0, self.training_steps, RL_CONFIG.expert_ratio_start, RL_CONFIG.epsilon_start
+            fc, lfc, mfc, ts, er, ep = 0, 0, 0, self.training_steps, RL_CONFIG.expert_ratio_start, RL_CONFIG.epsilon_start
 
         ckpt = {
             "online_state_dict": self.online_net.state_dict(),
             "target_state_dict": self.target_net.state_dict(),
             "optimizer_state_dict": self.optimizer.state_dict(),
             "training_steps": self.training_steps,
+            "optimized_samples": int(self.optimized_samples),
+            "baseline_batch_size": int(self.baseline_batch_size),
+            "last_target_update_samples": int(self.last_target_update_samples),
             "frame_count": fc,
             "learner_frame_count": lfc,
+            "measurement_frame_count": mfc,
             "total_training_steps": ts,
             "expert_ratio": er,
             "epsilon": ep,
             "engine_version": ENGINE_VERSION,
-            "lr_anchor_step": int(getattr(self, "lr_anchor_step", 0)),
+            "lr_anchor_step": float(getattr(self, "lr_anchor_step", 0)),
             "lr_gear": str(getattr(self, "lr_gear", "climb")),
             "state_size": self.state_size,
             "single_frame_state_size": int(getattr(RL_CONFIG, "single_frame_state_size", self.state_size)),
             "frame_stack": int(getattr(RL_CONFIG, "frame_stack", 1)),
         }
+        if self._priority_phase is not None:
+            ckpt["priority_metric_phase"] = self._priority_phase.snapshot()
         if hasattr(self, "grad_scaler") and self.grad_scaler is not None:
             ckpt["grad_scaler_state_dict"] = self.grad_scaler.state_dict()
         if show_status:
@@ -901,17 +1449,38 @@ class RainbowAgent:
             except Exception as e:
                 print(f"  Replay buffer save failed: {e}")
 
+    @_with_training_paused
     def load(self, filepath, show_status=True) -> bool:
+        priority_checkpoint_present = False
+        graph_requested = bool(getattr(self, "_exact_graph_requested", False))
+        if graph_requested:
+            self._exact_graph_loaded = False
+            required = getattr(self, "_exact_graph_checkpoint", None)
+            if not required or os.path.realpath(filepath) != required or not os.path.isfile(filepath):
+                raise ExactInferenceGraphError("Graph mode refuses a missing or unexpected checkpoint path")
         if not os.path.exists(filepath):
             return False
         try:
             if show_status:
                 self._text_progress("  Model load", 0.0)
             ckpt = torch.load(filepath, map_location=self.device, weights_only=False)
+            priority_checkpoint_present = ckpt.get("priority_metric_phase") is not None
+            if self._priority_phase is not None or priority_checkpoint_present:
+                try:
+                    from .priority_phase import require_checkpoint_phase
+                except ImportError:
+                    from priority_phase import require_checkpoint_phase
+                require_checkpoint_phase(ckpt, self._priority_metric, self._priority_phase)
+                if self._priority_phase is not None:
+                    self._priority_phase.before_load(filepath, ckpt)
             if show_status:
                 self._text_progress("  Model load", 1.0)
 
+            if graph_requested and int(ckpt.get("engine_version", 0)) != ENGINE_VERSION:
+                raise ExactInferenceGraphError("Graph resume requires the exact checkpoint engine")
             if int(ckpt.get("engine_version", 0)) < ENGINE_VERSION:
+                if graph_requested:
+                    raise ExactInferenceGraphError("Graph resume refuses an incompatible checkpoint engine")
                 print("⚠  Incompatible checkpoint engine version — starting fresh.")
                 return False
 
@@ -928,27 +1497,37 @@ class RainbowAgent:
                 except Exception:
                     arch_changed = True
 
+            if graph_requested and (arch_changed or (set(m1) - {"support"}) or u1
+                                    or (set(m2) - {"support"}) or u2):
+                raise ExactInferenceGraphError("Graph resume refuses a partial/changed checkpoint actor")
             opt_sd = ckpt.get("optimizer_state_dict")
             opt_loaded = False
             if opt_sd and not arch_changed:
                 try:
-                    self.optimizer.load_state_dict(opt_sd)
+                    self._load_optimizer_state_dict(opt_sd)
                     opt_loaded = True
                 except Exception as e:
                     print(f"Optimizer state skipped: {e}")
             elif opt_sd:
                 print("Optimizer state skipped: checkpoint state shape differs from current frame stack.")
 
+            if graph_requested and not opt_loaded:
+                raise ExactInferenceGraphError("Graph resume refuses absent/failed optimizer restoration")
             gs_sd = ckpt.get("grad_scaler_state_dict")
             if gs_sd and hasattr(self, "grad_scaler") and self.grad_scaler is not None:
                 try:
                     self.grad_scaler.load_state_dict(gs_sd)
                 except Exception as e:
+                    if graph_requested:
+                        raise ExactInferenceGraphError("Graph resume GradScaler restoration failed: " + str(e)) from e
                     print(f"GradScaler state skipped: {e}")
 
             self.training_steps = ckpt.get("training_steps", 0)
             self.loaded_training_steps = self.training_steps
-            self.lr_anchor_step = int(ckpt.get("lr_anchor_step", 0))
+            self.optimized_samples = int(ckpt.get("optimized_samples", self.training_steps * self.baseline_batch_size))
+            self.loaded_optimized_samples = self.optimized_samples
+            self.last_target_update_samples = int(ckpt.get("last_target_update_samples", self._legacy_target_update_samples()))
+            self.lr_anchor_step = float(ckpt.get("lr_anchor_step", 0))
             # Gear persistence.  Checkpoints from before the gearbox existed
             # load conservatively as HOLD: any pre-gearbox checkpoint worth
             # loading is an advanced policy, and hot LR is what kills those
@@ -962,7 +1541,7 @@ class RainbowAgent:
                 # the 204,914 policy to ~138K within ~15K steps (2026-07-17);
                 # ramping LR from 5% over 8K steps (~5 min) absorbs the cold
                 # phase while the moment estimates converge.
-                self.ratchet_warmup_start_step = int(self.training_steps)
+                self.ratchet_warmup_start_step = self.schedule_steps
                 self.ratchet_warmup_steps = 8_000
                 print("  Optimizer state absent/stale — armed 8,000-step LR warmup")
             self._sync_inference(force=True)
@@ -978,11 +1557,19 @@ class RainbowAgent:
 
             try:
                 with metrics.lock:
+                    metrics.total_optimized_samples = self.optimized_samples
+                    metrics.loaded_optimized_samples = self.optimized_samples
+                    # Discard an empty-buffer budget observed by the producer
+                    # before this checkpoint's clocks/replay were installed.
+                    self.__dict__.pop('_replay_pressure_anchor', None)
+                    self.__dict__.pop('_replay_warmup_pending', None)
                     if not RESET_METRICS:
                         metrics.expert_ratio = ckpt.get("expert_ratio", RL_CONFIG.expert_ratio_start)
                         metrics.epsilon = ckpt.get("epsilon", RL_CONFIG.epsilon_start)
                         metrics.frame_count = int(ckpt.get("frame_count", 0))
                         metrics.learner_frame_count = int(ckpt.get("learner_frame_count", 0))
+                        metrics.measurement_frame_count = int(ckpt.get("measurement_frame_count", 0))
+                        metrics.loaded_measurement_frame_count = metrics.measurement_frame_count
                         metrics.loaded_frame_count = metrics.frame_count
                         metrics.total_training_steps = int(ckpt.get("total_training_steps", self.training_steps))
                     else:
@@ -990,6 +1577,8 @@ class RainbowAgent:
                         metrics.epsilon = RL_CONFIG.epsilon_start
                         metrics.frame_count = 0
                         metrics.learner_frame_count = 0
+                        metrics.measurement_frame_count = 0
+                        metrics.loaded_measurement_frame_count = 0
                         metrics.loaded_frame_count = 0
                         metrics.total_training_steps = self.training_steps
             except Exception:
@@ -1008,12 +1597,27 @@ class RainbowAgent:
                 except Exception as e:
                     print(f"  Replay buffer load failed: {e}")
 
+            if graph_requested:
+                if arch_changed:
+                    raise ExactInferenceGraphError("Graph resume refuses changed checkpoint geometry")
+                self._validate_exact_inference_graphs()
+            if self._priority_phase is not None:
+                self._priority_phase.finish_load(filepath)
             return True
         except Exception as e:
+            if self._priority_phase is not None or priority_checkpoint_present:
+                if self._priority_phase is not None:
+                    self._priority_phase.invalidate(e)
+                raise
+            if graph_requested:
+                graphs = getattr(self, "_exact_inference_graphs", None)
+                error = graphs.fail(e) if graphs is not None else ExactInferenceGraphError(str(e))
+                raise error from e
             print(f"Error loading {filepath}: {e}")
             traceback.print_exc()
             return False
 
+    @_with_training_paused
     def flush_replay_buffer(self):
         """Clear the entire replay buffer."""
         self.memory.flush()
@@ -1026,12 +1630,13 @@ class RainbowAgent:
             batch = self.memory.sample(64, beta=0.4)
             if batch is None:
                 return float("nan"), float("nan")
-            st = torch.from_numpy(batch[0]).to(self.inference_device).float()
-            joint_q = self._infer_q_joint(st)
+            st = torch.from_numpy(batch[0]).float()
+            joint_q = self._infer_q_joint(st, return_cpu=True)
             return float(joint_q.min().item()), float(joint_q.max().item())
         except Exception:
             return float("nan"), float("nan")
 
+    @_with_training_paused
     def reset_attention_weights(self):
         """Reinitialize enemy/action attention weights, keeping trunk and heads intact."""
         def attention_modules(net):
@@ -1049,6 +1654,9 @@ class RainbowAgent:
         if not modules:
             print("No attention layer to reset.")
             return
+        exposure = getattr(self, "_learning_optimizer_exposure", None)
+        if exposure is not None:
+            exposure.new_epoch("attention_reset_begin")
         for net in (self.online_net, self.target_net):
             for root in attention_modules(net):
                 for m in root.modules():
@@ -1128,9 +1736,11 @@ class RainbowAgent:
         except queue.Full:
             pass
         try:
-            self._train_thread.join(timeout=3.0)
+            self._train_thread.join(timeout=30.0)
         except Exception:
             pass
+        if self._prefetcher is not None:
+            self._prefetcher.close()
 
 
 # ── Interactive terminal keyboard handler ───────────────────────────────────

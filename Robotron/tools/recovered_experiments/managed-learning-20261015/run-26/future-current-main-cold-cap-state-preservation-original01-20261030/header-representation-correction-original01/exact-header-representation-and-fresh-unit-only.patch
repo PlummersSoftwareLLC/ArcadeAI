@@ -1,0 +1,20 @@
+--- verify_current_continuous_stopped_fullstate_v3.py
++++ verify_current_continuous_stopped_fullstate_v4.py
+@@ -349,7 +349,7 @@
+             moving={'captured_adds.npy','stale_age.npy','stale_age_normal.npy'}
+             require(set(left)==set(right)and all(left[key]==right[key]for key in set(left)-moving)
+                 and bank['transitions']==prior['transitions']
+-                and all(prior['arrays'][key]['header']==bank['arrays'][key]['header']
++                and all(json.dumps(prior['arrays'][key]['header'],sort_keys=True,allow_nan=False)==json.dumps(bank['arrays'][key]['header'],sort_keys=True,allow_nan=False)
+                     and prior['arrays'][key]['bytes']==bank['arrays'][key]['bytes']for key in prior['arrays']),
+                 'Unchanged clean bank episode metadata/geometry moved: '+name)
+     return dict(final_synchronous_bank_generations_verified=True,target_revisions=intent['target_revisions'],
+@@ -393,7 +393,7 @@
+     job=read(job_pin)
+     require(job['schema']==SCHEMA and job['source']==self_pin and job['original_attempt']==1 and job['no_retry']is True,
+         'Exact original stopped CPU job required')
+-    require(job['unit']=='robotron-current-continuous-stopped600-'+job['current_selection']['sha256'][:16]+'.service',
++    require(job['unit']=='robotron-current-continuous-header-stopped600-'+job['current_selection']['sha256'][:16]+'.service',
+         'Unique original stopped-state CPU unit required')
+     raw=subprocess.check_output(['systemctl','--user','show',job['unit']],text=True,timeout=10)
+     fields=dict(line.split('=',1)for line in raw.splitlines()if'='in line)

@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/hot-LR9375-applied120k-replay40M-learner32M-original01-20261031/selected-source/copy_managed_LR9375_dose_policy_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-repair-LR625-applied60k-replay20M-learner16M-original01-20261031/future-post-dose-policy-capture-source-only-original01/copy_named_post_repair_LR625_policy_v1.py
+@@ -15,7 +15,7 @@
+ ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ AGENT = ROOT / 'Scripts/dqn/agent.py'
+ AGENT_SHA = 'd2a95ff0828df2a00ac86049965b6df304d26b50263b76d027d27a586ff77152'
+-LATEST = ROOT / 'models_dqn/managed-checkpoints/LR9375-dose120k-replay40M-learner32M-original01-20261031.pt'
++LATEST = ROOT / 'models_dqn/managed-checkpoints/post-repair-LR625-dose60k-replay20M-learner16M-original01-20261031.pt'
+ 
+ 
+ def require(value, reason):

@@ -1,0 +1,218 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window02-D6-selected-metadata600-original01-preparation/prepare_window02_D6_metadata600_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-selected-metadata600-original01-preparation/prepare_window03_D7_metadata600_v1.py
+@@ -1,4 +1,4 @@
+-"""Inert NEW02/D6 metadata600 preparation and owned closeout; never launches.
++"""Inert NEW03/D7 metadata600 preparation and owned closeout; never launches.
+ 
+ Actual endpoint/profile completion is mandatory before materializing any job.
+ The default guard packet produced by the metadata payload is not selected for
+@@ -15,21 +15,19 @@
+ G=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ B=G/'logs/managed-learning-20261015/run-26'
+ I=B/'post-recovery-evaluation-isolation-original01-20261027'
+-W=B/'post-natural-turnover-durable-next-candidate-20261029-original02'
+-N=B/'post-natural-turnover-durable-next-candidate-20261029-original02-preparation'
+-F=I/'declared-launcher-evaluator-adapters-original06-fresh-study-namespaces-preparation/source-family-original02-unit-authority'
++W=B/'post-natural-turnover-durable-next-candidate-20261029-original03'
++N=B/'post-natural-turnover-durable-next-candidate-20261029-original03-preparation'
++F=I/'declared-launcher-evaluator-adapters-original07-proof2s-preparation/source-family-original01'
+ R=F/'metadata600-resource-templates-original01'
+ HERE=Path(__file__).resolve().parent
+ META=HERE/'actual-metadata-preparation-original01'
+-STUDY=I/'durable-window02-D6-fixed-RCRC-study-original01'
+-JOINT=I/'retired-api-row-projection-original01-preparation/engineering-contexts-original01-preparation/actual-current-main-contexts-original01/independent-retired-API-joint-engineering-qualification-original01.json'
+-FAMILY_SHA='89deb47e7cfa86a432ee46f888fe2ae557d8235b7e5b3870128f200f1493ed3b'
+-CONSTRUCTION_SHA='f3e835f7217bb82f07930183835c37e7645669e2ac5c67ce3133fc29f5920c0f'
+-JOINT_SHA='fc8e681804c7dbc72daec7b4d8487f813b048b3b8809b5765943745b163b12ba'
+-PLAN_SHA='0e12974bac193fc75e7d55b9746564d0e7d6d0ec7db98082b54b90d412f7c170'
+-DRIVER_SHA='f9f22173a954d70b30ea6443d2d2d579fb0162c474b534bfc74bc1020f17b71b'
++STUDY=I/'durable-window03-D7-fixed-RCRC-study-original01'
++FAMILY_SHA='19d77e8e7bb8802f006b395b165cd7e85b175c7e70f71dbebb4e0404f82a3f35'
++CONSTRUCTION_SHA='3d6ce1ff1c8cce15897e9f3ce61fbef479f3f3f0b3b18d6ae212b39b1aac7069'
++PLAN_SHA='43ace243055948eba395f97ba96faef339997c5d94cec6b50aea3104dbe9ae68'
++DRIVER_SHA='0d35f19fd52d90936ba356692a3f893649489bfa7fcaca85d47de114b48a3a6e'
+ CONTROL_SHA='5679d36399de4f0c7cc83edd900728112110115fb9f9d44d20c9a3e3b7753f55'
+-CLOSER_SHA='ad8c79d8a038667a1ca75cd1fe249a22dff0d34920c86d28ffbe8ec1d83aa84f'
++CLOSER_SHA='b8f16c4040a243431d311408ab2e07e0f0f8e2eff9219fce2d0fb466a5ac5987'
+ 
+ 
+ def require(value,message):
+@@ -43,7 +41,7 @@
+ 
+ 
+ def helpers():
+-    return module('_window02_D6_metadata_helpers',G/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py',
++    return module('_window03_D7_metadata_helpers',G/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py',
+         '2b6902933b502ac20dacbd444fbf786315d6c960fcad1d5b5bf223dd569708c1')
+ 
+ 
+@@ -58,29 +56,51 @@
+ 
+ 
+ def selected_sources(h):
+-    family,fp=metadata(h,F/'prepared-final-D6-retired-API-fresh-study-namespace-family-SOURCE-ONLY.json',FAMILY_SHA)
+-    construction,cp=metadata(h,F/'source-construction.json',CONSTRUCTION_SHA)
+-    values=[fp,cp]
+-    require(len(construction['records'])==32 and family['observer_dependency_count']==10
+-        and family['historical_main_input_count']==247,'Exact D6 source inventory required')
++    family,fp=metadata(h,F/'prepared-D7-proof2s-deadline-consumers-SOURCE-ONLY.json',FAMILY_SHA)
++    construction,cp=metadata(h,HERE/'selected-D7-deadline13-source-construction-v1.json',CONSTRUCTION_SHA)
++    core,corepin=metadata(h,Path(family['observer_source_packet']['path']),
++        'ab870d1e08ddc27a7ed6456ce4a3be821fc247829c867a94f8c4db96947ff0ef')
++    require(corepin==family['observer_source_packet']==construction['selected_observer_packet']
++        and fp==construction['selected_D7_packet']
++        and len(construction['records'])==len(family['sources'])==13
++        and construction['deadline_source_count']==13 and construction['observer_dependency_count']==10
++        and construction['historical_main_input_count']==247,'Exact13-deadline-source D7 inventory required')
++    values=[fp,cp,corepin]
++    require(set(family['sources'])=={row['name']for row in construction['records']},
++        'Deadline selector/helper inventory differs')
+     for row in construction['records']:
+         expected=row['source'];actual=h.pin(Path(expected['path']))
+-        require(actual==expected and actual['identity']['mode']=='0o444'
+-            and actual['identity']['uid']==os.getuid()and actual['identity']['nlink']==1
+-            and not Path(expected['path']).is_symlink(),'Selected immutable source full PIN differs')
++        require(expected==family['sources'][row['name']] and actual==expected
++            and actual['identity']['mode']=='0o444'and actual['identity']['uid']==os.getuid()
++            and actual['identity']['nlink']==1 and not Path(expected['path']).is_symlink(),
++            'Selected immutable deadline source full PIN differs')
+         h.checked(expected);values.append(expected)
+-    require(set(family['deadline_observer_sources'])=={'client','worker','health','health_base','API_projection',
+-        'round_admission','launcher_census','durability','control','interpreter'},'Exact ten-source observer authority required')
++    require(set(core['observer_sources'])=={'client','worker','health','health_base','API_projection',
++        'round_admission','launcher_census','durability','control','interpreter'}
++        and core['observer_sources']==construction['deadline_observer_sources']
++        and core['reviewer']==construction['deadline_raw_reviewer']
++        and core['proof_gap_contract']=='robotron-main-proof-gap-2s-v1'
++        and core['hot_max_gap_s']==2.0 and core['interval_s']==.2 and core['initial_samples']==100
++        and core['retained_narrow_API_exception_max_s']==.5,'Exact ten-source2s authority required')
++    family=dict(family,deadline_observer_sources=core['observer_sources'],
++        deadline_raw_reviewer=core['reviewer'],Native_frozen_source_family=corepin)
+     return family,values
+ 
+ 
+-def engineering(h,family):
+-    joint,jp=metadata(h,JOINT,JOINT_SHA)
+-    require(joint['schema']=='robotron-retired-API-joint-engineering-readiness-v1'
++def engineering(h,family,joint_path,joint_sha):
++    require(joint_path is not None and joint_sha is not None and len(joint_sha)==64
++        and all(c in '0123456789abcdef'for c in joint_sha),'Actual Root-selected engineering joint full SHA required')
++    joint_path=joint_path.resolve()
++    require(joint_path.is_relative_to(I/'future-two-second-main-proof-contract-original01-preparation')
++        and joint_path.name=='independent-proof2s-joint-engineering-qualification-original01.json',
++        'Only the future original proof2s engineering joint namespace is eligible')
++    joint,jp=metadata(h,joint_path,joint_sha)
++    require(joint['schema']=='robotron-proof2s-joint-engineering-readiness-v1'
+         and joint['status']=='ENGINEERING_PASS_AT_RECORDED_OBSERVED_LOAD_ONLY'
+         and joint['observer_sources']==family['deadline_observer_sources']
+         and joint['source_family']==family['Native_frozen_source_family']
+         and joint['historical_main_input_count']==247 and joint['old_failed_R1_requalified']is False
++        and joint['proof_gap_contract']=='robotron-main-proof-gap-2s-v1'and joint['maximum_gap_s']==2.0
+         and joint['quality_qualified']is joint['scientific_launch_qualified']is False,
+         'Actual current retired-API engineering authority differs')
+     values=[jp,family['Native_frozen_source_family']]
+@@ -102,10 +122,11 @@
+         and raw['original_sources']==family['deadline_observer_sources']and raw['full_main_input_count']==247
+         and raw['lifecycle']==joint['engineering']['long']['lifecycle']
+         and raw['raw_API_and_TCP_and_retirement_snapshots_replayed']is True
+-        and raw['legacy_500ms_evidence_and_projection_gaps_verified']is True,
++        and raw['proof_gap_contract']=='robotron-main-proof-gap-2s-v1'
++        and raw['verified_maximum_gap_s']==2.0 and raw['accepted_evidence_and_projection_gaps_verified']is True,
+         'Actual new raw readiness must bind the selected exact ten-source family')
+     values.extend([sp,rp,*family['deadline_observer_sources'].values(),family['deadline_raw_reviewer']])
+-    return rp,values
++    return rp,values,jp
+ 
+ 
+ def completed_profiles(h):
+@@ -113,9 +134,10 @@
+     result,rp=metadata(h,W/'result.json')
+     require(result['state']=='captured_CPU_verified'and result['owner']==plan['owner']
+         and result['endpoint']['path']==str(W/'endpoint.pt')
+-        and result['endpoint']['sha256']not in {'e078b0da4ce4e25146fab7484f8489f590e1086370746cb392afcd7f5f8adef5',
++        and result['endpoint']['sha256']not in {'862fb4cde4ecb146b5b23a83b77ccbf1675a980bc310f6c2a6a8806d87b7c81e',
++            'e078b0da4ce4e25146fab7484f8489f590e1086370746cb392afcd7f5f8adef5',
+             'a6e17a3c6cd8a9b6cb5479e6c6cbd1a284c1cd880372d0d02441680bc708e502'},
+-        'Only the actual distinct completed NEW02 endpoint is eligible')
++        'Only the actual distinct completed NEW03 endpoint is eligible')
+     canonical,cc=metadata(h,W/'canonical-profile-CPU-original01/independent-original-canonical-CPU-closeout.json')
+     frozen,fc=metadata(h,W/'frozen-profile-CPU-original01/independent-original-profile-scope-closeout.json')
+     require(canonical['status']==frozen['status']=='PASS'and canonical['actual_exit']==frozen['actual_exit']==0
+@@ -127,14 +149,14 @@
+     require(candidate['status']=='PASS'and candidate['actual_exit']==0
+         and candidate['all_Q_bytes_and_actions_match']is candidate['original_scope_released']is True
+         and frozen['profile_adoption']==cp and proof['checkpoint']['sha256']==result['endpoint']['sha256'],
+-        'Actual NEW02 independentlyclosed frozen adoption required')
+-    wrapper=module('_window02_actual_endpoint_metadata',N/'prepare_durable_endpoint_profiles_v4.py',
+-        'a220fdd92f131b9f5709a43ebf12b3a0afc3d89293bda58db32faf8f4831bd48')
++        'Actual NEW03 independentlyclosed frozen adoption required')
++    wrapper=module('_window03_actual_endpoint_metadata',N/'prepare_durable_endpoint_profiles_v5.py',
++        '149c6ff32564b0224b893b55a35ff9e8437acee12c00cd442e6d90f176ee033f')
+     original=wrapper.original_endpoint()
+     require(original['result']=={key:rp[key]for key in ('path','sha256','bytes')},'Actual own endpoint selector differs')
+     _,reference=metadata(h,I/'reference-frozen-profile-v2-CPU-original01/independent-profile-adoption.json',
+         '59f6fd9df2987ff15c4506b9fa306479bf9ddb893a45aeb21f6c434effe75654')
+-    return result['endpoint']['sha256'],rp,reference,cp,[pp,rp,cc,fc,cp,pf,h.pin(N/'prepare_durable_endpoint_profiles_v4.py')]
++    return result['endpoint']['sha256'],rp,reference,cp,[pp,rp,cc,fc,cp,pf,h.pin(N/'prepare_durable_endpoint_profiles_v5.py')]
+ 
+ 
+ def controller_argv(config):
+@@ -142,22 +164,22 @@
+         '--expected-source-sha256',CONTROL_SHA]
+ 
+ 
+-def prepare(h):
++def prepare(h,joint_path,joint_sha):
+     family,values=selected_sources(h)  # Expected bytes/full PINs before imports or output creation.
+-    raw,eng_inputs=engineering(h,family)
++    raw,eng_inputs,joint_pin=engineering(h,family,joint_path,joint_sha)
+     candidate,rp,reference,profile,profile_inputs=completed_profiles(h)
+     _,lease=metadata(h,I/'post-outage-permanent-private-coordinator-restoration-original01.json',
+         '26ccbdd83b17aabc5daeecb77e40278f68329152e8913fde26bc75073ccfe09d')
+     require(not META.exists()and not STUDY.exists(),'Wholly fresh metadata and four-job study directories required')
+-    control=module('_window02_metadata600_control',R/'control_metadata600_v1.py',CONTROL_SHA)
+-    driver=h.pin(R/'prepare_selected_metadata600_v1.py');require(driver['sha256']==DRIVER_SHA,'Selected D6 metadata driver differs')
++    control=module('_window03_metadata600_control',R/'control_metadata600_v1.py',CONTROL_SHA)
++    driver=h.pin(R/'prepare_selected_metadata600_v1.py');require(driver['sha256']==DRIVER_SHA,'Selected D7 metadata driver differs')
+     values.extend([*eng_inputs,*profile_inputs,lease,driver,h.pin(R/'control_metadata600_v1.py'),
+         h.pin(R/'close_metadata600_v1.py'),h.pin(Path(__file__).resolve())])
+     values=list({value['path']:value for value in values}.values())
+     for value in values:h.checked(value)
+     META.mkdir(mode=0o700)
+     job=dict(schema='robotron-selected-admission-study-CPU-preparation-v1',
+-        unit='robotron-window02-D6-metadata-CPU-'+candidate[:12]+'-original01-20261029.service',
++        unit='robotron-window03-D7-metadata-CPU-'+candidate[:12]+'-original01-20261029.service',
+         output=str(META/'runtime'),study_directory=str(STUDY),candidate_sha256=candidate,inputs=values,
+         original_attempt=1,no_retry=True,capture_result=rp,reference_profile=reference,candidate_profile=profile,
+         deadline_readiness=raw,lease_recovery=lease)
+@@ -171,8 +193,8 @@
+     cp=h.put(META/'controller-config.json',cfg);require(control.checked_config(cp['path'])==cfg,'Exact metadata600 ABI differs')
+     prepared=h.put(META/'prepared-NOT-LAUNCHED.json',dict(source=h.pin(Path(__file__).resolve()),job=jp,config=cp,
+         driver=driver,controller=h.pin(R/'control_metadata600_v1.py'),closer=h.pin(R/'close_metadata600_v1.py'),
+-        actual_D6_family=h.pin(F/'prepared-final-D6-retired-API-fresh-study-namespace-family-SOURCE-ONLY.json'),
+-        actual_engineering_joint=h.pin(JOINT),scientific_payload_launched=False,
++        actual_D7_family=h.pin(F/'prepared-D7-proof2s-deadline-consumers-SOURCE-ONLY.json'),
++        actual_engineering_joint=joint_pin,scientific_payload_launched=False,
+         default_generated_guard_packet_selected_for_launch=False,fresh_closed_metadata_guard_authority_required=True))
+     return dict(prepared=prepared,Root_original_controller_argv=controller_argv(cp))
+ 
+@@ -188,15 +210,16 @@
+ def main(argv=None):
+     p=argparse.ArgumentParser(description=__doc__);g=p.add_mutually_exclusive_group()
+     for name in ('prepare-metadata','print-controller-command','close-metadata'):g.add_argument('--'+name,action='store_true')
++    p.add_argument('--engineering-joint',type=Path);p.add_argument('--engineering-joint-sha256')
+     args=p.parse_args(argv)
+-    if not any(vars(args).values()):print('PLAN_ONLY: no reads, imports, outputs, CPU, services, models or controls');return
++    if not any((args.prepare_metadata,args.print_controller_command,args.close_metadata)):print('PLAN_ONLY: no reads, imports, outputs, CPU, services, models or controls');return
+     h=helpers()
+-    if args.prepare_metadata:out=prepare(h)
++    if args.prepare_metadata:out=prepare(h,args.engineering_joint,args.engineering_joint_sha256)
+     elif args.print_controller_command:
+         value,pin=packet(h);out=dict(prepared=pin,Root_original_controller_argv=controller_argv(value['config']))
+     else:
+         packet(h)
+-        out=module('_window02_original_metadata600_closer',R/'close_metadata600_v1.py',CLOSER_SHA).close(META)
++        out=module('_window03_original_metadata600_closer',R/'close_metadata600_v1.py',CLOSER_SHA).close(META)
+     print(json.dumps(out),flush=True)
+ 
+ 

@@ -1,0 +1,46 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-R1-owned-launch-original01-preparation/run_owned_R1_window03_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/durable-R1-launch-source-original01/run_owned_physical_R1_v1.py
+@@ -17,8 +17,8 @@
+ G=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ I=G/'logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027'
+ A=Path(__file__).resolve().parent
+-S=I/'durable-window03-D7-fixed-RCRC-study-original01'
+-D=Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original07-proof2s-preparation/source-family-original01')
++# Study/source directories are resolved from the exact immutable selection.
++
+ 
+ 
+ def require(value,message):
+@@ -42,8 +42,10 @@
+     require(selected_pin['sha256']==args.launch_selection_sha256 and selected_pin['identity']['mode']=='0o444',
+         'Exact immutable fresh R1 launch selection required')
+     selected=read(selected_pin)
+-    require(selected['schema']=='robotron-window03-D7-original-R1-launch-selection-v1'
+-        and selected['source']==h.pin(A/'prepare_owned_R1_launch_v1.py')
++    S=Path(selected['prepared_manifest']['path']).parent
++    D=Path(selected['sources']['study_preparer']['path']).parent
++    require(selected['schema']=='robotron-generic-physical-original-R1-launch-selection-v1'
++        and selected['source']==h.pin(A/'prepare_owned_physical_R1_launch_v1.py')
+         and selected['sources']['wrapper']==h.pin(Path(__file__).resolve()), 'Actual Root-selected R1 source differs')
+     for value in selected['sources'].values():h.checked(value)
+     rp=selected['readiness'];ready=read(rp)
+@@ -59,7 +61,7 @@
+     fresh_operation()
+     mp=ready['prepared_manifest']
+     require(mp==selected['prepared_manifest'] and mp['path']==str(S/'prepared-four-legs-NOT-LAUNCH-QUALIFIED.json'),
+-        'Exact NEW window03 four-job manifest required')
++        'Exact selected fresh physical four-job manifest required')
+     manifest=read(mp);study=read(manifest['study_precommit'])
+     require(manifest['engineering_only']is False and manifest['study_precommit']==selected['study_precommit']
+         and study['ordered_legs']==['R1','C1','R2','C2'] and study['no_retry']is True
+@@ -68,8 +70,8 @@
+         and read(selected['candidate_capture']['result'])['endpoint']['sha256']==selected['candidate_sha256']
+         and read(selected['candidate_capture']['plan'])['owner']==read(selected['candidate_capture']['result'])['owner']
+         and study['policies']['reference']['checkpoint']['sha256']=='b23152ece3bb614831a278fe0572c07433f1bee59c5accef5a1ab7d3007af883',
+-        'Exact fresh RCRC window03/protected pair required')
+-    namespace='window03-proof2s-'+manifest['study_precommit']['sha256'][:16]+'-r1'
++        'Exact fresh physical RCRC/protected pair required')
++    namespace='physical-cohort-proof2s-'+manifest['study_precommit']['sha256'][:16]+'-r1'
+     unit='robotron-'+namespace+'-wrapper-original01-20261029.service'
+     require(selected['wrapper_unit']==unit, 'Exact new wrapper namespace differs')
+     review=read(ready['review_precommit']);cpu=read(ready['review_preparation_CPU'])

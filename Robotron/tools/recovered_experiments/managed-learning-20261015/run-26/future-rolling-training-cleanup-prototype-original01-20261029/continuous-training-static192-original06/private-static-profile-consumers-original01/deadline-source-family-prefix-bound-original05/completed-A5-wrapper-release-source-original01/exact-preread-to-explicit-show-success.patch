@@ -1,0 +1,11 @@
+--- Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/completed-A5-wrapper-release-source-original01/preread-close_completed_A5_wrapper-72f482-SOURCE-ONLY-UNSELECTED.py
++++ Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/completed-A5-wrapper-release-source-original01/close_completed_A5_wrapper_v1.py
+@@ -170,6 +170,8 @@
+     shown = control.command(out, 'original-A5-service-show',
+                             ['systemctl', '--user', 'show', CURRENT_A5_UNIT])
+     archives.append(shown)
++    require(shown['exit'] == 0 and shown['timed_out'] is False,
++            'Original A5 show archive must succeed before terminal classification')
+     props = control.fields(shown)
+     control.original_terminal(props, identity)
+     validate_scope(props, identity, terminal=True)

@@ -1,0 +1,478 @@
+--- a/Robotron/Scripts/dqn/replay_buffer.py
++++ b/Robotron/Scripts/dqn/replay_buffer.py
+@@ -66,6 +66,14 @@
+     if cursor != len(out):
+         raise ValueError("State output row count differs from replay sample")
+     return out
++
++
++try:
++    from .bank_output import (BankOutputTelemetry, stream_output_enabled,
++                              write_bank_array)
++except ImportError:
++    from bank_output import (BankOutputTelemetry, stream_output_enabled,
++                             write_bank_array)
+ 
+ 
+ class SumTree:
+@@ -305,6 +313,10 @@
+             capture_attempts=0, capture_deferrals=0, snapshot_lock_max_ms=0.0,
+             writes=0, write_failures=0, write_duration_s=0.0,
+             last_write_duration_s=0.0, last_error=None)
++        # Only field-file output changes when explicitly requested.
++        # Capture/publication/revision/epoch/flush semantics stay unchanged.
++        self._bank_stream_output = stream_output_enabled()
++        self._bank_output_telemetry = BankOutputTelemetry(self._bank_stream_output)
+         # EpHOF sentinel indices start past the game-HOF sentinel span so the
+         # two banks can never alias in update_priorities' >= capacity filter.
+         self._ephof_base = self.capacity + (
+@@ -1161,6 +1173,9 @@
+             result["saved_revision"] = dict(self._bank_saved_revision)
+             result["dirty"] = {bank: self._bank_revision[bank] != self._bank_saved_revision[bank]
+                                for bank in ("hof", "ephof")}
++        # No writer/replay/model lock is held while reading phase scalars.
++        output = getattr(self, "_bank_output_telemetry", None)
++        result["output"] = output.snapshot() if output is not None else dict(available=False)
+         return result
+ 
+     def _capture_bank(self, bank, expected_epoch):
+@@ -1259,20 +1274,10 @@
+             lengths = snapshot["meta"]["ep_len"]
+             for field, source in snapshot["arrays"].items():
+                 path = os.path.join(directory, f"{bank}_{field}.npy")
+-                output = np.lib.format.open_memmap(path, mode="w+", dtype=source.dtype,
+-                    shape=(snapshot["count"]*snapshot["stride"], *source.shape[1:]))
+-                try:
+-                    cursor = 0
+-                    for episode, length in enumerate(lengths):
+-                        length = int(length)
+-                        begin = episode*snapshot["stride"]
+-                        output[begin:begin+length] = source[cursor:cursor+length]
+-                        cursor += length
+-                    output.flush()
+-                finally:
+-                    output._mmap.close()
+-                with open(path, "rb") as stream:
+-                    os.fsync(stream.fileno())
++                write_bank_array(path, source, count=snapshot["count"],
++                    stride=snapshot["stride"], lengths=lengths,
++                    stream_output=self._bank_stream_output,
++                    telemetry=self._bank_output_telemetry, bank=bank, field=field)
+             meta_path = os.path.join(directory, f"{bank}_meta.npz")
+             with open(meta_path, "xb") as stream:
+                 np.savez(stream, **snapshot["meta"])
+--- /dev/null
++++ b/Robotron/Scripts/dqn/bank_output.py
+@@ -0,0 +1,192 @@
++"""Bank field output and bounded host phase telemetry; never takes replay locks.
++
++Streaming is explicitly opt-in at buffer construction. Both routes preserve
++the padded .npy geometry. Generation publication/capture/revision logic remains
++in replay_buffer; this helper does not read live replay storage.
++"""
++from collections import deque
++from contextlib import contextmanager
++import errno
++import io
++import math
++import os
++import threading
++import time
++
++import numpy as np
++
++
++CHUNK_BYTES = 8 * 1024 * 1024
++PHASES = ("create", "write", "mmap_flush", "mmap_close", "file_open",
++          "file_fsync", "file_close")
++
++
++def stream_output_enabled(environ=None):
++    """Read once at replay construction; invalid explicit settings fail closed."""
++    value = (os.environ if environ is None else environ).get("DQN_STREAM_BANK_OUTPUT", "0")
++    value = str(value).strip().lower()
++    if value not in ("0", "false", "no", "off", "", "1", "true", "yes", "on"):
++        raise ValueError("DQN_STREAM_BANK_OUTPUT must be a boolean (default 0)")
++    enabled = value in ("1", "true", "yes", "on")
++    if enabled and not (callable(getattr(os, "pwrite", None))
++                        and callable(getattr(os, "ftruncate", None))):
++        raise RuntimeError("DQN_STREAM_BANK_OUTPUT requires pwrite and ftruncate")
++    return enabled
++
++
++class BankOutputTelemetry:
++    """Cumulative/non-draining field-file host timings, bounded to seven phases.
++
++    A single serialized bank writer owns this recorder. Its scalar lock never
++    acquires replay, writer, model, or reporting locks. A snapshot is taken only
++    after releasing those locks. No device calls, learning clocks or RNG change.
++    """
++
++    def __init__(self, stream_output=False):
++        self.backend = "stream" if stream_output else "memmap"
++        self._lock = threading.Lock()
++        self._started = time.monotonic_ns()
++        self._active = None
++        self._recent = deque(maxlen=32)
++        self._totals = {name: dict(count=0, errors=0, host_total_ms=0.0,
++            host_max_ms=0.0, logical_bytes=0, payload_bytes=0) for name in PHASES}
++
++    @contextmanager
++    def phase(self, name, *, bank, field, logical_bytes=0, payload_bytes=0):
++        if name not in self._totals:
++            raise ValueError("Unknown bank output phase")
++        started = time.monotonic_ns()
++        event = dict(bank=bank, field=field, phase=name,
++                     logical_bytes=int(logical_bytes), payload_bytes=int(payload_bytes))
++        with self._lock:
++            self._active = dict(event, started_monotonic_ns=started)
++        failed = True
++        try:
++            yield
++            failed = False
++        finally:
++            ended = time.monotonic_ns()
++            elapsed_ms = (ended - started) / 1e6
++            with self._lock:
++                total = self._totals[name]
++                total["count"] += 1
++                total["errors"] += int(failed)
++                total["host_total_ms"] += elapsed_ms
++                total["host_max_ms"] = max(total["host_max_ms"], elapsed_ms)
++                total["logical_bytes"] += int(logical_bytes)
++                total["payload_bytes"] += int(payload_bytes)
++                self._recent.append(dict(event, host_ms=elapsed_ms,
++                    ended_monotonic_ns=ended, error=failed))
++                self._active = None
++
++    def snapshot(self):
++        with self._lock:
++            active = dict(self._active) if self._active else None
++            if active:
++                active["elapsed_host_ms"] = (time.monotonic_ns()
++                                             - active["started_monotonic_ns"]) / 1e6
++            return dict(schema="robotron-bank-output-v1", available=True,
++                stream_output_enabled=self.backend == "stream", backend=self.backend,
++                scope="host elapsed; field files only; not device/disk service time",
++                started_monotonic_ns=self._started, active=active,
++                totals={name: dict(value) for name, value in self._totals.items()},
++                recent=[dict(value) for value in self._recent])
++
++
++def _pwrite_all(fd, data, offset):
++    while data:
++        try:
++            amount = os.pwrite(fd, data, offset)
++        except InterruptedError:
++            continue
++        if not isinstance(amount, int) or not 0 < amount <= len(data):
++            raise OSError(errno.EIO, "bank output pwrite made invalid progress")
++        offset += amount
++        data = data[amount:]
++
++
++def _stream_array(path, source, *, count, stride, lengths, telemetry, bank, field):
++    # Existing compact snapshots are C-contiguous fixed-width row arrays.
++    # Fail explicitly if an unexpected source violates that contract.
++    if (not isinstance(source, np.ndarray) or source.ndim < 1
++            or source.dtype.hasobject or source.dtype.itemsize <= 0
++            or not source.flags.c_contiguous):
++        raise ValueError("Stream bank source must be contiguous, fixed-width and object-free")
++    lengths = np.asarray(lengths)
++    if (not isinstance(count, int) or isinstance(count, bool) or count < 0
++            or not isinstance(stride, int) or isinstance(stride, bool) or stride <= 0
++            or lengths.ndim != 1 or lengths.dtype.kind not in "iu"
++            or len(lengths) != count or np.any(lengths < 0)
++            or np.any(lengths > stride)
++            or sum(int(value) for value in lengths) != source.shape[0]):
++        raise ValueError("Stream bank episode lengths/geometry differ from compact rows")
++    shape = (count * stride, *source.shape[1:])
++    row_bytes = math.prod(source.shape[1:]) * source.dtype.itemsize
++    logical_bytes = count * stride * row_bytes
++    # This public v1 writer is byte-identical to open_memmap(version=None) for
++    # all current bank descriptors/shapes. Oversized exotic descriptors fail
++    # before opening a file, rather than silently changing the file format.
++    header = io.BytesIO()
++    np.lib.format.write_array_header_1_0(header, dict(
++        descr=np.lib.format.dtype_to_descr(source.dtype), fortran_order=False, shape=shape))
++    header_bytes = header.getvalue()
++    with telemetry.phase("file_open", bank=bank, field=field):
++        fd = os.open(os.fspath(path), os.O_WRONLY | os.O_CREAT | os.O_EXCL
++                     | getattr(os, "O_CLOEXEC", 0), 0o666)
++    try:
++        with telemetry.phase("create", bank=bank, field=field):
++            _pwrite_all(fd, memoryview(header_bytes), 0)
++            os.ftruncate(fd, len(header_bytes) + logical_bytes)
++        with telemetry.phase("write", bank=bank, field=field,
++                             logical_bytes=logical_bytes, payload_bytes=source.nbytes):
++            raw = memoryview(source).cast("B") if source.size else memoryview(b"")
++            cursor = 0
++            for episode, length in enumerate(lengths):
++                amount = int(length) * row_bytes
++                destination = len(header_bytes) + episode * stride * row_bytes
++                for first in range(0, amount, CHUNK_BYTES):
++                    size = min(CHUNK_BYTES, amount - first)
++                    _pwrite_all(fd, raw[cursor + first:cursor + first + size], destination + first)
++                cursor += amount
++        with telemetry.phase("file_fsync", bank=bank, field=field):
++            os.fsync(fd)
++    finally:
++        with telemetry.phase("file_close", bank=bank, field=field):
++            os.close(fd)
++
++
++def _memmap_array(path, source, *, count, stride, lengths, telemetry, bank, field):
++    # Original operation order and assignment arithmetic are preserved.
++    with telemetry.phase("create", bank=bank, field=field):
++        output = np.lib.format.open_memmap(path, mode="w+", dtype=source.dtype,
++                                          shape=(count * stride, *source.shape[1:]))
++    try:
++        with telemetry.phase("write", bank=bank, field=field,
++                             logical_bytes=count * stride * math.prod(source.shape[1:]) * source.dtype.itemsize,
++                             payload_bytes=source.nbytes):
++            cursor = 0
++            for episode, length in enumerate(lengths):
++                length = int(length)
++                begin = episode * stride
++                output[begin:begin + length] = source[cursor:cursor + length]
++                cursor += length
++        with telemetry.phase("mmap_flush", bank=bank, field=field):
++            output.flush()
++    finally:
++        with telemetry.phase("mmap_close", bank=bank, field=field):
++            output._mmap.close()
++    with telemetry.phase("file_open", bank=bank, field=field):
++        stream = open(path, "rb")
++    try:
++        with telemetry.phase("file_fsync", bank=bank, field=field):
++            os.fsync(stream.fileno())
++    finally:
++        with telemetry.phase("file_close", bank=bank, field=field):
++            stream.close()
++
++
++def write_bank_array(path, source, *, count, stride, lengths, stream_output,
++                     telemetry, bank, field):
++    writer = _stream_array if stream_output else _memmap_array
++    return writer(path, source, count=count, stride=stride, lengths=lengths,
++                  telemetry=telemetry, bank=bank, field=field)
+--- /dev/null
++++ b/Robotron/Scripts/dqn/test_bank_output.py
+@@ -0,0 +1,217 @@
++"""CPU-only durable bank output byte, failure and telemetry regressions."""
++import io
++import os
++from pathlib import Path
++import tempfile
++import threading
++import unittest
++from unittest.mock import patch
++
++import numpy as np
++
++from . import bank_output as module
++
++
++class BankOutputTests(unittest.TestCase):
++    def setUp(self):
++        temporary = tempfile.TemporaryDirectory()
++        self.addCleanup(temporary.cleanup)
++        self.root = Path(temporary.name)
++
++    def write(self, path, source, *, stream=True, lengths=(2, 0, 3), stride=5,
++              telemetry=None):
++        telemetry = telemetry if telemetry is not None else module.BankOutputTelemetry(stream)
++        module.write_bank_array(path, source, count=len(lengths), stride=stride,
++            lengths=np.asarray(lengths, dtype=np.int32), stream_output=stream,
++            telemetry=telemetry, bank="hof", field="states")
++        return telemetry
++
++    def test_flag_default_off_explicit_boolean_and_unavailable_error(self):
++        for value in (None, "", "0", "false", "NO", " off "):
++            env = {} if value is None else {"DQN_STREAM_BANK_OUTPUT": value}
++            self.assertFalse(module.stream_output_enabled(env))
++        for value in ("1", "true", "YES", " on "):
++            self.assertTrue(module.stream_output_enabled({"DQN_STREAM_BANK_OUTPUT": value}))
++        with self.assertRaisesRegex(ValueError, "DQN_STREAM_BANK_OUTPUT"):
++            module.stream_output_enabled({"DQN_STREAM_BANK_OUTPUT": "unexpected"})
++        with patch.object(module.os, "pwrite", None):
++            self.assertFalse(module.stream_output_enabled({}))
++            with self.assertRaisesRegex(RuntimeError, "pwrite"):
++                module.stream_output_enabled({"DQN_STREAM_BANK_OUTPUT": "1"})
++
++    def test_complete_npy_bytes_match_dense_oracle_with_holes_and_special_bits(self):
++        # No float arithmetic: retain NaN payloads, signaling bits, signed zero,
++        # infinities and subnormals in both native and non-native byte order.
++        patterns = [0, 0x80000000, 1, 0x80000001, 0x7f800000, 0xff800000,
++                    0x7fc01234, 0x7fa05678, 0x007fffff, 0x00800000,
++                    0x7f7fffff, 0xff7fffff, 0x3f800000, 0xbf800000, 0x3f000001]
++        sources = [np.asarray(patterns, dtype=order + "u4").view(order + "f4").reshape(5, 3)
++                   for order in ("<", ">")]
++        sources += [np.arange(15, dtype=dtype).reshape(5, 3)
++                    for dtype in (np.int64, np.uint8)]
++        sources.append((np.arange(15).reshape(5, 3) % 2).astype(np.bool_))
++        for index, source in enumerate(sources):
++            dense = np.zeros((15, 3), dtype=source.dtype)
++            dense[:2] = source[:2]
++            dense[10:13] = source[2:]
++            oracle = io.BytesIO()
++            np.save(oracle, dense, allow_pickle=False)
++            source_bytes = source.tobytes()
++            for stream in (False, True):
++                with self.subTest(dtype=source.dtype, stream=stream):
++                    path = self.root / f"{index}-{stream}.npy"
++                    stats = self.write(path, source, stream=stream).snapshot()
++                    self.assertEqual(path.read_bytes(), oracle.getvalue())
++                    actual = np.load(path, allow_pickle=False)
++                    self.assertEqual(actual[2:10].tobytes(), b"\0" * (8 * 3 * source.dtype.itemsize))
++                    self.assertEqual(source.tobytes(), source_bytes)
++                    self.assertEqual(stats["totals"]["mmap_flush"]["count"], int(not stream))
++                    self.assertEqual(stats["totals"]["mmap_close"]["count"], int(not stream))
++
++    def test_invalid_stream_sources_lengths_and_existing_path_fail(self):
++        source = np.arange(20, dtype=np.float32).reshape(5, 4)
++        for invalid in (source[:, ::-1], source.astype(object)):
++            with self.assertRaises(ValueError):
++                self.write(self.root / "bad.npy", invalid)
++        with self.assertRaises(ValueError):
++            self.write(self.root / "bad.npy", source, lengths=(2, 0, 4))
++        self.assertFalse((self.root / "bad.npy").exists())
++        path = self.root / "existing.npy"
++        path.write_bytes(b"keep")
++        with self.assertRaises(FileExistsError):
++            self.write(path, source)
++        self.assertEqual(path.read_bytes(), b"keep")
++
++    def test_short_interrupted_writes_preserve_bytes_and_bound_payload_chunks(self):
++        original = os.pwrite
++        calls, interrupted = [], False
++        def short(fd, data, offset):
++            nonlocal interrupted
++            if not interrupted:
++                interrupted = True
++                raise InterruptedError()
++            calls.append((offset, len(data)))
++            return original(fd, data[:5], offset)
++        source = np.arange(48, dtype=np.float32).reshape(12, 4)
++        path = self.root / "short.npy"
++        with patch.object(module, "CHUNK_BYTES", 19), \
++             patch.object(module.os, "pwrite", side_effect=short):
++            self.write(path, source, lengths=(12,), stride=16)
++        with path.open("rb") as stream:
++            self.assertEqual(np.lib.format.read_magic(stream), (1, 0))
++            np.lib.format.read_array_header_1_0(stream)
++            header_size = stream.tell()
++        self.assertTrue(interrupted)
++        self.assertLessEqual(max(amount for offset, amount in calls if offset >= header_size), 19)
++        dense = np.zeros((16, 4), dtype=np.float32); dense[:12] = source
++        expected = io.BytesIO(); np.save(expected, dense, allow_pickle=False)
++        self.assertEqual(path.read_bytes(), expected.getvalue())
++
++    def test_zero_progress_payload_write_reports_error_and_closes_descriptor(self):
++        original = os.pwrite
++        descriptors = []
++        def stalled(fd, data, offset):
++            if offset > 0:
++                descriptors.append(fd)
++                return 0
++            return original(fd, data, offset)
++        stats = module.BankOutputTelemetry(True)
++        with patch.object(module.os, "pwrite", side_effect=stalled):
++            with self.assertRaisesRegex(OSError, "invalid progress"):
++                self.write(self.root / "zero.npy", np.zeros((5, 4), dtype=np.float32), telemetry=stats)
++        snap = stats.snapshot()
++        self.assertEqual(snap["totals"]["write"]["errors"], 1)
++        self.assertEqual(snap["totals"]["file_close"]["count"], 1)
++        self.assertIsNone(snap["active"])
++        with self.assertRaises(OSError):
++            os.fstat(descriptors[0])
++
++    def test_fsync_failure_is_reported_and_descriptor_is_closed(self):
++        descriptors = []
++        def fail(fd):
++            descriptors.append(fd)
++            raise OSError("fsync failed")
++        stats = module.BankOutputTelemetry(True)
++        with patch.object(module.os, "fsync", side_effect=fail):
++            with self.assertRaisesRegex(OSError, "fsync failed"):
++                self.write(self.root / "sync.npy", np.zeros((5, 4), dtype=np.float32), telemetry=stats)
++        value = stats.snapshot()
++        self.assertEqual(value["totals"]["file_fsync"]["errors"], 1)
++        self.assertEqual(value["totals"]["file_close"]["count"], 1)
++        self.assertIsNone(value["active"])
++        with self.assertRaises(OSError):
++            os.fstat(descriptors[0])
++
++    def test_close_failure_propagates_and_counts_failed_close(self):
++        original = os.close
++        descriptors = []
++        def close_then_fail(fd):
++            descriptors.append(fd)
++            original(fd)
++            raise OSError("close failed")
++        stats = module.BankOutputTelemetry(True)
++        with patch.object(module.os, "close", side_effect=close_then_fail):
++            with self.assertRaisesRegex(OSError, "close failed"):
++                self.write(self.root / "close.npy", np.zeros((5, 4), dtype=np.float32), telemetry=stats)
++        value = stats.snapshot()
++        self.assertEqual(value["totals"]["file_close"]["errors"], 1)
++        self.assertEqual(value["totals"]["file_fsync"]["errors"], 0)
++        self.assertIsNone(value["active"])
++        with self.assertRaises(OSError):
++            os.fstat(descriptors[0])
++
++    def test_memmap_flush_failure_still_records_mmap_close(self):
++        class Output:
++            closed = False
++            @property
++            def _mmap(self):
++                return self
++            def __setitem__(self, key, value):
++                pass
++            def flush(self):
++                raise OSError("flush failed")
++            def close(self):
++                self.closed = True
++        output = Output(); stats = module.BankOutputTelemetry(False)
++        with patch.object(module.np.lib.format, "open_memmap", return_value=output):
++            with self.assertRaisesRegex(OSError, "flush failed"):
++                self.write(self.root / "unused.npy", np.zeros((5, 4), dtype=np.float32),
++                           stream=False, telemetry=stats)
++        self.assertTrue(output.closed)
++        self.assertEqual(stats.snapshot()["totals"]["mmap_flush"]["errors"], 1)
++        self.assertEqual(stats.snapshot()["totals"]["mmap_close"]["count"], 1)
++
++    def test_telemetry_is_bounded_non_draining_independent_and_live_readable(self):
++        stats = module.BankOutputTelemetry(True)
++        for _ in range(40):
++            with stats.phase("write", bank="hof", field="states", logical_bytes=100, payload_bytes=9):
++                pass
++        first = stats.snapshot()
++        self.assertEqual(first["totals"]["write"]["count"], 40)
++        self.assertEqual(first["totals"]["write"]["payload_bytes"], 360)
++        self.assertEqual(len(first["recent"]), 32)
++        first["totals"]["write"]["count"] = -1
++        first["recent"][0]["bank"] = "mutated"
++        self.assertEqual(stats.snapshot()["totals"]["write"]["count"], 40)
++        self.assertEqual(stats.snapshot()["recent"][0]["bank"], "hof")
++        entered, release = threading.Event(), threading.Event()
++        def work():
++            with stats.phase("file_fsync", bank="ephof", field="next_states"):
++                entered.set(); release.wait(5)
++        thread = threading.Thread(target=work); thread.start()
++        try:
++            self.assertTrue(entered.wait(1))
++            active = stats.snapshot()["active"]
++            self.assertEqual((active["bank"], active["field"], active["phase"]),
++                             ("ephof", "next_states", "file_fsync"))
++            self.assertGreaterEqual(active["elapsed_host_ms"], 0)
++            active["phase"] = "changed"
++            self.assertEqual(stats.snapshot()["active"]["phase"], "file_fsync")
++        finally:
++            release.set(); thread.join(5)
++        self.assertIsNone(stats.snapshot()["active"])
++        self.assertEqual(stats.snapshot()["totals"]["file_fsync"]["count"], 1)
++
++
++if __name__ == "__main__":
++    unittest.main()

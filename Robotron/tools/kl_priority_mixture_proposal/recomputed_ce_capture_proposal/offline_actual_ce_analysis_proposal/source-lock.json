@@ -1,0 +1,73 @@
+{
+  "schema": "robotron-actual-ce-analysis-source-lock-v1",
+  "preparation_state": "SOURCE_ONLY_UNEXECUTED",
+  "producer_manifest": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/revision2/manifest-source-review-v2.json",
+    "bytes": 2391,
+    "sha256": "356b8b0999b05d3d4cd6e2addfcbee832c7365c9c31f9c08506f8714c0dfeaa2"
+  },
+  "producer_sources": {
+    "recomputed_ce_capture.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/revision2/recomputed_ce_capture.py",
+      "bytes": 26538,
+      "sha256": "6c3ef3735342295154f24b37f7fe0f54c2f05bd13789629c856214441e087263"
+    },
+    "training.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/revision2/training.py",
+      "bytes": 31175,
+      "sha256": "16a327b08eeb0be829d92e46dd72eab014c5f8b8f5331a7cf043785979e842c5"
+    },
+    "replay_buffer.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/revision2/replay_buffer.py",
+      "bytes": 113613,
+      "sha256": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f"
+    },
+    "prefetch.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/revision2/prefetch.py",
+      "bytes": 15674,
+      "sha256": "02871bc515ba23f8d353131e9b6b6b4e390692803578febee7c8d643dd308a27"
+    },
+    "agent.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/revision2/agent.py",
+      "bytes": 95163,
+      "sha256": "b885020db1c07e2a736d46f20c295dc71a461242f717bd324e1a3111379b5157"
+    }
+  },
+  "unchanged_loss": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/loss_kernel.py",
+    "bytes": 7957,
+    "sha256": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a"
+  },
+  "separate_conditional_rehearsal_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/private_rehearsal_proposal/cuda_trace_worker.py",
+    "bytes": 34551,
+    "sha256": "53ab48313f79bc6cdae6ba2ab70969a229ec478ff94b7d52a331c8c64dd37464"
+  },
+  "separate_independent_CE_verifier_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/recomputed-ce-private-independent-CPU-verification-preparation-20261017/verify_retained_ce.py",
+    "bytes": 20974,
+    "sha256": "072d1bf718af39e9ee7221e82edbd55c48e8a978eaeb8db1d597072ee841849e"
+  },
+  "legacy_incompatible_analyser_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/executed_trace_analysis_proposal/analyse_trace.py",
+    "bytes": 31113,
+    "sha256": "b9f2e9550e47f12240968d7c53e8a6c9192dd5365b7cde24b45eec56932a4967"
+  },
+  "actual_input_binding": null,
+  "actual_analysis": null,
+  "actual_tests": null,
+  "future_resource_proposal": {
+    "cpu_threads": 2,
+    "memory_bytes": 3221225472,
+    "tasks": 128,
+    "work_seconds": 120,
+    "cuda_visible_devices": "",
+    "payload_bytes_each": 671088640,
+    "max_attempts": 8
+  },
+  "original_conditional_CE_tolerance": {
+    "rtol": 0.0002,
+    "atol": 2e-05
+  },
+  "scope": "Actual-only descriptive CE and draw-weight analysis. No recomputation, gradient measurement, target/KL/rank inference, training or runtime operation."
+}

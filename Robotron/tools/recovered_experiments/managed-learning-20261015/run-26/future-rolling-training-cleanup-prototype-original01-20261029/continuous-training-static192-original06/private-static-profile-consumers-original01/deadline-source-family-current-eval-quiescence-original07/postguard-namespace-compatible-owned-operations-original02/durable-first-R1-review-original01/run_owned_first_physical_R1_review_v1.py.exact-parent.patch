@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/postguard-owned-operations-original01/durable-first-R1-review-original01/run_owned_first_physical_R1_review_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/postguard-namespace-compatible-owned-operations-original02/durable-first-R1-review-original01/run_owned_first_physical_R1_review_v1.py
+@@ -42,7 +42,7 @@
+         'Exact actual immutable W03 launch selection required')
+     launch=json.loads(h.checked(launch_pin).read_bytes())
+     require(launch['schema']=='robotron-generic-physical-original-R1-launch-selection-v1'
+-        and launch['source']['sha256']=='e089e6f45ae8cc26813d589fbc36eab281fd20bec091e5f5f6151ed4e2c7337d'
++        and launch['source']['sha256']=='5701b99c08bb7a7e16e4052daa45d2fae3bd6ba257a8592dd460804347d6320d'
+         and launch['source']['identity']['mode']=='0o444'
+         and launch['sources']['review_preparer']['sha256']=='d0955c345dd46d08d261cf6c20c8dff87e1335c4977d55d75a8ed895fac99be0'
+         and launch['sources']['review_preparer']['identity']['mode']=='0o444',

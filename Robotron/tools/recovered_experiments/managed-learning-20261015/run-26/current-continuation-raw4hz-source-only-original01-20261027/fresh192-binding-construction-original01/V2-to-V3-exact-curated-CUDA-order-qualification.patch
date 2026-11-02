@@ -1,0 +1,31 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/fresh192-binding-construction-original01/prepare_fresh192_binding_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/fresh192-binding-construction-original01/prepare_fresh192_binding_v3.py
+@@ -329,7 +329,18 @@
+         if b'=' not in item: continue
+         k,v = item.split(b'=',1); k,v = k.decode(),v.decode()
+         if k.startswith(('DQN_','ROBOTRON_','CUDA_')) or k == 'PYTHONUNBUFFERED': environment[k] = v
+-    require(environment == policy['trainer_curated_environment'], 'Current full controlled trainer environment changed')
++    qualification_pin = pin(D/'actual-fresh192-binding-original01/ROOT-actual-inherited-CUDA-order-observation-original01.json')
++    require(qualification_pin['sha256'] == 'eb97e6a3d8905271e6f38c8118bcb5bd16f827bc47efd7de63c26e02b87ccdc1',
++            'Exact ROOT inherited-CUDA-order qualification required')
++    qualification = read(qualification_pin)
++    require(qualification['schema'] == 'robotron-root-readonly-actual-new-trainer-CUDA-environment-v1'
++            and qualification['owner'] == policy['trainer']
++            and qualification['actual_CUDA_environment'] == dict(CUDA_DEVICE_ORDER='PCI_BUS_ID',
++                CUDA_VISIBLE_DEVICES='GPU-c0c5d295-6f07-aab5-bbde-b592ea426ec1')
++            and {k:v for k,v in environment.items() if k.startswith('CUDA_')} == qualification['actual_CUDA_environment']
++            and 'CUDA_DEVICE_ORDER' not in policy['trainer_curated_environment']
++            and {k:v for k,v in environment.items() if k != 'CUDA_DEVICE_ORDER'} == policy['trainer_curated_environment'],
++            'Exact documented baseline curation plus only qualified inherited CUDA_DEVICE_ORDER required')
+     after = owners(); last_api = api()
+     observed = dict(schema=capture['schema'],owners=before,owners_after=after,actors=actors,
+                     api_before=first_api,api=last_api)
+@@ -340,6 +351,8 @@
+         actor_count=192,eval_count=37,training_count=155,three_original_owners_unchanged=True,
+         supplemental0_parent_not_fabricated=True,learner_frame_count=last_api['learner_frame_count'],
+         training_steps=last_api['training_steps'],fps=last_api['fps'],api_timestamp=last_api['ts'],
++        additional_inherited_CUDA_order_qualification=qualification_pin,
++        trainer_environment_scope='Exact Native curated DQN/ROBOTRON/CUDA_VISIBLE_DEVICES/PYTHONUNBUFFERED baseline plus only ROOT-qualified CUDA_DEVICE_ORDER=PCI_BUS_ID',
+         controls_process_or_canonical_writes=0)
+ 
+ 

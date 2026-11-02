@@ -1,0 +1,189 @@
+--- a/Robotron/tools/PIPELINE_REPORTING.md
++++ b/Robotron/tools/PIPELINE_REPORTING.md
+@@ -48,6 +48,71 @@
+ counter/reset semantics, exact interval means, missing values, full JSON payloads,
+ actual dashboard API snapshots, and prevention of incompatible CSV appends.
+ 
++## Learning exposure counters
++
++Run23 enabled the separately reviewed `DQN_LEARNING_EXPOSURE_COUNTERS=1`
++telemetry on 2026-10-16; the code default remains OFF. `/api/now` exposes
++`host_pipeline.learning_exposure.{optimizer,replay}`. The same complete object
++is retained in existing CSV `pipeline_snapshot_json`; no columns or checkpoint
++keys were added. Snapshots do not drain these counters.
++
++The existing `training_steps` and `optimized_samples` remain logical learner
++clocks. A completed iteration still advances them when GradScaler skips the
++optimizer update. LR, imitation, target/actor refresh and replay-pressure
++schedules continue to use their existing clocks. The new counters neither
++replace these clocks nor change training behavior.
++
++Optimizer `total` and `since_epoch` contain `attempts_started`,
++`outcomes_recorded`, `applied`, `amp_skipped` and `unavailable`. Outcomes partition
++into the last three categories. `applied` means the optimizer call was admitted,
++not that every parameter changed or every Adam state advanced. The supported
++single-device fused-Adam/GradScaler path retains the existing `found_inf` tensor
++and appends it after diagnostics to the existing packed CPU readback; it adds no
++extra device readback, reduction, event or synchronization. Unsupported or
++malformed private metadata is explicitly unavailable. An in-flight attempt can
++make `available=false` with pending count one; it is not itself an AMP skip.
++
++Replay `accepted_learner_total` counts only normally completed, post-nstep new
++ring additions with explicit DQN or epsilon source tags. Expert, eval and
++unattributed rows retain separate counts; their presence is permitted and they
++are excluded from the learner count. Imported replay/bank rows and wire frames
++do not count as new admissions. Run23's prefleet audit verified a restored
++six-million-row ring with zero new accepted rows.
++
++Compare deltas only within the same `process_id`, `instance_monotonic_ns` and
++`epoch`. Replay clear/flush/load and optimizer restore/reset invalidate the
++corresponding epoch before destructive mutation; totals remain process-local
++and are not checkpoint-restored. A future fresh-data burn-in also needs a
++verified actor/nstep/replay-queue policy boundary. Snapshot components and model
++clocks are not atomic together: report AMP skip increments as observation
++brackets, and retain nonfinite-gradient diagnostics without assigning a skip to
++a particular row. Nonfinite loss remains a health failure. Earlier compiler B's
++precommitted nonfinite-gradient failure is not retroactively reclassified.
++
++Implementation/startup evidence is in
++`logs/managed-learning-20261015/run-23/exposure-source-application-audit.json`,
++`exposure-postapply-independent-audit.json` and
++`startup-readonly-independent-audit.json` in the same directory. The bounded CPU
++fixtures and tiny constructed-GPU0 parity probe do not establish live overhead
++or cross-device equivalence.
++
++The first fixed run23 health window (11:38:36.064–11:41:36.078 UTC on
++2026-10-16) recorded 3,151 completed optimizer outcomes: 3,150 applied, one
++AMP-skipped and zero unavailable. Fresh learner inserts were 813,040
++(731,168 DQN + 81,872 epsilon); 90,536 expert and 227,847 eval inserts were
++retained separately. The one Inf-gradient diagnostic and both observed skip
++brackets from prefleet through the endpoint remain in the audit; only one skip
++bracket falls in the primary window. They are not atomic row-level attribution.
++The original observer's overstrict zero-eval alerts were preserved and every
++row was rechecked against the correct exclusion/partition contract, without
++moving the window or changing production policy.
++
++The measured 71,833.77 samples/s versus run22's 69,261.72 is descriptive
++(+3.714%), not a causal estimate of telemetry overhead or a learning-quality
++result. The final evidence is `exposure-health-independent-summary.json` and
++`exposure-health-final-independent-audit.json` in run23. These operational
++observations do not change the protected 64M reference or scheduled quality gates.
++
+ ## Bank field output phases
+ 
+ `bank_persistence.output` in `/api/now` and the same nested `output` object in
+@@ -96,4 +161,16 @@
+ speedup or universal reliability fix is established. The default remains OFF and
+ the separate trial is ON. See
+ `logs/managed-learning-20261015/run-20/natural-bank-stream-vs-memmap-independent-comparison.json`.
+-No subsequent natural-event result is included here.
++The same trainer then completed two further natural stream cycles at 10:27 and
++10:57 UTC on 2026-10-16. Across all three observed cycles, both banks published
++on each cycle (six publications), with zero bank/field errors, main deadline
++errors or journal disconnects, all 192 pinned actor identities preserved, and
++at least 134 seconds of recovery observation after each pair. See
++`logs/managed-learning-20261015/run-20/natural-bank-stream-independent-audit.json`,
++`natural-bank-repeat-independent-audit.json` and
++`natural-bank-third-independent-audit.json` in that directory. These are three
++sequential natural observations under changing policy/payload and disclosed
++coast-period auxiliary work, not controlled repetitions or a universal fix.
++Header/geometry/size and sampled valid/padded-row checks are not exhaustive
++payload equality or a filesystem durability proof. GC/snapshot/unmap causality
++and a faster whole save remain unestablished.
+--- a/Robotron/DELL_SETUP.md
++++ b/Robotron/DELL_SETUP.md
+@@ -80,13 +80,41 @@
+ 
+ The v28 model retains its four-frame state and existing checkpoint keys.
+ The migration preserves model weights, optimizer/scaler state, counters, replay,
+-and banks. A persisted `optimized_samples` counter measures learning progress
+-in original **512-sample batch equivalents**. Legacy checkpoints initialize it
++and banks. The persisted `optimized_samples` counter records logical processed
++sample exposure, with schedules expressed in original **512-sample batch equivalents**. Legacy checkpoints initialize it
+ from their optimizer-step count times 512. LR and expert/BC schedules, target
+ updates, inference synchronization, and replay-pressure accounting follow this
+ sample clock, so changing batch size does not abruptly rescale earlier progress.
+ Epsilon and PER schedules retain their frame-based clocks. Larger batches still
+ change gradient statistics and should be judged with evaluation results.
++
++Run23 enabled `DQN_LEARNING_EXPOSURE_COUNTERS=1` on 2026-10-16; its code default
++is OFF. `/api/now` → `host_pipeline.learning_exposure` and existing CSV
++`pipeline_snapshot_json` now distinguish logical processed samples from known
++optimizer outcomes and fresh replay admissions. No CSV columns, checkpoint
++keys, loss, action, schedule or persistent clock changed. A completed logical
++iteration still advances its existing clocks after an AMP-skipped update.
++`applied` means an admitted optimizer call, not proof every parameter moved;
++`amp_skipped` and `unavailable` remain separate. Pending in-flight attempts can
++briefly make the optimizer snapshot unavailable.
++
++Fresh learner replay counts include only normally completed post-nstep DQN and
++epsilon rows, with expert/eval/unattributed counts separate; imported replay and
++banks are excluded. The prefleet audit verified all six million restored ring
++rows contributed zero new admissions. Compare counter deltas only within an
++unchanged process/instance/epoch; load/clear/reset invalidates the relevant
++baseline. A behavior-change burn-in additionally needs a verified queue/nstep
++boundary. Counters and model diagnostics are not an atomic snapshot, so skip
++increments are observation brackets rather than per-row causal evidence. Full
++scope and API semantics are in `tools/PIPELINE_REPORTING.md`; startup evidence is
++`logs/managed-learning-20261015/run-23/startup-readonly-independent-audit.json`.
++The first fixed health window (11:38:36.064–11:41:36.078 UTC) recorded 3,151
++optimizer outcomes: 3,150 applied, one AMP-skipped and zero unavailable. All
++813,040 new learner inserts were DQN/epsilon; expert and eval inserts stayed
++separate. The Inf-gradient diagnostic and skip observation brackets are retained.
++Its 71,833.77 samples/s (+3.714% versus run22) is descriptive, not causal overhead
++or learning-quality evidence. Final guards and original observer-predicate
++correction are retained in run23's `exposure-health-final-independent-audit.json`.
+ 
+ The six-million-transition ring stores state/next-state arrays in FP16: about
+ 249 GiB for those arrays plus metadata. `/dev/shm` is configured at **320 GiB**;
+@@ -128,8 +156,16 @@
+ uncontrolled host work differ. This first pair supports continued observation
+ of the opt-in trial, not a causal speedup or universal reliability fix. See
+ `logs/managed-learning-20261015/run-20/natural-bank-stream-vs-memmap-independent-comparison.json`.
+-The flag remains default OFF; the current trial is ON. The next natural event
+-is not included in this result.
++Two further natural streaming cycles at 10:27 and 10:57 UTC also published
++both banks with zero bank/field errors, main deadlines or journal disconnects,
++preserving all 192 actor identities through at least 134 seconds of recovery.
++The three observed cycles total six bank publications. The recurrence audits
++are `natural-bank-repeat-independent-audit.json` and
++`natural-bank-third-independent-audit.json` in the same run20 directory. They
++strengthen observed recurrence evidence without establishing a causal speedup,
++GC/snapshot/unmap cause or universal reliability fix. Published-file checks cover
++headers, geometry, sizes and sampled rows, not exhaustive payload equality or
++filesystem durability. The flag remains default OFF; the retained trial is ON.
+ 
+ ## Python environment and optional WebRTC
+ 
+@@ -630,6 +666,31 @@
+ this batch chronology in panel D; historical actor-scaling trial data remain in
+ its JSON and archived earlier figure. No new run19 performance result is claimed.
+ 
++The subsequent training-compiler A–B–A trial on 2026-10-16 retained batch 4096,
++192 actors and the existing exact actor graphs. A used `DQN_COMPILE_MODE=default`;
++B selected `max-autotune-no-cudagraphs` for the full training-loss variants only.
++Training CUDA graphs remained disabled and the actor backend was unchanged.
++The fixed 180-second windows were:
++
++| Leg | UTC window | Samples/s | Outcome |
++| --- | --- | ---: | --- |
++| Default A, run20 | 10:51:00.326–10:54:00.329 | 70,927.95 | Clean baseline |
++| Autotune B, run21 | 11:10:51.813–11:13:51.827 | 71,355.98 | INVALID; retained raw rate only |
++| Default A return, run22 | 11:21:58.252–11:24:58.268 | 69,261.72 | Clean return |
++
++B failed the precommitted nonfinite-gradient guard: an Inf gradient-norm reading
++was retained with finite loss. AMP outcome counters were not deployed in B, so
++its optimizer application/skip status and a compiler cause are unproven. The
++invalid leg is excluded from throughput selection; default compilation remains
++selected. Later exposure telemetry does not rescue or reclassify that leg.
++Sources are `compiler-default-A-independent-summary.json` in run20,
++`compiler-B-independent-summary.json` and
++`compiler-B-final-guard-provenance-audit.json` in run21, and
++`compiler-Areturn-independent-summary.json` and
++`compiler-Areturn-final-independent-audit.json` in run22, under
++`logs/managed-learning-20261015`. Sequential policy/replay/kernel trajectories
++preclude a controlled learning-quality or causal speed comparison.
++
+ The prescribed 96M regression guard on 2026-10-16 completed all 81 admitted
+ games, including every late tail: mean 205,422.22, median 169,600 and SE 8,846.83.
+ The same GPU0 compiled FP32/TF32 backend as both 64M legs passed full validation,

@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Root raw-KL one-shot transition actual job; no future job supplied",
+  "type": "object",
+  "required": [
+    "schema",
+    "mode",
+    "experiment",
+    "game_root",
+    "model_dir",
+    "output_directory",
+    "trainer_unit",
+    "fleet_unit",
+    "before",
+    "actor_masks",
+    "worker_mask",
+    "baseline_csv",
+    "bank_spec",
+    "settings_lifecycle",
+    "sources",
+    "candidate_sources",
+    "static_pins",
+    "helper_pins",
+    "verifier",
+    "phase_verifier",
+    "trial_core",
+    "prerequisites",
+    "protected_reference",
+    "original_dropin",
+    "running_phase",
+    "completed_dormant_capture",
+    "phase_id",
+    "request_id",
+    "startup_tag",
+    "boot_id",
+    "timeouts",
+    "insurance_verification",
+    "insurance_receipt",
+    "current_completed_request"
+  ],
+  "properties": {
+    "schema": {
+      "const": "robotron-raw-kl-owned-transition-job-v1"
+    },
+    "mode": {
+      "enum": [
+        "activate_kl",
+        "return_ce"
+      ]
+    },
+    "experiment": {
+      "type": "string",
+      "minLength": 1
+    },
+    "game_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model_dir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "output_directory": {
+      "type": "string",
+      "minLength": 1
+    },
+    "trainer_unit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fleet_unit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "before": {
+      "type": "object"
+    },
+    "actor_masks": {
+      "type": "object"
+    },
+    "worker_mask": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "baseline_csv": {
+      "type": "object"
+    },
+    "bank_spec": {
+      "type": "object"
+    },
+    "settings_lifecycle": {
+      "type": "object"
+    },
+    "sources": {
+      "type": "array"
+    },
+    "candidate_sources": {
+      "type": "object"
+    },
+    "static_pins": {
+      "type": "array"
+    },
+    "helper_pins": {
+      "type": "object"
+    },
+    "verifier": {
+      "type": "object"
+    },
+    "phase_verifier": {
+      "type": "object"
+    },
+    "trial_core": {
+      "$ref": "#/$defs/pin"
+    },
+    "prerequisites": {
+      "type": "object",
+      "required": [
+        "stage_A",
+        "stage_B",
+        "quality_release"
+      ],
+      "properties": {
+        "stage_A": {
+          "$ref": "#/$defs/pin"
+        },
+        "stage_B": {
+          "$ref": "#/$defs/pin"
+        },
+        "quality_release": {
+          "$ref": "#/$defs/pin"
+        }
+      },
+      "additionalProperties": false
+    },
+    "protected_reference": {
+      "$ref": "#/$defs/pin"
+    },
+    "original_dropin": {
+      "type": "object"
+    },
+    "running_phase": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/running_phase"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "completed_dormant_capture": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/pin"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "phase_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "startup_tag": {
+      "type": "string",
+      "minLength": 1
+    },
+    "boot_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timeouts": {
+      "const": {
+        "ready_s": 600,
+        "save_s": 60,
+        "cpu_s": 120
+      }
+    },
+    "insurance_verification": {
+      "$ref": "#/$defs/pin"
+    },
+    "insurance_receipt": {
+      "$ref": "#/$defs/pin"
+    },
+    "current_completed_request": {
+      "$ref": "#/$defs/pin"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "pin": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256",
+        "bytes",
+        "identity"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "identity": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    "running_phase": {
+      "type": "object",
+      "required": [
+        "record",
+        "boot_checkpoint",
+        "boot_verification",
+        "expected"
+      ],
+      "properties": {
+        "record": {
+          "$ref": "#/$defs/pin"
+        },
+        "boot_checkpoint": {
+          "type": "object"
+        },
+        "boot_verification": {
+          "$ref": "#/$defs/pin"
+        },
+        "expected": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

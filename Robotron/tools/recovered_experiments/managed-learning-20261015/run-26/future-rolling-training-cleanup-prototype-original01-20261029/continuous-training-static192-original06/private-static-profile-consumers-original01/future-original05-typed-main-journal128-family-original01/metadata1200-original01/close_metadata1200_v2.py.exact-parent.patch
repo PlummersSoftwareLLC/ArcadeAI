@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/metadata1200-namespace-overlay-original02/close_metadata1200_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/future-original05-typed-main-journal128-family-original01/metadata1200-original01/close_metadata1200_v2.py
+@@ -21,7 +21,7 @@
+     h=load('_metadata_scope_helpers',ROOT/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py')
+     directory=directory.resolve();cfg_pin=h.pin(directory/'controller-config.json');cfg=json.loads(h.checked(cfg_pin).read_bytes())
+     job_pin=h.pin(directory/'job.json');job=json.loads(h.checked(job_pin).read_bytes())
+-    control=load('_metadata_scope_control',Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/metadata1200-namespace-overlay-original02/control_metadata1200_v2.py'))
++    control=load('_metadata_scope_control',Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/future-original05-typed-main-journal128-family-original01/metadata1200-original01/control_metadata1200_v2.py'))
+     require(control.checked_config(cfg_pin['path'])==cfg,'Actual selected CPU configuration differs')
+     require(cfg['properties']==['CPUQuota=200%','MemoryMax=4G','MemorySwapMax=0','RuntimeMaxSec=1200','TasksMax=128','TimeoutStopSec=5','SendSIGKILL=no']
+             and cfg['observation_s']==1260,'Exact bounded CPU declaration required')

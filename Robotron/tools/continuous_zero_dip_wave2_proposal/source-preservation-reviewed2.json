@@ -1,0 +1,181 @@
+{
+  "schema": "robotron-continuous-zero-dip-wave2-effective-helper-source-preservation-v1",
+  "status": "SOURCE_ONLY_UNSELECTED_UNEXECUTED",
+  "preserved_initial_packet": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_zero_dip_wave2_proposal/preparation-manifest.json",
+    "sha256": "f6166790b2fcdeab8781226c28e0f0c99e6287978db0212da3db9678ffc115b2",
+    "bytes": 38437,
+    "identity": {
+      "device": 2304,
+      "inode": 82575411,
+      "bytes": 38437,
+      "mtime_ns": 1792349633258677763,
+      "ctime_ns": 1792349633258677763,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "preserved_initial_files": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_zero_dip_wave2_proposal/unapplied.patch",
+      "sha256": "cb4784e6b2c3fabeba3b0e7284be9df2c94466d35195ac616c38b41767f76878",
+      "bytes": 606,
+      "identity": {
+        "device": 2304,
+        "inode": 82575408,
+        "bytes": 606,
+        "mtime_ns": 1792349633249017819,
+        "ctime_ns": 1792349633249017819,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_zero_dip_wave2_proposal/test_continuous_zero_dip_deferred.py",
+      "sha256": "29004a03639f2a3ca74e40a9b3795e444ad68f90637dad999ed5ac75ad6e46ab",
+      "bytes": 21576,
+      "identity": {
+        "device": 2304,
+        "inode": 82575407,
+        "bytes": 21576,
+        "mtime_ns": 1792349544791040924,
+        "ctime_ns": 1792349633249407453,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_zero_dip_wave2_proposal/source-preservation.json",
+      "sha256": "2f1cd24d8f9d6505794ab6121b38de3434682244a19ae14b1fdb9b536547d59e",
+      "bytes": 2940,
+      "identity": {
+        "device": 2304,
+        "inode": 82575409,
+        "bytes": 2940,
+        "mtime_ns": 1792349633256004312,
+        "ctime_ns": 1792349633256004312,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_zero_dip_wave2_proposal/README.txt",
+      "sha256": "132f28479f3e23391f1accbebb1c91d694fec417db74e14b13eeb43ead77a97f",
+      "bytes": 5738,
+      "identity": {
+        "device": 2304,
+        "inode": 82575410,
+        "bytes": 5738,
+        "mtime_ns": 1792349633257098204,
+        "ctime_ns": 1792349633257098204,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  ],
+  "supersession": "Only selected execution route changes: actual imported source remains f44; future isolated process installs one authenticated helper before construction. First packet/test remain unexecuted and unselected.",
+  "base_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py",
+    "sha256": "f44ddfe31408b77b6d622e1d4ec4cda60a03999dc984d9e11b5aeac38911a9ed",
+    "bytes": 140517,
+    "identity": {
+      "device": 2304,
+      "inode": 79696030,
+      "bytes": 140517,
+      "mtime_ns": 1792306967914113042,
+      "ctime_ns": 1792306967928089640,
+      "mode": "0o664",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "unapplied_comparison_patch": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_zero_dip_wave2_proposal/unapplied.patch",
+    "sha256": "cb4784e6b2c3fabeba3b0e7284be9df2c94466d35195ac616c38b41767f76878",
+    "bytes": 606,
+    "identity": {
+      "device": 2304,
+      "inode": 82575408,
+      "bytes": 606,
+      "mtime_ns": 1792349633249017819,
+      "ctime_ns": 1792349633249017819,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "source_patched_comparison": {
+    "sha256": "5314c4fc70449b2f94520ce27d0f08374a68aba23175fcb49fa2e55ad4522408",
+    "bytes": 140562,
+    "full_source_copy_written": false
+  },
+  "selected_installer": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_zero_dip_wave2_proposal/effective_guard.py",
+    "sha256": "b9f90525cfd6366d595fdc8cc82646064197d7caee07169ce58e1e24b2118eb4",
+    "bytes": 7359,
+    "identity": {
+      "device": 2304,
+      "inode": 82575412,
+      "bytes": 7359,
+      "mtime_ns": 1792349863506522733,
+      "ctime_ns": 1792349968248763047,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "effective_body": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_zero_dip_wave2_proposal/effective_guard_body.py",
+    "sha256": "f7a4d367162bafb87f4bc94ddad54573a76ab9159ae11e07540b2690c2c6eba4",
+    "bytes": 973,
+    "identity": {
+      "device": 2304,
+      "inode": 82575413,
+      "bytes": 973,
+      "mtime_ns": 1792349863506339981,
+      "ctime_ns": 1792349968250763055,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "effective_body_equals_source_patched_helper_text": true,
+  "installer_API": {
+    "install": "install(socket_module, *, expected_module_path, expected_installer_sha256) -> GuardToken",
+    "verify": "verify(token) -> dict(base_socket,installer,effective_helper,function_code_globals_config_identity,only_one_module_global_replaced,effective_source_is_not_base_source)"
+  },
+  "installation_contract": [
+    "Explicit imported path, exact f44 source hash and canonical original helper code",
+    "Authenticated installer SHA and effective body SHA",
+    "Five named positional arguments; no defaults, annotations, decorators, imports, nested code or closures",
+    "Only original helper and new helper are compiled in temporary namespaces; full target module is never compiled here",
+    "New FunctionType uses existing socket_module.__dict__ and identical RL_CONFIG object",
+    "Only module-global _continuous_play_score_dip assigned, before construction",
+    "Token retains exact function/code/globals/config identity; no object IDs become cross-process provenance"
+  ],
+  "selected_guard_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_zero_dip_wave2_proposal/test_continuous_zero_dip_reviewed2.py",
+    "sha256": "d2e1780b9b9eafddf6d014596c291f25ca65cb157e1de6ef77ef1ec75c28cc08",
+    "bytes": 26024,
+    "identity": {
+      "device": 2304,
+      "inode": 82575414,
+      "bytes": 26024,
+      "mtime_ns": 1792349863507207344,
+      "ctime_ns": 1792349968250763055,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "guard_methods": 6,
+  "private_actual_imported_socket_sha256": "f44ddfe31408b77b6d622e1d4ec4cda60a03999dc984d9e11b5aeac38911a9ed",
+  "generated_package_byte_modifications": false,
+  "source_test_entry_remains_dormant": true,
+  "source_AST_compile_import_test_runtime_actions": false
+}

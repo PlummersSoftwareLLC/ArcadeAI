@@ -1,0 +1,40 @@
+--- Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/test_live8_maintenance.py	2026-10-17 02:39:43.708004937 -0500
++++ Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision2/test_live8_maintenance.py	2026-10-17 02:43:11.236884653 -0500
+@@ -420,5 +420,37 @@
+                 tool.first_attempt_clock_proof(changed,saved,"authentic")
+ 
+ 
++class HeldBootDefaultContracts(unittest.TestCase):
++    def fixture(self):
++        root="/source/Robotron";model=root+"/models_dqn"
++        env=dict(DQN_RATCHET="0",DQN_EXACT_GRAPH_CHECKPOINT=model+"/robotron_dqn_latest.pt")
++        sources={root+"/Scripts/dqn/config.py":tool.BOOT_CONFIG_SHA256}
++        return env,root,model,sources
++
++    def test_absent_held_env_uses_only_exact_pinned_config_default_without_mutating_it(self):
++        env,root,model,sources=self.fixture()
++        before=copy.deepcopy(env)
++        proof=tool.held_boot_paths(env,root,model,sources)
++        self.assertEqual(proof["model_dir"],model)
++        self.assertEqual(proof["path_source"],"pinned_config_default")
++        self.assertEqual(env,before)
++        env["ROBOTRON_DQN_MODEL_DIR"]=model
++        self.assertEqual(tool.held_boot_paths(env,root,model,sources)["path_source"],"explicit_environment")
++
++    def test_wrong_explicit_modeldir_or_graphcheckpoint_or_ratchet_rejected(self):
++        for key,value in (("ROBOTRON_DQN_MODEL_DIR","/other/models"),("DQN_EXACT_GRAPH_CHECKPOINT","/protected/winner.pt"),("DQN_RATCHET","1")):
++            with self.subTest(key=key):
++                env,root,model,sources=self.fixture();env[key]=value
++                with self.assertRaises(RuntimeError):tool.held_boot_paths(env,root,model,sources)
++
++    def test_missing_or_changed_default_source_and_wrong_declared_default_fail_closed(self):
++        env,root,model,sources=self.fixture()
++        for changed in ({},{root+"/Scripts/dqn/config.py":"0"*64}):
++            with self.subTest(changed=changed),self.assertRaisesRegex(RuntimeError,"exact held config"):
++                tool.held_boot_paths(env,root,model,changed)
++        with self.assertRaisesRegex(RuntimeError,"model directory differs"):
++            tool.held_boot_paths(env,root,"/other/models",sources)
++
++
+ if __name__ == "__main__":
+     unittest.main()

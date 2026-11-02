@@ -1,0 +1,20 @@
+--- connection_cleanup_receipts_candidate_v2.py
++++ connection_cleanup_receipts_candidate_v3.py
+@@ -138,6 +138,17 @@
+             raise ValueError('No unique original terminal cleanup receipt')
+         return self.snapshot(found[0])
+ 
++    def require_active_owner(self, token, cid, slot, eval_only, handler):
++        if (type(token) is not str or type(cid) is not int or type(slot) is not int
++                or type(eval_only) is not bool or handler is not threading.current_thread()):
++            raise ValueError('Exact active original connection producer required')
++        with self.lock:
++            row = self.records.get(token)
++            if (row is None or row['cid'] != cid or row['slot'] != slot
++                    or row['eval_only'] is not eval_only or row['handler'] is not handler
++                    or row['recorded'] or not handler.is_alive()):
++                raise ValueError('Stale or mismatched connection producer token')
++
+     def lookup_active(self, cid, slot):
+         if type(cid) is not int or type(slot) is not int:
+             raise ValueError('Exact active connection lookup required')

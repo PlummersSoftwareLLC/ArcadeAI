@@ -1,0 +1,178 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/state-sources/verify_stopped_full_training_state_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/verify_current_continuous_stopped_fullstate_v3.py
+@@ -21,18 +21,17 @@
+ import sys
+ import time
+ import traceback
++import types
+ 
+ ROOT=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ BASE=ROOT/'logs/managed-learning-20261015/run-26'
+ SCHEMA='robotron-stopped-full-training-state-CPU-job-v1'
+ MANIFEST_SCHEMA='robotron-stopped-full-training-state-restoration-manifest-v1'
+ CLOCKS=('training_steps','optimized_samples','learner_frame_count','frame_count')
+-OWNER=dict(pid=294486,starttime_ticks=1369270,unit='robotron-trainer.service',
+-    invocation_id='cba42d4be03e44c6a37fa66c6c8855e1',
+-    cgroup='/user.slice/user-1001.slice/user@1001.service/app.slice/robotron-trainer.service')
+-PHASE_ANCHOR_SHA='d9dfb33918a98a3164f503fafe7bc6ac4dfca1df15c252b531f4d0dd1eca8990'
+-BOOT_SHA='e04dc403489d2545fd4e67909537d2684f20f4a52c15eee0df1edb36de2cb114'
+-RECORD_SHA='f919a465369d4f28266693ae7a438946ef688a9f6087322c4bf917e6c5d327d2'
++OWNER = None  # Bound only by exact selected actual startup/stop metadata.
++PHASE_ANCHOR_SHA = None  # Bound only by exact selected actual startup/stop metadata.
++BOOT_SHA = None  # Bound only by exact selected actual startup/stop metadata.
++RECORD_SHA = None  # Bound only by exact selected actual startup/stop metadata.
+ MANIFEST_TOOLS_SHA='3ab7c6a018afce917bd1199ec9d09b5d3041936d638cdf17f91514006685faf7'
+ DEPENDENCIES={
+     'recipe_verifier':(BASE/'post-preview-LR0625-hot-verifier-original01-preparation-20261027/verify_recipe_phase_snapshot_lr0625_v1.py',
+@@ -98,8 +97,61 @@
+     sys.modules[name]=module;spec.loader.exec_module(module);return module
+ 
+ 
++
++def select_context(job):
++    """Bind one actual cold incarnation; no old owner/boot/phase is relabelled."""
++    global OWNER, FLEET, PHASE_ANCHOR_SHA, BOOT_SHA, RECORD_SHA
++    entry=job['current_inputs_source']
++    require(entry['path']==str(Path(__file__).with_name('current_main_preservation_inputs_v1.py')),
++            'Exact selected current preservation metadata source required')
++    helper=load('_current_continuous_preservation_inputs',entry)
++    selection=helper.read(job['current_selection'])
++    expected=helper.startup_anchor(selection)
++    require(job['owner']==selection['owner'] and job['fleet']==selection['fleet']
++            and job['expected_current_cap']==selection['expected_current_cap']
++            and job['phase_anchor']==job['boot_CPU_report']
++            and read(job['phase_anchor'])==expected,
++            'Actual restored boot descriptor/owner/cap differs')
++    require(job['phase_record']==expected['phase_record'], 'Actual current resume record required')
++    OWNER,FLEET=selection['owner'],selection['fleet']
++    PHASE_ANCHOR_SHA,BOOT_SHA,RECORD_SHA=(job[k]['sha256'] for k in ('phase_anchor','boot_CPU_report','phase_record'))
++    return helper,selection,expected
++
++
++def select_current_recipe(job,recipe):
++    """Same strict tensor/numerical body, exact selected .0625 cap8/12 literals."""
++    context=job['source_control_context']['held_recipe_context'];cap=job['expected_current_cap']
++    expected=dict(recipe.HISTORICAL_HELD_CONTEXT,learning_control_lr_scale=.0625,
++                  optimizer_lr=3.125e-6,max_samples_per_frame=cap)
++    require(type(cap)is int and cap in(8,12) and context==expected
++            and set(context)==set(expected)and all(type(context[k])is type(v)for k,v in expected.items()),
++            'All held recipe fields must match; only selected cold cap8/12 is variable')
++    data=recipe.STRICT_PATH.read_bytes()
++    require(hashlib.sha256(data).hexdigest()==recipe.STRICT_SHA256,'Original strict body changed')
++    replacements=list(recipe.RECIPE_REPLACEMENTS)
++    if cap==12:replacements.extend([(b'max_samples_per_frame=8,',b'max_samples_per_frame=12,'),
++        (b"DQN_MAX_SAMPLES_PER_FRAME='8',",b"DQN_MAX_SAMPLES_PER_FRAME='12',")])
++    effective=data
++    for old,new in replacements:
++        require(effective.count(old)==1 and effective.count(new)==0,'Exact recipe literal boundary differs')
++        effective=effective.replace(old,new)
++    inverse=effective
++    for old,new in reversed(replacements):inverse=inverse.replace(new,old)
++    require(inverse==data,'Unrelated strict source mutation refused')
++    selected=types.ModuleType('_current_continuous_selected_strict_body');selected.__file__=str(recipe.STRICT_PATH)
++    exec(compile(effective,str(recipe.STRICT_PATH)+'::current-cold-cap-'+str(cap),'exec'),selected.__dict__)
++    require(selected.HELD_RECIPE_CONTEXT==context,'Effective strict context differs')
++    return selected,dict(schema='robotron-phase-CPU-recipe-source-specialization-v1',
++        selected_recipe=dict(priority_metric='ce',batch_size=4096,learning_control_lr_scale=.0625,
++            scheduled_lr=3.125e-6,max_samples_per_frame=cap),
++        full_held_recipe_context=copy.deepcopy(context),raw_strict_source_sha256=recipe.STRICT_SHA256,
++        effective_source_sha256=hashlib.sha256(effective).hexdigest(),
++        literal_replacements=[dict(original=a.decode(),effective=b.decode())for a,b in replacements],
++        reverse_exact_raw_source=True,tensor_Adam_scaler_finite_and_shape_predicates_unchanged=True,
++        declared_recipe_and_isolated_setup_env_literals_only=True,saved_metadata_normalized=False)
++
+ def old_owner_absent(owner):
+-    require(owner==OWNER,'Only the explicitly selected original trainer is accepted')
++    require(owner==OWNER or owner==FLEET,'Only the explicitly selected trainer/fleet is accepted')
+     path=Path('/proc',str(owner['pid']),'stat')
+     try:
+         raw=path.read_text();parts=raw[raw.rfind(')')+2:].split()
+@@ -171,22 +223,34 @@
+ 
+ def verify_api_and_authority(job,poststop):
+     authority=read(job['stopped_authority']);api=read(authority['final_API']);seal=read(authority['bank_seal'])
+-    require(authority['schema']=='robotron-owned-stopped-training-preservation-authority-v1'
++    require(authority['schema']=='robotron-continuous-budget-stopped-preservation-authority-v1'
+         and authority['owner']==job['owner']==OWNER and type(authority['actual_exit'])is int and authority['actual_exit']==0
+         and authority['original_scope_released']is True,'Actual original0 and positively released stop required')
+     terminal=verify_terminal_archive(authority['terminal_archive'],poststop)
++    helper,selection,anchor=select_context(job)
++    require(authority['original_selection']==job['current_selection']
++            and seal['original_selection']==job['current_selection'] and seal['owner']==OWNER and seal['fleet']==FLEET
++            and authority['fleet_terminal_archive']==selection['fleet_terminal_archive'],
++            'Exact current continuous input/stop authority required')
++    helper.verify_input_closure(selection)
++    intent=load('_current_continuous_budget_intent',seal['budget_intent_source'])
++    require(seal['bank_pair']==intent.validate(read(seal['before_API']),api,seal['bank_pair']['banks'],
++            expected_pid=OWNER['pid'],now=seal['sealed_unix_s'],expected_cap=job['expected_current_cap'],
++            loaded_baseline=anchor['loaded_baseline']), 'Actual sealed budget/bank intent must replay exactly')
++    old_owner_absent(FLEET)
++
+     require(type(authority['stopped_unix_s'])in(int,float)and math.isfinite(authority['stopped_unix_s'])
+         and 0<api['ts']<=authority['stopped_unix_s'],'Actual stopped chronology differs')
+-    require(api['client_count']==0 and api['client_rows']==[] and api['training_enabled']is False
+-        and api['measurement_active']is True and api['memory_buffer_size']==6000000
++    require(api['client_count']==0 and api['client_rows']==[] and api['training_enabled']is True
++        and api['measurement_active']is False and api['memory_buffer_size']==6000000
+         and api['lr']==3.125e-6 and api['managed_experiment']==job['experiment']
+         and api['pipeline_read_error']==api['bank_persistence_read_error']=='','Final zero-client supported pause/recipe required')
+-    require(seal['input_sources_sealed']is seal['all_handlers_finished']is seal['prefetch_paused']
+-        is seal['budget_exhausted']is True,
++    require(seal['input_sources_sealed']is seal['all_handlers_finished']is seal['budget_exhausted']is True
++        and seal['prefetch_paused_claimed']is False,
+         'Original handler/FIFO/prefetch/budget and bank seal required')
+     require(seal['clock_floor']==job['clock_floor']and all(api[k]==job['clock_floor'][k]for k in CLOCKS),
+         'Root final paused clocks differ')
+-    require(seal['bank_pair']['status']=='PAUSED_RAM_BANK_SAVE_INTENT_AND_PRIOR_DISK_GEOMETRY_VERIFIED'
++    require(seal['bank_pair']['status']=='CONTINUOUS_BUDGET_EXHAUSTED_RAM_BANK_INTENT_AND_PRIOR_DISK_GEOMETRY_VERIFIED'
+         and seal['bank_pair']['expected_pid']==OWNER['pid']and seal['bank_pair']['final_synchronous_save_required']is True,
+         'Actual current RAM revision intent required')
+     for kind,reason in (('optimizer','optimizer_restore_begin'),('replay','directory_adopt_begin')):
+@@ -329,7 +393,7 @@
+     job=read(job_pin)
+     require(job['schema']==SCHEMA and job['source']==self_pin and job['original_attempt']==1 and job['no_retry']is True,
+         'Exact original stopped CPU job required')
+-    require(job['unit']=='robotron-stopped-full-training-state-CPU-original01-20261029.service',
++    require(job['unit']=='robotron-current-continuous-stopped600-'+job['current_selection']['sha256'][:16]+'.service',
+         'Unique original stopped-state CPU unit required')
+     raw=subprocess.check_output(['systemctl','--user','show',job['unit']],text=True,timeout=10)
+     fields=dict(line.split('=',1)for line in raw.splitlines()if'='in line)
+@@ -337,6 +401,7 @@
+         CPUQuotaPerSecUSec='2s',MemoryMax=str(4<<30),MemorySwapMax='0',TasksMax='128',
+         RuntimeMaxUSec='10min',Restart='no',NRestarts='0')
+     require(all(fields.get(k)==v for k,v in expected.items()),'Actual original600s/2CPU/4GiB scope differs')
++    select_context(job)
+     require(job['owner']==OWNER and set(job['clock_floor'])==set(CLOCKS)
+         and all(type(v)is int and v>0 for v in job['clock_floor'].values()),'Exact owner/final four clocks required')
+     deps={}
+@@ -347,7 +412,7 @@
+         # bound by full8/path/SHA; canonical production sources are never chmod'd.
+         deps[name]=load('_stopped_fullstate_'+name,value,immutable=name!='bank_witness')
+     tools_pin=job['dependencies']['manifest_tools']
+-    require(tools_pin['path']==str(Path(__file__).parent/'restoration_manifest_tools_v1.py')
++    require(tools_pin['path']=='/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/state-sources/restoration_manifest_tools_v1.py'
+         and tools_pin['sha256']==MANIFEST_TOOLS_SHA,'Exact shared typed-tree contract required')
+     tools=load('_stopped_fullstate_manifest_tools',tools_pin)
+     for value in job['inputs']:checked(value,immutable=value['identity']['mode']=='0o444')
+@@ -356,13 +421,15 @@
+     require(job['boot_CPU_report']['sha256']==BOOT_SHA and job['phase_record']['sha256']==RECORD_SHA
+         and job['phase_anchor']['sha256']==PHASE_ANCHOR_SHA,'Actual current boot/phase anchors required')
+     boot,record,anchor=(read(job[k])for k in('boot_CPU_report','phase_record','phase_anchor'))
+-    require(boot['checkpoint']['sha256']=='b99e50b9b1e7339f27c44de399e556ea0213c011ce2480c71eccd1e70ebd179e'
+-        and boot['Adam_state_parameters']==81 and boot['saved_optimizer_lrs']==[3.125e-6]
+-        and boot['selected_lr_scale']==.0625 and boot['CUDA_initialized']is False,'Actual .0625 boot proof differs')
+-    recipe=deps['recipe_verifier'];historical=recipe.load_base()
+-    base,specialization=recipe.select_recipe_base(job,historical)
++    require(boot['schema']=='robotron-actual-continuous-boot-state-descriptor-v1'
++        and boot['owner']==OWNER and boot['CUDA_initialized']is False
++        and boot['fresh_CPU_test_or_new_runtime_qualification_claimed']is False,
++        'Actual restored startup descriptor required; no new CPU report is fabricated')
++    recipe=deps['recipe_verifier']
++    base,specialization=select_current_recipe(job,recipe)
+     require(specialization['selected_recipe']['learning_control_lr_scale']==.0625
+-        and specialization['selected_recipe']['max_samples_per_frame']==8,'Exact .0625/cap8 recipe required')
++        and specialization['selected_recipe']['max_samples_per_frame']==job['expected_current_cap'],
++        'Exact .0625 selected current-cap recipe required')
+     output=Path(job['output_directory'])
+     require(output.is_absolute()and output.resolve(strict=False)==output and not output.exists()
+         and output.parent.is_dir(),'Exclusive new Root output required')

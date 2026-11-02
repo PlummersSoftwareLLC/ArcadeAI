@@ -1,0 +1,118 @@
+--- socket_server_cleanup_receipts_candidate_v4.py
++++ socket_server_continuous_train_candidate_v1.py
+@@ -1212,10 +1212,21 @@
+                     self.inference_batcher.stop()
+                 raise RuntimeError("Inference-only server requires a full-game journal") from exc
+ 
++        mode = os.getenv("ROBOTRON_CONTINUOUS_TRAINING_MODE", "0")
++        if mode not in ("0", "1"):
++            raise ValueError("Explicit continuous-training mode0/1 required")
++        self.continuous_training_mode = mode == "1"
++        if self.continuous_training_mode:
++            if (not self.replay_enabled or not getattr(metrics,"continuous_training_mode",False)
++                    or not getattr(metrics,"main_measurement_entry_disabled",False)
++                    or getattr(metrics,"measurement_active",False) or getattr(metrics,"ratchet_frozen",False)):
++                raise RuntimeError("Continuous MAIN requires actual pre-entry measurement fence and replay")
+         self._cleanup_receipts = None
+         cleanup_mode = os.getenv("ROBOTRON_ROLLING_TRAINING_CLEANUP", "0")
+         if cleanup_mode not in ("0", "1"):
+             raise ValueError("Explicit rolling cleanup mode0/1 required")
++        if self.continuous_training_mode and cleanup_mode != "1":
++            raise RuntimeError("Continuous MAIN requires original handler/Timer/FIFO cleanup receipts")
+         if cleanup_mode == "1":
+             if (not self.replay_enabled or self.async_buffer is None
+                     or self.game_journal is None or not self.game_journal.retire_after_game):
+@@ -1247,7 +1258,36 @@
+             value = self._cleanup_receipts.lookup_terminal(journal_game_id, cid, slot)
+         active, generation = self._measurement_snapshot()
+         value.update(observed_unix_s=time.time(), observed_monotonic_ns=time.monotonic_ns(),
+-                     measurement_active=active, measurement_generation=generation)
++                     measurement_active=active, measurement_generation=generation,
++                     continuous_training_mode=self.continuous_training_mode,
++                     main_measurement_entry_disabled=bool(getattr(metrics,"main_measurement_entry_disabled",False)))
++        value["training_refill_candidate"] &= not active
++        return value
++
++    def continuous_training_policy_snapshot(self):
++        if not self.continuous_training_mode or self._cleanup_receipts is None:
++            raise ValueError("Continuous training mode is not enabled")
++        active,generation=self._measurement_snapshot()
++        health=self.async_buffer.cleanup_health()
++        return dict(schema="robotron-continuous-main-policy-v1",
++            server_stamp=dict(self._cleanup_receipts.stamp),
++            continuous_training_mode=True,
++            main_measurement_entry_disabled=bool(getattr(metrics,"main_measurement_entry_disabled",False)),
++            measurement_active=active,measurement_generation=generation,
++            ratchet_frozen=bool(getattr(metrics,"ratchet_frozen",False)),
++            training_enabled=bool(getattr(metrics,"training_enabled",False)),
++            replay_admission_open=health["admission_open"],consumer_error=health["consumer_error"],
++            observed_unix_s=time.time(),observed_monotonic_ns=time.monotonic_ns())
++
++    def connection_cleanup_by_token(self, token):
++        if self._cleanup_receipts is None:
++            raise ValueError("Connection cleanup receipts are not enabled")
++        value=self._cleanup_receipts.lookup_token(token)
++        active,generation=self._measurement_snapshot()
++        value.update(observed_unix_s=time.time(),observed_monotonic_ns=time.monotonic_ns(),
++            measurement_active=active,measurement_generation=generation,
++            continuous_training_mode=self.continuous_training_mode,
++            main_measurement_entry_disabled=bool(getattr(metrics,"main_measurement_entry_disabled",False)))
+         value["training_refill_candidate"] &= not active
+         return value
+ 
+@@ -1413,6 +1453,22 @@
+             measurement_frames=int(getattr(metrics, "measurement_frame_count", 0)),
+         )
+ 
++    def _confirmed_journal_boundary(self, cid, frame, cs, reason, row):
++        if (not self.continuous_training_mode or reason != "zero_score_restart"
++                or row.get("boundary_reason") != reason or row.get("complete") is not True
++                or row.get("client_id") != cid or row.get("client_slot") != cs.get("client_slot")
++                or row.get("game_uid") != cs.get("game_uid") or row.get("score") != 0):
++            raise RuntimeError("Exact journal-confirmed zero-game boundary required")
++        self._require_connection_producer(cid,cs)
++        with self.client_lock:
++            if self.client_states.get(cid) is not cs:
++                raise RuntimeError("Confirmed boundary belongs to another connection")
++            self._game_uid_seq += 1
++            cs["game_uid"] = self._game_uid_seq
++            cs["deaths_this_game"] = 0
++        self._reset_new_game_replay_segment(cid,cs,frame.game_score)
++        cs["_journal_boundary_reset"] = True
++
+     def _journal_observe(self, cid, frame, cs, new_game, boundary_inputs=None):
+         if self.game_journal is None:
+             return
+@@ -1422,7 +1478,10 @@
+             cs["journal_measurement_generation"] = int(getattr(metrics, "measurement_generation", 0))
+             self.game_journal.observe(cid, frame, cs, new_game=new_game,
+                                       context=lambda: self._journal_context(cs),
+-                                      boundary_inputs=boundary_inputs)
++                                      boundary_inputs=boundary_inputs,
++                                      confirmed_boundary=(lambda reason,row:
++                                          self._confirmed_journal_boundary(cid,frame,cs,reason,row))
++                                          if self.continuous_training_mode else None)
+             if getattr(self.game_journal, "retire_after_game", False):
+                 cs["retire_after_game"] = self.game_journal.retirement_for_client(cid) is not None
+         except Exception as exc:
+@@ -1844,7 +1903,8 @@
+         # GA1 master difficulty (1-10) to poke into CMOS.  v1 clients keep the
+         # 5-byte action so their fixed-size read never desyncs.
+         cs = self.client_states.get(cid)
+-        if isinstance(cs, dict) and cs.get("retire_after_game", False):
++        if (isinstance(cs, dict) and cs.get("retire_after_game", False)
++                and (not self.continuous_training_mode or cs.get("eval_only",False))):
+             source_u8 |= 0x20
+         if isinstance(cs, dict) and cs.get("proto_v2", False):
+             # High bit of the difficulty byte = "you are an eval client":
+@@ -2302,6 +2362,10 @@
+                 if _response_trace is not None: _response_trace.mark("journal")
+                 self._journal_observe(cid, frame, cs, _is_new_game,
+                                       boundary_inputs=_boundary_inputs)
++                if cs.pop("_journal_boundary_reset",False):
++                    # The confirmed zero boundary cleared the old history after
++                    # the first stack build. Rebuild before any new replay.
++                    model_state = self._stack_model_state(cs,single_state)
+ 
+                 if _response_trace is not None: _response_trace.mark("metrics_aggregate")
+                 # Peak score and rolling score/level telemetry are shared

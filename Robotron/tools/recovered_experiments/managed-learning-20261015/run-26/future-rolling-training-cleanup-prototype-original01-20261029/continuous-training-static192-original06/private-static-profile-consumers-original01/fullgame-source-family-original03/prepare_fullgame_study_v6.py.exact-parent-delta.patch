@@ -1,0 +1,95 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-proof2s-fullgame-confirmation-original01-preparation/source-family-original01/prepare_fullgame_study_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/fullgame-source-family-original03/prepare_fullgame_study_v6.py
+@@ -65,6 +65,16 @@
+             and screen['separate_fullgame_confirmation_required']==dict(candidate_legs=2,minimum_games_each=64,
+                 all_slots=32,full_tail=True,mean_ratio_min=[105,100],median_preserved=True),
+             'Screen must preserve the complete-game confirmation requirements')
++    actual_study=read(assessment['prepared_manifest'],h)
++    require([v['leg']for v in actual_study['cases']]==list(ORDER),
++            'A wholly fresh matched static-profile RCRC screen is required')
++    profile=load('_fullgame_screen_static_profile',Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/static_profile_contract_v2.py'))
++    baseline=None
++    for value in actual_study['cases']:
++        original=read(value['native_job'],h);binding=read(original['main_binding'],h)
++        profile.validate_inventory(binding,h)
++        if baseline is None:baseline=binding
++        else:profile.same_domain(baseline,binding)
+     return assessment,screen,epoch
+ 
+ 
+@@ -109,16 +119,22 @@
+     source_study=read(assessment['prepared_manifest'],h)
+     previous_job=read(source_study['cases'][0]['native_job'],h)
+     case=read(previous_job['main_binding'],h)
+-    health=load('_fullgame_prepare_live_health',Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_health_transport_retired_API_v4.py'))
++    health=load('_fullgame_prepare_live_health',Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_transport_v1.py'))
++    profile=contract.static_profile()
++    profile.validate_inventory(case,h)
+     observer=load('_fullgame_prepare_live_raw',LOCAL/'fullgame_round_observer_v6.py')
+     deadline=time.monotonic()+15
+     while True:
+         try:
+-            case['initial_round']=json.loads((Path(case['round_root'])/'status.json').read_bytes())['round']
+-            baseline=observer.collect(health,case);health.validate(case,baseline);health.check_inputs(case,full=True);break
++            baseline=observer.collect(health,case);health.validate(case,baseline);health.check_inputs(case,full=True)
++            profile.sample_domain(case,baseline);break
+         except(ValueError,OSError):
+             require(time.monotonic()<deadline,'No coherent original main domain; no workload launched')
+             time.sleep(.02)
++    experiment=baseline['api']['managed_experiment']
++    require(type(experiment)is str and experiment and case.get('experiment',experiment)==experiment,
++            'Actual unchanged main experiment label required')
++    case['experiment']=experiment
+     recovery=read(lease_pin,h);restored=recovery['restored_lease'];h.checked(restored)
+     policies={}
+     for role,key in [('reference','strict_reference_profile'),('candidate','strict_candidate_profile')]:
+@@ -143,15 +159,17 @@
+         fresh_reference_R1_R2_required=True,previous_candidate_scores_not_reused_as_reference=True,**policies))
+     runtime=h.pin(LOCAL/'run_fullgame_rounds_v7.py');reviewer_pin=h.pin(LOCAL/'review_fullgame_rounds_v7.py');controller=h.pin(LOCAL/'control_fullgame_rounds_v6.py')
+     observer_sources=dict(client=h.pin(LOCAL/'fullgame_round_observer_client_v8.py'),worker=h.pin(LOCAL/'fullgame_round_observer_v6.py'),
+-        health=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_health_transport_retired_API_v4.py')),health_base=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_main_health_retired_API_v4.py')),API_projection=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/api_cached_projections_v3.py')),round_admission=h.pin(HERE/'round_admission_proof_v2.py'),launcher_census=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/launcher_census_v1.py')),durability=h.pin(HERE/'buffered_raw_writer_v2.py'),control=h.pin(HERE/'volatile_live_control_v1.py'),interpreter=h.pin(Path('/usr/bin/python3').resolve()))
+-    protocol=h.put(output/'main-health-protocol.json',dict(schema='robotron-native-fullgame-round-main-health-declared-launcher-proof2s-protocol-v1',
+-        case=binding,raw_API_required=True,close_requires_final_sample=True,hot_max_gap_s=2.0,initial_samples=100,raw_queue_protocol='pending-byte-digest-v2',volatile_live_tmpfs=True,source_bound_API_reconnect_projection=True,source_bound_natural_round_admission=True,source_bound_declared_launcher_census=True))
++        health=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_transport_v1.py')),health_base=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_health_v1.py')),registry=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_registry_v1.py')),
++        durability=h.pin(HERE/'buffered_raw_writer_v2.py'),control=h.pin(HERE/'volatile_live_control_v1.py'),interpreter=h.pin(Path('/usr/bin/python3').resolve()))
++    protocol=h.put(output/'main-health-protocol.json',dict(schema='robotron-native-fullgame-continuous-static192-main-health-proof2s-protocol-v1',
++        case=binding,raw_API_required=True,close_requires_final_sample=True,hot_max_gap_s=2.0,initial_samples=100,raw_queue_protocol='pending-byte-digest-v2',volatile_live_tmpfs=True,source_bound_retired_API_projection=True,source_bound_completed_original192_bootstrap=True,source_bound_static_original192_partition=True))
+     finalizer=next(pin for pin in previous_job['inputs']if pin['sha256']=='64c4001e3a46dd1f620bfa28b088f500bf8e9d3788a463d324cc408d7a42e6ee')
+-    family=h.put(output/'source-family.json',dict(schema='robotron-recovered-round-fullgame-declared-launcher-proof2s-family-v1',runtime=runtime,
++    family=h.put(output/'source-family.json',dict(schema='robotron-continuous-static192-fullgame-proof2s-family-v1',runtime=runtime,
+         leg_reviewer=reviewer_pin,contract=h.pin(LOCAL/'fullgame_round_contract_v7.py'),main_observer=observer_sources,
+         main_observer_reviewer=h.pin(LOCAL/'review_fullgame_round_observer_v7.py'),main_health_finalizer=finalizer,
+         private_parent_job=h.pin(contract.TEMPLATE),current_main_binding=binding,lease_recovery_authority=lease_pin,
+-        engineering_only=False,native_launch_qualified=True,main_domain_hot_review=hot_pin))
++        engineering_only=False,native_launch_qualified=True,main_domain_hot_review=hot_pin,
++        static_profile_contract=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/static_profile_contract_v2.py')),main_input_inventory_authority=case['input_inventory_authority']))
+     records=[];fresh=set()
+     for leg in ORDER:
+         directory=output/leg;directory.mkdir(mode=0o700);role='reference'if leg.startswith('R')else'candidate';selected=policies[role]
+@@ -160,7 +178,7 @@
+             checkpoint=selected['policy'],expected_policy_clocks=selected['saved_clocks'],minimum_completed_games=50,
+             confirmation_min_complete_games=64,engineering_only=False,source_family_manifest=family,main_health_protocol=protocol,
+             main_binding=binding,lease=restored,training_experiment=case['experiment'],original_attempt=1,no_retry=True,
+-            label='fullgame-rounds-'+leg.lower()+'-'+pair['sha256'][:12],
++            label='fullgame-static192-'+leg.lower()+'-'+pair['sha256'][:12],
+             prelaunch_CPU_closeout=str(directory/'fullgame-CPU-guards-original01/independent-closeout.json'))
+         for key in ('sessions','connections'):
+             job[key]={}
+@@ -168,7 +186,7 @@
+                 token=secrets.token_hex(16)
+                 while token=='0'*32 or token in seen or token in fresh:token=secrets.token_hex(16)
+                 fresh.add(token);job[key][str(slot)]=token
+-        values=[*nested_pins(job),h.pin(Path(__file__).resolve()),h.pin(HERE/'round_health_transport_v4.py'),h.pin(LOCAL/'fullgame_round_adaptation_delta_v7.json'),
++        values=[*nested_pins(job),h.pin(Path(__file__).resolve()),h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/static_profile_contract_v2.py')),case['input_inventory_authority'],h.pin(LOCAL/'fullgame_round_adaptation_delta_v7.json'),
+                 h.pin(LOCAL/'fullgame_round_contract_v7.py'),reviewer_pin,controller,*observer_sources.values(),finalizer,
+                 h.pin(LOCAL/'review_fullgame_round_observer_v7.py'),baseline_pin,lease_pin,hot_pin,assessment_pin,epoch_pin,*prior]
+         job['inputs']=list({pin['path']:pin for pin in values}.values());jp=h.put(directory/'job.json',job)
+@@ -182,7 +200,7 @@
+             original_attempt=1,no_retry=True,outer_start_horizon_s=21540,whole_cohort_timeout_s=21600,
+             admission_mode=reviewer.COHORT_SELECTION['strategy'],expected_selected_games=64,wall_limit_s=22200,startup_trace_frames=1200,
+             minimum_quality_completed_games=50,quality_minimum_games_remains=50,confirmation_min_complete_games=64,quality_qualified=False,promotion=False))
+-        config=dict(unit='robotron-compiled-full-tail32-integration-rounds-'+pair['sha256'][:12]+'-'+leg.lower()+'-original01.service',
++        config=dict(unit='robotron-compiled-full-tail32-integration-static192-'+pair['sha256'][:12]+'-'+leg.lower()+'-original01.service',
+             output=str(directory/'execution-original01'),argv=[str(ROOT.parent/'.venv-gb300/bin/python'),'-Xgil=0','-I','-B',runtime['path'],
+                 '--execute','--job',jp['path'],'--job-sha256',jp['sha256'],'--source-sha256',runtime['sha256']],
+             properties=reviewer.PROPERTIES,observation_s=22320,pins=[control.pin(pin['path'])for pin in [jp,scope,*job['inputs']]])

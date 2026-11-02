@@ -1,0 +1,91 @@
+--- a/Robotron/Scripts/dqn/experiment_status.py
++++ b/Robotron/Scripts/dqn/experiment_status.py
+@@ -18,6 +18,7 @@
+ _PLAN_LIMIT = 512 * 1024
+ _RECEIPT_LIMIT = 8 * 1024 * 1024
+ _MAX_LEGS = 4
++_STARTUP_GRACE_SECONDS = 120
+ 
+ 
+ def _number(value):
+@@ -57,6 +58,8 @@
+         self._lock = threading.Lock()
+         self._cached = None
+         self._last_good = None
++        self._count_campaign = None
++        self._observed_count_legs = set()
+         self._read_at = float("-inf")
+ 
+     def _under(self, value, boundary, relative_to):
+@@ -122,6 +125,9 @@
+                     "current_leg": None, "total_legs": 0, "updated_unix_s": None,
+                     "comparison": None, "outcome": None, "reason": None}
+         campaign = self._under(active.get("directory"), self.logs_root, self.game_root)
++        if campaign != self._count_campaign:
++            self._count_campaign = campaign
++            self._observed_count_legs.clear()
+         status_path = self._under(campaign / "status.json", campaign, campaign)
+         status = self._read(status_path, _STATUS_LIMIT)
+         plan_path = self._under(campaign / "plan.json", campaign, campaign)
+@@ -139,6 +145,7 @@
+         live_specs = {entry.get("index"): entry for entry in live[:_MAX_LEGS]
+                       if isinstance(entry, dict)}
+         indices = list(dict.fromkeys([*specs, *live_specs]))[:_MAX_LEGS]
++        self._observed_count_legs.intersection_update(indices)
+         updated = _number(status.get("updated_unix_s")) or status_path.stat().st_mtime
+         legs = []
+         for index in indices:
+@@ -147,6 +154,7 @@
+             job = _mapping(spec.get("job"))
+             leg_state = _text(progress.get("state")) or "pending"
+             data = {}
++            initializing = False
+             path_value = None
+             if leg_state == "finished":
+                 path_value = progress.get("receipt_path") or spec.get("receipt_path")
+@@ -162,20 +170,26 @@
+                     if index == status.get("current_leg") and leg_state == "running":
+                         updated = min(updated, path.stat().st_mtime)
+                 except FileNotFoundError:
+-                    # The runner publishes its PID before the evaluator is ready.
+-                    previous = next((leg for leg in (self._last_good or {}).get("legs", [])
+-                                     if leg["index"] == index), {})
++                    # Cold compilation can precede the first evaluator status.
++                    # The explicit start bounds grace; heartbeats cannot reset it.
+                     started = _number(progress.get("started_unix_s"))
+-                    if (leg_state == "finished" or previous.get("count") is not None or
+-                            (started is not None and self._clock() - started > 30)):
++                    now = self._clock()
++                    if (leg_state != "running" or index != status.get("current_leg") or
++                            index in self._observed_count_legs or started is None or
++                            not 0 <= now - started <= _STARTUP_GRACE_SECONDS or
++                            not 0 <= now - updated <= 30):
+                         raise
++                    initializing = True
+             cohort = _mapping(data.get("cohort"))
+             leg = {"index": _number(index),
+                    "role": _text(progress.get("role") or spec.get("role")),
+                    "label": _text(data.get("label") or job.get("label")),
+-                   "state": leg_state, "phase": _text(data.get("phase")) or leg_state}
++                   "state": leg_state,
++                   "phase": "initializing" if initializing else _text(data.get("phase")) or leg_state}
+             for key in ("count", "started", "pending", "mean", "median", "se"):
+                 leg[key] = _number(data.get(key, cohort.get(key)))
++            if leg["count"] is not None:
++                self._observed_count_legs.add(index)
+             for key in ("valid", "complete"):
+                 value = data.get(key)
+                 leg[key] = value if isinstance(value, bool) else None
+--- a/Robotron/Scripts/dqn/test_experiment_status.py
++++ b/Robotron/Scripts/dqn/test_experiment_status.py
+@@ -163,7 +163,9 @@
+         self.write(self.state_path, {})
+         self.assertFalse(self.reader.snapshot()["available"])
+         self.write(self.state_path, {"active_quality_job": {"directory": str(self.campaign)}})
+         (self.campaign / "01-reference/status.json").unlink()
++        self.status["legs"][0]["started_unix_s"] = self.now
++        self.write(self.campaign / "status.json", self.status)
+         result = self.refresh()
+-        self.assertEqual(result["legs"][0]["phase"], "running")
++        self.assertEqual(result["legs"][0]["phase"], "initializing")
+         self.assertNotIn("read_error", result)

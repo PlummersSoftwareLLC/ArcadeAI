@@ -1,0 +1,88 @@
+
+    def _capture_checkpoint_crossings(self, slot, stamp, previous_score, previous_packet):
+        if self._anchor is None:
+            return
+        for offset, rows in self._checkpoint_rows.items():
+            target = self._anchor + offset
+            if slot in rows or stamp <= target:
+                continue
+            require(previous_score is not None and previous_packet is not None
+                    and previous_packet['completed_exchange_ns'] <= target,
+                    'Checkpoint has no original last-before-horizon observation')
+            rows[slot] = dict(value=deepcopy(previous_score), activity=deepcopy(previous_packet),
+                              crossing=deepcopy(self._last_packets[slot]), retired=False)
+
+    def take_checkpoints(self, now_ns):
+        """Return all32 last-before-T scores only after each stream crosses T.
+
+        A completed, positively retired first game has a frozen final score and
+        needs no later origin traffic. No future score is credited to a look.
+        Repeated checkpoints retain the SAME32 games and are not independent.
+        """
+        with self._lock:
+            now = integer(now_ns, 'checkpoint current monotonic clock')
+            require(now <= self._clock(), 'Checkpoint observation is in the future')
+            if self._anchor is None:
+                return []
+            records = []
+            for offset, rows in self._checkpoint_rows.items():
+                target = self._anchor + offset
+                if target > now or offset in self._checkpoints_emitted:
+                    continue
+                for slot in SLOTS:
+                    if slot in rows:
+                        continue
+                    value, packet = self._scores[slot], self._last_packets[slot]
+                    if (slot in getattr(self, 'positively_retired_slots', set())
+                            and value['status'] == 'completed'
+                            and value['completion_observed_ns'] <= target
+                            and packet['completed_exchange_ns'] <= target):
+                        rows[slot] = dict(value=deepcopy(value), activity=deepcopy(packet),
+                                          crossing=None, retired=True)
+                require(len(rows) == 32 or now <= target + 25_000_000_000,
+                        'Incomplete planned checkpoint; never discard a missing slot or invent a score')
+                if len(rows) != 32:
+                    continue
+                output = []
+                for slot in SLOTS:
+                    data = rows[slot]; value = data['value']; packet = data['activity']
+                    complete = value['status'] == 'completed'
+                    require(value['score_observed_ns'] <= target
+                            and packet['completed_exchange_ns'] <= target,
+                            'Post-horizon data entered an earlier checkpoint')
+                    if not complete:
+                        require(target - value['score_observed_ns'] <= MAX_AGE_NS
+                                and target - packet['completed_exchange_ns'] <= MAX_AGE_NS,
+                                'Active checkpoint score/activity is stale')
+                    else:
+                        require(value['completion_observed_ns'] <= target,
+                                'Later completion credited to an earlier checkpoint')
+                    crossing = data['crossing']
+                    require(data['retired'] or (crossing is not None
+                            and crossing['completed_exchange_ns'] > target
+                            and crossing['sequence'] == packet['sequence'] + 1),
+                            'Original post-horizon crossing or positive retirement required')
+                    baseline = self._anchor_packets[slot]['accepted_ordinal']
+                    output.append(dict(slot=slot, member=deepcopy(self._members[slot]),
+                        score_at_horizon=value['score'], score_at_anchor=self._anchor_scores[slot]['score'],
+                        whole_game_complete=complete, status=value['status'],
+                        score_witness=deepcopy(value['score_witness']),
+                        completion_observed_ns=value.get('completion_observed_ns'),
+                        completed_row=deepcopy(value.get('completed_row')),
+                        activity=deepcopy(packet), first_post_horizon_activity=deepcopy(crossing),
+                        positively_retired_without_future_traffic=data['retired'],
+                        accepted_frame_exposure=packet['accepted_ordinal']-baseline,
+                        selected_first_game_accepted_frame_exposure=max(0,
+                            value['score_witness']['accepted_ordinal']-baseline)))
+                scores = [row['score_at_horizon'] for row in output]
+                records.append(dict(schema='robotron-planned-first-game-score-checkpoint-v1',
+                    anchor_monotonic_ns=self._anchor, horizon_offset_ns=offset,
+                    horizon_monotonic_ns=target, observed_monotonic_ns=now,
+                    final_horizon_ns=self.horizon_ns, policy=deepcopy(self._policy),
+                    n_scored=32, n_completed=sum(row['whole_game_complete'] for row in output),
+                    mean_score=statistics.mean(scores), median_score=statistics.median(scores),
+                    score_sum=sum(scores), rows=output, all32_original_members_retained=True,
+                    repeated_looks_are_not_independent_games=True, confidence_interval_computed=False,
+                    automatic_decision=False, full_game_quality_qualified=False, promotion=False))
+                self._checkpoints_emitted.add(offset)
+            return deepcopy(records)

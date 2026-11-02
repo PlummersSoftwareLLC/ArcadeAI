@@ -1,0 +1,45 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/later-LR625-vs-frozenS2-fixedcutoff-screen-original01-20261031/Root-preflight-frozen-pair-v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/expert05-LR625-vs-frozenS2-fixedcutoff-screen-original01-20261031/Root-preflight-frozen-pair-v1.py
+@@ -29,25 +29,37 @@
+     native = load('_Root_postdose_native_preflight', source['path'])
+     helper = native.parent().helpers()
+     controller_source = prepared['selected_sources']['controller']
+-    assert controller_source['sha256'] == 'b683ed3d6e4d4e3f7a7436d558be538af6bc4e3a2dc68f122593ab52dd05b09f'
++    assert controller_source['sha256'] == '4e0815686c40f9e1205c83433e86eed0f96c699b5c925bfc0277df8a31707d5b'
+     controller = load('_Root_postdose_controller_preflight', helper.checked(controller_source))
+     outer = load('_Root_postdose_outer_preflight', helper.checked(prepared['selected_sources']['outer']))
+     selection = json.loads(helper.checked(prepared['selection']).read_text())
+     configs = json.loads(helper.checked(prepared['controller_configs']).read_text())
+-    assert selection['candidate']['checkpoint']['sha256'] == 'bf91eba8265fef78b9e2ec0eff5425eb3b6f53ff6f597dad1b5dc225f5195c0d'
++    assert selection['candidate']['checkpoint']['sha256'] == 'f1c369372c027987bcad328c76924c3abd34feaa13913a02d1f927c1a5354e39'
+     cpu = json.loads(helper.checked(selection['candidate']['authority']).read_text())
+     assert cpu['optimizer_lrs'] == [6.25e-6] and cpu['CUDA_initialized'] is False
+     assert cpu['clocks'] == selection['candidate']['expected_policy_clocks']
+     assert cpu['checkpoint']['sha256'] == selection['candidate']['checkpoint']['sha256']
+-    floor_path = CASE.parent / 'LR625-postdose-vs-frozenS2-fixedcutoff-screen-original01-20261031/Root-actual-later-cumulative-LR625-dose-qualified-point-original01.json'
++    floor_path = CASE.parent / 'hot-expert05-LR625-applied60k-replay20M-learner16M-original01-20261031/Root-selected-completed-expert05-dose-endpoint-original01.json'
+     floor_raw = floor_path.read_bytes()
+-    assert hashlib.sha256(floor_raw).hexdigest() == '5b1ef866bbdc1c8f840c83a91be7c8ba8bfd2264c3750aa286b0bd0d93f3b7b4'
++    assert hashlib.sha256(floor_raw).hexdigest() == '824dd4d9b259d743ab4ce6d095a6c2a55defabc5cf7eee597a49d94109177b85'
+     floors = json.loads(floor_raw)['logical_clocks_at_qualified_point']
+     assert all(cpu['clocks'][key] >= value for key, value in floors.items())
++    main_metadata = json.loads(helper.checked(selection['current_Main_metadata']).read_text())
++    current_api = json.loads(helper.checked(main_metadata['sources']['API']).read_text())
++    current_policy = json.loads(helper.checked(main_metadata['sources']['policy']).read_text())
++    current_settings = json.loads(helper.checked(main_metadata['sources']['game_settings']).read_text())
++    assert main_metadata['current_main_inline'] == selection['current_main']
++    assert current_settings['expert_pct'] == current_api['game_settings']['expert_pct'] == 5
++    assert current_api['expert_ratio'] == .05 and current_api['epsilon'] == .1 and current_api['lr'] == 6.25e-6
++    assert current_policy['ratchet_frozen'] is False and current_policy['consumer_error'] is None
++    assert main_metadata['role_counts']['TRAIN'] == 155
++    assert main_metadata['startup_authority_and_held_are_restoration_origin_only'] is True
++    assert main_metadata['new_Main_restore_claimed'] is False
+     jobs = {leg: json.loads(helper.checked(prepared['jobs'][leg]['job']).read_text()) for leg in ['R1', 'C1']}
+     old_tokens = set()
+     for name in ['df519-vs-S2-fixed-cutoff-liveness-screen-original01-20261031',
+-                 'LR625-postdose-vs-frozenS2-fixedcutoff-screen-original01-20261031']:
++                 'LR625-postdose-vs-frozenS2-fixedcutoff-screen-original01-20261031',
++                 'later-LR625-vs-frozenS2-fixedcutoff-screen-original01-20261031']:
+         for leg in ['R1', 'C1']:
+             history = json.loads((CASE.parent / name / leg / 'job.json').read_text())
+             old_tokens.update(history['sessions'].values())

@@ -1,0 +1,35 @@
+{
+  "AST_parsed": true,
+  "added_functions": [
+    "_DashboardState.rejected_gap_body"
+  ],
+  "api_now_history_sampler_heartbeat_HTML_POST_unchanged": true,
+  "base_dashboard_sha256": "3013d511f1d933fe6012df5cecd7f8a8861824bdd41580cbe241b7498916f1c6",
+  "candidate_dashboard_bytes": 236331,
+  "candidate_dashboard_sha256": "3d1aa1950e6b1c5224ace3aecb9c837e433e5c36941b89465b414749f903da27",
+  "changed_original_function_texts": [
+    "_make_handler",
+    "_make_handler.DashboardHandler.do_GET"
+  ],
+  "current_a128_compatible": false,
+  "endpoint": "/api/rejected_gaps",
+  "envelope_schema": "robotron-rejected-gap-api-v1",
+  "explanation": "_make_handler text contains the changed nested do_GET; every other original function/method text is exact.",
+  "finite_edits": 2,
+  "future_evaluator_source_count": 13,
+  "future_execution_source_paths": 4,
+  "hunks": 2,
+  "imports_unchanged": true,
+  "main_source_change_required": false,
+  "original_function_count": 55,
+  "patch_sha256": "174b33ddd631896eedd9f75dff1bcebed52420e53e36fb1b18355ab3cd329e28",
+  "project_or_proposed_imports": 0,
+  "reverse_byte_equality": true,
+  "runtime_actions": 0,
+  "selected_source_mutations": 0,
+  "source_helper_runtime_destination": "Scripts/dqn/rejected_gap_telemetry.py",
+  "source_helper_sha256": "d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd",
+  "status": "SOURCE_ONLY_UNSELECTED_UNAPPLIED_TESTS_DEFERRED",
+  "tests_executed": 0,
+  "unchanged_original_functions": 53
+}

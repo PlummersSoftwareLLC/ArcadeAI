@@ -1,0 +1,125 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/raw-preview-readonly-reconciliation-original01/prepare_RAW_slot163_output_readonly_reconciliation_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/RAW-diagnostic-readonly-reconciliation-original01/prepare_RAW_diagnostic_slot163_readonly_reconciliation_v3.py
+@@ -10,7 +10,7 @@
+ import math
+ 
+ SLOT = '163'
+-TARGET_SHA = 'cbd8109f8d62f65c26c38ea91c73b3285fda0812895ee5e5fbf4e8565afedbd1'
++TARGET_SHA = 'cc32f15cf43f972209554e23dd4438e4f191938e75a98903007729725951305f'
+ REQUIRED_EXTRA = {'installed_wrapper', 'next_helper', 'next_authority', 'target_lua',
+                   'capture_equivalence_proof', 'root_selection', 'reconciler'}
+ FACTS = {'prior_binding', 'before_snapshot', 'after_old_birth_probe_snapshot',
+@@ -51,15 +51,22 @@
+ 
+ def prepare(plan, read, selected, normalise, window):
+     """Validate FUTURE facts and return objects; never publish or rebind anything."""
+-    require(plan['schema'] == 'robotron-slot163-RAW-output-reconciliation-plan-v1'
++    require(plan['schema'] == 'robotron-slot163-RAW-diagnostic-reconciliation-plan-v1'
+             and plan['root_selection'] is not None,
+             'Future ROOT freeze-release authority required')
+     selection = read(plan['root_selection'])
+-    require(selection['schema'] == 'robotron-root-slot163-next-capture-experiment-selection-v1'
+-            and selection['mode'] == 'NEXT_ONE_USE_PREVIEW_CAPTURE_EXPERIMENT_SLOT163'
++    require(selection['schema'] == 'robotron-root-slot163-RAW-timing-diagnostic-selection-v1'
++            and selection['mode'] == 'DIAGNOSTICRAW_TIMING_ONE_USE_SLOT163'
+             and selection['one_original_exec_only'] is True
+             and selection['persistent_or_rollout_acceptance'] is False,
+             'Exact ROOT one-use NEXT experiment selection required')
++    diagnostic_scope = dict(stdout_observation_budget_s=10, aggregation_target_s=5,
++        existing_stdout_only=True, hard_emission_deadline_claimed=False,
++        clock_requirement='host_wall', cpu_scope='process_cpu_all_threads',
++        fallback='header_only_no_timing_no_abort')
++    require(selection.get('diagnostic_only') is True
++            and selection.get('diagnostic_scope') == diagnostic_scope,
++            'Explicit diagnostic-only bounded observation scope required')
+     expected_count = selection.get('expected_held_input_count')
+     raw_wire_policy = dict(format=1, name='raw_rgb565be', RLE_enabled=False)
+     require(type(expected_count) is int and 215 <= expected_count <= 4096
+@@ -156,8 +163,9 @@
+             and claim['observed_parent']['prior_actor_birth_absent'] is True,
+             'Actual replacement must be the exact single-use claimant')
+     authority = read(plan['extra_pins']['next_authority'])
+-    require(authority['schema'] == 'robotron-slot163-next-one-use-capture-authority-v1'
++    require(authority['schema'] == 'robotron-slot163-RAW-timing-one-use-authority-v1'
+             and authority['mode'] == selection['mode']
++            and authority['diagnostic_scope'] == diagnostic_scope
+             and authority['root_selection'] == plan['root_selection']
+             and plan['extra_pins']['root_selection'] == plan['root_selection']
+             and authority['current_output_binding'] == selection['current_output_binding']
+@@ -184,19 +192,29 @@
+             'Actual NEXT claim must retire current OUTPUT, never original cached INPUT')
+     proof = read(plan['extra_pins']['capture_equivalence_proof'])
+     require(selection['capture_equivalence_proof'] == plan['extra_pins']['capture_equivalence_proof']
+-            and proof['schema'] == 'robotron-preview-decoded-RGB565-and-wire-policy-v1'
++            and old['preview_extra_source_pins']['target_lua']['sha256'] ==
++                'cbd8109f8d62f65c26c38ea91c73b3285fda0812895ee5e5fbf4e8565afedbd1'
++            and proof['schema'] == 'robotron-preview-RAW-phase-timing-source-and-semantics-v1'
+             and proof['parent'] == old['preview_extra_source_pins']['target_lua']
+-            and proof['candidate'] == target and proof['decoded_RGB565_equality_all_cases'] is True
+-            and proof['encoded_bytes_equality_required'] is False
++            and proof['candidate'] == target and proof['diagnostic_only'] is True
+             and proof['wire_policy'] == selection['wire_policy'] == raw_wire_policy
+-            and proof['gameplay_tensor_input_transport_timer_source_unchanged'] is True
+-            and proof['exact_single_line_delta_verified'] is True,
+-            'Exact decoded-RGB565 equality and explicit RAW-wire-policy proof required')
+-    benchmark = read(proof['benchmark'])
+-    require(benchmark['schema'] == 'robotron-preview-actual314t-RLE-vs-RAW-AST-benchmark-v1'
+-            and benchmark['actual_free_threaded'] is True
+-            and benchmark['decoded_RGB565_equality_all_cases'] is True
+-            and len(benchmark['cases']) >= 2, 'Original actual314t RAW/RLE decoder proof failed')
++            and all(proof[key] is True for key in ('gameplay_protocol_decoded_pixels_unchanged',
++                'encoded_frame_bytes_unchanged', 'telemetry_wire_fields_unchanged',
++                'server_source_unchanged', 'existing_stdout_only', 'VERSION_header_once'))
++            and proof['selected_slot'] == 163 and proof['aggregation_target_s'] == 5
++            and proof['clock_requirement'] == diagnostic_scope['clock_requirement']
++            and proof['cpu_scope'] == diagnostic_scope['cpu_scope']
++            and proof['fallback'] == diagnostic_scope['fallback']
++            and proof['phase_names'] == ['frame_period', 'capture_total', 'snapshot_size',
++                'snapshot_pixels', 'convert', 'serialize', 'socket_write', 'action_wait']
++            and type(proof['actual_CPU_exit']) is int and proof['actual_CPU_exit'] == 0,
++            'Exact unchanged-RAW phase-timing diagnostic source/clock/stdout proof required')
++    semantics = read(proof['semantic_checks'])
++    require(semantics['schema'] == 'robotron-RAW-phase-timing-Lua54-semantics-v1'
++            and all(semantics[key] is True for key in ('actual_Lua_syntax', 'full_source_exact_delta',
++                'decoded_capture_bytes_equality', 'socket_write_bytes_and_reply_semantics_unchanged',
++                'selected_only_bounded_aggregation', 'fallback_header_only_no_abort')),
++            'Actual Lua54 diagnostic semantics proof required')
+     # Engineering-only CID49 reuse is a new connection incarnation, never a fake CID.
+     # Earlier positive old-birth absence/newPID/newbirth and the exact claim join
+     # above remain mandatory. The public connected_seconds clock must reset
+@@ -235,7 +253,7 @@
+                 old['preview_extra_source_pins']['installed_wrapper']['sha256']
+             and plan['extra_pins']['installed_wrapper']['sha256'] != old['held_hashes'][wrapper_path]
+             and plan['extra_pins']['next_helper']['sha256'] ==
+-                'ecdb78d2843e240ba75286c6647be7b9acdf4a232dce45e6af5b1266318641c6'
++                'b805703e1782f1fa0db2453fb96d6446deb25c0c719d038da170019e274f83a0'
+             and old['preview_extra_source_pins']['accepted_guards']['sha256'] ==
+                 '9a8fe7c08e1e941e2d26a2cc3c65124b27129b9f470a0020453e33010bf32027'
+             and old['preview_extra_source_pins']['parent_collector']['sha256'] ==
+@@ -279,12 +297,13 @@
+                    preview_extra_source_pins=dict(copy.deepcopy(old['preview_extra_source_pins']),
+                                                   **copy.deepcopy(plan['extra_pins'])),
+                    preview_next_root_selection=plan['root_selection'],
++                   preview_diagnostic_only=True, preview_diagnostic_scope=diagnostic_scope,
+                    preview_previous_output_binding=plan['facts']['prior_binding'],
+-                   preview_current_binding_reason='Owned163 current OUTPUT to decoded-equivalent RAW-format1 Lua; EVAL1/trainer/191 actors retained. New prospective binding only.')
++                   preview_current_binding_reason='Owned163 RAW OUTPUT to phase-timing diagnostic only; sameencodedframes/EVAL1/trainer/191actors. No performance or rollout acceptance.')
+     binding['historical_original_actor_survivors'] = old['historical_original_actor_survivors'] - int(plan['selected_was_historical_original_actor'])
+     binding['verified_between_study_replacement_count'] = old['verified_between_study_replacement_count'] + 1
+     binding['owned_preview_actor_transition_count'] = old.get('owned_preview_actor_transition_count', 0) + 1
+-    proof = dict(schema='robotron-owned-slot163-next-output-readonly-reconciliation-evidence-v1',
++    proof = dict(schema='robotron-owned-slot163-RAW-diagnostic-readonly-reconciliation-evidence-v1',
+                  original_facts=copy.deepcopy(plan['facts']), old_actor=old_actor, actual_new_actor=new_actor,
+                  old_CID=first_roles[SLOT]['connection_id'], actual_new_CID=last_roles[SLOT]['connection_id'],
+                  actual_eval_preserved=True, original191_exact=True, original_trainer_and_supervisor_retained=True,
+@@ -295,7 +314,9 @@
+                  old_wrapper_sha256=old['held_hashes'][wrapper_path],
+                  new_wrapper=plan['extra_pins']['installed_wrapper'],
+                  capture_equivalence_proof_verified=True, decoded_RGB565_equivalence_verified=True,
+-                 wire_policy=raw_wire_policy, encoded_bytes_equality_required=False,
++                 wire_policy=raw_wire_policy, encoded_frame_bytes_unchanged=True,
++                 diagnostic_only=True, diagnostic_scope=diagnostic_scope,
++                 performance_or_rollout_acceptance=False,
+                  extra_pins=copy.deepcopy(plan['extra_pins']),
+                  original_exposure=first, actual_after_exposure=last,
+                  model_weights_replay_optimizer_not_reloaded_by_this_component=True,

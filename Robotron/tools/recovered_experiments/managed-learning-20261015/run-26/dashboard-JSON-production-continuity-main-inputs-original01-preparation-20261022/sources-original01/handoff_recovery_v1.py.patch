@@ -1,0 +1,11 @@
+--- deployed/handoff_recovery_v1.py
++++ proposed/handoff_recovery_v1.py
+@@ -128,7 +128,7 @@
+         require(callable(getattr(adapter,'recover_committed',None)), 'Complete committed recovery adapter required')
+         return adapter.recover_committed(live_job,state,observation_pending=observation_pending)
+     linux.live_owner(base['owner'])
+-    require(linux.full_pin(linux.GAME/'Scripts/dqn/socket_server.py')['sha256'] == linux.OLD_SOCKET_SHA,
++    require(linux.full_pin(linux.GAME/'Scripts/dqn/metrics_dashboard.py')['sha256'] == linux.OLD_SOCKET_SHA,
+             'Original source changed before stop commit; do not unwind blindly')
+     result = dict(status='PRESTOP_ORIGINAL_RESOURCES_RESTORED',original_handle_preserved=True,
+                   replacement_started=False,restart_retry=False,source_rollback=False,

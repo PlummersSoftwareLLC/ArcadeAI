@@ -1,0 +1,115 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_proposal/test_transition_wiring.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_reviewed2_proposal/test_transition_wiring.py
+@@ -17,7 +17,7 @@
+ 
+ from . import run_CE_batch_transition as adapter
+ from . import owned_lifecycle as owned
+-from ..batch2048_phase_boundary_proposal import profile_boundary as boundary
++from ..batch2048_phase_boundary_reviewed2_proposal import profile_boundary as boundary
+ 
+ 
+ class SeenPlan(Exception):
+@@ -57,7 +57,8 @@
+                 adapter.main(['--launch', '--job', '/synthetic/unbound.json'])
+         self.assertIn('PLAN_ONLY_UNCONSUMED', stream.getvalue())
+         self.assertTrue(adapter.DRAFT_BLOCKERS)
+-        self.assertIsNone(adapter.CPU2048_BINDING)
++        self.assertEqual(adapter.CPU2048_BINDING['script']['sha256'],
++            'a331b550191a48ab219cf92f2e1c42fc394e038c93609ecac4fb9a722b75e5cd')
+ 
+     def test_real_adapter_environment_delegate_uses_direction_and_keeps_ce(self):
+         pin = dict(path='/synthetic/new-record.json', sha256='b'*64, bytes=100,
+@@ -185,5 +186,93 @@
+             for node in calls))
+ 
+ 
++class CandidateJobBuilt(Exception):
++    def __init__(self, job):
++        super().__init__('Captured real candidate CPU job before any numerical command')
++        self.job = copy.deepcopy(job)
++
++
++class RealCandidateRouteContracts(unittest.TestCase):
++    """Call actual post_stop_ending/cpu_phase, stubbing only evidence/IO edges."""
++    def runtime_fixture(self, directory, mode):
++        selected = spec(mode); calls = []
++        clock_values = dict.fromkeys(adapter.CLOCKS, 100)
++        owner = dict(pid=123, starttime_ticks=456,
++            unit='robotron-managed-synthetic-trainer.service', invocation_id='a'*32,
++            cgroup='/user.slice/synthetic.service')
++        def full_pin(path, sha='b'*64, size=100):
++            return dict(path=str(path), sha256=sha, bytes=size,
++                identity=dict(device=1, inode=2, bytes=size, mtime_ns=3, ctime_ns=4,
++                    mode='0o444', uid=1001, nlink=1))
++        def publish(path, value):
++            calls.append(('publish', Path(path).name))
++            if Path(path).name == 'cpu-job.json':
++                raise CandidateJobBuilt(value)
++            return full_pin(path)
++        acquisition = dict(client_count=0, tag='synthetic_first_candidate', clock_floor=clock_values)
++        base = fake_base(); base.MAX_SOURCE=4<<20; base.publish=publish
++        base.pin=lambda *args: calls.append(('source-pin', args[0]['sha256']))
++        base.read_json=lambda pin: copy.deepcopy(acquisition)
++        cls=adapter.runtime_class(base); runtime=cls.__new__(cls)
++        profile = boundary.PROFILE_BINDING['pin']
++        phase = dict(record=full_pin('/synthetic/phase.json'),
++            boot_checkpoint=dict(path='/synthetic/latest.pt', sha256='d'*64, bytes=275000000),
++            boot_verification=full_pin('/synthetic/boot-CPU.json'), expected=dict(metric='ce'))
++        runtime.job=dict(mode=mode, batch_boundary=selected, batch_profile=full_pin(**{
++            'path':profile['path'], 'sha':profile['sha256'], 'size':profile['bytes']}),
++            running_phase=phase, experiment='synthetic_branch', phase_verifier2048=copy.deepcopy(adapter.CPU2048_BINDING),
++            phase_verifier=dict(script=dict(path=str(adapter.PHASE), sha256=adapter.PHASE_SHA, bytes=1),
++                strict_base=dict(path=str(adapter.PHASE.parent/'strict_phase_base.py'), sha256=adapter.STRICT_SHA, bytes=1)))
++        runtime.batch_boundary=boundary; runtime.output=Path(directory);runtime.cpu_attempts={}
++        runtime.floor=copy.deepcopy(clock_values);runtime.retired_owner=runtime.insured=owner
++        runtime.static=lambda: calls.append(('static', None))
++        runtime.absence=lambda: calls.append(('exact-owned-absence', owner))
++        runtime.phase_sources=lambda label: ({}, {})
++        runtime.collect_producer_observation=lambda *args: (
++            calls.append(('producer', args[1])) or full_pin('/synthetic/producer.json'))
++        source=full_pin('/synthetic/managed-checkpoints/synthetic_first_candidate.pt', 'e'*64, 275000000)
++        runtime.ending=dict(state='LATCH', owner=owner, decision=full_pin('/synthetic/first-LATCH.json'),
++            floor=copy.deepcopy(clock_values), candidate=dict(source=source,
++                verification_copy=full_pin('/synthetic/candidate-copy.pt','e'*64,275000000),
++                acquisition=full_pin('/synthetic/acquisition.json')))
++        return runtime, owner, phase, source, acquisition, calls
++
++    def test_actual_post_stop_ending_builds_before2048_candidate_job(self):
++        with tempfile.TemporaryDirectory() as directory:
++            runtime, owner, _, source, _, calls = self.runtime_fixture(directory, 'return_batch4096')
++            with patch.object(adapter, 'phase_metadata', side_effect=lambda base, phase, context, root: (phase, context, {})):
++                with self.assertRaises(CandidateJobBuilt) as caught:
++                    runtime.post_stop_ending(owner)
++            job=caught.exception.job
++            self.assertEqual(job['schema'], 'robotron-batch2048-phase-snapshot-checkpoint-CPU-job-reviewed2-v1')
++            self.assertEqual(job['verifier_sha256'], 'a331b550191a48ab219cf92f2e1c42fc394e038c93609ecac4fb9a722b75e5cd')
++            self.assertEqual(job['source'], source)
++            self.assertEqual(job['phase_snapshot']['purpose'], 'candidate')
++            self.assertEqual(job['source_control_context']['held_recipe_context']['batch_size'], 2048)
++            self.assertEqual(job['batch2048_context']['role'], 'candidate')
++            self.assertEqual(calls[0][0], 'static')
++            self.assertEqual(calls[1][0], 'exact-owned-absence')
++            self.assertIn(('producer', 'candidate'), calls)
++            self.assertFalse(runtime.cpu_attempts)  # trapped before original numerical command
++
++    def test_actual_return_startup_uses4096_and_activation_candidate_is_refused(self):
++        with tempfile.TemporaryDirectory() as directory:
++            runtime, owner, phase, source, acquisition, calls = self.runtime_fixture(directory, 'return_batch4096')
++            runtime.collect_producer_observation=lambda *args: self.fail('4096 startup cannot claim2048 producer')
++            with patch.object(adapter, 'phase_metadata', side_effect=lambda base, phase, context, root: (phase, context, {})):
++                with self.assertRaises(CandidateJobBuilt) as caught:
++                    runtime.cpu_phase('startup-fixture','startup',owner,source,source,phase,acquisition,'startup-key')
++            job=caught.exception.job
++            self.assertEqual(job['schema'], 'robotron-phase-snapshot-checkpoint-CPU-job-v1')
++            self.assertEqual(job['verifier_sha256'], adapter.PHASE_SHA)
++            self.assertEqual(job['source_control_context']['held_recipe_context']['batch_size'], 4096)
++            self.assertNotIn('batch2048_context', job)
++        with tempfile.TemporaryDirectory() as directory:
++            runtime, owner, phase, source, acquisition, calls = self.runtime_fixture(directory, 'activate_batch2048')
++            with self.assertRaisesRegex(ValueError, 'Endingcandidate'):
++                runtime.cpu_phase('invalid-candidate','candidate',owner,source,source,phase,acquisition,'invalid-key')
++            self.assertFalse(any(name == 'publish' for name, value in calls))
++
++
+ if __name__ == '__main__':
+     unittest.main()

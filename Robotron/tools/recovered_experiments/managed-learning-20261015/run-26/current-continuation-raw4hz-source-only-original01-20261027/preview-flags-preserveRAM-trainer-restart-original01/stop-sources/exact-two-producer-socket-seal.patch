@@ -1,0 +1,35 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/dashboard-JSON-production-continuity-main-inputs-original01-preparation-20261022/sources-original01/handoff_socket_seal_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/preview-flags-preserveRAM-trainer-restart-original01/stop-sources/current192_socket_seal_v1.py
+@@ -102,7 +102,12 @@
+ def seal(backend, context, probe, pause):
+     b = backend
+     require(b.accept_held and b.fleet_frozen, 'Input holds must precede the socket seal')
+-    actors = b.fleet['original192_actors']
++    actors = b.original_actors
++    require(set(b.producer_roots) == set(b.producer_owners) == {'fleet','supplemental0'}
++            and len({str(root) for root in b.producer_roots.values()}) == 2
++            and b.actor_owner_keys == {str(slot):('supplemental0' if slot == 0 else 'fleet')
++                                      for slot in range(192)},
++            'Exact191-plus-slot0 producer ownership required')
+     require(len(actors) == 192 and {a['slot'] for a in actors} == set(range(192)), 'Original192 actor set differs')
+     result = None
+ 
+@@ -116,7 +121,7 @@
+         require(len(rows_by_slot) == 193 and rows_by_slot.get(8191) == b.probe_id
+                 and all(rows_by_slot.get(s) == context['original192_rows'][s]['cid'] for s in range(192)),
+                 'Registered original client identities changed')
+-        for root in (b.listener_child, b.fleet_root):
++        for root in (b.listener_child, *b.producer_roots.values()):
+             events = dict(line.split() for line in (root/'cgroup.events').read_text().splitlines())
+             require(events.get('frozen') == '1', 'A selected kernel input hold was lost')
+         require(set(map(int,(b.listener_child/'cgroup.threads').read_text().split())) == {b.listener['tid']}
+@@ -127,7 +132,8 @@
+         for actor in actors:
+             pid = actor['pid']
+             require(birth(pid) == actor['starttime_ticks'] and sorted(os.sched_getaffinity(pid)) == actor['mask']
+-                    and Path('/proc',str(pid),'cgroup').read_text().strip() == '0::'+b.fleet['cgroup'],
++                    and Path('/proc',str(pid),'cgroup').read_text().strip() ==
++                    '0::'+b.producer_owners[b.actor_owner_keys[str(actor['slot'])]]['cgroup'],
+                     'Original actor process/affinity/cgroup changed')
+             clients['slot-'+str(actor['slot'])] = socket_inodes(pid)
+         own_socket = os.readlink(Path('/proc/self/fd',str(b.probe.fileno())))

@@ -1,0 +1,96 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/review_continuous_physical192_observer_v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/review_continuous_physical192_observer_v5.py
+@@ -36,7 +36,7 @@
+     native = read(lifecycle['native_job'], h)
+     require(job['native_job'] == lifecycle['native_job'] and job['native_runtime'] == native['runtime'],
+             'Original native/worker job or runtime join differs')
+-    require(job['schema'] == 'robotron-original192-immutable-bootstrap-live-pidfd-observer-proof2s-job-v4', 'Wrong declared observer protocol version')
++    require(job['schema'] == 'robotron-original192-live-pidfd-current-eval-quiescence-observer-proof2s-job-v5', 'Wrong declared observer protocol version')
+     require(job['interval_s'] == .2 and job['initial_samples'] == 100 and job['maximum_gap_s'] == 2.0
+             and job['work_s'] == 4200 and job['runtime_s'] == 4260 and job['attempt'] == 1
+             and job['no_retry'] is True, 'Observer bounds or original attempt differ')
+@@ -45,10 +45,11 @@
+             and job.get('source_bound_physical_original192_partition') is True
+             and job.get('immutable_original192_bootstrap_certificate') is True
+             and job.get('fresh_original_keeper_pidfd_census') is True
++            and job.get('source_bound_current_once_only_EVAL_quiescence_after_recorded_disconnect_exception') is True
+             and set(job['sources']) == {'client','worker','health','health_base','registry','durability','control','interpreter'}
+-            and job['sources']['health_base'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/continuous_physical192_health_v4.py'))
+-            and job['sources']['registry'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/continuous_physical192_registry_v4.py'))
+-            and job['sources']['health'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/continuous_physical192_transport_v4.py')),
++            and job['sources']['health_base'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_health_v5.py'))
++            and job['sources']['registry'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_registry_v5.py'))
++            and job['sources']['health'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_transport_v5.py')),
+             'Exact source-bound physical original192 observer dependencies required')
+     require(lifecycle['native_deadline_monotonic_s'] == job['deadline_monotonic_s']
+             == lifecycle['native_started_monotonic_s'] + 4200, 'Native time bound differs')
+@@ -95,6 +96,11 @@
+     durability_records = []
+     previous = None
+     records = []
++    last_cleanup_classes={}
++    preserved_cleanup_error_and_ready=True
++    original_cleanup_authority_claimed=False
++    historical_exception_slots=set()
++    cleanup_classifications_checked=0
+     last_advance = started
+     for index, value in enumerate(outcome['samples']):
+         row = read(value, h)
+@@ -109,7 +115,35 @@
+                 and json.loads(wire) == sample['api'], 'Raw API does not join parsed accepted snapshot')
+         require(started <= sample['monotonic_s'] <= outcome['ended_monotonic_s'] <= ended,
+                 'Accepted sample is outside the actual original worker lifetime')
+-        health.validate(case, sample, previous=previous)
++        partition=health.validate(case, sample, previous=previous)
++        last_cleanup_classes=partition['cleanup_classifications']
++        for slot,classification in last_cleanup_classes.items():
++            original_cleanup=sample['EVAL_cleanup_captures'][slot]['value']
++            preserved=(classification['historical_cleanup_error']==original_cleanup['cleanup_error']
++                and classification['original_ready_for_external_join']is original_cleanup['ready_for_external_join'])
++            claimed=any(classification[key]is not False for key in (
++                'original_cleanup_success_or_CID_reuse_claimed','original_deadline_or_wait_exception_subtype_proved',
++                'refill_external_handoff_or_reservation_release_authorized'))
++            require(preserved and not claimed, 'Derived current cleanup facts changed raw history or granted old-operation authority')
++            preserved_cleanup_error_and_ready=preserved_cleanup_error_and_ready and preserved
++            original_cleanup_authority_claimed=original_cleanup_authority_claimed or claimed
++            cleanup_classifications_checked+=1
++            category=classification['classification']
++            require(category in ('ORDINARY_CLEANUP_COMPLETED','CLEANUP_INCOMPLETE',
++                    'CURRENT_ONCE_ONLY_EVAL_QUIESCENCE_AFTER_RECORDED_DISCONNECT_EXCEPTION'),
++                    'Unknown accepted cleanup classification')
++            if category=='CURRENT_ONCE_ONLY_EVAL_QUIESCENCE_AFTER_RECORDED_DISCONNECT_EXCEPTION':
++                require(original_cleanup['cleanup_error']=='Original connection cleanup failed'
++                        and original_cleanup['ready_for_external_join']is False
++                        and classification['current_postconditions_proved']is True
++                        and slot not in sample['actors'] and slot in sample['EVAL_kernel_exit_receipts']
++                        and all(original_cleanup[key]is True for key in (
++                            'original_handler_stopped','original_owned_timer_stopped','owned_timer_callback_succeeded',
++                            'journal_disconnect_succeeded','FIFO_reset_executed','replay_consumer_healthy'))
++                        and original_cleanup['replay_admission_open']is True
++                        and sample['policy_capture']['value']['replay_admission_open']is True,
++                        'Historical exception is not independently proved current once-only EVAL quiescence')
++                historical_exception_slots.add(slot)
+         if previous is not None:
+             require(0 <= sample['monotonic_s']-previous['monotonic_s'] <= job['maximum_gap_s'], 'Accepted main evidence gap exceeds2s')
+         if previous is not None and sample['api']['training_steps'] > previous['api']['training_steps']:
+@@ -217,7 +251,7 @@
+             and lifecycle['released_properties']['MainPID'] == '0'
+             and not Path('/sys/fs/cgroup' + owner['cgroup']).exists(), 'Original observer scope remains')
+     return dict(schema='robotron-round-observer-independent-raw-review-v1', status='PASS',
+-        main_health_profile='PHYSICAL_ORIGINAL192_IMMUTABLE_BOOTSTRAP_LIVE_PIDFD_V4',
++        main_health_profile='PHYSICAL_ORIGINAL192_LIVE_PIDFD_CURRENT_EVAL_QUIESCENCE_V5',
+         source_bound_original192_physical_bootstrap_verified=True,
+         TRAIN155_original_physical_and_current_TCP_verified=True,
+         EVAL37_original_connection_and_strict_retirement_evidence_verified=True,
+@@ -226,6 +260,11 @@
+         immutable_original192_bootstrap_certificate_verified=True,
+         fresh_original_keeper_pidfd_census_verified=True,
+         authentic_published_normal0_exit_facts_and_monotone_coverage_verified=True,
++        current_once_only_EVAL_quiescence_with_historical_error_and_ready_false_preserved_verified=preserved_cleanup_error_and_ready,
++        original_cleanup_deadline_handoff_CID_reuse_or_refill_success_from_exception_claimed=original_cleanup_authority_claimed,
++        cleanup_classifications_replayed=cleanup_classifications_checked,
++        last_validated_EVAL_cleanup_classifications=last_cleanup_classes,
++        historical_disconnect_exception_slots=sorted(historical_exception_slots),
+         lifecycle=lifecycle_pin, original_job=job_pin, original_unit=job['unit'],
+         original_sources=job['sources'], accepted_samples=len(records),
+         raw_API_and_TCP_and_retirement_snapshots_replayed=True,

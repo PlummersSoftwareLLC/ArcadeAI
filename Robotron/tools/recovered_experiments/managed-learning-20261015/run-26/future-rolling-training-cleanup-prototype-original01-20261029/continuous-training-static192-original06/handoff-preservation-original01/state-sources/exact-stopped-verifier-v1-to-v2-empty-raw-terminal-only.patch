@@ -1,0 +1,25 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/state-sources/verify_stopped_full_training_state_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/state-sources/verify_stopped_full_training_state_v2.py
+@@ -68,9 +68,9 @@
+     return dict(path=str(path),sha256=digest,bytes=before['bytes'],identity=before)
+ 
+ 
+-def checked(value,*,immutable=False,limit=None):
++def checked(value,*,immutable=False,limit=None,allow_empty=False):
+     require(type(value)is dict and set(value)=={'path','sha256','bytes','identity'},'Full8 source/evidence pin required')
+-    if limit is not None:require(0<value['bytes']<=limit,'Bounded metadata required')
++    if limit is not None:require(type(value['bytes'])is int and (0<=value['bytes'] if allow_empty else 0<value['bytes']) and value['bytes']<=limit,'Bounded metadata required')
+     if immutable:require(value['identity']['mode']=='0o444','Immutable owned metadata required')
+     require(pin(value['path'])==value,'Selected full pin changed: '+value['path'])
+     return Path(value['path'])
+@@ -152,8 +152,8 @@
+     for name,command in commands.items():
+         require(type(command['exit'])is int and command['exit']==0 and command['owner']==OWNER,
+             'Original terminal command did not complete: '+name)
+-        checked(command['stdout'],immutable=True,limit=4<<20)
+-        checked(command['stderr'],immutable=True,limit=4<<20)
++        checked(command['stdout'],immutable=True,limit=4<<20,allow_empty=True)
++        checked(command['stderr'],immutable=True,limit=4<<20,allow_empty=True)
+     show=commands['show']
+     require(show['argv']==['systemctl','--user','show',OWNER['unit']],
+         'Actual original terminal show command differs')

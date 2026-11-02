@@ -1,0 +1,119 @@
+STORAGE WATCHER REVISION — SOURCE ONLY / UNEXECUTED / SEPARATE BUNDLE
+
+The actual reviewed1 run failed in its parent while compiling the base variant:
+the original helper's Path.rglob/lstat encountered a vanished private Triton
+tmp.pid_* entry. Root preserves original invocation/exit/artifacts independently.
+No consumed optimizer attempt or scientific parity result is inferred here.
+The author did not import, syntax-compile, default-invoke, test or launch this
+bundle, or query runtime/model/checkpoint/replay/API/service/GPU data. Shell
+file copies/diffs/hashes touched source only. Root subsequently reports all25
+private methods PASS in0.051s with unchanged source pins and original owned-unit
+exit0 retained before release. Root's separate receipt is
+run-26/cuda-storage-watcher-private-tests-reviewed2-20261017/root-result-review-and-release.json
+SHA6b90eca60ebe71a5ed8ba2196cf8eb80d48b1ad4345f11b1c46d474156045d06.
+That is a scoped root-provided test observation, not an author rerun or GPU result.
+
+Originals and bootstrap geometry
+  All original five files remain unchanged. original-source-archive/ preserves
+  exact0444 source copies: parent34b9144f, workerba0039d4, lockd6ffdaae,
+  RUNBOOK65cd671f, preparation-manifestccbe6713.
+  This separate directory contains a revised cuda_trace_parent.py and byte-
+  identical sibling cuda_trace_worker.py/source-lock.json copies. The worker's
+  HERE bootstrap therefore loads the revised parent, whose dynamic manifest
+  hash identifies it; the SAME worker and numerical lock remain enforced.
+  GAME=HERE.parents[3] accounts for this extra directory level. No old source
+  manifest, live source substitution or snapshot numerical policy is invoked.
+  unapplied-parent.patch is the exact review diff against the archived original
+  parent. It has NOT been applied to any original source.
+
+Unchanged scientific and resource contract
+  Base/OFF/ON order, eight4096x11128 attempts, saved trained checkpoint/scaler,
+  RNG/input persistence, compiled routes, native backend, -Xgil=0 child policy,
+  tolerances and all worker code are unchanged. Budgets remain2CPU/16GiB host/
+  12GiB allocator/13GiB GPU process/6GiB artifacts/128MiB tmpfs/128tasks,
+  180s per variant/600s total. Identity/token/PDEATH/preimport/source/GPU guards,
+  owned Popen reaping, signal-handler lifetime, cgroup/tmpfs/lease cleanup and
+  retained original-service-exit requirement remain the original reviewed path.
+  Default still prints its literal plan without helper imports or data reads.
+
+Narrow source-proven writer handling
+  The inline watcher traverses owned directory descriptors with O_NOFOLLOW,
+  performs no symlink traversal, and checks root and every pinned compiler-cache
+  boundary identity before/after each successful scan. Only these active roots
+  permit descendant ENOENT and regular-to-regular atomic publication: the
+  CURRENT variant's private cache directory, plus the exact private package
+  dqn/__pycache__ directory used by pinned native_sumtree. The latter is created
+  empty after source copying and its identity is bound in launch-manifest.json.
+  Every other compiler cache and every previous variant remain strict.
+  Directory replacement is never allowed. The installed Triton source publishes
+  regular temp files with os.replace then removes its scratch directory; no
+  directory-replacement exception is needed or introduced.
+
+  ON alone also tracks the fixed phase-root/ce-executed-trace-cuda-validation
+  directory. The parent does NOT precreate it: the unchanged observer requires
+  a NEW directory. Its identity is pinned on first observed appearance and may
+  never disappear, be replaced or become a symlink afterward. Only direct-child
+  context.json.tmp, status.json.tmp and attempt-01.json.tmp through
+  attempt-08.json.tmp may vanish with ENOENT. A known directory bearing one of
+  those filenames is not an allowed regular temporary. Only exact status.json
+  and its repeatedly reused status.json.tmp may atomically change from one
+  regular inode to another. Max(before_size,after_size) is counted. Persistent
+  context/attempt files, NPZ/tensor inputs/results, other filenames/directories,
+  all symlinks and non-ENOENT I/O failures remain strict. An unobserved vanished
+  temp cannot retrospectively prove its file type; the allowance is limited to
+  these source-proven names, with every observed type checked without following.
+
+  Cache ENOENT/publication counts and last affected paths are recorded separately
+  from observer temp/status-publication counts in each exact child-exit receipt.
+  No full path/event history or new writer thread is added. After the owned child
+  is reaped and its cgroup is empty, final storage checks have NO volatile-cache
+  or observer exceptions. All remaining existing regular files are counted;
+  a vanished cache entry does not bypass the6GiB comparison for other files.
+  Like the original watcher, this is a cooperative non-atomic observation, not
+  a filesystem quota. Directory iteration can miss a newly renamed cache entry
+  until the next sample; no atomic whole-tree size certificate is claimed.
+
+Pinned source proof
+  installed-triton-cache.py SHA4e130852ee5ed85350fa6298ba14e24faf97ee6e8c61045e4206f1fc7c124149,
+  archived under run-26/cuda-trace-reviewed1-independent-invalid-cleanup-review-20261017:
+  put() lines102-126 creates tmp.pid_<pid>_<uuid>, writes/closes its temporary,
+  os.replace publishes a regular file, then os.removedirs removes scratch dirs.
+  That source does not fsync its temporary; no fsync guarantee is attributed.
+  native_sumtree.py SHAde0900aecd09668dc0551d4ecec118351a1228e2a664bc183c5c06b865e52250:
+  _load_native lines69-99 builds sumtree-build-*.so in private __pycache__,
+  then os.replace publishes sumtree-<hash>.so and unlinks the old temp name.
+  executed_ce_trace.py SHAd9b02b3108cdb7aa9cf895ce585810287ca5cde6ddc6b1b872721731e49648eb:
+  _write_json lines309-320 writes exact same-directory <name>.tmp then replaces
+  the persistent JSON; _publish repeatedly updates status.json. NPZ writes are
+  create-only and receive no exception. This source proof explains a possible
+  race class, not the precise historical syscall timing of the failed run.
+
+Prepared deterministic tests — author unexecuted; root result recorded above
+  test_storage_watcher.py contains25 stdlib/mock/tempfile methods. They cover
+  exact nested GAME/REPO roots and unchanged worker/lock/budgets, literal default,
+  byte accounting, cache file/directory removal and rename, scandir ENOENT,
+  regular atomic replacement, both pinned cache roots, root/cache/observer loss
+  or replacement, symlinks, EACCES/EIO/ESTALE/ESRCH, noncache scientific loss,
+  strict post-reap behavior, the exact observer temporary/status whitelist,
+  repeated status.json.tmp inode publication, and negative wrong-name/nested/
+  outside paths, persistent data loss and directory-shaped temporary names.
+  No real process discovery, GPU, numerical dependency or helper import is used.
+
+  A prospective test command, ONLY after explicit root authorization, is:
+    env -u LD_PRELOAD -u PYTHONPATH CUDA_VISIBLE_DEVICES='' \
+      PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest \
+      Robotron.tools.kl_priority_mixture_proposal.cuda_trace_validation_proposal.storage_watcher_revision.test_storage_watcher -v
+  Do not interpret source inspection as a test PASS. Both reviewers must inspect
+  this exact revision and root must preserve actual CPU test completion/source
+  bindings before considering any fresh resource preflight or new GPU run.
+
+Future launch remains a separate root action
+  Use the original retained-unit/detached3s scheduling policy and SAME bounds,
+  with the NEW entrypoint .../storage_watcher_revision/cuda_trace_parent.py and
+  a distinct NEW output/unit. Never resume or overwrite reviewed1. Root must
+  first verify/cancel only the current owned waiting384M gate immediately before
+  an exclusive launch, and rearm the same target/tag/label/original deadline
+  after owned teardown. No gate cancellation/rearm, test execution or new GPU
+  attempt is authorized by this document. Actual service original invocation,
+  ExecMainCode/Status and journal must be archived before terminal unit release;
+  collected defaults are never proof of original exit.

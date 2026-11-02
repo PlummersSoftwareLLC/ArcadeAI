@@ -1,0 +1,76 @@
+{
+  "schema": "robotron-continuous-zero-dip-wave2-source-preservation-v1",
+  "status": "SOURCE_ONLY_UNSELECTED_UNAPPLIED_UNEXECUTED",
+  "base": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py",
+    "sha256": "f44ddfe31408b77b6d622e1d4ec4cda60a03999dc984d9e11b5aeac38911a9ed",
+    "bytes": 140517,
+    "identity": {
+      "device": 2304,
+      "inode": 79696030,
+      "bytes": 140517,
+      "mtime_ns": 1792306967914113042,
+      "ctime_ns": 1792306967928089640,
+      "mode": "0o664",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "patch": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_zero_dip_wave2_proposal/unapplied.patch",
+    "sha256": "cb4784e6b2c3fabeba3b0e7284be9df2c94466d35195ac616c38b41767f76878",
+    "bytes": 606,
+    "identity": {
+      "device": 2304,
+      "inode": 82575408,
+      "bytes": 606,
+      "mtime_ns": 1792349633249017819,
+      "ctime_ns": 1792349633249017819,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "candidate": {
+    "sha256": "5314c4fc70449b2f94520ce27d0f08374a68aba23175fcb49fa2e55ad4522408",
+    "bytes": 140562,
+    "full_source_copy_written": false
+  },
+  "unique_replacement": {
+    "before": "        and (int(frame.game_score) > 0 or not recent_start)\n",
+    "after": "        and (int(frame.game_score) > 0 or not recent_start\n             or int(frame.level_number) >= 2)\n",
+    "count": 1
+  },
+  "full_reverse_exact": true,
+  "unchanged_prefix_sha256": "4c27afb6627ace7441ed579951814ae835ad6a3d7e13de577bf45cd251d837ad",
+  "unchanged_suffix_sha256": "535760e47a9b9ebad92eb25e233c850f0c0ae725e80a5396176a911c82780fa3",
+  "only_changed_function": "_continuous_play_score_dip",
+  "base_helper_sha256": "9f590bbd1bd181f83e050bdece4951f721b699e89651d02f1932e57671602585",
+  "candidate_helper_sha256": "f7a4d367162bafb87f4bc94ddad54573a76ab9159ae11e07540b2690c2c6eba4",
+  "unchanged_semantics": [
+    "same previous/current raw wave; both alive; no current done or start bit",
+    "positive bounded dip <=100000",
+    "wave1zero+recent ambiguity",
+    "inactive/previous-inactive/done/currentSTART/wave regression reset cases",
+    "100M wrap,250K jump and score ceilings",
+    "journal first-play-wave1/full-game/cohort-abandonment rules",
+    "all action/replay/reward/reset paths and telemetry"
+  ],
+  "test_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_zero_dip_wave2_proposal/test_continuous_zero_dip_deferred.py",
+    "sha256": "29004a03639f2a3ca74e40a9b3795e444ad68f90637dad999ed5ac75ad6e46ab",
+    "bytes": 21576,
+    "identity": {
+      "device": 2304,
+      "inode": 82575407,
+      "bytes": 21576,
+      "mtime_ns": 1792349544791040924,
+      "ctime_ns": 1792349633249407453,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "target_AST_compile_import_test_execution": false,
+  "production_or_existing_source_writes": false
+}

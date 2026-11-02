@@ -1,0 +1,42 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-natural-turnover-durable-next-candidate-20261029-original01-preparation/prepare_durable_endpoint_profiles_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-natural-turnover-durable-next-candidate-20261029-original02-preparation/prepare_durable_endpoint_profiles_v4.py
+@@ -15,16 +15,16 @@
+ 
+ G=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ B=G/'logs/managed-learning-20261015/run-26'
+-CASE=B/'post-natural-turnover-durable-next-candidate-20261029-original01'
++CASE=B/'post-natural-turnover-durable-next-candidate-20261029-original02'
+ PROFILE=G/'tools/post_recovery_evaluation/prepare_and_close_profile_cpu_v2.py'
+ PROFILE_SHA='dc4b811b57b05e0a439ef2345d0dc73f6db42578b672511d13ec08ddda65ff8c'
+ CONTROLLER=G/'tools/quality_capacity_proposal/control_quality32_review_v1.py'
+ CONTROLLER_SHA='218e7f861deb82c340527d218ed9f92ef5c5836c8cb9d32452c0598e61ff9a14'
+-PLAN_SHA='97206a8e82ff4f43f8d74b8ab564c682ef2504d2f3ec13195154f52888baee6a'
+-UNIT='robotron-durable-candidate-window-original01-20261029.service'
+-PID=4033444
+-BIRTH=12427111
+-INVOCATION='65c862e335c84b279e38494cf118487e'
++PLAN_SHA='0e12974bac193fc75e7d55b9746564d0e7d6d0ec7db98082b54b90d412f7c170'
++UNIT='robotron-durable-candidate-window-original02-20261029.service'
++PID=148070
++BIRTH=13228092
++INVOCATION='db797b8c0af54cc2bce88bcfcd765a47'
+ CLOCKS=('learner_frame_count','training_steps','optimized_samples','frame_count')
+ 
+ 
+@@ -65,6 +65,7 @@
+     endpoint=result['endpoint'];require(endpoint['path']==str(CASE/'endpoint.pt')
+         and endpoint==report['checkpoint'] and result['CPU_verification']==cp,'Actual selected endpoint/report binding differs')
+     require(endpoint['sha256']not in {authority['endpoint']['sha256'],
++        'e078b0da4ce4e25146fab7484f8489f590e1086370746cb392afcd7f5f8adef5',
+         'a6e17a3c6cd8a9b6cb5479e6c6cbd1a284c1cd880372d0d02441680bc708e502',
+         '444a14287789b26e3d84564cf4a9e49518d82d91d6a3ed82ca09526ef89c8523'},'A genuinely distinct endpoint is required')
+     ep=Path(endpoint['path']);st=ep.stat();require(not ep.is_symlink() and ep.resolve(strict=True)==ep
+@@ -127,7 +128,7 @@
+             policy=dict(checkpoint=job['checkpoint'],expected_policy_clocks=original['report']['clocks'],
+                 training_experiment='CE4096-LR125-survival32M-original01-20261023',
+                 immutable_numerical_or_protection_authority=h.pin(CASE/'endpoint-CPU.json')),
+-            launcher_aware_observer_engineering_qualified=False,scientific_launch_qualified=False,quality_qualified=False,promotion=False))
++            launcher_aware_observer_engineering_qualified=False,retired_API_projection_observer_engineering_qualified=False,scientific_launch_qualified=False,quality_qualified=False,promotion=False))
+     elif a.close_canonical:prepared=api.close(canonical)
+     elif a.prepare_frozen:prepared=api.prepare(CASE/'result.json',frozen,
+         canonical_closeout=canonical/'independent-original-canonical-CPU-closeout.json')

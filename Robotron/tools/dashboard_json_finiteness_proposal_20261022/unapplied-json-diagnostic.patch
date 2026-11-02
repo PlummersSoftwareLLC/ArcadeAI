@@ -1,0 +1,145 @@
+--- a/Robotron/Scripts/dqn/metrics_dashboard.py
++++ b/Robotron/Scripts/dqn/metrics_dashboard.py
+@@ -59,6 +59,23 @@
+             return 0.0
+         def get_eplen_100k_average():
+             return 0.0
++
++
++def _json_safe_diagnostic_snapshot(snapshot):
++    """Keep a nonfinite optional gradient diagnostic explicit in valid JSON.
++
++    All other fields are left intact for strict serialization and health checks.
++    The source snapshot and numerical training metrics are never mutated.
++    """
++    value = snapshot.get("grad_norm")
++    if isinstance(value, float) and not math.isfinite(value):
++        snapshot = dict(snapshot)
++        snapshot["grad_norm"] = None
++        snapshot["grad_norm_nonfinite"] = (
++            "nan" if math.isnan(value) else
++            "positive_infinity" if value > 0 else "negative_infinity"
++        )
++    return snapshot
+ 
+ 
+ def _tail_mean(values, count: int = 20) -> float:
+@@ -863,7 +880,16 @@
+     def sample(self):
+         with self.lock:
+             self._update_web_client_count_locked()
+-        snap = self._build_snapshot()
++        try:
++            snap = _json_safe_diagnostic_snapshot(self._build_snapshot())
++            body = json.dumps(snap, allow_nan=False).encode("utf-8")
++        except (TypeError, ValueError):
++            # Do not serve a previous healthy snapshot as the failed new one.
++            failure = {"ts": time.time(), "snapshot_error": "Metric snapshot is not valid finite JSON"}
++            with self.lock:
++                self.latest = failure
++                self._cached_now_body = json.dumps(failure, allow_nan=False).encode("utf-8")
++            raise
+         with self.lock:
+             now = time.time()
+             if self._first_sample_time is None:
+@@ -872,13 +898,13 @@
+             # Skip the first 10 samples or 2 seconds, whichever comes first
+             if self._sample_count <= 10 and (now - self._first_sample_time) < 2.0:
+                 self.latest = snap
+-                self._cached_now_body = json.dumps(snap).encode("utf-8")
++                self._cached_now_body = body
+                 return
+             self.latest = snap
+             # Charts use scalar values. Client tables and experiment records
+             # belong only in the latest snapshot, not in every history row.
+             self.history.append(compact_history_row(snap))
+-            self._cached_now_body = json.dumps(snap).encode("utf-8")
++            self._cached_now_body = body
+ 
+     def payload(self) -> dict[str, Any]:
+         with self.lock:
+@@ -3041,8 +3067,12 @@
+       return (n < 0 ? "-" : "+") + padded;
+     }
+ 
++    function chartNumber(value) {
++      return value === null || value === undefined ? NaN : Number(value);
++    }
++
+     function fmtPaddedFloat(v, intDigits = 2, decDigits = 2, padChar = "0") {
+-      if (v === null || v === undefined || Number.isNaN(v)) return "0";
++      if (v === null || v === undefined || !Number.isFinite(Number(v))) return "--";
+       const n = Math.abs(Number(v));
+       const [ip, fp] = n.toFixed(decDigits).split(".");
+       return ip.padStart(intDigits, padChar) + (fp !== undefined ? "." + fp : "");
+@@ -4304,7 +4334,7 @@
+       const values = [];
+       for (const row of points) {
+         for (const s of seriesDefs) {
+-          const v = Number(row[s.key]);
++          const v = chartNumber(row[s.key]);
+           if (Number.isFinite(v)) {
+             values.push(v);
+           }
+@@ -4507,9 +4537,13 @@
+         const xFn = s.linearTime ? xAtLinear : xAtLog;
+         const smoothAlpha = Number.isFinite(s.smooth_alpha) ? Number(s.smooth_alpha) : MINI_CHART_VALUE_SMOOTH_ALPHA;
+         const mw = Number.isFinite(s.median_window) ? s.median_window : 0;
+-        const readVal = mw >= 3
+-          ? (i) => medianNeighbors(i, n, mw, (j) => Number(points[j][s.key]))
+-          : (i) => Number(points[i][s.key]);
++        const readVal = (i) => {
++          const value = chartNumber(points[i][s.key]);
++          if (!Number.isFinite(value)) return NaN;
++          return mw >= 3
++            ? medianNeighbors(i, n, mw, (j) => chartNumber(points[j][s.key]))
++            : value;
++        };
+         ctx.strokeStyle = s.color;
+         ctx.globalAlpha = (s.key === "level_1m") ? 0.95 : 0.82;
+         ctx.lineWidth = (s.key === "level_1m") ? 2.0 : 1.6;
+@@ -4639,7 +4673,7 @@
+           if (!key) continue;
+           const alpha = Number.isFinite(def.alpha) ? Number(def.alpha) : 0.12;
+ 
+-          const vNow = Number(row[key]);
++          const vNow = chartNumber(row[key]);
+           if (Number.isFinite(vNow)) {
+             sums[k] += vNow;
+             counts[k] += 1;
+@@ -4649,7 +4683,7 @@
+             const rowStart = src[starts[k]] || {};
+             const tsS = Number(rowStart.ts);
+             if (!Number.isFinite(tsI) || !Number.isFinite(tsS) || (tsI - tsS) <= windowSec) break;
+-            const vS = Number(rowStart[key]);
++            const vS = chartNumber(rowStart[key]);
+             if (Number.isFinite(vS)) {
+               sums[k] -= vS;
+               counts[k] = Math.max(0, counts[k] - 1);
+@@ -4657,6 +4691,10 @@
+             starts[k] += 1;
+           }
+ 
++          if (!Number.isFinite(vNow)) {
++            nextRow[key] = null;
++            continue;
++          }
+           const avg = counts[k] > 0 ? (sums[k] / counts[k]) : (Number.isFinite(vNow) ? vNow : 0.0);
+           emas[k] = (emas[k] === null) ? avg : (emas[k] + ((avg - emas[k]) * alpha));
+           nextRow[key] = emas[k];
+@@ -4980,6 +5018,7 @@
+         if (!res.ok) throw new Error("bad response");
+         const payload = await res.json();
+         const now = payload && payload.now ? payload.now : null;
++        if (now && now.snapshot_error) throw new Error(now.snapshot_error);
+         const history = Array.isArray(payload && payload.history) ? payload.history : [];
+         historyCache = history.slice(-MAX_HISTORY_POINTS);
+         if (now && (!latestNow || Number(now.ts) >= Number(latestNow.ts))) latestNow = now;
+@@ -5009,6 +5048,7 @@
+         const res = await fetch(`/api/now?cid=${encodeURIComponent(CLIENT_ID)}&t=${Date.now()}`, { cache: "no-store", signal: controller.signal });
+         if (!res.ok) throw new Error("bad response");
+         const now = await res.json();
++        if (now && now.snapshot_error) throw new Error(now.snapshot_error);
+         latestNow = now;
+         const ts = Number(now && now.ts);
+         if (Number.isFinite(ts) && ts > lastTs + 1e-9) {

@@ -1,0 +1,65 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_transport_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_transport_v2.py
+@@ -1,4 +1,4 @@
+-"""Prospective static192 continuous-main TCP/retired-API evidence.
++"""Prospective physical-original192 current TCP/strict EVAL-retirement evidence.
+ 
+ Original complete Linux TCP ownership predicate is retained exactly. Raw API
+ is preserved; only a separately labelled retirement view can omit a cached row.
+@@ -15,8 +15,8 @@
+ import sys
+ import time
+ 
+-BASE=Path(__file__).with_name('continuous_static192_health_v1.py')
+-BASE_SHA='6fcff86103d409a3646f523a6adf6a95cc9eabd3b0090826493aaa99a7b9fbcc'
++BASE=Path(__file__).with_name('continuous_physical192_health_v2.py')
++BASE_SHA='77a832a4202bf81e2f8eae00affc2127be0a22795c75f0c5cf1585f22d2991a9'
+ PORT=9998
+ 
+ def require(condition, reason):
+@@ -91,7 +91,7 @@
+ 
+ def base():
+     require(hashlib.sha256(BASE.read_bytes()).hexdigest() == BASE_SHA, 'Selected continuous health source changed')
+-    name = '_prospective_continuous_static192_health_v1'
++    name = '_prospective_continuous_physical192_health_v2'
+     if name not in sys.modules:
+         spec = importlib.util.spec_from_file_location(name, BASE)
+         module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+@@ -181,9 +181,13 @@
+                 and type(r['eval']) is bool and r['eval'] is case['slot_eval'][str(r['client_slot'])] for r in rows)
+             and len(slots) == len(set(slots)), 'Unknown/duplicate slot or wrong role in raw API')
+     for slot, row in zip(slots, rows):
+-        conn = reg.binding(case, slot, case['continuous']['original_slots'][slot]['connection_binding'],
+-                           case['continuous']['original_slots'][slot]['original_child'])
+-        require(row['client_id'] == conn['client_id'], 'Original fixed connection CID changed')
++        if case['slot_eval'][slot]:
++            conn = reg.binding(case, slot, case['continuous']['original_slots'][slot]['connection_binding'],
++                               case['continuous']['original_slots'][slot]['original_child'])
++        else:
++            require(slot in partition['current_connections'], 'Original TRAIN lacks fresh current handler')
++            conn = partition['current_connections'][slot]
++        require(row['client_id'] == conn['client_id'], 'API CID differs from its selected current physical connection')
+     extras = set(slots) - set(actors)
+     require(extras <= partition['retiring'] | partition['closed'], 'Unknown extra API row is not a natural EVAL retirement')
+     projected = sample
+@@ -211,7 +215,7 @@
+                     'Cached retired EVAL changed original physical/CID/registration role')
+             natural, result = partition['naturals'][slot]
+             require(0 <= sample['unix_s'] - reg.number(result['end_unix_s']) <= .5
+-                    and 0 <= sample['unix_s'] - sample['status']['slots'][slot]['natural_result']['identity']['mtime_ns']/1e9 <= .5,
++                    and 0 <= sample['unix_s'] - natural['first_observed_unix_s'] <= .5,
+                     'Original natural-result end/publication500ms expiry exceeded')
+             probe = entry['PID_absence']
+             require(probe == sample['PID_absence'][slot] and probe['absent'] is True
+@@ -264,7 +268,9 @@
+                 and replay['accepted_learner_total'] >= old['replay']['accepted_learner_total']
+                 and all(v >= old['replay']['accepted_by_source_total'][k]
+                         for k, v in replay['accepted_by_source_total'].items()), 'Learning exposure counters rolled back')
+-    return dict(profile='STATIC_ORIGINAL192_NO_FAULT_ADOPTION', partition=partition['counts'],
++    return dict(profile='PHYSICAL_ORIGINAL192_TRAIN_CURRENT_TCP_EVAL_ORIGINAL_ONCE', partition=partition['counts'],
++                TRAIN_original_physical_current_TCP_verified=True,
++                EVAL_original_connection_strict_retirement_verified=True,
+                 raw_API_unchanged=True, projected_retired_API_slots=projected.get('projected_retired_API_slots', []))
+ 
+ 

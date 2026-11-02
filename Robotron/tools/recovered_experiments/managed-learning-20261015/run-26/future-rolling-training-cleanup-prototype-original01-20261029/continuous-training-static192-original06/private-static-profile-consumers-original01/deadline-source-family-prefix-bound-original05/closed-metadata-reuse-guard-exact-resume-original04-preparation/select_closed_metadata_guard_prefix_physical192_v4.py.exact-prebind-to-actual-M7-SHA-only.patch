@@ -1,0 +1,15 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/closed-metadata-reuse-guard-exact-resume-original04-preparation/unselected-prebind-source-snapshots/select_closed_metadata_guard_prefix_physical192_v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/closed-metadata-reuse-guard-exact-resume-original04-preparation/select_closed_metadata_guard_prefix_physical192_v4.py
+@@ -10,9 +10,9 @@
+ from pathlib import Path
+ 
+ LOCAL = Path(__file__).resolve().parent
+-GENERATOR_SHA = None  # Pending actual M7 PASS/close/manifest and final binding.
+-PREPARER_SHA = None  # Pending actual M7 PASS/close/manifest and final binding.
+-CLOSER_SHA = None  # Pending actual M7 PASS/close/manifest and final binding.
++GENERATOR_SHA = 'a78f7f7e7f93ba0148704df61e35df4d2e288aeabbc62def247183ec56f9dadc'
++PREPARER_SHA = 'f16790dbbabcc60a7ce891fee5a835c443b811735a20481e879f4c897f87ed4e'
++CLOSER_SHA = '2afa743774550aa613703aab64f82ec0da6f539509978e82744c7b9a7d99110a'
+ 
+ 
+ def require(value, reason):

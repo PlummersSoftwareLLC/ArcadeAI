@@ -1,0 +1,55 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window02-D6-R1-owned-launch-original01-preparation/run_owned_R1_window02_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-R1-owned-launch-original01-preparation/run_owned_R1_window03_v1.py
+@@ -17,8 +17,8 @@
+ G=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ I=G/'logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027'
+ A=Path(__file__).resolve().parent
+-S=I/'durable-window02-D6-fixed-RCRC-study-original01'
+-D=Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original06-fresh-study-namespaces-preparation/source-family-original02-unit-authority')
++S=I/'durable-window03-D7-fixed-RCRC-study-original01'
++D=Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original07-proof2s-preparation/source-family-original01')
+ 
+ 
+ def require(value,message):
+@@ -33,16 +33,16 @@
+ 
+ def run(args):
+     require(hashlib.sha256(Path(__file__).read_bytes()).hexdigest()==args.expected_source_sha256,'Exact selected R1 wrapper required')
+-    h=load('_window02_D6_R1_helpers',G/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py',
++    h=load('_window03_D7_R1_helpers',G/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py',
+         '2b6902933b502ac20dacbd444fbf786315d6c960fcad1d5b5bf223dd569708c1')
+-    helper=load('_window02_D6_R1_original_Popen',G/'tools/startup_policy_journal_proposal/sequence_quality32_2259_prospective197_v1.py',
++    helper=load('_window03_D7_R1_original_Popen',G/'tools/startup_policy_journal_proposal/sequence_quality32_2259_prospective197_v1.py',
+         'b462dbb6562e08ef6efca66bc10f6b0c94273daceb12ac9f86f4a68eb972d6e4')
+     read=lambda p:json.loads(h.checked(p).read_bytes())
+     selected_pin=h.pin(args.launch_selection.resolve())
+     require(selected_pin['sha256']==args.launch_selection_sha256 and selected_pin['identity']['mode']=='0o444',
+         'Exact immutable fresh R1 launch selection required')
+     selected=read(selected_pin)
+-    require(selected['schema']=='robotron-window02-D6-original-R1-launch-selection-v1'
++    require(selected['schema']=='robotron-window03-D7-original-R1-launch-selection-v1'
+         and selected['source']==h.pin(A/'prepare_owned_R1_launch_v1.py')
+         and selected['sources']['wrapper']==h.pin(Path(__file__).resolve()), 'Actual Root-selected R1 source differs')
+     for value in selected['sources'].values():h.checked(value)
+@@ -59,15 +59,17 @@
+     fresh_operation()
+     mp=ready['prepared_manifest']
+     require(mp==selected['prepared_manifest'] and mp['path']==str(S/'prepared-four-legs-NOT-LAUNCH-QUALIFIED.json'),
+-        'Exact NEW window02 four-job manifest required')
++        'Exact NEW window03 four-job manifest required')
+     manifest=read(mp);study=read(manifest['study_precommit'])
+     require(manifest['engineering_only']is False and manifest['study_precommit']==selected['study_precommit']
+         and study['ordered_legs']==['R1','C1','R2','C2'] and study['no_retry']is True
+         and study['policies']['candidate']['checkpoint']['sha256']==selected['candidate_sha256']
+-        and selected['candidate_sha256']=='862fb4cde4ecb146b5b23a83b77ccbf1675a980bc310f6c2a6a8806d87b7c81e'
++        and selected['candidate_capture']['result']in study['prospective_capture_evidence']
++        and read(selected['candidate_capture']['result'])['endpoint']['sha256']==selected['candidate_sha256']
++        and read(selected['candidate_capture']['plan'])['owner']==read(selected['candidate_capture']['result'])['owner']
+         and study['policies']['reference']['checkpoint']['sha256']=='b23152ece3bb614831a278fe0572c07433f1bee59c5accef5a1ab7d3007af883',
+-        'Exact fresh RCRC window02/protected pair required')
+-    namespace='window02-retired-api-'+manifest['study_precommit']['sha256'][:16]+'-r1'
++        'Exact fresh RCRC window03/protected pair required')
++    namespace='window03-proof2s-'+manifest['study_precommit']['sha256'][:16]+'-r1'
+     unit='robotron-'+namespace+'-wrapper-original01-20261029.service'
+     require(selected['wrapper_unit']==unit, 'Exact new wrapper namespace differs')
+     review=read(ready['review_precommit']);cpu=read(ready['review_preparation_CPU'])

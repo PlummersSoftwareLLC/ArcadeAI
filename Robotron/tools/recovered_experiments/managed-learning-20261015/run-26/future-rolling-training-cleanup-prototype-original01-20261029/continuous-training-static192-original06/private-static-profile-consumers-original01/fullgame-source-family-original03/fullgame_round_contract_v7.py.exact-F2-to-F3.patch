@@ -1,0 +1,31 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/fullgame-source-family-original02/fullgame_round_contract_v7.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/fullgame-source-family-original03/fullgame_round_contract_v7.py
+@@ -119,7 +119,7 @@
+             and protocol == dict(schema='robotron-native-fullgame-continuous-static192-main-health-proof2s-protocol-v1',
+                 case=job['main_binding'],raw_API_required=True,close_requires_final_sample=True,hot_max_gap_s=2.0,initial_samples=100,raw_queue_protocol='pending-byte-digest-v2',volatile_live_tmpfs=True,source_bound_retired_API_projection=True,source_bound_completed_original192_bootstrap=True,source_bound_static_original192_partition=True),
+             'Exact source-bound fullgame round observer context required')
+-    expected = {'client': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/fullgame-source-family-original02/fullgame_round_observer_client_v8.py', 'worker': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/fullgame-source-family-original02/fullgame_round_observer_v6.py', 'health': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_transport_v1.py', 'health_base': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_health_v1.py', 'registry': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_registry_v1.py', 'durability': '/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/buffered_raw_writer_v2.py', 'control': '/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/volatile_live_control_v1.py', 'interpreter': '/usr/bin/python3.12'}
++    expected = {'client': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/fullgame-source-family-original03/fullgame_round_observer_client_v8.py', 'worker': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/fullgame-source-family-original03/fullgame_round_observer_v6.py', 'health': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_transport_v1.py', 'health_base': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_health_v1.py', 'registry': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_registry_v1.py', 'durability': '/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/buffered_raw_writer_v2.py', 'control': '/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/volatile_live_control_v1.py', 'interpreter': '/usr/bin/python3.12'}
+     expected = {name:Path(path) for name,path in expected.items()}
+     require(set(family['main_observer']) == set(expected), 'Exact fullgame observer dependency set required')
+     for name,path in expected.items():
+@@ -157,7 +157,8 @@
+ 
+ def validate_launch(job, jp, ctx, h):
+     require(os.environ.get('ROBOTRON_CONTINUOUS_TRAINING_MODE','0') == '0'
+-            and os.environ.get('ROBOTRON_ROLLING_TRAINING_CLEANUP','0') == '0',
++            and os.environ.get('ROBOTRON_ROLLING_TRAINING_CLEANUP','0') == '0'
++            and os.environ.get('ROBOTRON_CONTINUOUS_STARTUP_HOLD','0') == '0',
+             'Private fullgame sidecars require explicit/default mode0 before ownership')
+     pair,family = ctx['pair'],ctx['family']
+     require(pair['engineering_only'] is False and family['native_launch_qualified'] is True,
+@@ -189,7 +190,8 @@
+     require(checked['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1'
+             and checked['verified_maximum_gap_s'] == 2.0
+             and checked['accepted_evidence_and_projection_gaps_verified'] is True
+-            and checked['source_bound_static_original192_partition_verified'] is True
++            and checked['main_health_profile'] == 'STATIC_ORIGINAL192_NO_FAULT_ADOPTION'
++            and checked['TRAIN155_originals_and_EVAL37_once_partition_verified'] is True
+             and checked['source_bound_completed_original192_bootstrap_verified'] is True,
+             'Exact prospective fullgame2s engineering proof contract required')
+     lifecycle = read(proof['lifecycle'],h);worker = read(lifecycle['worker_job'],h);proved = read(worker['case'],h)

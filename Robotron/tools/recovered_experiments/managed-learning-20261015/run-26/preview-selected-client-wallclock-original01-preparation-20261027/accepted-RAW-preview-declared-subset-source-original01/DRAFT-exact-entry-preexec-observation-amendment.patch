@@ -1,0 +1,107 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/accepted-RAW-preview-declared-subset-source-original01/exec_declared_raw_preview_entry_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/accepted-RAW-preview-declared-subset-source-original01/exec_declared_raw_preview_entry_cid_v2.py
+@@ -6,6 +6,8 @@
+ """
+ import argparse
+ import hashlib
++import json
++import time
+ import os
+ from pathlib import Path
+ import stat
+@@ -100,7 +102,69 @@
+     prior = read(config['prior_binding']); prior_policy = read(prior['supervision_policy'])
+     require(context['current_registry']['actors'] == prior_policy['baseline_actors'],
+             'Plan current OUTPUT and source-adoption prior registry differ')
+-    return dict(plan=plan, context=context, source=source, actual_owned_commit=commit_pin)
++    return dict(plan=plan, context=context, source=source, actual_owned_commit=commit_pin,
++                config_pin=config_pin, entry_pin=entry_pin, plan_pin=config['plan'],
++                activation=config['activation'])
++
++
++def sample_exec_anchor(clock=time):
++    """One bounded wall/monotonic bracket; no unbounded clock resampling."""
++    begin = clock.monotonic_ns()
++    deadline = begin + 1_000_000_000
++    attempts = []
++    for _ in range(3):
++        lo = clock.monotonic_ns(); wall = clock.time_ns(); hi = clock.monotonic_ns()
++        attempts.append(dict(mono_before_ns=lo, wall_ns=wall, mono_after_ns=hi))
++        require(hi >= lo and hi <= deadline, 'Preexec clock bracket budget failed')
++        if hi - lo <= 1_000_000:
++            return dict(mono_before_ns=lo, wall_ns=wall, mono_after_ns=hi,
++                        sample_begin_ns=begin, deadline_mono_ns=deadline,
++                        attempts=attempts)
++    raise ValueError('No sufficiently tight preexec clock bracket')
++
++
++def write_exec_observation(prepared, slot, command, output, observed_parent, modules):
++    """Immutable preexec observation only; successful MAME must be proven later."""
++    accepted = modules['accepted']; fuse = modules['fuse']
++    directory = prepared['activation']['directory']
++    accepted.validate_private_claim_directory(directory)
++    pid = os.getpid(); birth = fuse.process_birth(pid)
++    require(type(birth) is int and birth > 0, 'Actual launcher birth unavailable')
++    prior = prepared['context']['current_registry']['actors'][slot]
++    require(output['ROBOTRON_CLIENT_SLOT'] == slot
++            and output['ROBOTRON_EVAL_MODE'] in ('1', '2')
++            and command[command.index('-autoboot_script') + 1]
++                == prepared['context']['target_lua']['path'], 'Final declared output differs')
++    anchor = sample_exec_anchor()
++    record = dict(schema='robotron-preview-owned-preexec-observation-v1',
++        status='PREEXEC_OBSERVATION_NOT_EXEC_SUCCESS', slot=int(slot),
++        claimant_pid=pid, claimant_birth=birth, config=prepared['config_pin'],
++        entry_source=prepared['entry_pin'], plan=prepared['plan_pin'],
++        source_commit=prepared['actual_owned_commit'],
++        activation_nonce=prepared['activation']['nonce'], prior_actor=prior,
++        observed_parent=observed_parent, command=command,
++        output_environment={key: output[key] for key in prior['environment']},
++        forced_eval_mode=output['ROBOTRON_EVAL_MODE'],
++        output_lua=prepared['context']['target_lua'], clock_anchor=anchor)
++    raw = (json.dumps(record, sort_keys=True, allow_nan=False) + '\n').encode()
++    require(0 < len(raw) <= 2_000_000, 'Small preexec record required')
++    name = f'slot{slot}-pid{pid}-birth{birth}-exec-observation.json'
++    descriptor = os.open(directory['path'], os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
++    try:
++        opened = os.fstat(descriptor)
++        require(opened.st_nlink == 2 and dict(device=opened.st_dev, inode=opened.st_ino,
++            mode=oct(stat.S_IMODE(opened.st_mode)), uid=opened.st_uid) == directory['identity'],
++            'Owned preexec directory changed')
++        fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
++                     0o444, dir_fd=descriptor)
++        # No delete/rearm path; interruption leaves the observation consumed.
++        with os.fdopen(fd, 'wb') as stream:
++            stream.write(raw); stream.flush(); os.fchmod(stream.fileno(), 0o444)
++            os.fsync(stream.fileno())
++        os.fsync(descriptor)
++    finally:
++        os.close(descriptor)
++    return record
+ 
+ 
+ def admit(prepared, args, environment, modules, read, exec_function=None):
+@@ -112,8 +176,23 @@
+     modules['fuse'].verify_parent(dict(supervisor_owner=context['parent_owner'],
+         supervisor_process=context['parent_process'],
+         prior_actor=context['current_registry']['actors'][slot]), modules['collector'])
++    def record_then_exec(path, command, output):
++        observed = modules['fuse'].verify_parent(dict(supervisor_owner=context['parent_owner'],
++            supervisor_process=context['parent_process'],
++            prior_actor=context['current_registry']['actors'][slot]), modules['collector'])
++        record = write_exec_observation(prepared, slot, command, output, observed, modules)
++        modules['accepted'].validate_private_claim_directory(prepared['activation']['directory'])
++        modules['fuse'].verify_parent(dict(supervisor_owner=context['parent_owner'],
++            supervisor_process=context['parent_process'],
++            prior_actor=context['current_registry']['actors'][slot]), modules['collector'])
++        require(time.monotonic_ns() <= record['clock_anchor']['deadline_mono_ns'],
++                'Preexec observation-to-exec budget expired')
++        (os.execve if exec_function is None else exec_function)(path, command, output)
++        raise AssertionError('execve returned without replacing launcher')
++    upgraded = int(slot) in modules['core'].subset(prepared['plan']['override_slots'])
+     modules['core'].dispatch(prepared['plan'], args, environment, read, modules['base'],
+-        modules['accepted'], modules['roles'].roles, modules['fuse'], modules['collector'], exec_function)
++        modules['accepted'], modules['roles'].roles, modules['fuse'], modules['collector'],
++        record_then_exec if upgraded else exec_function)
+ 
+ 
+ def main(argv=None):

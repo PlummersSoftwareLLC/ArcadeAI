@@ -1,0 +1,36 @@
+{
+  "schema": "robotron-actual-ce-analysis-preparation-manifest-v1",
+  "status": "SOURCE_ONLY_UNEXECUTED",
+  "actual_tests": null,
+  "actual_inputs": null,
+  "actual_result": null,
+  "source_peer_review": {
+    "reviewer": "/root/audit_quality_result",
+    "status": "SOURCE_ONLY_PASS",
+    "tool_sha256": "e4ffb0cb95aa4f426005cce351b11cb96b4af30339908183e1f61fbf728875bb",
+    "tests_sha256": "fff6e0510064e8faf5197517e5afbf1ed9dcd238f1bf2d9d478cc8f65b95b914",
+    "scope": "No imports/default/tests/payload/runtime actions; does not validate actual PT decoder/resources/live8."
+  },
+  "files": {
+    "analyse_actual_ce.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/offline_actual_ce_analysis_proposal/analyse_actual_ce.py",
+      "bytes": 24128,
+      "sha256": "e4ffb0cb95aa4f426005cce351b11cb96b4af30339908183e1f61fbf728875bb"
+    },
+    "test_analyse_actual_ce.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/offline_actual_ce_analysis_proposal/test_analyse_actual_ce.py",
+      "bytes": 8934,
+      "sha256": "fff6e0510064e8faf5197517e5afbf1ed9dcd238f1bf2d9d478cc8f65b95b914"
+    },
+    "PREPARATION.txt": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/offline_actual_ce_analysis_proposal/PREPARATION.txt",
+      "bytes": 8341,
+      "sha256": "428074a33640679f1302619fdc150b6e3b0d19702f4146107aabf95da8d83f7a"
+    },
+    "source-lock.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/offline_actual_ce_analysis_proposal/source-lock.json",
+      "bytes": 3585,
+      "sha256": "6ecaa465371057bee65a7156a4061cf9fe092e1bd4c118070999defeaa636f27"
+    }
+  }
+}

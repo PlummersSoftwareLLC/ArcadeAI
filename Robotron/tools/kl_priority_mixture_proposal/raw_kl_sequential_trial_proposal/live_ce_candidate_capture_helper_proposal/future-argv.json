@@ -1,0 +1,70 @@
+{
+  "argv_template": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_ce_candidate_capture_helper_proposal/capture_live_CE_candidate.py",
+    "--execute",
+    "--job",
+    "<ACTUAL_0444_JOB>",
+    "--expected-job-sha256",
+    "<ACTUAL_JOB_SHA256>",
+    "--expected-source-sha256",
+    "980bc51130e00a5394b98e6ef2abbc414147df794b722a06f597cf135424ffff"
+  ],
+  "capture_unit_bounds": {
+    "CPUQuota": "200%",
+    "MemoryMax": "768M",
+    "MemorySwapMax": 0,
+    "Restart": "no",
+    "RuntimeMaxSec": 120,
+    "TasksMax": 128
+  },
+  "guard_tests": {
+    "actual_execution": null,
+    "argv": [
+      "/usr/bin/python3.12",
+      "-I",
+      "-B",
+      "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_ce_candidate_capture_helper_proposal/test_capture_live_CE.py"
+    ],
+    "count": 8,
+    "selected_methods": [
+      "test_literal_plan_never_reads_or_loads_helpers",
+      "test_small_owned_copy_readonly_independent_and_no_overwrite",
+      "test_immediate_completion_is_exact_original_request_inode",
+      "test_whole_capture_wiring_emits_only_pending_cpu_and_authentic_nan",
+      "test_freeze_release_refusal_happens_before_output_or_request",
+      "test_foreign_completed_same_tag_does_not_substitute_request",
+      "test_late_owner_change_retains_candidate_and_failure_without_cpu_job",
+      "test_original_boot_proof_hash_mismatch_fails_without_cpu_job"
+    ]
+  },
+  "job": null,
+  "job_sha256": null,
+  "output_contract": {
+    "no_CPU_or_quality_pass": true,
+    "required": [
+      "source",
+      "verification_copy",
+      "acquisition",
+      "cpu_job",
+      "cpu_argv",
+      "trigger_API",
+      "current_phase",
+      "owner",
+      "capture_completion"
+    ],
+    "status": "CAPTURED_PENDING_CPU"
+  },
+  "schema": "robotron-live-ce-capture-future-argv-v1",
+  "status": "SOURCE_ONLY_NOT_INVOKED",
+  "strict_CPU_separate_bounds": {
+    "CPUQuota": "200%",
+    "MemoryMax": "3G",
+    "MemorySwapMax": 0,
+    "Restart": "no",
+    "RuntimeMaxSec": 120,
+    "TasksMax": 128
+  }
+}

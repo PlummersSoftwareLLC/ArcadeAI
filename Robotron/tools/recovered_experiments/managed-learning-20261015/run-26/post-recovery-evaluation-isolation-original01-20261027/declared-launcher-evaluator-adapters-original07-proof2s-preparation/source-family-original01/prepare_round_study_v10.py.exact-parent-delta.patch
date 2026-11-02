@@ -1,0 +1,78 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original06-fresh-study-namespaces-preparation/source-family-original02-unit-authority/prepare_round_study_v10.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original07-proof2s-preparation/source-family-original01/prepare_round_study_v10.py
+@@ -21,8 +21,8 @@
+ HERE = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
+ LOCAL = Path(__file__).resolve().parent
+ PREVIOUS = BASE/'deadline-score32-fixed-fleet-admission-original03-preparation-20261026/fixed-RCRC-deadline32-study-original03'
+-CAPTURE = BASE/'post-natural-turnover-durable-next-candidate-20261029-original02'
+-CAPTURE_PLAN_SHA = '0e12974bac193fc75e7d55b9746564d0e7d6d0ec7db98082b54b90d412f7c170'
++CAPTURE = BASE/'post-natural-turnover-durable-next-candidate-20261029-original03'
++CAPTURE_PLAN_SHA = '43ace243055948eba395f97ba96faef339997c5d94cec6b50aea3104dbe9ae68'
+ PROTECTED_SHA = 'b23152ece3bb614831a278fe0572c07433f1bee59c5accef5a1ab7d3007af883'
+ LEGS = ('R1', 'C1', 'R2', 'C2')
+ 
+@@ -82,7 +82,7 @@
+     result_pin = h.pin(CAPTURE/'result.json')
+     result = read(result_pin, h)
+     plan_pin = h.pin(CAPTURE/'window-plan.json')
+-    require(plan_pin['sha256'] == CAPTURE_PLAN_SHA, 'Exact new independent original02 capture plan required')
++    require(plan_pin['sha256'] == CAPTURE_PLAN_SHA, 'Exact new independent original03 capture plan required')
+     plan = read(plan_pin, h)
+     require(result['state'] == 'captured_CPU_verified' and result['owner'] == plan['owner']
+             and result['original_DQN_window_unchanged'] is True, 'Only the completed selected prospective capture is eligible')
+@@ -93,9 +93,10 @@
+     for value in plan['inputs']:
+         subset = h.pin(value['path'])
+         require(all(subset[key] == expected for key, expected in value.items()), 'Capture source/recipe changed')
+-    require(result['endpoint']['path'] == str(CAPTURE/'endpoint.pt'), 'Actual new original02 endpoint path required')
++    require(result['endpoint']['path'] == str(CAPTURE/'endpoint.pt'), 'Actual new original03 endpoint path required')
+     checkpoint = subset_pin(result['endpoint'], h)
+-    require(checkpoint['sha256'] not in ('e078b0da4ce4e25146fab7484f8489f590e1086370746cb392afcd7f5f8adef5',
++    require(checkpoint['sha256'] not in ('862fb4cde4ecb146b5b23a83b77ccbf1675a980bc310f6c2a6a8806d87b7c81e',
++            'e078b0da4ce4e25146fab7484f8489f590e1086370746cb392afcd7f5f8adef5',
+             'a6e17a3c6cd8a9b6cb5479e6c6cbd1a284c1cd880372d0d02441680bc708e502',
+             '444a14287789b26e3d84564cf4a9e49518d82d91d6a3ed82ca09526ef89c8523',
+             '684b8506cf404dc23ef49a0081703e75e1b14d47aeab7921f7f54e196b5505fa'),
+@@ -135,7 +136,7 @@
+ def capture_binding(template_pin, h):
+     template = read(template_pin, h)
+     health = load('_prepare_round_health', Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_health_transport_retired_API_v4.py'))
+-    collector = load('_prepare_round_raw_API', Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_observer_retired_API_v4.py'))
++    collector = load('_prepare_round_raw_API', Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-two-second-main-proof-contract-original01-preparation/source-family-original01/round_observer_proof2s_v1.py'))
+     deadline = time.monotonic()+30
+     while True:
+         launcher = load('_prepare_exact_declared_launchers',Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/launcher_census_v1.py'))
+@@ -221,10 +222,10 @@
+     native = load('_prepare_actual_round_native', Path(runtime['path']))
+     control = load('_prepare_actual_round_controller', Path(controller['path']))
+     contract = native.round_contract()
+-    protocol = h.put(output/'main-health-protocol.json', dict(schema='robotron-native-round-main-health-declared-launcher-protocol-v1',
+-        case=binding, raw_API_required=True, close_requires_final_sample=True, hot_max_gap_s=.5, initial_samples=100,
++    protocol = h.put(output/'main-health-protocol.json', dict(schema='robotron-native-round-main-health-declared-launcher-proof2s-protocol-v1',
++        case=binding, raw_API_required=True, close_requires_final_sample=True, hot_max_gap_s=2.0, initial_samples=100,
+         raw_queue_protocol='pending-byte-digest-v2', volatile_live_tmpfs=True,source_bound_API_reconnect_projection=True,source_bound_natural_round_admission=True,source_bound_declared_launcher_census=True))
+-    observer = dict(client=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_observer_client_retired_API_v4.py')), worker=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_observer_retired_API_v4.py')),
++    observer = dict(client=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-two-second-main-proof-contract-original01-preparation/source-family-original01/round_observer_client_proof2s_v1.py')), worker=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-two-second-main-proof-contract-original01-preparation/source-family-original01/round_observer_proof2s_v1.py')),
+         health=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_health_transport_retired_API_v4.py')),health_base=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_main_health_retired_API_v4.py')),API_projection=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/api_cached_projections_v3.py')),round_admission=h.pin(HERE/'round_admission_proof_v2.py'),launcher_census=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/launcher_census_v1.py')), durability=h.pin(HERE/'buffered_raw_writer_v2.py'), control=h.pin(HERE/'volatile_live_control_v1.py'), interpreter=h.pin(Path('/usr/bin/python3').resolve()))
+     old_family = read(old_candidate['source_family_manifest'], h)
+     study = h.put(output/'study-precommit.json', dict(schema='robotron-deadline32-fixed-fresh-RCRC-study-v1',
+@@ -244,7 +245,7 @@
+         directory.mkdir(mode=0o700)
+         role = 'reference' if leg.startswith('R') else 'candidate'
+         selected = reference if role == 'reference' else candidate
+-        namespace = 'deadline32-retired-api-'+study['sha256'][:16]+'-'+leg.lower()+'-original01-20261029'
++        namespace = 'deadline32-proof2s-'+study['sha256'][:16]+'-'+leg.lower()+'-original01-20261029'
+         native_unit = 'robotron-'+namespace+'.service'
+         job = copy.deepcopy(old_ref if role == 'reference' else old_candidate)
+         job.update(unit=native_unit, lease=restored['restored_lease'], runtime=runtime, output=str(directory/'deadline-output-original01'), leg=leg,
+@@ -262,8 +263,8 @@
+                     token = secrets.token_hex(16)
+                 fresh.add(token)
+                 job[key][str(slot)] = token
+-        family = dict(schema='robotron-deadline32-declared-launcher-source-family-v1', runtime=runtime,
+-            reviewer=reviewer, main_observer=observer, round_observer_reviewer=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/review_round_observer_retired_API_v4.py')),
++        family = dict(schema='robotron-deadline32-declared-launcher-proof2s-source-family-v1', runtime=runtime,
++            reviewer=reviewer, main_observer=observer, round_observer_reviewer=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-two-second-main-proof-contract-original01-preparation/source-family-original01/review_round_observer_proof2s_v1.py')),
+             main_health_finalizer=old_family['main_health_finalizer'], deadline_components=job['components'],
+             private_parent_job=h.pin(PREVIOUS/'C2/job.json'), current_main_binding=binding,
+             lease_recovery_authority=lease_recovery, main_domain_hot_review=main_proof, native_launch_qualified=not engineering,

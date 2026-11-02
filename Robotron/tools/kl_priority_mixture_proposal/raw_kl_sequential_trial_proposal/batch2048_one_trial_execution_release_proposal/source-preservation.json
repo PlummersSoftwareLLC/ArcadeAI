@@ -1,0 +1,157 @@
+{
+  "byte_identical_named_functions_and_classes": {
+    "deadline_guard.py": [
+      "require",
+      "identity",
+      "pin",
+      "read_pin",
+      "profile_binding",
+      "validate_authorization",
+      "publish",
+      "clock",
+      "process_start",
+      "show",
+      "classify",
+      "ActionLock",
+      "request_stop",
+      "read_requested",
+      "read_adoption",
+      "supervise"
+    ],
+    "owned_lifecycle.py": [
+      "require",
+      "held_boot_paths",
+      "identity",
+      "canonical",
+      "fingerprint",
+      "pin",
+      "read_json",
+      "read_source",
+      "validate_python_binding",
+      "capture_row_checks",
+      "first_attempt_clock_proof",
+      "boot_log_proof",
+      "SettingsLifecycle",
+      "fsync_directory",
+      "publish",
+      "exclusive_copy",
+      "Sources",
+      "resume_all",
+      "binding_matches",
+      "load_module",
+      "read_job",
+      "Runtime",
+      "Maintenance",
+      "main"
+    ],
+    "run_CE_batch_transition.py": [
+      "boundary",
+      "require",
+      "selected_environment",
+      "four",
+      "triple",
+      "start_record",
+      "expected_start",
+      "request_identity",
+      "publish_request",
+      "zero_replay",
+      "clock_max",
+      "phase_early_module",
+      "before_owner",
+      "insurance_context",
+      "validate_ending",
+      "load_v4",
+      "archive_metadata",
+      "phase_metadata",
+      "validate_installed_phase",
+      "runtime_class",
+      "source_state",
+      "transition"
+    ],
+    "run_one_trial.py": [
+      "require",
+      "load",
+      "bounded_copy_dispatch",
+      "raw_api_publication",
+      "observer_job",
+      "live_api_plan",
+      "durable_event",
+      "ReceiptJournal",
+      "install_action_boundary",
+      "registered_terminal",
+      "_owned_cpu",
+      "owned_cpu",
+      "allow_registered_early_cpu",
+      "physical_retirement",
+      "require_deadline_retirement",
+      "ending_candidate",
+      "inherit_retirement",
+      "return_after_retirement",
+      "run",
+      "read_trial"
+    ]
+  },
+  "changed_existing_functions": {
+    "deadline_guard.py": [
+      "main"
+    ],
+    "owned_lifecycle.py": [],
+    "run_CE_batch_transition.py": [
+      "require_execution_ready",
+      "read_job",
+      "main"
+    ],
+    "run_one_trial.py": [
+      "make_return_job",
+      "main"
+    ]
+  },
+  "current_sources": {
+    "deadline_guard.py": {
+      "bytes": 21353,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_proposal/deadline_guard.py",
+      "sha256": "2a1e6c41e2d38e33508bb17ea94901481e82fe708f944d0077a730e1ebfa5ab4"
+    },
+    "owned_lifecycle.py": {
+      "bytes": 60968,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_proposal/owned_lifecycle.py",
+      "sha256": "6f961e5c724ae70bb4abf4641f7a3a6a27d55579e9acb2808ee15de08960d8ac"
+    },
+    "run_CE_batch_transition.py": {
+      "bytes": 76380,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_proposal/run_CE_batch_transition.py",
+      "sha256": "bbdbce10635cc9c729c6805e101f3d1c492f15ce24edb06eb95e53dc0c6d1739"
+    },
+    "run_one_trial.py": {
+      "bytes": 50268,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_proposal/run_one_trial.py",
+      "sha256": "7024ff8c9216f3e30d749b36e69868b402a4ad5504fefb1b4261eb92c7b67285"
+    }
+  },
+  "model_or_numeric_bodies_added": false,
+  "predecessors": {
+    "deadline_guard.py": {
+      "bytes": 20226,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_controller_proposal/deadline_guard.py",
+      "sha256": "24feb103cc784f865447375a96719164018baef8b915be1b4edd224172aa44e2"
+    },
+    "owned_lifecycle.py": {
+      "bytes": 60968,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_reviewed3_proposal/owned_lifecycle.py",
+      "sha256": "6f961e5c724ae70bb4abf4641f7a3a6a27d55579e9acb2808ee15de08960d8ac"
+    },
+    "run_CE_batch_transition.py": {
+      "bytes": 75685,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_reviewed3_proposal/run_CE_batch_transition.py",
+      "sha256": "6c46d9b107b5a5a9557079b4195fe47fa034a84c47e677948fac6ceae6a9004e"
+    },
+    "run_one_trial.py": {
+      "bytes": 49032,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_controller_proposal/run_one_trial.py",
+      "sha256": "5ad95a96b2fe5c17622c79a8aacf89f1fd49b7994148f4655a0ea7c35d5123ae"
+    }
+  },
+  "schema": "robotron-ce2048-execution-release-source-preservation-v1",
+  "source_AST_parsed_only": true,
+  "tests_executed": false
+}

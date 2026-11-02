@@ -1,0 +1,57 @@
+{
+  "status": "SOURCE_PREPARED_PENDING_ROOT_TESTS_AND_ACTUAL_TERMINAL",
+  "test_argv": [
+    "/usr/bin/python3",
+    "-B",
+    "-m",
+    "unittest",
+    "-v",
+    "Robotron.tools.managed_candidate_capture_proposal.test_prepare_448_candidate"
+  ],
+  "authored_unexecuted_methods": 11,
+  "preparation_argv": [
+    "/usr/bin/python3",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/managed_candidate_capture_proposal/prepare_448_candidate.py",
+    "--execute",
+    "--directory",
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/fresh3-448M-candidate-root-preparation-reviewed1-20261017"
+  ],
+  "default": "Literal PLAN; no file/commands/runtime/copy/application imports",
+  "CPU_wrapper_argv": [
+    "/usr/bin/env",
+    "-u",
+    "LD_PRELOAD",
+    "-u",
+    "PYTHONPATH",
+    "CUDA_VISIBLE_DEVICES=",
+    "OMP_NUM_THREADS=2",
+    "OPENBLAS_NUM_THREADS=2",
+    "MKL_NUM_THREADS=2",
+    "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "-u",
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/managed-candidate-checkpoint-CPU-verifier-proposal-20261017/verify_candidate_checkpoint.py",
+    "--execute",
+    "--job",
+    "ABS_ACTUAL_PREPARATION/root-job.json",
+    "--expected-job-sha256",
+    "ACTUAL_ROOT_JOB_SHA",
+    "--expected-verifier-sha256",
+    "ea6ccfcd62e2683641475634ba1647856a988691a6cede3dbeda629dd03ba56b"
+  ],
+  "CPU_resource_contract": {
+    "CPUQuota": "200%",
+    "MemoryMax": "3G",
+    "MemorySwapMax": "0",
+    "TasksMax": 64,
+    "RuntimeMaxSec": 120,
+    "Type": "exec",
+    "RemainAfterExit": "yes"
+  },
+  "original_watch_unit_retained": true,
+  "no_release_by_preparer": true,
+  "author_executed": false
+}

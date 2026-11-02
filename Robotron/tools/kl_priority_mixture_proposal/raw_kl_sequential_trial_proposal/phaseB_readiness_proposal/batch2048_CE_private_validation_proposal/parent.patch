@@ -1,0 +1,243 @@
+--- original/parent
++++ CE2048/parent
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env python3
+-"""SOURCE-ONLY private raw-KL Stage B constructor/learner/phase readiness.
++"""SOURCE-ONLY private CE2048 constructor/learner/phase readiness.
+ 
+ Default prints a literal plan without helper/source/data reads or live queries.
+ Future --launch requires a separately reviewed exclusive resource window and a
+@@ -29,14 +29,14 @@
+ HERE = Path(__file__).parent
+ GAME = HERE.parents[4]
+ REPO = GAME.parent
+-SCHEMA = 'robotron-raw-kl-stage-b-private-v1'
++SCHEMA = 'robotron-ce-batch2048-stage-b-private-v1'
+ SEED = 20261017
+-VARIANTS = ('kl18', 'resume', 'return_ce')
++VARIANTS = ('ce18', 'resume', 'restart_ce')
+ GIB, MIB = 1 << 30, 1 << 20
+ BOUNDS = dict(cpu_threads=2, memory_bytes=16*GIB, vram_allocator_bytes=12*GIB,
+               vram_process_bytes=13*GIB, artifact_bytes=6*GIB, tmpfs_bytes=128*MIB,
+               tasks=128, phase_timeout_s=600, total_timeout_s=2100)
+-SOURCE_LOCK_SHA256 = '8edbe0082cb93939ebc9bfe6be922058f9c821addf72567f57d2c7a83b53b5fc'
++SOURCE_LOCK_SHA256 = 'd7b2365efafc637bb094895b92fccd0e7d10a5af7564535cb006006b73079639'
+ LOCK_SHA = SOURCE_LOCK_SHA256
+ BLOCKED_NAMES = {
+     'cuda_trace_parent.py', 'cuda_trace_worker.py', 'checkpoint_at_frame.py',
+@@ -92,9 +92,9 @@
+         'attempt-%02d.json.tmp' % index for index in range(1, 9)}
+     checkpoint_path=Path(checkpoint_save['path']) if checkpoint_save is not None else None
+     if checkpoint_path is not None:
+-        require(checkpoint_path==root/'kl18/post-step-checkpoint.pt.tmp'
++        require(checkpoint_path==root/'ce18/post-step-checkpoint.pt.tmp'
+                 and isinstance(checkpoint_save['initial_complete'],bool),
+-                'Checkpoint context must be exact owned kl18 publication')
++                'Checkpoint context must be exact owned ce18 publication')
+ 
+     def pin_observer(info=None):
+         if observer is None:
+@@ -278,17 +278,22 @@
+     require(hashlib.sha256(data).hexdigest()==SOURCE_LOCK_SHA256, 'Reviewed source lock changed')
+     lock=json.loads(data)
+     require(lock['schema']==SCHEMA and lock['seed']==SEED and lock['variants']==list(VARIANTS)
+-            and lock['batch_rows']==4096 and lock['state_width']==11128
++            and lock['batch_rows']==2048 and lock['source_batch_rows']==4096 and lock['state_width']==11128
+             and lock['joint_actions']==81 and lock['atoms']==51
+             and lock['stage_b']['attempts']==18 and lock['stage_b']['roles']==list(VARIANTS)
+             and lock['stage_b']['qualification_pass'] is False
+             and lock['stage_b']['wall_seconds_per_role']==BOUNDS['phase_timeout_s']==600
+             and lock['stage_b']['wall_seconds_total']==BOUNDS['total_timeout_s']==2100
+             and lock['stage_b']['no_replacement'] is True and lock['stage_b']['cap']==8
+-            and lock['stage_b']['samples_per_attempt']==4096
+-            and lock['stage_b']['synthetic_frame_credit_per_attempt']==512
+-            and lock['stage_b']['synthetic_frame_credits_total']==9216
++            and lock['stage_b']['samples_per_attempt']==2048
++            and lock['stage_b']['synthetic_frame_credit_per_attempt']==256
++            and lock['stage_b']['synthetic_frame_credits_total']==4608
+             and lock['stage_b']['required_applied_outcomes']==1, 'Fixed Stage B protocol changed')
++    profile=lock['batch_profile']; profile_path=Path(profile['path'])
++    require(profile=={'path': '/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json', 'sha256': 'e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50', 'bytes': 764} and digest(profile_path)==profile['sha256']
++        and profile_path.stat().st_size==profile['bytes']
++        and lock['stage_b']['priority_metric']=='ce'
++        and lock['input_subset']['begin']==0 and lock['input_subset']['end']==2048, 'Exact CE2048 profile/subset differs')
+     for group in ('immutable_helpers','source_files'):
+         for name,item in lock[group].items():
+             source=Path(item['source'])
+@@ -380,8 +385,8 @@
+     environment=_BASE.configure_environment(layout,variant)
+     record=paths['root']/'phase-record.json'
+     require(record.is_file() and not record.is_symlink(), 'Owned phase record must precede worker launch')
+-    environment.update(DQN_BATCH_SIZE='4096',DQN_TORCH_COMPILE='1',DQN_FULL_LOSS_COMPILE='1',
+-        DQN_COHERENT_SNAPSHOT='0',DQN_PER_PRIORITY_METRIC='ce' if variant=='return_ce' else 'kl',
++    environment.update(DQN_BATCH_SIZE='2048',DQN_TORCH_COMPILE='1',DQN_FULL_LOSS_COMPILE='1',
++        DQN_COHERENT_SNAPSHOT='0',DQN_PER_PRIORITY_METRIC='ce',
+         DQN_PRIORITY_PHASE_RECORD=str(record),DQN_PRIORITY_PHASE_RECORD_SHA256=digest(record),
+         DQN_EXACT_INFERENCE_GRAPHS='1',DQN_EXACT_GRAPH_CHECKPOINT=str(paths['models']/'robotron_dqn_latest.pt'),
+         DQN_RATCHET='0',DQN_NATIVE_BATCH_UPDATE='1',DQN_DIRECT_REPLAY_FILL='1',
+@@ -560,27 +565,27 @@
+     manifest=json.loads(Path(manifest_path).read_text()); manifest_sha=digest(manifest_path)
+     require(variant==VARIANTS[len(results)], 'Stage B role order changed')
+     source_result=None
+-    if variant=='kl18':
++    if variant=='ce18':
+         source=manifest['trained_fixture']['source']
+     else:
+-        require(results and results[0]['variant']=='kl18', 'Newest post-step phase source missing')
++        require(results and results[0]['variant']=='ce18', 'Newest post-step phase source missing')
+         source=results[0]['saved_checkpoint']
+-        require(Path(source['path'])==layout.phase('kl18')['root']/'post-step-checkpoint.pt',
++        require(Path(source['path'])==layout.phase('ce18')['root']/'post-step-checkpoint.pt',
+                 'Later roles must use newest private post-step bytes, never original448')
+-        result_path=layout.phase('kl18')['root']/'phase-result.json'
++        result_path=layout.phase('ce18')['root']/'phase-result.json'
+         source_result=stable_file(result_path,digest(result_path),result_path.stat().st_size)
+         recorded,_=bounded_json(source_result,read_only=True)
+-        require(recorded==results[0], 'Completed kl18 proof changed')
++        require(recorded==results[0], 'Completed ce18 proof changed')
+     paths=layout.phase(variant);latest=copy_checkpoint(source,paths['models']/'robotron_dqn_latest.pt')
+-    metric='ce' if variant=='return_ce' else 'kl'
+-    phase_id=('ce-stageB-' if variant=='return_ce' else 'kl-stageB-')+manifest['nonce']
++    metric='ce'
++    phase_id=('ce2048-restart-' if variant=='restart_ce' else 'ce2048-start-')+manifest['nonce']
+     record=dict(schema='robotron-priority-metric-start-v1',phase_id=phase_id,metric=metric,
+-        action='resume' if variant=='resume' else 'start',previous_metric='unknown' if variant=='kl18' else 'kl',
++        action='resume' if variant=='resume' else 'start',previous_metric='unknown' if variant=='ce18' else 'ce',
+         checkpoint={name:latest[name] for name in ('path','sha256','bytes')},model_dir=str(paths['models']),
+         root_precommit_sha256=manifest_sha)
+     record_path=paths['root']/'phase-record.json';publish(base,record_path,record,read_only=True)
+     record_pin=stable_file(record_path,digest(record_path),record_path.stat().st_size)
+-    value=dict(schema='robotron-raw-kl-stage-b-role-input-v1',variant=variant,
++    value=dict(schema='robotron-ce-batch2048-stage-b-role-input-v1',variant=variant,
+         global_manifest_sha256=manifest_sha,source=source,latest=latest,phase_record=record_pin,
+         source_role_result=source_result,metric=metric)
+     publish(base,paths['root']/'role-input.json',value,read_only=True)
+@@ -591,9 +596,9 @@
+     path=layout.phase(variant)['root']/'role-input.json'
+     value,_=bounded_json(dict(path=str(path),sha256=digest(path),bytes=path.stat().st_size),read_only=True)
+     paths=layout.phase(variant)
+-    require(value['schema']=='robotron-raw-kl-stage-b-role-input-v1'
++    require(value['schema']=='robotron-ce-batch2048-stage-b-role-input-v1'
+             and value['variant']==variant and value['global_manifest_sha256']==manifest_sha
+-            and value['metric']==('ce' if variant=='return_ce' else 'kl')
++            and value['metric']==('ce')
+             and Path(value['latest']['path'])==paths['models']/'robotron_dqn_latest.pt'
+             and Path(value['phase_record']['path'])==paths['root']/'phase-record.json',
+             'Owned role input manifest differs')
+@@ -603,15 +608,15 @@
+     record,_=bounded_json(value['phase_record'],read_only=True)
+     require(digest(layout.output/'launch-manifest.json')==manifest_sha, 'Global launch manifest changed')
+     manifest=json.loads((layout.output/'launch-manifest.json').read_text())
+-    if variant=='kl18':
++    if variant=='ce18':
+         require(value['source']==manifest['trained_fixture']['source'] and value['source_role_result'] is None,
+                 'Initial role must load exact verified448 copy')
+     else:
+-        require(Path(value['source']['path'])==layout.phase('kl18')['root']/'post-step-checkpoint.pt'
+-                and Path(value['source_role_result']['path'])==layout.phase('kl18')['root']/'phase-result.json',
++        require(Path(value['source']['path'])==layout.phase('ce18')['root']/'post-step-checkpoint.pt'
++                and Path(value['source_role_result']['path'])==layout.phase('ce18')['root']/'phase-result.json',
+                 'Later role newest-checkpoint ancestry differs')
+         predecessor,_=bounded_json(value['source_role_result'],read_only=True)
+-        require(predecessor['saved_checkpoint']==value['source'] and predecessor['variant']=='kl18'
++        require(predecessor['saved_checkpoint']==value['source'] and predecessor['variant']=='ce18'
+                 and predecessor['status']=='OBSERVATIONS_COMPLETE' and predecessor['actual_attempts']==18,
+                 'Later role must use completed fixed18 source proof')
+     require(value['source']['sha256']==value['latest']['sha256']
+@@ -622,9 +627,9 @@
+     require(record['root_precommit_sha256']==manifest_sha and record['metric']==value['metric']
+             and record['checkpoint']=={key:value['latest'][key] for key in ('path','sha256','bytes')}
+             and record['model_dir']==str(paths['models'])
+-            and record['phase_id']==('ce-stageB-' if variant=='return_ce' else 'kl-stageB-')+manifest['nonce']
++            and record['phase_id']==('ce2048-restart-' if variant=='restart_ce' else 'ce2048-start-')+manifest['nonce']
+             and record['action']==('resume' if variant=='resume' else 'start')
+-            and record['previous_metric']==('unknown' if variant=='kl18' else 'kl'), 'Role phase/checkpoint mismatch')
++            and record['previous_metric']==('unknown' if variant=='ce18' else 'ce'), 'Role phase/checkpoint mismatch')
+     return value
+ 
+ 
+@@ -649,7 +654,7 @@
+             return dict(pending=True)
+         require(mode==0o444 and info.st_size>0, 'Completed save marker must be readonly/nonempty')
+         value,_=bounded_json(dict(path=str(path),sha256=digest(path),bytes=info.st_size),read_only=True)
+-        require(value['schema']=='robotron-raw-kl-stage-b-save-v1' and value['variant']=='kl18'
++        require(value['schema']=='robotron-ce-batch2048-stage-b-save-v1' and value['variant']=='ce18'
+                 and value['stage']==stage and value['path']==str(target), 'Save marker context differs')
+         return value
+     entered=read_marker('entered','save-entered.json')
+@@ -666,10 +671,10 @@
+ 
+ def checkpoint_publication_state(layout,variant,parent_identity,events):
+     """Snapshot context, not permission, before one non-atomic traversal."""
+-    if variant!='kl18':
++    if variant!='ce18':
+         return None
+-    directory=layout.phase('kl18')['root']
+-    require(storage_directory_identity(directory)==parent_identity, 'Owned kl18 directory changed')
++    directory=layout.phase('ce18')['root']
++    require(storage_directory_identity(directory)==parent_identity, 'Owned ce18 directory changed')
+     snapshot=checkpoint_marker_snapshot(directory,events)
+     return dict(path=str(directory/'post-step-checkpoint.pt.tmp'),parent_identity=parent_identity,
+         initial_complete=snapshot['completed'] is not None,events=events)
+@@ -743,12 +748,12 @@
+ def result_contract(result,variant):
+     require(result.get('status')=='OBSERVATIONS_COMPLETE' and result.get('variant')==variant
+             and result.get('qualification_pass') is False, 'Stage B role completion/scope differs')
+-    require(result.get('actual_attempts')==(18 if variant=='kl18' else 0),
++    require(result.get('actual_attempts')==(18 if variant=='ce18' else 0),
+             'Fixed Stage B role update budget differs')
+     require(result.get('phase_load_verified') is True and result.get('constructor_verified') is True,
+             'Actual constructor/load proof missing')
+     require(isinstance(result.get('readiness_pass'),bool), 'Stage B readiness flag missing')
+-    if variant=='kl18':
++    if variant=='ce18':
+         require(isinstance(result.get('saved_checkpoint'),dict)
+                 and type(result.get('applied_outcomes')) is int and 0<=result['applied_outcomes']<=18
+                 and (result['applied_outcomes']>0 or result['readiness_pass'] is False),
+@@ -763,7 +768,7 @@
+     require(Path(native_cache['path']) == layout.scripts/'dqn/__pycache__', 'Unexpected native compiler-cache path')
+     cache_identity = storage_directory_identity(paths['cache'])
+     cache_events = dict(ignored_enoent=0, last_relative_path=None)
+-    checkpoint_parent_identity=storage_directory_identity(paths['root']) if variant=='kl18' else None
++    checkpoint_parent_identity=storage_directory_identity(paths['root']) if variant=='ce18' else None
+     checkpoint_events=dict(ignored_enoent=0,last_path=None)
+     observer = (dict(path=str(paths['root']/'ce-executed-trace-cuda-validation'), identity=None,
+                      ignored_temp_enoent=0, last_temp_name=None, status_replacements=0, status_tmp_replacements=0)
+@@ -889,7 +894,7 @@
+                     paths[name].mkdir(parents=True, mode=0o700)
+                 for name in ('inductor', 'triton', 'cuda', 'torch', 'extensions', 'tmp'):
+                     (paths['cache']/name).mkdir(mode=0o700)
+-                publish(base, paths['control'], dict(experiment='isolated-raw-kl-stage-b', lr_scale=.5))
++                publish(base, paths['control'], dict(experiment='isolated-ce-batch2048-stage-b', lr_scale=.5))
+             cgroup = base.OwnedCgroup(delegated, nonce)
+             manifest = dict(schema=SCHEMA, explicit_launch=True, seed=SEED, variants=list(VARIANTS),
+                 attempts=18, retained_acquisition_attempts=8, selected_original_index=1,
+@@ -954,13 +959,14 @@
+             applied_outcomes=results[0]['applied_outcomes'],actual_attempts=18,
+             source_lock_sha256=SOURCE_LOCK_SHA256,owned_cleanup_complete=True,
+             parent_process_scan_observations=dict(base.process_scan_observations),
+-            scope='Actual private candidate constructor/load and isolated fixed-input learner/phase-lifecycle readiness; no live adoption or learning-quality qualification',
+-            limitations=['Readonly verified448 weights with reused genuine older attempt01 inputs are a declared regression fixture, never a new current draw',
++            input_subset=lock['input_subset'], batch_rows=2048, priority_metric='ce',
++            scope='Actual private CE2048 constructor/load and isolated fixed-subset learner/phase readiness; no live adoption or learning-quality qualification',
++            limitations=['Readonly verified448 weights with first2048 ordered rows of original4096 attempt01 reused18 times; a declared geometry fixture, never a new current draw',
+                 'A bounded replay adapter/native6M scalar tree is not full ring/bank restoration or a coherent live learning anchor',
+                 'Private serving graphs are explicitly released before isolated learner updates; no serving/learning concurrency proof',
+                 'Exactly18 actual attempts, no19th rescue; all-skip coverage remains readinessFalse',
+                 'Resume/return-CE use newest post-step checkpoint bytes and no optimizer attempt',
+-                'Previous all8 captured-vs-recomputed failures remain unchanged; no historical actualH/KL or learning-benefit claim',
++                'Historical failures remain unchanged; no current replay-population, efficacy, learning-speed or throughput claim',
+                 'Original parent unit terminal identity/exit must be archived by root before release'])
+         publish(base, directory/'result.json', aggregate)
+         return aggregate
+@@ -973,8 +979,8 @@
+     args = parser.parse_args(argv)
+     if not args.launch:
+         print(json.dumps(dict(status='PLAN_ONLY_UNEXECUTED',schema=SCHEMA,launch=False,
+-            variants=list(VARIANTS),batch_rows=4096,attempts=18,selected_original_index=1,
+-            role_attempts={'kl18':18,'resume':0,'return_ce':0},qualification_pass=False,
++            variants=list(VARIANTS),batch_rows=2048,attempts=18,selected_original_index=1,
++            role_attempts={'ce18':18,'resume':0,'restart_ce':0},qualification_pass=False,
+             bounds=BOUNDS,source_lock_sha256=SOURCE_LOCK_SHA256,numerical_imports=False,
+             runtime_queries=False,outputs_created=False,automatic_retry=False),indent=2))
+         return 0

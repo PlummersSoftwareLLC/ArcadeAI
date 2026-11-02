@@ -1,0 +1,37 @@
+{
+  "schema": "robotron-priority-phase-resume-proof-clarification-v1",
+  "status": "SOURCE_ONLY_UNAPPLIED",
+  "original_contract": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_activation_lifecycle_proposal/ACTIVATION_AND_RETURN_CE.json",
+    "sha256": "2da78068ada0d5d083be1112ab6391131c57e6d6125ae87b41b60de8debf130c"
+  },
+  "scope": "Clarifies startup phase proof for optional resume_kl. Original activation/return start semantics remain unchanged; original file is retained.",
+  "action_start": {
+    "applies_to": [
+      "activate_kl",
+      "return_ce"
+    ],
+    "phase_record_sha256": "CURRENT immutable recordSHA",
+    "last_resume_record_sha256": null,
+    "started_from": "CURRENT record.checkpoint triple plus CURRENT stopped-boot CPU four clocks",
+    "phase_id": "NEW unique ID",
+    "root_precommit_sha256": "CURRENT immutable phase trial core SHA"
+  },
+  "action_resume": {
+    "applies_to": [
+      "resume_kl"
+    ],
+    "phase_record_sha256": "ORIGINAL phase-start recordSHA retained from valid predecessor checkpoint",
+    "last_resume_record_sha256": "CURRENT new immutable resume recordSHA",
+    "started_from": "ORIGINAL valid predecessor started_from retained exactly; do not replace with newest resume boot",
+    "phase_id": "SAME valid predecessor ID",
+    "root_precommit_sha256": "SAME original phase trial core SHA",
+    "current_resume_boot": "Separately bind CURRENT record.checkpoint triple and newest stopped-CPU four clocks; postboot current clocks may advance",
+    "counters": "Postboot saved priority_update_calls/ring_rows_submitted may advance from valid predecessor; retain previous/current and actual overshoot, do not claim exact preupdate zero or reset"
+  },
+  "source_evidence": "priority_phase.py79-88 copies previous state and only updates last_resume_record_sha256; lines89-99 create new started_from on actionstart.",
+  "correction": "Any general original-contract wording equating phase.started_from with the current boot means actionstart only; resume follows this explicit preserved-lineage distinction.",
+  "actions": {
+    "imports_tests_model_reads_runtime_or_installation": false
+  }
+}

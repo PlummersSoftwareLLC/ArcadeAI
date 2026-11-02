@@ -1,0 +1,134 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/new-static-context-engineering-original01-preparation/joint-finalization-source-original01/finalize_static192_engineering_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/new-static-context-engineering-original01-preparation/count-bounded-long-original02-preparation/finalize_static192_countbounded_engineering_v2.py
+@@ -18,6 +18,9 @@
+ FAMILY_SHA = '72e03ed29d4f446bac8bdf4d7557a85b01536b43eb7a71c174e305521535c1af'
+ MAP_SHA = '4629c151898362a71c3aa1f011c2088154c1cd69b9abc8959efdad79103c7410'
+ PREPARE_SHA = 'c2b265c19f2acb1f184ae9ce88b1e379d5655f3fc66cd7750f62d0bca795020d'
++NEW_PREPARE_SHA = 'ca7f73c3cac1427120a6cd175b93c96b0cb65b46058df7e4882486efd093323f'
++NEW_PROBE_SHA = '5170a39adf4c05b8604a8f0caaac302bf443454b7fe9b3417b3cc5e765d0db16'
++NEW_CLOSE_SHA = 'be04ed81f39326dbbcfe8544c2a55f65407e864bf061fa033cc46dbab25e6ede'
+ PROBE_SHA = 'f143cd90bceffacbd7b787b994b137d20ad2aacb717d87c99f551960361ea08a'
+ CLOSE_SHA = 'ecbca38b9f56fc2a78b2efba92e777167aff1b023ad07d83db455cffca5a80e9'
+ REVIEW_SHA = 'f6dcd7b9ae7556bc1e669b3973a6c5797f845d89c23e2d62a4955b55b519590a'
+@@ -87,17 +90,16 @@
+             'Exact frozen Root-selected finalizer required')
+     job_pin = pin(job_path);require(job_pin['sha256'] == job_sha,'Root job SHA differs')
+     job = read(job_pin)
+-    require(job['schema'] == 'robotron-root-finalize-static192-engineering-job-v1'
+-            and set(job) == {'schema','prepared_contexts','launch_index','case','closeouts','output'}
+-            and set(job['closeouts']) == set(MODES),'Exact three-scope Root selection required')
+-    prepared = read(job['prepared_contexts']); index = read(job['launch_index']); case = read(job['case'])
++    require(job['schema'] == 'robotron-root-finalize-countbounded-static192-engineering-job-v2'
++            and set(job) == {'schema','contexts','case','output'}
++            and set(job['contexts']) == set(MODES)
++            and all(set(v) == {'prepared_contexts','launch_index','closeout'} for v in job['contexts'].values()),'Exact three-scope Root selection required')
++    prepared = read(job['contexts']['warmup']['prepared_contexts']); case = read(job['case'])
+     require(prepared['schema'] == 'robotron-static192-three-observer-engineering-preparation-v1'
+             and prepared['status'] == 'DATA_PREPARED_NOT_LAUNCHED'
+             and prepared['source']['sha256'] == PREPARE_SHA
+             and pin(prepared['source']['path']) == prepared['source']
+             and prepared['case'] == job['case']
+-            and index['schema'] == 'robotron-static192-three-original-engineering-launches-v1'
+-            and len(index['records']) == 3
+             and case['schema'] == 'robotron-continuous-static192-health-case-v1',
+             'Exact actual NEW static case/preparation/index required')
+     family = prepared['source_family']; source_map = prepared['source_map']
+@@ -125,6 +127,21 @@
+     require(pin(reviewed_source['path']) == reviewed_source,'Selected frozen reviewer source changed')
+     result = {}; parent_births = set(); worker_births = set()
+     for mode in MODES:
++        selected = job['contexts'][mode]
++        prepared = read(selected['prepared_contexts']); index = read(selected['launch_index'])
++        is_new_long = mode == 'long'
++        require(prepared['schema'] == ('robotron-static192-countbounded-long-engineering-preparation-v2' if is_new_long
++                    else 'robotron-static192-three-observer-engineering-preparation-v1')
++                and prepared['status'] == 'DATA_PREPARED_NOT_LAUNCHED'
++                and prepared['source']['sha256'] == (NEW_PREPARE_SHA if is_new_long else PREPARE_SHA)
++                and pin(prepared['source']['path']) == prepared['source']
++                and prepared['case'] == job['case'] and prepared['source_family'] == family
++                and prepared['source_map'] == source_map and prepared['observer_sources'] == mapped
++                and prepared['observer_reviewer'] == reviewed_source
++                and index['schema'] == ('robotron-static192-countbounded-long-original-engineering-launches-v2' if is_new_long
++                    else 'robotron-static192-three-original-engineering-launches-v1')
++                and len(index['records']) == (1 if is_new_long else 3),
++                'Per-mode original source/preparation/index/case authority differs')
+         records = [r for r in index['records'] if r['kind'] == 'main-static192' and r['mode'] == mode]
+         intents = [r for r in prepared['records'] if r['kind'] == 'main-static192' and r['mode'] == mode]
+         require(len(records) == len(intents) == 1, 'One exact original per mode required')
+@@ -134,18 +151,19 @@
+                 and intent['attempt'] == 1 and type(intent['attempt']) is int
+                 and intent['no_retry'] is True and intent['engineering_only'] is True,
+                 'Original mode/intent/no-retry case join differs')
+-        owner = read(record['original_live_owner']); close_pin = job['closeouts'][mode]; close = read(close_pin)
+-        require(close['schema'] == 'robotron-static192-original-engineering-closeout-v1'
++        owner = read(record['original_live_owner']); close_pin = selected['closeout']; close = read(close_pin)
++        require(close['schema'] == ('robotron-static192-countbounded-long-original-engineering-closeout-v2' if is_new_long
++                    else 'robotron-static192-original-engineering-closeout-v1')
+                 and close['status'] == 'PASS_ENGINEERING_ONLY' and close['kind'] == 'main-static192'
+-                and close['mode'] == mode and close['launch_index'] == job['launch_index']
++                and close['mode'] == mode and close['launch_index'] == selected['launch_index']
+                 and close['original_live_owner'] == record['original_live_owner']
+-                and close['source']['sha256'] == CLOSE_SHA
++                and close['source']['sha256'] == (NEW_CLOSE_SHA if is_new_long else CLOSE_SHA)
+                 and pin(close['source']['path']) == close['source']
+                 and type(close['original_parent_actual_exit']) is int and close['original_parent_actual_exit'] == 0
+                 and type(close['worker_actual_exit']) is int and close['worker_actual_exit'] == (1 if mode == 'abort' else 0)
+                 and close['all_original_births_units_cgroups_and_tmpfs_control_absent'] is True
+                 and close['actual_parent_CPU_cores'] == 2 and close['actual_parent_memory_bytes'] == 4<<30
+-                and close['actual_parent_runtime_s'] == 780
++                and close['actual_parent_runtime_s'] == (1800 if is_new_long else 780)
+                 and close['scientific_qualification'] is close['quality_qualified'] is close['promotion'] is False,
+                 'Actual original independent closer/exit/resources/release differs')
+         terminal = read(close['parent_terminal']); stopped = read(close['owned_stop'])
+@@ -158,7 +176,8 @@
+         pair = (owner['pid'],owner['birth'])
+         require(pair not in parent_births,'Reused original parent handle');parent_births.add(pair)
+         report = read(close['actual_probe_result'])
+-        require(report['schema'] == 'robotron-static192-health-actual-native-interface-probe-v1'
++        require(report['schema'] == ('robotron-static192-health-countbounded-native-interface-probe-v2' if is_new_long
++                    else 'robotron-static192-health-actual-native-interface-probe-v1')
+                 and report['status'] == 'PASS_ENGINEERING_INTERFACE_ONLY' and report['mode'] == mode
+                 and report['sources'] == mapped and report['retired_API_reviewer_source'] == reviewed_source
+                 and report['observer_lifecycle'] == close['worker_lifecycle']
+@@ -170,10 +189,20 @@
+                 and report['main_runtime_changed'] is report['private_policy_or_GPU_loaded']
+                     is report['scientific_launch_qualified'] is report['quality_qualified'] is False,
+                 'Actual source-bound probe domain differs')
++        if is_new_long:
++            require(report['long_work_contract'] == close['long_work_contract']
++                        == 'MINIMUM600S_AND_VALIDATED3000_SAMPLES_HARD1200S'
++                    and report['long_minimum_work_s'] == 600 and report['long_maximum_work_s'] == 1200
++                    and report['long_minimum_observed_samples'] == 3000
++                    and type(report['actual_long_work_s']) in (int,float)
++                    and 600 <= report['actual_long_work_s'] == close['actual_long_work_s'] <= 1200
++                    and type(report['last_validated_long_count']) is int
++                    and report['last_validated_long_count'] == close['last_validated_long_count'] >= 3000,
++                    'Actual NEW long lacks both sustained600s and validated3000 sample qualification')
+         native = read(report['original_job']); lifecycle = read(close['worker_lifecycle'])
+         worker = read(lifecycle['worker_job']); outcome = read(lifecycle['outcome'])
+         worker_owner = read(outcome['owner']); worker_terminal = read(lifecycle['terminal_properties'])
+-        require(native['runtime']['sha256'] == PROBE_SHA and pin(native['runtime']['path']) == native['runtime']
++        require(native['runtime']['sha256'] == (NEW_PROBE_SHA if is_new_long else PROBE_SHA) and pin(native['runtime']['path']) == native['runtime']
+                 and native['main_binding'] == job['case']
+                 and lifecycle['native_job'] == report['original_job']
+                 and worker['native_job'] == report['original_job'] and worker['native_runtime'] == native['runtime']
+@@ -218,7 +247,8 @@
+             require(reviewed is None and outcome['success'] is False and lifecycle['success'] is False
+                     and worker_terminal['ExecMainCode'] == '1' and worker_terminal['ExecMainStatus'] == '1',
+                     'Expected original worker abort failure was not preserved')
+-        result[mode] = dict(closeout=close_pin,lifecycle=close['worker_lifecycle'],
++        result[mode] = dict(prepared_contexts=selected['prepared_contexts'],launch_index=selected['launch_index'],
++            closeout=close_pin,lifecycle=close['worker_lifecycle'],
+             actual_probe_result=close['actual_probe_result'],independent_raw_review=raw_pin,
+             accepted_samples=close['accepted_samples'],unaccepted_samples=close['unaccepted_samples'],
+             original_parent_actual_exit=0,worker_actual_exit=close['worker_actual_exit'])
+@@ -236,6 +266,9 @@
+         main_health_profile='STATIC_ORIGINAL192_NO_FAULT_ADOPTION',
+         admission_basis='EVER_BOUND_ORIGINAL192_NOT_SIMULTANEOUS',simultaneous192_actors_claimed=False,
+         all_original_engineering_scopes_closed_at_recorded_closer=True,
++        long_work_contract='MINIMUM600S_AND_VALIDATED3000_SAMPLES_HARD1200S',
++        legacy_warmup_and_abort_only_reused_with_same_static8_case_inventory_and_sources=True,
++        failed_original600_scope_not_reused_or_requalified=True,
+         raw_predicates_replayed_by_this_finalizer=False,fresh_runtime_or_resource_probe_performed=False,
+         old_invalid_studies_or_old_whole_round_engineering_requalified=False,
+         private_frozen_policy_CPU_or_study_guard_qualified=False,

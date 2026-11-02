@@ -1,0 +1,34 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/hot-LR9375-applied120k-replay40M-learner32M-original01-20261031/selected-source/analyze_LR9375_autoexpert_dose_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-repair-LR625-applied60k-replay20M-learner16M-original01-20261031/selected-source/analyze_post_repair_LR625_dose_v1.py
+@@ -1,7 +1,7 @@
+-"""Pure LR9.375e-6 at automatic expert10% dose analysis; no observations, control writes or actions."""
++"""Pure post-repair LR6.25e-6 at automatic expert10% dose analysis; no observations, control writes or actions."""
+ from math import isfinite, isclose
+-OWNER = {'pid': 208501, 'birth': 27823352}
+-TARGETS = {'applied_updates': 120000, 'replay_additions': 40000000, 'learner_frames': 32000000}
++OWNER = {'pid': 1644742, 'birth': 36415496}
++TARGETS = {'applied_updates': 60000, 'replay_additions': 20000000, 'learner_frames': 16000000}
+ OP = {'attempted': 'attempts_started', 'outcomes': 'outcomes_recorded', 'applied': 'applied', 'skipped': 'amp_skipped', 'unavailable': 'unavailable'}
+ SRC = ('dqn', 'epsilon', 'expert', 'eval', 'unattributed')
+ IDS = ('process_id', 'instance_monotonic_ns', 'epoch', 'epoch_reason')
+@@ -51,9 +51,9 @@
+ def analyze(anchor, sample):
+   """Optional sample.previous={counters,api_ts} uses the prior VALID output."""
+   try:
+-    need(anchor['schema'] == 'robotron-LR9375-autoexpert-dose-anchor-v1' and anchor['main_owner'] == OWNER, 'Wrong anchor/Main')
++    need(anchor['schema'] == 'robotron-post-repair-LR625-dose-anchor-v1' and anchor['main_owner'] == OWNER, 'Wrong anchor/Main')
+     need(anchor['targets'] == TARGETS and all(type(v) is int for v in anchor['targets'].values()), 'Wrong targets')
+-    need(type(anchor['expected_lr']) in (int, float) and anchor['expected_lr'] == 9.375e-6, 'Wrong LR')
++    need(type(anchor['expected_lr']) in (int, float) and anchor['expected_lr'] == 6.25e-6, 'Wrong LR')
+     need(type(anchor['expected_expert']) in (int, float) and anchor['expected_expert'] == 0.1, 'Wrong expert ratio')
+     need(type(anchor['expected_epsilon']) in (int, float) and anchor['expected_epsilon'] == 0.1, 'Wrong epsilon')
+     control = sha(anchor['control_sha256']); start = number(anchor['observed_unix_s']); base_ts = number(anchor['api_ts'])
+@@ -100,7 +100,7 @@
+     elapsed = now - start
+     d = dict(applied_updates=c['applied'] - base['applied'], replay_additions=c['replay'] - base['replay'], learner_frames=c['learner_frames'] - base['learner_frames'])
+     remaining = {k: max(0, TARGETS[k] - d[k]) for k in TARGETS}; rates = {k: d[k] / elapsed for k in TARGETS}
+-    eta = max(remaining[k] / rates[k] for k in TARGETS) if elapsed >= 120 and all(v > 0 for v in rates.values()) else None
++    eta = max(remaining[k] / rates[k] for k in TARGETS) if elapsed >= 60 and all(v > 0 for v in rates.values()) else None
+     if eta is not None and not isfinite(now + eta): eta = None
+     out = result('VALID', 'Dose arithmetic only')
+     out.update(deltas=d, remaining=remaining, all_reached=not any(remaining.values()), elapsed_s=elapsed, rates_per_s=rates, estimated_remaining_s=eta, estimated_completion_unix_s=None if eta is None else now + eta, counters=c, api_ts=ts)

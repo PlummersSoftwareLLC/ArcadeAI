@@ -1,0 +1,30 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-physical-original04/deadline_round_contract_v11.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/deadline_round_contract_v11.py
+@@ -14,7 +14,7 @@
+ LEGACY_REVIEW_SHA = 'f2b311fd6d375e6b1e35c571b91cfb8c209881855834941d5b0292b51a9bbf5e'
+ LEGACY_JOB = BASE / 'deadline-score32-fixed-fleet-admission-original03-preparation-20261026/fixed-RCRC-deadline32-study-original03/C2/job.json'
+ LEGACY_JOB_SHA = 'b6f9d229836f6cbe2897e2fa3ef6426209998ac9b361c47d1a48a95200cd1fc5'
+-HEALTH_SHAS = {'registry': '71fc044d7b3bbbfceba5ef23f69a6c741eeff5700176050c6cdbe9e4794bba69', 'health_base': '77a832a4202bf81e2f8eae00affc2127be0a22795c75f0c5cf1585f22d2991a9', 'health': 'a460b4f3d5352d712c39929dcafe9883909610c01a71a0a08b82953f490d5541', 'worker': '8f290def72dadb0f4bb9f1d68ec7a67cecd539ea604954a83dfedcc8bccce66e', 'client': 'f4090f2a35959a337db9d0a987248d7a2122407255856927ed611f0d4eb6554f', 'durability': '5dbeb347474dd9289ae18a2de0c438820f535fa9d75badaa3cfbf82dff6c1aa5', 'control': 'a2ce55471f7ff14490553cf05871e79a0ff15c925d01441065821b0f95daade8'}
++HEALTH_SHAS = {'registry': 'c57b0ef9522101c69aa551b1488921c4a97af27fd10f1c52c95387fa873cf204', 'health_base': '83c1b3c1dee625c423310093eb5a13ff373875a4569435c8b14ba6d979b7d051', 'health': 'c6fc79735335629c00b56d9a189beae23d5cb780fe6470d957c50ac67a358b9b', 'worker': 'be26a30baaf012a17dd402528b0860d7b83f5e53bb39cd13f806b839c7042d52', 'client': 'f4090f2a35959a337db9d0a987248d7a2122407255856927ed611f0d4eb6554f', 'durability': '5dbeb347474dd9289ae18a2de0c438820f535fa9d75badaa3cfbf82dff6c1aa5', 'control': 'a2ce55471f7ff14490553cf05871e79a0ff15c925d01441065821b0f95daade8'}
+ PRIVATE_FIELDS = ('source_package', 'actor_source_sha256', 'loaded_rom_sha256',
+     'prior_ROM_identity_proof', 'lua', 'mame', 'rompath', 'boot_seed', 'seed_runtime',
+     'main_sources', 'actor_slots', 'origin_port', 'proxy_ports', 'device',
+@@ -112,7 +112,7 @@
+     require(recovery['current_boot_id'] == Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
+             'Restored coordinator belongs to a different boot')
+     h.checked(job['lease'])
+-    require(family['round_observer_reviewer']['sha256'] == '49517cda74226f60f12297c5a106a758d76a3e0e4682a0a2c9058124c4ad433f', 'Exact independent round observer reviewer required')
++    require(family['round_observer_reviewer']['sha256'] == '5c43b07c591b2ff65f828f516df240576aa12be94646c78daf954a49560bff0b', 'Exact independent round observer reviewer required')
+     h.checked(family['round_observer_reviewer'])
+     return validate_derivation(job['runtime']['path'], family['reviewer']['path'])
+ 
+@@ -150,7 +150,8 @@
+             and verified['source_bound_original192_physical_bootstrap_verified'] is True
+             and verified['TRAIN155_original_physical_and_current_TCP_verified'] is True
+             and verified['EVAL37_original_connection_and_strict_retirement_evidence_verified'] is True
+-            and verified['EVAL_closed_slots_have_positive_normal0_reap_and_cleanup_verified'] is True,
++            and verified['EVAL_closed_slots_have_positive_normal0_reap_and_cleanup_verified'] is True
++            and verified['prior_completed_EVAL_prefix_and_current_suffix_verified'] is True,
+             'Exact prospective2s engineering proof contract required')
+     require(verified['original_sources'] == family['main_observer'], 'Main-domain proof uses a different observer source')
+     lifecycle = json.loads(h.checked(proof['lifecycle']).read_bytes())

@@ -1,0 +1,64 @@
+{
+  "schema": "robotron-live8-four-readout-source-lock-v1",
+  "source_only": true,
+  "author_execution": false,
+  "frozen_reconstruction": {
+    "cuda_trace_parent.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_recompute_proposal/cuda_trace_parent.py",
+      "sha256": "02af5b4ab846c1fe2579ceeba4ceabff8f05a4686c6debe490df56c1978779ba",
+      "bytes": 41954
+    },
+    "cuda_trace_worker.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_recompute_proposal/cuda_trace_worker.py",
+      "sha256": "182f008a969f55c2aa5952612f1631b3435cab61cbc5ae42fcd708c4f91a03a7",
+      "bytes": 26162
+    },
+    "source-lock.json": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_recompute_proposal/source-lock.json",
+      "sha256": "683278660704999645e93dfbc7aad1b20423a5755080a76ccad8f3af54c3c82f",
+      "bytes": 8268
+    },
+    "preparation-manifest.json": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_recompute_proposal/preparation-manifest.json",
+      "sha256": "6efd771b862f97b08870c8cdf2ffb2e31f0da8d3f12e4c9bc2111db0ed991701",
+      "bytes": 7478
+    }
+  },
+  "actual_ce_helper": {
+    "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/offline_actual_ce_analysis_proposal/analyse_actual_ce.py",
+    "sha256": "e4ffb0cb95aa4f426005cce351b11cb96b4af30339908183e1f61fbf728875bb",
+    "bytes": 24128
+  },
+  "actual_ce_analysis": {
+    "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-actual-CE-offline-analysis-reviewed1-20261017/analysis.json",
+    "sha256": "f9235940e47732188dffb3a2b47b5db881d83ca00dd089721892be6296454a43",
+    "bytes": 193489
+  },
+  "actual_input_binding": {
+    "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-actual-CE-analysis-source-preflight-20261017/input-binding.json",
+    "sha256": "0c2a528a3b1611b6e746e9ca09653297b62c750e35887bfaa1982dd8258351cf",
+    "bytes": 7374
+  },
+  "priority_source": {
+    "source": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/replay_buffer.py",
+    "sha256": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f",
+    "bytes": 113613
+  },
+  "conditional_kernel": {
+    "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/executed_trace_proposal/loss_kernel.py",
+    "sha256": "ce527c840f1b0cce3f77fece52923c7023519605db92d7c5e691b1b573ee6d2f",
+    "bytes": 9208
+  },
+  "original_loss": {
+    "source": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/loss_kernel.py",
+    "sha256": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a",
+    "bytes": 7957
+  },
+  "restrictions": {
+    "executed_per_row_target_observed": false,
+    "candidate_KL_population_observed": false,
+    "parameter_gradients_measured": false,
+    "quality_or_learning_speed_qualification": false,
+    "actual_future_reconstruction_job": null
+  }
+}

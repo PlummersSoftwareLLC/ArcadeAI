@@ -1,0 +1,336 @@
+{
+  "actual": {
+    "new20_tests": null,
+    "new_control_launch": null,
+    "result": null
+  },
+  "author_verification": {
+    "candidate_compile_or_execution": 0,
+    "held_source_edits": 0,
+    "model_access": 0,
+    "project_imports": 0,
+    "runtime_queries": 0,
+    "source_AST_only": true,
+    "tests": 0
+  },
+  "files": {
+    "control_audit_reviewed3.py": {
+      "bytes": 17094,
+      "identity": {
+        "bytes": 17094,
+        "ctime_ns": 1792306398891963524,
+        "device": 2304,
+        "inode": 81531268,
+        "mode": "0o444",
+        "mtime_ns": 1792306398891963524,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/control_audit_reviewed3.py",
+      "sha256": "b5a50047e1a2981a41732c756bf908c6b9b935c58d1d0503c0df494e6f863aee"
+    },
+    "deferred_tests_reviewed3_20261018/test_control_gc.py": {
+      "bytes": 27839,
+      "identity": {
+        "bytes": 27839,
+        "ctime_ns": 1792306429792997858,
+        "device": 2304,
+        "inode": 81531270,
+        "mode": "0o444",
+        "mtime_ns": 1792306429792997858,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/deferred_tests_reviewed3_20261018/test_control_gc.py",
+      "sha256": "3bec2c4b17fe833dbf8f1c3674b801fbdb7369ee75a55db013da811b3e26a89b"
+    }
+  },
+  "future_control_CLI": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/control_audit_reviewed3.py",
+    "--execute",
+    "--config",
+    "<FRESH_ROOT_CONFIG.json>",
+    "--expected-source-sha256",
+    "b5a50047e1a2981a41732c756bf908c6b9b935c58d1d0503c0df494e6f863aee"
+  ],
+  "future_root_20_test_argv": [
+    "/usr/bin/env",
+    "-u",
+    "LD_PRELOAD",
+    "-u",
+    "PYTHONPATH",
+    "CUDA_VISIBLE_DEVICES=",
+    "PYTHONDONTWRITEBYTECODE=1",
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/deferred_tests_reviewed3_20261018",
+    "-p",
+    "test_control_gc.py",
+    "-v"
+  ],
+  "future_root_bounds": {
+    "CPUQuota": "100%",
+    "MemoryMax": "512M",
+    "MemorySwapMax": 0,
+    "RuntimeMaxSec": 60,
+    "TasksMax": 128
+  },
+  "limitations": [
+    "Authored/source-read only; no new20 test execution or real launch by author.",
+    "Tests prove selected control behavior against strict fakes, not live systemd integration, payload performance or numerical efficacy.",
+    "Original3c source and19 suite remain immutable; actual failed launcher and original seven-test payload are preserved without retry or relabelling."
+  ],
+  "real_defect_evidence": {
+    "actual_payload_summary": "Seven original tests PASS/0skip per pinned stderr; original launcher failure remains distinct, no same-process observe or live starttick capture was performed. Root handles original manual closure separately.",
+    "cat_and_show_commands_exit": 0,
+    "cat_has_Timer_and_implicit_target": true,
+    "no_retry_or_retrospective_adoption": true,
+    "original_19_PASS_before_this_boundary_failure": true,
+    "original_launcher_disposition": {
+      "error": "ValueError('Launch-time timer cat does not target the exact original service')",
+      "original_attempt": 1,
+      "payload_retried": false,
+      "status": "UNRELEASED_NO_RETRY",
+      "timer": "robotron-rejected-gap-healthy-activation-reviewed2-seven-guards-original01-20261018.timer",
+      "unit": "robotron-rejected-gap-healthy-activation-reviewed2-seven-guards-original01-20261018.service",
+      "unknown_units_stopped": false
+    },
+    "original_timer_invocation": "87790d845c154821a79053eb1eb5d0e5",
+    "show_exact_owned_timer_service_and_invocation": true
+  },
+  "schema": "robotron-GC-control-reviewed3-implicit-timer-source-preparation-v1",
+  "source_delta": {
+    "all_scheduling_observation_original_lifetime_archive_release_semantics_unchanged": true,
+    "byte_exact_other_functions": [
+      "require",
+      "pin",
+      "publish",
+      "command",
+      "fields",
+      "show",
+      "checked_config",
+      "timer_state",
+      "original_terminal",
+      "release_original",
+      "observe",
+      "main"
+    ],
+    "new_control_sha256": "b5a50047e1a2981a41732c756bf908c6b9b935c58d1d0503c0df494e6f863aee",
+    "no_original_file_modified": true,
+    "only_changed_boundary": "Timer-cat target predicate after successful exact cat/show and timer_state identity checks.",
+    "only_changed_function": "launch",
+    "original_control_sha256": "3c600a37d6502de5b82a1ab04c12901ee6e693c1c5272e0a92b46af87e8f452d",
+    "predicate": "Exactly one [Timer] section. No active Unit assignments allows implicit same-name target, authenticated by unchanged exact timer show Id/InvocationID/Unit. Any explicit Unit assignment must be the single exact Unit=ownedservice under [Timer]. Duplicate, contradictory, foreign, malformed or wrong-section assignments refuse."
+  },
+  "status": "SOURCE_ONLY_FIXED_AWAITING_ROOT20_TEST_EXECUTION_AND_PEER",
+  "tests": {
+    "changed_test_selectors_only": [
+      "SOURCE reviewed2 -> reviewed3",
+      "SOURCE_SHA new exact source SHA"
+    ],
+    "class_name": "DeferredGCControlTests",
+    "count": 20,
+    "executed_by_author": 0,
+    "fixture_scope": "Strict scripted subprocess/proc/clock fakes; private temp files only. Positive implicit/exact-explicit launch, negative foreign/contradictory/duplicate/wrong-section/missing-Timer/duplicate-Timer/malformed/show-target; no actions or real process adoption.",
+    "methods": [
+      "test_archive_failure_does_not_turn_payload0_into_lifecycle0",
+      "test_archive_timeout_preserves_partial_bytes_and_unknown_exit",
+      "test_audit0_normal_sameprocess_and_all_six_successes",
+      "test_audit2_timer_GC_has_real_cat1_and_no_fabricated_timer_stop",
+      "test_changed_config_after_launch_is_not_accepted",
+      "test_changed_launch_archive_refuses_without_cleanup",
+      "test_changed_selected_PIN_is_rejected_before_scheduling",
+      "test_deadline_leaves_observed_original_untouched",
+      "test_default_plan_has_no_function_level_reads_or_operations",
+      "test_foreign_service_after_timer_release_is_not_stopped",
+      "test_foreign_timer_is_not_stopped",
+      "test_implicit_timer_cat_launch_and_strict_explicit_target",
+      "test_launch_requires_actual_timer_invocation_and_successful_cat",
+      "test_missed_live_identity_is_not_retrospectively_adopted",
+      "test_observe_cannot_adopt_without_its_own_launch",
+      "test_repeated_launch_and_observe_are_refused",
+      "test_reset_failure_preserves_partial_owned_release_and_audit2",
+      "test_scheduling_timeout_is_not_retried_or_released",
+      "test_stop5_accepts_only_each_exact_owned_reason_and_fresh_absence",
+      "test_wrong_stop5_reason_or_not_absent_keeps_cleanup_incomplete"
+    ],
+    "new_method": "test_implicit_timer_cat_launch_and_strict_explicit_target",
+    "new_subcases": 10,
+    "original19_method_bodies_byte_exact": true
+  },
+  "upstream_pins": {
+    "original-launch-timer-cat-command.json": {
+      "bytes": 1221,
+      "identity": {
+        "bytes": 1221,
+        "ctime_ns": 1792306238606270575,
+        "device": 2304,
+        "inode": 83624431,
+        "mode": "0o444",
+        "mtime_ns": 1792306238606270575,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-healthy-activation-reviewed2-seven-guards-original01-root-execution-20261018/original-launch-timer-cat-command.json",
+      "sha256": "2a0cf052ce42bcbdd1ac6b94ad2b7c82246cf1990bcce81732250bc66e06e131"
+    },
+    "original-launch-timer-cat-stdout.txt": {
+      "bytes": 751,
+      "identity": {
+        "bytes": 751,
+        "ctime_ns": 1792306238605104842,
+        "device": 2304,
+        "inode": 83624429,
+        "mode": "0o444",
+        "mtime_ns": 1792306238605104842,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-healthy-activation-reviewed2-seven-guards-original01-root-execution-20261018/original-launch-timer-cat-stdout.txt",
+      "sha256": "2ecf5b747ee9b2b8435ec0616f2c400c87311cb13d87f058b752509295a74d05"
+    },
+    "original-launch-timer-show-command.json": {
+      "bytes": 1225,
+      "identity": {
+        "bytes": 1225,
+        "ctime_ns": 1792306238613685291,
+        "device": 2304,
+        "inode": 83624434,
+        "mode": "0o444",
+        "mtime_ns": 1792306238613685291,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-healthy-activation-reviewed2-seven-guards-original01-root-execution-20261018/original-launch-timer-show-command.json",
+      "sha256": "94d7a72dfa874526758ccf8def322ea31d185053d549a23d9e102a0a59cd3243"
+    },
+    "original-launch-timer-show-stdout.txt": {
+      "bytes": 2678,
+      "identity": {
+        "bytes": 2678,
+        "ctime_ns": 1792306238611918788,
+        "device": 2304,
+        "inode": 83624432,
+        "mode": "0o444",
+        "mtime_ns": 1792306238611918788,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-healthy-activation-reviewed2-seven-guards-original01-root-execution-20261018/original-launch-timer-show-stdout.txt",
+      "sha256": "fb0becfa6e9ecfd2062c0b84d56f06fbd37d37c3be76a7fec31a88d108f11a12"
+    },
+    "original_19_PASS_owned_release": {
+      "bytes": 13438,
+      "identity": {
+        "bytes": 13438,
+        "ctime_ns": 1792304951799214252,
+        "device": 2304,
+        "inode": 83624133,
+        "mode": "0o444",
+        "mtime_ns": 1792304951799214252,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/postquality-GC-control-regressions-original01-root-execution-20261018/root-original-result-and-owned-release.json",
+      "sha256": "550bc096af649163758daffcdf5b0d1a2120a85227850e796c83323ee1d5c1b0"
+    },
+    "original_19_test_manifest": {
+      "bytes": 4075,
+      "identity": {
+        "bytes": 4075,
+        "ctime_ns": 1792302814836786777,
+        "device": 2304,
+        "inode": 81531241,
+        "mode": "0o444",
+        "mtime_ns": 1792302814836786777,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/deferred_tests_20261018/preparation-manifest.json",
+      "sha256": "740dfbeedf9dede218e1a988663559cf7147d805d6608a563797c8c416b7e782"
+    },
+    "original_control": {
+      "bytes": 16717,
+      "identity": {
+        "bytes": 16717,
+        "ctime_ns": 1792300493497560614,
+        "device": 2304,
+        "inode": 81529004,
+        "mode": "0o444",
+        "mtime_ns": 1792300493497560614,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/control_audit_reviewed2.py",
+      "sha256": "3c600a37d6502de5b82a1ab04c12901ee6e693c1c5272e0a92b46af87e8f452d"
+    },
+    "original_test_source": {
+      "bytes": 24566,
+      "identity": {
+        "bytes": 24566,
+        "ctime_ns": 1792302814833633357,
+        "device": 2304,
+        "inode": 81531235,
+        "mode": "0o444",
+        "mtime_ns": 1792302744771359198,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/deferred_tests_20261018/test_control_gc.py",
+      "sha256": "44fad36d3fe593ebbeadf79150a3d76062315e4a0d65613af4a14a3fa6183432"
+    },
+    "root-launch-error-preserved.json": {
+      "bytes": 427,
+      "identity": {
+        "bytes": 427,
+        "ctime_ns": 1792306238614822351,
+        "device": 2304,
+        "inode": 83624435,
+        "mode": "0o444",
+        "mtime_ns": 1792306238614822351,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-healthy-activation-reviewed2-seven-guards-original01-root-execution-20261018/root-launch-error-preserved.json",
+      "sha256": "cb908ccf0281af88332dffdf62d9b04e6b8a267548516f6805e1b016d37349a2"
+    },
+    "root-launch-intent.json": {
+      "bytes": 18223,
+      "identity": {
+        "bytes": 18223,
+        "ctime_ns": 1792306238590070258,
+        "device": 2304,
+        "inode": 83624425,
+        "mode": "0o444",
+        "mtime_ns": 1792306238590070258,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-healthy-activation-reviewed2-seven-guards-original01-root-execution-20261018/root-launch-intent.json",
+      "sha256": "6a6e1e0184d9b30505899f20c5d3bde6c1338f5eb1890f359a52bd26cbf8667a"
+    },
+    "stderr.txt": {
+      "bytes": 1484,
+      "identity": {
+        "bytes": 1484,
+        "ctime_ns": 1792306242250284317,
+        "device": 2304,
+        "inode": 83624437,
+        "mode": "0o664",
+        "mtime_ns": 1792306242250284317,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-healthy-activation-reviewed2-seven-guards-original01-root-execution-20261018/stderr.txt",
+      "sha256": "5836db3a29f95124b0f2310ccc04d45e0a9d18ac3fcbfc5e358015a9d3dbe569"
+    }
+  }
+}

@@ -1,0 +1,543 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_one_trial_installed_ce_revision2_proposal/early_insurance.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_early_phase_insurance_proposal/early_phase_insurance.py
+@@ -1,4 +1,4 @@
+-"""One asynchronous live model-only insurance; no work at import/default.
++"""One asynchronous CE2048 early phase snapshot; literal PLAN by default.
+ 
+ The root controller owns the active runtime, observation clock and ending. Only
+ Snapshot.start/tick mutate its managed-request bookkeeping, on the main thread.
+@@ -7,6 +7,8 @@
+ """
+ import copy
+ import errno
++import hashlib
++import importlib.util
+ import json
+ import os
+ from pathlib import Path
+@@ -26,6 +28,232 @@
+         raise RuntimeError(message)
+ 
+ 
++EXECUTION_KIND = 'phase_early_insurance2048'
++RESULT_SCHEMA = 'robotron-batch2048-early-phase-insurance-result-v1'
++CPU_JOB_SCHEMA = 'robotron-batch2048-phase-snapshot-checkpoint-CPU-job-reviewed2-v1'
++CPU_RESULT_SCHEMA = 'robotron-batch2048-phase-snapshot-checkpoint-CPU-result-reviewed2-v1'
++ORIGINAL_STRICT_SHA = '7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead'
++PROFILE = dict(path='/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json',
++    sha256='e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50', bytes=764)
++CPU_FAMILY = {'script': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/verify_phase_snapshot_2048.py', 'sha256': 'a331b550191a48ab219cf92f2e1c42fc394e038c93609ecac4fb9a722b75e5cd', 'bytes': 37695}, 'strict_base': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/strict_phase_base_2048.py', 'sha256': '47677509f170c4c3b6a1c03918e02ab13996af1ceafffac29b7536c2fad61f80', 'bytes': 33727}}
++COLLECTOR_BINDING = {'script': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_producer_collector_proposal/collect_producer.py', 'sha256': 'b6a338297ca91f39b1270db8179fac06cd3ba3d6ef5fb175df46968ca6c3bcfb', 'bytes': 23824}, 'manifest': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_producer_collector_proposal/preparation-manifest.json', 'sha256': '193b3956f6808cd4813527e369b8b30552d5d940dbc6d0bc352630a1d4dfa1fd', 'bytes': 3499}}  # Exact frozen193b/b6a family.
++CLOCKS = ('training_steps', 'optimized_samples', 'learner_frame_count', 'frame_count')
++
++
++
++class ReadonlyMetadataBase:
++    """Only NEW local JSON is sealed; delegate existing bounded copier/identity IO."""
++    def __init__(self, base):self.original=base
++    def __getattr__(self, name):return getattr(self.original,name)
++    def publish(self,path,value):
++        path=Path(path)
++        raw_api=path.name=='trigger-API.json' and path.parent.name=='snapshot'
++        raw=(json.dumps(value,sort_keys=True,indent=2,allow_nan=raw_api)+'\n').encode()
++        require(0<len(raw)<=self.MAX_JSON,'Bounded new local metadata required')
++        fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
++        try:
++            offset=0
++            while offset<len(raw):
++                count=os.write(fd,raw[offset:]);require(count>0,'Short metadata write');offset+=count
++            os.fchmod(fd,0o444);os.fsync(fd)
++            require(self.identity(os.fstat(fd))==self.identity(path.lstat()),'New metadata path changed during publication')
++        finally:os.close(fd)
++        fd=os.open(path.parent,os.O_RDONLY|os.O_DIRECTORY)
++        try:os.fsync(fd)
++        finally:os.close(fd)
++        result=self.fingerprint(path,self.MAX_JSON)
++        require(result['sha256']==hashlib.sha256(raw).hexdigest() and result['bytes']==len(raw) and
++            result['identity']['mode']=='0o444' and result['identity']['uid']==os.getuid() and result['identity']['nlink']==1,
++            'Published new readonly metadata differs')
++        return result
++
++
++def triple(value):
++    return {key:value[key] for key in ('path','sha256','bytes')}
++
++
++def readonly_json(base, pin):
++    require(pin['identity']['mode']=='0o444' and pin['identity']['uid']==os.getuid()
++        and pin['identity']['nlink']==1,'Independent owned readonly metadata required')
++    return base.read_json(pin)
++
++
++def checked_profile(base, pin):
++    require(triple(pin)==PROFILE,'Wrong exact CE2048 profile')
++    value=readonly_json(base,pin)
++    require(value['priority_metric']=='ce' and value['batch_size']==2048 and
++        value['before_batch_size']==value['return_batch_size']==4096 and value['LR_compensation'] is False
++        and value['deliberate_recipe_changes']==['DQN_BATCH_SIZE'],'Wrong held one-knob profile')
++    return value
++
++
++def load_collector(base, binding):
++    require(COLLECTOR_BINDING is not None,'UNCONSUMED: final collector source binding is unresolved')
++    require(set(binding)=={'script','manifest'} and
++        {name:triple(binding[name]) for name in ('script','manifest')}==COLLECTOR_BINDING,
++        'Wrong exact reviewed producer collector')
++    for value in binding.values():base.pin(value,base.MAX_SOURCE)
++    module=base.load_module(binding['script']['path'],'CE2048_early_producer_collector')
++    for value in binding.values():base.pin(value,base.MAX_SOURCE)
++    require(str(Path(module.__file__).resolve())==binding['script']['path'],'Unexpected collector module path')
++    return module
++
++
++def check_python_identity(base, verifier, *, hash_executable):
++    """Preserve the successful venv argv; attest its final symlink separately.
++
++    Resolving argv itself before Popen would change Python's venv discovery.
++    The23MiB executable is hashed at read_job and before CPU spawn only; frequent
++    runtime guards compare its full stat identity, plus the small context pins.
++    """
++    spec = verifier["python_identity"]
++    required = {"argv_path", "link_target", "link_identity", "executable", "pyvenv_cfg", "library_context"}
++    require(isinstance(spec, dict) and set(spec) == required, "Invalid explicit Python binding")
++    argv_path = Path(verifier["python"])
++    require(str(argv_path) == spec["argv_path"] and argv_path.is_absolute() and argv_path.name == "python"
++        and argv_path.parent == argv_path.parent.resolve(strict=True), "Python argv is not the explicit canonical-parent venv path")
++    before = argv_path.lstat()
++    require(stat.S_ISLNK(before.st_mode) and base.identity(before) == spec["link_identity"]
++        and os.readlink(argv_path) == spec["link_target"], "Python venv symlink changed")
++    target = base.canonical(spec["executable"]["path"])
++    require(argv_path.resolve(strict=True) == target and target.stat().st_size <= 64 << 20
++        and os.access(argv_path, os.X_OK), "Python resolved executable differs or is not executable")
++    if hash_executable:
++        base.pin(spec["executable"], 64 << 20)
++    else:
++        info = target.lstat()
++        require(stat.S_ISREG(info.st_mode) and base.identity(info) == spec["executable"]["identity"]
++            and info.st_size == spec["executable"]["bytes"], "Python executable metadata changed")
++    venv = argv_path.parent.parent
++    require(spec["pyvenv_cfg"]["path"] == str(venv / "pyvenv.cfg"), "Wrong venv configuration pin")
++    base.pin(spec["pyvenv_cfg"], base.MAX_SOURCE)
++    require(isinstance(spec["library_context"], list) and len(spec["library_context"]) == 4, "Exactly four held library context pins required")
++    site = venv / "lib/python3.14t/site-packages"
++    expected = {str(site / package / name) for package in ("torch", "numpy") for name in ("__init__.py", "version.py")}
++    require({item["path"] for item in spec["library_context"]} == expected, "Python library context paths differ")
++    for item in spec["library_context"]:
++        base.pin(item, base.MAX_SOURCE)
++    require(base.identity(argv_path.lstat()) == base.identity(before) and os.readlink(argv_path) == spec['link_target']
++        and argv_path.resolve(strict=True) == target, 'Python symlink changed during identity check')
++    return dict(argv_path=str(argv_path), resolved_executable=str(target),
++        executable_sha256=spec['executable']['sha256'], executable_hashed=hash_executable,
++        scope='Environment identity only; new numerical provenance requires actual retained phase CPU success')
++
++
++def phase_job(adapter,base,experiment,owner,phase,pairs,context,frozen,floor,profile,producer,output):
++    recipe=checked_profile(base,profile)
++    acquisition=readonly_json(base,frozen['acquisition']);observed=readonly_json(base,producer)
++    require(acquisition['schema']=='robotron-owned-phase-snapshot-acquisition-v1' and
++        acquisition['purpose']=='candidate' and acquisition['client_count']==192 and
++        acquisition['owner_before']==acquisition['owner_after']==owner and
++        acquisition['source_checkpoint']==triple(frozen['source']) and acquisition['clock_floor']==floor and
++        acquisition['phase_record_sha256']==phase['record']['sha256'] and
++        acquisition['boot_checkpoint']==phase['boot_checkpoint'] and acquisition['stopped_absence'] is None,
++        'Genuine active192 phase acquisition required; not startup/stopped/candidate selection')
++    require(observed['schema']=='robotron-root-batch2048-producer-observation-v1' and
++        observed['owner']==owner and observed['source_checkpoint']==triple(frozen['source']) and
++        observed['acquisition_sha256']==frozen['acquisition']['sha256'] and observed['csv_scope']=='producer2048'
++        and observed['profile_sha256']==PROFILE['sha256'],'Final actual2048 producer acquisition join differs')
++    require(phase['expected']['metric']=='ce' and phase['expected']['valid'] is True and
++        context['held_recipe_context']==recipe['held_recipe_context'],'Exact CE2048 model/recipe context required')
++    require(all(type(floor[k]) is int and floor[k]>0 for k in CLOCKS),'Real four-clock floor required')
++    return dict(schema=CPU_JOB_SCHEMA,verifier_sha256=CPU_FAMILY['script']['sha256'],
++        strict_phase_base_sha256=CPU_FAMILY['strict_base']['sha256'],original_strict_base_sha256=ORIGINAL_STRICT_SHA,
++        experiment=experiment,source=copy.deepcopy(frozen['source']),verification_copy=copy.deepcopy(frozen['verification_copy']),
++        clock_floor=copy.deepcopy(floor),source_control_context=copy.deepcopy(context),output_directory=str(output),
++        phase_snapshot=dict(purpose='candidate',owner=copy.deepcopy(owner),observed_clients=192,
++            phase_record=copy.deepcopy(phase['record']),boot_checkpoint=copy.deepcopy(phase['boot_checkpoint']),
++            boot_verification=copy.deepcopy(phase['boot_verification']),expected_phase=copy.deepcopy(phase['expected']),
++            acquisition=copy.deepcopy(frozen['acquisition']),sources=copy.deepcopy(pairs)),
++        batch2048_context=dict(profile=copy.deepcopy(profile),role='early_insurance',producer_observation=copy.deepcopy(producer)))
++
++
++def check_phase_report(base, report_pin, job_pin):
++    report=base.read_json(report_pin);job=readonly_json(base,job_pin)
++    require(report.get('status')=='PASS' and report.get('schema')==CPU_RESULT_SCHEMA and report.get('role')=='phase_snapshot'
++        and job['verifier_sha256']==CPU_FAMILY['script']['sha256'] and
++        job['strict_phase_base_sha256']==CPU_FAMILY['strict_base']['sha256'] and job['original_strict_base_sha256']==ORIGINAL_STRICT_SHA and
++        report['script']['sha256']==CPU_FAMILY['script']['sha256'] and report['strict_phase_base']['sha256']==CPU_FAMILY['strict_base']['sha256'] and
++        report.get('root_job')==job and report['job_file']['sha256']==job_pin['sha256'] and
++        report.get('phase_metadata_verified') is True and job['schema']==CPU_JOB_SCHEMA and
++        job['phase_snapshot']['purpose']=='candidate' and job['phase_snapshot']['observed_clients']==192 and
++        job['batch2048_context']['role']=='early_insurance' and report['configured_batch_size']==2048 and
++        report['actual_producer_batch_size']==2048 and report['producer_CSV_verified'] is True,
++        'Actual reviewed2 phase early-insurance report/job/profile required; no legacy7d relabelling')
++    require(report['sha256']==job['source']['sha256']==job['verification_copy']['sha256'] and
++        report['bytes']==job['source']['bytes']==job['verification_copy']['bytes'] and
++        report['saved_priority_metric_phase']['metric']=='ce' and report['saved_priority_metric_phase']['valid'] is True and
++        all(type(report['clocks'][k]) is int and report['clocks'][k]>=job['clock_floor'][k] for k in CLOCKS),
++        'Actual phase model/finite clockfloor proof differs')
++    return report
++
++
++def check_phase_provenance(base,verifier,job_pin,proof):
++    report_pin=proof['phase_cpu_report'];readonly_json(base,report_pin)
++    report=check_phase_report(base,report_pin,job_pin)
++    original=proof['original_numeric_report'];base.pin(original,base.MAX_JSON)
++    require(original['sha256']==report_pin['sha256'] and original['bytes']==report_pin['bytes'] and
++        (original['identity']['device'],original['identity']['inode'])!=(report_pin['identity']['device'],report_pin['identity']['inode']),
++        'Numeric result must be independently archived; never chmod historical original')
++    execution=readonly_json(base,proof['successful_execution']);completion=readonly_json(base,proof['successful_completion'])
++    result=readonly_json(base,proof['successful_result'])
++    owner=completion['original_owner']
++    require(isinstance(owner,dict) and set(owner)==OWNER_KEYS and completion['original_pid']==owner['pid'] and
++        completion['original_invocation']==owner['invocation_id'] and completion['original_nrestarts']==0 and
++        completion['original_exec_code']==result['original_exec_code']==1 and
++        completion['original_exit']==result['original_exit']==0 and completion['result']==result['original_result']=='success'
++        and result['original_pid']==owner['pid'] and result['original_invocation']==owner['invocation_id'] and
++        result['original_owner']==owner and result['actual_unit']==owner['unit'] and result['status']=='PASS' and
++        execution['kind']==result['kind']==EXECUTION_KIND and execution['unit']==owner['unit'] and
++        result['original_archived_before_release'] is True and result['numeric_report_sha256']==report_pin['sha256'] and
++        result['original_completion']==proof['successful_completion'],'Actual original retained phase CPU provenance required')
++    expected=[verifier['python'],'-Xgil=0','-I','-B','-u',CPU_FAMILY['script']['path'],'--execute','--job',job_pin['path'],
++        '--expected-job-sha256',job_pin['sha256'],'--expected-verifier-sha256',CPU_FAMILY['script']['sha256']]
++    require(execution['command']==expected and execution['argv'][-len(expected):]==expected and execution['job']==job_pin,
++        'Original exact retained numerical argv/job differs')
++    require([r['unit'] for r in result['releases']]==[execution['timer'],owner['unit']],
++        'Exact timer-first/service release ordering required')
++    for key in ('terminal_show','terminal_cat','invocation_journal'):
++        artifact=completion[key];base.pin(artifact,base.MAX_SOURCE)
++        require(artifact['identity']['mode']=='0o444' and artifact['identity']['uid']==os.getuid()
++            and artifact['identity']['nlink']==1,'Original execution archives must be readonly')
++    return report
++
++
++def archive_phase_report(helper,original_report,destination):
++    """Reuse the pinned metadata copier; never broaden the model-copy registry."""
++    copied=helper.adapter.archive_metadata(helper.base,original_report,destination)
++    helper.base.pin(original_report,helper.base.MAX_JSON)
++    require(copied['sha256']==original_report['sha256'] and copied['bytes']==original_report['bytes'] and
++        copied['identity']['mode']=='0o444' and
++        (copied['identity']['device'],copied['identity']['inode'])!=
++        (original_report['identity']['device'],original_report['identity']['inode']),
++        'Independent actual numeric report archive differs')
++    return copied
++
++
++def phase_insurance_floor(base,result_pin,expected_owner,expected_phase_record,profile):
++    result=readonly_json(base,result_pin);checked_profile(base,profile)
++    require(result['schema']==RESULT_SCHEMA and result['status']=='PASS' and result['role']=='early_insurance' and
++        result['owner']==expected_owner and result['phase']['record']==expected_phase_record and result['profile']==profile and
++        result['eligible_quality_candidate'] is False and result['legacy_7d_insurance'] is False,
++        'Explicit CE2048 early phase result required; never substitute legacy insurance/candidate')
++    require(result['phase_cpu_report']==result['cpu_provenance']['phase_cpu_report'],
++        'Published early phase report differs from its actual CPU provenance')
++    job=readonly_json(base,result['phase_cpu_job']);verifier=dict(python=result['python'])
++    report=check_phase_provenance(base,verifier,result['phase_cpu_job'],result['cpu_provenance'])
++    require(job['phase_snapshot']['owner']==expected_owner and job['phase_snapshot']['phase_record']==expected_phase_record,
++        'Insurance belongs to another owner/phase')
++    saved=readonly_json(base,result['saved_receipt'])
++    require(saved['role']=='early_insurance' and saved['tag']==result['tag'] and saved['trainer']==expected_owner
++        and saved['source']==job['source'] and saved['acquisition']==job['phase_snapshot']['acquisition'],
++        'Distinct actual saved early tag/acquisition differs')
++    return dict(owner=copy.deepcopy(expected_owner),clock_floor={k:report['clocks'][k] for k in CLOCKS},
++        tag=result['tag'],phase_record=copy.deepcopy(expected_phase_record),report=result['phase_cpu_report'],
++        source=job['source'],role='early_insurance',legacy_7d_insurance=False,eligible_quality_candidate=False)
++
++
++
+ def command(argv, *, timeout=5):
+     result = subprocess.run(argv, capture_output=True, text=True, timeout=timeout, check=False)
+     absent_show = argv[:3] == ['systemctl', '--user', 'show'] and 'LoadState=not-found' in result.stdout.splitlines()
+@@ -33,8 +261,8 @@
+     return result.stdout
+ 
+ 
+-def publish_text(base, path, text):
+-    require(0 < len(text.encode()) <= base.MAX_SOURCE, 'Bounded nonempty unit/source archive required')
++def publish_text(base, path, text, *, allow_empty_journal=False):
++    require((0 if allow_empty_journal else 1) <= len(text.encode()) <= base.MAX_SOURCE, 'Bounded nonempty unit/source archive required')
+     with Path(path).open('x') as stream:
+         stream.write(text); stream.flush(); os.fsync(stream.fileno())
+         os.fchmod(stream.fileno(), 0o444)
+@@ -174,7 +402,7 @@
+ 
+ 
+ class RetainedCPU:
+-    """Single direct7d CPU service. Success archives its original unit before release.
++    """Single reviewed2 phase CPU service; authentic early_insurance profile role.
+ 
+     Failure retains the original failed service and evidence. Requested unit,
+     exact argv/job and the actual child owner are exposed for the controller's
+@@ -191,7 +419,7 @@
+     def run_once(self, helper, job_pin, verifier, directory):
+         base, spec = self.base, helper.spec
+         base.pin(verifier['script'], base.MAX_SOURCE)
+-        base.validate_python_binding(verifier, helper.original_insurance, hash_executable=True)
++        check_python_identity(base, verifier, hash_executable=True)
+         unit = spec['cpu_unit'];timer = unit.removesuffix('.service')+'.timer'
+         for name in (unit, timer):
+             state, _ = self.show(name)
+@@ -210,7 +438,7 @@
+             '--setenv=OMP_NUM_THREADS=2', '--setenv=MKL_NUM_THREADS=2',
+             '--setenv=OPENBLAS_NUM_THREADS=2', '--setenv=NUMEXPR_NUM_THREADS=2',
+             '--on-active=3s', '--timer-property=AccuracySec=100ms'] + numerical
+-        intent = base.publish(directory/'execution-intent.json', dict(kind='insurance', unit=unit, timer=timer,
++        intent = base.publish(directory/'execution-intent.json', dict(kind=EXECUTION_KIND, unit=unit, timer=timer,
+             argv=argv, job=job_pin, command=numerical, only_one_attempt=True))
+         helper.register_request(dict(request=intent, unit=unit, timer=timer, job=job_pin,
+                                      argv=argv, command=numerical, owner=None, carrier=None,
+@@ -265,7 +493,7 @@
+         show_pin = publish_text(base, directory/'original-terminal-show.txt', text)
+         cat_pin = publish_text(base, directory/'original-terminal-cat.txt', self.run(['systemctl', '--user', 'cat', unit]))
+         journal_pin = publish_text(base, directory/'original-invocation-journal.txt', self.run([
+-            'journalctl', '--user', '--no-pager', '-o', 'short-iso-precise', '_SYSTEMD_INVOCATION_ID='+state['InvocationID']]))
++            'journalctl', '--user', '--no-pager', '-o', 'short-iso-precise', '_SYSTEMD_INVOCATION_ID='+state['InvocationID']]), allow_empty_journal=True)
+         completion = dict(original_invocation=state['InvocationID'], original_pid=int(state['ExecMainPID']),
+             original_exec_code=int(state['ExecMainCode']), original_exit=int(state['ExecMainStatus']),
+             result=state['Result'], unit_released=False, original_owner=adopted,
+@@ -277,11 +505,10 @@
+         require(adopted is not None, 'Original unit archived but no independently observed CPU PID/start; no invented identity')
+         require(completion['original_exec_code'] == 1 and completion['original_exit'] == 0 and completion['original_nrestarts'] == 0 and
+                 completion['result'] == 'success', 'Original early insurance CPU failed; retained, no retry')
+-        report_pin = base.fingerprint(Path(base.read_json(job_pin)['output_directory'])/'cpu-verification.json', base.MAX_JSON)
+-        report = base.read_json(report_pin)
+-        require(report['status'] == 'PASS' and report['mode'] == 'insurance' and
+-                report['job_file']['sha256'] == job_pin['sha256'] and report['root_job'] == base.read_json(job_pin),
+-                'Original early CPU report does not match its actual job')
++        original_report = base.fingerprint(Path(base.read_json(job_pin)['output_directory'])/'cpu-verification.json', base.MAX_JSON)
++        check_phase_report(base, original_report, job_pin)
++        report_pin = archive_phase_report(helper, original_report, directory/'numeric-report-readonly.json')
++        check_phase_report(base, report_pin, job_pin)
+         before, _ = self.show(unit)
+         require(before['InvocationID'] == adopted['invocation_id'] and int(before['ExecMainPID']) == adopted['pid'] and
+                 before['ExecMainStatus'] == '0', 'Original CPU changed before exact release')
+@@ -301,30 +528,30 @@
+             require(after.get('LoadState') == 'not-found' or after.get('ActiveState') == 'inactive',
+                     'Owned CPU unit/timer did not release')
+             releases.append(dict(unit=name, already_absent=False, final_load_state=after.get('LoadState')))
+-        reviewed = base.publish(directory/'result-review-and-release.json', dict(status='PASS', kind='insurance',
++        reviewed = base.publish(directory/'result-review-and-release.json', dict(status='PASS', kind=EXECUTION_KIND,
+             original_invocation=adopted['invocation_id'], original_pid=adopted['pid'], original_exec_code=1,
+             original_exit=0, original_result='success', original_archived_before_release=True,
+             numeric_report_sha256=report_pin['sha256'], original_completion=completion_pin, actual_unit=unit,
+             releases=releases, original_owner=adopted))
+         helper.record_release(reviewed)
+-        return dict(insurance_report=report_pin, successful_execution=intent,
++        return dict(phase_cpu_report=report_pin, original_numeric_report=original_report, successful_execution=intent,
+                     successful_completion=completion_pin, successful_result=reviewed)
+ 
+ 
+-class EarlyInsurance:
++class EarlyPhaseInsurance:
+     def __init__(self, adapter, base, runtime, spec, output, *, executor=None, spawn=None,
+                  clock=time.monotonic, wall=time.time, run=command):
+-        require(set(spec) == {'tag', 'cpu_unit', 'save_timeout_s', 'cpu_timeout_s'} and
+-                spec['cpu_timeout_s'] == 120 and spec['save_timeout_s'] == 60 and
+-                re.fullmatch(r'robotron-[A-Za-z0-9_-]+\.service', spec['cpu_unit'] or ''), 'Explicit unique bounded early CPU spec required')
+-        self.adapter, self.base, self.runtime, self.spec = adapter, base, runtime, copy.deepcopy(spec)
+-        self.output = Path(output); self.clock, self.wall, self.run = clock, wall, run
+-        self.snapshot = Snapshot(adapter, base, runtime, spec, self.output/'snapshot', clock=clock, wall=wall)
+-        self.executor = executor or RetainedCPU(base, run=run, clock=clock)
+-        self.spawn = spawn or self._spawn
+-        self._lock = threading.Lock(); self._result = dict(status='NEW'); self._registration = None
+-        self.worker_started = False
+-        self.original_insurance = copy.deepcopy(runtime.job['insurance_verification'])
++        required={'tag','cpu_unit','save_timeout_s','cpu_timeout_s','profile','collector','python_identity','producer_expectation'}
++        require(isinstance(spec,dict) and set(spec)==required and spec['cpu_timeout_s']==120 and
++                spec['save_timeout_s']==60 and re.fullmatch(r'robotron-[A-Za-z0-9_-]+\.service',spec['cpu_unit'] or ''),
++                'Explicit one-shot CE2048 early phase spec required')
++        self.adapter,self.base,self.runtime,self.spec=adapter,ReadonlyMetadataBase(base),runtime,copy.deepcopy(spec)
++        self.output=Path(output);self.clock,self.wall,self.run=clock,wall,run
++        self.snapshot=Snapshot(adapter,self.base,runtime,spec,self.output/'snapshot',clock=clock,wall=wall)
++        self.executor=executor or RetainedCPU(self.base,run=run,clock=clock)
++        self.spawn=spawn or self._spawn
++        self._lock=threading.Lock();self._result=dict(status='NEW');self._registration=None
++        self.worker_started=False;self.background_attempted=False
+ 
+     @staticmethod
+     def _spawn(function):
+@@ -427,88 +654,111 @@
+             raise
+ 
+     def _start(self):
++        # Explicit root selection only; an unresolved external source cannot act.
++        self.collector=load_collector(self.base,self.spec['collector'])
++        self.profile=checked_profile(self.base,self.spec['profile'])
++        family=self.runtime.job['phase_verifier2048']
++        require({k:self.adapter.triple(family[k]) for k in ('script','strict_base')}==CPU_FAMILY,
++                'Wrong exact reviewed2 CPU family')
++        for value in family.values():self.base.pin(value,self.base.MAX_SOURCE)
++        self.verifier=dict(script=copy.deepcopy(family['script']),strict_base=copy.deepcopy(family['strict_base']),
++            python=self.runtime.job['verifier']['python'],python_identity=copy.deepcopy(self.spec['python_identity']))
++        check_python_identity(self.base,self.verifier,hash_executable=True)
+         self.output.mkdir(mode=0o700)
+-        raw = self.runtime.raw_api()
+-        require(raw['client_count'] == 192 and raw['training_enabled'] is True, 'Early insurance needs actual healthy192, no pause')
+-        self.owner = copy.deepcopy(self.runtime.trainer_id())
+-        self.runtime.inspect('after')
+-        # All mutable source/unit/control observations happen on this main thread.
+-        pairs, self.context = self.runtime.phase_sources('early-insurance')
+-        self.source_pairs = self.base.publish(self.output/'source-archive-pairs.json', pairs)
+-        old_control = self.context['archived_control'];self.base.pin(old_control, self.base.MAX_JSON)
+-        _, control = self.base.exclusive_copy(old_control['path'], self.output/'archived-control.json')
+-        self.context['archived_control'] = control
+-        unit = self.runtime.job['trainer_unit']
+-        self.context['archived_trainer_unit'] = publish_text(self.base, self.output/'trainer-unit-cat.txt',
+-            self.run(['systemctl', '--user', 'cat', unit]))
+-        self.unit_show = publish_text(self.base, self.output/'trainer-unit-show.txt',
+-            self.run(['systemctl', '--user', 'show', unit]))
+-        self.phase = dict(record=copy.deepcopy(self.runtime.record_pin),
++        raw=self.runtime.raw_api()
++        require(raw['client_count']==192 and raw['training_enabled'] is True and not raw.get('measurement_active',False),
++                'Early phase insurance requires genuinely active192, no pause')
++        self.owner=copy.deepcopy(self.runtime.trainer_id());self.runtime.inspect('after')
++        require(self.runtime.record['metric']==self.runtime.record['previous_metric']=='ce' and
++                self.runtime.record['action']=='start','Only fresh treatment CE->CE phase accepted')
++        pairs,self.context=self.runtime.phase_sources('early-phase-insurance2048')
++        self.pairs=copy.deepcopy(pairs);self.source_pairs=self.base.publish(self.output/'source-archive-pairs.json',pairs)
++        self.context['held_recipe_context']=copy.deepcopy(self.profile['held_recipe_context'])
++        phase=dict(record=copy.deepcopy(self.runtime.record_pin),
+             boot_checkpoint=self.adapter.triple(self.runtime.current_checkpoint['source']),
+             boot_verification=copy.deepcopy(self.runtime.current_checkpoint['verification']),
+-            expected=self.adapter.expected_start(self.runtime.record, self.runtime.record_pin,
+-                                                self.base.read_json(self.runtime.current_checkpoint['verification'])))
+-        self.snapshot.start(raw, self.adapter.four(raw))
+-        require(self.snapshot.owner == self.owner, 'Early owner changed during request preparation')
+-        with self._lock:
+-            self._result = dict(status='PENDING', phase='managed-save')
++            expected=self.adapter.expected_start(self.runtime.record,self.runtime.record_pin,
++                self.base.read_json(self.runtime.current_checkpoint['verification'])))
++        self.phase,self.context,archives=self.adapter.phase_metadata(self.base,phase,self.context,self.output/'metadata')
++        self.base.publish(self.output/'metadata-archives.json',archives)
++        expectation=readonly_json(self.base,self.spec['producer_expectation'])
++        require(set(expectation)=={'schema','owner','boot_id','argv','cwd','exe','environment'} and
++                expectation['schema']=='robotron-root-CE2048-producer-expectation-v1' and expectation['owner']==self.owner,
++                'Actual selected new-owner producer expectation required')
++        env=self.adapter.selected_environment(self.runtime.job['before']['environment'],
++            self.runtime.job['batch_boundary'],self.runtime.record_pin)
++        env={k:v for k,v in env.items() if k.startswith(('DQN_','ROBOTRON_','CUDA_','TORCHINDUCTOR_'))}
++        require(expectation['environment']==env and env.get('DQN_BATCH_SIZE')=='2048' and
++                env.get('DQN_PER_PRIORITY_METRIC')=='ce','Expected actual CE2048 environment differs')
++        owner_pin=self.base.publish(self.output/'owner.json',self.owner)
++        self.collector_spec=dict(schema='robotron-batch2048-producer-live-capture-spec-v1',profile=self.spec['profile'],
++            owner=self.owner,owner_pin=owner_pin,phase_record=self.phase['record'],boot_verification=self.phase['boot_verification'],
++            source_pins={name:pair['current'] for name,pair in pairs.items()},game_root=self.runtime.job['game_root'],
++            environment=env,argv=expectation['argv'],cwd=expectation['cwd'],exe=expectation['exe'],
++            experiment=self.runtime.job['experiment'],boot_id=expectation['boot_id'])
++        self.snapshot.start(raw,self.adapter.four(raw))
++        require(self.snapshot.owner==self.owner,'Early owner changed across request publication')
++        with self._lock:self._result=dict(status='PENDING',phase='managed-save')
+         return self.result()
+ 
+     def tick(self):
+-        if self.result()['status'] != 'PENDING' or self.worker_started:
+-            return self.result()
+-        state = self.snapshot.tick()
+-        if state['status'] == 'FAILED':
+-            with self._lock:
+-                self._result = dict(status='FAILED', error=state['error'], phase='managed-save')
+-        elif state['status'] == 'COMPLETE':
+-            self.worker_started = True
+-            # Small state is frozen BEFORE dispatch; worker never calls runtime
+-            # static/inspect/API/owner methods or mutates managed-request state.
+-            self.verifier = copy.deepcopy(self.runtime.job['verifier'])
+-            try:
+-                self.worker = self.spawn(self._background)
++        if self.result()['status']!='PENDING' or self.worker_started:return self.result()
++        state=self.snapshot.tick()
++        if state['status']=='FAILED':
++            with self._lock:self._result=dict(status='FAILED',error=state['error'],phase='managed-save')
++        elif state['status']=='COMPLETE':
++            self.worker_started=True
++            try:self.worker=self.spawn(self._background)
+             except BaseException as error:
+-                with self._lock:
+-                    self._result = dict(status='FAILED', phase='background-dispatch', error=repr(error))
++                with self._lock:self._result=dict(status='FAILED',phase='background-dispatch',error=repr(error))
+         return self.result()
+ 
+     def _background(self):
++        with self._lock:
++            require(not self.background_attempted,'One background acquisition/CPU attempt only')
++            self.background_attempted=True
+         try:
+-            frozen = self.snapshot.freeze(purpose='candidate', phase=self.phase)
+-            saved = self.base.publish(self.output/'saved-insurance-receipt.json', dict(
+-                schema='robotron-owned-early-KL-insurance-v1', tag=self.spec['tag'], trainer=self.owner,
+-                source=frozen['source'], copy=frozen['verification_copy'], trigger=self.snapshot.raw_pin,
+-                completed_request=self.snapshot.transition['after']['archive'],
+-                no_trainer_actor_stop_or_recipe_source_change=True))
+-            context = copy.deepcopy(self.context)
+-            context['provenance'] = [self.source_pairs, self.unit_show, self.snapshot.raw_pin, saved,
+-                self.snapshot.transition['request']['archive'], self.snapshot.transition['after']['archive'],
+-                self.phase['record'], self.phase['boot_verification']]
+-            job = dict(schema='robotron-live8-maintenance-checkpoint-CPU-job-v1', mode='insurance',
+-                verifier_sha256=self.verifier['script']['sha256'], experiment=self.runtime.job['experiment'],
+-                source=frozen['source'], verification_copy=frozen['verification_copy'], clock_floor=self.snapshot.floor,
+-                source_control_context=context, output_directory=str(self.output/'cpu-output'),
+-                insurance=dict(tag=self.spec['tag'], trainer=self.owner, trigger_snapshot=self.snapshot.raw_pin,
+-                               completed_request=self.snapshot.completed))
+-            job_pin = self.base.publish(self.output/'CPU-root-job.json', job)
+-            execution_dir = self.output/'CPU-execution';execution_dir.mkdir(mode=0o700)
+-            proof = self.executor.run_once(self, job_pin, self.verifier, execution_dir)
+-            verifier = copy.deepcopy(self.verifier);verifier['context'] = context
+-            for key in ('successful_execution', 'successful_completion', 'successful_result'):
+-                verifier['python_binding'][key] = proof[key]
+-            # Frozen v4 validates all NEW actual retained-unit provenance and the
+-            # original exact interpreter symlink/library binding, without Torch.
+-            self.base.validate_python_binding(verifier, proof['insurance_report'], hash_executable=False)
+-            with self._lock:
+-                self._result = dict(status='PASS', insurance_report=proof['insurance_report'],
+-                    insurance_verification=proof['insurance_report'], saved_receipt=saved, insurance_receipt=saved,
+-                    verifier=verifier, frozen=frozen)
++            # Independent read-only producer collection occurs while owner is live.
++            # Neither collector nor worker calls runtime.inspect/static/API methods.
++            capture=self.collector.capture_live(self.collector_spec,self.output/'producer-live-capture')
++            frozen=self.snapshot.freeze(purpose='candidate',phase=self.phase)
++            # FINAL real acquisition is already durably published by freeze.
++            producer=self.collector.bind_capture(capture,frozen['source'],frozen['acquisition'],self.output/'producer-binding')
++            saved=self.base.publish(self.output/'saved-early-phase-receipt.json',dict(
++                schema='robotron-owned-CE2048-early-phase-snapshot-v1',role='early_insurance',tag=self.spec['tag'],
++                trainer=self.owner,source=frozen['source'],copy=frozen['verification_copy'],trigger=self.snapshot.raw_pin,
++                acquisition=frozen['acquisition'],completed_request=self.snapshot.transition['after']['archive'],
++                producer_capture=capture,producer_observation=producer,phase_record=self.phase['record'],
++                no_trainer_actor_stop_or_recipe_source_change=True,eligible_quality_candidate=False))
++            context=copy.deepcopy(self.context)
++            context['provenance']=list(context.get('provenance',[]))+[self.source_pairs,self.snapshot.raw_pin,saved,
++                self.snapshot.transition['request']['archive'],self.snapshot.transition['after']['archive'],
++                self.phase['record'],self.phase['boot_verification'],self.spec['producer_expectation'],capture,producer]
++            job=phase_job(self.adapter,self.base,self.runtime.job['experiment'],self.owner,self.phase,self.pairs,
++                          context,frozen,self.snapshot.floor,self.spec['profile'],producer,self.output/'cpu-output')
++            jp=self.base.publish(self.output/'CPU-phase-job.json',job)
++            execution_dir=self.output/'CPU-execution';execution_dir.mkdir(mode=0o700)
++            proof=self.executor.run_once(self,jp,self.verifier,execution_dir)
++            check_phase_provenance(self.base,self.verifier,jp,proof)
++            check_python_identity(self.base,self.verifier,hash_executable=False)
++            result=dict(schema=RESULT_SCHEMA,status='PASS',role='early_insurance',tag=self.spec['tag'],owner=self.owner,
++                phase_cpu_report=proof['phase_cpu_report'],saved_receipt=saved,phase_cpu_job=jp,cpu_provenance=proof,
++                python_identity=copy.deepcopy(self.verifier['python_identity']),python=self.verifier['python'],
++                frozen=frozen,producer_capture=capture,producer_observation=producer,phase=copy.deepcopy(self.phase),
++                profile=self.spec['profile'],eligible_quality_candidate=False,legacy_7d_insurance=False)
++            result_pin=self.base.publish(self.output/'result.json',result)
++            with self._lock:self._result=dict(result,result_pin=result_pin)
+         except BaseException as error:
+-            failure = dict(status='FAILED', phase='freeze-or-first-CPU', error=repr(error), traceback=traceback.format_exc())
+-            try:
+-                self.base.publish(self.output/'early-insurance-failure.json', failure)
+-            except BaseException as reporting:
+-                failure['reporting_error'] = repr(reporting)
+-            with self._lock:
+-                self._result = failure
++            failure=dict(status='FAILED',phase='freeze-or-first-phase-CPU',error=repr(error),traceback=traceback.format_exc())
++            try:self.base.publish(self.output/'early-phase-insurance-failure.json',failure)
++            except BaseException as reporting:failure['reporting_error']=repr(reporting)
++            with self._lock:self._result=failure
++
++
++def main():
++    print('PLAN_ONLY_UNCONSUMED: explicit root-owned CE2048 phase adapter and frozen collector required; no reads/imports/actions')
++    return 0
++
++
++if __name__ == '__main__':
++    raise SystemExit(main())

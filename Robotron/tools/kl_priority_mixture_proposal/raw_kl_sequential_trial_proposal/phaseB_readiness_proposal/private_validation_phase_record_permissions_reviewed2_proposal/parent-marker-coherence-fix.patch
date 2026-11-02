@@ -1,0 +1,86 @@
+--- before-marker-coherence/cuda_trace_parent.py
++++ current-preexecution/cuda_trace_parent.py
+@@ -630,32 +630,34 @@
+ 
+ def checkpoint_marker_snapshot(directory,events):
+     directory=Path(directory);target=directory/'post-step-checkpoint.pt'
+-    markers={}
+-    for stage,name in (('entered','save-entered.json'),('complete','save-complete.json')):
++    def read_marker(stage,name):
+         path=directory/name
+         try:
+             info=path.lstat()
+         except OSError as error:
+             if error.errno==errno.ENOENT:
+-                markers[stage]=None;continue
++                return None
+             raise
+         mode=stat.S_IMODE(info.st_mode)
+         require(stat.S_ISREG(info.st_mode) and info.st_uid==os.getuid()
+                 and info.st_nlink==1 and 0<=info.st_size<=65536 and not mode&0o111,
+                 'Save marker must be owned single-link bounded regular metadata')
+         if mode&0o200:
+-            # create-only write_json exposes the path while filling/fsyncing it.
+-            # A writable marker is pending, never proof authorizing a save.
+-            markers[stage]=dict(pending=True)
++            # Visible create-only publication is not yet authority.
+             events['pending_marker_snapshots']=events.get('pending_marker_snapshots',0)+1
+             events['last_pending_marker']=name
+-            continue
++            return dict(pending=True)
+         require(mode==0o444 and info.st_size>0, 'Completed save marker must be readonly/nonempty')
+         value,_=bounded_json(dict(path=str(path),sha256=digest(path),bytes=info.st_size),read_only=True)
+         require(value['schema']=='robotron-raw-kl-stage-b-save-v1' and value['variant']=='kl18'
+                 and value['stage']==stage and value['path']==str(target), 'Save marker context differs')
+-        markers[stage]=value
+-    entered=markers['entered'];complete=markers['complete']
++        return value
++    entered=read_marker('entered','save-entered.json')
++    complete=read_marker('complete','save-complete.json')
++    if complete is not None and (entered is None or entered.get('pending',False)):
++        # Reads are not a coherent snapshot. Intent is monotonic/create-only;
++        # allow ONE fresh strict read if completion appeared after a stale view.
++        entered=read_marker('entered','save-entered.json')
+     require(complete is None or (entered is not None and not entered.get('pending',False)),
+             'Completed save lacks validated entered record')
+     return dict(entered_valid=entered is not None and not entered.get('pending',False),
+--- before-marker-coherence/test_stage_b_parent.py
++++ current-preexecution/test_stage_b_parent.py
+@@ -8,6 +8,7 @@
+ import json
+ import os
+ from pathlib import Path
++import stat
+ import tempfile
+ from types import SimpleNamespace
+ import unittest
+@@ -91,6 +92,29 @@
+         self.temp.write_bytes(b'fixture')
+         with self.assertRaises(FileNotFoundError):self.count_with_disappearance(self.context(),self.temp.unlink)
+         self.assertEqual(self.events['ignored_enoent'],0)
++
++    def test_stale_absent_or_pending_entered_is_read_once_again_after_complete_appears(self):
++        self.entered();self.complete()
++        path=self.directory/'save-entered.json';real_lstat=Path.lstat;real_bounded=parent.bounded_json
++        for first in ('absent','pending'):
++            seen=[];parsed=[]
++            def lstat(value,*args,**kwargs):
++                if value==path and not seen:
++                    seen.append(True)
++                    if first=='absent':raise FileNotFoundError(errno.ENOENT,'stale first view',str(path))
++                    return SimpleNamespace(st_mode=stat.S_IFREG|0o644,st_uid=os.getuid(),st_nlink=1,st_size=0)
++                return real_lstat(value,*args,**kwargs)
++            def bounded(record,**kwargs):
++                parsed.append(record['path']);return real_bounded(record,**kwargs)
++            with self.subTest(first=first),patch.object(Path,'lstat',lstat),patch.object(parent,'bounded_json',side_effect=bounded):
++                result=parent.checkpoint_marker_snapshot(self.directory,self.events)
++            self.assertTrue(result['entered_valid']);self.assertIsNotNone(result['completed'])
++            self.assertEqual(parsed.count(str(path)),1)
++
++    def test_complete_with_genuinely_missing_entered_is_still_refused(self):
++        self.complete()
++        with self.assertRaisesRegex(RuntimeError,'lacks validated entered'):
++            parent.checkpoint_marker_snapshot(self.directory,self.events)
+ 
+     def test_preexisting_complete_never_authorizes_later_stale_temp_loss(self):
+         self.entered();self.complete();self.temp.write_bytes(b'stale')

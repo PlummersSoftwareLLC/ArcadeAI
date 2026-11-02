@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Actual final CE543M quality owned closure job; no hypothetical job is executable",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "binding_job",
+    "timer_invocation_id",
+    "terminal_status",
+    "terminal_summary",
+    "root_acceptance",
+    "legs",
+    "output_directory"
+  ],
+  "properties": {
+    "schema": {
+      "const": "robotron-CE543M-quality-owned-closure-job-v1"
+    },
+    "binding_job": {
+      "$ref": "#/$defs/pin"
+    },
+    "timer_invocation_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "terminal_status": {
+      "$ref": "#/$defs/pin"
+    },
+    "terminal_summary": {
+      "$ref": "#/$defs/pin"
+    },
+    "root_acceptance": {
+      "$ref": "#/$defs/pin"
+    },
+    "legs": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "receipt",
+          "finished_record",
+          "audit_receipt",
+          "audit_execution",
+          "independent_review",
+          "startup_observation",
+          "index",
+          "evaluator",
+          "actors"
+        ],
+        "properties": {
+          "receipt": {
+            "$ref": "#/$defs/pin"
+          },
+          "finished_record": {
+            "$ref": "#/$defs/pin"
+          },
+          "audit_receipt": {
+            "$ref": "#/$defs/pin"
+          },
+          "audit_execution": {
+            "$ref": "#/$defs/pin"
+          },
+          "independent_review": {
+            "$ref": "#/$defs/pin"
+          },
+          "startup_observation": {
+            "$ref": "#/$defs/pin"
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "evaluator": {
+            "type": "object",
+            "required": [
+              "pid",
+              "starttime_ticks"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "pid": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "starttime_ticks": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "actors": {
+            "type": "array",
+            "minItems": 16,
+            "maxItems": 16,
+            "items": {
+              "type": "object",
+              "required": [
+                "slot",
+                "pid",
+                "starttime_ticks"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "pid": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "starttime_ticks": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "slot": {
+                  "type": "integer",
+                  "minimum": 4096,
+                  "maximum": 4111
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "output_directory": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "$defs": {
+    "pin": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256",
+        "bytes",
+        "identity"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "identity": {
+          "type": "object",
+          "minProperties": 1
+        }
+      }
+    }
+  }
+}

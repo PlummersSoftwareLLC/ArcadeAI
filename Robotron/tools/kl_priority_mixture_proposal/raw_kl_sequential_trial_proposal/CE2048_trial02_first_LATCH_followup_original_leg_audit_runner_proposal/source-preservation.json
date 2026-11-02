@@ -1,0 +1,33 @@
+{
+  "schema": "robotron-first-LATCH-followup-audit-root-runner-preservation-v1",
+  "original_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE543M_quality_original_leg_audit_runner_proposal/run_original_leg_audit.py",
+    "sha256": "e3b4e3492fa3e26dcebdfefb84c5d9c5f7b6468861cf7e7f2c63d0e0804286c5",
+    "bytes": 19839
+  },
+  "new_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_followup_original_leg_audit_runner_proposal/run_original_leg_audit.py",
+    "sha256": "8f0967f763ae524cc7399bfef58fd2d04a125e796e4daa75ac7c8d81efc7430e",
+    "bytes": 20067
+  },
+  "unchanged_functions": [
+    "require",
+    "sha",
+    "load",
+    "pin",
+    "save",
+    "call",
+    "show",
+    "start",
+    "setup",
+    "archive"
+  ],
+  "changed_functions": [
+    "names",
+    "audit_argv",
+    "configure_future",
+    "launch"
+  ],
+  "archive_body_byte_exact": true,
+  "actual_execution": null
+}

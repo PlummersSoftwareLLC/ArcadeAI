@@ -5,10 +5,34 @@
 # ==================================================================================================================
 """Prioritized replay buffer using a sum-tree for O(log N) sampling."""
 
-import os, sys, time, shutil
+import os, sys, time, shutil, json, uuid
 import numpy as np
 import threading
+
+try:
+    from .learning_exposure import ReplayInsertExposure, exposure_enabled, disabled_snapshot as exposure_disabled_snapshot
+except ImportError:
+    from learning_exposure import ReplayInsertExposure, exposure_enabled, disabled_snapshot as exposure_disabled_snapshot
 from collections import deque
+
+try:
+    from .native_sumtree import propagate as _native_propagate
+    from .native_sumtree import gather_fp16_rows as _native_gather_fp16_rows
+except ImportError:
+    try:
+        from native_sumtree import propagate as _native_propagate
+        from native_sumtree import gather_fp16_rows as _native_gather_fp16_rows
+    except ImportError:
+        _native_propagate = None
+        _native_gather_fp16_rows = None
+
+try:
+    from .native_sumtree import batch_update as _native_batch_update
+except ImportError:
+    try:
+        from native_sumtree import batch_update as _native_batch_update
+    except ImportError:
+        _native_batch_update = None
 
 try:
     from .config import RL_CONFIG, decode_token_types, TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT
@@ -16,10 +40,45 @@ except ImportError:
     from config import RL_CONFIG, decode_token_types, TYPE_ONEHOT_OFFSET, TYPE_CLASS_COUNT
 
 
-ACTOR_DQN = 0
-ACTOR_EPSILON = 1
-ACTOR_EXPERT = 2
-ACTOR_KIND_COUNT = 3
+try:
+    from .actor_tags import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT, ACTOR_KIND_COUNT
+except ImportError:
+    from actor_tags import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT, ACTOR_KIND_COUNT
+
+
+def _gather_states_fp32(source, indices, out=None):
+    if _native_gather_fp16_rows is not None:
+        gathered = _native_gather_fp16_rows(source, indices, out=out)
+        if gathered is not None:
+            return gathered
+    if out is not None:
+        np.copyto(out, source[indices], casting="unsafe")
+        return out
+    return source[indices].astype(np.float32, copy=False)
+
+
+def _fill_state_rows(out, ring_source, ring_indices, banks):
+    """Fill a validated final state buffer without a concatenation allocation."""
+    cursor = len(ring_indices)
+    _gather_states_fp32(ring_source, ring_indices, out=out[:cursor])
+    for source, indices in banks:
+        end = cursor + len(indices)
+        if end != cursor:
+            # Keep bank values fp32; the actor's retained elite evidence must
+            # never be rounded through the fp16 ring representation.
+            np.copyto(out[cursor:end], source[indices], casting="unsafe")
+        cursor = end
+    if cursor != len(out):
+        raise ValueError("State output row count differs from replay sample")
+    return out
+
+
+try:
+    from .bank_output import (BankOutputTelemetry, stream_output_enabled,
+                              write_bank_array)
+except ImportError:
+    from bank_output import (BankOutputTelemetry, stream_output_enabled,
+                             write_bank_array)
 
 
 class SumTree:
@@ -36,6 +95,8 @@ class SumTree:
         self._depth = int(np.ceil(np.log2(max(2, self.capacity))))
 
     def _propagate(self, idx: int):
+        if _native_propagate is not None and _native_propagate(self.tree, idx):
+            return
         parent = idx >> 1
         while parent >= 1:
             self.tree[parent] = self.tree[parent * 2] + self.tree[parent * 2 + 1]
@@ -104,6 +165,12 @@ class SumTree:
         Sets all leaf priorities at once then walks up the tree one level at
         a time, merging duplicate parents with np.unique at each level.
         """
+        if (_native_batch_update is not None
+                and _native_batch_update(self.tree, self.capacity, data_indices, priorities)):
+            mx = float(priorities.max())
+            if mx > self.max_priority:
+                self.max_priority = mx
+            return
         tree_idx = data_indices.astype(np.int64) + self.capacity
         self.tree[tree_idx] = priorities.astype(np.float64)
         mx = float(priorities.max())
@@ -132,6 +199,7 @@ class PrioritizedReplayBuffer:
         self.state_size = int(state_size)
         self.alpha = float(alpha)
         self.lock = threading.Lock()
+        self._insert_exposure = ReplayInsertExposure() if exposure_enabled() else None
 
         # Storage arrays
         # fp16 ring states (2026-07-18): halves state memory so the ring can
@@ -237,6 +305,24 @@ class PrioritizedReplayBuffer:
         # has moved past the value at its last successful save.
         self._hof_saved_admit_add = 0
         self._ephof_saved_admit_add = 0
+        # Admissions can share the same ring-add clock. Persistence therefore
+        # uses independent revisions; quota/staleness clocks retain their meaning.
+        self._bank_revision = {"hof": 0, "ephof": 0}
+        self._bank_saved_revision = {"hof": 0, "ephof": 0}
+        self._bank_load_epoch = {"hof": 0, "ephof": 0}
+        self._bank_persist_lock = threading.RLock()
+        self._bank_writer_lock = threading.Lock()
+        self._bank_writer_thread = None
+        self._bank_snapshot_chunk_rows = 128
+        self._bank_snapshot_attempts = 2
+        self._bank_persistence_stats = dict(
+            capture_attempts=0, capture_deferrals=0, snapshot_lock_max_ms=0.0,
+            writes=0, write_failures=0, write_duration_s=0.0,
+            last_write_duration_s=0.0, last_error=None)
+        # Only field-file output changes when explicitly requested.
+        # Capture/publication/revision/epoch/flush semantics stay unchanged.
+        self._bank_stream_output = stream_output_enabled()
+        self._bank_output_telemetry = BankOutputTelemetry(self._bank_stream_output)
         # EpHOF sentinel indices start past the game-HOF sentinel span so the
         # two banks can never alias in update_priorities' >= capacity filter.
         self._ephof_base = self.capacity + (
@@ -331,7 +417,7 @@ class PrioritizedReplayBuffer:
 
     def add(self, state, action: int, reward: float, next_state, done: bool,
             horizon: int = 1, expert: int = 0, priority_hint: float = 0.0,
-            interest: float = 0.0, actor_kind: int | None = None):
+            interest: float = 0.0, actor_kind: int | None = None, source_actor: str | None = None):
         with self.lock:
             self._adds_total += 1   # bank starvation/staleness clock
             kind = int(actor_kind) if actor_kind is not None else self.actor_kind_from_name(None, expert)
@@ -390,6 +476,9 @@ class PrioritizedReplayBuffer:
                 self._interesting_bank_ptr = (self._interesting_bank_ptr + 1) % len(self._interesting_bank)
                 self._interesting_bank_count = min(self._interesting_bank_count + 1, len(self._interesting_bank))
             self.size = self.tree.size
+            exposure = getattr(self, "_insert_exposure", None)
+            if exposure is not None:
+                exposure.accepted(source_actor, expert, kind)
 
     def clear(self):
         """Wipe all transitions in place (collapse-watchdog recovery).
@@ -406,6 +495,9 @@ class PrioritizedReplayBuffer:
         permanence is its entire reason to exist.
         """
         with self.lock:
+            exposure = getattr(self, "_insert_exposure", None)
+            if exposure is not None:
+                exposure.new_epoch("clear_begin")
             self.tree.tree[:] = 0.0
             self.tree.data_ptr = 0
             self.tree.size = 0
@@ -558,6 +650,7 @@ class PrioritizedReplayBuffer:
             setattr(self, f"_{bank}_last_admit_add", self._adds_total)
             if normal:
                 setattr(self, f"_{bank}_last_normal_admit_add", self._adds_total)
+            self._bank_revision[bank] += 1
         if relief_note:
             print(relief_note)
         return True
@@ -713,142 +806,312 @@ class PrioritizedReplayBuffer:
             float(getattr(RL_CONFIG, "ephof_replay_fraction", 0.0)),
             float(getattr(RL_CONFIG, "ephof_min_episode_score", 0)), self._ephof_max_eps)
 
-    def sample(self, batch_size: int, beta: float = 0.4):
+    def sample_into(self, batch_size, states_out, next_states_out, beta=0.4):
+        """Opt-in final-buffer fill; sampling/RNG/quotas match sample exactly."""
+        return self.sample(batch_size, beta=beta, _state_out=(states_out, next_states_out))
+
+    def sample(self, batch_size: int, beta: float = 0.4, _state_out=None):
         """Sample a prioritised batch. Returns (states, actions, rewards,
         next_states, dones, horizons, is_expert, actor_kind, indices, weights)."""
         with self.lock:
-            if self.size < batch_size:
-                return None
+            return self._sample_locked(batch_size, beta, _state_out)
 
-            total = self.tree.total()
-            if total <= 0:
-                return None
+    def sample_with_metadata(self, batch_size: int, beta: float = 0.4, *,
+                             capture_id: str, _state_out=None):
+        """Explicit diagnostic API; ordinary sample()/sample_into() stay OFF.
 
-            # Hall-of-fame quota first: a guaranteed slice of permanent
-            # peak-play data in every batch (the anti-forgetting anchor).
-            hof_count = 0
-            if self._hof_enabled and self.hof_total >= int(getattr(RL_CONFIG, "hof_min_transitions", 4096)):
-                hof_frac = max(0.0, min(0.25, float(getattr(RL_CONFIG, "hof_replay_fraction", 0.0))))
-                hof_frac *= self._bank_quota_scale_for("hof")
-                hof_count = min(batch_size // 4, int(round(batch_size * hof_frac)))
-            ephof_count = 0
-            if self._ephof_enabled and self.ephof_total >= int(getattr(RL_CONFIG, "ephof_min_transitions", 4096)):
-                ephof_frac = max(0.0, min(0.30, float(getattr(RL_CONFIG, "ephof_replay_fraction", 0.0))))
-                ephof_frac *= self._bank_quota_scale_for("ephof")
-                ephof_count = min(batch_size // 4, int(round(batch_size * ephof_frac)))
-            # Combined banks may never crowd the ring below half the batch.
-            if hof_count + ephof_count > batch_size // 2:
-                ephof_count = max(0, batch_size // 2 - hof_count)
+        Return (ordinary ten-field batch, detached draw metadata), or
+        (None, None). No extra sampler/RNG call, tree scan, disk/device work,
+        or sampling-policy change. The caller supplies a capture identity;
+        it is NOT a persisted replay/load/row generation or optimizer ticket.
+        This API is not wired to production prefetch/training by this proposal.
+        """
+        if (not isinstance(capture_id, str) or not capture_id
+                or len(capture_id) > 128):
+            raise ValueError("A bounded nonempty diagnostic capture_id is required")
+        if type(batch_size) is not int or not 1 <= batch_size <= 4096:
+            raise ValueError("Diagnostic draws are bounded to 1..4096 rows")
+        with self.lock:
+            trace = {"capture_id": capture_id,
+                     "observer_error": None,
+                     "lock_observation_started_monotonic_ns": time.monotonic_ns()}
+            batch = self._sample_locked(batch_size, beta, _state_out, _draw_trace=trace)
+            if batch is None:
+                return None, None
+            # Direct state outputs may alias reusable pinned slots. Retain
+            # detached small fields here, and explicitly omit full states.
+            names = ("actions", "rewards", "dones", "horizons", "is_expert", "actor_kind")
+            positions = (1, 2, 4, 5, 6, 7)
+            try:
+                trace["small_batch_fields"] = {
+                    name: self._draw_metadata_copy(batch[position])
+                    for name, position in zip(names, positions)
+                }
+                trace["lock_observation_finished_monotonic_ns"] = time.monotonic_ns()
+            except Exception as error:
+                # Metadata-only fault AFTER this exact draw. Never resample,
+                # catch a sampler/gather error or call a session/file hook here.
+                trace["observer_error"] = type(error).__name__
+            return batch, trace
 
-            frac = max(0.0, min(0.75, float(getattr(RL_CONFIG, "interesting_replay_fraction", 0.0))))
-            recent_frac = max(0.0, min(0.75, float(getattr(RL_CONFIG, "recent_replay_fraction", 0.0))))
-            if frac + recent_frac > 0.90:
-                scale = 0.90 / (frac + recent_frac)
-                frac *= scale
-                recent_frac *= scale
-            ring_budget = batch_size - hof_count - ephof_count
-            interesting_count = min(ring_budget - 1, int(round(batch_size * frac))) if frac > 0.0 else 0
-            interesting_indices = self._sample_interesting_indices(interesting_count)
-            recent_count = min(ring_budget - int(interesting_indices.size) - 1, int(round(batch_size * recent_frac))) if recent_frac > 0.0 else 0
-            recent_indices = self._sample_recent_indices(recent_count)
-            per_count = ring_budget - int(interesting_indices.size) - int(recent_indices.size)
+    @staticmethod
+    def _draw_metadata_copy(value):
+        copied = np.array(value, copy=True)
+        copied.flags.writeable = False
+        return copied
 
-            # Stratified sampling — one uniform draw per segment (vectorised)
-            segment = total / max(1, per_count)
-            lows = np.arange(per_count, dtype=np.float64) * segment
-            highs = lows + segment
-            values = np.random.uniform(lows, highs)
-            per_indices = self.tree.batch_get(values) if per_count > 0 else np.empty(0, dtype=np.int64)
-            if per_indices.size:
-                np.clip(per_indices, 0, self.size - 1, out=per_indices)
-            indices = np.concatenate([per_indices, interesting_indices, recent_indices])
+    def _record_draw_metadata_locked(self, trace, beta, total, per_indices,
+                                     interesting_indices, recent_indices,
+                                     indices, weights, banks, per_clamped,
+                                     unnormalized):
+        """Copy only selected rows under the existing plain replay lock.
 
-            # Importance-sampling weights (2026-07 fix): the PER formula
-            # applies ONLY to the tree-drawn slice.  The recent/interesting
-            # quotas are uniform/score-drawn, not priority-drawn — assigning
-            # them PER weights computed from tree priorities they were never
-            # drawn by tilted over half of each batch's effective gradient
-            # toward the newest minutes of the policy's own play (the
-            # positive-feedback engine of every collapse).  Quota and HOF
-            # samples get weight 1.0.
-            weights = np.ones(int(indices.size) + hof_count + ephof_count, dtype=np.float64)
-            if per_indices.size:
-                pri = np.maximum(1e-10, self.tree.tree[per_indices + self.tree.capacity])
-                w = (self.size * (pri / total)) ** (-beta)
-                weights[:per_indices.size] = w / max(1e-12, float(w.max()))
-                # Honest bank weights (2026-07-22): bank rows previously rode
-                # weight 1.0 — the PER max — giving 25% of the batch a
-                # privileged gradient pull over live data (mean PER weight is
-                # well below 1).  Bank rows now carry exactly the mean PER
-                # weight: an average vote, never a megaphone.
-                if hof_count + ephof_count > 0:
-                    weights[int(indices.size):] = float(
-                        np.mean(weights[:per_indices.size]))
+        No global tree-minimum scan and no persistent generation fabrication.
+        Bank payload is already copied by the ordinary sampler under this lock.
+        """
+        counts = (len(per_indices), len(interesting_indices), len(recent_indices))
+        counts += tuple(next((len(slots) for bank, _, slots in banks if bank == name), 0)
+                        for name in ("hof", "ephof"))
+        cursor, origins = 0, []
+        for name, count in zip(("per", "interesting", "recent", "hof", "ephof"), counts):
+            origins.append((name, cursor, cursor + count))
+            cursor += count
+        per_raw = np.array(self.tree.tree[per_indices + self.tree.capacity], copy=True)
+        all_indices = np.concatenate([indices] + [base + slots for _, base, slots in banks])
+        trace.update(
+            schema="robotron-replay-draw-observation-v1",
+            scope="selected replay sampler draw; tree metric not independently identified",
+            beta=float(beta), alpha=float(self.alpha), capacity=int(self.capacity),
+            state_width=int(self.state_size), size=int(self.size), pointer=int(self.tree.data_ptr),
+            adds_total_process_local=int(self._adds_total), tree_total=float(total),
+            historical_max=float(self.tree.max_priority),
+            selected_per_raw_max_weight=float(unnormalized.max()) if len(unnormalized) else None,
+            selected_per_min_clamped_leaf=float(per_clamped.min()) if len(per_clamped) else None,
+            origin_boundaries=tuple(origins),
+            indices=self._draw_metadata_copy(all_indices),
+            ring_selected_raw_leaves=self._draw_metadata_copy(
+                self.tree.tree[indices + self.tree.capacity]),
+            per_raw_leaves=self._draw_metadata_copy(per_raw),
+            per_clamped_leaves=self._draw_metadata_copy(per_clamped),
+            per_raw_weights_float64=self._draw_metadata_copy(unnormalized),
+            supplied_weights_float64=self._draw_metadata_copy(weights),
+            supplied_weights_float32=self._draw_metadata_copy(weights.astype(np.float32)),
+            # A bounded observation must not pretend that a future tree read
+            # or a disk CURRENT selector identifies the sampled in-RAM rows.
+            unknown=dict(global_tree_minimum="not maintained; full-tree scan deliberately omitted",
+                         priority_metric="requires separately bound caller/run provenance",
+                         tree_metric_identity="stored leaves have no persisted metric tag",
+                         ring_load_epoch="not tracked by current replay",
+                         slot_insert_generation="not stored per slot",
+                         priority_metric_conversion_age="not stored per slot",
+                         persistent_bank_generation="RAM revision is not a disk CURRENT generation",
+                         optimizer_outcome="not an executed learner attempt",
+                         full_states="omitted; compact sampler fixture is not numerical replay"),
+            banks={name: dict(
+                enabled=bool(getattr(self, f"_{name}_enabled")),
+                valid_flat_count=len(getattr(self, f"_{name}_flat", ())),
+                transitions=int(getattr(self, f"{name}_total")),
+                episodes=int(getattr(self, f"{name}_ep_count")),
+                revision=int(self._bank_revision[name]), load_epoch=int(self._bank_load_epoch[name]),
+                last_admit_add=int(getattr(self, f"_{name}_last_admit_add")),
+                last_normal_admit_add=int(getattr(self, f"_{name}_last_normal_admit_add")),
+                quota_scale=float(self._bank_quota_scale_for(name))
+                    if getattr(self, f"_{name}_enabled") else None,
+                selected_slots=self._draw_metadata_copy(next(
+                    (slots for bank, _, slots in banks if bank == name),
+                    np.empty(0, dtype=np.int64)))) for name in ("hof", "ephof")},
+        )
 
-            # Bank rows (HOF / EpHOF) ride sentinel indices >= capacity;
-            # update_priorities filters them out (no sum-tree leaves).  EpHOF
-            # sentinels start at _ephof_base, past the game-HOF span, so the
-            # two banks cannot alias.
-            banks = []
-            if hof_count > 0:
-                banks.append(("hof", self.capacity,
-                              self._hof_flat[np.random.randint(0, self._hof_flat.size, hof_count)]))
-            if ephof_count > 0:
-                banks.append(("ephof", self._ephof_base,
-                              self._ephof_flat[np.random.randint(0, self._ephof_flat.size, ephof_count)]))
-            if banks:
-                all_indices = np.concatenate(
-                    [indices] + [base + slots for _, base, slots in banks])
+    def _sample_locked(self, batch_size, beta, _state_out, _draw_trace=None):
+        # Output validation and sampling share the replay lock: a storage
+        # reload must not change the alias set between validation and writes.
+        if _state_out is not None:
+            if len(_state_out) != 2:
+                raise ValueError("Two replay state outputs are required")
+            for output in _state_out:
+                if (not isinstance(output, np.ndarray) or output.dtype != np.dtype(np.float32)
+                        or output.shape != (batch_size, self.state_size)
+                        or not output.flags.c_contiguous or not output.flags.writeable
+                        or not output.flags.aligned):
+                    raise ValueError("Replay state output must be writable contiguous aligned fp32 with exact shape")
+                storage = [value for value in vars(self).values() if isinstance(value, np.ndarray)]
+                storage.append(self.tree.tree)
+                for source in storage:
+                    if np.may_share_memory(output, source):
+                        raise ValueError("Replay state output may not alias replay storage")
+            if np.may_share_memory(*_state_out):
+                raise ValueError("Replay state outputs may not alias each other")
+        if self.size < batch_size:
+            return None
 
-                def _cat(field, cast=None):
-                    # fp16 ring + fp32 banks: concat promotes to fp32 (free);
-                    # astype guards the invariant if bank dtype ever changes.
-                    parts = [getattr(self, field)[indices]] + [
-                        getattr(self, f"{prefix}_{field}")[slots] for prefix, _, slots in banks]
-                    out = np.concatenate(parts)
-                    return out.astype(cast, copy=False) if cast is not None else out
+        total = self.tree.total()
+        if total <= 0:
+            return None
 
-                return (
-                    _cat("states", np.float32),
-                    _cat("actions"),
-                    _cat("rewards"),
-                    _cat("next_states", np.float32),
-                    _cat("dones"),
-                    _cat("horizons"),
-                    _cat("is_expert"),
-                    _cat("actor_kind"),
-                    all_indices,
-                    weights.astype(np.float32),
-                )
+        # Hall-of-fame quota first: a guaranteed slice of permanent
+        # peak-play data in every batch (the anti-forgetting anchor).
+        hof_count = 0
+        if self._hof_enabled and self.hof_total >= int(getattr(RL_CONFIG, "hof_min_transitions", 4096)):
+            hof_frac = max(0.0, min(0.25, float(getattr(RL_CONFIG, "hof_replay_fraction", 0.0))))
+            hof_frac *= self._bank_quota_scale_for("hof")
+            hof_count = min(batch_size // 4, int(round(batch_size * hof_frac)))
+        ephof_count = 0
+        if self._ephof_enabled and self.ephof_total >= int(getattr(RL_CONFIG, "ephof_min_transitions", 4096)):
+            ephof_frac = max(0.0, min(0.30, float(getattr(RL_CONFIG, "ephof_replay_fraction", 0.0))))
+            ephof_frac *= self._bank_quota_scale_for("ephof")
+            ephof_count = min(batch_size // 4, int(round(batch_size * ephof_frac)))
+        # Combined banks may never crowd the ring below half the batch.
+        if hof_count + ephof_count > batch_size // 2:
+            ephof_count = max(0, batch_size // 2 - hof_count)
+
+        frac = max(0.0, min(0.75, float(getattr(RL_CONFIG, "interesting_replay_fraction", 0.0))))
+        recent_frac = max(0.0, min(0.75, float(getattr(RL_CONFIG, "recent_replay_fraction", 0.0))))
+        if frac + recent_frac > 0.90:
+            scale = 0.90 / (frac + recent_frac)
+            frac *= scale
+            recent_frac *= scale
+        ring_budget = batch_size - hof_count - ephof_count
+        interesting_count = min(ring_budget - 1, int(round(batch_size * frac))) if frac > 0.0 else 0
+        interesting_indices = self._sample_interesting_indices(interesting_count)
+        recent_count = min(ring_budget - int(interesting_indices.size) - 1, int(round(batch_size * recent_frac))) if recent_frac > 0.0 else 0
+        recent_indices = self._sample_recent_indices(recent_count)
+        per_count = ring_budget - int(interesting_indices.size) - int(recent_indices.size)
+
+        # Stratified sampling — one uniform draw per segment (vectorised)
+        segment = total / max(1, per_count)
+        lows = np.arange(per_count, dtype=np.float64) * segment
+        highs = lows + segment
+        values = np.random.uniform(lows, highs)
+        per_indices = self.tree.batch_get(values) if per_count > 0 else np.empty(0, dtype=np.int64)
+        if per_indices.size:
+            np.clip(per_indices, 0, self.size - 1, out=per_indices)
+        indices = np.concatenate([per_indices, interesting_indices, recent_indices])
+
+        # Importance-sampling weights (2026-07 fix): the PER formula
+        # applies ONLY to the tree-drawn slice.  The recent/interesting
+        # quotas are uniform/score-drawn, not priority-drawn — assigning
+        # them PER weights computed from tree priorities they were never
+        # drawn by tilted over half of each batch's effective gradient
+        # toward the newest minutes of the policy's own play (the
+        # positive-feedback engine of every collapse).  Quota and HOF
+        # samples get weight 1.0.
+        weights = np.ones(int(indices.size) + hof_count + ephof_count, dtype=np.float64)
+        if per_indices.size:
+            pri = np.maximum(1e-10, self.tree.tree[per_indices + self.tree.capacity])
+            w = (self.size * (pri / total)) ** (-beta)
+            weights[:per_indices.size] = w / max(1e-12, float(w.max()))
+            # Honest bank weights (2026-07-22): bank rows previously rode
+            # weight 1.0 — the PER max — giving 25% of the batch a
+            # privileged gradient pull over live data (mean PER weight is
+            # well below 1).  Bank rows now carry exactly the mean PER
+            # weight: an average vote, never a megaphone.
+            if hof_count + ephof_count > 0:
+                weights[int(indices.size):] = float(
+                    np.mean(weights[:per_indices.size]))
+
+        # Bank rows (HOF / EpHOF) ride sentinel indices >= capacity;
+        # update_priorities filters them out (no sum-tree leaves).  EpHOF
+        # sentinels start at _ephof_base, past the game-HOF span, so the
+        # two banks cannot alias.
+        banks = []
+        if hof_count > 0:
+            banks.append(("hof", self.capacity,
+                          self._hof_flat[np.random.randint(0, self._hof_flat.size, hof_count)]))
+        if ephof_count > 0:
+            banks.append(("ephof", self._ephof_base,
+                          self._ephof_flat[np.random.randint(0, self._ephof_flat.size, ephof_count)]))
+        if _draw_trace is not None:
+            try:
+                self._record_draw_metadata_locked(
+                    _draw_trace, beta, total, per_indices, interesting_indices,
+                    recent_indices, indices, weights, banks,
+                    pri if per_indices.size else np.empty(0, dtype=np.float64),
+                    w if per_indices.size else np.empty(0, dtype=np.float64))
+            except Exception as error:
+                _draw_trace["observer_error"] = type(error).__name__
+        if banks:
+            all_indices = np.concatenate(
+                [indices] + [base + slots for _, base, slots in banks])
+
+            def _cat(field, cast=None):
+                if _state_out is not None and field in ("states", "next_states"):
+                    output = _state_out[0 if field == "states" else 1]
+                    return _fill_state_rows(
+                        output, getattr(self, field), indices,
+                        [(getattr(self, f"{prefix}_{field}"), slots) for prefix, _, slots in banks],
+                    )
+                # fp16 ring + fp32 banks: concat promotes to fp32 (free);
+                # astype guards the invariant if bank dtype ever changes.
+                ring = (_gather_states_fp32(getattr(self, field), indices)
+                        if field in ("states", "next_states") else getattr(self, field)[indices])
+                parts = [ring] + [
+                    getattr(self, f"{prefix}_{field}")[slots] for prefix, _, slots in banks]
+                out = np.concatenate(parts)
+                return out.astype(cast, copy=False) if cast is not None else out
 
             return (
-                self.states[indices].astype(np.float32),
-                self.actions[indices],
-                self.rewards[indices],
-                self.next_states[indices].astype(np.float32),
-                self.dones[indices],
-                self.horizons[indices],
-                self.is_expert[indices],
-                self.actor_kind[indices],
-                indices,
+                _cat("states", np.float32),
+                _cat("actions"),
+                _cat("rewards"),
+                _cat("next_states", np.float32),
+                _cat("dones"),
+                _cat("horizons"),
+                _cat("is_expert"),
+                _cat("actor_kind"),
+                all_indices,
                 weights.astype(np.float32),
             )
 
-    def update_priorities(self, indices, td_errors):
-        """Update priorities based on TD errors (fully vectorised)."""
-        with self.lock:
-            idx = np.asarray(indices, dtype=np.int64)
-            td = np.abs(np.asarray(td_errors).astype(np.float64))
-            # HOF rows carry sentinel indices >= capacity and have no
-            # sum-tree leaves — writing them would corrupt ring priorities.
-            mask = idx < self.capacity
-            if not mask.all():
-                idx = idx[mask]
-                td = td[mask]
-            if idx.size == 0:
-                return
-            new_p = (td + 1e-6) ** self.alpha
-            self.tree.batch_update(idx, new_p)
+        return (
+            _gather_states_fp32(self.states, indices, out=_state_out[0] if _state_out is not None else None),
+            self.actions[indices],
+            self.rewards[indices],
+            _gather_states_fp32(self.next_states, indices, out=_state_out[1] if _state_out is not None else None),
+            self.dones[indices],
+            self.horizons[indices],
+            self.is_expert[indices],
+            self.actor_kind[indices],
+            indices,
+            weights.astype(np.float32),
+        )
+
+    def update_priorities(self, indices, td_errors, timing_out=None):
+        """Update priorities; optional host timings are published after unlock.
+
+        The normal two-argument call performs no extra clock reads. Timed
+        calls preserve the same replay lock and operation order, including
+        early returns/errors; timing_out is a caller-owned dictionary.
+        """
+        measuring = timing_out is not None
+        started = time.perf_counter() if measuring else 0.0
+        acquired = finished = None
+        try:
+            with self.lock:
+                if measuring:
+                    acquired = time.perf_counter()
+                try:
+                    idx = np.asarray(indices, dtype=np.int64)
+                    td = np.abs(np.asarray(td_errors).astype(np.float64))
+                    # HOF rows carry sentinel indices >= capacity and have no
+                    # sum-tree leaves — writing them would corrupt ring priorities.
+                    mask = idx < self.capacity
+                    if not mask.all():
+                        idx = idx[mask]
+                        td = td[mask]
+                    if idx.size == 0:
+                        return
+                    new_p = (td + 1e-6) ** self.alpha
+                    self.tree.batch_update(idx, new_p)
+                finally:
+                    if measuring:
+                        finished = time.perf_counter()
+        finally:
+            if measuring and acquired is not None:
+                timing_out.update(
+                    replay_lock_wait_ms=(acquired - started) * 1000.0,
+                    locked_priority_ms=(finished - acquired) * 1000.0,
+                    replay_update_host_ms=(time.perf_counter() - started) * 1000.0,
+                )
 
     def boost_priorities(self, indices, factor: float):
         """Multiply existing priorities of the given indices by *factor*.
@@ -984,6 +1247,12 @@ class PrioritizedReplayBuffer:
     def __len__(self):
         return self.size
 
+    def get_learning_exposure_snapshot(self):
+        """Call outside model/telemetry locks; no import/restore of counters."""
+        with self.lock:
+            exposure = getattr(self, "_insert_exposure", None)
+            return exposure.snapshot() if exposure is not None else exposure_disabled_snapshot()
+
     def get_partition_stats(self):
         """Return buffer statistics (O(1) via tracked counter)."""
         with self.lock:
@@ -1010,189 +1279,375 @@ class PrioritizedReplayBuffer:
 
     # ── Persistence ─────────────────────────────────────────────────────
 
-    def _save_hof(self, dirpath: str, verbose: bool = True):
-        """Persist the hall of fame to its own directory.
+    _BANK_FIELDS = ("states", "next_states", "actions", "rewards", "dones",
+                    "horizons", "is_expert", "actor_kind")
+    _BANK_SCHEMA = "robotron-bank-generation-v1"
 
-        Deliberately a SIBLING of the replay directory (…_replay_hof), not
-        inside it: collapse-recovery reverts delete the replay dir, and the
-        hall of fame must survive reverts — that is its entire purpose.
+    def _bank_stat(self, **values):
+        with self._bank_writer_lock:
+            for name, value in values.items():
+                if name == "snapshot_lock_max_ms":
+                    self._bank_persistence_stats[name] = max(
+                        self._bank_persistence_stats[name], value)
+                elif name in ("capture_attempts", "capture_deferrals", "writes",
+                              "write_failures", "write_duration_s"):
+                    self._bank_persistence_stats[name] += value
+                else:
+                    self._bank_persistence_stats[name] = value
+
+    def get_bank_persistence_stats(self):
+        """Read-only telemetry; no model, sampling or schedule clocks change."""
+        with self._bank_writer_lock:
+            result = dict(self._bank_persistence_stats)
+            result["writer_active"] = bool(self._bank_writer_thread
+                                           and self._bank_writer_thread.is_alive())
+        with self.lock:
+            result["revision"] = dict(self._bank_revision)
+            result["saved_revision"] = dict(self._bank_saved_revision)
+            result["dirty"] = {bank: self._bank_revision[bank] != self._bank_saved_revision[bank]
+                               for bank in ("hof", "ephof")}
+        # No writer/replay/model lock is held while reading phase scalars.
+        output = getattr(self, "_bank_output_telemetry", None)
+        result["output"] = output.snapshot() if output is not None else dict(available=False)
+        return result
+
+    def _capture_bank(self, bank, expected_epoch):
+        """Optimistic point-in-time snapshot; never accept mixed revisions.
+
+        Allocate outside the replay lock. Each locked copy is at most the
+        configured number of valid rows, followed by a yield to producers.
+        Any admission/load during the complete capture rejects the attempt.
         """
-        if not self._hof_enabled or self.hof_ep_count == 0:
-            return
+        self._bank_stat(capture_attempts=1)
         with self.lock:
-            os.makedirs(dirpath, exist_ok=True)
-            used = self.hof_ep_count * self._hof_stride
-            np.save(os.path.join(dirpath, "hof_states.npy"), self.hof_states[:used])
-            np.save(os.path.join(dirpath, "hof_next_states.npy"), self.hof_next_states[:used])
-            np.save(os.path.join(dirpath, "hof_actions.npy"), self.hof_actions[:used])
-            np.save(os.path.join(dirpath, "hof_rewards.npy"), self.hof_rewards[:used])
-            np.save(os.path.join(dirpath, "hof_dones.npy"), self.hof_dones[:used])
-            np.save(os.path.join(dirpath, "hof_horizons.npy"), self.hof_horizons[:used])
-            np.save(os.path.join(dirpath, "hof_is_expert.npy"), self.hof_is_expert[:used])
-            np.save(os.path.join(dirpath, "hof_actor_kind.npy"), self.hof_actor_kind[:used])
-            np.savez(os.path.join(dirpath, "hof_meta.npz"),
-                     ep_score=self.hof_ep_score[:self.hof_ep_count],
-                     ep_len=self.hof_ep_len[:self.hof_ep_count],
-                     ep_game=self.hof_ep_game[:self.hof_ep_count],
-                     ep_level=self.hof_ep_level[:self.hof_ep_count],
-                     # Staleness watermarks (ages, not raw clocks — the adds
-                     # counter is process-local): a frozen bank must not
-                     # reload as "fresh" and reclaim full quota.
-                     stale_age=np.int64(self._adds_total - self._hof_last_admit_add),
-                     stale_age_normal=np.int64(self._adds_total - self._hof_last_normal_admit_add),
-                     stride=np.int64(self._hof_stride),
-                     state_size=np.int64(self.state_size))
-            self._hof_saved_admit_add = self._hof_last_admit_add
+            if expected_epoch != self._bank_load_epoch[bank]:
+                return None
+            count = int(getattr(self, f"{bank}_ep_count"))
+            if not getattr(self, f"_{bank}_enabled") or not count:
+                return None
+            revision = self._bank_revision[bank]
+            stride = int(getattr(self, f"_{bank}_stride"))
+            meta = {field: getattr(self, f"{bank}_{field}")[:count].copy()
+                    for field in ("ep_score", "ep_len", "ep_game", "ep_level")}
+            adds = int(self._adds_total)
+            meta.update(stale_age=np.int64(adds-getattr(self, f"_{bank}_last_admit_add")),
+                        stale_age_normal=np.int64(adds-getattr(self, f"_{bank}_last_normal_admit_add")),
+                        stride=np.int64(stride), state_size=np.int64(self.state_size),
+                        captured_adds=np.int64(adds), mutation_generation=np.int64(revision))
+            last_admit = int(getattr(self, f"_{bank}_last_admit_add"))
+            sources = {field: getattr(self, f"{bank}_{field}") for field in self._BANK_FIELDS}
+        lengths = meta["ep_len"]
+        total = int(lengths.sum())
+        arrays = {field: np.empty((total, *source.shape[1:]), dtype=source.dtype)
+                  for field, source in sources.items()}
+        cursor, max_hold = 0, 0.0
+        chunk = max(1, int(self._bank_snapshot_chunk_rows))
+        coherent = True
+        try:
+            for episode, length in enumerate(lengths):
+                length = int(length)
+                for first in range(0, length, chunk):
+                    amount = min(chunk, length-first)
+                    with self.lock:
+                        started = time.perf_counter()
+                        if (self._bank_revision[bank] != revision
+                                or self._bank_load_epoch[bank] != expected_epoch
+                                or any(getattr(self, f"{bank}_{field}") is not source
+                                       for field, source in sources.items())):
+                            coherent = False
+                        else:
+                            begin = episode*stride+first
+                            for field, source in sources.items():
+                                np.copyto(arrays[field][cursor:cursor+amount],
+                                          source[begin:begin+amount], casting="no")
+                        max_hold = max(max_hold, (time.perf_counter()-started)*1000)
+                    if not coherent:
+                        return None
+                    cursor += amount
+                    time.sleep(0)
+            with self.lock:
+                coherent = (self._bank_revision[bank] == revision
+                            and self._bank_load_epoch[bank] == expected_epoch)
+            if not coherent:
+                return None
+            return dict(bank=bank, revision=revision, epoch=expected_epoch,
+                        count=count, total=total, stride=stride, meta=meta,
+                        arrays=arrays, last_admit=last_admit)
+        finally:
+            self._bank_stat(snapshot_lock_max_ms=max_hold)
+
+    @staticmethod
+    def _fsync_directory(path):
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+
+    def _write_bank_generation(self, snapshot, dirpath):
+        """Write immutable files, then atomically publish one generation.
+
+        Padded legacy geometry is retained. Unused rows are sparse zero holes;
+        only the valid per-episode prefixes consume write bandwidth.
+        """
+        bank = snapshot["bank"]
+        os.makedirs(dirpath, exist_ok=True)
+        generations = os.path.join(dirpath, "generations")
+        os.makedirs(generations, exist_ok=True)
+        identifier = "gen-" + uuid.uuid4().hex
+        directory = os.path.join(generations, identifier)
+        pointer = os.path.join(dirpath, "CURRENT.json")
+        previous = None
+        if os.path.isfile(pointer):
+            previous = self._resolve_bank_directory(bank, dirpath)[1]
+        os.mkdir(directory)
+        temporary_pointer = pointer + "." + uuid.uuid4().hex + ".tmp"
+        published = False
+        try:
+            lengths = snapshot["meta"]["ep_len"]
+            for field, source in snapshot["arrays"].items():
+                path = os.path.join(directory, f"{bank}_{field}.npy")
+                write_bank_array(path, source, count=snapshot["count"],
+                    stride=snapshot["stride"], lengths=lengths,
+                    stream_output=self._bank_stream_output,
+                    telemetry=self._bank_output_telemetry, bank=bank, field=field)
+            meta_path = os.path.join(directory, f"{bank}_meta.npz")
+            with open(meta_path, "xb") as stream:
+                np.savez(stream, **snapshot["meta"])
+                stream.flush()
+                os.fsync(stream.fileno())
+            self._fsync_directory(directory)
+            self._fsync_directory(generations)
+            selected = dict(schema=self._BANK_SCHEMA, bank=bank, generation=identifier,
+                            previous=previous, mutation_generation=snapshot["revision"])
+            with open(temporary_pointer, "x") as stream:
+                json.dump(selected, stream, sort_keys=True, allow_nan=False)
+                stream.write("\n")
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary_pointer, pointer)
+            published = True
+            self._fsync_directory(dirpath)
+            # Retain current and previous complete generations. Legacy files
+            # remain untouched, allowing old-format recovery and inspection.
+            keep = {identifier, previous}
+            for name in os.listdir(generations):
+                if (name.startswith("gen-") and len(name) == 36 and name not in keep
+                        and all(char in "0123456789abcdef" for char in name[4:])):
+                    shutil.rmtree(os.path.join(generations, name))
+        finally:
+            if os.path.exists(temporary_pointer):
+                os.unlink(temporary_pointer)
+            if not published:
+                shutil.rmtree(directory, ignore_errors=True)
+
+    def _resolve_bank_directory(self, bank, dirpath):
+        pointer = os.path.join(dirpath, "CURRENT.json")
+        if not os.path.isfile(pointer):
+            return dirpath, None
+        with open(pointer) as stream:
+            value = json.load(stream)
+        if not isinstance(value, dict):
+            raise ValueError("Invalid bank generation selector")
+        generation = value.get("generation", "")
+        if (value.get("schema") != self._BANK_SCHEMA or value.get("bank") != bank
+                or not isinstance(generation, str) or len(generation) != 36
+                or not generation.startswith("gen-")
+                or any(char not in "0123456789abcdef" for char in generation[4:])):
+            raise ValueError("Invalid bank generation selector")
+        path = os.path.join(dirpath, "generations", generation)
+        if not os.path.isdir(path) or os.path.islink(path):
+            raise ValueError("Selected bank generation is missing or not a regular directory")
+        return path, generation
+
+    def _persist_bank(self, bank, dirpath, expected_epoch, verbose=False):
+        with self._bank_persist_lock:
+            snapshot = None
+            for _ in range(max(1, int(self._bank_snapshot_attempts))):
+                snapshot = self._capture_bank(bank, expected_epoch)
+                if snapshot is not None:
+                    break
+                self._bank_stat(capture_deferrals=1)
+                with self.lock:
+                    if (self._bank_load_epoch[bank] != expected_epoch
+                            or not getattr(self, f"{bank}_ep_count")):
+                        return None
+            if snapshot is None:
+                return None
+            started = time.perf_counter()
+            try:
+                self._write_bank_generation(snapshot, dirpath)
+            except Exception as error:
+                self._bank_stat(write_failures=1, last_error=f"{bank}: {type(error).__name__}: {error}")
+                raise
+            finally:
+                elapsed = time.perf_counter()-started
+                self._bank_stat(write_duration_s=elapsed, last_write_duration_s=elapsed)
+            with self.lock:
+                # Do not certify admissions that arrived during disk I/O.
+                if self._bank_load_epoch[bank] == expected_epoch:
+                    self._bank_saved_revision[bank] = snapshot["revision"]
+                    setattr(self, f"_{bank}_saved_admit_add", snapshot["last_admit"])
+            self._bank_stat(writes=1, last_error=None)
+            description = f"{bank.upper()} {snapshot['count']} eps / {snapshot['total']:,} tr"
             if verbose:
-                print(f"  HOF saved: {self.hof_ep_count} episodes / {self.hof_total:,} transitions")
+                print(f"  {description} saved as an atomic generation")
+            return description
 
-    def _load_hof(self, dirpath: str, verbose: bool = True) -> bool:
-        if not self._hof_enabled or not os.path.isdir(dirpath):
-            return False
-        meta_path = os.path.join(dirpath, "hof_meta.npz")
-        if not os.path.isfile(meta_path):
-            return False
-        meta = np.load(meta_path)
-        if int(meta["stride"]) != self._hof_stride or int(meta["state_size"]) != self.state_size:
-            print("  HOF load skipped: stride/state_size mismatch with config")
-            return False
+    def _wait_bank_writer(self, timeout=None):
+        with self._bank_writer_lock:
+            worker = self._bank_writer_thread
+        if worker is not None and worker is not threading.current_thread():
+            worker.join(timeout=timeout)
+            if worker.is_alive():
+                raise TimeoutError("Bank persistence writer is still active")
+
+    def _save_bank_sync(self, bank, dirpath, verbose=True):
+        if not getattr(self, f"_{bank}_enabled") or not getattr(self, f"{bank}_ep_count"):
+            return None
+        self._wait_bank_writer()
         with self.lock:
-            ep_score = np.asarray(meta["ep_score"], dtype=np.float64)
-            ep_len = np.asarray(meta["ep_len"], dtype=np.int32)
-            n_eps = min(int(ep_score.shape[0]), self._hof_max_eps)
-            used = n_eps * self._hof_stride
-            self.hof_states[:used] = np.load(os.path.join(dirpath, "hof_states.npy"))[:used]
-            self.hof_next_states[:used] = np.load(os.path.join(dirpath, "hof_next_states.npy"))[:used]
-            self.hof_actions[:used] = np.load(os.path.join(dirpath, "hof_actions.npy"))[:used]
-            self.hof_rewards[:used] = np.load(os.path.join(dirpath, "hof_rewards.npy"))[:used]
-            self.hof_dones[:used] = np.load(os.path.join(dirpath, "hof_dones.npy"))[:used]
-            self.hof_horizons[:used] = np.load(os.path.join(dirpath, "hof_horizons.npy"))[:used]
-            self.hof_is_expert[:used] = np.load(os.path.join(dirpath, "hof_is_expert.npy"))[:used]
-            self.hof_actor_kind[:used] = np.load(os.path.join(dirpath, "hof_actor_kind.npy"))[:used]
-            self.hof_ep_score[:n_eps] = ep_score[:n_eps]
-            self.hof_ep_len[:n_eps] = ep_len[:n_eps]
-            # Legacy saves lack game/level metadata: -1 ids are treated as
-            # unique by dedup.  New-format ids stay valid because the server
-            # seeds its uid counter above max_game_uid() at boot.
-            if "ep_game" in meta.files:
-                self.hof_ep_game[:n_eps] = np.asarray(meta["ep_game"], dtype=np.int64)[:n_eps]
-                self.hof_ep_level[:n_eps] = np.asarray(meta["ep_level"], dtype=np.int32)[:n_eps]
-            else:
-                self.hof_ep_game[:n_eps] = -1
-                self.hof_ep_level[:n_eps] = 0
-            # Zero tail metadata: a mid-run reload can SHRINK ep_count below
-            # slots the live bank had filled; a stale ep_len there corrupts
-            # the fresh-slot accounting on the next admission.
-            self.hof_ep_len[n_eps:] = 0
-            self.hof_ep_score[n_eps:] = -np.inf
-            self.hof_ep_game[n_eps:] = -1
-            self.hof_ep_level[n_eps:] = 0
-            # Restore staleness ages relative to this process's clock.
-            if "stale_age" in meta.files:
-                self._hof_last_admit_add = self._adds_total - int(meta["stale_age"])
-                self._hof_last_normal_admit_add = self._adds_total - int(meta["stale_age_normal"])
-            # Disk and memory are identical right now: bank starts clean.
-            self._hof_saved_admit_add = self._hof_last_admit_add
-            self.hof_ep_count = n_eps
-            self.hof_total = int(self.hof_ep_len[:n_eps].sum())
-            self._hof_rebuild_flat_locked()
-        if verbose:
-            print(f"  HOF loaded: {self.hof_ep_count} episodes / {self.hof_total:,} transitions "
-                  f"(best {self.hof_ep_score[:self.hof_ep_count].max():,.0f})")
-        return True
+            epoch = self._bank_load_epoch[bank]
+        result = self._persist_bank(bank, dirpath, epoch, verbose)
+        if result is None:
+            raise RuntimeError(f"{bank.upper()} snapshot deferred by concurrent bank mutation; bank remains dirty")
+        return result
 
-    def _save_ephof(self, dirpath: str, verbose: bool = True):
-        """Persist the EpHOF to its own sibling directory (same survive-the-
-        revert contract as the game HOF)."""
-        if not self._ephof_enabled or self.ephof_ep_count == 0:
-            return
-        with self.lock:
-            os.makedirs(dirpath, exist_ok=True)
-            used = self.ephof_ep_count * self._ephof_stride
-            np.save(os.path.join(dirpath, "ephof_states.npy"), self.ephof_states[:used])
-            np.save(os.path.join(dirpath, "ephof_next_states.npy"), self.ephof_next_states[:used])
-            np.save(os.path.join(dirpath, "ephof_actions.npy"), self.ephof_actions[:used])
-            np.save(os.path.join(dirpath, "ephof_rewards.npy"), self.ephof_rewards[:used])
-            np.save(os.path.join(dirpath, "ephof_dones.npy"), self.ephof_dones[:used])
-            np.save(os.path.join(dirpath, "ephof_horizons.npy"), self.ephof_horizons[:used])
-            np.save(os.path.join(dirpath, "ephof_is_expert.npy"), self.ephof_is_expert[:used])
-            np.save(os.path.join(dirpath, "ephof_actor_kind.npy"), self.ephof_actor_kind[:used])
-            np.savez(os.path.join(dirpath, "ephof_meta.npz"),
-                     ep_score=self.ephof_ep_score[:self.ephof_ep_count],
-                     ep_len=self.ephof_ep_len[:self.ephof_ep_count],
-                     ep_game=self.ephof_ep_game[:self.ephof_ep_count],
-                     ep_level=self.ephof_ep_level[:self.ephof_ep_count],
-                     stale_age=np.int64(self._adds_total - self._ephof_last_admit_add),
-                     stale_age_normal=np.int64(self._adds_total - self._ephof_last_normal_admit_add),
-                     stride=np.int64(self._ephof_stride),
-                     state_size=np.int64(self.state_size))
-            self._ephof_saved_admit_add = self._ephof_last_admit_add
-            if verbose:
-                print(f"  EpHOF saved: {self.ephof_ep_count} episodes / {self.ephof_total:,} transitions")
+    def _save_hof(self, dirpath, verbose=True):
+        return self._save_bank_sync("hof", dirpath, verbose)
 
-    def _load_ephof(self, dirpath: str, verbose: bool = True) -> bool:
-        if not self._ephof_enabled or not os.path.isdir(dirpath):
-            return False
-        meta_path = os.path.join(dirpath, "ephof_meta.npz")
-        if not os.path.isfile(meta_path):
-            return False
-        meta = np.load(meta_path)
-        if int(meta["stride"]) != self._ephof_stride or int(meta["state_size"]) != self.state_size:
-            print("  EpHOF load skipped: stride/state_size mismatch with config")
-            return False
-        with self.lock:
-            ep_score = np.asarray(meta["ep_score"], dtype=np.float64)
-            ep_len = np.asarray(meta["ep_len"], dtype=np.int32)
-            n_eps = min(int(ep_score.shape[0]), self._ephof_max_eps)
-            used = n_eps * self._ephof_stride
-            self.ephof_states[:used] = np.load(os.path.join(dirpath, "ephof_states.npy"))[:used]
-            self.ephof_next_states[:used] = np.load(os.path.join(dirpath, "ephof_next_states.npy"))[:used]
-            self.ephof_actions[:used] = np.load(os.path.join(dirpath, "ephof_actions.npy"))[:used]
-            self.ephof_rewards[:used] = np.load(os.path.join(dirpath, "ephof_rewards.npy"))[:used]
-            self.ephof_dones[:used] = np.load(os.path.join(dirpath, "ephof_dones.npy"))[:used]
-            self.ephof_horizons[:used] = np.load(os.path.join(dirpath, "ephof_horizons.npy"))[:used]
-            self.ephof_is_expert[:used] = np.load(os.path.join(dirpath, "ephof_is_expert.npy"))[:used]
-            self.ephof_actor_kind[:used] = np.load(os.path.join(dirpath, "ephof_actor_kind.npy"))[:used]
-            self.ephof_ep_score[:n_eps] = ep_score[:n_eps]
-            self.ephof_ep_len[:n_eps] = ep_len[:n_eps]
-            if "ep_game" in meta.files:
-                self.ephof_ep_game[:n_eps] = np.asarray(meta["ep_game"], dtype=np.int64)[:n_eps]
-                self.ephof_ep_level[:n_eps] = np.asarray(meta["ep_level"], dtype=np.int32)[:n_eps]
-            else:
-                self.ephof_ep_game[:n_eps] = -1
-                self.ephof_ep_level[:n_eps] = 0
-            self.ephof_ep_len[n_eps:] = 0
-            self.ephof_ep_score[n_eps:] = -np.inf
-            self.ephof_ep_game[n_eps:] = -1
-            self.ephof_ep_level[n_eps:] = 0
-            if "stale_age" in meta.files:
-                self._ephof_last_admit_add = self._adds_total - int(meta["stale_age"])
-                self._ephof_last_normal_admit_add = self._adds_total - int(meta["stale_age_normal"])
-            self._ephof_saved_admit_add = self._ephof_last_admit_add
-            self.ephof_ep_count = n_eps
-            self.ephof_total = int(self.ephof_ep_len[:n_eps].sum())
-            self._ephof_rebuild_flat_locked()
-        if verbose:
-            print(f"  EpHOF loaded: {self.ephof_ep_count} episodes / {self.ephof_total:,} transitions "
-                  f"(best life {self.ephof_ep_score[:self.ephof_ep_count].max():,.0f})")
-        return True
+    def _save_ephof(self, dirpath, verbose=True):
+        return self._save_bank_sync("ephof", dirpath, verbose)
 
-    def save_banks_if_dirty(self, verbose: bool = False) -> list:
-        """Persist HOF/EpHOF on their own cadence, decoupled from the rare
-        full-ring save (2026-07-23: banks rode the ring-save cadence, went
-        12h stale in RAM, and a crash would have lost every admission
-        since — including the record 83M game).  No-ops for a bank with no
-        admissions since its last save, so quiet periods cost nothing."""
+    def save_banks_if_dirty(self, verbose=False):
+        """Queue at most one writer, returning immediately without disk I/O.
+
+        Captures retry a bounded number of times. Failed/deferred work stays
+        dirty; a later request or explicit flush retries it. No queue grows.
+        """
+        with self._bank_writer_lock:
+            if self._bank_writer_thread is not None and self._bank_writer_thread.is_alive():
+                return []
+            with self.lock:
+                requests = [(bank, getattr(self, f"_{bank}_dir"), self._bank_load_epoch[bank])
+                    for bank in ("hof", "ephof")
+                    if (getattr(self, f"_{bank}_enabled") and getattr(self, f"_{bank}_dir")
+                        and getattr(self, f"{bank}_ep_count")
+                        and self._bank_revision[bank] != self._bank_saved_revision[bank])]
+            if not requests:
+                return []
+
+            def write():
+                for bank, path, epoch in requests:
+                    try:
+                        self._persist_bank(bank, path, epoch, verbose)
+                    except Exception as error:
+                        self._bank_stat(last_error=f"{bank}: {type(error).__name__}: {error}")
+                        print(f"[BANKS] background {bank.upper()} save failed: {error}")
+            self._bank_writer_thread = threading.Thread(target=write, name="BankPersistence", daemon=True)
+            self._bank_writer_thread.start()
+            return [f"queued {bank.upper()}" for bank, _, _ in requests]
+
+    def flush_banks(self, timeout=None, verbose=False):
+        """Wait for the current writer, then synchronously capture dirty banks.
+
+        Guarantees a coherent generation through the revision present when
+        each capture begins, or raises. Admissions after capture remain dirty;
+        callers needing a final stop-tail guarantee must first quiesce actors.
+        The optional timeout bounds waiting for an already-running writer.
+        """
+        self._wait_bank_writer(timeout)
         saved = []
-        if (self._hof_enabled and self._hof_dir
-                and self._hof_last_admit_add != self._hof_saved_admit_add):
-            self._save_hof(self._hof_dir, verbose)
-            saved.append(f"HOF {self.hof_ep_count} eps / {self.hof_total:,} tr")
-        if (self._ephof_enabled and self._ephof_dir
-                and self._ephof_last_admit_add != self._ephof_saved_admit_add):
-            self._save_ephof(self._ephof_dir, verbose)
-            saved.append(f"EpHOF {self.ephof_ep_count} eps / {self.ephof_total:,} tr")
+        for bank in ("hof", "ephof"):
+            with self.lock:
+                dirty = self._bank_revision[bank] != self._bank_saved_revision[bank]
+                path = getattr(self, f"_{bank}_dir")
+            if dirty and path:
+                result = self._save_bank_sync(bank, path, verbose)
+                if result:
+                    saved.append(result)
         return saved
+
+    def _load_bank(self, bank, dirpath, verbose=True):
+        if not getattr(self, f"_{bank}_enabled") or not os.path.isdir(dirpath):
+            return False
+        with self._bank_persist_lock:
+            selected, generation = self._resolve_bank_directory(bank, dirpath)
+            meta_path = os.path.join(selected, f"{bank}_meta.npz")
+            if not os.path.isfile(meta_path):
+                if generation is not None:
+                    raise ValueError("Selected bank generation metadata is missing")
+                return False
+            with np.load(meta_path, allow_pickle=False) as loaded:
+                meta = {name: loaded[name].copy() for name in loaded.files}
+            stride = int(getattr(self, f"_{bank}_stride"))
+            if int(meta["stride"]) != stride or int(meta["state_size"]) != self.state_size:
+                print(f"  {bank.upper()} load skipped: stride/state_size mismatch with config")
+                return False
+            original_count = len(meta["ep_score"])
+            count = min(original_count, int(getattr(self, f"_{bank}_max_eps")))
+            lengths = np.asarray(meta["ep_len"], dtype=np.int32)[:count].copy()
+            if (len(lengths) != count or np.any(lengths < 0) or np.any(lengths > stride)
+                    or not np.isfinite(meta["ep_score"][:count]).all()):
+                raise ValueError("Invalid bank episode metadata")
+            total = int(lengths.sum())
+            staged = {}
+            for field in self._BANK_FIELDS:
+                source = np.load(os.path.join(selected, f"{bank}_{field}.npy"),
+                                 mmap_mode="r", allow_pickle=False)
+                target = getattr(self, f"{bank}_{field}")
+                expected = (original_count*stride, *target.shape[1:])
+                if source.shape != expected or source.dtype != target.dtype:
+                    raise ValueError(f"Invalid bank array geometry/dtype: {field}")
+                compact = np.empty((total, *target.shape[1:]), dtype=target.dtype)
+                cursor = 0
+                for episode, length in enumerate(lengths):
+                    length = int(length)
+                    compact[cursor:cursor+length] = source[episode*stride:episode*stride+length]
+                    cursor += length
+                staged[field] = compact
+                del source
+            games = np.asarray(meta.get("ep_game", np.full(original_count, -1)), dtype=np.int64)[:count]
+            levels = np.asarray(meta.get("ep_level", np.zeros(original_count)), dtype=np.int32)[:count]
+            scores = np.asarray(meta["ep_score"], dtype=np.float64)[:count]
+            if any(len(value) != count for value in (games, levels, scores)):
+                raise ValueError("Invalid bank episode metadata lengths")
+            with self.lock:
+                self._bank_load_epoch[bank] += 1
+                self._bank_revision[bank] += 1
+                for field, compact in staged.items():
+                    target = getattr(self, f"{bank}_{field}")
+                    cursor = 0
+                    for episode, length in enumerate(lengths):
+                        length = int(length)
+                        prefix = target[episode*stride:(episode+1)*stride]
+                        prefix.fill(0)
+                        prefix[:length] = compact[cursor:cursor+length]
+                        cursor += length
+                getattr(self, f"{bank}_ep_len")[:] = 0
+                getattr(self, f"{bank}_ep_score")[:] = -np.inf
+                getattr(self, f"{bank}_ep_game")[:] = -1
+                getattr(self, f"{bank}_ep_level")[:] = 0
+                for field, value in (("ep_len", lengths), ("ep_score", scores),
+                                     ("ep_game", games), ("ep_level", levels)):
+                    getattr(self, f"{bank}_{field}")[:count] = value
+                if "stale_age" in meta:
+                    setattr(self, f"_{bank}_last_admit_add", self._adds_total-int(meta["stale_age"]))
+                    setattr(self, f"_{bank}_last_normal_admit_add", self._adds_total-int(meta["stale_age_normal"]))
+                setattr(self, f"_{bank}_saved_admit_add", getattr(self, f"_{bank}_last_admit_add"))
+                setattr(self, f"{bank}_ep_count", count)
+                setattr(self, f"{bank}_total", total)
+                getattr(self, f"_{bank}_rebuild_flat_locked")()
+                self._bank_saved_revision[bank] = self._bank_revision[bank]
+            if verbose:
+                print(f"  {bank.upper()} loaded: {count} episodes / {total:,} transitions")
+            return True
+
+    def _load_hof(self, dirpath, verbose=True):
+        return self._load_bank("hof", dirpath, verbose)
+
+    def _load_ephof(self, dirpath, verbose=True):
+        return self._load_bank("ephof", dirpath, verbose)
 
     def save(self, filepath: str, verbose: bool = True):
         """Save the full replay buffer as individual .npy files in a directory."""
@@ -1505,6 +1960,9 @@ class PrioritizedReplayBuffer:
             self._progress_bar("  Replay load", 0.40)
 
         with self.lock:
+            exposure = getattr(self, "_insert_exposure", None)
+            if exposure is not None:
+                exposure.new_epoch("directory_adopt_begin")
             for name, (attr, _, _) in specs.items():
                 setattr(self, attr, mapped[name])
 
@@ -1588,6 +2046,9 @@ class PrioritizedReplayBuffer:
             self._progress_bar("  Replay load", 0.40)
 
         with self.lock:
+            exposure = getattr(self, "_insert_exposure", None)
+            if exposure is not None:
+                exposure.new_epoch("array_restore_begin")
             if verbose:
                 self._progress_bar("  Replay load", 0.45)
 
@@ -1654,6 +2115,14 @@ class PrioritizedReplayBuffer:
         quota behave like another generic sampler.  Keep terminal, scoring, and
         high-priority surprises, then cap the partition so it remains sparse.
         """
+        if (os.getenv("ROBOTRON_CONTINUOUS_STARTUP_HOLD", "0") == "1"
+                and not getattr(self, "_continuous_exact_resume_consumed", False)):
+            if os.getenv("ROBOTRON_CONTINUOUS_TRAINING_MODE", "0") != "1":
+                raise RuntimeError("Exact replay restoration requires continuous MAIN hold mode")
+            # Preserve the stopped current rows, including interest flags.
+            # The startup bridge independently compares every scalar payload.
+            self._continuous_exact_resume_consumed = True
+            return
         if n <= 0:
             return
         max_frac = max(0.0, min(1.0, float(getattr(RL_CONFIG, "max_interesting_replay_fraction", 0.30))))
@@ -1760,6 +2229,9 @@ class PrioritizedReplayBuffer:
     def flush(self):
         """Clear the entire replay buffer."""
         with self.lock:
+            exposure = getattr(self, "_insert_exposure", None)
+            if exposure is not None:
+                exposure.new_epoch("flush_begin")
             self.tree = SumTree(self.capacity)
             self.size = 0
             self._n_expert = 0

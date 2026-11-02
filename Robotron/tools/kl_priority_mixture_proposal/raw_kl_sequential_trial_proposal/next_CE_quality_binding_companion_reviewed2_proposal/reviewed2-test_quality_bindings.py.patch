@@ -1,0 +1,53 @@
+--- frozen-a073/test_quality_bindings.py
++++ unconsumed-reviewed2/test_quality_bindings.py
+@@ -7,6 +7,7 @@
+ import os
+ from pathlib import Path
+ import tempfile
++from types import SimpleNamespace
+ import unittest
+ from unittest import mock
+ 
+@@ -94,6 +95,42 @@
+ 
+ 
+ class LiveCEBindingContracts(unittest.TestCase):
++    def test_launch_actual_ce_schema_without_original_executions(self):
++        binding,_=fixture();self.assertNotIn('original_executions',binding)
++        spec=importlib.util.spec_from_file_location('_live_ce_launch_contract',HERE/'root_quality_carrier.py')
++        carrier=importlib.util.module_from_spec(spec);spec.loader.exec_module(carrier)
++        with tempfile.TemporaryDirectory() as folder:
++            root=Path(folder);preview=root/'preview';preview.mkdir();execution=root/'execution';output=root/'campaign'
++            bound=dict(candidate_sha256=binding['candidate']['sha256'],candidate_bytes=binding['candidate']['bytes'])
++            (preview/'default-plan.json').write_text('{}')
++            (preview/'root-default-plan-source-review.json').write_text(json.dumps(dict(actual_inputs=bound,plan_sha256='plan-sha')))
++            seen=[]
++            def show(unit):
++                seen.append(unit)
++                if len(seen)<=2:return dict(unit=unit),dict(LoadState='not-found')
++                if unit.endswith('.timer'):return dict(unit=unit),dict(ActiveState='active',SubState='waiting')
++                return dict(unit=unit),dict(MainPID='0')
++            args=SimpleNamespace(plan_sha256='plan-sha',plan_review=root/'review.json',plan_review_sha256='review-sha',
++                runtime_readiness=root/'ready.json',runtime_readiness_sha256='ready-sha')
++            review=dict(status='PASS',plan_sha256='plan-sha',actual_inputs=bound)
++            with mock.patch.multiple(carrier,CFG=binding,D=preview,J=execution,OUT=output,U='robotron-quality-ce-guard',
++                    REFERENCE=Path(binding['reference']['path']),CANDIDATE=Path(binding['candidate']['path'])),\
++                mock.patch.object(carrier,'inputs',return_value=(bound,{})),\
++                mock.patch.object(carrier,'sha',return_value='plan-sha'),\
++                mock.patch.object(carrier,'validate_plan'),mock.patch.object(carrier,'source_checks'),\
++                mock.patch.object(carrier,'pinned_json',side_effect=[(review,{'review':'PIN'}),({}, {'ready':'PIN'})]),\
++                mock.patch.object(carrier,'readiness_contract'),mock.patch.object(carrier,'fast_runtime',return_value={'healthy':True}),\
++                mock.patch.object(carrier,'show',side_effect=show),\
++                mock.patch.object(carrier,'call',return_value=dict(returncode=0,stdout='',stderr='')) as scheduled:
++                (preview/'default-argv.json').write_text(json.dumps(carrier.default_argv()))
++                result=carrier.launch(args)
++            self.assertEqual(result['status'],'DURABLE_LAUNCH_SUBMITTED')
++            self.assertEqual(seen,['robotron-quality-ce-guard.service','robotron-quality-ce-guard.timer',
++                'robotron-quality-ce-guard.timer','robotron-quality-ce-guard.service'])
++            scheduled.assert_called_once()
++            self.assertEqual(scheduled.call_args.args[0][0],'systemd-run')
++            self.assertEqual(scheduled.call_args.args[0][-1],'--launch')
++
+     def test_complete_live_ce_shape_needs_no_trial_or_latch(self):
+         binding,values=fixture(); result=M.validate(binding,reader=lambda p:values[p['path']])
+         self.assertEqual(result['current_ce_phase'],binding['current_ce_phase'])

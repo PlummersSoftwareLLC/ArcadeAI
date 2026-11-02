@@ -1,0 +1,40 @@
+{
+  "CPU_tests": [
+    "<ROOT_PINNED_STDLIB_PYTHON>",
+    "-I",
+    "-B",
+    "-c",
+    "import sys,unittest;sys.path.insert(0,'/home/dave/source/repos/ArcadeAI/Robotron');suite=unittest.defaultTestLoader.loadTestsFromNames(['tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.live_transition_post_stop_floor_companion.test_transition_adapter','tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.live_transition_post_stop_floor_companion.test_ending_floor']);assert suite.countTestCases()==26;r=unittest.TextTestRunner(verbosity=2).run(suite);sys.exit(not r.wasSuccessful())"
+  ],
+  "actual_execution": null,
+  "actual_interpreter": null,
+  "actual_job": null,
+  "expected_methods": 26,
+  "original_transition_resources": "Unchanged d495: CPU2/4GiB/Swap0/128tasks/4800s with owned cleanup and root3600s KL-owner ceiling independently enforced; CPU child120s each only after known KLabsence.",
+  "parent_environment": {
+    "CUDA_VISIBLE_DEVICES": ""
+  },
+  "schema": "robotron-post-stop-floor-future-argv-template-v1",
+  "status": "SOURCE_ONLY_UNEXECUTED",
+  "test_resources": {
+    "CPUQuota": "200%",
+    "MemoryMax": "512MiB",
+    "MemorySwapMax": 0,
+    "RuntimeMaxSec": 60,
+    "TasksMax": 32
+  },
+  "transition": [
+    "<ROOT_REVIEWED_VENV>",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_transition_post_stop_floor_companion/run_raw_kl_transition.py",
+    "--launch",
+    "--job",
+    "<ACTUAL_V2_JOB>",
+    "--expected-job-sha256",
+    "<ACTUAL_JOB_SHA>",
+    "--expected-controller-sha256",
+    "<FINAL_COMPANION_SHA>"
+  ]
+}

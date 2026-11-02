@@ -1,0 +1,23 @@
+{
+  "authored_methods": 8,
+  "future_controller_argv": null,
+  "future_deadline_argv": null,
+  "guard_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "-c",
+    "import importlib.util, unittest; p='/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_controller_proposal/test_controller_boundary.py'; s=importlib.util.spec_from_file_location('ce2048_boundary_guards',p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); r=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(m.ControllerBoundaryContracts)); raise SystemExit(0 if r.wasSuccessful() else 1)"
+  ],
+  "guard_limits": {
+    "CPUQuota": "100%",
+    "CUDA_VISIBLE_DEVICES": "",
+    "MemoryMax": "512M",
+    "MemorySwapMax": "0",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "RuntimeMaxSec": 60,
+    "TasksMax": 32
+  },
+  "reason": "Preserved source-only sibling refuses execute before reads/imports/arming. A later proof-validating release sibling must bind actual CE2048 numeric/cleanup, exact guards and final rootjob/core; none is fabricated here.",
+  "status": "SOURCE_ONLY_UNEXECUTED_NO_ACTUAL_LAUNCH_COMMAND"
+}

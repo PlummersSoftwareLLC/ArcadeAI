@@ -1,0 +1,71 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-selected-context600-original01-preparation/closed-metadata-readiness-reuse-original03-preparation/closed_metadata_readiness_reuse_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window02-D6-selected-metadata600-original01-preparation/closed-metadata-reuse-guard-original01-preparation/closed_metadata_readiness_reuse_D6_v2.py
+@@ -22,24 +22,35 @@
+     return value
+ 
+ 
++SOURCE_CONTRACT_SHA = '51dba1d3150db4af359b57dec6c5d29e23d3b2ae4a360dfde5a7ee16d5dc0ecc'
++
++
+ class ClosedMetadataReadiness:
+-    def __init__(self, cpu_job, h, phase):
++    def __init__(self, cpu_job, h, phase, authority=None):
+         self.h, self.phase = h, phase
+         self.authority_pin = cpu_job['closed_metadata_readiness_authority']
+-        a = self.read(self.authority_pin)
+-        require(a['schema'] == 'robotron-closed-metadata-and-raw-readiness-predicate-reuse-authority-v1', 'Exact reuse authority required')
++        a = self.read(self.authority_pin) if authority is None else authority
++        require(a['schema'] == 'robotron-D6-closed-metadata-and-raw-readiness-predicate-reuse-authority-v2', 'Exact reuse authority required')
+         self.a = a
+-        for key, sha in {
+-            'metadata_closeout': '29ad1900ca8afdcc1dcb9cd871a2a45cbcc278825a2e4959ade938e8d4308e5a',
+-            'metadata_report': 'c12344e4491857584df5d337adaf9c90d9f53ba14d115e55c48f325b01238f60',
+-            'metadata_driver': '6d0539c4f0fe385e5347db7826a98ed4d380abdf91c4de326baabba14d9d4a3c',
+-            'metadata_preparer': '0596b784624feb7dd0c2406aae0d83227bf894feaaa58212a049bc974abc95e7',
+-            'metadata_contract': 'cdafb1a0c417a697e1232ca7be7d21bd0652dbf7cfc949cbd8bb12c913f079c3',
+-            'raw_review': '5808521bcf78a52a25d1abc271120bad12d9bdf4f13f2ccd6da27bed29e5f6fa',
+-            'raw_reviewer': 'b583bae60bc09b56666851b80851a582a4e14b4508d0221cf43769045c1b49f2',
+-        }.items():
+-            require(a[key]['sha256'] == sha, 'Selected original reuse source differs: ' + key)
++        policy_pin = cpu_job['closed_metadata_readiness_source_contract']
++        require(policy_pin['sha256'] == SOURCE_CONTRACT_SHA and a['source_contract'] == policy_pin,
++                'Exact selected D6 source contract required')
++        policy = self.read(policy_pin)
++        require(policy['schema'] == 'robotron-D6-prospective-closed-metadata-guard-source-contract-v1'
++                and policy['D6_source_family']['sha256'] == '89deb47e7cfa86a432ee46f888fe2ae557d8235b7e5b3870128f200f1493ed3b'
++                and policy['D6_source_peer']['sha256'] == '6dafa62594430ad4e3f3451fe192bdece04e5ebfe1481e4c3d437e4e606eb8e1'
++                and policy['raw_samples'] == 3101 and policy['full_main_input_count'] == 247,
++                'D6 source selection differs')
++        for key in ('D6_source_family', 'D6_source_peer', 'Native_source_family', 'joint_engineering',
++                    'metadata_driver', 'metadata_preparer', 'metadata_contract', 'metadata_closer',
++                    'raw_review', 'raw_reviewer', 'lifecycle', 'worker_job', 'outcome', 'reader', 'archive'):
++            require(a[key] == policy[key], 'Selected new source differs: ' + key)
+             h.checked(a[key])
++        require(Path(a['metadata_closeout']['path']).parent == Path(policy['future_metadata_directory'])
++                and a['metadata_closeout']['sha256'] != '29ad1900ca8afdcc1dcb9cd871a2a45cbcc278825a2e4959ade938e8d4308e5a'
++                and a['metadata_report']['sha256'] != 'c12344e4491857584df5d337adaf9c90d9f53ba14d115e55c48f325b01238f60',
++                'Only the NEW closed metadata scope may authorize reuse')
++        self.policy = policy
+         close = self.read(a['metadata_closeout'])
+         require(close['status'] == 'PASS_ENGINEERING_ONLY' and close['actual_exit'] == 0
+                 and close['actual_CPU_cores'] == 2 and close['actual_memory_bytes'] == 4 << 30
+@@ -75,6 +86,10 @@
+         require(prepared['engineering_only'] is False and prepared['source_preparer'] == a['metadata_preparer']
+                 and [row['leg'] for row in prepared['cases']] == a['ordered_legs'] == ['R1', 'C1', 'R2', 'C2']
+                 and [row['native_job'] for row in prepared['cases']] == a['native_jobs'], 'Original four-job preparation differs')
++        require(Path(a['native_prepared']['path']).parent == Path(policy['future_study_directory'])
++                and all(row['runtime'] == policy['native_runtime']
++                        and row['native_controller'] == policy['native_controller'] for row in prepared['cases']),
++                'Only the selected D6 exact four subjects may be reused')
+         self.subjects = [(row['leg'], self.read(row['native_job'])) for row in prepared['cases']]
+         self.raw = self.read(a['raw_review'])
+         require(self.raw['status'] == 'PASS' and self.raw['lifecycle'] == a['lifecycle']
+@@ -104,7 +119,7 @@
+         require(proof['lifecycle'] == self.a['lifecycle'], 'Original readiness proof lifecycle differs')
+         h.checked(family['round_observer_reviewer'])
+         verified = copy.deepcopy(self.raw)
+-        require(verified['original_sources'] == family['main_observer'], 'Main-domain proof uses a different observer source')
++        require(verified['original_sources'] == family['main_observer'] == self.policy['observer_sources'], 'Main-domain proof uses a different observer source')
+         lifecycle = self.read(proof['lifecycle'])
+         worker = self.read(lifecycle['worker_job'])
+         proved = self.read(worker['case'])

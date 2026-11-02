@@ -1,0 +1,53 @@
+{
+  "optional_treatment_startup_baseline_origin": {
+    "captured_unix_s": null,
+    "csv": null,
+    "owner": null,
+    "profile_sha256": "e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50",
+    "schema": "robotron-root-pretransition-batch2048-CSV-v1",
+    "scope": "pretransition_baseline4096",
+    "transition_started_unix_s": null
+  },
+  "producer_observation": {
+    "acquisition_sha256": null,
+    "csv": null,
+    "csv_origin": null,
+    "csv_scope": null,
+    "environment": null,
+    "experiment": null,
+    "observed_unix_s": null,
+    "owner": null,
+    "producer_started_unix_s": null,
+    "profile_sha256": "e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50",
+    "schema": "robotron-root-batch2048-producer-observation-v1",
+    "source_checkpoint": null,
+    "trainer_unit": null
+  },
+  "required_producer2048_CSV_origin": {
+    "csv_archive": null,
+    "environment_after": null,
+    "environment_before": null,
+    "header_bytes": null,
+    "header_sha256": null,
+    "observed_after_unix_s": null,
+    "observed_before_unix_s": null,
+    "owner_after": null,
+    "owner_before": null,
+    "row_end_offset": null,
+    "row_sha256": null,
+    "row_start_offset": null,
+    "schema": "robotron-root-batch2048-producer-CSV-origin-v2",
+    "source_csv": {
+      "fd_after": null,
+      "fd_before": null,
+      "opened_nofollow": true,
+      "path": null,
+      "path_after": null,
+      "path_before": null,
+      "regular_file": true
+    },
+    "unit_after": null,
+    "unit_before": null
+  },
+  "status": "SOURCE_ONLY_UNBOUND_NOT_ACTUAL_EVIDENCE"
+}

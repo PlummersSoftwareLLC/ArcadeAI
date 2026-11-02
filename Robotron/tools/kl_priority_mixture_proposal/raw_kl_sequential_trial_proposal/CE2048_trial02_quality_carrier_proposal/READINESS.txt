@@ -1,0 +1,42 @@
+Future root observation contract; no collection command is executed here
+
+Schema: robotron-CE2048-trial02-exclusive-readiness-v1. The actual record must
+have status PASS and an actual observed_unix_s less than180s old at launch.
+This template is UNBOUND, not a PASS witness. Root captures genuine current
+resources after exact known trial/insurance units have been archived/released.
+
+candidate = {source:CFG.candidate.path,sha256,bytes,
+ root_job_sha256:evidence.phase_cpu_job.sha256,
+ cpu_proof_sha256:evidence.phase_cpu_report.sha256}.
+main_owner/fleet_owner/inference_worker must equal BOTH runtime_anchor and the
+binder's actual runtime_baseline. All192 pid/start/slot/mask tuples, source_hashes
+and control_hashes match that baseline. unit_files exactly match the anchor's
+nonempty absolute path->SHA map and are rehashed. environment_sha256 is the
+actual SHA256 of json.dumps(selected_environment,sort_keys=True).encode(), using
+all DQN_/ROBOTRON_/CUDA_/TORCHINDUCTOR_ process environment fields. It is not the
+separate LiveHost bindings.environment_sha256 format. The current owner is the
+new returned CE owner, with DQN_BATCH_SIZE4096 and its actual new phase pointers.
+
+resources must retain actual raw command/proc/API evidence and affirm every
+following checked predicate: GPU0 UUID=b549...1dd0 with no compute owner and
+>=14GiB free; GPU1 UUID=c0c5...6ec1 has only the actual main; port9999 no TCP
+listener; existing GPU0 snapshot lease free; no competing helpers or private
+cgroup/tmpfs/processes; no pending managed save; command/UID/cwd/exe identities,
+held environment and unit files checked. The exact UUIDs are in the JSON template.
+
+owned_units_released is ONLY true after original controller and deadline service
+and timer, plus the genuine typed early-phase CPU service/timer, are each freshly
+not-found following original terminal archives and exact owned releases. Bind
+those actual identities/artifacts to the binder's owned_cleanup; do not reuse
+historical trial01/oldKL/old capture unit names. Candidate/newest CPU checks run
+inline in the actual trial controller and have argv/exit completion records;
+do not invent separate PID/invocation/service identities for those checks.
+Also establish absence of any actual private quality/capture/CPU helper relevant
+to this ending and of the two new campaign unit names before launch.
+
+The carrier repeats core source/PID/start/invocation/actor/inference masks,
+CE4096 environment, free-GPU/9999/lease/save and currentAPI192/owner checks at
+launch. Root's fresh full descriptor supplies the complete command/source/unit/
+resource proof; this pack does not pretend a new collector was implemented.
+A copied old readiness record or guessed current owner cannot satisfy the new
+binder's actual baseline and candidate identity requirements.

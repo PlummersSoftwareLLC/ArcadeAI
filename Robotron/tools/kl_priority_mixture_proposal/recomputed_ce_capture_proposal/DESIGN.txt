@@ -1,0 +1,109 @@
+Recomputed CE calibration capture — source-only preparation, 2026-10-17
+
+Root authorizes this separate proposal after the completed warmup A/A diagnostic.
+Nothing is applied, imported, compiled, sampled, tested or launched by this work.
+The old six-file executed-target proposal and every failed/observation receipt
+remain immutable. This proposal does not repair or qualify those experiments.
+
+The live loss source stays byte-identical de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a.
+TrainingLoss construction, four-output call/unpack, CE objective, backward,
+scaler/Adam calls, schedules, priorities and target/inference sync remain the
+original expressions. No live projected-target/log-probability capture and no
+extra forward/RNG draw. Five-output loss is allowed only in a separately owned
+offline recomputation process, explicitly RECOMPUTED and conditional.
+
+Five overlays: current agent.py and training.py with isolated observer calls;
+replay_buffer.py and prefetch.py byte-identical to the sealed sampler/lease
+overlays (c79174e0 / 02871bc5); new recomputed_ce_capture.py. No loss overlay.
+Startup-only DQN_RECOMPUTED_CE_CAPTURE_DIR names a NEW absolute directory with
+prefix ce-recomputed-capture-. It is mutually exclusive with the old trace flag.
+OFF does not import the new observer or change compiled construction/ABI/math.
+Startup validation failures fail startup before producer/learner construction;
+after startup, observer faults latch INVALID and remain outside the learner's
+compile-disable/error handler. No sampler retry or replacement forward.
+
+Ordinals are first eight consumed train_step attempts after replay/enable/
+pressure/batch guards, reserved BEFORE transfer. Discarded/invalidated leases
+and compile warmup are not attempts. Transfer, forward, optimizer, readback or
+priority exceptions retain their ordinal and original exception. An AMP skip
+is retained with actual exposure/found_inf. Never replace any with attempt9.
+Producer draw metadata remains bounded by the existing <=3 slots, plus a local
+producer transient, and is not equated to eight lifetime draws.
+
+Under the existing training RLock, after the consumed lease joins the learner
+stream and after the original online.train()/LR/schedule preparation, BEFORE
+the unchanged loss call: explicitly synchronize the owned learner device; copy
+the exact eight consumed staged tensors to owned CPU storage; copy online and
+target state_dict tensors to owned CPU storage; record modes, effective AMP/
+compile/TF32 flags, scalar configuration, exact schedule, RNG (Python, NumPy,
+CPU and owned CUDA), clocks and draw metadata/lease epoch. Reject unsupported
+geometry/dtype/nonfinite state, changed lease or missing inputs as observer
+invalidity, while preserving the learner's original behavior. No inference or
+Adam snapshot is needed to reconstruct CE; actual optimizer-outcome evidence
+is still retained and is not proof every parameter moved.
+
+CPU copies must complete before this loss invocation, and become durable before
+the consumed slot is released. No model writer may interleave because the
+training RLock covers these owned online/target writes; private rehearsal must
+prove this contract on actual source. A failed transfer may have only its
+entered/error row and no PRE snapshot; that is an incomplete retained attempt.
+PRE snapshots are per-attempt and do not establish a replay/RNG learning anchor.
+
+After the unchanged loss forward, retain detached actual CE, weighted loss, BC
+loss and diagnostic vector, backend and original schedule. Join actual finished
+optimizer exposure ticket and packed found_inf at the existing finish boundary;
+retain known outcome even if later priorities/readback/clocks fail. End runs
+before lease.release in finally. Genuine learner errors are observed best-effort
+then bare-raised unchanged. Observer/reporting failure never enters compile
+fallback, disables training, or claims capture success.
+
+The PRE record also names the actual caller-selected compiled module's immutable
+loss constants. Configuration snapshots are observational metadata, not a new
+control transaction: concurrent/hot configuration changes invalidate readiness;
+compiled constants, actual schedule tensor and bound source govern recomputation.
+
+Storage: fixed eight attempts, <=6GiB total artifacts, <=640MiB of owned current
+raw snapshot (before serialization); no queue of eight raw snapshots or growing
+writer backlog. Synchronous bounded serialization/fsync drains current raw data
+before releasing the lease, then drops tensor references. Published row receipts
+retain only primitive metadata and file hashes. Failed writes remain visible,
+can stop capture, and cannot fabricate a ninth success. All publication paths are
+create-only (context.json, attempt-NN.entered.json, attempt-NN.payload.pt,
+attempt-NN.json, status-NNN.json and final.json), fsynced with their directory.
+No temporary rename, disappearance or replacement allowance is required in the
+owned storage watcher. Partial files remain failure evidence; only fully drained
+receipts count. Status count is bounded; no append-only unbounded log.
+Actual FP32 state pairs alone cost 2,917,171,200 bytes for eight4096x11128 rows;
+online+target snapshots add about1.1GB. Exact tensor-byte counting precedes copies
+and disk writes. Pickle/JSON overhead has a separately enforced budget margin.
+No FP16 rounding of HOF/staged FP32 states to meet budget. CPU/disk pauses are
+measured and explicitly part of the observation; no throughput/steady-state
+mixture claim. Disk budget is checked allocation-by-allocation, not a quota.
+
+The private smallest rehearsal is one actual4096 attempt through the unchanged
+four-output training route, using the already verified trained fixture, original
+saved scaler, fixed bounded synthetic inputs and owned GPU0 guards. Applied or
+positively proven AMP-skipped outcomes are reported distinctly; a skip does not
+validate applied Adam behavior. Before that, private CPU whole-step tests cover
+default OFF source/ABI, PRE snapshot timing, exact staged dtype/lease lifetime,
+applied/skip/transfer+forward+optimizer errors, observer I/O containment, budget
+failure, first8/no9, no retained mutable tensors after drain, and slot reuse.
+No actual rehearsal or live capture is authorized by this source proposal.
+
+Offline analysis reloads each PRE online/target and exact inputs/modes/config/
+schedule/RNG into a separate private process. Its projected targets/log-probs,
+entropy, auxiliary terms, KL and counterfactual weights are RECOMPUTED. Compare
+recomputed CE to actual emitted CE using the original frozen CE rtol2e-4/atol2e-5;
+preserve mismatches and report interpretation_not_ready. CE agreement does NOT
+mathematically bound missing live entropy, KL, ranks or bank weights. Repeated
+recomputation measures empirical stability only. Near-floor/material-negative/
+rank ambiguity remains not-ready, never an exact executed KL claim. Three-vector
+selected-row analysis (actual emitted weights, fresh recomputed CE normalization,
+fresh recomputed KL normalization with own bank recoupling) stays conditional;
+duplicate rows preserve ordered samples and are not a coherent migrated tree.
+
+Next decision after the one-attempt private rehearsal: whether bounded live8
+observational capture is useful and affordable under an owned maintenance plan.
+No recipe/priority/LR change, full-network five-output parity, matched-learning
+anchor, main-GB300 hardware equivalence, real fleet lifecycle, or learning gain
+is established. Any future KL learning experiment needs its own reviewed gates.

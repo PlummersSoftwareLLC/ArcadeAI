@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Reviewed3 additive fields only; no complete actual job or launch authority",
+  "type": "object",
+  "required": [
+    "schema",
+    "mode",
+    "batch_profile",
+    "phase_early_insurance_result",
+    "producer_capture",
+    "producer_collector",
+    "verifier"
+  ],
+  "properties": {
+    "schema": {
+      "const": "robotron-ce-batch-profile-transition-job-reviewed3-v1"
+    },
+    "mode": {
+      "enum": [
+        "activate_batch2048",
+        "return_batch4096"
+      ]
+    },
+    "batch_profile": {
+      "$ref": "#/$defs/pin"
+    },
+    "phase_early_insurance_result": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/pin"
+        }
+      ]
+    },
+    "producer_capture": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/pin"
+        }
+      ]
+    },
+    "producer_collector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "script",
+        "manifest"
+      ],
+      "properties": {
+        "script": {
+          "$ref": "#/$defs/pin"
+        },
+        "manifest": {
+          "$ref": "#/$defs/pin"
+        }
+      }
+    },
+    "verifier": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "pin": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256",
+        "bytes",
+        "identity"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^/"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "identity": {
+          "type": "object"
+        }
+      }
+    }
+  },
+  "$comment": "Actual function read_job remains authoritative. Activation fields phase_early_insurance_result/producer_capture are null and genuine7d insurance remains. Return requires phase result/capture FULLPINs, legacyinsurance fields null, verifier python_identity rather than oldpython_binding, and actual current owner/phase/profile joins. All old ownership/masks/recipe/source/prerequisite fields remain mandatory in original shape."
+}

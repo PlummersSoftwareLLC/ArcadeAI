@@ -1,0 +1,24 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/future-capacity64-shared-slot-domain-UNSELECTED-original01/runtime-family-original03/A32/run_evaluator_count_active600_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/A32/run_evaluator_count_active600_v2.py
+@@ -59,6 +59,9 @@
+     return load('_compiled32_original_helper_defs', path)
+ 
+ def validate_job(job, *, cpu_initializer=False):
++    chain_path = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/startup_slot64_chain_v1.py')
++    require(hashlib.sha256(chain_path.read_bytes()).hexdigest() == '8d55787af32e4b9b348d7078ec553f6c4368a6e6ebb87a32666c93223dbce936', "Actual nested Lua chain guard changed")
++    load("_actual_startup_slot64_chain", chain_path).validate_job(job)
+     require(type(cpu_initializer) is bool and job.get('initializer_fixture_only') is cpu_initializer, 'Explicit CPU-only fixture mode or native-job mode required')
+     require(job.get('capacity_shape') == dict(actor_count=ACTOR_COUNT, games_per_slot=GAMES_PER_SLOT, expected_games=64, identity_count=2 * ACTOR_COUNT, inference_max_batch_size=16), 'Exact evaluator geometry required')
+     require(job['schema'] == 'robotron-evaluator-count-active600-engineering-v1' and job['diagnostic_role'] == 'timing_load_only' and (job['diagnostic_only'] is True), 'This runtime is a startup/monitor diagnostic, never a quality leg')
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/future-capacity64-shared-slot-domain-UNSELECTED-original01/runtime-family-original03/B64/run_evaluator_count_active600_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/B64/run_evaluator_count_active600_v2.py
+@@ -59,6 +59,9 @@
+     return load('_compiled32_original_helper_defs', path)
+ 
+ def validate_job(job, *, cpu_initializer=False):
++    chain_path = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/startup_slot64_chain_v1.py')
++    require(hashlib.sha256(chain_path.read_bytes()).hexdigest() == '8d55787af32e4b9b348d7078ec553f6c4368a6e6ebb87a32666c93223dbce936', "Actual nested Lua chain guard changed")
++    load("_actual_startup_slot64_chain", chain_path).validate_job(job)
+     require(type(cpu_initializer) is bool and job.get('initializer_fixture_only') is cpu_initializer, 'Explicit CPU-only fixture mode or native-job mode required')
+     require(job.get('capacity_shape') == dict(actor_count=ACTOR_COUNT, games_per_slot=GAMES_PER_SLOT, expected_games=64, identity_count=2 * ACTOR_COUNT, inference_max_batch_size=16), 'Exact evaluator geometry required')
+     require(job['schema'] == 'robotron-evaluator-count-active600-engineering-v1' and job['diagnostic_role'] == 'timing_load_only' and (job['diagnostic_only'] is True), 'This runtime is a startup/monitor diagnostic, never a quality leg')

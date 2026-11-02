@@ -1,0 +1,479 @@
+--- a/Robotron/Scripts/dqn/game_journal.py
++++ b/Robotron/Scripts/dqn/game_journal.py
+@@ -1,4 +1,6 @@
+-"""Raw game/life evidence for experiment comparisons, independent of RL terminals.
++"""UNSELECTED private completion-policy proposal; default legacy behavior retained.
++
++Raw game/life evidence for experiment comparisons, independent of RL terminals.
+ 
+ ``done`` is a lost LIFE.  Whole games end on the ingest layer's accepted score
+ reset, or confirmed life exhaustion.  Initial attachments and disconnects are
+@@ -44,7 +46,10 @@
+ 
+ 
+ class GameJournal:
+-    def __init__(self, directory, lives_start=3, clock=time.time):
++    def __init__(self, directory, lives_start=3, clock=time.time, completion_policy="wire_lives_v1"):
++        if completion_policy not in ("wire_lives_v1", "confirmed_reset_reserves_v1"):
++            raise ValueError("Unknown explicit game completion policy")
++        self.completion_policy = completion_policy
+         self.directory = Path(directory)
+         self.directory.mkdir(parents=True, exist_ok=True)
+         self.games_path = self.directory / "games.jsonl"
+@@ -68,7 +73,8 @@
+         if not directory:
+             directory = Path(model_dir).parent / "logs" / (
+                 "game-journal-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ"))
+-        return cls(directory, lives_start=lives_start)
++        return cls(directory, lives_start=lives_start,
++                   completion_policy=os.getenv("ROBOTRON_GAME_COMPLETION_POLICY", "wire_lives_v1"))
+ 
+     def _write(self, path, row):
+         # One small append per life/game, outside the frame/inference critical
+@@ -80,6 +86,8 @@
+         self.sequence += 1
+         now = self.clock()
+         ctx = context()
++        if self.completion_policy == "confirmed_reset_reserves_v1":
++            ctx = dict(ctx, complete_game_boundary_policy=self.completion_policy)
+         if boundary_inputs is not None:
+             ctx = dict(ctx, game_boundary_diagnostics=
+                        _boundary_start_evidence(boundary_inputs, reason))
+@@ -95,6 +103,8 @@
+             life_start_score=int(frame.game_score), life_frames=0,
+             last_alive=False, last_done=False, seen_positive_lives=False,
+             mixed_experiment=False, finished=False, restart_pulse=False,
++            last_raw_reserves=None, seen_positive_reserves=False,
++            seen_zero_reserves_after_play=False, terminal_confirmation=None,
+             measurement_active=bool(ctx.get("measurement_active", False)),
+             measurement_generation=int(ctx.get("measurement_generation", 0)),
+             mixed_measurement=False, first_play_level=None, result=None,
+@@ -103,6 +113,10 @@
+                              lives=int(getattr(frame, "lives", -1)),
+                              start_pressed=bool(frame.start_pressed)),
+         )
++        if self.completion_policy == "confirmed_reset_reserves_v1":
++            raw = getattr(frame, "num_lasers", None)
++            game["start_frame"]["raw_reserves"] = (raw if type(raw) is int
++                                                   and 0 <= raw < 255 else None)
+         self.active[cid] = game
+         if game["measurement_active"]:
+             self.measurement_games[game["journal_game_id"]] = game
+@@ -148,6 +162,9 @@
+             excluded_reason=excluded, experiment=game["start"].get("experiment", ""),
+             start_context=game["start"], end_context=end,
+         )
++        if self.completion_policy == "confirmed_reset_reserves_v1":
++            row["completion_policy"] = self.completion_policy
++            row["terminal_confirmation"] = game["terminal_confirmation"]
+         self._write(self.games_path, row)
+         game["finished"] = True
+         game["result"] = row
+@@ -158,21 +175,51 @@
+ 
+         ``new_game`` comes from the existing ingest classifier, without the
+         ratchet's 5,000-point cutoff.  A zero-point game has no score decrease:
+-        confirmed exhaustion followed by an autoboot pulse and a new alive edge
+-        supplies that otherwise invisible boundary.  Wire lives alone are not
+-        sufficient there (Lua's lives counter itself resets on a score drop),
+-        so all-zero games additionally use the configured starting life count.
++        replenishment of the ROM reserve counter after observed exhaustion,
++        together with an autoboot pulse, supplies that otherwise invisible
++        boundary. Derived wire lives never complete games in confirmed mode.
+         """
+         with self.lock:
+             game = self.active.get(cid)
++            raw_reserves = getattr(frame, "num_lasers", None)
++            reserves = (raw_reserves if type(raw_reserves) is int
++                        and 0 <= raw_reserves < 255 else None)
++            recent_start = (bool(boundary_inputs[7]) if boundary_inputs is not None else False)
++            zero_reserve_restart = bool(
++                self.completion_policy == "confirmed_reset_reserves_v1"
++                and game is not None and not game["finished"]
++                and game["score"] == int(frame.game_score) == 0
++                and game["first_play_level"] == 1 and game["playable_frames"] > 0
++                and game["seen_positive_reserves"] and game["seen_zero_reserves_after_play"]
++                and game["last_raw_reserves"] == 0
++                and reserves is not None and reserves > 0
++                and int(frame.level_number) in (0, 1)
++                and (game["restart_pulse"] or frame.start_pressed or recent_start))
+             if game is None:
+                 game = self._begin(cid, frame, cs, context, bool(new_game),
+                                    "score_reset" if new_game else "initial_attachment",
+                                    boundary_inputs=boundary_inputs)
+-            elif new_game or int(cs.get("game_uid", 0)) != game["game_uid"]:
+-                self._finish(game, context, "score_reset" if new_game else "game_uid_changed", True)
+-                game = self._begin(cid, frame, cs, context, True,
+-                                   "score_reset" if new_game else "game_uid_changed",
++            elif new_game or int(cs.get("game_uid", 0)) != game["game_uid"] or zero_reserve_restart:
++                reason = ("zero_score_restart" if zero_reserve_restart else
++                          "score_reset" if new_game else "game_uid_changed")
++                if self.completion_policy == "confirmed_reset_reserves_v1":
++                    game["terminal_confirmation"] = dict(
++                        schema="robotron-confirmed-game-reset-v1", reason=reason,
++                        previous_score=int(game["score"]), next_score=int(frame.game_score),
++                        previous_game_uid=game["game_uid"], next_game_uid=int(cs.get("game_uid", 0)),
++                        previous_raw_reserves=game["last_raw_reserves"], next_raw_reserves=reserves,
++                        next_wave=int(frame.level_number), next_alive=bool(frame.player_alive),
++                        restart_pulse=bool(game["restart_pulse"] or frame.start_pressed or recent_start),
++                        classifier_new_game=bool(new_game),
++                        next_journal_game_id=f"{self.run_id}:{self.sequence + 1}",
++                        ingest_boundary_inputs=(_boundary_start_evidence(boundary_inputs, reason)
++                                                if boundary_inputs is not None else None))
++                confirmed = (self.completion_policy != "confirmed_reset_reserves_v1"
++                             or bool(new_game) or zero_reserve_restart)
++                if not confirmed:
++                    reason = "unconfirmed_game_uid_changed"
++                self._finish(game, context, reason, confirmed)
++                game = self._begin(cid, frame, cs, context, confirmed, reason,
+                                    boundary_inputs=boundary_inputs)
+             elif game["finished"]:
+                 game["restart_pulse"] |= bool(frame.start_pressed)
+@@ -193,6 +240,11 @@
+                 != game["measurement_active"]
+                 or int(cs.get("journal_measurement_generation", game["measurement_generation"]))
+                 != game["measurement_generation"])
++            if self.completion_policy == "confirmed_reset_reserves_v1":
++                game["restart_pulse"] |= bool(frame.start_pressed)
++                game["seen_positive_reserves"] |= reserves is not None and reserves > 0
++                game["seen_zero_reserves_after_play"] |= reserves == 0 and game["playable_frames"] > 0
++                game["last_raw_reserves"] = reserves
+             game["observed_frames"] += 1
+             game["score"] = max(game["score"], int(frame.game_score))
+             # A real score reset can precede the old wave byte clearing.
+@@ -233,7 +285,8 @@
+                 game["life_start_score"] = int(frame.game_score)
+                 game["life_frames"] = 0
+                 zero_exhausted = game["score"] == 0 and game["deaths"] >= self.lives_start
+-                if (lives == 0 and game["seen_positive_lives"]) or zero_exhausted:
++                if (self.completion_policy == "wire_lives_v1"
++                        and ((lives == 0 and game["seen_positive_lives"]) or zero_exhausted)):
+                     self._finish(game, context, "zero_score_lives_exhausted" if zero_exhausted
+                                  else "wire_lives_exhausted", True)
+             game["last_alive"] = bool(frame.player_alive)
+--- a/Robotron/tools/run_frozen_sidecar.py
++++ b/Robotron/tools/run_frozen_sidecar.py
+@@ -92,7 +92,8 @@
+     cpu_threads: int = 2
+     boot_assets: Path | None = None
+     inference_backend: str = "eager"
+-    game_boundary_diagnostics: bool = False
++    game_boundary_diagnostics: bool = True
++    completion_policy: str = "confirmed_reset_reserves_v1"
+ 
+     def validate(self, *, require_boot_assets=False):
+         if self.directory != self.directory.resolve():
+@@ -117,6 +118,8 @@
+             raise ValueError("device must be cpu or cuda")
+         if self.inference_backend not in ("eager", "inductor"):
+             raise ValueError("inference_backend must be eager or inductor")
++        if self.completion_policy != "confirmed_reset_reserves_v1" or self.game_boundary_diagnostics is not True:
++            raise ValueError("Confirmed full-game resets and boundary diagnostics are required")
+         if type(self.game_boundary_diagnostics) is not bool:
+             raise ValueError("game_boundary_diagnostics must be a bool")
+         if self.inference_backend == "inductor" and self.device != "cuda":
+@@ -144,6 +147,7 @@
+                     boot_assets=str(self.boot_assets) if self.boot_assets else None,
+                     inference_backend=self.inference_backend,
+                     game_boundary_diagnostics=self.game_boundary_diagnostics,
++                    completion_policy=self.completion_policy,
+                     comparison_caveat="Reevaluate the incumbent on this same device, high-slot set, "
+                     "fresh private MAME configuration and pacing before candidate comparisons.")
+ 
+@@ -179,6 +183,7 @@
+     os.environ["ROBOTRON_DQN_MODEL_DIR"] = str(job.directory / "isolated-models")
+     os.environ["ROBOTRON_DQN_CONTROL_PATH"] = str(job.directory / "isolated-control.json")
+     os.environ["ROBOTRON_RUN_DIR"] = str(job.directory / "journal")
++    os.environ["ROBOTRON_GAME_COMPLETION_POLICY"] = job.completion_policy
+     # Bind the plan's explicit choice; inherited environment never opts in.
+     os.environ["ROBOTRON_GAME_BOUNDARY_DIAGNOSTICS"] = "1" if job.game_boundary_diagnostics else "0"
+     os.environ["ROBOTRON_TRAIN_GPU"] = "0"
+@@ -362,6 +367,7 @@
+ 
+ def source_hashes():
+     paths = [Path(__file__), GAME / "tools/sidecar_boot.py",
++             GAME / "tools/confirmed_terminal_evidence.py",
+              GAME / "Scripts/main.lua", GAME / "Scripts/robotron_socket_wait.c"]
+     paths.extend(GAME / "Scripts/dqn" / name for name in (
+         "config.py", "model.py", "actor_tags.py", "socket_server.py", "game_journal.py",
+@@ -587,8 +593,23 @@
+     if result.get("valid"):
+         try:
+             validate_receipt(result)
++            try:
++                from .confirmed_terminal_evidence import collect_successors, validate_receipt_terminals
++            except ImportError:
++                from confirmed_terminal_evidence import collect_successors, validate_receipt_terminals
++            rows = result.get("rows", result.get("cohort", {}).get("rows", []))
++            def read_original(name):
++                raw = (job.directory / "journal" / name).read_bytes()
++                if raw and not raw.endswith(b"\n"):
++                    raise ValueError("Partial original terminal journal")
++                return [json.loads(line) for line in raw.splitlines()]
++            result["terminal_successors"] = collect_successors(rows,
++                read_original("games.jsonl"), read_original("measurement_starts.jsonl"))
++            result["terminal_journal_sha256"] = {name: sha256(job.directory / "journal" / name)
++                for name in ("games.jsonl", "measurement_starts.jsonl")}
++            validate_receipt_terminals(result, rows)
+             result["receipt_validator"] = "passed"
+-        except ValueError as error:
++        except (OSError, ValueError, TypeError, KeyError) as error:
+             result.update(valid=False, reason="receipt_validation_failed", validation_error=str(error))
+             result["invalidity_reasons"].append("receipt_validation_failed")
+     write_json(job.directory / "receipt.json", result)
+@@ -606,7 +627,7 @@
+     parser.add_argument("--gpu-uuid")
+     parser.add_argument("--inference-backend", choices=("eager", "inductor"), default="eager",
+                         help="inductor opts into strict CUDA compile/warmup before server/fleet startup")
+-    parser.add_argument("--game-boundary-diagnostics", action="store_true",
++    parser.add_argument("--game-boundary-diagnostics", action="store_true", default=True,
+                         help="opt in to primitive game-boundary inputs in private journal contexts")
+     parser.add_argument("--port", type=int, default=9999)
+     parser.add_argument("--cohort-s", type=float, default=120)
+--- a/Robotron/tools/run_quality_campaign.py
++++ b/Robotron/tools/run_quality_campaign.py
+@@ -64,7 +64,7 @@
+     mame: Path = Path("/usr/games/mame")
+     rompath: Path = evaluator.GAME / "roms"
+     hypothesis: str = "The candidate checkpoint improves greedy, full-game score over the protected reference."
+-    game_boundary_diagnostics: bool = False
++    game_boundary_diagnostics: bool = True
+ 
+     def jobs(self):
+         counts = Counter()
+@@ -388,7 +388,7 @@
+     parser.add_argument("--mame", type=Path, default=Path("/usr/games/mame"))
+     parser.add_argument("--rompath", type=Path, default=evaluator.GAME / "roms")
+     parser.add_argument("--hypothesis", default=Campaign.__dataclass_fields__["hypothesis"].default)
+-    parser.add_argument("--game-boundary-diagnostics", action="store_true",
++    parser.add_argument("--game-boundary-diagnostics", action="store_true", default=True,
+                         help="precommit the same opt-in boundary diagnostics for all four legs")
+     parser.add_argument("--launch", action="store_true", help="run the precommitted campaign; default prints its plan")
+     args = parser.parse_args(argv)
+--- a/Robotron/tools/compare_sidecar_measurements.py
++++ b/Robotron/tools/compare_sidecar_measurements.py
+@@ -20,6 +20,7 @@
+     "timeout_s", "wait_us", "epsilon", "expert_ratio", "difficulty",
+     "start_level", "replay_enabled", "fp16", "mame", "rompath",
+     "cpu_threads", "boot_assets", "inference_backend", "inference_max_batch_size",
++    "completion_policy", "game_boundary_diagnostics",
+ )
+ 
+ 
+@@ -33,6 +34,12 @@
+ 
+ def validate_backend(receipt, *, verify_checkpoint=False):
+     leg = validate_receipt(receipt)
++    try:
++        from .confirmed_terminal_evidence import validate_receipt_terminals
++    except ImportError:
++        from confirmed_terminal_evidence import validate_receipt_terminals
++    rows = receipt.get("rows", receipt.get("cohort", {}).get("rows", []))
++    validate_receipt_terminals(receipt, rows)
+     job = receipt.get("job", {})
+     if any(field not in job for field in JOB_FIELDS):
+         raise ValueError("Missing private backend settings")
+--- a/Robotron/tools/confirmed_terminal_evidence.py
++++ b/Robotron/tools/confirmed_terminal_evidence.py
+@@ -0,0 +1,132 @@
++"""Pure prospective full-game terminal validation; historical rows fail closed.
++
++This module neither reads files nor decides quality gates. The owning evaluator
++must obtain successors from its original measurement-start/game journals, and an
++independent auditor must reconcile those files before any winner protection.
++"""
++MODE = 'confirmed_reset_reserves_v1'
++SCHEMA = 'robotron-confirmed-game-reset-v1'
++
++
++def require(condition, message):
++    if not condition:
++        raise ValueError('Unconfirmed full-game terminal: ' + message)
++
++
++def integer(value, name):
++    require(type(value) is int and value >= 0, name + ' must be a nonnegative integer')
++    return value
++
++
++def start_record(row):
++    """Project an original game row or original measurement-start row equally."""
++    return dict(journal_game_id=row['journal_game_id'], client_id=row['client_id'],
++                client_slot=row['client_slot'], game_uid=row['game_uid'],
++                start_unix_s=row['start_unix_s'], start_reason=row['start_reason'],
++                known_start=row['known_start'], start_frame=row['start_frame'],
++                context=row.get('start_context', row.get('context')))
++
++
++def validate_terminal(row, successor):
++    require(row.get('completion_policy') == MODE, 'explicit completion policy missing')
++    require(row.get('complete') is True, 'partial game')
++    require(row.get('start_context', {}).get('complete_game_boundary_policy') == MODE,
++            'start completion policy differs')
++    confirmation = row.get('terminal_confirmation')
++    require(isinstance(confirmation, dict) and confirmation.get('schema') == SCHEMA,
++            'terminal confirmation missing')
++    score = integer(row.get('score'), 'score')
++    require(confirmation.get('previous_score') == score,
++            'terminal differs from accumulated full score')
++    require(confirmation.get('previous_game_uid') == row.get('game_uid'), 'previous UID differs')
++    reason = confirmation.get('reason')
++    require(reason == row.get('boundary_reason') and reason in ('score_reset', 'zero_score_restart'),
++            'terminal is not an accepted reset')
++    diagnostic = confirmation.get('ingest_boundary_inputs')
++    require(isinstance(diagnostic, dict) and diagnostic.get('schema') == 'robotron-game-boundary-inputs-v1'
++            and diagnostic.get('classifier_verdict') == 'accept'
++            and diagnostic.get('journal_start_reason') == reason, 'accepted ingest primitives missing')
++    current = diagnostic.get('current_wire')
++    previous = diagnostic.get('previous_accepted_wire')
++    baseline = diagnostic.get('classifier_previous')
++    require(isinstance(current, dict) and isinstance(previous, dict) and isinstance(baseline, dict),
++            'previous/current accepted sample missing')
++    require(integer(baseline.get('raw_score'), 'classifier baseline') == score % 100_000_000,
++            'registered terminal truncates or differs from final classifier baseline')
++    next_score = integer(confirmation.get('next_score'), 'next score')
++    require(current.get('raw_score') == next_score % 100_000_000, 'next score differs from accepted wire')
++    require(type(current.get('accepted_frames_before')) is int
++            and type(previous.get('accepted_frames_before')) is int
++            and current['accepted_frames_before'] > previous['accepted_frames_before'],
++            'accepted samples are not ordered')
++    if reason == 'score_reset':
++        require(confirmation.get('classifier_new_game') is True
++                and diagnostic.get('classifier_new_game') is True, 'classifier reset missing')
++        require(next_score < score and next_score <= 100_000, 'score did not reset')
++    else:
++        require(score == next_score == 0, 'zero-score boundary has nonzero score')
++        require(confirmation.get('previous_raw_reserves') == 0
++                and type(confirmation.get('next_raw_reserves')) is int
++                and 0 < confirmation['next_raw_reserves'] < 255,
++                'zero-score reserve replenishment missing')
++        require(confirmation.get('restart_pulse') is True
++                and confirmation.get('next_wave') in (0, 1), 'zero-score restart evidence missing')
++        require(confirmation.get('classifier_new_game') is False
++                and diagnostic.get('classifier_new_game') is False, 'zero-score classifier evidence differs')
++    require(isinstance(successor, dict), 'original successor start missing')
++    require(successor.get('journal_game_id') == confirmation.get('next_journal_game_id')
++            and successor.get('journal_game_id') != row.get('journal_game_id'), 'successor ID differs')
++    require(successor.get('client_id') == row.get('client_id')
++            and successor.get('client_slot') == row.get('client_slot')
++            and successor.get('game_uid') == confirmation.get('next_game_uid'), 'successor actor/UID differs')
++    require(successor.get('known_start') is True and successor.get('start_reason') == reason,
++            'successor is not a known start')
++    require(successor.get('start_unix_s', -1) >= row['end_unix_s'], 'successor precedes terminal')
++    context = successor.get('context', {})
++    require(context.get('complete_game_boundary_policy') == MODE
++            and context.get('game_boundary_diagnostics') == diagnostic, 'successor accepted inputs differ')
++    frame = successor.get('start_frame', {})
++    require(frame.get('score') == next_score
++            and frame.get('level') == confirmation.get('next_wave')
++            and frame.get('player_alive') == confirmation.get('next_alive')
++            and frame.get('raw_reserves') == confirmation.get('next_raw_reserves'), 'successor frame differs')
++    return dict(journal_game_id=row['journal_game_id'],
++                next_journal_game_id=successor['journal_game_id'], reason=reason, score=score)
++
++
++def collect_successors(rows, original_game_rows, original_starts):
++    """Require the independently persisted start registry and game rows to agree."""
++    games, starts, full_games = {}, {}, {}
++    for records, target in ((original_game_rows, games), (original_starts, starts)):
++        for row in records:
++            key = row['journal_game_id']
++            require(key not in target, 'duplicate original journal/start ID')
++            target[key] = start_record(row)
++            if target is games:
++                full_games[key] = row
++    successors = {}
++    for row in rows:
++        own = row['journal_game_id']
++        require(own in games and own in starts and games[own] == starts[own] == start_record(row)
++                and full_games[own] == row,
++                'admitted row differs from original game/start record')
++        confirmation = row.get('terminal_confirmation')
++        require(isinstance(confirmation, dict), 'terminal confirmation missing')
++        identifier = confirmation.get('next_journal_game_id')
++        require(identifier in starts and identifier in games and starts[identifier] == games[identifier],
++                'next start was not retained in both original journals')
++        successor = starts[identifier]
++        validate_terminal(row, successor)
++        successors[own] = successor
++    return successors
++
++
++def validate_receipt_terminals(receipt, rows):
++    require(receipt.get('job', {}).get('completion_policy') == MODE,
++            'job completion policy missing')
++    require(receipt.get('job', {}).get('game_boundary_diagnostics') is True,
++            'job accepted-boundary diagnostics missing')
++    successors = receipt.get('terminal_successors')
++    require(isinstance(successors, dict) and set(successors) == {r['journal_game_id'] for r in rows},
++            'successor coverage differs from all admitted games')
++    return [validate_terminal(row, successors[row['journal_game_id']]) for row in rows]
+--- a/Robotron/tools/test_compare_sidecar_measurements.py
++++ b/Robotron/tools/test_compare_sidecar_measurements.py
+@@ -35,6 +35,7 @@
+                        for slot in slots},
+         socket_wait=dict(port=9999, wait_us=1000, sha256="wire",
+                          actors={str(slot): dict(matching_activation=True) for slot in slots}))
++    add_confirmed_fixture(data)
+     return data
+ 
+ 
+@@ -135,5 +136,39 @@
+                 validate_backend(data, verify_checkpoint=True)
+ 
+ 
++"""Synthetic unit-test proof construction; never original evaluation evidence."""
++def add_confirmed_fixture(data):
++    import copy
++    mode = 'confirmed_reset_reserves_v1'
++    data['job'].update(completion_policy=mode, game_boundary_diagnostics=True)
++    successors = {}
++    for index, row in enumerate(data['rows']):
++        zero = row['score'] == 0
++        reason = 'zero_score_restart' if zero else 'score_reset'
++        uid = index + 1
++        next_uid = uid if zero else uid + 10000
++        row.update(client_id=index % 16, game_uid=uid, completion_policy=mode,
++                   boundary_reason=reason, start_reason='score_reset')
++        row['start_context']['complete_game_boundary_policy'] = mode
++        diagnostic = dict(schema='robotron-game-boundary-inputs-v1',
++            journal_start_reason=reason, classifier_verdict='accept', classifier_new_game=not zero,
++            classifier_previous=dict(raw_score=row['score'] % 100_000_000, raw_wave=1, player_alive=False),
++            previous_accepted_wire=dict(raw_score=row['score'] % 100_000_000, accepted_frames_before=5),
++            current_wire=dict(raw_score=0, accepted_frames_before=6))
++        next_id = row['journal_game_id'] + ':next'
++        row['terminal_confirmation'] = dict(schema='robotron-confirmed-game-reset-v1',
++            reason=reason, previous_score=row['score'], next_score=0,
++            previous_game_uid=uid, next_game_uid=next_uid, previous_raw_reserves=0,
++            next_raw_reserves=2, next_wave=1, next_alive=False, restart_pulse=True,
++            classifier_new_game=not zero, next_journal_game_id=next_id,
++            ingest_boundary_inputs=diagnostic)
++        successors[row['journal_game_id']] = dict(journal_game_id=next_id,
++            client_id=row['client_id'], client_slot=row['client_slot'], game_uid=next_uid,
++            known_start=True, start_reason=reason, start_unix_s=row['end_unix_s']+.01,
++            start_frame=dict(score=0, level=1, player_alive=False, raw_reserves=2),
++            context=dict(complete_game_boundary_policy=mode,
++                         game_boundary_diagnostics=copy.deepcopy(diagnostic)))
++    data['terminal_successors'] = successors
++
+ if __name__ == "__main__":
+     unittest.main()
+--- a/Robotron/tools/test_run_quality_campaign.py
++++ b/Robotron/tools/test_run_quality_campaign.py
+@@ -11,7 +11,7 @@
+ from unittest.mock import patch
+ 
+ from . import run_quality_campaign as campaign
+-from .test_compare_sidecar_measurements import sidecar
++from .test_compare_sidecar_measurements import sidecar, add_confirmed_fixture
+ 
+ 
+ class CampaignTests(unittest.TestCase):
+@@ -53,6 +53,7 @@
+             row["score"] = scores[index] if isinstance(scores, list) else scores
+         data["started"] = data["count"] = len(rows)
+         data["socket_wait"].update(port=spec["job"]["port"], wait_us=spec["job"]["wait_us"])
++        add_confirmed_fixture(data)
+         if nested:
+             data["cohort"] = dict(rows=data.pop("rows"), pending=0, abandoned=0,
+                 started=len(rows), count=len(rows), valid=True, complete=True, closed=True,

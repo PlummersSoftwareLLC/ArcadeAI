@@ -1,0 +1,27 @@
+{
+  "status": "UNSELECTED_UNEXECUTED_AFTER_CURRENT_QUALITY_CLOSURE_ONLY",
+  "literal_plan": [
+    "/ROOT_VERIFIED_PYTHON",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/lr25_hot_window_observer_proposal/hot_window_observer.py"
+  ],
+  "metadata_guards": [
+    "/ROOT_VERIFIED_PYTHON",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/lr25_hot_window_observer_proposal",
+    "-p",
+    "test_hot_window_observer.py",
+    "-v"
+  ],
+  "expected_test_methods": 11,
+  "actual_test_result": null,
+  "actual_window_job": null,
+  "actual_window_result": null,
+  "note": "No execution CLI exists. Future root owns authenticated callback integration; default main is literal PLAN."
+}

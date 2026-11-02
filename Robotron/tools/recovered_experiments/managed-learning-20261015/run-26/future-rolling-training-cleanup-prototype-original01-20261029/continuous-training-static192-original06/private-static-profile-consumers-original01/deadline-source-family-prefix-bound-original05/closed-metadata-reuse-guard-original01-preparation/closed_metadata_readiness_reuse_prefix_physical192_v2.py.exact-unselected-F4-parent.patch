@@ -1,0 +1,116 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-physical-original04/metadata600-resource-templates-original01/closed-metadata-reuse-guard-original01-preparation/closed_metadata_readiness_reuse_physical192_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/closed-metadata-reuse-guard-original01-preparation/closed_metadata_readiness_reuse_prefix_physical192_v2.py
+@@ -23,7 +23,7 @@
+     return value
+ 
+ 
+-SOURCE_CONTRACT_SHA = '1504401ad9fcffd33f56c2997de7e2b24bb9f014615b027484339aa01631b461'
++SOURCE_CONTRACT_SHA = '7b1d2b37b3396016b2b8de8c768246cd292e3a92b1e009c31f09a3691e52957d'
+ 
+ 
+ class ClosedMetadataReadiness:
+@@ -38,16 +38,51 @@
+                 'Exact selected physical source contract required')
+         policy = self.read(policy_pin)
+         require(policy['schema'] == 'robotron-physical192-prospective-closed-metadata-guard-source-contract-v1'
+-                and policy['physical_source_family']['sha256'] == '18832e401535058524d15f03d519b16c2b11df45bfb762d68d385773678b334d'
+-                and policy['physical_health_source_family']['sha256'] == '0effd7170f23dfac8ecd811c2df4b74435972b330bf74ba61913c530ce7a35b5'
+-                and type(policy['raw_samples']) is int and policy['raw_samples'] >= 3000 and policy['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1' and policy['maximum_gap_s'] == 2.0 and policy['full_main_input_count'] == 311
++                and policy['physical_source_family']['sha256'] == 'eb5070a9ea134c5b16e553e024c554a948d70f469d862d93b7867ae9e9d675bd'
++                and policy['physical_health_source_family']['sha256'] == '5a901e68e16270f7985f907964d46cc0ceb7b6e17dd1834009a5d616b88fcecd'
++                and policy['actual_new_binding_complete'] is True
++                and type(policy['raw_samples']) is int and policy['raw_samples'] >= 3000 and policy['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1' and policy['maximum_gap_s'] == 2.0 and policy['full_main_input_count'] == 348
+                 and policy['main_health_profile'] == 'PHYSICAL_ORIGINAL192_TRAIN_CURRENT_TCP_EVAL_ORIGINAL_ONCE',
+                 'physical source selection differs')
+         for key in ('physical_source_family', 'core_source_peer', 'physical_health_source_family', 'joint_engineering',
+                     'physical_private_source_peer', 'shared_profile_helper', 'metadata_driver', 'metadata_preparer', 'metadata_contract', 'metadata_closer',
+-                    'raw_review', 'raw_reviewer', 'lifecycle', 'worker_job', 'outcome', 'reader', 'archive'):
++                    'raw_review', 'raw_reviewer', 'lifecycle', 'worker_job', 'outcome', 'reader', 'archive',
++                    'physical_main_case', 'physical_input_inventory', 'observer_source_map', 'metadata_assembler',
++                    'metadata_controller', 'metadata_resource_packet', 'engineering_finalizer', 'engineering_closer'):
+             require(a[key] == policy[key], 'Selected new source differs: ' + key)
+             h.checked(a[key])
++        joint = self.read(a['joint_engineering'])
++        require(joint['schema'] == 'robotron-continuous-physical192-joint-engineering-readiness-v1'
++                and joint['status'] == 'ENGINEERING_PASS_AT_RECORDED_OBSERVED_LOAD_ONLY'
++                and joint['source'] == policy['engineering_finalizer']
++                and joint['case'] == policy['physical_main_case']
++                and joint['input_inventory_authority'] == policy['physical_input_inventory']
++                and joint['source_family'] == policy['physical_health_source_family']
++                and joint['observer_sources'] == policy['observer_sources']
++                and joint['observer_reviewer'] == a['raw_reviewer']
++                and joint['lifecycle'] == a['lifecycle']
++                and joint['independent_raw_review'] == a['raw_review']
++                and joint['engineering']['long']['independent_raw_review'] == a['raw_review']
++                and set(joint['engineering']) == {'warmup','long','abort'}
++                and joint['all_three_modes_are_fresh_originals_for_this_physical_case'] is True
++                and joint['all_original_engineering_scopes_closed_at_recorded_closer'] is True
++                and joint['old_static_or_countbounded_failures_reused_or_requalified'] is False
++                and joint['admission_basis'] == 'EVER_BOUND_ORIGINAL192_NOT_SIMULTANEOUS'
++                and joint['simultaneous192_actors_claimed'] is False
++                and joint['proof_gap_contract'] == policy['proof_gap_contract']
++                and joint['maximum_gap_s'] == 2.0 and joint['interval_s'] == .2
++                and joint['long_work_contract'] == 'MINIMUM600S_AND_VALIDATED3000_SAMPLES_HARD1200S',
++                'Only the actual NEW prefix-aware three-original engineering joint may bind reuse')
++        for mode, row in joint['engineering'].items():
++            closed = self.read(row['closeout'])
++            require(closed['source'] == policy['engineering_closer']
++                    and closed['status'] == 'PASS_ENGINEERING_ONLY' and closed['mode'] == mode
++                    and closed['original_parent_actual_exit'] == 0
++                    and closed['worker_actual_exit'] == (1 if mode == 'abort' else 0)
++                    and closed['actual_parent_CPU_cores'] == 2 and closed['actual_parent_memory_bytes'] == 4 << 30
++                    and closed['actual_parent_runtime_s'] == (1800 if mode == 'long' else 780)
++                    and closed['all_original_births_units_cgroups_and_tmpfs_control_absent'] is True,
++                    'Actual NEW original engineering scope closure differs')
+         require(Path(a['metadata_closeout']['path']).parent == Path(policy['future_metadata_directory'])
+                 and a['metadata_closeout']['sha256'] != '29ad1900ca8afdcc1dcb9cd871a2a45cbcc278825a2e4959ade938e8d4308e5a'
+                 and a['metadata_report']['sha256'] != 'c12344e4491857584df5d337adaf9c90d9f53ba14d115e55c48f325b01238f60',
+@@ -80,17 +115,17 @@
+                 'Closed metadata must bind these exact four jobs')
+         require(metadata_job['schema'] == 'robotron-selected-admission-study-CPU-preparation-v1'
+                 and metadata_job['original_attempt'] == 1 and metadata_job['no_retry'] is True
+-                and metadata_job['deadline_readiness'] == a['raw_review'], 'Original metadata source inputs differ')
++                and metadata_job['deadline_readiness'] == a['joint_engineering'], 'Original metadata source inputs differ')
+         config = self.read(a['metadata_config'])
+         require(config['argv'][3] == a['metadata_driver']['path'] and config['argv'][-1] == a['metadata_driver']['sha256'], 'Original metadata driver argv differs')
+         for pin in metadata_job['inputs']:
+             h.checked(pin)
+-        require(all(a[key] in metadata_job['inputs'] for key in ('metadata_preparer', 'metadata_contract', 'shared_profile_helper')),
++        require(all(a[key] in metadata_job['inputs'] for key in ('metadata_preparer', 'metadata_contract', 'shared_profile_helper', 'metadata_assembler', 'metadata_controller')),
+                 'Actual metadata job did not hold the selected predicate sources')
+         prepared = self.read(a['native_prepared'])
+         require(prepared['engineering_only'] is False and prepared['source_preparer'] == a['metadata_preparer']
+                 and [row['leg'] for row in prepared['cases']] == a['ordered_legs'] == ['R1', 'C1', 'R2', 'C2']
+-                and [row['native_job'] for row in prepared['cases']] == a['native_jobs'], 'Original four-job preparation differs')
++                and [row['native_job'] for row in prepared['cases']] == a['native_jobs'] == policy['exact_jobs'], 'Original four-job preparation differs')
+         require(Path(a['native_prepared']['path']).parent == Path(policy['future_study_directory'])
+                 and all(row['runtime'] == policy['native_runtime']
+                         and row['native_controller'] == policy['native_controller'] for row in prepared['cases']),
+@@ -105,7 +140,8 @@
+                 and all(self.raw[key] is True for key in ('source_bound_original192_physical_bootstrap_verified',
+                     'TRAIN155_original_physical_and_current_TCP_verified',
+                     'EVAL37_original_connection_and_strict_retirement_evidence_verified',
+-                    'EVAL_closed_slots_have_positive_normal0_reap_and_cleanup_verified'))
++                    'EVAL_closed_slots_have_positive_normal0_reap_and_cleanup_verified',
++                    'prior_completed_EVAL_prefix_and_current_suffix_verified'))
+                 and self.raw['accepted_evidence_and_projection_gaps_verified'] is True and self.raw['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1' and self.raw['verified_maximum_gap_s'] == 2.0,
+                 'Actual full raw readiness predicates required')
+         life = self.read(a['lifecycle'])
+@@ -128,7 +164,7 @@
+                 'Private frozen sidecar must remain source-mode0 before ownership')
+         family = context['family']
+         require(family['native_launch_qualified'] is True, 'Engineering family is never scientific launch authority')
+-        require(family['main_domain_hot_review'] == self.a['raw_review'] and family['round_observer_reviewer'] == self.a['raw_reviewer'], 'Original readiness source binding differs')
++        require(family['main_domain_hot_review'] == self.a['joint_engineering'] and family['round_observer_reviewer'] == self.a['raw_reviewer'], 'Original readiness source binding differs')
+         proof = self.read(family['main_domain_hot_review'])
+         require(proof['lifecycle'] == self.a['lifecycle'], 'Original readiness proof lifecycle differs')
+         h.checked(family['round_observer_reviewer'])
+@@ -138,7 +174,7 @@
+         worker = self.read(lifecycle['worker_job'])
+         proved = self.read(worker['case'])
+         current = context['main_binding']
+-        shared = load('_physical_guard_domain_helper', h.checked(self.policy['shared_profile_helper']))
++        shared = load('_prefix_physical_guard_domain_helper', h.checked(self.policy['shared_profile_helper']))
+         shared.same_domain(proved, current)
+         shared.validate_inventory(current, h)
+         require(len(current['inputs']) == self.policy['full_main_input_count'], 'Exact physical input domain count differs')

@@ -1,0 +1,73 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/posttrial-slot163-authorities-and-readonly-reconciliation-original02-guard-corrections/prepare_slot163_readonly_reconciliation_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/actual-selected-preview30-trial-original01-20261027/engineering-reconciliation600-and-CID49-adapter-original01/prepare_slot163_readonly_reconciliation_engineering600_v3.py
+@@ -7,6 +7,7 @@
+ import copy
+ import hashlib
+ import json
++import math
+ 
+ SLOT = '163'
+ TARGET_SHA = '507f3f5a799d49791d2c6cbca3f4600167a166c4a410723d4d29225d18b6e0ab'
+@@ -63,7 +64,7 @@
+             and set(plan['extra_pins']) == REQUIRED_EXTRA
+             and all(plan['extra_pins'][key] is not None for key in REQUIRED_EXTRA),
+             'Future actual PID/CID/inodes/observations remain unfilled')
+-    require(type(plan['max_handoff_s']) is int and 0 < plan['max_handoff_s'] <= 120,
++    require(type(plan['max_handoff_s']) is int and 0 < plan['max_handoff_s'] <= 600,
+             'ROOT must preselect bounded operational handoff time')
+     require(type(plan['selected_was_historical_original_actor']) is bool,
+             'Historical survivor classification must be explicitly proven')
+@@ -117,8 +118,9 @@
+     require(ready['actors'] == after['actors'], 'Replacement changed before new baseline')
+     first_roles, last_roles = roles(first_api), roles(last_api)
+     require(first_roles[SLOT]['eval'] is True and last_roles[SLOT]['eval'] is True
+-            and first_roles[SLOT]['connection_id'] != last_roles[SLOT]['connection_id'],
+-            'Actual new CID must preserve selected eval role')
++            and (first_roles[SLOT]['connection_id'] != last_roles[SLOT]['connection_id']
++                 or first_roles[SLOT]['connection_id'] == 49),
++            'Actual connection must preserve selected eval role; only CID49 reuse is allowed')
+     require(all(first_roles[key] == last_roles[key] for key in wanted - {SLOT}),
+             'Another actual CID/role changed')
+     claim = facts['trial_claim']
+@@ -134,6 +136,33 @@
+     require(claim['original_permit'] == plan['extra_pins']['single_use_permit']
+             and claim['manifest'] == plan['extra_pins']['launch_input_manifest'],
+             'Claim selected another permit/input manifest')
++    # Engineering-only CID49 reuse is a new connection incarnation, never a fake CID.
++    # Earlier positive old-birth absence/newPID/newbirth and the exact claim join
++    # above remain mandatory. The public connected_seconds clock must reset
++    # consistently with the consumed claim, within the existing API 5s cache bound.
++    reused_CID = first_roles[SLOT]['connection_id'] == last_roles[SLOT]['connection_id']
++    connection_incarnation = dict(numeric_CID_reused=reused_CID)
++    if reused_CID:
++        selected_row = next(row for row in last_api['client_rows'] if row['client_slot'] == 163)
++        connected_s = selected_row.get('connected_seconds')
++        api_stamp = last_api['ts']
++        reserved_ns = claim.get('reserved_unix_ns')
++        require(type(connected_s) in (int, float) and math.isfinite(connected_s) and connected_s >= 0
++                and type(api_stamp) in (int, float) and math.isfinite(api_stamp)
++                and type(reserved_ns) is int and reserved_ns > 0,
++                'Reused CID49 requires actual finite reset connection-time evidence')
++        connection_start_s = api_stamp - connected_s
++        require(last_roles[SLOT]['connection_id'] == 49
++                and new_actor['pid'] != old_actor['pid']
++                and new_actor['starttime_ticks'] > old_actor['starttime_ticks']
++                and after['previous_birth_probes'][SLOT] != old_actor['starttime_ticks']
++                and claim['claimant_pid'] == new_actor['pid']
++                and claim['claimant_birth'] == new_actor['starttime_ticks']
++                and connection_start_s >= reserved_ns / 1e9 - 5.0
++                and reserved_ns / 1e9 <= api_stamp + 5.0,
++                'Reused CID49 is not joined to the new claimed actor/connection after old-birth absence')
++        connection_incarnation.update(connection_start_unix_s=connection_start_s,
++            claim_reserved_unix_s=reserved_ns / 1e9, timestamp_cache_tolerance_s=5.0)
+     first, last = check_exposure(first_api, last_api, old['owner']['pid'], normalise, window)
+     baseline = read(old['baseline_API'])
+     window.healthy(first_api, baseline, old['experiment'], before['unix_s'])
+@@ -177,6 +206,7 @@
+                  original_facts=copy.deepcopy(plan['facts']), old_actor=old_actor, actual_new_actor=new_actor,
+                  old_CID=first_roles[SLOT]['connection_id'], actual_new_CID=last_roles[SLOT]['connection_id'],
+                  actual_eval_preserved=True, original191_exact=True, original_trainer_and_supervisor_retained=True,
++                 selected_connection_incarnation=connection_incarnation,
+                  old_lua=old_lua, private_target=target, actual_claim_joined_to_live_MAME=True,
+                  old_held_count=len(old['held_hashes']), new_held_count=len(held),
+                  original_source_hashes_retained=True, extra_pins=copy.deepcopy(plan['extra_pins']),

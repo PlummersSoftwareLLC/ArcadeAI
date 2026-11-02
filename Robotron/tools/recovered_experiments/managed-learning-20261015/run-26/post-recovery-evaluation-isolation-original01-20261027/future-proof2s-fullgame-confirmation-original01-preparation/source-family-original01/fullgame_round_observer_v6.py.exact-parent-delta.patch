@@ -1,0 +1,46 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original06-fresh-study-namespaces-preparation/source-family-original02-unit-authority/fullgame_round_observer_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-proof2s-fullgame-confirmation-original01-preparation/source-family-original01/fullgame_round_observer_v6.py
+@@ -17,7 +17,7 @@
+ import time
+ import urllib.request
+ 
+-SCHEMA = 'robotron-fullgame-round-observer-declared-launcher-job-v1'
++SCHEMA = 'robotron-fullgame-round-observer-declared-launcher-proof2s-job-v1'
+ 
+ 
+ def require(value, message):
+@@ -134,7 +134,7 @@
+ 
+ def run(job, job_pin):
+     require(job['schema'] == SCHEMA and job['attempt'] == 1 and job['no_retry'] is True, 'One original observer required')
+-    require(job['interval_s'] == .2 and job['initial_samples'] == 100 and job['maximum_gap_s'] == .5
++    require(job['interval_s'] == .2 and job['initial_samples'] == 100 and job['maximum_gap_s'] == 2.0
+             and job['work_s'] == 22200 and job['runtime_s'] == 22260, 'Exact complete-game observer bounds required')
+     require(job.get('source_bound_API_reconnect_projection') is True
+             and job.get('source_bound_natural_round_admission') is True
+@@ -225,11 +225,11 @@
+                     kind='unaccepted', index=len(retries))
+                 retries.append(retry)
+                 baseline = started if previous is None else previous['monotonic_s']
+-                require(time.monotonic() - baseline < job['maximum_gap_s'], 'No accepted original main proof for500ms')
++                require(time.monotonic() - baseline < job['maximum_gap_s'], 'No accepted original main proof for2s')
+                 time.sleep(.01)
+                 continue
+             if previous is not None:
+-                require(sample['monotonic_s'] - previous['monotonic_s'] <= .5, 'Accepted main proof gap exceeds500ms')
++                require(sample['monotonic_s'] - previous['monotonic_s'] <= 2.0, 'Accepted main proof gap exceeds2s')
+                 if sample['api']['training_steps'] > previous['api']['training_steps']:
+                     last_advance = time.monotonic()
+             require(time.monotonic() - last_advance < 60, 'No advancing learner step for60s')
+@@ -249,9 +249,9 @@
+                 initial = dict(initial_candidate, durable_prefix=ready,
+                     durable_ready_monotonic_s=time.monotonic())
+             published = time.monotonic()
+-            require(0 <= published - sample['monotonic_s'] <= .5, 'Main projection source exceeds500ms')
++            require(0 <= published - sample['monotonic_s'] <= 2.0, 'Main projection source exceeds2s')
+             if publications:
+-                require(published-publications[-1]['updated_monotonic_s'] <= .5, 'Main projection gap exceeds500ms')
++                require(published-publications[-1]['updated_monotonic_s'] <= 2.0, 'Main projection gap exceeds2s')
+             publications.append(dict(index=len(samples)-1, updated_monotonic_s=published,
+                 queued_raw={key:entry[key] for key in ('sequence', 'sha256', 'bytes')}))
+             control.publish(dict(schema='robotron-round-observer-live-v2', control=control.descriptor(),

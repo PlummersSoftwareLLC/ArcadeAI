@@ -1,0 +1,101 @@
+ACTIVATION-BOUND GAME-BOUNDARY INPUT DIAGNOSTICS — UNAPPLIED REVISION
+
+This NEW directory supersedes no evidence and applies no production changes.
+All four candidates, patch and fifteen tests are SOURCE ONLY / UNEXECUTED.
+No application import, compile, test, default invocation, patch application,
+live process/API/service query, GPU, checkpoint or replay access was performed
+by this author. Primitive source text/difflib/hash generation alone was used.
+
+Preserved reviewed1 evidence
+  The parent directory's six original files remain unchanged, including the
+  original GNU-diff-format patch and ten tests. Root executed those tests once:
+  nine passed; exact patch-byte check failed because GNU diff and difflib placed
+  a game_journal hunk differently. The candidate algorithm/field checks passed.
+  Root preserved actual exit1/elapsed0.315s and unchanged source pins in:
+    run-26/game-boundary-diagnostics-private-tests-reviewed1-20261017/
+      execution-precommit.json, execution-completion.json and captured logs.
+  This revision generates its patch with the SAME difflib.unified_diff format
+  that the still-strict exact-byte assertion expects; that assertion is not
+  weakened or bypassed. This revision has not been run to establish a pass.
+
+Explicit startup choice and receipt identity
+  run_frozen_sidecar.Job and run_quality_campaign.Campaign each append a bool
+  game_boundary_diagnostics=False. Old positional callers retain their meaning.
+  Both CLIs gain --game-boundary-diagnostics (store_true); default remains OFF.
+  One Campaign choice propagates to all four Jobs, every precommitted job.plan,
+  per-leg argv and existing sidecar plan/receipt job record. No leg hot toggle.
+  configure_environment explicitly sets ROBOTRON_GAME_BOUNDARY_DIAGNOSTICS to
+  1 or0 from that Job before imports; inherited ambient1 cannot activate OFF.
+  SocketServer additionally requires replay_enabled=False and exact env1.
+
+  Campaign load_leg checks the receipt flag against its precommitted job, and
+  the cross-leg backend signature includes the normalized bool. Legacy absent
+  flag means the old default OFF; non-bool and mismatched receipt values fail.
+  Standalone comparison helper JOB_FIELDS is unchanged: this new explicit
+  comparison binding is the campaign path, not a claim that every older external
+  comparison tool understands the new flag. No quality criterion changes.
+
+Data, allocation and boundaries
+  Same primitive accepted-sample scheme as the original source proposal:
+    previous/current parsed wire score, wave, alive, done, start, lives and
+    connection-local accepted-frame count before increment; actual prior
+    classifier score/wave/alive baseline, last_start_frame before/after this
+    frame's start update, actual recent_start/verdict/new_game.
+  Score/wave copy occurs before coercion/unwrapping. Prior wire and classifier
+  baseline are separate because an accepted torn-score frame can be coerced.
+  No full wire/RAM/model state, recent history, extra RNG, thread or lock.
+  Client storage is one previous accepted primitive tuple; enabled loop locals
+  also briefly retain previous/current/input tuples. Rejected frames do not
+  advance the accepted tracker. Reconnect's first previous sample is null.
+  Existing source/config pins are needed to interpret thresholds and gates.
+
+  OFF has only branches/None arguments and no diagnostic tuples/dicts/client
+  key. ON builds two small tuples per accepted frame and expands a small dict
+  at existing journal _begin. It adds game_boundary_diagnostics to start context
+  in the existing admission/completion records, without an additional write.
+  Initial attachments and journal zero_score_restart are truthfully separate
+  from classifier_new_game. No performance overhead measurement is claimed.
+
+  NEW minimal later-first-play evidence: inside the EXISTING first_play_level
+  assignment, a measured known game whose first playable level is not1 copies
+  that frame's primitive inputs to start_context.first_play_not_wave_1_inputs.
+  This captures inactive wave0 reset followed by first alive wave2, even when
+  that later frame is not a score reset. It does not rewrite the already-written
+  measurement_starts line or write immediately. The existing completion or
+  disconnect games.jsonl row preserves this supplement. If the entire process
+  dies before that normal write, this late supplement is not durable; do not
+  claim crash-proof live rejection logging. No extra flush or failover journal.
+
+  first_play_level, known_start, eligibility, game IDs, accepted-score decision,
+  wave1 rule, pending/abandoned status, rewards, UID allocation, scoring,
+  admission windows, tails and timeout behavior remain the same. A wave2 start
+  stays abandoned. No old row repair, retry, cause determination or current
+  training/quality improvement follows from this diagnostic proposal.
+
+Validation authored, NOT RUN
+  Fifteen stdlib/private methods retain the ten original semantic checks and
+  exact patch equality, plus five narrow checks:
+    - inactive wave0 reset then bad first-play wave2 evidence retained on normal
+      disconnect; no immediate extra write, immutable admission line and same
+      abandonment reason;
+    - actual Job.plan defaultFalse/True and actual configure_environment with
+      opposite ambient values, explicitly mocking /proc/self/maps;
+    - actual sidecar CLI default/opt-in plans, no evaluator launch/output;
+    - actual campaign CLI and all four Job/argv values agree, no launch/output;
+    - actual load_leg rejects mismatched/non-bool flag and preserves legacyOFF.
+  Activation tests import full candidate stdlib sidecar/campaign copies under
+  a new private module package/temp directory. Existing backend validators are
+  explicitly stubbed only for narrow flag checks; they are not requalified by
+  those tests. Other tests execute the actual classifier AST region and journal
+  bridge plus full original/candidate journal modules in private directories.
+  No Torch, MAME, real socket/listener, trainer/server constructor or live files.
+
+  After root explicitly releases any fixed window and authorizes execution:
+    env -u LD_PRELOAD -u PYTHONPATH CUDA_VISIBLE_DEVICES='' \
+      PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest \
+      Robotron.tools.game_boundary_diagnostics_proposal.activation_bound_revision.test_game_boundary_diagnostics -v
+  Preserve exact command/logs/exit and source identities in NEW evidence.
+  Before adoption, also run the existing journal suite against private copies,
+  private actual handle_client/frame integration (wire/FIFO/measurement boundary
+  lifecycle), and reviewed patch applicability. None is completed by this source
+  preparation. No production application or new campaign is authorized here.

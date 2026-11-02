@@ -1,0 +1,109 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/public-status-bridge-mixed-continuation03-original04/project_owned_mixed_physical_study_status_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/public-status-bridge-continuation03-handoff-gap-original05/project_owned_mixed_physical_study_status_v7.py
+@@ -204,7 +204,33 @@
+             clock_mapping='Current bounded host cosample of original immutable monotonic anchor',clock_span_ns=after-before)
+     return value
+ 
+-def leg_status(case,display,candidate):
++def sequence_facts(cfg,h):
++    """A live exact original sequence proves waiting, never a review exit/result."""
++    seq=SEQUENCE_DIRECTORY
++    outcome=read(seq/'sequence-original-outcome.json')
++    child=read(seq/'sequence-original-child.json')
++    require(outcome is None or type(child)is dict and bool(child),
++        'Original sequence terminal outcome requires its original child/precommit record')
++    facts=dict(live=None,precommit=None,review_precommit=cfg['mixed_review_precommit'])
++    if child:
++        commitpin=h.pin(seq/'sequence-precommit.json')
++        commit=json.loads(h.checked(commitpin).read_bytes())
++        require(commit['schema']=='robotron-deadline32-original-sequence-precommit-v1'
++            and commit['source']==cfg['sequence_source'] and commit['study_directory']==str(S)
++            and commit['output']==str(seq) and commit['review_precommit']==cfg['mixed_review_precommit']
++            and commit['ordered_legs']==ORDER and commit['original_attempt']==1 and commit['no_retry']is True
++            and child['original_precommit']==commitpin and child['observed_live']is True
++            and type(child['pid'])is int and child['pid']>1 and type(child['birth'])is int and child['birth']>0,
++            'Actual original sequence source/study/precommit/birth differs')
++        facts.update(live=live(child)['live'],precommit=commitpin)
++        if outcome:
++            require(outcome['schema']=='robotron-deadline32-original-sequence-outcome-v1'
++                and outcome['precommit']==commitpin and outcome['original_attempt']==1 and outcome['no_retry']is True,
++                'Original sequence terminal outcome differs')
++    return outcome,child,facts
++
++
++def leg_status(case,display,candidate,sequence=None):
+     leg=case['leg'];folder=S/leg;job=read(Path(case['native_job']['path']));native=Path(job['output'])
+     q=folder/('root-'+leg+'-independent-qualified.json')
+     row=dict(leg=leg,phase='pending',state='pending',independently_qualified=False,full_game_quality_qualified=False)
+@@ -246,6 +272,14 @@
+         row.update(phase='independent_review_starting',state='running',**{k:v for k,v in review_live.items()if k!='live'})
+     elif first_live['live']is True:
+         row.update(phase='independent_review_starting',state='running',**{k:v for k,v in first_live.items()if k!='live'})
++    elif review_prepared and review_live['live']is False and sequence and sequence['live']is True:
++        require(leg in ('C1','R2','C2') and review_prepared['leg']==leg
++            and review_prepared['precommit']==sequence['review_precommit'] and review_prepared['no_retry']is True
++            and native_result is not None and type(native_result.get('actual_exit'))is int
++            and native_result['actual_exit']==0, 'Same original sequence/prepared review/native completion required')
++        row.update(phase='review_controller_handoff_waiting_result_or_qualification',state='waiting',
++            review_result_publication_pending=True,review_success_or_exit_inferred=False,
++            wait='Original review owner/controller ended; the same original sequence is live, awaiting its result and qualification publication')
+     elif review_prepared and review_live['live']is False:
+         row.update(phase='original_review_outcome_unresolved',state='unresolved')
+     elif native_result and native_result.get('actual_exit')==0:
+@@ -305,7 +339,7 @@
+     SEQUENCE_DIRECTORY=Path(cfg['sequence_directory'])
+     require(SEQUENCE_DIRECTORY.is_absolute() and SEQUENCE_DIRECTORY==S/'owned-continuation-original03',
+         'Root-selected future sequence output must be directly in this study')
+-    UNIT='robotron-physical-cohort-proof2s-'+selection['study_precommit']['sha256'][:16]+'-public-status-original03-20261029.service'
++    UNIT='robotron-physical-cohort-proof2s-'+selection['study_precommit']['sha256'][:16]+'-public-status-original04-20261030.service'
+     require(cfg['unit']==UNIT,'Exact study-derived passive publisher unit required')
+     handoff=json.loads(h.checked(cfg['publication_handoff']).read_bytes())
+     require(handoff['schema']=='robotron-root-generic-public-status-writer-handoff-v1'
+@@ -318,6 +352,11 @@
+         'Actual Root single-writer public handoff required')
+     require(handoff['public_preimage']['path']==str(PUBLIC),'Actual public preimage path required')
+     h.checked(handoff['public_preimage'])
++    prior_pub03_unit='robotron-physical-cohort-proof2s-'+selection['study_precommit']['sha256'][:16]+'-public-status-original03-20261029.service'
++    require(any(prior['original']['unit']==prior_pub03_unit and prior.get('closure_basis','ORIGINAL_PID_BIRTH')=='ORIGINAL_PID_BIRTH'
++        and type(prior['original'].get('birth',prior['original'].get('starttime_ticks')))is int
++        and prior.get('positive_owned_closeout')is not None for prior in handoff['previous_automatic_publishers']),
++        'Actual positive original-birth PUB03 closure must join the new handoff')
+     for prior in handoff['previous_automatic_publishers']:
+         if prior.get('closure_basis')=='POSITIVE_CLOSED_INVOCATION_WITHOUT_PERSISTED_BIRTH':
+             closed_invocation_without_birth(prior,h,cfg['launch_selection'],selection['study_precommit'])
+@@ -342,21 +381,20 @@
+     while True:
+         active=(read(G/'logs/managed-learning-20261015/state.json')or{}).get('active_quality_job')or{}
+         if active.get('directory')!=str(S):return 0
+-        rows=[leg_status(case,display,selection['candidate_sha256'])for case in manifest['cases']]
+-        seq=SEQUENCE_DIRECTORY;outcome=read(seq/'sequence-original-outcome.json');seqchild=read(seq/'sequence-original-child.json')
+-        if seqchild:
+-            commit=read(seq/'sequence-precommit.json');require(commit['source']==cfg['sequence_source']and commit['study_directory']==str(S)and commit['review_precommit']==cfg['mixed_review_precommit']and seqchild['original_precommit']==h.pin(seq/'sequence-precommit.json'),'Actual sequence source/study/precommit differs')
++        outcome,seqchild,sequence=sequence_facts(cfg,h)
++        rows=[leg_status(case,display,selection['candidate_sha256'],sequence=sequence)for case in manifest['cases']]
++        original_sequence_live=sequence['live']is True
+         chosen=next((r for r in rows if r['state']!='qualified'),rows[-1]);state=chosen['state']
+         original_scope_live=any(r.get('native_owner_live')is True or r.get('review_owner_live')is True for r in rows)
+         if outcome:
+             state='closed'if outcome['status']=='FOUR_ORIGINAL_SCREENING_LEGS_REVIEWED'else'stopped'if outcome['status']=='STOPPED_NO_NEW_ACTIONS'else'failed'
+-        elif seqchild and live(seqchild)['live']is False:state='unresolved'
++        elif seqchild and sequence['live']is False:state='unresolved'
+         detail=chosen['leg']+': '+chosen['phase'].replace('_',' ')+'. 32 original first games; one common fixed one-hour anchor.'
+         if chosen.get('review_budget'):detail+=' Independent review limit33min; controller observation34min. These limits are not completion estimates.'
+         if state in('failed','unresolved','stopped'):detail+=' Original evidence is preserved; no automatic retry or next action.'
+         if outcome and outcome.get('original_scope_still_running_preserved')and original_scope_live:detail+=' An original payload remains live and preserved.'
+         next_stage='Root screen verdict; separate fullgame confirmation only if eligible'if state=='closed'else'independent_review'if chosen['phase']in('collecting','closed_pending_independent_review','native_closed_waiting_original_controller')else'qualification'if 'review'in chosen['phase']else'next original leg only after qualification'
+-        value=dict(schema='robotron-prepared-policy-screening-status-v1',study_directory=str(S),state='review_pending'if state=='waiting'else'screened'if state=='closed'else state,stage=chosen['phase'],current_leg=chosen['leg'],updated_unix_s=time.time(),candidate_sha256=selection['candidate_sha256'],quality_qualified=False,promotion=False,detail=detail,legs=rows,next_stage=next_stage,limits_are_not_ETAs=True,original_payload_live=original_scope_live)
++        value=dict(schema='robotron-prepared-policy-screening-status-v1',study_directory=str(S),state='review_pending'if state=='waiting'else'screened'if state=='closed'else state,stage=chosen['phase'],current_leg=chosen['leg'],updated_unix_s=time.time(),candidate_sha256=selection['candidate_sha256'],quality_qualified=False,promotion=False,detail=detail,legs=rows,next_stage=next_stage,limits_are_not_ETAs=True,original_payload_live=original_scope_live,original_sequence_live=original_sequence_live)
+         if chosen.get('deadline_timing'):
+             value['deadline_timing']=chosen['deadline_timing']
+             value['deadline_anchor']=dict(anchor=chosen['deadline_timing']['anchor'],policy=dict(policy_sha256=chosen['deadline_timing']['policy_sha256']))
+@@ -388,7 +426,7 @@
+                 updated_unix_s=value['updated_unix_s'],main_training_continues=None)
+         # Never write canonical state or study/status/display-status: sequence owns them.
+         atomic(PUBLIC,value);atomic(O/'generic-public-status-last-projection-original01.json',value)
+-        if state in('closed','failed','stopped','unresolved')and not original_scope_live:return 0
++        if state in('closed','failed','stopped','unresolved')and not original_scope_live and not original_sequence_live:return 0
+         time.sleep(2)
+ 
+ if __name__=='__main__':

@@ -1,0 +1,36 @@
+{
+  "schema": "robotron-CE2048-trial02-first-LATCH-policy-followup-exclusive-readiness-v1",
+  "status": null,
+  "observed_unix_s": null,
+  "candidate": {
+    "source": null,
+    "sha256": null,
+    "bytes": null,
+    "root_job_sha256": null,
+    "cpu_proof_sha256": null
+  },
+  "main_owner": null,
+  "fleet_owner": null,
+  "inference_worker": null,
+  "actors": null,
+  "source_hashes": null,
+  "control_hashes": null,
+  "unit_files": null,
+  "environment_sha256": null,
+  "resources": {
+    "GPU0_no_compute_owner": null,
+    "GPU1_main_only": null,
+    "port9999_clear": null,
+    "lease_free": null,
+    "no_competing_helpers": null,
+    "no_private_cgroup_tmpfs_processes": null,
+    "no_pending_save": null,
+    "owned_units_released": null,
+    "commands_UID_cwd_exe_checked": null,
+    "held_environment_checked": null,
+    "unit_files_checked": null,
+    "gpu0_uuid": "GPU-b549355c-78bb-53d8-04a6-da34d45e1dd0",
+    "gpu1_uuid": "GPU-c0c5d295-6f07-aab5-bbde-b592ea426ec1",
+    "GPU0_free_bytes": null
+  }
+}

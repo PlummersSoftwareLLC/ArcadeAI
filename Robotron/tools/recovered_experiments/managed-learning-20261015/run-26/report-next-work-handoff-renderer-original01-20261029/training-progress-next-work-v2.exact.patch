@@ -1,0 +1,52 @@
+--- training-progress-parent.html
++++ training-progress-next-work-candidate-v2.html
+@@ -33,9 +33,40 @@
+  const remaining=cutoff.getTime()-nowMs;
+  return 'Fixed one-hour cutoff: '+when+'. '+(remaining>0?'About '+Math.ceil(remaining/60000).toLocaleString()+' min remaining.':'Cutoff reached; collecting final scores and closure.');
+ }
++function nextWorkView(e){
++ const w=e&&e.next_work,text=v=>typeof v==='string'?v.trim():'';
++ if(!w||(!text(w.current_stage)&&!text(w.state)))return null;
++ const stateText={startup_guard_fix_in_progress:'Correcting the startup guard'};
++ const stage=text(w.current_stage)||stateText[w.state]||text(w.state).replaceAll('_',' ');
++ const stamp=Number.isFinite(w.updated_unix_s)&&w.updated_unix_s>0?w.updated_unix_s:e.updated_unix_s;
++ const updated=Number.isFinite(stamp)&&stamp>0?new Date(stamp*1000).toLocaleString():'Update time unavailable';
++ const deadline=Number.isFinite(w.deadline_unix_s)&&w.deadline_unix_s>0?new Date(w.deadline_unix_s*1000):null;
++ return {stage,detail:text(w.detail),waiting:text(w.waiting_for),next:text(w.next_stage),updated,
++  eta:text(w.eta)||(deadline&&Number.isFinite(deadline.getTime())?'Recorded deadline: '+deadline.toLocaleString()+'.':'No completion time has been set.'),
++  training:w.main_training_continues===true?'Main training continues.':w.main_training_continues===false?'Main training is not active.':'Main training status has not been reported.',
++  trainingContinues:w.main_training_continues};
++}
++function renderNextWork(view,now){
++ if(!view)return;
++ $('trainingModeTitle').textContent='Current work';
++ $('phase').textContent=view.stage;
++ $('wait').textContent=[view.detail,view.waiting?'Waiting for: '+view.waiting:''].filter(Boolean).join(' ');
++ $('trainingModeNote').textContent=view.training;
++ $('next').textContent=view.next||view.waiting||'Next step has not been reported.';
++ $('nextExposure').textContent='';
++ $('candidateDetail').textContent=view.detail;
++ $('candidateETA').textContent=view.eta;
++ $('screeningState').textContent=view.training+' Previous comparison results remain below.';
++ $('eta').textContent='This earlier observation is retained; current work status is shown above.';
++ $('updated').textContent='Work status updated '+view.updated+(now&&Number.isFinite(now.ts)?' · live trainer updated '+new Date(now.ts*1000).toLocaleTimeString():' · live trainer data unavailable');
++ if(typeof view.trainingContinues==='boolean')$('training').textContent=view.trainingContinues?'Main training continues':'Main training not active';
++ $('error').textContent=now?'':'Live trainer data is unavailable; the recorded work status remains visible.';
++}
+ async function update(){
+  try{
+-  const [now,p,c,e,t]=await Promise.all([get('/api/now'),get('/api/html/training-progress.json'),get('/api/html/next-policy-capture.json').catch(()=>null),get('/api/html/next-policy-evaluation.json').catch(()=>null),get('/api/html/next-policy-timing.json').catch(()=>null)]);
++  const [now,p,c,e,t]=await Promise.all([get('/api/now').catch(()=>null),get('/api/html/training-progress.json').catch(()=>null),get('/api/html/next-policy-capture.json').catch(()=>null),get('/api/html/next-policy-evaluation.json').catch(()=>null),get('/api/html/next-policy-timing.json').catch(()=>null)]);
++  const work=nextWorkView(e);
++  if(!now||!p){if(work){renderNextWork(work,now);return;}throw Error('Live status unavailable');}
+   const round=now.training_round||{};
+   $('phase').textContent='Round '+(round.round||'—')+' · '+fmt(round.completed)+' of '+fmt(round.total)+' games finished';
+   $('wait').textContent=fmt(round.active)+' managed games remain. '+Math.max(0,(now.client_count||0)-(round.active||0))+' additional clients are connected. There is no fixed finishing time for these full games.';
+@@ -139,6 +170,7 @@
+    $('screenTableNote').textContent='Reviewed means include all32 games scored at the fixed cutoff, including unfinished games. Scores appear after independent review. The main report’s complete-game counts and averages describe finished games only. Full-game confirmation remains required before promotion.';
+    $('rows').replaceChildren(...e.legs.map(v=>{const tr=document.createElement('tr');for(const text of[v.leg+(v.independently_qualified?' · reviewed':' · '+String(v.phase||'queued').replaceAll('_',' ')),fmt(v.n_scored),fmt(v.n_completed),fmt(v.n_censored),fmt(v.mean_score)]){const td=document.createElement('td');td.textContent=text;tr.append(td)}return tr}));
+   }else if(!historyLoaded){const h=await get('/api/html/training-progress-history.json');$('rows').replaceChildren(...['R1','C1','R2','C2'].map(name=>{const v=h.legs[name],tr=document.createElement('tr');for(const text of[name,v.n_scored,v.n_completed,v.n_censored,fmt(v.mean_score)]){const td=document.createElement('td');td.textContent=text;tr.append(td)}return tr}));historyLoaded=true;}
++  renderNextWork(work,now);
+  }catch(error){$('error').textContent='Status update delayed; retrying. Last good values remain visible.';}
+ }
+ update();setInterval(update,10000);

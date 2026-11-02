@@ -1,0 +1,28 @@
+{
+  "schema": "robotron-rawKL-trial02-future-quality-preparation-manifest-v1",
+  "status": "FROZEN_SOURCE_PREPARATION_ONLY",
+  "files": {
+    "QUALITY_PREFLIGHT.txt": {
+      "sha256": "664b5260d3f3e0a5deb60bc60897bf614d5dc13532c2f2ff09bbcf74ae14ba4e",
+      "bytes": 4555,
+      "mode": "0o444"
+    },
+    "future-quality-template.json": {
+      "sha256": "38e892068a241fbd014081fb147f5908bf5d31654060ce07dca91c52b75dbffb",
+      "bytes": 7506,
+      "mode": "0o444"
+    },
+    "source-lock.json": {
+      "sha256": "158feb50bce333f9aeb7c159237e36b0466fd93db8a2d1798c7eade3d4bef392",
+      "bytes": 6290,
+      "mode": "0o444"
+    }
+  },
+  "actual_candidate": null,
+  "actual_phase_CPU": null,
+  "actual_CE_return": null,
+  "actual_default_plan": null,
+  "actual_launch": null,
+  "author_imports_tests_runtime_tensor_reads": false,
+  "no_framework_or_evaluator_changes": true
+}

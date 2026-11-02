@@ -1,0 +1,22 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original05-retired-API-preparation/prepare_round_study_v10.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original06-fresh-study-namespaces-preparation/prepare_round_study_v10.py
+@@ -250,8 +250,8 @@
+             policy_authority=selected['immutable_numerical_or_protection_authority'], study_precommit=study,
+             observer_sources=observer, main_binding=binding, main_health_protocol=protocol,
+             prelaunch_family_guard_closeout=str(directory/'source-family-guards-CPU-original01/independent-deadline32-family-guards-and-CPU-closeout.json'),
+-            label='deadline32-launcher-v1-'+leg.lower()+'-original01-20261028',
+-            measurement_label='deadline32-launcher-v1-'+leg.lower()+'-original01-20261028')
++            label='deadline32-retired-api-'+study['sha256'][:12]+'-'+leg.lower()+'-original01-20261029',
++            measurement_label='deadline32-retired-api-'+study['sha256'][:12]+'-'+leg.lower()+'-original01-20261029')
+         for key in ('sessions', 'connections'):
+             job[key] = {}
+             for slot in job['actor_slots']:
+@@ -281,7 +281,7 @@
+         if not engineering:
+             contract.validate_launch(job, context, h)
+         jp = h.put(directory/'job.json', job)
+-        config = dict(unit='robotron-deadline32-launcher-v1-'+leg.lower()+'-original01-20261029.service',
++        config = dict(unit='robotron-deadline32-retired-api-'+study['sha256'][:12]+'-'+leg.lower()+'-original01-20261029.service',
+             output=str(directory/'execution-original01'), argv=[str(ROOT.parent/'.venv-gb300/bin/python'),
+                 '-Xgil=0','-I','-B',runtime['path'],'--execute','--job',jp['path'],
+                 '--job-sha256',jp['sha256'],'--source-sha256',runtime['sha256']],

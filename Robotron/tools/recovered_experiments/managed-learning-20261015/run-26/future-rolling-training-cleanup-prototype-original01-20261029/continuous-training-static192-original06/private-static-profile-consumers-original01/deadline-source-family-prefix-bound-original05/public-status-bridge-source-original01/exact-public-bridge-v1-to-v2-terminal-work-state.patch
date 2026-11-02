@@ -1,0 +1,37 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/public-status-bridge-source-original01/project_owned_physical_study_status_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/public-status-bridge-source-original01/project_owned_physical_study_status_v2.py
+@@ -229,14 +229,26 @@
+         # During actual collecting let the existing browser predicate validate
+         # and render the common original anchor and decrement its own countdown.
+         # Outside collecting replace the old setup override with this live phase.
+-        if chosen['phase']!='collecting' or not chosen.get('deadline_timing'):
+-            waiting=('Original independent review and qualification' if 'review' in chosen['phase']
+-                else 'Original controller cleanup and independent review' if chosen['state']=='waiting'
+-                else 'Root review of preserved original outcome' if state in('failed','unresolved','stopped')
+-                else 'All 32 original starts and their common deadline anchor')
+-            eta=('No scoring countdown is active. Review runtime/observation limits are not finishing estimates.'
+-                if 'review' in chosen['phase'] else 'No scoring deadline is set until the original common anchor exists.')
+-            value['next_work'].update(state='physical_'+chosen['phase'],current_stage=chosen['leg']+' · '+chosen['phase'].replace('_',' '),
++        if not(state=='running' and chosen['phase']=='collecting' and chosen.get('deadline_timing')):
++            if state=='closed':
++                work_state='physical_screening_complete'
++                work_stage='All four original screening legs independently reviewed'
++                waiting='Root screening verdict; separate full-game confirmation only if eligible'
++                eta='Screening and independent reviews are complete. No finishing time is set for the next required stage.'
++            elif state in('failed','unresolved','stopped'):
++                work_state='physical_'+state
++                work_stage=chosen['leg']+' original outcome '+state+'; evidence preserved'
++                waiting='Root review of the preserved original outcome; no automatic retry or next action'
++                eta='No next completion time is set while the original outcome needs review.'
++            else:
++                work_state='physical_'+chosen['phase']
++                work_stage=chosen['leg']+' · '+chosen['phase'].replace('_',' ')
++                waiting=('Original independent review and qualification' if 'review' in chosen['phase']
++                    else 'Original controller cleanup and independent review' if chosen['state']=='waiting'
++                    else 'All 32 original starts and their common deadline anchor')
++                eta=('No scoring countdown is active. Review runtime/observation limits are not finishing estimates.'
++                    if 'review' in chosen['phase'] else 'No scoring deadline is set until the original common anchor exists.')
++            value['next_work'].update(state=work_state,current_stage=work_stage,
+                 detail=detail,waiting_for=waiting,next_stage=next_stage,eta=eta,deadline_unix_s=None,
+                 updated_unix_s=value['updated_unix_s'],main_training_continues=None)
+         # Never write canonical state or study/status/display-status: sequence owns them.

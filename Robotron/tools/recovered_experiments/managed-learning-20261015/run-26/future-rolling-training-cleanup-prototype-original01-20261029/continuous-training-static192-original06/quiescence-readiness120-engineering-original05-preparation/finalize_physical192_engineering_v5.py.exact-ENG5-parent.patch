@@ -1,0 +1,42 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/immutable-bootstrap-live-pidfd-quiescence-engineering-original04-preparation/finalize_physical192_engineering_v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/quiescence-readiness120-engineering-original05-preparation/finalize_physical192_engineering_v5.py
+@@ -15,10 +15,10 @@
+ ENG = HERE
+ MODE_ROOT = HERE.parent
+ HC = MODE_ROOT/'health-consumer-live-pidfd-current-EVAL-quiescence-original05'
+-FAMILY_SHA = '9e00ed11b9ad56b8a16911eb38c3d48f9edd0a7fa7d0bb670749cc9ed75d0eac'
+-MAP_SHA = '5d8ce346200f8737aae484b72a15b7f38dd8ea1da8ac463acc1c94531894f8b9'
+-PREPARE_SHA = 'a81efc1abd89c361c78cf8357cc29334e3968a0b320105c8f384b197edec6f49'
+-PROBE_SHA = '8b6e276fe0b0cf74c5fd917012cad4604a60a426ede79b798930b1bb9604c307'
++FAMILY_SHA = '22245530f82299b2a3f634d07ba828a91678dc67a6ad5bd869a780d6d4a62651'
++MAP_SHA = 'c8231a36c0028567a6a7da884046aa98ceeaf0fc6f0c338e4230fd305fb7e553'
++PREPARE_SHA = 'd82dae95ae6eff723a414fceb9afc8918feee636cc250ef88ffd4915387c9ef7'
++PROBE_SHA = 'bde9dd42392434476e1515d2650092b0a1abf1f1cfe078a2255247cf02bbfb04'
+ CLOSE_SHA = '8f812f5cefb8e4e77182062bfb73f77e48598279508dc2d8c2de5c2a8500b026'
+ REVIEW_SHA = '30ea4d2eb6d97b5ccbd04e262f7b4c45e47af268f7644f7893ad88deba47a133'
+ MODES = ('warmup','long','abort')
+@@ -132,6 +132,24 @@
+                 for p,v in parent['inputs'].items() if v != case['inputs'][p]}
+             and inventory['added_inputs'] == {p:v for p,v in case['inputs'].items() if p not in parent['inputs']},
+             'Exact held inventory/historical247 transitions differ')
++    readiness_parent_pin = inventory['readiness120_parent_case']
++    readiness_inventory_pin = inventory['readiness120_parent_inventory']
++    readiness_parent = read(readiness_parent_pin); readiness_inventory = read(readiness_inventory_pin)
++    overlay = case['observer_client_readiness_overlay']
++    require(readiness_parent_pin['sha256'] == '95a87d6b9f4112970a8dd3e46dc5ee8b20316514d433592835cd5c962cdbfec6'
++            and readiness_inventory_pin['sha256'] == 'cb87a6cdbad00b5ec35139fb7e01089cc2b915839be1118793b8b81e5f41b826'
++            and readiness_parent['schema'] == case['schema'] and len(readiness_parent['inputs']) == 382
++            and readiness_parent['input_inventory_authority'] == readiness_inventory_pin
++            and readiness_inventory['inputs'] == readiness_parent['inputs']
++            and inventory['all_prior382_paths_retained'] is True and inventory['prior382_replacements'] == {}
++            and set(readiness_parent['inputs']) <= set(case['inputs'])
++            and all(case['inputs'][p] == v for p,v in readiness_parent['inputs'].items())
++            and overlay['schema'] == 'robotron-HC5-client-readiness120-case-overlay-v1'
++            and overlay['parent_case'] == readiness_parent_pin and overlay['parent_inventory'] == readiness_inventory_pin
++            and overlay['family'] == family and overlay['source_map'] == source_map
++            and overlay['client'] == mapped['client'] and overlay['initial_samples'] == 100
++            and overlay['readiness_wait_s'] == 120 and overlay['case_profile_and_protocol_unchanged'] is True,
++            'Exact unchanged HC5 parent382 and client-only readiness120 overlay required')
+     reviewed_source = prepared['observer_reviewer']
+     require(reviewed_source['sha256'] == REVIEW_SHA,'Selected actual static raw reviewer differs')
+     require(pin(reviewed_source['path']) == reviewed_source,'Selected frozen reviewer source changed')

@@ -1,0 +1,47 @@
+--- Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/run_live8_maintenance.py	2026-10-17 02:36:59.845306460 -0500
++++ Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision2/run_live8_maintenance.py	2026-10-17 02:43:11.233884641 -0500
+@@ -39,6 +39,7 @@
+ MAX_SOURCE = 4 << 20
+ MAX_CAPTURE = 6 << 30
+ MAX_PAYLOAD = 640 << 20
++BOOT_CONFIG_SHA256 = "f2794754a14e9f13c82b613aa131698246a08dc9021c18f1b78fda7c4b484498"
+ BLOCKED = frozenset(("checkpoint_at_frame.py", "run_quality_campaign.py", "run_frozen_sidecar.py",
+     "cuda_trace_parent.py", "cuda_trace_worker.py", "forensic_parent.py", "forensic_worker.py",
+     "whole_agent_smoke.py", "whole_agent_worker.py", "inference_worker_affinity.py", "parallel_state_fill_trial.py",
+@@ -51,6 +52,24 @@
+         raise RuntimeError(message)
+ 
+ 
++def held_boot_paths(environment, game_root, model_dir, source_hashes):
++    """Resolve only the pinned held config's explicit path or exact default.
++
++    config.py strips the env value and defaults to its Robotron/models_dqn.
++    No environment is changed and no path/config module is imported here.
++    """
++    config_path = str(Path(game_root) / "Scripts/dqn/config.py")
++    require(source_hashes.get(config_path) == BOOT_CONFIG_SHA256, "Boot default requires exact held config source")
++    explicit = (environment.get("ROBOTRON_DQN_MODEL_DIR") or "").strip()
++    resolved = explicit or str(Path(game_root) / "models_dqn")
++    require(resolved == model_dir and Path(resolved).is_absolute(), "Explicit/default model directory differs from held root job")
++    latest = str(Path(model_dir) / "robotron_dqn_latest.pt")
++    require(environment.get("DQN_RATCHET") == "0" and environment.get("DQN_EXACT_GRAPH_CHECKPOINT") == latest,
++        "Held boot must use latest with ratchet disabled and matching exact-graph checkpoint")
++    return dict(model_dir=resolved, latest=latest, path_source="explicit_environment" if explicit else "pinned_config_default",
++        config_path=config_path, config_sha256=BOOT_CONFIG_SHA256)
++
++
+ def identity(info):
+     return dict(device=info.st_dev, inode=info.st_ino, bytes=info.st_size,
+         mtime_ns=info.st_mtime_ns, ctime_ns=info.st_ctime_ns,
+@@ -293,10 +312,7 @@
+     require(job["readiness_timeout_s"] == 600 and job["capture_timeout_s"] == 600 and job["verifier"]["timeout_s"] == 120,
+         "Fixed bounded maintenance deadlines differ")
+     require(FLAG not in job["before"]["environment"] and OLD_FLAG not in job["before"]["environment"], "Existing observer session is forbidden")
+-    require(job["before"]["environment"].get("DQN_RATCHET") == "0"
+-        and job["before"]["environment"].get("ROBOTRON_DQN_MODEL_DIR") == job["model_dir"]
+-        and job["before"]["environment"].get("DQN_EXACT_GRAPH_CHECKPOINT") == str(Path(job["model_dir"]) / "robotron_dqn_latest.pt"),
+-        "Held boot must use latest path with ratchet disabled and matching exact-graph checkpoint")
++    held_boot_paths(job["before"]["environment"], job["game_root"], job["model_dir"], job["before"]["bindings"]["source_hashes"])
+     require(job["original_dropin"]["content_base64"] is None and job["original_dropin"]["mode"] is None,
+         "New dedicated maintenance override must initially be absent")
+     require(set(map(int, job["actor_masks"])) == {x["pid"] for x in job["before"]["bindings"]["actors"]}, "Actor mask manifest differs")

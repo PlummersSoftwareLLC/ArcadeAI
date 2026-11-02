@@ -1,0 +1,43 @@
+--- a/Robotron/Scripts/dqn/socket_server.py
++++ b/Robotron/Scripts/dqn/socket_server.py
+@@ -1189,6 +1189,30 @@
+             cs["measurement_active"] = active
+             cs["measurement_generation"] = generation
+         return active
++
++    def _reset_new_game_replay_segment(self, cid, cs, current_score):
++        """Isolate a genuine accepted game reset, without inventing a death.
++
++        A missed terminal leaves an incomplete life: discard its uncertain
++        suffix and suppress its HOF/episode admission until the next real done.
++        If the old natural terminal was observed, its counters are already
++        clear and the fresh life retains ordinary admission semantics.
++        """
++        partial_life = bool(cs.get("replay_episode_partial", False)
++                            or cs.get("last_state") is not None
++                            or int(cs.get("ep_frames", 0)) > 0)
++        # Deliberately reuse the existing field reset, not its unconditional
++        # policy-change partial-life flag or measurement/journal ACK behavior.
++        reset_client_replay_segment(cs, current_score)
++        cs["replay_episode_partial"] = partial_life
++        cs["was_done"] = False
++        cs["ep_t0"] = time.time()
++        cs["last_game_score"] = int(current_score)
++        cs["last_clear_frame"] = -1
++        if self.async_buffer is not None:
++            # Same producer FIFO: old steps/elite finish before this reset;
++            # any new-game replay follows it. Stored rows/banks are retained.
++            self.async_buffer.reset_client_async(cid)
+ 
+     def measurement_boundary_status(self, generation):
+         active, current_generation = self._measurement_snapshot()
+@@ -2044,6 +2068,9 @@
+                         cs["last_time"] = now
+ 
+                 measuring = self._sync_measurement_boundary(cid, cs, frame.game_score)
++                if (_is_new_game and not measuring
++                        and not cs.get("replay_disabled", False)):
++                    self._reset_new_game_replay_segment(cid, cs, frame.game_score)
+                 model_state = self._stack_model_state(cs, single_state)
+ 
+                 # Measurement is separate from per-life RL terminal handling.

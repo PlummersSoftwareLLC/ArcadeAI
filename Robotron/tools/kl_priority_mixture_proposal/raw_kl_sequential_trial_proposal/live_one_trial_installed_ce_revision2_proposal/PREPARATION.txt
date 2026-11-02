@@ -1,0 +1,60 @@
+This is a source-only sibling for ONE NEW separately precommitted KL trial.
+Trial01 FAILED before192 at the readonly boot-report boundary; its startup job
+is not resubmitted. Its explicit newest-state CE repair and all original sources,
+results, code/exit receipts remain unchanged. No author imports/tests/runtime,
+tensors, source installation or canonical state updates occurred here.
+
+Selected code: run_one_trial.py binds this sibling run_raw_kl_transition.py.
+Transition job schema: robotron-raw-kl-installed-phase-transition-job-v3.
+Outer one-trial schema/12 keys and independent deadline schema remain unchanged.
+Activation and CE-return BOTH require sources=[] and all five installed candidate
+hashes in BEFORE; activation requires authentic current CE record/expected founder,
+historical boot triple+verified boot report and matching environment. Return still
+requires actual KL founder and the unchanged ending proof. Both capture flags must
+be absent. No absent priority_phase.py assumption, install, source rollback, oldboot,
+resume of trial01, new phase telemetry or scientific criterion is introduced.
+
+Activation stopped_checkpoint now uses the real phase-aware newest_stopped CPU
+route for the actual current CE phase and192-owner insurance floor. It does not
+call the legacy untagged stopped-checkpoint verifier. Only its newly verified
+saved validCE predecessor can start the NEW KL record (action=start, previous=ce).
+The fresh root job must bind current owner/192 insurance, current completed slot,
+settings, Restart=no override, exact current sources/control/actors/masks, and a
+NEW authorized core/phase/request/tags/output. No actual next-trial job is supplied.
+
+Metadata correction is local, not a relaxation of immutable verification:
+archive_metadata reads the exact owned/nlink1 bounded metadata PIN through nofollow
+FD/path brackets, creates a new independent inode without overwrite, seals0444,
+fsyncs file+directory and verifies hash/bytes/full FD identity. It never chmods the
+source or copies .pt. V4 checkpoint copying retains200..400MiB and all prior guards.
+Before EVERY phase CPU, phase_metadata replaces the consumed boot report and all
+context archived_control/archived_trainer_unit/provenance PINs with these independent
+archives (including inputs already444); current model-package source pins stay exact.
+The successful phase CPU's original writable result is retained and archived444;
+that returned archive is stored as current_checkpoint.verification or phase_CPU.
+Thus newest→startup and startup→later running-phase edges consume the new PIN,
+not an unused side copy. Original report/job/context permissions/bytes are unchanged.
+
+Unchanged: candidate5 science, original CE tolerances, all horizons/counters,
+3240s durable first-LATCH cutoff,3310s exact-owner stop intent,3600s strict absence
+ceiling, 1Hz/5s/30s/60s guards,32MiB journal, async early192 insurance, one candidate,
+post-stop candidate→newest CPU floor→NEW CE order, all192 undo, no retries/rescue.
+Deadline guard and early_insurance helper are byte-identical copies of ace5;
+controller changes only its pinned adapter path/hash. Prior32 controller guards
+are byte-identical; copied early15 guards only import the selected local adapter.
+Ten new authored stdlib guards exercise real0644/0664 metadata, actual cpu_phase
+including returned444 output reused by startup, installed CE/KL phase validation,
+actual phase-aware stopped_checkpoint and refusal of legacy/old/wrong predecessors.
+A missing boot_checkpoint/expected field in a new mock fixture was found and fixed
+by source review before execution; this is not an actual test/numeric failure.
+
+Future test selection is exactly the three modules in future-argv.json (57methods:
+32+15+10), REPO sys.path, Robotron.tools namespace. Only root executes them.
+No source-only PASS or mocked verifier is a live/CPU/numerical acceptance claim.
+
+Resources remain CPU2/4G/128tasks7200s parent; independent CPU1/256M32tasks6000s
+supervisor; each strict CPU120s/3G64tasks. Outer allowance is unchanged: up to600s
+pre-KL retirement/latest proof,3600s owner ceiling incl startup,~1750s post-absence
+candidate/newest/startup proofs and CE readiness (~5950s), bounded7200s outer plus
+SIGINT/900s graceful stop. The larger outer budget never extends KL-owner3600s.
+Root archives original unit PID/start/invocation/code/exit before owned release.

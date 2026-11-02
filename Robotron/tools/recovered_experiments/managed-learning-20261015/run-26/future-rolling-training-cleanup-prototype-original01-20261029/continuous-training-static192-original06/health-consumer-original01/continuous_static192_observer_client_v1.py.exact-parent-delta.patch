@@ -1,0 +1,31 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-two-second-main-proof-contract-original01-preparation/source-family-original01/round_observer_client_proof2s_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_observer_client_v1.py
+@@ -26,15 +26,15 @@
+         self.common = h.load('_native_round_observer_protocol', h.checked(self.sources['worker']))
+         c = self.common
+         c.require(self.sources['client'] == h.pin(__file__), 'Actual round client source differs')
+-        c.require(protocol['schema'] == 'robotron-native-round-main-health-declared-launcher-proof2s-protocol-v1'
++        c.require(protocol['schema'] == 'robotron-native-continuous-static192-main-health-proof2s-protocol-v1'
+                   and protocol['case'] == job['main_binding'] and prior_groups == []
+                   and protocol['raw_API_required'] is True and protocol['close_requires_final_sample'] is True
+                   and protocol['hot_max_gap_s'] == 2.0 and protocol['initial_samples'] == 100
+                   and protocol['raw_queue_protocol'] == 'pending-byte-digest-v2'
+                   and protocol['volatile_live_tmpfs'] is True
+-                  and protocol['source_bound_API_reconnect_projection'] is True
+-                  and protocol['source_bound_natural_round_admission'] is True
+-                  and protocol['source_bound_declared_launcher_census'] is True,
++                  and protocol['source_bound_retired_API_projection'] is True
++                  and protocol['source_bound_completed_original192_bootstrap'] is True
++                  and protocol['source_bound_static_original192_partition'] is True,
+                   'Fresh original round-health protocol required')
+         for value in self.sources.values():
+             h.checked(value)
+@@ -54,7 +54,7 @@
+             unit=self.unit, output=str(self.output), parent=self.parent,
+             native_job=jp, native_runtime=job['runtime'], case=job['main_binding'],
+             sources=self.sources, interval_s=.2, initial_samples=100, maximum_gap_s=2.0,
+-            raw_queue_protocol='pending-byte-digest-v2', source_bound_API_reconnect_projection=True, source_bound_natural_round_admission=True, source_bound_declared_launcher_census=True, live_control_path=str(self.control_path),
++            raw_queue_protocol='pending-byte-digest-v2', source_bound_retired_API_projection=True, source_bound_completed_original192_bootstrap=True, source_bound_static_original192_partition=True, live_control_path=str(self.control_path),
+             work_s=4200, runtime_s=4260, deadline_monotonic_s=deadline)
+         self.jobpin = h.put(self.root / 'job.json', self.job)
+         self.owner_pin = None

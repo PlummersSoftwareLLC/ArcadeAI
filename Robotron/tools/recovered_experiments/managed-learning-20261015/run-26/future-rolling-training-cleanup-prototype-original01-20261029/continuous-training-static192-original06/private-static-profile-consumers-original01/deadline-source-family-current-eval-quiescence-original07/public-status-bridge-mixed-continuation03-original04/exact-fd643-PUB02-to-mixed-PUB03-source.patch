@@ -1,0 +1,236 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/public-status-bridge-continuation02-original03/project_owned_physical_study_status_v5.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/public-status-bridge-mixed-continuation03-original04/project_owned_mixed_physical_study_status_v6.py
+@@ -11,6 +11,8 @@
+ from pathlib import Path
+ import subprocess
+ import time
++import stat
++import statistics
+ 
+ G=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ I=G/'logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027'
+@@ -64,12 +66,132 @@
+     state=live(child)
+     return result,state
+ 
+-def timing(job,leg,candidate):
++
++PUB02_POSITIVE_CLOSEOUT = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/public-status-bridge-continuation02-original03/Root-original-publisher02-positive-closeout-original01/Root-original-publisher02-archived-released.json', 'sha256': 'a9957c6d38cb4cd4af7182b6bd752c83e1d32101858778acf3bb48bbe8b94347', 'bytes': 14457, 'identity': {'device': 2304, 'inode': 87556178, 'bytes': 14457, 'mtime_ns': 1793325923069718634, 'ctime_ns': 1793325923069718634, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
++
++
++def checked_archived_metadata(value,h,as_json=True):
++    """Honor retained full5/full8 ordinary metadata pins without broadening them."""
++    path=Path(value['path']);info=path.lstat()
++    require(path.is_absolute()and path.resolve(strict=True)==path and not path.is_symlink()
++            and stat.S_ISREG(info.st_mode)and info.st_uid==os.getuid()and info.st_nlink==1
++            and stat.S_IMODE(info.st_mode)==0o444 and info.st_size==value['bytes']<4<<20,
++            'Exact immutable owned bounded archived metadata required')
++    actual=h.pin(path)
++    require(set(value)=={'path','sha256','bytes','identity'}
++            and {'device','inode','mode','uid','nlink'}<=set(value['identity'])
++            and set(value['identity'])<={'device','inode','bytes','mtime_ns','ctime_ns','mode','uid','nlink'}
++            and all(actual[k]==value[k]for k in ('path','sha256','bytes'))
++            and all(actual['identity'][k]==v for k,v in value['identity'].items()),
++            'Selected archived metadata SHA/identity differs')
++    raw=path.read_bytes()
++    require(len(raw)==value['bytes']and hashlib.sha256(raw).hexdigest()==value['sha256']
++            and h.pin(path)==actual,'Archived metadata raced its bounded read')
++    return json.loads(raw)if as_json else raw
++
++
++def closed_invocation_without_birth(prior,h,launch_selection,study):
++    """One exact already-closed PUB02; never invent or substitute a birth value."""
++    require(prior['positive_owned_closeout']==PUB02_POSITIVE_CLOSEOUT,
++            'Only retained original PUB02 may use its explicit no-persisted-birth branch')
++    closed=checked_archived_metadata(PUB02_POSITIVE_CLOSEOUT,h)
++    owner=prior['original'];unit='robotron-physical-cohort-proof2s-'+study['sha256'][:16]+'-public-status-original02-20261029.service'
++    require(set(owner)=={'unit','pid','invocation_id'}and owner==closed['original']and owner['unit']==unit
++            and type(owner['pid'])is int and owner['pid']>0
++            and closed['schema']=='robotron-Root-original-ended-owned-observer-or-sequence-closeout-v1'
++            and closed['status']=='ORIGINAL_TERMINAL_ARCHIVED_AND_RELEASED'
++            and closed['original_starttime_ticks_persisted']is False
++            and closed['original_PID_currently_absent']is True
++            and closed['original_invocation_PID_and_restart_crosschecks_verified']is True
++            and type(closed['actual_original_exit'])is int and closed['actual_original_exit']==0
++            and closed['scientific_native_payload_started']is False,
++            'Exact positive original closed invocation/PID evidence required')
++    first=checked_archived_metadata(closed['actual_first_live_scope'],h)
++    livefields=first['first_actual_scope']
++    expected=dict(Id=unit,MainPID=str(owner['pid']),ExecMainPID=str(owner['pid']),
++        InvocationID=owner['invocation_id'],NRestarts='0',Restart='no',ActiveState='active',SubState='running',Type='exec')
++    require(type(first['actual_exit'])is int and first['actual_exit']==0 and first['no_retry']is True
++            and all(livefields.get(k)==v for k,v in expected.items()),
++            'Captured first-live SHOW must bind exact original unit/PID/invocation')
++    oldcfg=checked_archived_metadata(first['config'],h)
++    require(oldcfg['unit']==unit and oldcfg['launch_selection']==launch_selection
++            and oldcfg['source']['sha256']=='fd6433567d0616366cebcf9b486529586638dc84a46bc1616b6a00875a459eaa',
++            'Retained closed invocation belongs to another original publisher source/study')
++    expected_argv=[oldcfg['source']['path'],'--run','--config',first['config']['path'],
++        '--config-sha256',first['config']['sha256'],'--expected-source-sha256',oldcfg['source']['sha256']]
++    require(all(token in livefields['ExecStart']for token in expected_argv),
++            'Captured live original publisher argv/source/config differs')
++    def command(row,argv):
++        require(row['argv']==argv and type(row['exit'])is int and row['exit']==0
++                and row['timed_out']is False and row['error']is None,
++                'Actual archived command failed or differs')
++        checked_archived_metadata(row['stderr'],h,False)
++        return checked_archived_metadata(row['stdout'],h,False).decode()
++    archives=closed['archives'];require(len(archives)==3,'Exact SHOW/CAT/invocation journal archives required')
++    terminal=dict(v.split('=',1)for v in command(archives[0],['systemctl','--user','show',unit]).splitlines()if'='in v)
++    command(archives[1],['systemctl','--user','cat',unit])
++    command(archives[2],['journalctl','--user','--no-pager','-o','short-iso','_SYSTEMD_INVOCATION_ID='+owner['invocation_id']])
++    wanted=dict(Id=unit,InvocationID=owner['invocation_id'],ExecMainPID=str(owner['pid']),MainPID='0',
++        ExecMainCode='1',ExecMainStatus='0',Result='success',NRestarts='0',Restart='no')
++    require(all(terminal.get(k)==v for k,v in wanted.items())and terminal['SubState']in('exited','dead')
++            and all(token in terminal['ExecStart']for token in expected_argv),
++            'Actual exact original normal0 terminal SHOW required')
++    release=closed['release'];require(release['unit']==unit and release['confirmed_absent']is True,
++            'Exact owned service release must be positively complete')
++    before=dict(v.split('=',1)for v in command(release['before'],['systemctl','--user','show',unit]).splitlines()if'='in v)
++    require(all(before.get(k)==v for k,v in wanted.items()),'Release did not begin from exact original normal0 terminal')
++    command(release['stop'],['systemctl','--user','stop',unit])
++    final=dict(v.split('=',1)for v in command(release['final'],['systemctl','--user','show',unit]).splitlines()if'='in v)
++    require(final.get('LoadState')=='not-found','Archived final unit absence required')
++    cgroup=closed['captured_cgroup']
++    require(cgroup==livefields['ControlGroup']and cgroup.endswith('/'+unit)and closed['cgroup_absent']is True
++            and not Path('/sys/fs/cgroup'+cgroup).exists()and not Path('/proc',str(owner['pid'])).exists(),
++            'Original captured cgroup and PID must still be absent; unknown PID reuse is refused')
++    return owner
++
++
++def display_case(root,case):
++    leg=case['leg']
++    folder=root/leg;job=read(Path(case['native_job']['path']));native=Path(job['output'])
++    raw=read(native/'status.json');closed=read(folder/'controller-original-result.json')
++    q=read(folder/('root-'+leg+'-independent-qualified.json'))
++    if q:phase='complete'
++    elif closed:phase='closed_pending_independent_review'if closed['actual_exit']==0 else'original_failed_no_retry'
++    elif raw:phase='collecting'if raw['phase']=='active_deadline'else raw['phase']
++    elif (native/'original-loaded-policy.json').exists():phase='certifying_32_original_starts'
++    elif (native/'original-initial-main-readiness.json').exists():phase='loading_and_compiling_frozen_policy'
++    elif (folder/'controller-original-launch.json').exists():phase='verifying_main_readiness'
++    else:phase='pending'
++    row=dict(phase=phase,complete=q is not None,count=0,updated_unix_s=time.time(),
++             independently_qualified=q is not None,full_game_quality_qualified=False,
++             reason='Fixed one-hour score screen; separate complete-game confirmation is required.')
++    if raw:row['started']=raw['n_selected_first_games']
++    if closed and closed['actual_exit']!=0:row.update(valid=False,reason='Original run failed and is preserved without retry.')
++    if q:
++        assert q['status']=='INDEPENDENT_DEADLINE32_QUALIFIED'and q['leg']==leg
++        score=q['score_cutoff']
++        row.update(n_scored=score['n_scored'],completed=score['n_completed'],n_censored=score['n_censored'],
++                   mean_score=score['mean_score'],median_score=score['median_score'])
++        seal=read(native/'original-deadline-score-seal.json')
++        finished=[value['score']for value in seal['rows']if value['whole_game_complete']is True]
++        assert len(finished)==score['n_completed']
++        row.update(count=len(finished),mean=statistics.mean(finished)if finished else None,valid=True)
++    if phase=='collecting':
++        anchor=read(native/'original-deadline-anchor.json')['anchor']
++        row['close_ts']=time.time()+(anchor['deadline_monotonic_ns']-time.monotonic_ns())/1e9
++    if (native/'original-loaded-policy.json').exists():
++        loaded=read(native/'original-loaded-policy.json');assert loaded['policy']['checkpoint_sha256']==job['checkpoint']['sha256']
++        row.update(checkpoint_sha256=job['checkpoint']['sha256'],clocks=job['expected_policy_clocks'])
++    return row
++
++
++def timing(job,case,candidate):
++    leg=case['leg']
+     a=read(Path(job['output'])/'original-deadline-anchor.json')
+     if not a:return None
+     b=a['anchor']
+     require(candidate=='c0acc8ad3aa411a00928b6f242b2e4a6299780b5a2991c75225d334c21af60f0'
+-        and a['original_job']['path']==str(S/leg/'job.json')
++        and a['original_job']==case['native_job']
+         and a['policy']['policy_sha256']==job['checkpoint']['sha256']
+         and b['members']==32 and b['horizon_ns']==3600000000000
+         and b['deadline_monotonic_ns']-b['anchor_monotonic_ns']==b['horizon_ns'], 'Original per-leg fixed anchor differs')
+@@ -83,12 +205,12 @@
+     return value
+ 
+ def leg_status(case,display,candidate):
+-    leg=case['leg'];folder=S/leg;job=read(folder/'job.json');native=Path(job['output'])
++    leg=case['leg'];folder=S/leg;job=read(Path(case['native_job']['path']));native=Path(job['output'])
+     q=folder/('root-'+leg+'-independent-qualified.json')
+     row=dict(leg=leg,phase='pending',state='pending',independently_qualified=False,full_game_quality_qualified=False)
+     if q.exists():
+         # The unchanged guard alone reads qualified score/seal values.
+-        safe=display.display(S,leg)
++        safe=display_case(S,case)
+         require(safe['independently_qualified']is True,'Qualified display guard refused')
+         row.update(safe,state='qualified',phase='complete',n_completed=safe.get('completed'));return row
+     native_result_exists=(native/'result.json').is_file()  # Never open the large native body.
+@@ -140,7 +262,7 @@
+         row.update(phase='verifying_main_readiness',state='running',**{k:v for k,v in native_live.items()if k!='live'})
+     if row['phase'].startswith('independent_review')or review_prepared:
+         row['review_budget']=dict(actual_reviewer_runtime_limit_s=1980,controller_observation_limit_s=2040,parent_limit_s=2400 if leg=='R1'else 21600,these_are_limits_not_ETAs=True)
+-    if row['phase']=='collecting':row['deadline_timing']=timing(job,leg,candidate)
++    if row['phase']=='collecting':row['deadline_timing']=timing(job,case,candidate)
+     return row
+ 
+ def run(args):
+@@ -151,14 +273,22 @@
+     require(cfg['schema']=='robotron-generic-physical-public-status-selection-v1'
+         and cfg['source']==h.pin(Path(__file__).resolve()),'Exact generic public bridge source required')
+     selection=json.loads(h.checked(cfg['launch_selection']).read_bytes())
+-    manifest=json.loads(h.checked(selection['prepared_manifest']).read_bytes())
++    original_manifest=json.loads(h.checked(selection['prepared_manifest']).read_bytes())
++    manifest=json.loads(h.checked(cfg['mixed_manifest']).read_bytes())
++    mixed_review=json.loads(h.checked(cfg['mixed_review_precommit']).read_bytes())
+     study=json.loads(h.checked(selection['study_precommit']).read_bytes())
+     require(selection['schema']=='robotron-generic-physical-original-R1-launch-selection-v1'
+         and selection['source']['sha256']=='5701b99c08bb7a7e16e4052daa45d2fae3bd6ba257a8592dd460804347d6320d'
+         and selection['candidate_sha256']==study['policies']['candidate']['checkpoint']['sha256']=='c0acc8ad3aa411a00928b6f242b2e4a6299780b5a2991c75225d334c21af60f0'
+         and study['policies']['reference']['checkpoint']['sha256']=='b23152ece3bb614831a278fe0572c07433f1bee59c5accef5a1ab7d3007af883'
+         and [c['leg']for c in manifest['cases']]==ORDER
+-        and manifest['study_precommit']==selection['study_precommit'], 'Actual bound generic physical RCRC study required')
++        and manifest['original_manifest']==selection['prepared_manifest']
++        and manifest['cases'][0]==original_manifest['cases'][0]
++        and manifest['study_precommit']==selection['study_precommit']
++        and mixed_review['native_prepared']==cfg['mixed_manifest']
++        and mixed_review['ordered_legs']==[r['leg']for r in mixed_review['cases']]==ORDER
++        and mixed_review['retained_R1']['precommit']==json.loads(h.checked(selection['readiness']).read_bytes())['review_precommit']
++        and [r['native_job']for r in mixed_review['cases']]==[r['native_job']for r in manifest['cases']], 'Actual bound generic physical RCRC study required')
+     A=Path(h.checked(selection['source'])).parent
+     S=Path(selection['prepared_manifest']['path']).parent
+     require(S.is_relative_to(G/'logs/managed-learning-20261015/run-26')
+@@ -169,12 +299,13 @@
+         and first['source']['sha256']=='7f6471c57d64f589c66bd63b2500f99ca40920905dd05606fd08508bd46a51d7'
+         and first['selected_R1_source_preparation']==selection['source_preparation'], 'Same actual R1 first-review source contract required')
+     FIRST_REVIEW=Path(h.checked(first['source'])).parent
+-    require(cfg['sequence_source']['sha256']=='d821a0121ad4b2cdec82877299d5666aecee56b42aa11c5ce70c738096cc80f9', 'Exact generic continuation source required')
++    require(cfg['sequence_source']['sha256']=='53198b61a8c9b39561cf671ed0b8f66e764afeb3ffab33ec7ae8ce36549efdea'
++        and mixed_review['source']['sha256']=='2773083959c548370193a962a9b9f4a407f65bf6af2086258d90510ec8af7deb', 'Exact mixed continuation/precommit sources required')
+     h.checked(cfg['sequence_source'])
+     SEQUENCE_DIRECTORY=Path(cfg['sequence_directory'])
+-    require(SEQUENCE_DIRECTORY.is_absolute() and SEQUENCE_DIRECTORY.parent==S,
++    require(SEQUENCE_DIRECTORY.is_absolute() and SEQUENCE_DIRECTORY==S/'owned-continuation-original03',
+         'Root-selected future sequence output must be directly in this study')
+-    UNIT='robotron-physical-cohort-proof2s-'+selection['study_precommit']['sha256'][:16]+'-public-status-original02-20261029.service'
++    UNIT='robotron-physical-cohort-proof2s-'+selection['study_precommit']['sha256'][:16]+'-public-status-original03-20261029.service'
+     require(cfg['unit']==UNIT,'Exact study-derived passive publisher unit required')
+     handoff=json.loads(h.checked(cfg['publication_handoff']).read_bytes())
+     require(handoff['schema']=='robotron-root-generic-public-status-writer-handoff-v1'
+@@ -188,8 +319,12 @@
+     require(handoff['public_preimage']['path']==str(PUBLIC),'Actual public preimage path required')
+     h.checked(handoff['public_preimage'])
+     for prior in handoff['previous_automatic_publishers']:
+-        h.checked(prior['positive_owned_closeout'])
+-        require(live(prior['original'])['live']is False,'Previous actual public publisher birth remains')
++        if prior.get('closure_basis')=='POSITIVE_CLOSED_INVOCATION_WITHOUT_PERSISTED_BIRTH':
++            closed_invocation_without_birth(prior,h,cfg['launch_selection'],selection['study_precommit'])
++        else:
++            require(prior.get('closure_basis','ORIGINAL_PID_BIRTH')=='ORIGINAL_PID_BIRTH','Unknown prior publisher closure basis')
++            h.checked(prior['positive_owned_closeout'])
++            require(live(prior['original'])['live']is False,'Previous actual public publisher birth remains')
+         oldfields=dict(v.split('=',1)for v in subprocess.check_output(['systemctl','--user','show',prior['original']['unit']],text=True,timeout=5).splitlines()if'='in v)
+         require(oldfields.get('LoadState')=='not-found','Previous actual publisher unit remains; one writer only')
+     fields=dict(v.split('=',1)for v in subprocess.check_output(['systemctl','--user','show',UNIT],text=True,timeout=5).splitlines()if'='in v)
+@@ -210,7 +345,7 @@
+         rows=[leg_status(case,display,selection['candidate_sha256'])for case in manifest['cases']]
+         seq=SEQUENCE_DIRECTORY;outcome=read(seq/'sequence-original-outcome.json');seqchild=read(seq/'sequence-original-child.json')
+         if seqchild:
+-            commit=read(seq/'sequence-precommit.json');require(commit['source']==cfg['sequence_source']and commit['study_directory']==str(S)and commit['review_precommit']==read(selection['readiness']['path'])['review_precommit']and seqchild['original_precommit']==h.pin(seq/'sequence-precommit.json'),'Actual sequence source/study/precommit differs')
++            commit=read(seq/'sequence-precommit.json');require(commit['source']==cfg['sequence_source']and commit['study_directory']==str(S)and commit['review_precommit']==cfg['mixed_review_precommit']and seqchild['original_precommit']==h.pin(seq/'sequence-precommit.json'),'Actual sequence source/study/precommit differs')
+         chosen=next((r for r in rows if r['state']!='qualified'),rows[-1]);state=chosen['state']
+         original_scope_live=any(r.get('native_owner_live')is True or r.get('review_owner_live')is True for r in rows)
+         if outcome:

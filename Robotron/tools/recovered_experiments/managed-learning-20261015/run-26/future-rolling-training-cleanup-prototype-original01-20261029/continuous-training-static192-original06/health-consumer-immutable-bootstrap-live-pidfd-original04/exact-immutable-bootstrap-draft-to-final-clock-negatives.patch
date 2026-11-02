@@ -1,0 +1,17 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/test_immutable_bootstrap_live_pidfd_health_adversarial_DRAFT_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/test_immutable_bootstrap_live_pidfd_health_adversarial_v1.py
+@@ -684,6 +684,14 @@
+             with self.assertRaises(ValueError):h.reg.kernel_eval_exit(h.case,bad,'0')
+             # An authentic old publication clock is acceptable only with a fresh actual-FD census.
+             h.health.validate_eval_holder(h.case,missing)
++            for field,value in [('updated_monotonic_ns',1001000000000),('updated_monotonic_ns',-1),
++                                ('updated_monotonic_ns',999900000000.5),('updated_monotonic_ns',True),
++                                ('updated_unix_s',missing['unix_s']+1),('updated_unix_s',-1),
++                                ('updated_unix_s',float('nan'))]:
++                bad=copy.deepcopy(missing);pub=bad['EVAL_exit_witness_capture']['publication']
++                pub['value'][field]=value;wire,sha=h.wire(pub['value']);pub.update(raw_wire=wire,sha256=sha)
++                with self.subTest(publication_clock=field,value=value),self.assertRaises(ValueError):
++                    h.health.validate_eval_holder(h.case,bad)
+             for mutation in ('dead','birth','missing_fd','inode','target','namespace','live_target_absent','duplicate','bracket','source','foreign_fd','reused_fd'):
+                 bad=copy.deepcopy(missing);cap=bad['EVAL_exit_witness_capture'];census=cap['descriptor_census']
+                 if mutation=='dead':census['owner_after']['process']['state']='Z'

@@ -1,0 +1,94 @@
+{
+  "schema": "robotron-additive-source-preservation-note-v1",
+  "status": "SOURCE_ONLY_UNSELECTED",
+  "addition": "One new stdlib driver; no installed source or immutable upstream was edited. No controller, owner-stop, phase transition or retained CPU lifecycle was copied.",
+  "numeric_body_copied_or_modified": false,
+  "numeric_module_loaded_by_driver": false,
+  "exact_reuse": "Authenticated upstream modules supply their unchanged class/function definitions; the driver calls only the listed parametric interfaces.",
+  "upstream_interfaces": {
+    "d525": [
+      "show",
+      "process_start",
+      "command",
+      "identity",
+      "write_bytes",
+      "publish"
+    ],
+    "capture7be": [
+      "Files",
+      "CaptureRuntime",
+      "four",
+      "triple",
+      "request_identity",
+      "publish_request"
+    ],
+    "snapshot0112": [
+      "Snapshot only; never RetainedCPU"
+    ],
+    "observerf1fa": [
+      "normalise",
+      "validate_job",
+      "ReceiptJournal",
+      "poll",
+      "encoded"
+    ],
+    "CPUd73_and_strict0854": [
+      "fingerprinted as source prerequisites and emitted into the future CPU job; never imported/executed by this driver"
+    ]
+  },
+  "guard_scope": {
+    "authored": 6,
+    "executed": false,
+    "numerics_or_live_processes_exercised": false,
+    "reuses_existing_observer_11_guards_without_copy": true
+  },
+  "narrow_shared_health_API": {
+    "methods": {
+      "api": {
+        "sha256": "8904ffa0d4124cde4537cbca38e7d5593246c9f1d5954cbe3bc4c70da7df7932",
+        "bytes": 233,
+        "first_line": 216,
+        "last_line": 219
+      },
+      "check_process": {
+        "sha256": "5e110a6d7f8d3bc29bdd830f32bf8961a41feb3336e59e0ab5bd625f52a3d7ce",
+        "bytes": 946,
+        "first_line": 221,
+        "last_line": 230
+      },
+      "check_health": {
+        "sha256": "9f7339f199f5268a5d61bb540086a144bb703f1fd7d49063aefcefc43e4037a8",
+        "bytes": 4701,
+        "first_line": 232,
+        "last_line": 281
+      }
+    },
+    "required_attributes": [
+      "ops",
+      "files",
+      "owner",
+      "baseline",
+      "resources",
+      "env",
+      "hashes",
+      "observer",
+      "expected_exposure",
+      "health_floor_clocks"
+    ],
+    "floor_semantics": "Driver uses genuine fresh .5 entry CPU clocks. A separate entry helper may supply explicitly authenticated historical startup clocks as a labelled health floor, without fabricating any entry CPU."
+  },
+  "actions_forbidden_to_author": [
+    "import proposed modules",
+    "execute defaults",
+    "run tests",
+    "live API/process/systemd/GPU queries",
+    "model body reads",
+    "control/canonical/installed mutations"
+  ],
+  "actual_future_job": null,
+  "actual_future_control": null,
+  "actual_future_B": null,
+  "actual_future_cutoff": null,
+  "selected": false,
+  "failure_policy": "Preserve first failure and exact pending/control evidence; no automatic reversal across an untrusted/unresolved save. Root must accept supervision policy before selection."
+}

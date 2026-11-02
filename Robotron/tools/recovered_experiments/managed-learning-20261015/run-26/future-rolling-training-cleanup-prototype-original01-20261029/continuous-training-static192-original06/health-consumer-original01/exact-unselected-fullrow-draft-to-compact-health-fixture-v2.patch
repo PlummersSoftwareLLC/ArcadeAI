@@ -1,0 +1,102 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/test_continuous_static192_health_adversarial_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/test_continuous_static192_health_adversarial_v2.py
+@@ -24,9 +24,9 @@
+ 
+ HERE = Path(__file__).resolve().parent
+ SOURCES = {
+-    'registry': ('continuous_static192_registry_v1.py', None),
+-    'health': ('continuous_static192_health_v1.py', None),
+-    'transport': ('continuous_static192_transport_v1.py', None),
++    'registry': ('continuous_static192_registry_v1.py', '2f3eddaf75ee3b9a875d0a621a63eeea7274eae3afa75bcceb309002233316d1'),
++    'health': ('continuous_static192_health_v1.py', '6fcff86103d409a3646f523a6adf6a95cc9eabd3b0090826493aaa99a7b9fbcc'),
++    'transport': ('continuous_static192_transport_v1.py', '73462699277d0382cdb981167284add7b95b6cf31f2073a708cb77e52f479372'),
+ }
+ 
+ 
+@@ -59,7 +59,8 @@
+     ns = dict(common)
+     selected = [n for n in tree.body if isinstance(n, ast.FunctionDef)
+         or isinstance(n, ast.Assign) and all(isinstance(t, ast.Name)
+-            and t.id in {'MODE','SCHEMA','CASE_SCHEMA','SLOTS','STATES','FIXED_SLOT'} for t in n.targets)]
++            and t.id in {'MODE','SCHEMA','CASE_SCHEMA','SLOTS','STATES','FIXED_SLOT',
++                         'ORIGINAL_FIELDS','COMPACT_FIELDS'} for t in n.targets)]
+     exec(compile(ast.fix_missing_locations(ast.Module(body=selected, type_ignores=[])), filename, 'exec'), ns)
+     registry = SimpleNamespace(**ns)
+     tree, filename = source('health')
+@@ -166,12 +167,13 @@
+                     exe=self.case['actor_executable']['path'], environment=env), connection=conn,
+                 process_owned_TCP=dict(inode=30000+int(slot),
+                     local=conn['socket_endpoints']['peer'], remote=conn['socket_endpoints']['server'])), mono=996.2)
+-            c['original_slots'][slot] = dict(eval_only=self.roles[slot], incarnation=1,
+-                state='active_eval' if self.roles[slot] else 'active_train', original_child=child,
++            c['original_slots'][slot] = dict(eval_only=self.roles[slot], incarnation=1,original_child=child,
+                 spawn_intent=intent, original_child_receipt=spawned, connection_binding=physical,
+-                natural_result=None, closure=None, faults=0, prior_fault_closure=None, quarantine_reason=None)
++                )
++        c['original_membership'] = self.event('original192-membership',None,
++            dict(original_slots=copy.deepcopy(c['original_slots'])),incarnation=0,mono=997.)
+         c['initial_barrier'] = self.event('initial-all192-barrier', None, dict(slots=list(range(192)),
+-            slot_eval=self.roles, physical_connections={s:r['connection_binding']
++            slot_eval=self.roles,original_membership=c['original_membership'],physical_connections={s:r['connection_binding']
+                 for s,r in c['original_slots'].items()}), incarnation=0, mono=998.0)
+         lineage = dict(process_id=1000, instance_monotonic_ns=500, epoch=1, epoch_reason='synthetic')
+         self.case['exposure'] = dict(optimizer=dict(lineage), replay=dict(lineage))
+@@ -250,9 +252,19 @@
+             self.case['actor_executable']) for s,r in c['original_slots'].items()}
+         status = dict(schema=self.reg.SCHEMA,mode=self.reg.MODE,epoch=c['epoch'],
+             supervisor=c['supervisor'],trainer=c['trainer'],rolemap=c['rolemap'],source_authority=c['source_authority'],
+-            errors=[],slots=copy.deepcopy(c['original_slots']),updated_unix_s=unix-.1,
++            original_membership=c['original_membership'],errors=[],slots={},updated_unix_s=unix-.1,
+             updated_monotonic_ns=int((mono-.1)*1e9),initial_admission=dict(complete=True,
+                 slots_ever_bound=list(range(192)),immutable_all192_barrier=c['initial_barrier']))
++        for slot,original in c['original_slots'].items():
++            # Independent implementation of the declared compact-wire hash;
++            # the actual verifier's original_digest/slot_view must agree.
++            raw=json.dumps(original,sort_keys=True,separators=(',',':'),
++                ensure_ascii=True,allow_nan=False).encode('utf-8')
++            status['slots'][slot]=dict(eval_only=self.roles[slot],incarnation=1,
++                state='active_eval' if self.roles[slot] else 'active_train',
++                original_pid=original['original_child']['pid'],original_birth=original['original_child']['birth'],
++                original_slot_sha256=hashlib.sha256(raw).hexdigest(),natural_result=None,closure=None,
++                prior_fault_closure=None,quarantine_reason=None,faults=0)
+         def capture(schema):
+             return dict(before_monotonic_ns=int((mono-.15)*1e9),after_monotonic_ns=int((mono-.05)*1e9),
+                 value=dict(schema=schema,server_stamp=c['server_stamp'],continuous_training_mode=True,
+@@ -280,7 +292,7 @@
+             client_id=0,client_slot=0,game_uid=1,score=score,journal_game_id='SYNTHETIC:1',
+             boundary_reason='zero_score_restart' if score==0 else 'score_reset',
+             start_unix_s=self.now-5,end_unix_s=self.now-age,
+-            start=dict(measurement_generation=0,measurement_active=False,ratchet_frozen=False))
++            start_context=dict(measurement_generation=0,measurement_active=False,ratchet_frozen=False))
+         raw_line = self.write('synthetic-journal-line.jsonl',
+             (json.dumps(result,separators=(',',':'))+'\n').encode())
+         natural = self.event('natural-result',0,dict(result=result,raw_line=raw_line,natural_complete=True),
+@@ -334,10 +346,18 @@
+             accepted = h.transport.validate(h.case,sample)
+             self.assertEqual(accepted['partition']['active_train'],155)
+             self.assertEqual(accepted['partition']['active_eval'],37)
++            self.assertLess(len(h.wire(sample['status'])[0].encode()),524288)
++            raw_before=copy.deepcopy(sample['status'])
++            view=h.reg.validate_snapshot(h.case,sample)
++            self.assertIn('original_child',view['slots']['40'])
++            self.assertNotIn('original_child',sample['status']['slots']['40'])
++            self.assertEqual(sample['status'],raw_before)  # raw compact wire is retained
+             reports=copy.deepcopy(sample['status']);reports.update(train_games_completed=123,last_train_game=dict(score=0))
+             self.assertEqual(h.health.stable_round_status(reports),h.health.stable_round_status(sample['status']))
+             for field,value in [('incarnation',2),('faults',1),('prior_fault_closure',{'fake':True}),
+-                                ('quarantine_reason','fault'),('state','quarantined')]:
++                                ('quarantine_reason','fault'),('state','quarantined'),
++                                ('original_pid',99999),('original_birth',99999),
++                                ('original_slot_sha256','0'*64),('original_child',{'extra':'forbidden'})]:
+                 bad = copy.deepcopy(sample);bad['status']['slots']['40'][field] = value
+                 h.counts(bad);h.refresh(bad)
+                 with self.subTest(field=field),self.assertRaises(ValueError):
+@@ -352,6 +372,8 @@
+                 with self.subTest(key=key),self.assertRaises(ValueError):h.transport.validate(h.case,bad)
+             case=copy.deepcopy(h.case);del case['continuous']['original_slots']['191']
+             with self.assertRaises(ValueError):h.reg.validate_case(case)
++            case=copy.deepcopy(h.case);case['continuous']['original_membership']=None
++            with self.assertRaises((ValueError,TypeError)):h.reg.validate_case(case)
+             case=copy.deepcopy(h.case);case['slot_eval']['40']=True
+             with self.assertRaises(ValueError):h.reg.validate_case(case)
+             case=copy.deepcopy(h.case);entry=case['continuous']['source_pins'][0]

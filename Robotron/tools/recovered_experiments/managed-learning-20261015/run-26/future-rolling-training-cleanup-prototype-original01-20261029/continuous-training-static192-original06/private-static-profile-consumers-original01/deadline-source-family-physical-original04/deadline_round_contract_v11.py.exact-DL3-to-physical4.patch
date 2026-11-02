@@ -1,0 +1,66 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-original03/deadline_round_contract_v11.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-physical-original04/deadline_round_contract_v11.py
+@@ -14,7 +14,7 @@
+ LEGACY_REVIEW_SHA = 'f2b311fd6d375e6b1e35c571b91cfb8c209881855834941d5b0292b51a9bbf5e'
+ LEGACY_JOB = BASE / 'deadline-score32-fixed-fleet-admission-original03-preparation-20261026/fixed-RCRC-deadline32-study-original03/C2/job.json'
+ LEGACY_JOB_SHA = 'b6f9d229836f6cbe2897e2fa3ef6426209998ac9b361c47d1a48a95200cd1fc5'
+-HEALTH_SHAS = {'registry': '2f3eddaf75ee3b9a875d0a621a63eeea7274eae3afa75bcceb309002233316d1', 'health_base': '6fcff86103d409a3646f523a6adf6a95cc9eabd3b0090826493aaa99a7b9fbcc', 'health': '73462699277d0382cdb981167284add7b95b6cf31f2073a708cb77e52f479372', 'worker': 'c1dad49f4ae56cf89d8083601485d737f5d96111df3834cbf10a5b833ef0273b', 'client': '629c288b062b6abd3af27b87c01d94c8ac1f988df899968d902943b689659fa9', 'durability': '5dbeb347474dd9289ae18a2de0c438820f535fa9d75badaa3cfbf82dff6c1aa5', 'control': 'a2ce55471f7ff14490553cf05871e79a0ff15c925d01441065821b0f95daade8'}
++HEALTH_SHAS = {'registry': '71fc044d7b3bbbfceba5ef23f69a6c741eeff5700176050c6cdbe9e4794bba69', 'health_base': '77a832a4202bf81e2f8eae00affc2127be0a22795c75f0c5cf1585f22d2991a9', 'health': 'a460b4f3d5352d712c39929dcafe9883909610c01a71a0a08b82953f490d5541', 'worker': '8f290def72dadb0f4bb9f1d68ec7a67cecd539ea604954a83dfedcc8bccce66e', 'client': 'f4090f2a35959a337db9d0a987248d7a2122407255856927ed611f0d4eb6554f', 'durability': '5dbeb347474dd9289ae18a2de0c438820f535fa9d75badaa3cfbf82dff6c1aa5', 'control': 'a2ce55471f7ff14490553cf05871e79a0ff15c925d01441065821b0f95daade8'}
+ PRIVATE_FIELDS = ('source_package', 'actor_source_sha256', 'loaded_rom_sha256',
+     'prior_ROM_identity_proof', 'lua', 'mame', 'rompath', 'boot_seed', 'seed_runtime',
+     'main_sources', 'actor_slots', 'origin_port', 'proxy_ports', 'device',
+@@ -73,16 +73,16 @@
+ 
+ 
+ def validate_static(job, protocol, family, h):
+-    require(protocol['schema'] == 'robotron-native-continuous-static192-main-health-proof2s-protocol-v1'
++    require(protocol['schema'] == 'robotron-native-continuous-physical-original192-main-health-proof2s-protocol-v2'
+             and protocol['case'] == job['main_binding'] and protocol['raw_API_required'] is True
+             and protocol['close_requires_final_sample'] is True and protocol['hot_max_gap_s'] == 2.0
+             and protocol['initial_samples'] == 100
+             and protocol['raw_queue_protocol'] == 'pending-byte-digest-v2'
+             and protocol['volatile_live_tmpfs'] is True
+             and protocol['source_bound_retired_API_projection'] is True
+-            and protocol['source_bound_completed_original192_bootstrap'] is True
+-            and protocol['source_bound_static_original192_partition'] is True, 'Exact hot round-health protocol required')
+-    require(family['schema'] == 'robotron-deadline32-static192-proof2s-source-family-v1'
++            and protocol['source_bound_original192_physical_bootstrap'] is True
++            and protocol['source_bound_physical_original192_partition'] is True, 'Exact hot round-health protocol required')
++    require(family['schema'] == 'robotron-deadline32-physical192-proof2s-source-family-v2'
+             and family['runtime'] == job['runtime'] and family['deadline_components'] == job['components']
+             and family['main_observer'] == job['observer_sources']
+             and family['current_main_binding'] == job['main_binding'], 'Native/family source binding differs')
+@@ -112,7 +112,7 @@
+     require(recovery['current_boot_id'] == Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
+             'Restored coordinator belongs to a different boot')
+     h.checked(job['lease'])
+-    require(family['round_observer_reviewer']['sha256'] == 'f6dcd7b9ae7556bc1e669b3973a6c5797f845d89c23e2d62a4955b55b519590a', 'Exact independent round observer reviewer required')
++    require(family['round_observer_reviewer']['sha256'] == '49517cda74226f60f12297c5a106a758d76a3e0e4682a0a2c9058124c4ad433f', 'Exact independent round observer reviewer required')
+     h.checked(family['round_observer_reviewer'])
+     return validate_derivation(job['runtime']['path'], family['reviewer']['path'])
+ 
+@@ -146,9 +146,11 @@
+     require(verified['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1'
+             and verified['verified_maximum_gap_s'] == 2.0
+             and verified['accepted_evidence_and_projection_gaps_verified'] is True
+-            and verified['main_health_profile'] == 'STATIC_ORIGINAL192_NO_FAULT_ADOPTION'
+-            and verified['source_bound_completed_original192_bootstrap_verified'] is True
+-            and verified['TRAIN155_originals_and_EVAL37_once_partition_verified'] is True,
++            and verified['main_health_profile'] == 'PHYSICAL_ORIGINAL192_TRAIN_CURRENT_TCP_EVAL_ORIGINAL_ONCE'
++            and verified['source_bound_original192_physical_bootstrap_verified'] is True
++            and verified['TRAIN155_original_physical_and_current_TCP_verified'] is True
++            and verified['EVAL37_original_connection_and_strict_retirement_evidence_verified'] is True
++            and verified['EVAL_closed_slots_have_positive_normal0_reap_and_cleanup_verified'] is True,
+             'Exact prospective2s engineering proof contract required')
+     require(verified['original_sources'] == family['main_observer'], 'Main-domain proof uses a different observer source')
+     lifecycle = json.loads(h.checked(proof['lifecycle']).read_bytes())
+@@ -178,7 +180,7 @@
+ 
+ 
+ def static_profile():
+-    path = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/static_profile_contract_v2.py')
+-    require(hashlib.sha256(path.read_bytes()).hexdigest() == '5260662e651c6f26cde42bb04cde913dd51015658d071499b6966e661e6a451b',
++    path = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/physical_profile_contract_v3.py')
++    require(hashlib.sha256(path.read_bytes()).hexdigest() == '16f842452a56d5a2ae9f3c01b6cd4581623d2463c333ed785e8b8ea53a0909e8',
+             'Exact selected static input-inventory/domain verifier required')
+     return load('_deadline_static_original192_profile', path)

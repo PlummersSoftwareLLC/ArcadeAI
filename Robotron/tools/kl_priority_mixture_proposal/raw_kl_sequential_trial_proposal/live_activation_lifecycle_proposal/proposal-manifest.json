@@ -1,0 +1,20 @@
+{
+  "schema": "robotron-raw-KL-live-lifecycle-source-proposal-manifest-v1",
+  "status": "SOURCE_ONLY_NOT_EXECUTION_READY",
+  "files": {
+    "ACTIVATION_AND_RETURN_CE.json": {
+      "sha256": "2da78068ada0d5d083be1112ab6391131c57e6d6125ae87b41b60de8debf130c",
+      "bytes": 19309,
+      "mode": "0o444"
+    },
+    "RESUME_PHASE_CLARIFICATION.json": {
+      "sha256": "361198285de10d1c875c127acd2ffc675015531c7d12794bfccfc70e96ce6390",
+      "bytes": 2226,
+      "mode": "0o444"
+    }
+  },
+  "production_source_unchanged": true,
+  "actual_activation": null,
+  "actual_return_CE": null,
+  "actual_tests": null
+}

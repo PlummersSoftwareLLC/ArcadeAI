@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original03-private-AST-preparation/fullgame_review_entry_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original04-mmap-preparation/fullgame_review_entry_v6.py
+@@ -12,7 +12,7 @@
+ 
+ HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
+ LOCAL=Path(__file__).resolve().parent
+-CORE_SHA='d68126b96b0b8eb6442c813905d5c71afab89e0f1226c1426b6599f3e4f0fa3c'
++CORE_SHA='babe6e7d5e818e2c975fab8d0c816d077eb1d875832cc66333769c6471ef8590'
+ 
+ 
+ def load(name,path):

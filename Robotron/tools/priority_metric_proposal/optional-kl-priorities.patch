@@ -1,0 +1,185 @@
+--- a/Robotron/Scripts/dqn/config.py
++++ b/Robotron/Scripts/dqn/config.py
+@@ -447,6 +447,13 @@
+ SERVER_CONFIG = ServerConfigData()
+ 
+ # ---------------------------------------------------------------------------
++def _validated_per_priority_metric(value):
++    metric = str(value).strip().lower()
++    if metric not in ("ce", "kl"):
++        raise ValueError("DQN_PER_PRIORITY_METRIC must be ce or kl")
++    return metric
++
++
+ @dataclass
+ class RLConfigData:
+     # ── state / action ──────────────────────────────────────────────────
+@@ -683,6 +690,8 @@
+     # carry more retention weight accordingly.
+     memory_size: int = 6_000_000
+     priority_alpha: float = 0.7
++    # Opt-in sampling experiment only; the categorical CE objective is unchanged.
++    per_priority_metric: str = _validated_per_priority_metric(os.getenv("DQN_PER_PRIORITY_METRIC", "ce"))
+     priority_beta_start: float = 0.4
+     priority_beta_frames: int = 10_000_000
+     priority_eps: float = 1e-6
+--- a/Robotron/Scripts/dqn/loss_kernel.py
++++ b/Robotron/Scripts/dqn/loss_kernel.py
+@@ -7,6 +7,19 @@
+ 
+ import torch
+ import torch.nn.functional as F
++
++
++def categorical_priority_values(cross_entropy, projected, metric):
++    """Detached replay surprise, independent of the CE training objective."""
++    cross_entropy = cross_entropy.detach().float()
++    if metric == "ce":
++        return cross_entropy
++    if metric != "kl":
++        raise ValueError("PER priority metric must be ce or kl")
++    with torch.no_grad():
++        target = projected.detach().float()
++        entropy = -(target * target.clamp_min(1e-12).log()).sum(dim=1)
++        return (cross_entropy - entropy).clamp_min(0.0)
+ 
+ 
+ class TrainingLoss(torch.nn.Module):
+@@ -25,7 +38,7 @@
+     measured before projection and before target smoothing.
+     """
+ 
+-    def __init__(self, online_net, target_net, cfg, diagnostics=True):
++    def __init__(self, online_net, target_net, cfg, diagnostics=True, return_priorities=False):
+         super().__init__()
+         self.online_net = online_net
+         self.target_net = target_net
+@@ -41,6 +54,10 @@
+         self.q_temperature = max(1e-3, float(getattr(cfg, "expert_q_policy_temperature", 10.0)))
+         self.q_margin = float(getattr(cfg, "expert_q_margin", 0.5))
+         self.diagnostics = bool(diagnostics)
++        self.return_priorities = bool(return_priorities)
++        self.priority_metric = str(getattr(cfg, "per_priority_metric", "ce"))
++        if self.priority_metric not in ("ce", "kl"):
++            raise ValueError("PER priority metric must be ce or kl")
+ 
+     def forward(self, states, actions, rewards, next_states, dones, horizons,
+                 is_expert, weights, schedule_weights):
+@@ -148,4 +165,7 @@
+                 ))
+             else:
+                 diagnostic_values = torch.zeros(12, device=states.device, dtype=torch.float32)
++        if self.return_priorities:
++            priorities = categorical_priority_values(ce_loss, projected, self.priority_metric)
++            return weighted_loss, ce_loss, bc_loss, diagnostic_values, priorities
+         return weighted_loss, ce_loss, bc_loss, diagnostic_values
+--- a/Robotron/Scripts/dqn/training.py
++++ b/Robotron/Scripts/dqn/training.py
+@@ -18,8 +18,10 @@
+ 
+ try:
+     from .learning_exposure import capture_amp_found_inf
++    from .loss_kernel import categorical_priority_values
+ except ImportError:
+     from learning_exposure import capture_amp_found_inf
++    from loss_kernel import categorical_priority_values
+ 
+ try:
+     from .config import RL_CONFIG, metrics
+@@ -244,7 +246,7 @@
+     if kernel_active:
+         schedule_t = torch.tensor([bc_w, q_policy_w, margin_w], device=device, dtype=torch.float32)
+         with amp_ctx:
+-            weighted_loss, ce_loss, bc_loss, kernel_diag = kernel(
++            weighted_loss, ce_loss, bc_loss, kernel_diag, priority_values = kernel(
+                 states_t, actions_t, rewards_t, next_states_t, dones_t,
+                 horizons_t, is_expert_t, weights_t, schedule_t)
+     else:
+@@ -334,6 +336,13 @@
+                         margin.scatter_(1, actions_t.unsqueeze(1), 0.0)
+                         per_row = (joint_q + margin).max(dim=1).values - expert_q
+                         weighted_loss = weighted_loss + margin_w * (per_row * expert_mask).sum() / B
++
++    priority_metric = str(getattr(cfg, "per_priority_metric", "ce"))
++    if not kernel_active:
++        priority_values = categorical_priority_values(ce_loss, m_joint, priority_metric)
++    # Keep the default CE readback/layout exact. KL adds a vector to the same
++    # existing readback; CE slice diagnostics retain their original meaning.
++    scalar_offset = B * (2 if priority_metric == "kl" else 1)
+ 
+     # ── NaN / Inf guard ───────────────────────────────────────────────────
+     if not torch.isfinite(weighted_loss):
+@@ -414,9 +423,12 @@
+                 entropy_rows.mean(), (top_q[:, 0] - top_q[:, 1]).mean(),
+                 (ce_loss.detach().float() - entropy_rows).mean()])
+         if optimizer_exposure is not None and outcome_tensor is not None:
+-            outcome_host_index = B + len(scalars)
++            outcome_host_index = scalar_offset + len(scalars)
+             scalars.append(outcome_tensor)
+-        packed = torch.cat((ce_loss.detach().float(), torch.stack(scalars)))
++        row_outputs = (ce_loss.detach().float(),)
++        if priority_metric == "kl":
++            row_outputs += (priority_values,)
++        packed = torch.cat((*row_outputs, torch.stack(scalars)))
+     priority_telemetry = getattr(agent, "_pipeline_telemetry", None) if diagnostic_due else None
+     priority_timings = {} if priority_telemetry is not None else None
+     priority_t0 = time.perf_counter()
+@@ -434,18 +446,19 @@
+     if gpu_timing is not None:
+         # The packed CPU readback above already waits for these events.
+         metrics.last_train_gpu_compute_ms = gpu_timing[0].elapsed_time(gpu_timing[1])
+-    td_errors = host[:B]
+-    loss_val, gn, bc_loss_val = map(float, host[B:B+3])
++    td_errors = host[:B]  # CE retained for existing slice diagnostics.
++    priority_errors = host[B:2 * B] if priority_metric == "kl" else td_errors
++    loss_val, gn, bc_loss_val = map(float, host[scalar_offset:scalar_offset+3])
+     if diagnostic_due:
+-        _q_pred_min, _q_pred_max, _q_overest, q_mean, agree_move, agree_fire = map(float, host[B+3:B+9])
++        _q_pred_min, _q_pred_max, _q_overest, q_mean, agree_move, agree_fire = map(float, host[scalar_offset+3:scalar_offset+9])
+         for name, value in zip(('below_support_mass', 'above_support_mass', 'edge_atom_mass',
+-                                'target_entropy', 'action_q_gap', 'categorical_kl'), host[B+9:B+15]):
++                                'target_entropy', 'action_q_gap', 'categorical_kl'), host[scalar_offset+9:scalar_offset+15]):
+             setattr(metrics, 'c51_' + name, float(value))
+     if priority_timings is None:
+-        agent.memory.update_priorities(indices, td_errors)
++        agent.memory.update_priorities(indices, priority_errors)
+     else:
+         priority_update_started = time.perf_counter()
+-        agent.memory.update_priorities(indices, td_errors, timing_out=priority_timings)
++        agent.memory.update_priorities(indices, priority_errors, timing_out=priority_timings)
+     priority_ms = (time.perf_counter() - priority_t0) * 1000.0
+     if priority_timings is not None:
+         priority_timings.update(
+@@ -502,7 +515,7 @@
+         metrics.last_sample_epsilon_frac = sample_epsilon_frac
+         metrics.last_sample_expert_frac = sample_expert_frac
+         metrics.last_inference_sync_age = int(max(0, int(agent.training_steps) - int(getattr(agent, "last_inference_sync", 0))))
+-        metrics.last_priority_mean = float(np.mean(td_errors))
++        metrics.last_priority_mean = float(np.mean(priority_errors))
+ 
+         if diagnostic_due:
+             # Smoothed Q diagnostics: seed on first sample, then EMA.
+--- a/Robotron/Scripts/dqn/agent.py
++++ b/Robotron/Scripts/dqn/agent.py
+@@ -447,10 +447,10 @@
+                 # Diagnostic mode is a static module flag, never a runtime
+                 # Python branch inside the optimized graph.
+                 self.compiled_training_loss = torch.compile(
+-                    TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=False),
++                    TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=False, return_priorities=True),
+                     dynamic=False, options=compile_options)
+                 self.compiled_training_loss_diagnostics = torch.compile(
+-                    TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=True),
++                    TrainingLoss(self.online_net, self.target_net, RL_CONFIG, diagnostics=True, return_priorities=True),
+                     dynamic=False, options=compile_options)
+                 actions = torch.zeros(bsz, device=self.device, dtype=torch.long)
+                 rewards = torch.zeros(bsz, device=self.device, dtype=torch.float32)
+@@ -463,7 +463,7 @@
+                     for train_states in _variants(bsz, self.device, torch.float32):
+                         next_states = train_states.clone()
+                         with torch.autocast("cuda", dtype=torch.float16, enabled=amp_on):
+-                            warm_loss, _, _, _ = loss_fn(
++                            warm_loss, _, _, _, _ = loss_fn(
+                                 train_states, actions, rewards, next_states,
+                                 dones, horizons, expert, weights, schedule)
+                         warm_loss.backward()

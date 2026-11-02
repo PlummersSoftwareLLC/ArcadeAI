@@ -1,0 +1,82 @@
+diff --git a/Robotron/tools/PIPELINE_REPORTING.md b/Robotron/tools/PIPELINE_REPORTING.md
+--- a/Robotron/tools/PIPELINE_REPORTING.md
++++ b/Robotron/tools/PIPELINE_REPORTING.md
+@@ -47,3 +47,48 @@
+ Bounded CPU checks in `Scripts/dqn/test_run_telemetry.py` cover cache sharing,
+ counter/reset semantics, exact interval means, missing values, full JSON payloads,
+ actual dashboard API snapshots, and prevention of incompatible CSV appends.
++
++## Bank field output phases
++
++`bank_persistence.output` in `/api/now` and the same nested `output` object in
++CSV `bank_persistence_json` expose `robotron-bank-output-v1`. The CSV header is
++unchanged. This is a cumulative, non-draining snapshot with seven fixed phases:
++`create`, `write`, `mmap_flush`, `mmap_close`, `file_open`, `file_fsync`, and
++`file_close`. Each phase reports `count`, `errors`, `host_total_ms`,
++`host_max_ms`, `logical_bytes`, and `payload_bytes`. Counts include completed
++phase attempts; errors identify failed attempts. `active` identifies the current
++bank/field/phase and its elapsed host time, and `recent` retains only the last
++32 completed phase events. A cached or sampled read can miss short active
++phases and older events; cumulative totals retain completed work.
++
++These are host elapsed times for field `.npy` files, including scheduling and
++filesystem waits. They exclude capture, snapshot allocation/release, metadata,
++directory synchronization, atomic `CURRENT` publication, and generation cleanup.
++They are neither GPU timings nor physical disk service times. The difference
++from whole-bank write time does not isolate any one excluded operation. Byte
++counts describe the padded array body and compact valid-row payload on `write`;
++they do not measure physical disk traffic.
++
++`DQN_STREAM_BANK_OUTPUT` is read once when replay is constructed and defaults to
++`0` (`backend=memmap`). The original route times array assignment, mmap flush,
++mmap close, and file fsync separately. Opt-in `1` (`backend=stream`) writes the
++same padded `.npy` geometry with bounded positional writes and file fsync; its
++mmap phase counts stay zero because those operations are absent. Both routes
++retain coherent capture, dirty/revision and load-epoch checks, atomic `CURRENT`
++publication, retained complete generations, and the existing durability contract.
++The flag changes field output only; it does not remove synchronization or
++change what a successful save means.
++
++The 2026-10-16 run19 natural **memmap** baseline completed both bank publications
++with no bank/field write errors, but recorded 34 main inference-deadline errors
++and reconnections while all 192 pinned MAME PIDs survived. Aggregate field write
++time was 10.466 s, mmap flush 7.833 s, and mmap close 26.916 ms (9.964 ms maximum).
++This does not establish a long unmap/close stall or a GC/snapshot cause. Timings
++and deadline overlap are observational; the audit also records an overlapping
++autosave and sampling gaps. See
++`logs/managed-learning-20261015/run-19/natural-bank-memmap-independent-audit.json`.
++
++Run20 began a separate streaming-enabled trial. No result from its first natural
++bank event is included here; the enabled flag and startup observations do not
++establish a reliability fix or causal performance improvement. The trial plan is
++`logs/managed-learning-20261015/run-20/natural-bank-observer-plan.json`.
+diff --git a/Robotron/DELL_SETUP.md b/Robotron/DELL_SETUP.md
+--- a/Robotron/DELL_SETUP.md
++++ b/Robotron/DELL_SETUP.md
+@@ -102,6 +102,26 @@
+ for shutdown. The source from before optimization is backed up under
+ `/home/dave/source/mame-validation/perf-backup`; previous checkpoint `.bak`
+ files remain beside their models.
++
++Bank field output defaults to `DQN_STREAM_BANK_OUTPUT=0`. The opt-in streaming
++route retains coherent bank snapshots, the padded `.npy` format, file/directory
++durability steps, and atomic `CURRENT` publication with retained complete
++generations. It changes how field files are written. Full field phase counters
++are available as `/api/now` → `bank_persistence.output` and CSV
++`bank_persistence_json` → `output`; no CSV header change is required. These host
++elapsed timers exclude capture/release, metadata and selector/directory work.
++Their scope and bounded recent-event retention are documented in
++`tools/PIPELINE_REPORTING.md`.
++
++On 2026-10-16, run19's natural memmap event published both banks without bank
++write errors, while 34 main inference-deadline errors caused reconnections; all
++192 pinned MAME processes survived. Recorded mmap close time was 26.916 ms
++total (9.964 ms maximum), so this event does not establish a long unmap stall.
++Neither GC/snapshot release nor the cause of the deadline burst is established.
++The full observation is in
++`logs/managed-learning-20261015/run-19/natural-bank-memmap-independent-audit.json`.
++Run20 began a separate `DQN_STREAM_BANK_OUTPUT=1` trial. No natural bank result
++from that trial is reported here; the flag or a clean startup is not proof of a fix.
+ 
+ ## Python environment and optional WebRTC
+ 

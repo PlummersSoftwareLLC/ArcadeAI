@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/preview-flags-preserveRAM-trainer-restart-original01/stop-sources/current192_socket_seal_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/preview-flags-preserveRAM-trainer-restart-original01/stop-sources/current192_socket_seal_v2.py
+@@ -105,6 +105,8 @@
+     actors = b.original_actors
+     require(set(b.producer_roots) == set(b.producer_owners) == {'fleet','supplemental0'}
+             and len({str(root) for root in b.producer_roots.values()}) == 2
++            and all(b.producer_roots[key] == Path('/sys/fs/cgroup'+b.producer_owners[key]['cgroup'])
++                    for key in b.producer_roots)
+             and b.actor_owner_keys == {str(slot):('supplemental0' if slot == 0 else 'fleet')
+                                       for slot in range(192)},
+             'Exact191-plus-slot0 producer ownership required')

@@ -1,0 +1,323 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-health-review-read-once-prototype-original01-20261030/full-health-integration-original02/probe_full_per_sample_health_integration_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-health-review-read-once-prototype-original01-20261030/full-health-integration-original02/full-corpus-original03/compare_closed_C1_full_accepted_corpus_v3.py
+@@ -1,4 +1,4 @@
+-"""UNSELECTED offline full per-sample health comparison: local kernel sharing.
++"""UNSELECTED offline complete accepted-C1 corpus comparison: local kernel sharing.
+ 
+ This does not replace the full accepted/rejected health replay or h.checked.
+ Root alone may benchmark a bounded, independently qualified, closed C1 subset.
+@@ -22,10 +22,11 @@
+ import struct
+ import sys
+ import time
++import threading
+ 
+ ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ B = ROOT/'logs/managed-learning-20261015/run-26'
+-HERE = B/'future-health-review-read-once-prototype-original01-20261030/full-health-integration-original02'
++HERE = B/'future-health-review-read-once-prototype-original01-20261030/full-health-integration-original02/full-corpus-original03'
+ ORIGINAL_REGISTRY = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_registry_v5.py', 'sha256': '8cc5340708a73ffb97b16be4b96e72b3d5560ee0b371b7ffd8d67c4074cf76b4', 'bytes': 49518, 'identity': {'device': 2304, 'inode': 85353797, 'bytes': 49518, 'mtime_ns': 1793309467460439411, 'ctime_ns': 1793309543185873072, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+ ORIGINAL_BASE = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_health_main_journal128_v1.py', 'sha256': '95502ef826a20a6a62a014236ea79956ee3af5c05dda23b07c8ebef459c7ef7a', 'bytes': 37464, 'identity': {'device': 2304, 'inode': 85380114, 'bytes': 37464, 'mtime_ns': 1793325874164729893, 'ctime_ns': 1793325874164729893, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+ ORIGINAL_TRANSPORT = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_transport_main_journal128_v1.py', 'sha256': '3108ccc41b55285ca3381072be81fcd75ad1fcc68cf11711ba01025ef8cc55f6', 'bytes': 17116, 'identity': {'device': 2304, 'inode': 85380124, 'bytes': 17116, 'mtime_ns': 1793325874181550458, 'ctime_ns': 1793325874181550458, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+@@ -85,7 +86,8 @@
+ 
+ def read_metadata(value, maximum, metadata_inputs):
+     raw=checked_bytes(value,maximum)
+-    metadata_inputs.append(copy.deepcopy(value))
++    if metadata_inputs is not None:
++        metadata_inputs.append(copy.deepcopy(value))
+     return json.loads(raw)
+ 
+ 
+@@ -250,18 +252,153 @@
+         require(not str(args[0]).split('.')[0]in ('torch','numpy','socket','subprocess'), 'No GPU/model/network import')
+ 
+ 
++def progress_heartbeat(total):
++    """Local benchmark telemetry only: counters/timing, never proof objects."""
++    stopped=threading.Event();lock=threading.Lock()
++    state=dict(phase='accepted_corpus',completed=0,total=total)
++    started=time.monotonic()
++    def emit():
++        with lock:
++            snapshot=dict(state)
++        print(json.dumps(dict(progress=snapshot,elapsed_s=time.monotonic()-started)),flush=True)
++    def loop():
++        while not stopped.wait(20):
++            emit()
++    def update(**values):
++        require(set(values)<={'phase','completed','original_validate_wall_s','prototype_validate_wall_s'},
++            'Telemetry may contain counters/timing only')
++        with lock:
++            state.update(values)
++    emit()
++    thread=threading.Thread(target=loop,name='offline-corpus-progress',daemon=True)
++    thread.start()
++    def stop():
++        stopped.set();thread.join(timeout=2)
++        require(not thread.is_alive(),'Benchmark progress thread did not stop')
++    return update,stop
++
++
++def advance_digest(chain,value):
++    return hashlib.sha256(bytes.fromhex(chain)+canonical(value)).hexdigest()
++
++
++def compare_corpus(pins,case,worker_pin,worker,owner,source_bytes):
++    original_read_pin=selected_registry_reader(source_bytes['registry'])
++    old_read,old_calls=recorder(original_read_pin);new_read,new_calls=recorder(original_read_pin)
++    # Assemble the pair ONCE. Recorder lists reset before every invocation;
++    # no namespace/function is patched or rebound while traversing the corpus.
++    original=assemble_full_health(source_bytes,old_read,False)
++    prototype=assemble_full_health(source_bytes,new_read,True)
++    rows=[];negative_results=[];negative_seed=None
++    empty=hashlib.sha256(b'').hexdigest()
++    chains={key:empty for key in ('original_outputs','prototype_outputs','original_dependencies',
++        'prototype_dependencies','inputs','ordered_rows')}
++    totals={name:dict(wall_s=0.0,CPU_s=0.0,callback_calls=0,callback_bytes=0,unique_dependency_sum=0)
++        for name in ('original','prototype')}
++    update,stop=progress_heartbeat(len(pins))
++    started=time.monotonic();cpu_started=time.process_time()
++    try:
++        for index,value in enumerate(pins):
++            old_calls.clear();new_calls.clear()
++            row=read_metadata(value,8<<20,None)
++            sample=checked_snapshot(row,index,worker_pin,worker,owner)
++            if index==0:
++                previous=None;previous_pin=None
++            else:
++                previous_pin=pins[index-1]
++                prior=read_metadata(previous_pin,8<<20,None)
++                previous=checked_snapshot(prior,index-1,worker_pin,worker,owner)
++            before=canonical(dict(case=case,sample=sample,previous=previous))
++            input_sha=hashlib.sha256(before).hexdigest()
++            order=('original','prototype')if index%2==0 else('prototype','original');measured={}
++            for name in order:
++                health=original if name=='original'else prototype
++                measured[name]=measure(lambda:health.validate(case,sample,previous=previous))
++                require(canonical(dict(case=case,sample=sample,previous=previous))==before,
++                    'Validation mutated original corpus input')
++            require(measured['original'][0]==measured['prototype'][0],
++                'Full per-sample health outputs differ at index '+str(index))
++            old_deps=dependency_set(old_calls);new_deps=dependency_set(new_calls)
++            require(old_deps==new_deps,'Unique full-health dependencies differ at index '+str(index))
++            k=len(sample.get('EVAL_kernel_exit_receipts',{}))
++            require(len(old_calls)-len(new_calls)==2*max(0,k-1),'Unexpected sharing callback delta')
++            counts={name:dict(callback_calls=len(calls),callback_bytes=sum(x['pin']['bytes']for x in calls),
++                unique_dependencies=len(deps))for name,calls,deps in
++                (('original',old_calls,old_deps),('prototype',new_calls,new_deps))}
++            first_new_count=len(new_calls)
++            # Same assembled instance: independently prove the next call starts
++            # empty, including when its input happens to equal the preceding call.
++            new_calls.clear()
++            repeated=prototype.validate(case,sample,previous=previous)
++            require(repeated==measured['prototype'][0] and len(new_calls)==first_new_count
++                and dependency_set(new_calls)==new_deps,'Same-instance next call retained authentication state')
++            require(canonical(dict(case=case,sample=sample,previous=previous))==before,
++                'Repeated validation mutated corpus input')
++            result=dict(index=index,sample_sha256=value['sha256'],
++                sample_fullpin_sha256=hashlib.sha256(canonical(value)).hexdigest(),
++                previous_index=None if index==0 else index-1,
++                previous_fullpin_sha256=None if previous_pin is None else hashlib.sha256(canonical(previous_pin)).hexdigest(),
++                input_sha256=input_sha,kernel_slots=k,outputs_equal=True,unique_dependencies_equal=True,
++                inputs_unchanged=True,same_instance_second_validate_reauthenticates=True,
++                original_outputs_sha256=hashlib.sha256(canonical(measured['original'][0])).hexdigest(),
++                prototype_outputs_sha256=hashlib.sha256(canonical(measured['prototype'][0])).hexdigest(),
++                original_dependencies_sha256=hashlib.sha256(canonical(old_deps)).hexdigest(),
++                prototype_dependencies_sha256=hashlib.sha256(canonical(new_deps)).hexdigest(),
++                original=measured['original'][1],prototype=measured['prototype'][1],counts=counts)
++            for name in ('original','prototype'):
++                for key in ('wall_s','CPU_s'):totals[name][key]+=measured[name][1][key]
++                for key in ('callback_calls','callback_bytes'):totals[name][key]+=counts[name][key]
++                totals[name]['unique_dependency_sum']+=counts[name]['unique_dependencies']
++                for suffix in ('outputs','dependencies'):
++                    key=name+'_'+suffix
++                    chains[key]=advance_digest(chains[key],dict(index=index,sha256=result[key+'_sha256']))
++            chains['inputs']=advance_digest(chains['inputs'],dict(index=index,sha256=input_sha))
++            chains['ordered_rows']=advance_digest(chains['ordered_rows'],result)
++            rows.append(result)
++            if negative_seed is None and sample.get('EVAL_cleanup_captures'):
++                negative_seed=copy.deepcopy(dict(case=case,sample=sample,previous=previous))
++            update(completed=index+1,original_validate_wall_s=totals['original']['wall_s'],
++                prototype_validate_wall_s=totals['prototype']['wall_s'])
++        require(len(rows)==8147 and negative_seed is not None,'Exact complete corpus and one negative seed required')
++        update(phase='eight_copied_negative_checks')
++        seed_before=canonical(negative_seed)
++        for label,value in copied_negative_inputs(negative_seed['case'],negative_seed['sample'],negative_seed['previous']):
++            old_calls.clear();new_calls.clear()
++            before=canonical(value)
++            old=outcome_of_validation(original,value['case'],value['sample'],value['previous'])
++            require(canonical(value)==before,'Original mutated negative copied data')
++            new=outcome_of_validation(prototype,value['case'],value['sample'],value['previous'])
++            require(canonical(value)==before,'Prototype mutated negative copied data')
++            require(old['accepted']is False and new==old,'Expected identical bounded negative rejection')
++            require(dependency_set(old_calls)==dependency_set(new_calls),'Negative unique dependencies differ')
++            negative_results.append(dict(label=label,expected_rejection=True,error_type=old['error_type'],error=old['error'],
++                unique_dependencies_equal=True,inputs_unchanged=True,
++                dependencies_sha256=hashlib.sha256(canonical(dependency_set(old_calls))).hexdigest()))
++        require(len(negative_results)==8 and canonical(negative_seed)==seed_before,
++            'Bounded negative coverage or original seed immutability differs')
++        require(chains['original_outputs']==chains['prototype_outputs']
++            and chains['original_dependencies']==chains['prototype_dependencies'],'Aggregate equality chains differ')
++        elapsed=dict(wall_s=time.monotonic()-started,CPU_s=time.process_time()-cpu_started)
++        return rows,negative_results,totals,chains,elapsed
++    finally:
++        stop()
++
++
+ def execute(selection_pin, own_pin):
+     require(not any(name.split('.')[0]in ('torch','numpy') for name in sys.modules), 'No Torch/NumPy in metadata probe')
+-    resource.setrlimit(resource.RLIMIT_CPU,(60,60))
++    resource.setrlimit(resource.RLIMIT_CPU,(5400,5400))
+     resource.setrlimit(resource.RLIMIT_AS,(1<<30,1<<30))
+     archive_policy=dict(archive=None)
+     sys.addaudithook(lambda event,args:deny_unsafe(event,args,archive_policy))
+     metadata_inputs=[]
+     selected=read_metadata(selection_pin,262144,metadata_inputs)
+-    require(selected['schema']=='robotron-root-closed-C1-full-health-integration-probe-v2'
++    require(selected['schema']=='robotron-root-closed-C1-whole-accepted-corpus-comparison-v3'
+         and selected['prototype']==own_pin and selected['original_registry']==ORIGINAL_REGISTRY
+         and selected['original_base']==ORIGINAL_BASE and selected['original_transport']==ORIGINAL_TRANSPORT,
+         'Exact unselected component sources required')
++    require(selected['quiet_period_confirmed']is True and selected['all_accepted_samples']is True
++        and type(selected['expected_accepted_samples'])is int and selected['expected_accepted_samples']==8147,
++        'Root must explicitly select the whole8147 corpus during a quiet period after the study/reviews')
+     checked_bytes(own_pin,262144)
+     q=read_metadata(selected['closed_C1_qualification'],2_000_000,metadata_inputs)
+     require(q['schema']=='robotron-root-deadline32-leg-qualification-v1'
+@@ -302,100 +439,50 @@
+         and case['inputs'].get(archive['path'])==dict(sha256=archive['sha256'],identity=archive['identity']),
+         'Only the exact case-held immutable historical prefix archive may bypass the raw-extension deny')
+     archive_policy['archive']=archive['path']
+-    pins=selected['samples']
+-    require(type(pins)is list and 1<=len(pins)<=3 and len({p['path']for p in pins})==len(pins),
+-        'Select one to three distinct saved accepted C1 samples only')
+-    indices=[]
+-    for value in pins:
+-        matches=[index for index,entry in enumerate(outcome['samples'])if entry==value]
+-        require(len(matches)==1,'Sample is not an exact accepted outcome fullpin')
+-        indices.append(matches[0])
+-    require(indices==sorted(indices) and len(set(indices))==len(indices), 'Ordered distinct accepted subset required')
++    require(selected['closed_observer_outcome']==life['outcome'], 'Root whole-corpus outcome fullpin differs')
++    pins=outcome['samples']
++    require(type(pins)is list and len(pins)==selected['expected_accepted_samples']==8147
++        and len({entry['path']for entry in pins})==len(pins),'Exact complete ordered accepted corpus required')
+     source_bytes={key:checked_bytes(pin,2_000_000)for key,pin in
+         (('registry',ORIGINAL_REGISTRY),('base',ORIGINAL_BASE),('transport',ORIGINAL_TRANSPORT))}
+-    original_read_pin=selected_registry_reader(source_bytes['registry'])
+     owner=read_metadata(outcome['owner'],2_000_000,metadata_inputs)
+-    results=[];negative_results=[];negative_seed=None
+-    for ordinal,(value,index)in enumerate(zip(pins,indices)):
+-        row=read_metadata(value,8<<20,metadata_inputs)
+-        sample=checked_snapshot(row,index,life['worker_job'],worker,owner)
+-        if index==0:
+-            previous=None;previous_pin=None
+-        else:
+-            previous_pin=outcome['samples'][index-1]
+-            prior=read_metadata(previous_pin,8<<20,metadata_inputs)
+-            previous=checked_snapshot(prior,index-1,life['worker_job'],worker,owner)
+-        before=canonical(dict(case=case,sample=sample,previous=previous))
+-        old_read,old_calls=recorder(original_read_pin);new_read,new_calls=recorder(original_read_pin)
+-        original=assemble_full_health(source_bytes,old_read,False)
+-        prototype=assemble_full_health(source_bytes,new_read,True)
+-        order=('original','prototype')if ordinal%2==0 else('prototype','original');measured={}
+-        for name in order:
+-            health=original if name=='original'else prototype
+-            measured[name]=measure(lambda:health.validate(case,sample,previous=previous))
+-            require(canonical(dict(case=case,sample=sample,previous=previous))==before,'Validation mutated original input')
+-        require(measured['original'][0]==measured['prototype'][0],'Full per-sample health outputs differ')
+-        require(dependency_set(old_calls)==dependency_set(new_calls),'Unique full-health callback dependencies differ')
+-        first_new_calls=list(new_calls)
+-        repeated=prototype.validate(case,sample,previous=previous)
+-        repeat_calls=new_calls[len(first_new_calls):]
+-        require(repeated==measured['prototype'][0] and len(repeat_calls)==len(first_new_calls)
+-            and dependency_set(repeat_calls)==dependency_set(first_new_calls),
+-            'Same validator instance failed to reset authentication for the next validate call')
+-        require(canonical(dict(case=case,sample=sample,previous=previous))==before,'Repeated validation mutated original input')
+-        k=len(sample.get('EVAL_kernel_exit_receipts',{}))
+-        require(len(old_calls)-len(first_new_calls)==2*max(0,k-1),'Unexpected sharing callback delta')
+-        counts={name:dict(callback_calls=len(calls),callback_bytes=sum(x['pin']['bytes']for x in calls),
+-            unique_dependencies=len(dependency_set(calls)))for name,calls in (('original',old_calls),('prototype',first_new_calls))}
+-        results.append(dict(sample=value,index=index,actual_previous_accepted_sample=previous_pin,order=list(order),
+-            kernel_slots=k,outputs_equal=True,unique_dependencies_equal=True,inputs_unchanged=True,
+-            same_instance_second_validate_reauthenticates=True,second_validate_callback_calls=len(repeat_calls),
+-            original_outputs_sha256=hashlib.sha256(canonical(measured['original'][0])).hexdigest(),
+-            prototype_outputs_sha256=hashlib.sha256(canonical(measured['prototype'][0])).hexdigest(),
+-            original=measured['original'][1],prototype=measured['prototype'][1],counts=counts,
+-            original_dependency_set=[json.loads(x)for x in dependency_set(old_calls)],
+-            prototype_dependency_set=[json.loads(x)for x in dependency_set(first_new_calls)]))
+-        if negative_seed is None and sample.get('EVAL_cleanup_captures'):
+-            negative_seed=(sample,previous)
+-    require(negative_seed is not None,'Select a closed accepted sample with cleanup evidence for bounded negative checks')
+-    sample,previous=negative_seed;seed_before=canonical(dict(case=case,sample=sample,previous=previous))
+-    for label,value in copied_negative_inputs(case,sample,previous):
+-        old_read,old_calls=recorder(original_read_pin);new_read,new_calls=recorder(original_read_pin)
+-        original=assemble_full_health(source_bytes,old_read,False);prototype=assemble_full_health(source_bytes,new_read,True)
+-        before=canonical(value)
+-        old=outcome_of_validation(original,value['case'],value['sample'],value['previous'])
+-        require(canonical(value)==before,'Original validator mutated negative copied data')
+-        new=outcome_of_validation(prototype,value['case'],value['sample'],value['previous'])
+-        require(canonical(value)==before,'Prototype mutated negative copied data')
+-        require(old['accepted']is False and new==old,'Expected identical bounded negative rejection')
+-        require(dependency_set(old_calls)==dependency_set(new_calls),'Negative unique dependencies differ')
+-        negative_results.append(dict(label=label,expected_rejection=True,error_type=old['error_type'],error=old['error'],
+-            unique_dependencies_equal=True,inputs_unchanged=True))
+-    require(len(negative_results)==8 and canonical(dict(case=case,sample=sample,previous=previous))==seed_before,
+-        'Bounded negative coverage or original input immutability differs')
++    rows,negative_results,totals,chains,elapsed=compare_corpus(pins,case,life['worker_job'],worker,owner,source_bytes)
+     require(not any(name.split('.')[0]in ('torch','numpy')for name in sys.modules),'Unexpected model import')
++    # Recheck fixed header/source fullpins before publishing any success report.
++    for entry in metadata_inputs:
++        checked_bytes(entry,64<<20)
++    for entry in (own_pin,ORIGINAL_REGISTRY,ORIGINAL_BASE,ORIGINAL_TRANSPORT):
++        checked_bytes(entry,2_000_000)
+     output=Path(selected['output'])
+     require(output.parent==HERE and output.name.startswith('Root-') and output.resolve(strict=False)==output
+-        and not output.exists(),'Fresh direct-child Root-only probe output required')
++        and not output.exists(),'Fresh direct-child Root-only comparison output required')
+     output.mkdir(mode=0o700)
+-    value=dict(schema='robotron-closed-C1-full-per-sample-health-integration-probe-result-v2',status='PASS',
++    for name in ('original','prototype'):
++        totals[name]['mean_validate_wall_s']=totals[name]['wall_s']/len(rows)
++        totals[name]['mean_validate_CPU_s']=totals[name]['CPU_s']/len(rows)
++    value=dict(schema='robotron-closed-C1-whole-accepted-corpus-comparison-result-v3',status='PASS',
+         source=own_pin,selection=selection_pin,original_registry=ORIGINAL_REGISTRY,original_base=ORIGINAL_BASE,
+-        original_transport=ORIGINAL_TRANSPORT,closed_C1_qualification=selected['closed_C1_qualification'],metadata_inputs=metadata_inputs,
+-        samples=results,negative_checks=negative_results,resource_limits=dict(CPU_seconds=60,address_space_bytes=1<<30,external_wall_s=90),
++        original_transport=ORIGINAL_TRANSPORT,closed_C1_qualification=selected['closed_C1_qualification'],
++        closed_observer_outcome=life['outcome'],header_metadata_inputs=metadata_inputs,
++        complete_accepted_corpus_selected=True,accepted_rows_compared=len(rows),per_row_summaries=rows,
++        aggregate=totals,ordered_digest_chains=chains,negative_checks=negative_results,whole_comparison_elapsed=elapsed,
++        resource_limits=dict(CPU_seconds=5400,address_space_bytes=1<<30,external_wall_s=6000,maximum_rows=8147),
++        memory_bound='Fixed authenticated outcome list plus8147 compact row summaries; only current/predecessor rows, per-call callback lists and one negative seed retained; no per-row111-dependency sets',
+         max_rss_KiB=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+-        timing_scope='transport.validate including original factory/dependency checks; excludes source assembly, sealed row hash/JSON parse, outer durability and full-corpus review',
++        timing_scope='First original/prototype transport.validate per row including original factory/dependency checks; excludes row/predecessor hash/JSON parse, source assembly, repeat-reset checks, eight negatives, outer durability and whole-review work',
++        assembled_pairs=1,recorder_lists_reset_before_every_row_and_negative=True,
+         full_per_sample_health_outputs_equal=True,full_closed_review_replaced=False,accepted_or_rejected_evidence_requalified=False,
+         outer_fe911_durability_rejection_coverage_source_unchanged=True,
+         dependency_set_scope='Exact original registry.read_pin successful callbacks; h.checked and all outer helper hooks unchanged',
+         imported_production_modules_monkeypatched=False,cross_sample_evidence_cache=False,
+         current_or_future_study_source_selected=False,throughput_or_quality_credit=False,
+-        explicit_immutable_prior_cohort_archive=archive,
+-        no_model_Torch_proc_API_or_live_raw_journal_reads=True)
++        explicit_immutable_prior_cohort_archive=archive,no_model_Torch_proc_API_or_live_raw_journal_reads=True)
+     raw=(json.dumps(value,indent=2,sort_keys=True,allow_nan=False)+'\n').encode()
+     with(output/'report.json').open('xb')as stream:
+         stream.write(raw);stream.flush();os.fchmod(stream.fileno(),0o444);os.fsync(stream.fileno())
+     print(json.dumps(dict(status='PASS',output=str(output/'report.json'),sha256=hashlib.sha256(raw).hexdigest(),
+-        samples=len(results),negative_checks=len(negative_results),full_review_replaced=False)),flush=True)
++        accepted_rows=len(rows),negative_checks=len(negative_results),full_review_replaced=False)),flush=True)
++
+ 
+ 
+ 
+@@ -407,7 +494,7 @@
+     parser.add_argument('--source-sha256')
+     args=parser.parse_args()
+     if not args.execute:
+-        print('SOURCE_ONLY_UNSELECTED_FULL_PER_SAMPLE_HEALTH_PROBE')
++        print('SOURCE_ONLY_UNSELECTED_FULL_ACCEPTED_CORPUS_PROBE')
+         return 0
+     own=Path(__file__).resolve(strict=True)
+     own_raw=own.read_bytes();info=own.lstat()

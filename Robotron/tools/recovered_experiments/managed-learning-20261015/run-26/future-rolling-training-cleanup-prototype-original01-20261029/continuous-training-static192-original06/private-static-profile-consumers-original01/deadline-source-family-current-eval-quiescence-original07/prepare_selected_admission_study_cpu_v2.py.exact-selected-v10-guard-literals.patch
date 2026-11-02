@@ -1,0 +1,20 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/prepare_selected_admission_study_cpu_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/prepare_selected_admission_study_cpu_v2.py
+@@ -37,7 +37,7 @@
+     for pin in job['inputs']:h.checked(pin)
+     capture=json.loads(h.checked(job['capture_result']).read_bytes())
+     assert capture['state']=='captured_CPU_verified'and capture['endpoint']['sha256']==job['candidate_sha256']
+-    guard=load('_selected_admission_actual_guard_preparer',LOCAL/'prepare_round_cpu_guard_v9.py')
++    guard=load('_selected_admission_actual_guard_preparer',LOCAL/'prepare_round_cpu_guard_v10.py')
+     classification=guard.preflight_held_inputs(job['inputs'])
+     output=Path(job['output']);output.mkdir(mode=0o700);started=time.monotonic()
+     preparer=load('_selected_admission_actual_preparer',LOCAL/'prepare_round_study_v10.py')
+@@ -55,7 +55,7 @@
+     report=h.put(output/'report.json',dict(schema='robotron-selected-admission-study-original-CPU-preparation-result-v1',
+         status='PASS',original_job=h.pin(a.job),actual_PID=os.getpid(),actual_scope=fields,
+         native_prepared=prepared,exact_CPU_packet=cpu,selected_sha256=job['candidate_sha256'],
+-        metadata_guard_preparer=h.pin(LOCAL/'prepare_round_cpu_guard_v9.py'),held_input_classification_preflight=classification,
++        metadata_guard_preparer=h.pin(LOCAL/'prepare_round_cpu_guard_v10.py'),held_input_classification_preflight=classification,
+         elapsed_s=time.monotonic()-started,all_four_native_outputs_and_future_guards_absent=True,
+         Torch_imported=False,GPU_or_MAME_launched=False,scientific_payload_launched=False,
+         exact_selected_context_CPU_qualified=False,quality_qualified=False,promotion=False))

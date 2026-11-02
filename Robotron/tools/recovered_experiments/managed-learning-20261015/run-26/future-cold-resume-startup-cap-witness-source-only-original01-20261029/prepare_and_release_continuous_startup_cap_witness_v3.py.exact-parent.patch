@@ -1,0 +1,94 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/startup-bridge-sources/prepare_and_release_continuous_startup_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-cold-resume-startup-cap-witness-source-only-original01-20261029/prepare_and_release_continuous_startup_cap_witness_v3.py
+@@ -14,9 +14,9 @@
+ import stat
+ import subprocess
+ 
+-BRIDGE = '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/startup-bridge-sources/continuous_startup_bridge_v2.py'
+-BRIDGE_SHA = '62e8fdce2221e084945594e35a965a6f7643887d56f8679894e307949a4c5096'
+-INSTALLED_SHA = {'/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/agent.py': 'd2a95ff0828df2a00ac86049965b6df304d26b50263b76d027d27a586ff77152', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/config.py': 'ef26db6aa19fe67ec9e1e15f8227b4e24bbc853b05d0ea00c450b290bf80b249', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/connection_cleanup_receipts.py': 'f27e38411238fcf62256e6b317836b757d31d5e0ac962ec8523dd380236d80ee', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/continuous_startup_bridge.py': '62e8fdce2221e084945594e35a965a6f7643887d56f8679894e307949a4c5096', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/game_journal.py': '6aa78cb40434793853d17a1032cc6454ac86b0168828848d9d390336ba8678f0', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/main.py': '78178c39b281c0baf52222387f06db2d899c1bf2adfbe8c9fe2fd22729ff59c5', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/managed_driver.py': 'a7ec6dffba18e37b814842d498c8a34ba44f93dce4968ab769d480e329a643ec', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/managed_measurement.py': '39764cfa84572fe36c57e37a5c958d7caa001854c141ebcc161cc973f7b5f3c0', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/metrics_dashboard.py': 'b80ac9494b98ef8c824d8e07ee0b748c20967e26a164d6e501ef781744c7a222', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/replay_buffer.py': '34b05e3c4403bc2dca53222222416db2afb733c480ee6238a0cc4e723885d0e8', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py': 'a076501b0601a637b91269a41572be60496754ad1da4b04385d77c51b9f34423'}
++BRIDGE = '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-cold-resume-startup-cap-witness-source-only-original01-20261029/continuous_startup_bridge_cap_witness_v3.py'
++BRIDGE_SHA = '47efc654e1a46f281a094b43a8e55802b5f76cbdb62e830b5769a2f6d6e790f4'
++INSTALLED_SHA = {'/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/agent.py': 'd2a95ff0828df2a00ac86049965b6df304d26b50263b76d027d27a586ff77152', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/config.py': 'ef26db6aa19fe67ec9e1e15f8227b4e24bbc853b05d0ea00c450b290bf80b249', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/connection_cleanup_receipts.py': 'f27e38411238fcf62256e6b317836b757d31d5e0ac962ec8523dd380236d80ee', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/continuous_startup_bridge.py': '47efc654e1a46f281a094b43a8e55802b5f76cbdb62e830b5769a2f6d6e790f4', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/game_journal.py': '6aa78cb40434793853d17a1032cc6454ac86b0168828848d9d390336ba8678f0', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/main.py': '78178c39b281c0baf52222387f06db2d899c1bf2adfbe8c9fe2fd22729ff59c5', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/managed_driver.py': 'a7ec6dffba18e37b814842d498c8a34ba44f93dce4968ab769d480e329a643ec', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/managed_measurement.py': '39764cfa84572fe36c57e37a5c958d7caa001854c141ebcc161cc973f7b5f3c0', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/metrics_dashboard.py': 'b80ac9494b98ef8c824d8e07ee0b748c20967e26a164d6e501ef781744c7a222', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/replay_buffer.py': '34b05e3c4403bc2dca53222222416db2afb733c480ee6238a0cc4e723885d0e8', '/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py': 'a076501b0601a637b91269a41572be60496754ad1da4b04385d77c51b9f34423'}
+ MODE = 'CONTINUOUS_TRAIN155_EVAL37_ONCE'
+ 
+ 
+@@ -111,6 +111,8 @@
+     selected, value = selected_json(args.selection, args.selection_sha256, bridge)
+     require(value['schema'] == 'robotron-root-continuous-startup-hold-selection-v1'
+             and value['unit'] == 'robotron-trainer.service', 'Exact permanent trainer with future new incarnation required')
++    require(type(value['expected_startup_cap']) is int and value['expected_startup_cap'] in (8, 12),
++            'Root must select explicit startup cap8 or12')
+     validate_stopped(value, bridge)
+     root = Path(value['output_directory'])
+     require(root.is_absolute() and root.resolve(strict=False) == root and not root.exists(), 'Fresh held startup output required')
+@@ -122,17 +124,17 @@
+         restoration_manifest=value['restoration_manifest'], stopped_CPU_report=value['stopped_CPU_report'],
+         stopped_state_authority=value['stopped_state_authority'], checkpoint=value['checkpoint'],
+         resume_record=value['resume_record'], source_pins=value['source_pins'], output_directory=str(root),
+-        release_path=str(root/'ROOT-release.json'))
++        release_path=str(root/'ROOT-release.json'), expected_startup_cap=value['expected_startup_cap'])
+     result = bridge.publish(output, job)
+     print(json.dumps(dict(status='PREPARED_STARTUP_JOB_NOT_LAUNCHED', job=result,
+         required_environment=dict(ROBOTRON_CONTINUOUS_TRAINING_MODE='1', ROBOTRON_CONTINUOUS_STARTUP_HOLD='1',
+             ROBOTRON_CONTINUOUS_STARTUP_JOB=result['path'], ROBOTRON_CONTINUOUS_STARTUP_JOB_SHA256=result['sha256'],
+             DQN_PRIORITY_PHASE_RECORD=value['resume_record']['path'], DQN_PRIORITY_PHASE_RECORD_SHA256=value['resume_record']['sha256'],
+-            PYTHONUNBUFFERED='1'), unset_environment=['ROBOTRON_TRAINING_ROUND_STATUS'],
++            PYTHONUNBUFFERED='1', DQN_MAX_SAMPLES_PER_FRAME=str(value['expected_startup_cap'])), unset_environment=['ROBOTRON_TRAINING_ROUND_STATUS'],
+         supervisor_not_started=True, Runtime_or_state_restoration_qualified=False)), flush=True)
+ 
+ 
+-def actual_owner(owner, job_pin):
++def actual_owner(owner, job_pin, expected_startup_cap):
+     require(set(owner) == {'pid','birth','unit','invocation_id','cgroup','uid'}
+             and owner['unit'] == 'robotron-trainer.service' and owner['uid'] == os.getuid()
+             and type(owner['pid']) is int and owner['pid'] > 1 and type(owner['birth']) is int,
+@@ -147,12 +149,18 @@
+     birth = int((proc/'stat').read_text().rsplit(')',1)[1].split()[19])
+     require(birth == owner['birth'] and proc.stat().st_uid == owner['uid']
+             and (proc/'cgroup').read_text().splitlines() == ['0::'+owner['cgroup']], 'Held process birth/cgroup/UID changed')
+-    env = dict(x.split('=',1) for x in (proc/'environ').read_bytes().decode().split('\0') if '=' in x)
++    require(type(expected_startup_cap) is int and expected_startup_cap in (8, 12), 'Explicit selected startup cap required')
++    env_records = [x.split('=',1) for x in (proc/'environ').read_bytes().decode().split('\0') if '=' in x]
++    require([v for k,v in env_records if k == 'DQN_MAX_SAMPLES_PER_FRAME'] == [str(expected_startup_cap)],
++            'Actual held unit process startup cap differs or is duplicated')
++    env = dict(env_records)
+     wanted_env = dict(ROBOTRON_CONTINUOUS_TRAINING_MODE='1', ROBOTRON_CONTINUOUS_STARTUP_HOLD='1',
+-        ROBOTRON_CONTINUOUS_STARTUP_JOB=job_pin['path'], ROBOTRON_CONTINUOUS_STARTUP_JOB_SHA256=job_pin['sha256'], PYTHONUNBUFFERED='1')
++        ROBOTRON_CONTINUOUS_STARTUP_JOB=job_pin['path'], ROBOTRON_CONTINUOUS_STARTUP_JOB_SHA256=job_pin['sha256'], PYTHONUNBUFFERED='1',
++        DQN_MAX_SAMPLES_PER_FRAME=str(expected_startup_cap))
+     require(all(env.get(k) == v for k,v in wanted_env.items()) and not env.get('LD_PRELOAD')
+             and not env.get('ROBOTRON_TRAINING_ROUND_STATUS'), 'Actual process hold environment differs')
+-    return dict(owner=owner, unit_fields={k: values[k] for k in wanted})
++    return dict(owner=owner, unit_fields={k: values[k] for k in wanted},
++        expected_startup_cap=expected_startup_cap, process_startup_environment_cap=env['DQN_MAX_SAMPLES_PER_FRAME'])
+ 
+ 
+ def release(args):
+@@ -176,15 +184,23 @@
+             and held['dashboard_and_GAME_listener_not_created'] is True
+             and held['optimizer_attempts_before_release'] == held['new_replay_inserts_before_release'] == 0,
+             'Actual held restoration report is not release-ready')
++    require(type(job['expected_startup_cap']) is int and job['expected_startup_cap'] in (8, 12)
++            and held['startup_budget']['expected_startup_cap'] == job['expected_startup_cap']
++            and held['startup_budget']['runtime_cap'] == job['expected_startup_cap']
++            and held['startup_budget']['process_startup_environment_cap'] == str(job['expected_startup_cap'])
++            and held['startup_budget']['fresh_per_boot_baseline_verified'] is True
++            and held['startup_budget']['anchor_installed_or_rebased'] is False,
++            'Held report does not prove the exact selected startup cap and existing fresh budget')
+     require(not release_path.exists() and not (root/'release-consumed.json').exists(), 'Release is one-use; no retry/overwrite')
+     validate_stopped(job, bridge)
+-    before = actual_owner(held['owner'], job_pin)
++    before = actual_owner(held['owner'], job_pin, job['expected_startup_cap'])
+     value = dict(schema='robotron-root-continuous-startup-one-use-release-v1', owner=held['owner'],
+         original_job=job_pin, held_report=held_pin, checkpoint=job['checkpoint'], allow_training=True,
+-        operator_source=own, original_attempt=1, no_retry=True)
++        operator_source=own, original_attempt=1, no_retry=True,
++        expected_startup_cap=job['expected_startup_cap'], startup_budget=held['startup_budget'])
+     stage = root/('.ROOT-release-staged-'+str(os.getpid())+'.json')
+     bridge.publish(stage, value)
+-    require(actual_owner(held['owner'], job_pin) == before, 'Held owner changed before publication')
++    require(actual_owner(held['owner'], job_pin, job['expected_startup_cap']) == before, 'Held owner changed before publication')
+     os.link(stage, release_path, follow_symlinks=False)  # Exclusive; existing release never replaced.
+     stage.unlink()
+     fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY)

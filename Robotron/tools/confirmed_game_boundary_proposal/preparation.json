@@ -1,0 +1,26 @@
+{
+  "status": "PRIVATE_PROPOSAL_NOT_INSTALLED",
+  "original": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/game_journal.py",
+    "sha256": "10827d786becfd19c386bddfbce85f1ab5ace5349d87717305e4044a2843edb0"
+  },
+  "original_archive": "/home/dave/source/repos/ArcadeAI/Robotron/tools/confirmed_game_boundary_proposal/game_journal.original.py",
+  "candidate": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/confirmed_game_boundary_proposal/game_journal_candidate.py",
+    "sha256": "a543943f9b53f1e601746d59caee30c5ad7bdfae37c8460eaef8b9288758ab4e"
+  },
+  "mode": "confirmed_reset_reserves_v1",
+  "default": "wire_lives_v1",
+  "scope": "Only optional journal completion. No wire, model, score classifier, training, replay, actor or runtime mutation.",
+  "ROM_sources": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Code/Williams/RRG23.ASM",
+      "sha256": "fa1a4cd59cee0333bce6b5f5c1bbe1c231ab48a9e3a254aebdb1a4a189803b64"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Code/Williams/RRF.ASM",
+      "sha256": "3e9094c61a69c3f68f06102c7d71a60f0f0fa5bff80c4a8422ef1703441a109a"
+    }
+  ],
+  "evidence": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-continuity-original-terminal-score-truncation-forensic-archive-20261018/root-original-terminal-score-contradiction.json"
+}

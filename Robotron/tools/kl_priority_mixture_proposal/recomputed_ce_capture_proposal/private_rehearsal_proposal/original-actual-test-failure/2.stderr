@@ -1,0 +1,25 @@
+test_bootstrap_ownership_body_is_exact_frozen_warmup_body (private_rehearsal_proposal.test_rehearsal_contract.RehearsalContractTests.test_bootstrap_ownership_body_is_exact_frozen_warmup_body) ... ok
+test_known_saved_scale_skip_is_retained_without_replacement (private_rehearsal_proposal.test_rehearsal_contract.RehearsalContractTests.test_known_saved_scale_skip_is_retained_without_replacement) ... ok
+test_offline_nonfinite_outputs_and_full_expected_are_persisted_before_rejection (private_rehearsal_proposal.test_rehearsal_contract.RehearsalContractTests.test_offline_nonfinite_outputs_and_full_expected_are_persisted_before_rejection) ... ok
+test_offline_owned_adam_call_is_observed_rejected_and_guard_removed (private_rehearsal_proposal.test_rehearsal_contract.RehearsalContractTests.test_offline_owned_adam_call_is_observed_rejected_and_guard_removed) ... ok
+test_offline_scaler_calls_are_rejected_and_both_original_methods_restore (private_rehearsal_proposal.test_rehearsal_contract.RehearsalContractTests.test_offline_scaler_calls_are_rejected_and_both_original_methods_restore) ... ok
+test_offline_wrong_output_abi_is_retained_before_rejection (private_rehearsal_proposal.test_rehearsal_contract.RehearsalContractTests.test_offline_wrong_output_abi_is_retained_before_rejection) ... ok
+test_one_applied_admission_requires_actual_adam_and_logical_clock_progress (private_rehearsal_proposal.test_rehearsal_contract.RehearsalContractTests.test_one_applied_admission_requires_actual_adam_and_logical_clock_progress) ... ok
+test_primary_training_exception_survives_close_sync_and_publication_failures (private_rehearsal_proposal.test_rehearsal_contract.RehearsalContractTests.test_primary_training_exception_survives_close_sync_and_publication_failures) ... ERROR
+test_skip_with_changed_model_or_unavailable_outcome_fails (private_rehearsal_proposal.test_rehearsal_contract.RehearsalContractTests.test_skip_with_changed_model_or_unavailable_outcome_fails) ... ok
+
+======================================================================
+ERROR: test_primary_training_exception_survives_close_sync_and_publication_failures (private_rehearsal_proposal.test_rehearsal_contract.RehearsalContractTests.test_primary_training_exception_survives_close_sync_and_publication_failures)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/private_rehearsal_proposal/test_rehearsal_contract.py", line 174, in test_primary_training_exception_survives_close_sync_and_publication_failures
+    worker.capture(ctx)
+  File "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/private_rehearsal_proposal/cuda_trace_worker.py", line 230, in capture
+    kernel = ctx.loss.TrainingLoss(a.online_net, a.target_net, ctx.cfg, diagnostics=diagnostic)
+                                   ^^^^^^^^^^^^
+AttributeError: 'types.SimpleNamespace' object has no attribute 'online_net'
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.016s
+
+FAILED (errors=1)

@@ -1,0 +1,88 @@
+{
+  "status": "PRESERVED_UNEXECUTED_DRAFT_HISTORY",
+  "reason": "Whole stat_result included atime; a harmless source read could cause a false changed-source refusal.",
+  "original_declared": {
+    "source": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_freshness_proposal/test_stale_bank_admission_deferred.py",
+      "sha256": "754c1970a87c8fd90f7af4e275c67d1dcf965ac6437c1bf6e2470f2443ed4eab",
+      "bytes": 11509,
+      "identity": {
+        "device": 2304,
+        "inode": 81295410,
+        "bytes": 11509,
+        "mtime_ns": 1792331955617281270,
+        "ctime_ns": 1792331955617281270,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "manifest": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_freshness_proposal/preparation-manifest.json",
+      "sha256": "21d5bc7054b296d28a43a56105e3fabc6b19e71518e913b6d0aa2aa288294812",
+      "bytes": 3613,
+      "identity": {
+        "device": 2304,
+        "inode": 81295413,
+        "bytes": 3613,
+        "mtime_ns": 1792332128286420393,
+        "ctime_ns": 1792332128286420393,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "byte_exact_copies": {
+    "source": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_freshness_proposal/draft-history-reader-atime-20261018/test_stale_bank_admission_deferred.py",
+      "sha256": "754c1970a87c8fd90f7af4e275c67d1dcf965ac6437c1bf6e2470f2443ed4eab",
+      "bytes": 11509,
+      "identity": {
+        "device": 2304,
+        "inode": 81295417,
+        "bytes": 11509,
+        "mtime_ns": 1792332403851748146,
+        "ctime_ns": 1792332403851748146,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "manifest": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_freshness_proposal/draft-history-reader-atime-20261018/preparation-manifest.json",
+      "sha256": "21d5bc7054b296d28a43a56105e3fabc6b19e71518e913b6d0aa2aa288294812",
+      "bytes": 3613,
+      "identity": {
+        "device": 2304,
+        "inode": 81295418,
+        "bytes": 3613,
+        "mtime_ns": 1792332403853924699,
+        "ctime_ns": 1792332403853924699,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "selected_fixture": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_freshness_proposal/test_stale_bank_admission_deferred.py",
+    "sha256": "faafc2588042a5f9ce2fb0c289f9eb31cb9e83085ffc6f4c0d3dd938dad8f059",
+    "bytes": 11711,
+    "identity": {
+      "device": 2304,
+      "inode": 81295419,
+      "bytes": 11711,
+      "mtime_ns": 1792332403854557917,
+      "ctime_ns": 1792332403855203935,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "before": "    before=path.lstat();raw=path.read_bytes();after=path.lstat()\n    if not (stat.S_ISREG(before.st_mode) and before==after and len(raw)==pin['bytes']\n",
+  "after": "    before=path.lstat();raw=path.read_bytes();after=path.lstat()\n    def identity(info):\n        return (info.st_dev,info.st_ino,info.st_size,info.st_mtime_ns,info.st_ctime_ns,\n                stat.S_IMODE(info.st_mode),info.st_uid,info.st_nlink)\n    if not (stat.S_ISREG(before.st_mode) and identity(before)==identity(after) and len(raw)==pin['bytes']\n",
+  "reverse_byte_exact": true,
+  "tests_run": false,
+  "scope": "Fixture reader only. Historical manifest remains old bytes, not a current-selection closure. No executed failure or production change occurred."
+}

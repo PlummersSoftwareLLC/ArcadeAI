@@ -1,0 +1,156 @@
+{
+  "schema": "robotron-continuous-guard-protection-source-preservation-v1",
+  "status": "SOURCE_TEXT_ONLY_UNEXECUTED",
+  "base": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/protect_quality_winner.py",
+    "sha256": "e45965d3057ec8542ab2b05fd2250209e53986a0977fbb1294aa54f64a11f0f0",
+    "bytes": 9580,
+    "identity": {
+      "device": 2304,
+      "inode": 79963906,
+      "bytes": 9580,
+      "mtime_ns": 1792188277074306461,
+      "ctime_ns": 1792188277074306461,
+      "mode": "0o664",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "selected_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_quality_winner_protection_proposal/protect_quality_winner_reviewed2.py",
+    "sha256": "b68e071fbb01dba50e905ea96968e164913b04b1453c1ffe2b9cec719a47e730",
+    "bytes": 16572,
+    "identity": {
+      "device": 2304,
+      "inode": 82707058,
+      "bytes": 16572,
+      "mtime_ns": 1792358396535001916,
+      "ctime_ns": 1792358396535001916,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "blocked_draft": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_quality_winner_protection_proposal/protect_quality_winner.py",
+    "sha256": "938221ba97909a9c92ac7e9885b5afbfdd9bc50368e4c29923cfa801c87eb29a",
+    "bytes": 16453,
+    "identity": {
+      "device": 2304,
+      "inode": 82707057,
+      "bytes": 16453,
+      "mtime_ns": 1792358357903728754,
+      "ctime_ns": 1792358357903728754,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "blocked_draft_reason": "Unexecuted initial loader treated canonical comparison source modes as444; their genuine installed modes are664. Only the new selected helper parameter/calls distinguish exact444 proposal modules from exact664 canonical comparisons; no source chmod was performed.",
+  "ordered_replacements": [
+    {
+      "name": "honest companion scope docstring",
+      "before": "\"\"\"Revalidate a finished four-leg campaign; publish a protected copy only with --publish.\n\nThis does not change the learner, learning controls, managed incumbent, or services.\nThe published metadata retains the fresh reference and both candidate receipts.\n\"\"\"",
+      "after": "\"\"\"UNSELECTED: revalidate the exact effective-guard campaign before optional protection.\n\nWithout --publish this performs the original read-only review, including hashes\nof immutable checkpoint snapshots and closed cohort evidence. It is not PLAN-only.\nThe canonical E13 is base provenance; the mandatory isolated-evaluator guard,\nchecked native profile and four runtime receipt joins remain explicit metadata.\nNo guard is installed or recompiled here. Root alone may select publication only\nafter all four valid audits, owned native closure and both independent gates.\nThis tool does not change training, controls, services, incumbent or freeze state.\n\"\"\""
+    },
+    {
+      "name": "stdlib importlib loader",
+      "before": "import hashlib\n",
+      "after": "import hashlib\nimport importlib.util\n"
+    },
+    {
+      "name": "stdlib source identity/module registry",
+      "before": "import shutil\n",
+      "after": "import shutil\nimport stat\nimport sys\n"
+    },
+    {
+      "name": "exact source loader plus checked four-receipt provenance",
+      "before": "try:\n    from . import run_quality_campaign as campaign\nexcept ImportError:\n    import run_quality_campaign as campaign\n",
+      "after": "GAME = Path('/home/dave/source/repos/ArcadeAI/Robotron')\nCOMPANION = GAME/'tools/frozen_continuous_guard_evaluator_proposal/run_quality_campaign.py'\nCOMPANION_SHA = '6d6fd8e4aa201d7099927af508742e8112cca3a5e6ca621731306664789ed8db'\nCHECKER_SOURCE = GAME/'tools/continuous_guard_same_lr25_continuation_proposal/effective_provenance.py'\nCHECKER_SHA = 'f157895d90707fc725bda2381c9422c6e9ac22ab924597551d0d4d1f2d973556'\nREADER_SOURCE = GAME/'tools/continuous_guard_same_lr25_continuation_proposal/quality_bindings.py'\nREADER_SHA = '2934df1534c1ff82fdd30e0dec930146fdeb74c2589547abd76967df3fe40989'\n\n\ndef source_record(path, expected, *, expected_mode=0o444):\n    \"\"\"Authenticate bounded source bytes/identity; never a tensor/body reader.\"\"\"\n    path = Path(path)\n    if not path.is_absolute() or path != path.resolve(strict=True) or path.suffix != '.py':\n        raise ValueError('Exact absolute source file required')\n    with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW), 'rb') as stream:\n        before = os.fstat(stream.fileno())\n        raw = stream.read((512 << 10)+1)\n        after = os.fstat(stream.fileno())\n    def identity(value):\n        return dict(device=value.st_dev,inode=value.st_ino,bytes=value.st_size,\n            mtime_ns=value.st_mtime_ns,ctime_ns=value.st_ctime_ns,\n            mode=oct(stat.S_IMODE(value.st_mode)),uid=value.st_uid,nlink=value.st_nlink)\n    actual = identity(before)\n    if (not stat.S_ISREG(before.st_mode) or before.st_uid != os.getuid()\n            or before.st_nlink != 1 or stat.S_IMODE(before.st_mode) != expected_mode\n            or len(raw) != before.st_size or not 0 < len(raw) <= 512 << 10\n            or actual != identity(after) or actual != identity(path.lstat())\n            or hashlib.sha256(raw).hexdigest() != expected):\n        raise ValueError('Selected owned readonly source hash/identity differs')\n    return dict(path=str(path),sha256=expected,bytes=len(raw),identity=actual)\n\n\ndef load_checked(name, path, expected):\n    \"\"\"One explicit module path/hash, fresh private name, no fallback or install.\"\"\"\n    before = source_record(path,expected)\n    if name in sys.modules:\n        raise ValueError('Protection dependency was already loaded under its private name')\n    spec = importlib.util.spec_from_file_location(name,path)\n    if spec is None or spec.loader is None:\n        raise ValueError('Selected source loader unavailable')\n    module = importlib.util.module_from_spec(spec)\n    sys.modules[name] = module\n    spec.loader.exec_module(module)\n    if Path(module.__file__).resolve() != path or source_record(path,expected) != before:\n        raise ValueError('Selected module source changed while loading')\n    return module,before\n\n\n# These sources are stdlib-only; importing them does not construct SocketServer,\n# install/compile the native guard, import DQN/Torch, launch or touch a model.\ncampaign,CAMPAIGN_PIN = load_checked('_guard_protection_campaign',COMPANION,COMPANION_SHA)\nCHECKER,CHECKER_PIN = load_checked('_guard_protection_effective_checker',CHECKER_SOURCE,CHECKER_SHA)\nMETADATA,READER_PIN = load_checked('_guard_protection_metadata_reader',READER_SOURCE,READER_SHA)\n# Authenticate the finite comparison modules actually imported by the companion,\n# in addition to its unchanged on-disk execution_sources/precommit checks.\nSUPPORT_PINS = {}\nfor function, expected_path, expected_sha in (\n        (campaign.summarize,GAME/'tools/compare_frozen_measurements.py',\n         '53f744737a722fec2760c0001dc5747b19b05e07a1de8699764c781f04da6be0'),\n        (campaign.validate_backend,GAME/'tools/compare_sidecar_measurements.py',\n         '879590b64e760037a81da2ff574d5994d9259cf1746b8e406177e2220d37c746')):\n    support = sys.modules[function.__module__]\n    if (Path(support.__file__).resolve() != expected_path\n            or function.__globals__ is not support.__dict__\n            or getattr(support,function.__name__) is not function):\n        raise ValueError('Loaded comparison implementation is not the selected module')\n    SUPPORT_PINS[str(expected_path)] = source_record(expected_path,expected_sha,expected_mode=0o664)\n\n\ndef guard_provenance(plan, specs, evidence):\n    \"\"\"Check all four original runtime records with the already selected checker.\"\"\"\n    for selected in (CAMPAIGN_PIN,CHECKER_PIN,READER_PIN,*SUPPORT_PINS.values()):\n        if source_record(selected['path'],selected['sha256'],\n                expected_mode=int(selected['identity']['mode'],8)) != selected:\n            raise ValueError('Protection dependency identity changed since import')\n    selection = plan['effective_implementation']\n    profile = CHECKER.check_selection(selection,METADATA.read)\n    stable, joins = None,[]\n    for spec in specs:\n        path = Path(spec['receipt_path'])\n        raw = path.read_bytes()\n        receipt_sha = hashlib.sha256(raw).hexdigest()\n        if evidence.get(str(path)) != receipt_sha:\n            raise ValueError('Runtime provenance receipt differs from reviewed evidence')\n        effective = json.loads(raw)['effective_implementation']\n        checked = CHECKER.check_runtime(effective,selection,METADATA.read)\n        if stable is not None and checked != stable:\n            raise ValueError('Checked effective runtime differs across the four receipts')\n        stable = checked\n        joins.append(dict(index=spec['index'],role=spec['role'],receipt_path=str(path),\n            receipt_sha256=receipt_sha,verified_before_serving=effective['verified_before_serving'],\n            verified_after_cleanup=effective['verified_after_cleanup'],\n            verification_error=effective['verification_error'],\n            verification_count=effective['verification_count'],\n            local_identity_before=effective['local_identity_before'],\n            local_identity_after=effective['local_identity_after']))\n    if len(joins) != 4 or [row['index'] for row in joins] != [1,2,3,4]:\n        raise ValueError('Exactly four original runtime provenance joins required')\n    return dict(effective_implementation=selection,stable_effective_implementation=stable,\n        effective_implementation_receipts=joins,canonical_source_hashes_are_base_provenance=True,\n        effective_implementation_scope='One setup-time helper override in isolated evaluators only; live main canonical f44 is unchanged.',\n        effective_implementation_provenance=dict(campaign=CAMPAIGN_PIN,checker=CHECKER_PIN,\n            metadata_reader=READER_PIN,comparison_sources=list(SUPPORT_PINS.values()),\n            native_profile=CHECKER.CLOSED['native_profile'],verified_native_profile=profile))\n"
+    },
+    {
+      "name": "review checked provenance before unchanged assessment",
+      "before": "    report = campaign.assess_campaign(plan, records)\n",
+      "after": "    effective_evidence = guard_provenance(plan,specs,evidence)\n    report = campaign.assess_campaign(plan, records)\n"
+    },
+    {
+      "name": "returned metadata retains effective declaration",
+      "before": "        assessment=report, scope=\"Frozen-policy quality qualification only; no live learner rollback or learning-speed claim.\")",
+      "after": "        **effective_evidence,\n        assessment=report, scope=\"Frozen-policy quality qualification only; no live learner rollback or learning-speed claim.\")"
+    }
+  ],
+  "byte_reverse_to_e459_exact": true,
+  "base_function_count": 5,
+  "selected_function_count": 8,
+  "whole_function_raw_sha256_unchanged": {
+    "digest": "7d50be39a90a9f2dc35fc9f455dc6a56562a16541821848e7987b9b8c1dbd2b0",
+    "_fsync_directory": "ce4ceceecb1816a0b4fbfd8f85a51a80b576e2810197ba648efb52dcc8227d91",
+    "publish": "baa11573a7e9cf656f39eccb981eaef92ab8902f5f8a046f7e0dc8d76d6c7256",
+    "main": "2eda526a1fb861090d385cbe507c4076550e100c2d5b57488db0d9ec36e8888c"
+  },
+  "only_changed_base_function": "review",
+  "new_functions": [
+    "source_record",
+    "load_checked",
+    "guard_provenance"
+  ],
+  "draft_mode_correction": [
+    {
+      "before": "def source_record(path, expected):",
+      "after": "def source_record(path, expected, *, expected_mode=0o444):"
+    },
+    {
+      "before": "or before.st_nlink != 1 or stat.S_IMODE(before.st_mode) != 0o444",
+      "after": "or before.st_nlink != 1 or stat.S_IMODE(before.st_mode) != expected_mode"
+    },
+    {
+      "before": "SUPPORT_PINS[str(expected_path)] = source_record(expected_path,expected_sha)",
+      "after": "SUPPORT_PINS[str(expected_path)] = source_record(expected_path,expected_sha,expected_mode=0o664)"
+    },
+    {
+      "before": "if source_record(selected['path'],selected['sha256']) != selected:",
+      "after": "if source_record(selected['path'],selected['sha256'],\n                expected_mode=int(selected['identity']['mode'],8)) != selected:"
+    }
+  ],
+  "byte_reverse_to_draft_exact": true,
+  "fixture_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_quality_winner_protection_proposal/test_protection_metadata_deferred.py",
+    "sha256": "d22def7720f260bde3a899f264c0ffe7ebab864b8951a68c81f7d07fc9627914",
+    "bytes": 16600,
+    "identity": {
+      "device": 2304,
+      "inode": 82707062,
+      "bytes": 16600,
+      "mtime_ns": 1792358575875632749,
+      "ctime_ns": 1792358632655857411,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "fixture_method_names": [
+    "test_actual_loader_has_one_exact_module_and_no_fallback",
+    "test_loader_missing_or_changed_dependency_refuses_without_retry",
+    "test_four_original_runtime_joins_use_real_checker_and_actual_modes",
+    "test_wrong_native_profile_or_receipt_provenance_is_rejected",
+    "test_real_review_preserves_assessment_and_returns_effective_metadata"
+  ],
+  "fixture_data": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_quality_winner_protection_proposal/closed-metadata-fixture-inputs.json",
+    "sha256": "5458be5daf2c1280acf90dd86df0a43a3d5c4d16f42d518d4aaa2059087ec901",
+    "bytes": 314827,
+    "identity": {
+      "device": 2304,
+      "inode": 82707059,
+      "bytes": 314827,
+      "mtime_ns": 1792358474972724921,
+      "ctime_ns": 1792358474972724921,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "fixture_scope": "Five deferred methods execute actual extracted load_checked/guard_provenance/digest/review plus actual pure f157 checker only after root selection. Source/file/profile/loaders/time/campaign assessment and future receipt envelopes are strict fakes. Existing source_record host-I/O bracket, full Q precommit/scorer/row validation, copy/fsync/exclusive-link publication and host lifecycle are not executed by these metadata fixtures.",
+  "author_AST_compile_import_target_or_tests_executed": false,
+  "production_or_canonical_sources_changed": false
+}

@@ -1,0 +1,44 @@
+ADDITIVE MOCK FIXTURE REVIEWED3 — SOURCE ONLY, NO AUTHOR EXECUTION
+
+Preserve original6efd and reviewed2c026 manifests/tests unchanged. Root actually
+ran both selected59 suites; each FAILED57pass/2errors. First failed on missing
+fake Torch.float16; reviewed2 supplied that but then exposed missing fake
+payload.inputs.weights during construction of the raw retained four-readout
+input dictionary. No GPU launch or448pause occurred in either run.
+
+Reviewed2 actual original:PID11503/inv2a1594288d37491ba7796878c99c08ea,
+ExecMainCode1/Status1, archived/released under
+ run-26/live8-conditional8-guards-root-execution-reviewed2-20261017/
+ archive SHA8aa2e3c14a3a82c09c8d20dbf58c9bf9e9cc6c32c29c2706fbcf9551ea85c020
+ release SHAc31208caa0d34bae7e783e206ca6f6f609fa26d0754ffab8c1f2efcd1589b6e4
+Original first failure remains bound in FIXTURE_REVIEWED2 and companionc026.
+
+NEW same-package test_reconstruction_contract_reviewed3.py copies reviewed2
+65a9452a and adds ONLY inputs=dict(weights='original-emitted-weights') to the
+fake payload. It retains the already added float16 sentinel. No assertion,
+fault injection, expected message, dataset, count, parent/worker/lock/tolerance
+changes. This is not a production/scientific fix or an experiment rescue.
+
+Complete SOURCE walk of actual worker.forward_and_retain, not only the latest
+exception line, confirms these dependencies before its two intended test faults:
+ - ctx.torch:float16/autocast/cuda.synchronize, all fake-provided;
+ - ctx.agent.device and ctx.attempted_forward_indices, fake-provided;
+ - ctx.conditional.forbidden_offline_updates yields a three-counter dict;
+ - kernel returns the test's deliberate valid5/nonfinite or invalid4 ABI tuple;
+ - ctx.science.rng_state and finite, fake-provided;
+ - ctx.conditional.save_payload, fake create-only writer;
+ - payload.actual plus actual.ce, already provided;
+ - payload.inputs.weights, now provided as opaque emitted-weight sentinel;
+ - item.payload and item.receipt, already provided;
+ - pre_rng,index,directory supplied directly; row argument unused by helper;
+ - output tuple/TRACE_NAMES access uses supplied valid5 or intended invalid4;
+ - calls dictionary remains present after context exit.
+Thus the rawsave argument construction reaches the intended original assertions:
+raw file exists before nonfinite/ABI failure, and duplicate index cannot retry.
+No inference about actual Torch/GPU/scientific execution follows from this walk.
+
+Root selects existing18process+25storage+NEW16 reviewed3 contracts only, total59.
+Relative same-package parent/worker imports are unchanged. Root uses a new unique
+unit/output; all actual prior failure logs/source/exit evidence remain immutable.
+Author has not imported, executed, compiled or tested any corrected fixture or
+performed numerical/model/tensor/runtime actions.

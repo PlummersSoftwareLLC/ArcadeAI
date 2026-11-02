@@ -1,0 +1,119 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-proof2s-fullgame-confirmation-original01-preparation/source-family-original01/fullgame_round_contract_v7.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/fullgame-source-family-original01/fullgame_round_contract_v7.py
+@@ -1,4 +1,4 @@
+-"""Recovered-round health integration for the original all64 complete-game protocol.
++"""Static-original192 main-health integration for the original all64 fullgame protocol.
+ 
+ The internal historical selection descriptor retains its minimum50 transport
+ floor. Original native and reviewer predicates already require exactly64 actual
+@@ -22,6 +22,8 @@
+ REVIEW_SHA = 'e2231b41f69671ebb0d80bf52a3aeb20e273486fc58934c33ecef61eec185d2c'
+ TEMPLATE = BASE/'quality32-protected1741-vs-currentLR125-quota64Protocol-firstSave-original01-preparation-20261024/04-candidate/job.json'
+ HERE = Path(__file__).resolve().parent
++STATIC_PROFILE = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/static_profile_contract_v2.py')
++STATIC_PROFILE_SHA = '5260662e651c6f26cde42bb04cde913dd51015658d071499b6966e661e6a451b'
+ HELPER = ROOT/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py'
+ HELPER_SHA = '2b6902933b502ac20dacbd444fbf786315d6c960fcad1d5b5bf223dd569708c1'
+ PRIVATE_FIELDS = ('schema','actor_slots','origin_port','device','backend','cpu_threads','admission_s','wall_limit_s',
+@@ -48,6 +50,12 @@
+ def helpers():
+     require(hashlib.sha256(HELPER.read_bytes()).hexdigest() == HELPER_SHA, 'Helper source changed')
+     return load('_fullgame_round_helpers', HELPER)
++
++
++def static_profile():
++    require(hashlib.sha256(STATIC_PROFILE.read_bytes()).hexdigest() == STATIC_PROFILE_SHA,
++            'Exact Root-selected static input/domain contract required')
++    return load('_fullgame_static_profile_contract', STATIC_PROFILE)
+ 
+ 
+ def read(pin, h):
+@@ -105,13 +113,13 @@
+     require(job['runtime'] == h.pin(HERE/'run_fullgame_rounds_v7.py')
+             and family['leg_reviewer'] == h.pin(HERE/'review_fullgame_rounds_v7.py')
+             and family['contract'] == h.pin(Path(__file__).resolve()), 'Actual fullgame adapter source identity differs')
+-    require(family['schema'] == 'robotron-recovered-round-fullgame-declared-launcher-proof2s-family-v1'
++    require(family['schema'] == 'robotron-continuous-static192-fullgame-proof2s-family-v1'
+             and family['runtime'] == job['runtime'] and family['current_main_binding'] == job['main_binding']
+             and family['engineering_only'] is pair['engineering_only']
+-            and protocol == dict(schema='robotron-native-fullgame-round-main-health-declared-launcher-proof2s-protocol-v1',
+-                case=job['main_binding'],raw_API_required=True,close_requires_final_sample=True,hot_max_gap_s=2.0,initial_samples=100,raw_queue_protocol='pending-byte-digest-v2',volatile_live_tmpfs=True,source_bound_API_reconnect_projection=True,source_bound_natural_round_admission=True,source_bound_declared_launcher_census=True),
++            and protocol == dict(schema='robotron-native-fullgame-continuous-static192-main-health-proof2s-protocol-v1',
++                case=job['main_binding'],raw_API_required=True,close_requires_final_sample=True,hot_max_gap_s=2.0,initial_samples=100,raw_queue_protocol='pending-byte-digest-v2',volatile_live_tmpfs=True,source_bound_retired_API_projection=True,source_bound_completed_original192_bootstrap=True,source_bound_static_original192_partition=True),
+             'Exact source-bound fullgame round observer context required')
+-    expected = {'client': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-proof2s-fullgame-confirmation-original01-preparation/source-family-original01/fullgame_round_observer_client_v8.py', 'worker': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-proof2s-fullgame-confirmation-original01-preparation/source-family-original01/fullgame_round_observer_v6.py', 'health': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_health_transport_retired_API_v4.py', 'health_base': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_main_health_retired_API_v4.py', 'API_projection': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/api_cached_projections_v3.py', 'round_admission': '/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/round_admission_proof_v2.py', 'launcher_census': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/launcher_census_v1.py', 'durability': '/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/buffered_raw_writer_v2.py', 'control': '/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/volatile_live_control_v1.py', 'interpreter': '/usr/bin/python3.12'}
++    expected = {'client': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/fullgame-source-family-original01/fullgame_round_observer_client_v8.py', 'worker': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/fullgame-source-family-original01/fullgame_round_observer_v6.py', 'health': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_transport_v1.py', 'health_base': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_health_v1.py', 'registry': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_registry_v1.py', 'durability': '/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/buffered_raw_writer_v2.py', 'control': '/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/volatile_live_control_v1.py', 'interpreter': '/usr/bin/python3.12'}
+     expected = {name:Path(path) for name,path in expected.items()}
+     require(set(family['main_observer']) == set(expected), 'Exact fullgame observer dependency set required')
+     for name,path in expected.items():
+@@ -130,21 +138,27 @@
+             and recovery['exclusive_lock_acquisition_and_release_verified'] is True, 'Exact recovered permanent coordinator required')
+     h.checked(job['lease'])
+     binding = read(job['main_binding'], h)
+-    require(binding['schema'] == 'robotron-round-main-health-case-v1' and len(binding['inputs']) == 247,
+-            'All247 recovered main inputs required')
++    inventory = static_profile().validate_inventory(binding,h)
++    require(family['static_profile_contract'] == h.pin(STATIC_PROFILE)
++            and family['main_input_inventory_authority'] == binding['input_inventory_authority'],
++            'Exact separately held Root input inventory/static profile required')
+     health = load('_fullgame_round_context_health', h.checked(family['main_observer']['health']))
+     health.check_inputs(binding,full=True)
+     baseline = read(binding['baseline_snapshot'],h)
+     health.validate(binding,baseline)
++    static_profile().sample_domain(binding,baseline)
+     require(binding['experiment'] == job['training_experiment'] == baseline['api']['managed_experiment'],
+             'Recovered main recipe differs from selected training context')
+     wire = baseline['raw_API_wire'].encode()
+     require(hashlib.sha256(wire).hexdigest() == baseline['api_wire_sha256'] and json.loads(wire) == baseline['api'],
+             'Baseline raw API does not join the census')
+-    return dict(pair=pair,family=family,protocol=protocol,binding=binding,baseline=baseline)
++    return dict(pair=pair,family=family,protocol=protocol,binding=binding,baseline=baseline,inventory=inventory)
+ 
+ 
+ def validate_launch(job, jp, ctx, h):
++    require(os.environ.get('ROBOTRON_CONTINUOUS_TRAINING_MODE','0') == '0'
++            and os.environ.get('ROBOTRON_ROLLING_TRAINING_CLEANUP','0') == '0',
++            'Private fullgame sidecars require explicit/default mode0 before ownership')
+     pair,family = ctx['pair'],ctx['family']
+     require(pair['engineering_only'] is False and family['native_launch_qualified'] is True,
+             'Engineering context can never launch a scientific fullgame cohort')
+@@ -174,20 +188,18 @@
+     checked = reviewer.verify(proof['lifecycle'],h)
+     require(checked['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1'
+             and checked['verified_maximum_gap_s'] == 2.0
+-            and checked['accepted_evidence_and_projection_gaps_verified'] is True,
++            and checked['accepted_evidence_and_projection_gaps_verified'] is True
++            and checked['source_bound_static_original192_partition_verified'] is True
++            and checked['source_bound_completed_original192_bootstrap_verified'] is True,
+             'Exact prospective fullgame2s engineering proof contract required')
+     lifecycle = read(proof['lifecycle'],h);worker = read(lifecycle['worker_job'],h);proved = read(worker['case'],h)
+-    require(checked['original_sources'] == family['main_observer']
+-            and proved['inputs'] == ctx['binding']['inputs'] and proved['slot_eval'] == ctx['binding']['slot_eval'],
+-            'Fullgame readiness uses another source/role domain')
+-    static = ('pid','starttime_ticks','parent_pid','cgroup','command','environment','affinity','uids','executable')
+-    for role in ('trainer','fleet'):
+-        before,now = proved['owners'][role],ctx['binding']['owners'][role]
+-        require(before['unit'] == now['unit'] and before['invocation'] == now['invocation']
+-                and all(before['process'][key] == now['process'][key] for key in static), 'Main owner changed')
+-    for kind in ('optimizer','replay'):
+-        require(all(proved['exposure'][kind][key] == ctx['binding']['exposure'][kind][key]
+-                    for key in ('process_id','instance_monotonic_ns','epoch','epoch_reason')), 'Exposure lineage changed')
++    require(checked['original_sources'] == family['main_observer'],
++            'Fullgame readiness uses another exact static observer source map')
++    static_profile().same_domain(proved,ctx['binding'])
++    proof_outcome = read(lifecycle['outcome'],h)
++    for value in (proof_outcome['samples'][0],proof_outcome['samples'][-1]):
++        # This follows the independent verifier's complete typed raw replay.
++        static_profile().sample_domain(proved,read(value,h)['snapshot'])
+     guard_path = Path(job['prelaunch_CPU_closeout'])
+     require(guard_path == Path(job['output']).parent/'fullgame-CPU-guards-original01/independent-closeout.json',
+             'Exact fullgame per-job CPU guard path required')
+@@ -233,6 +245,8 @@
+             'Original readiness receipt path or publication order differs')
+     first = read_pin(outcome['samples'][0])['snapshot']
+     last = read_pin(outcome['samples'][-1])['snapshot']
++    static_profile().sample_domain(ctx['binding'],first)
++    static_profile().sample_domain(ctx['binding'],last)
+     require(0 <= initial['unix_s']-first['unix_s'] <= 30
+             and initial['unix_s'] <= receipt['observed_unix_s'] <= loaded_unix <= admission['open_unix_ns']/1e9
+             and started <= result['native_started_monotonic_s'] <= checked['first_accepted_monotonic_s'] <= checked['initial_qualified_monotonic_s']

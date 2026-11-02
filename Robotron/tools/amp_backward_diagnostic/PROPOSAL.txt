@@ -1,0 +1,177 @@
+OFFLINE PROPOSAL ONLY — NO RUNNER, TEST RUN, NUMERICAL IMPORT OR LAUNCH
+
+Purpose
+
+Locate nonfinite gradients before clipping in one fresh full RainbowNetwork
+backward comparison. This is forensic work on the OLD reviewed2 frozen54-source
+candidate. It does not certify the current merged source, snapshot capture,
+restore, optimizer correctness, playing quality or faster learning.
+
+Reviewed2 positively recorded three safe AMP skips at65536,32768,16384, ending
+with scale8192. No8192 attempt ran. All81 observed bad gradients were inspected
+AFTER global clipping, which can spread a NaN norm into otherwise good grads.
+The failed run did not retain its fresh initial weights or sampled batches;
+this proposal cannot exactly reproduce that run retrospectively. Reviewed1's
+cause remains unproven. Keep all original failures/receipts/code unchanged.
+
+Smallest execution design
+
+Do not build another independent service/GPU orchestrator. A future small parent
+adapter should reuse the pinned dbdb86f... stdlib launcher's path/identity,
+exclusive GPU0 lease, main-owner checks, dedicated delegated-service cgroup,
+limits, token-before-numerical-import protocol and owned cleanup. Its normal
+source_manifest() must NOT be used: it deliberately rejects these now-old core
+bases. Instead verify source-lock.json and copy exactly its54 immutable archival
+sources to a NEW private package. This exception is explicit forensic scope,
+never a bypass claiming that old snapshot code matches the production merge.
+
+Reuse the archived c652ff7... worker's setup/state_fixture/cleanup functions by
+file hash. Do not invoke its capture/restore/update_once or alter its files.
+Bind the future thin parent and thin diagnostic worker hashes in the new launch
+manifest too; validating only the imported old worker would leave the adapter
+unbound. No executable adapter is included here: these two small adapters and
+their guard tests still require implementation/review after the ABA is terminal.
+
+Retain the original resource bounds: GPU0 UUID only,10GiB allocator,11GiB
+process VRAM,12GiB RAM,96tasks,2CPU,4GiB artifacts,128MiB private tmpfs and300s
+total timeout. The main training GPU UUID is forbidden and its sole PID/start
+identity must remain fixed. Refuse all quality/sidecar/performance/smoke/ABA
+processes and quality port9999. Use no MAME, HTTP listener, production model,
+production replay/control/settings, or live checkpoint. No ordinary session
+cgroup fallback. Cleanup must retain the existing handled-signal/parent-death
+and exact-owned-process guarantees. No numerical work during the current ABA.
+
+Fixed inputs and case order
+
+One precommitted seed:20261016. Exactly three cases, one backward per case:
+  1. fp16_amp_default: autocastFP16, enabled CUDA GradScaler init_scale65536.
+  2. fp16_amp_scale1: autocastFP16, enabled CUDA GradScaler init_scale1.
+  3. fp32_unscaled: autocast disabled, agent.use_amp=False, no scaler operation.
+
+Construct a FRESH actual CUDA GradScaler instance for EACH AMP case with that
+case's declared initial scale. Bind/remove hooks per instance and discard it
+after evidence. Do not reuse an aborted scaler via load_state_dict or a scale
+reset: unscale_ leaves its per-optimizer stage=UNSCALED, and load_state_dict does
+not clear that transient registry. Never call forbidden update() to clear it.
+The saved scaler state is evidence, not the cross-case reset procedure.
+
+Scale1 is an explicitly labelled forensic control, not a replacement default,
+smoke retry or way to manufacture PASS. Do not extend the old3-attempt budget,
+lower its initial scale, change its fixture, or relabel either failed smoke.
+
+After all guards and private import-time paths are established, seed Python,
+NumPy and Torch before constructing ONE fresh actual full11128-state Rainbow
+agent using the frozen worker's bounded configuration (ring128,batch8). Join
+TrainWorker and CLOSE/JOIN real prefetch before taking RNG snapshots or sampling;
+no background producer may consume RNG while the cases run. No keyboard/server.
+Preserve and record the actual inference model too, although it is unused here.
+
+Generate exactly the old160 state_fixture transitions, in the same order,
+actions index%81,rewards(index%7-3)/100,dones index%19==0,horizons1+index%3,
+actor cycle dqn/epsilon/expert. Populate through actual agent.step; admit the
+same64-slot HOF/EpHOF entries. This omits the irrelevant async FIFO/server only;
+it must not sanitize empty-object rows, masks, lane/grid blocks or action labels.
+Use the same pre-update clocks/control/LR settings as frozen capture, including
+training_steps7 and optimized_samples=target_update_period*baseline_batch_size-8.
+Seal the warmup budget anchor then credit the same32 private frames once. Save
+the exact pressure-anchor/schedule/scalar state; verify the real cap permits the
+single manual step without granting another case extra frame or update credit.
+
+Use actual memory.sample once with actual beta schedule. Materialize/copy and
+save ALL10 arrays:states,actions,rewards,next_states,dones,horizons,is_expert,
+actor_kind,indices,weights. Preserve native dtype/shape and raw bytes per array.
+Pass that exact raw tuple as prefetched_batch to actual training.train_step.
+No hand-written loss, replacement projection or alternate attention model.
+
+Before ANY backward, persist the fresh online/target/inference state dicts,
+optimizer state/groups, scaler settings, complete config/manual controls/clocks,
+and Python/NumPy/TorchCPU/ownedCUDA RNG. Use tensor/NPZ/JSON formats without
+object-array pickle. Save file and per-tensor SHA,dtype/shape/content digests.
+Restore these same saved inputs and RNG before EACH case; no seed search or
+resampling. Only case precision/scaler-init mode may differ. Save per-case
+pre-forward RNG digests and parameter/buffer/optimizer digests to prove parity.
+
+Record existing precision/runtime flags rather than silently changing them:
+effective GIL,Python/Torch/CUDA,autocast dtype,TF32 and float32-matmul policy,
+cuDNN/backend reduction/determinism settings,model train/eval flags,dropout and
+any noise/RNG state. FP32 means autocast disabled; if TF32 is enabled, disclose
+that the FP32 control is not strict IEEE matmul. CUDA projection/index_add and
+backend operations can be nondeterministic despite identical saved RNG; make
+no bitwise replay claim. Do not force GIL0 or import missing v3/expert packages.
+Optional expert availability/exercised=False remains explicit.
+
+Actual old train_step interception, without rewriting its loss
+
+Pinned training.py19408112... _train_step_impl currently orders:
+  AMP: scale(loss).backward -> unscale_(optimizer) -> found_inf capture -> clip
+       -> exposure.begin -> scaler.step -> scaler.update.
+  FP32: loss.backward -> clip -> exposure.begin -> optimizer.step.
+
+Only in the isolated diagnostic child, install reversible hooks under the
+agent's training lock. Other train/prefetch/server workers must already be gone.
+  - Register an actual optimizer step PRE-hook that raises ForbiddenStep before
+    the real Adam implementation; this preserves optimizer.step identity for
+    capture_amp_found_inf. Do not replace Adam with a fake optimizer.
+  - Guard this scaler instance's step/update methods too: either call is fatal.
+  - Wrap this scaler instance's unscale_: snapshot the actual scaled .grad
+    tensors, delegate the ORIGINAL unscale_ exactly once, snapshot unscaled grads.
+  - Replace this child's torch.nn.utils.clip_grad_norm_ with a boundary hook.
+    It verifies exact caller source/function and exact online parameter IDs,
+    records native gradients BEFORE any clipping, and raises BoundaryReached.
+    It NEVER calls real clipping. For FP32 this is the unscaled grad snapshot;
+    mark scaled stage not-applicable (scale1 mathematical convention only).
+  - Catch only the private BoundaryReached sentinel as successful observation.
+    A step guard firing, early None/nonfinite loss, unsupported boundary, source
+    drift, record failure, or any other exception is a recorded diagnostic error.
+    Do not continue into a different loss path or attempt another backward.
+
+The boundary hook may inspect ONLY its pinned _train_step_impl caller's locals
+to save actual weighted_loss,ce_loss,bc_loss,projected target,joint log-probs/
+logits and actual tensor input dtypes. Do not recompute a substitute loss.
+Delete frame references immediately to avoid retaining the autograd graph.
+Module forward/pre-hooks on actual encoders,attention,Linear and LayerNorm
+record finite flags,max magnitudes and LayerNorm input variance. Top-level
+training_outputs/joint_dist/q_values_joint are direct methods, so a forward
+hook on RainbowNet alone is insufficient; wrap/delegate these exact methods
+or read their retained actual outputs at the pinned boundary. No extra forward.
+
+Record actual current-object presence/padding counts for states AND next_states,
+and the module attention masks (including the existing slot0 empty-row unmask).
+Nonfinite module outputs are evidence, not authorization to alter masks. Empty
+rows are already handled in this source; do not assume an all-masked cause.
+
+Evidence and no-step certificate
+
+Preserve original native gradient tensors by parameter at both scaled/unscaled
+boundaries, including NaN/Inf, with their hashes. Per parameter record None vs
+present,dtype,shape,numel,NaN/+Inf/-Inf counts,max_abs of finite entries and
+float64-accumulated finite-entry L2 norm. Keep a separate all-finite flag and
+full-norm nonfinite status; finite-only statistics must not hide bad values.
+No nan_to_num,gradient replacement,clipping or optimizer/scaler update.
+
+After BoundaryReached, require zero optimizer/scaler step/update guard calls,
+unchanged online/target/inference parameters and buffers,unchanged optimizer
+moments/every per-parameter Adam step,unchanged exposure starts/outcomes and
+unchanged training/sample clocks/replay priorities. Original train_step may
+assign its scheduled LR before backward; record this separately and restore
+the same pre-case optimizer-group metadata before the next case. RNG advancement,
+gradient allocation and transient GradScaler unscale bookkeeping are expected;
+save them rather than treating them as learning progress. Restore every hook
+in finally, clean up owned worker/device/cgroup/tmpfs and verify source hashes.
+
+Results must say OBSERVATIONS_COMPLETE, not snapshot-qualified or training-PASS.
+All three fixed cases/results/errors stay in the receipt, including early
+failures. Cases must not be discarded or replaced. Interpret a finite unscaled
+scale1/FP32 result versus default-scale bad gradients as evidence consistent
+with scale/precision sensitivity, not proof of the original run's exact cause,
+an AI improvement, or permission to change production AMP defaults.
+
+Deferred checks before any launch
+
+After ABA terminal only: implement/review the small adapters and CPU hook tests
+covering actual boundary ordering,zero forbidden steps,restoration on exception,
+early-return failure,scaled/unscaled tensor preservation,private source drift,
+identical input/RNG resets and no additional attempts. Recheck default dry run
+cannot query NVIDIA/create paths/spawn numerical workers. Then separately
+review exact resource/source/ownership precommit before a guarded three-case
+GPU diagnostic. No such tests or execution were performed for this proposal.

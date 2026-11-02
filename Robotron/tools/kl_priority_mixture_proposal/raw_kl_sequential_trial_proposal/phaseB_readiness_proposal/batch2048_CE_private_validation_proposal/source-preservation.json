@@ -1,0 +1,73 @@
+{
+  "parent": {
+    "renamed_symbols": "kl18\u2192ce18, return_ce\u2192restart_ce, raw-kl-stage-b\u2192ce-batch2048-stage-b",
+    "unchanged_bodies": [
+      "require",
+      "digest",
+      "sync_directory",
+      "storage_directory_identity",
+      "owned_byte_count",
+      "scan_quality_processes",
+      "checked_module",
+      "helpers",
+      "Layout",
+      "file_identity",
+      "stable_file",
+      "bounded_json",
+      "payload_metadata",
+      "row_contract",
+      "bind_inputs",
+      "job_pin_matches",
+      "trained_fixture",
+      "copy_checkpoint",
+      "checkpoint_marker_snapshot",
+      "checkpoint_publication_state",
+      "checkpoint_temp_vanish_allowed",
+      "publish",
+      "command",
+      "result_contract",
+      "run_variant"
+    ],
+    "changed_bodies": [
+      "read_lock",
+      "configure_environment",
+      "prepare_role_inputs",
+      "read_role_input",
+      "launch",
+      "main"
+    ],
+    "added_bodies": []
+  },
+  "worker": {
+    "renamed_symbols": "kl18\u2192ce18, return_ce\u2192restart_ce, raw-kl-stage-b\u2192ce-batch2048-stage-b",
+    "unchanged_bodies": [
+      "require",
+      "safe",
+      "write_json",
+      "fsync_directory",
+      "bootstrap",
+      "FixedReplayAdapter",
+      "four_clocks",
+      "named_optimizer",
+      "state_snapshot",
+      "describe_slots",
+      "require_loaded",
+      "construct_and_load",
+      "save_payload",
+      "grant_frame_credit",
+      "verify_progress",
+      "save_post_checkpoint",
+      "run_ce18",
+      "main"
+    ],
+    "changed_bodies": [
+      "setup",
+      "StepObservers",
+      "one_attempt",
+      "run"
+    ],
+    "added_bodies": [
+      "fixed_subset"
+    ]
+  }
+}

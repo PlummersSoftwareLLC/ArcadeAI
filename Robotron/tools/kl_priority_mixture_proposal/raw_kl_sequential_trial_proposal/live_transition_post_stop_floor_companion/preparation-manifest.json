@@ -1,0 +1,102 @@
+{
+  "actual_candidate": null,
+  "actual_job": null,
+  "actual_owner": null,
+  "actual_tests": null,
+  "actual_transition": null,
+  "author_scope": "Source/text and small decoded JSON reads, stdlib source hashes/equality/diffs and additive files only. No candidate/helper/framework imports, compile, tests, defaults, PT/tensor/replay bodies or hashes, runtime queries, live source/state/control actions.",
+  "authored_tests": {
+    "new_ending_floor": 7,
+    "original_byte_exact": 19,
+    "scope": "Pure stdlib mocked ownership/CPU calls and small private metadata only; no actual numeric validation or processes",
+    "selected_total": 26,
+    "selection": "Two exact modules in future-argv-template.json, no broad discovery"
+  },
+  "created_utc": "2026-10-17T11:31:45.676977+00:00",
+  "failure_policy": "First started/failed CPU is fatal and retained. No replacement candidate or CE start on stale latest. Root-led separately reviewed forward repair only; all original matching192 actors resume attempts remain inherited.",
+  "files": {
+    "PREPARATION.txt": {
+      "bytes": 6818,
+      "mode": "0o444",
+      "sha256": "93f6b3a29893a35ca7e6a5587d1c37eeb3872becda30b8d7ac09ffa7a534c3b8"
+    },
+    "ending-proof-template.json": {
+      "bytes": 1168,
+      "mode": "0o444",
+      "sha256": "dc76f88799d742262c89cf54f33d6c8050e0acf75ab951e5f50ac39563933109"
+    },
+    "future-argv-template.json": {
+      "bytes": 1677,
+      "mode": "0o444",
+      "sha256": "e896fe39182f40a188c5f93ef673bd5eb9a0978589ab1655e297c36441791cc5"
+    },
+    "job.schema.json": {
+      "bytes": 5053,
+      "mode": "0o444",
+      "sha256": "a353550ee73eecec77f09154a3aa973c5f1e4ef572258b8c5621ec187c2713ba"
+    },
+    "job.schema.json.patch": {
+      "bytes": 1393,
+      "mode": "0o444",
+      "sha256": "86f0893c6994a7e146286a8d9c8eec0fcf8981eb8213e660503f8889c08e8019"
+    },
+    "run_raw_kl_transition.py": {
+      "bytes": 59862,
+      "mode": "0o444",
+      "sha256": "7d0aa20b5ef4fc1d6c889718ee688387cd684cf702cced503714435132b949d6"
+    },
+    "run_raw_kl_transition.py.patch": {
+      "bytes": 15345,
+      "mode": "0o444",
+      "sha256": "a1fd31cb08585c0808f3dc31f272566ae247f6b810bfdb36b81df6d967089af3"
+    },
+    "source-lock.json": {
+      "bytes": 4728,
+      "mode": "0o444",
+      "sha256": "08a41ad7bda4e0cd99c9b1f0f51439d5e7fa9035997a251f6373e4c5953fddb8"
+    },
+    "test_ending_floor.py": {
+      "bytes": 12941,
+      "mode": "0o444",
+      "sha256": "9d9db9947b8c07156f9945f626a94a23c6a85a3186007640e1c5719fb47d53be"
+    },
+    "test_transition_adapter.py": {
+      "bytes": 19393,
+      "mode": "0o444",
+      "sha256": "d342b299016dfae58a70426bb2fabc9b7097a018dd39018d03df1f2ff61aeb0b"
+    }
+  },
+  "metadata_before_stop": [
+    "Authenticate activation start_request and before_resume_api_PIN; exact observer raw baseline",
+    "Same actual insured KL owner/core/epoch/boot and actual first immutable decision",
+    "Historical candidate client0or192, exact request/completion archive tags and floor; no PT stat/hash/load"
+  ],
+  "required_order": [
+    "Owned pause and existing single candidate freeze",
+    "Exact known KL stop and absence",
+    "One historical candidate phase CPU; saved4>=maxearlyinsurance4,actualLATCH4",
+    "Existing newest stopped CPU with floor=maxearlyinsurance4,LATCH4,candidateCPU4",
+    "New CE phase actionstart from verified newest bytes"
+  ],
+  "schema": "robotron-raw-kl-post-stop-candidate-floor-source-preparation-v1",
+  "selected_ancestor": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_transition_adapter_proposal/preparation-manifest.json",
+    "sha256": "d4956b08530cf80b3e7a3ba362fe38cf7f5b51d50cee35bc989177d5bb7fc038"
+  },
+  "source_review": {
+    "audit_quality_result": "Pending separate source receipt",
+    "runtime_initial_ordering": "PASS at4e4b; baseline/acquisition metadata fixes applied in7d0aa20b; final delta receipt pending"
+  },
+  "status": "SOURCE_ONLY_UNEXECUTED",
+  "supersedes": "Only candidate numerical-check ordering in ending5141: candidate CPU now occurs AFTER KL stop and BEFORE newest CPU/CE start. Both CPU checks remain outside KL-owner ceiling.",
+  "unchanged": {
+    "CPU_after_exact_absence": true,
+    "ancestor_bytes": true,
+    "cutoff_3240_and_ceiling_3600": true,
+    "first_latch_horizons": true,
+    "one_candidate_no_retry": true,
+    "scientific_sources": true,
+    "strict_phase_CPU": true,
+    "training_recipe": true
+  }
+}

@@ -1,0 +1,164 @@
+{
+  "activation_authorized": false,
+  "actual_application": null,
+  "actual_tests": null,
+  "author_verification": {
+    "AST_or_compile": 0,
+    "execution": 0,
+    "imports": 0,
+    "model_or_replay_access": 0,
+    "patch_application": 0,
+    "runtime_queries": 0,
+    "tests": 0,
+    "text_only": true
+  },
+  "candidate_in_memory": {
+    "bytes": 141245,
+    "full_source_file_written": false,
+    "path": "Robotron/Scripts/dqn/socket_server.py",
+    "sha256": "2669dc6cb1dc9965dd8e8e5ceac9ffcb44091d0c119a96ddef86b11d4d27e0db"
+  },
+  "change": {
+    "guard": "if _gap_ticket is not None:",
+    "ordinary_mature_n3_no_gap_trace_calls_skipped": 8,
+    "sites": [
+      {
+        "base_line": 2112,
+        "stage": "after_reset"
+      },
+      {
+        "base_line": 2194,
+        "stage": "previous_step"
+      },
+      {
+        "base_line": 2286,
+        "stage": "nstep_before"
+      },
+      {
+        "base_line": 2292,
+        "stage": "nstep_after"
+      },
+      {
+        "base_line": 2295,
+        "stage": "enqueue_called"
+      },
+      {
+        "base_line": 2300,
+        "stage": "enqueue_returned"
+      },
+      {
+        "base_line": 2302,
+        "stage": "one_step"
+      },
+      {
+        "base_line": 2303,
+        "stage": "enqueue_called"
+      },
+      {
+        "base_line": 2309,
+        "stage": "enqueue_returned"
+      },
+      {
+        "base_line": 2393,
+        "stage": "finish"
+      },
+      {
+        "base_line": 2433,
+        "stage": "finish"
+      },
+      {
+        "base_line": 2484,
+        "stage": "next_action"
+      },
+      {
+        "base_line": 2530,
+        "stage": "finish"
+      }
+    ],
+    "ticket_call_sites": 13
+  },
+  "future_root_checks": [
+    "After capture and quality freeze release: reconstruct/reverse/AST; meaningful real-handler None vs real-ticket regressions must cover group flush/terminal/one-step, measurement/newgame, done/inactive, send/enqueue failure and unchanged snapshot/witness/counters.",
+    "Assert skipped pure keyword callback absent for None while real operations continue. Test then measure cost; source reasoning is not executable or performance proof.",
+    "A selected socket SHA change needs main62-map and E13 evaluator closure/new binding/auditor/carrier/collector pin updates as applicable. Existing frozen families/plans remain immutable and are not silently compatible. Root alone selects application/new-owner maintenance."
+  ],
+  "helper_contract": {
+    "bytes": 12216,
+    "identity": {
+      "bytes": 12216,
+      "ctime_ns": 1792301353397526560,
+      "device": 2304,
+      "inode": 81529014,
+      "mode": "0o444",
+      "mtime_ns": 1792301353397526560,
+      "nlink": 1,
+      "uid": 1001
+    },
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_proposal/rejected_gap_telemetry_reviewed3.py",
+    "sha256": "d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd"
+  },
+  "limits": [
+    "No live occurrence, rejected-gap6% attribution, speed gain, efficacy or production upper bound is claimed. Branch/call/kwargs cost is unmeasured.",
+    "Equivalence assumes held ordinary dict/scalar/list contracts; arbitrary monkeypatched coercions/getters with side effects are not a production assumption. Future helper None-ticket semantic changes require re-review."
+  ],
+  "metrics_type_source": {
+    "bytes": 117528,
+    "identity": {
+      "bytes": 117528,
+      "ctime_ns": 1792239930882587724,
+      "device": 2304,
+      "inode": 79724998,
+      "mode": "0o664",
+      "mtime_ns": 1792239930881775881,
+      "nlink": 1,
+      "uid": 1001
+    },
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/config.py",
+    "sha256": "19abcbde4d08cf8465b82185ac6dd52eb8965adb8611584e0677c4c7ff21d1fd"
+  },
+  "patch": {
+    "bytes": 6958,
+    "identity": {
+      "bytes": 6958,
+      "ctime_ns": 1792309832985733061,
+      "device": 2304,
+      "inode": 80638036,
+      "mode": "0o444",
+      "mtime_ns": 1792309832985733061,
+      "nlink": 1,
+      "uid": 1001
+    },
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_none_ticket_fastpath_proposal/unapplied.patch",
+    "sha256": "bafc74d09e0d305a10f26a65fccbfd0b09915d91e0641dcf45ebfe415ed6feb0"
+  },
+  "preservation": {
+    "exact_text_reverse_to_base": true,
+    "held_sources_untouched": true,
+    "helper_api_counters_bounds_order_unchanged": true,
+    "only_changes": "13 guards and indentation of their13 existing single-line calls."
+  },
+  "proof": [
+    "d586.event returns None for connection=None and kind!=connect BEFORE lock/client/clock/counter/state access. All guarded stages satisfy this predicate. Identity check preserves every non-None ticket, including any falsey non-None value.",
+    "Existing call arguments/order remain exact for real tickets. connect/received/receive/parser/reject/neutral/accepted/disconnect calls remain byte-identical and unguarded; denominators and pending-gap lifecycle are not filtered.",
+    "_replay_writable (socket1273-1277) only reads cs.get and getattr regular MetricsData flags; no writes, locks, counters or I/O. MetricsData is an ordinary dataclass (config1516-1517), ratchet_frozen boolean1707, without attribute-access overrides. All actual replay-writable gates remain unchanged.",
+    "Other skipped kwargs are scalar/reference loads, bool(training_done) already built as bool, and len(matured) on the held nstep.add list result. None-ticket calls formerly discarded these values before helper state access.",
+    "No real parser/classifier/reset/stack/journal/reward/nstep/add/enqueue/action/send/cleanup/logging operation changes. Real-ticket group flush/terminal/one-step ordering remains intact."
+  ],
+  "schema": "robotron-rejected-gap-none-ticket-fastpath-source-proposal-v1",
+  "source_base": {
+    "bytes": 140517,
+    "identity": {
+      "bytes": 140517,
+      "ctime_ns": 1792306967928089640,
+      "device": 2304,
+      "inode": 79696030,
+      "mode": "0o664",
+      "mtime_ns": 1792306967914113042,
+      "nlink": 1,
+      "uid": 1001
+    },
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py",
+    "sha256": "f44ddfe31408b77b6d622e1d4ec4cda60a03999dc984d9e11b5aeac38911a9ed"
+  },
+  "status": "SOURCE_ONLY_UNSELECTED_UNAPPLIED_UNEXECUTED"
+}

@@ -1,0 +1,123 @@
+{
+  "schema": "robotron-owned-client-exception-record-serialization-unapplied-proposal-v1",
+  "utc": "2026-10-18T05:20:15.920588+00:00",
+  "status": "SOURCE_ONLY_UNSELECTED_UNAPPLIED",
+  "patch": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/owned_shutdown_error_log_serialization_proposal/unapplied.patch",
+    "sha256": "de5dc91ac745cd5b1faf7036208742ff3d13595da68e30632b4563046d3a7676",
+    "bytes": 1215,
+    "identity": {
+      "device": 2304,
+      "inode": 81529007,
+      "bytes": 1215,
+      "mtime_ns": 1792300815919565740,
+      "ctime_ns": 1792300815919565740,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "baseline_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py",
+    "sha256": "4a1f6a3cc7c82d8c85e1af93ceac0ca7457663d5f5ba7c7d893e3c2b3003e26c",
+    "bytes": 136403,
+    "identity": {
+      "device": 2304,
+      "inode": 79695972,
+      "bytes": 136403,
+      "mtime_ns": 1792288634136965085,
+      "ctime_ns": 1792288634151983356,
+      "mode": "0o664",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "unchanged_auditor_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postaccepted_newgame_live8M_quality_binding_proposal/audit_completed_leg.py",
+    "sha256": "9e0c8196e55130b64b9701867110614f5e4d7663fd38ed254942bd71b4d0d118",
+    "bytes": 34203,
+    "identity": {
+      "device": 2304,
+      "inode": 86245501,
+      "bytes": 34203,
+      "mtime_ns": 1792292247772827417,
+      "ctime_ns": 1792292442247895250,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "closed_original_console": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/postaccepted-newgame-live8M-quality-original-leg02-audit-20261017-output/evaluator-console.log",
+    "sha256": "f75f1dbea85a5f20c8cf19e4a4581dbb5c4b79c8cf12f1a6d6a18c5be4c0688e",
+    "bytes": 11825,
+    "identity": {
+      "device": 2304,
+      "inode": 83492929,
+      "bytes": 11825,
+      "mtime_ns": 1792299022226804855,
+      "ctime_ns": 1792299022226804855,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "candidate_source": {
+    "sha256": "2a93215cd1bd967bf7973b318eba4ec967bf36e648dadc9bc81f9bc2d7b401f5",
+    "bytes": 136661,
+    "materialized_or_installed": false
+  },
+  "scope": "No installed/selected source, current quality recipe/boot/profile/control, classifier or running source changed. No tests/default/project imports/runtime/API/process/unit/GPU/model operations or live campaign reads. Only supplied held source and previously authorized closed C1 console consumed.",
+  "exact_changes": [
+    "Initialize one per-SocketServer threading.Lock next to the existing inference-error lock.",
+    "Keep the existing pre-shutdown _fail_inference_only call and shutdown condition byte-exact and before logging.",
+    "Replace separate Client stdout print and multi-write traceback.print_exc with the exact Client line plus traceback.format_exc, written once and flushed to stderr under the per-server logging lock. No helper call adds an exception traceback frame."
+  ],
+  "proof_by_source": [
+    "Current private-evaluator generic exception path has the exact two frames expected by9e0c. The candidate changes no throw/infer/catch call path; shifted line numbers remain permitted by its existing regex.",
+    "A complete traceback begins immediately after its own Client header, so eight competing client handlers cannot concatenate headers or interleave their traceback writes with one another. No traceback header, raise line or terminal is suppressed.",
+    "Earlier genuine errors still latch before acquiring the logging lock. Fatal/cleanup/native validity and all fixed quality gates are unchanged.",
+    "Exact reverse of the two declared replacements reproduces socket4a bytes; stdlib AST parse only confirmed candidate syntax."
+  ],
+  "logging_interface_detail": "The Client error header moves from stdout to stderr to keep the full record on the existing traceback stream. Native evaluator already merges stderr into stdout, so combined console retains text and traceback semantics. Any external stdout-only consumer must be reviewed before selection.",
+  "known_limits": [
+    "This serializes client generic-exception records, not every print from unrelated server code or other processes. An unrelated fatal/server error is not newly exempted and must remain reviewable/rejected.",
+    "Single write under one lock prevents competing client handlers from interleaving their records. Global OS-level atomicity for arbitrary streams/custom handlers or other processes is not claimed. Future root test must use the actual selected combined-console stream behavior.",
+    "The log lock can serialize slow stderr I/O during exception cleanup. It is independent of the training/client/replay/inference-error locks; no additional model/control action occurs. Existing finally cleanup still runs.",
+    "No current source or audit output may be patched/reclassified by this proposal. Future source/evaluator closures must explicitly pin any applied candidate; current frozen campaign remains unchanged."
+  ],
+  "deferred_test_cases": [
+    {
+      "name": "eight_concurrent_owned_shutdown_errors",
+      "required": "Drive eight actual handler/infer exception paths using stdlib fakes/real pinned AST methods and one recording stderr sink. Each complete Client line+two-frame traceback must be emitted by one write, under the same per-server lock; exact frozen auditor classifier accepts each uninterleaved stopped-before-completion trace. Preserve all eight IDs/stacks/terminals and newlines.",
+      "executed": false
+    },
+    {
+      "name": "genuine_early_error_stays_fatal",
+      "required": "With shutdown_event unset, actual handler still calls _fail_inference_only before logging; first error latch remains, full real error/trace remains emitted, native invalidity cannot become valid due to formatting.",
+      "executed": false
+    },
+    {
+      "name": "unknown_exception_and_extra_frames",
+      "required": "Unknown error text, exception chaining or foreign/extra traceback frames remain complete and visible and remain unclassified/rejected by unchanged9e0c. Do not truncate or allowlist them.",
+      "executed": false
+    },
+    {
+      "name": "record_text_and_traceback_integrity",
+      "required": "Compare ordinary single-thread record with old Client line plus traceback.format_exc text. No exception class, message, stack frame, line/path, chaining, caret or trailing newline is removed. Both header and traceback now share stderr; combined console text must match.",
+      "executed": false
+    },
+    {
+      "name": "nonexception_training_and_connection_paths",
+      "required": "Source preservation or actual-handler fake-I/O controls confirm only __init lock allocation and generic exception logging changed. Successful inference/replay/game/reset/measurement/control/ConnectionError and server.stop behavior remain exact.",
+      "executed": false
+    },
+    {
+      "name": "logging_lock_lifecycle",
+      "required": "Distinct servers own distinct locks initialized before handler launch. Existing inference-error lock is released before logging lock acquisition. No training/client/replay/optimizer lock or action is acquired by logging; slow/failing stderr is not silently suppressed.",
+      "executed": false
+    }
+  ],
+  "test_execution_count": 0,
+  "actual_deployment": false
+}

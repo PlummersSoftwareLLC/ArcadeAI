@@ -1,0 +1,30 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/run_cold_slot64_prefix_v1.before-completed1201-readiness.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/run_cold_slot64_prefix_v1.py
+@@ -265,6 +265,9 @@
+         with (private / 'boot.lua').open('x') as stream:
+             stream.write('local ok,err=pcall(function() assert(loadfile(' + json.dumps(job['lua']['path']) + '))() end)\nif not ok then print("COMPILED32_FULL_TAIL_FATAL "..tostring(err));manager.machine:exit() end\n')
+ 
++def cold_prefixes_ready(actors):
++    return set(actors) == set(SLOTS) and all(row['proxy'].prefix_verified.is_set() and row['proxy'].sequence > 1200 for row in actors.values())
++
+ def prefix_only_marker(actors, *, policy, boundary, admission, started_monotonic_s, observed_monotonic_s, observed_unix_s):
+     require(set(actors) == set(SLOTS) and len(actors) == 64, 'Every original cold64 slot required')
+     require(0 < observed_monotonic_s - started_monotonic_s < 300, 'Cold prefix startup duration differs')
+@@ -274,7 +277,7 @@
+     prefixes, subjects, nonces = {}, {}, []
+     for slot, row in actors.items():
+         proxy = row['proxy']
+-        require(proxy.prefix_verified.is_set() and proxy.error is None and proxy.handoff is not None, 'Uncertified original prefix')
++        require(proxy.prefix_verified.is_set() and proxy.sequence > 1200 and proxy.error is None and proxy.handoff is not None, 'Uncertified original prefix')
+         summary = proxy.prefix_summary
+         footer = summary['footer']
+         require(summary['dense_prefix_frames'] == 1200 and summary['continues_after_prefix'] is True
+@@ -550,7 +553,7 @@
+                     require(process_birth(child.pid) == row['birth'], 'Original actor birth changed')
+                 else:
+                     require(child.returncode == 0 and row['proxy'].stop_sent.is_set(), 'Original actor exited nonzero or before host-authorized drain')
+-            prefixes_ready = len(actors) == ACTOR_COUNT and all((row['proxy'].prefix_verified.is_set() for row in actors.values()))
++            prefixes_ready = cold_prefixes_ready(actors)
+             require(time.monotonic() - started < 300, 'Original all64 cold startup prefix not certified within300s')
+             if prefixes_ready and fixed_window is not None and boundary(controller.generation)['ready']:
+                 policy_after = policy_reader()

@@ -1,0 +1,196 @@
+--- Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision3/test_live8_maintenance.py	2026-10-17 02:48:19.959186769 -0500
++++ Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision4/test_live8_maintenance.py	2026-10-17 03:05:32.565451835 -0500
+@@ -81,6 +81,7 @@
+         self.missing_recovery_bank = self.pid0_start = self.initial_cpu_fail = False
+         self.failed_pid0_state = False
+         self.mark_failed_on_start = False
++        self.pre_cpu_fault_once = self.incomplete_cpu_proof = False
+         self.verification_failed = False
+         self.output = directory
+         self.job = dict(trainer_unit="trainer", experiment="held", model_dir=str(directory), bank_spec={},
+@@ -88,8 +89,10 @@
+         self.host = FakeHost(self)
+         self.metrics = SimpleNamespace(block_restore_signals=nullcontext)
+         self.banks = SimpleNamespace(stopped_state=lambda spec:dict(banks="both_generation_headers"))
+-        self.insured = dict(pid=10)
++        self.insured = dict(pid=10,starttime_ticks=1010)
+         self.last_retired = None
++        self.retired_owner = self.retirement_candidate = None
++        self.cpu_attempts = {}
+         self.current_checkpoint = None
+         self.original_dropin, self.dropin, self.recovery_dropin, self.phase, self.lineages = None, b"capture", b"normal-no-auto-restart", "before", {}
+         self.checkpoints, self.starts, self.proofs = [], [], []
+@@ -101,7 +104,7 @@
+ 
+     def trainer_id(self):
+         tool.require(self.host.pid == self.host.owned and self.host.pid > 0, "unknown replacement")
+-        return dict(pid=self.host.pid)
++        return dict(pid=self.host.pid,starttime_ticks=self.host.pid+1000)
+ 
+     def absence(self):
+         tool.require(self.host.pid == 0, "old trainer is still live")
+@@ -109,14 +112,33 @@
+ 
+     def stopped_checkpoint(self, retired, label):
+         self.absence()
++        if self.pre_cpu_fault_once:
++            self.pre_cpu_fault_once=False
++            raise OSError("poststop preCPU observation failed once")
+         self.checkpoints.append((retired["pid"], label))
++        self.cpu_attempts[tool.SettingsLifecycle.key(retired)]="started"
+         if self.initial_cpu_fail:
+             self.verification_failed = True
+             raise RuntimeError("nonfinite stopped latest")
++        if self.incomplete_cpu_proof:
++            raise RuntimeError("CPU exited but invalid/missing proof")
+         self.last_retired = retired
++        self.cpu_attempts[tool.SettingsLifecycle.key(retired)]="passed"
+         self.current_checkpoint = dict(source=tool.fingerprint(self.latest))
+         return self.current_checkpoint
+ 
++    def stop_owned(self, expected=None):
++        self.retirement_candidate=self.trainer_id()
++        self.host.stop(expected)
++        self.confirm_retired()
++        return self.retirement_candidate
++
++    def confirm_retired(self):
++        tool.require(self.retirement_candidate is not None,"No owned stop")
++        self.absence()
++        self.retired_owner=copy.deepcopy(self.retirement_candidate)
++        return self.retired_owner,dict(settings="same-byte-owned-stop-proof")
++
+     def start(self, phase, label):
+         self.absence()
+         self.starts.append(phase)
+@@ -238,6 +260,26 @@
+         self.assertEqual(r.starts, [])
+         self.assertEqual([pid for sig,pid in r.host.events if sig == signal.SIGCONT], [1,2,3])
+ 
++    def test_poststop_preCPU_fault_retains_owner_and_recovers_with_FIRST_newest_CPU_check(self):
++        op,r,sources,_=self.fixture(pre_cpu_fault_once=True)
++        result,error=op.run()
++        self.assertIsInstance(error,OSError)
++        self.assertEqual(r.checkpoints,[(10,"recovery-stopped")])
++        self.assertEqual(r.starts,["before"])
++        self.assertEqual(sources.phase,"before")
++        self.assertFalse(result["manual_recovery_required"])
++        self.assertIn("recovery192_ready",result)
++        self.assertEqual([pid for sig,pid in r.host.events if sig == signal.SIGCONT],[1,2,3])
++
++    def test_started_CPU_without_valid_PASS_proof_is_not_retried_even_without_failed_flag(self):
++        op,r,_,_=self.fixture(incomplete_cpu_proof=True)
++        result,_=op.run()
++        self.assertFalse(r.verification_failed)
++        self.assertEqual(r.checkpoints,[(10,"initial-stopped")])
++        self.assertEqual(r.starts,[])
++        self.assertTrue(result["manual_recovery_required"])
++        self.assertEqual([pid for sig,pid in r.host.events if sig == signal.SIGCONT],[1,2,3])
++
+     def test_failed_pid0_start_can_recover_unchanged_latest_without_none_dereference(self):
+         op, r, sources, _ = self.fixture(pid0_start=True)
+         result, _ = op.run()
+@@ -529,5 +571,103 @@
+                 tool.validate_python_binding(verifier,insurance,hash_executable=False)
+ 
+ 
++class SettingsLifecycleContracts(unittest.TestCase):
++    def fixture(self):
++        temporary=tempfile.TemporaryDirectory();self.addCleanup(temporary.cleanup)
++        root=Path(temporary.name)
++        values=dict(start_advanced=False,start_level_min=1,epsilon_pct=-1,expert_pct=-1,auto_curriculum=False,difficulty=5)
++        path=root/"game_settings.json";path.write_text(json.dumps(values,indent=2));path.chmod(0o664)
++        spec=dict(initial=tool.fingerprint(path),parsed_values=values,policy="same_bytes_after_owned_stop_only")
++        state=tool.SettingsLifecycle(spec,str(root));retired=dict(pid=10,starttime_ticks=1010)
++        return root,path,spec,state,retired
++
++    def replace(self,path,raw,mode=0o664):
++        temporary=path.with_name("game_settings.json.tmp")
++        temporary.write_bytes(raw);temporary.chmod(mode);os.replace(temporary,path)
++
++    def test_atomic_same_byte_shutdown_rewrite_requires_owned_absence_and_durable_receipt(self):
++        root,path,spec,state,retired=self.fixture();raw=path.read_bytes()
++        self.replace(path,raw)
++        with self.assertRaises(RuntimeError):state.check()
++        with self.assertRaisesRegex(RuntimeError,"still live"):
++            state.adopt_after_stop(retired,"before",lambda:(_ for _ in ()).throw(RuntimeError("still live")),lambda _:None)
++        self.assertEqual(state.current,spec["initial"])
++        receipt=state.adopt_after_stop(retired,"before",lambda:None,lambda value:tool.publish(root/"settings-transition.json",value))
++        proof=tool.read_json(receipt)
++        self.assertEqual(proof["replacement"]["sha256"],spec["initial"]["sha256"])
++        self.assertNotEqual(proof["replacement"]["identity"]["inode"],spec["initial"]["identity"]["inode"])
++        self.assertEqual(proof["parsed_values"],spec["parsed_values"])
++        state.check()
++
++    def test_changed_bytes_values_mode_or_link_policy_cannot_be_adopted(self):
++        for kind in ("values","format","mode","nlink"):
++            with self.subTest(kind=kind):
++                root,path,spec,state,retired=self.fixture();raw=path.read_bytes()
++                if kind=="values":
++                    changed=dict(spec["parsed_values"],difficulty=6);raw=json.dumps(changed,indent=2).encode()
++                if kind=="format":raw+=b"\n"
++                self.replace(path,raw,0o644 if kind=="mode" else 0o664)
++                if kind=="nlink":os.link(path,root/"second-link")
++                with self.assertRaisesRegex(RuntimeError,"held bytes/values/mode/owner/link"):
++                    state.adopt_after_stop(retired,"after",lambda:None,lambda value:tool.publish(root/"forbidden.json",value))
++                self.assertEqual(state.current,spec["initial"])
++                self.assertFalse((root/"forbidden.json").exists())
++
++    def test_initial_full_identity_and_exact_parsed_types_are_not_relaxed(self):
++        root,path,spec,state,_=self.fixture()
++        self.replace(path,path.read_bytes())
++        with self.assertRaises(RuntimeError):tool.SettingsLifecycle(spec,str(root))
++        fresh=copy.deepcopy(spec);fresh["initial"]=tool.fingerprint(path);fresh["parsed_values"]["start_advanced"]=0
++        with self.assertRaises(RuntimeError):tool.SettingsLifecycle(fresh,str(root))
++
++    def test_publication_failure_does_not_trust_new_identity_or_authorize_later_writer(self):
++        root,path,spec,state,retired=self.fixture();raw=path.read_bytes();self.replace(path,raw)
++        with self.assertRaises(OSError):
++            state.adopt_after_stop(retired,"before",lambda:None,lambda _:(_ for _ in ()).throw(OSError("fsync/publication failed")))
++        self.assertEqual(state.current,spec["initial"]);self.assertEqual(state.transitions,{})
++        state.adopt_after_stop(retired,"before",lambda:None,lambda value:tool.publish(root/"allowed.json",value))
++        current=copy.deepcopy(state.current);self.replace(path,raw)
++        with self.assertRaises(RuntimeError):state.adopt_after_stop(retired,"before",lambda:None,lambda _:None)
++        self.assertEqual(state.current,current)
++
++    def test_only_settings_identity_transitions_other_static_identity_stays_exact(self):
++        root,path,spec,state,retired=self.fixture();raw=path.read_bytes();self.replace(path,raw)
++        state.adopt_after_stop(retired,"before",lambda:None,lambda value:tool.publish(root/"allowed.json",value))
++        other=root/"untouched.py";other.write_text("# unchanged\n");other_pin=tool.fingerprint(other)
++        runtime=tool.Runtime.__new__(tool.Runtime);runtime.settings=state;runtime.exclusive=lambda:None
++        runtime.job=dict(helper_pins={},static_pins=[other_pin],verifier=dict(script=other_pin),
++            insurance_verification=other_pin,insurance_receipt=other_pin)
++        with patch.object(tool,"validate_python_binding",return_value=None):
++            runtime.static()
++            self.replace(other,other.read_bytes())
++            with self.assertRaisesRegex(RuntimeError,"Pinned file changed"):
++                runtime.static()
++
++    def test_real_retirement_registration_precedes_poststop_check_failure_but_never_adopts_unknown(self):
++        root,path,spec,state,retired=self.fixture()
++        process=dict(pid=10,starttime_ticks=1010,kind="trainer")
++        retired=dict(retired,unit="trainer",cgroup="/owned",invocation_id="a"*32)
++        runtime=tool.Runtime.__new__(tool.Runtime)
++        runtime.settings=state;runtime.retirement_candidate=retired;runtime.retired_owner=None
++        runtime.host=SimpleNamespace(known_trainer=dict(pid=10,identity=process,cgroup="/owned"),retired_trainers=[process])
++        runtime.job=dict(trainer_unit="trainer");runtime.phase="before";runtime.output=root
++        runtime.metrics=SimpleNamespace(block_restore_signals=nullcontext);runtime.absence=lambda:None
++        with patch.object(state,"adopt_after_stop",side_effect=OSError("poststop settings publication failed")):
++            with self.assertRaises(OSError):runtime.confirm_retired()
++        self.assertEqual(runtime.retired_owner,retired)
++        for kind in ("unregistered","unknown","not_absent"):
++            with self.subTest(kind=kind):
++                runtime.retired_owner=None
++                runtime.host.known_trainer=dict(pid=10,identity=process,cgroup="/owned")
++                runtime.host.retired_trainers=[] if kind=="unregistered" else [process]
++                runtime.absence=lambda:None
++                if kind=="unknown":
++                    runtime.host.known_trainer=dict(pid=99,identity=dict(pid=99,starttime_ticks=2020),cgroup="/owned")
++                if kind=="not_absent":
++                    runtime.absence=lambda:(_ for _ in ()).throw(RuntimeError("old process remains"))
++                with self.assertRaises(RuntimeError):runtime.confirm_retired()
++                self.assertIsNone(runtime.retired_owner)
++
++
+ if __name__ == "__main__":
+     unittest.main()

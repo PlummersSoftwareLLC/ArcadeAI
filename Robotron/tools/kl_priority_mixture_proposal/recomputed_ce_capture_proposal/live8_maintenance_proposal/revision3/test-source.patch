@@ -1,0 +1,92 @@
+--- Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision2/test_live8_maintenance.py	2026-10-17 02:43:11.236884653 -0500
++++ Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision3/test_live8_maintenance.py	2026-10-17 02:48:19.959186769 -0500
+@@ -3,6 +3,7 @@
+ import copy
+ import io
+ import json
++import os
+ from pathlib import Path
+ import signal
+ import tempfile
+@@ -452,5 +453,81 @@
+             tool.held_boot_paths(env,root,"/other/models",sources)
+ 
+ 
++class PythonBindingContracts(unittest.TestCase):
++    def fixture(self):
++        temporary=tempfile.TemporaryDirectory();self.addCleanup(temporary.cleanup)
++        root=Path(temporary.name);venv=root/".venv-gb300";(venv/"bin").mkdir(parents=True)
++        target=root/"python3.14t";target.write_bytes(b"\x7fELF-known-fixture");target.chmod(0o755)
++        argv=venv/"bin/python";argv.symlink_to(target)
++        cfg=venv/"pyvenv.cfg";cfg.write_text("include-system-site-packages = false\n")
++        libraries=[]
++        for package in ("torch","numpy"):
++            directory=venv/"lib/python3.14t/site-packages"/package;directory.mkdir(parents=True)
++            for name in ("__init__.py","version.py"):
++                path=directory/name;path.write_text("# pinned library context\n");libraries.append(tool.fingerprint(path))
++        script=root/"verify_maintenance_checkpoint.py";script.write_text("# source only\n")
++        verifier=dict(python=str(argv),script=tool.fingerprint(script))
++        insurance=tool.publish(root/"insurance.json",dict(status="PASS",mode="insurance",job_file=dict(sha256="1"*64)))
++        execution=tool.publish(root/"execution.json",dict(kind="insurance",argv=["systemd-run",str(argv),"-Xgil=0","-I","-B","-u",str(script),"--execute",
++            "--expected-job-sha256","1"*64,"--expected-verifier-sha256",verifier["script"]["sha256"]]))
++        completion=tool.publish(root/"completion.json",dict(original_exec_code=1,original_exit=0,result="success",original_invocation="a"*32,original_pid=123))
++        result=tool.publish(root/"result.json",dict(status="PASS",kind="insurance",original_exec_code=1,original_exit=0,original_result="success",
++            original_invocation="a"*32,original_pid=123,original_archived_before_release=True,numeric_report_sha256=insurance["sha256"]))
++        verifier["python_binding"]=dict(argv_path=str(argv),link_target=os.readlink(argv),link_identity=tool.identity(argv.lstat()),
++            executable=tool.fingerprint(target),pyvenv_cfg=tool.fingerprint(cfg),library_context=libraries,
++            successful_execution=execution,successful_completion=completion,successful_result=result)
++        return root,verifier,insurance
++
++    def test_successful_venv_symlink_argv_is_preserved_without_executing_it(self):
++        _,verifier,insurance=self.fixture()
++        before=copy.deepcopy(verifier)
++        proof=tool.validate_python_binding(verifier,insurance,hash_executable=True)
++        self.assertEqual(proof["argv_path"],verifier["python"])
++        self.assertNotEqual(proof["argv_path"],proof["resolved_executable"])
++        self.assertTrue(proof["venv_preserved"])
++        self.assertEqual(verifier,before)
++
++    def test_link_retarget_or_wrong_resolved_executable_is_fatal(self):
++        root,verifier,insurance=self.fixture()
++        other=root/"other-python";other.write_bytes(b"other");other.chmod(0o755)
++        link=Path(verifier["python"]);link.unlink();link.symlink_to(other)
++        with self.assertRaisesRegex(RuntimeError,"symlink changed"):
++            tool.validate_python_binding(verifier,insurance,hash_executable=True)
++
++    def test_config_or_library_context_drift_is_fatal(self):
++        for kind in ("cfg","library"):
++            with self.subTest(kind=kind):
++                _,verifier,insurance=self.fixture();spec=verifier["python_binding"]
++                path=Path(spec["pyvenv_cfg"]["path"] if kind=="cfg" else spec["library_context"][0]["path"])
++                path.write_text("changed context\n")
++                with self.assertRaises(RuntimeError):
++                    tool.validate_python_binding(verifier,insurance,hash_executable=False)
++
++    def test_failed_original_exit_or_different_successful_argv_cannot_authorize_python(self):
++        for kind in ("exit","argv"):
++            with self.subTest(kind=kind):
++                root,verifier,insurance=self.fixture();spec=verifier["python_binding"]
++                key="successful_result" if kind=="exit" else "successful_execution"
++                data=tool.read_json(spec[key])
++                if kind=="exit":data["original_exit"]=1
++                else:data["argv"][1]=str(root/"global-python")
++                spec[key]=tool.publish(root/(kind+"-changed.json"),data)
++                with self.assertRaises(RuntimeError):
++                    tool.validate_python_binding(verifier,insurance,hash_executable=True)
++
++    def test_frequent_guard_does_not_rehash_executable_but_detects_its_metadata_drift(self):
++        _,verifier,insurance=self.fixture();target=Path(verifier["python_binding"]["executable"]["path"])
++        original=tool.fingerprint
++        def no_binary_read(path,limit=None):
++            if Path(path)==target:raise AssertionError("Per-second ELF rehash")
++            return original(path,limit)
++        with patch.object(tool,"fingerprint",side_effect=no_binary_read):
++            proof=tool.validate_python_binding(verifier,insurance,hash_executable=False)
++            self.assertFalse(proof["executable_hashed"])
++            target.write_bytes(b"changed ELF")
++            with self.assertRaisesRegex(RuntimeError,"executable metadata"):
++                tool.validate_python_binding(verifier,insurance,hash_executable=False)
++
++
+ if __name__ == "__main__":
+     unittest.main()

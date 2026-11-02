@@ -1,0 +1,33 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-R1-owned-launch-original01-preparation/project_owned_R1_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-R1-owned-launch-original01-preparation/project_owned_R1_v2.py
+@@ -17,7 +17,7 @@
+ A=Path(__file__).resolve().parent
+ S=I/'durable-e078b0da-launcher-mmap-study-original01'
+ ORDER=['R1','C1','R2','C2']
+-UNIT='robotron-e078-original-R1-passive-display-original01-20261029.service'
++UNIT='robotron-e078-original-R1-passive-display-original02-20261029.service'
+ MANIFEST_SHA='53cadb2588874e143bf4385bd1d446fa83d31eb6784b371aacd634ec37c7bfe3'
+ 
+ 
+@@ -68,10 +68,10 @@
+         RuntimeMaxUSec='1h 21min',TimeoutStopUSec='10s',SendSIGKILL='no')
+     require(expected['InvocationID']and all(fields.get(k)==v for k,v in expected.items()),'Exact durable passive display scope required')
+     active=(read(G/'logs/managed-learning-20261015/state.json')or{}).get('active_quality_job')or{}
+-    require(active.get('directory')==str(S)and int(active.get('current_leg',1))==1,
++    require(active.get('directory')==str(S)and active.get('current_leg',1)in(1,'R1'),
+         'Root must register this original R1 before display publication')
+     epath=G/'html/next-policy-evaluation.json'
+-    backup=A/'next-policy-evaluation-before-original-R1.exact.json'
++    backup=A/'next-policy-evaluation-before-original-R1-display02.exact.json'
+     with backup.open('xb')as f:
+         f.write(epath.read_bytes());f.flush();os.fchmod(f.fileno(),0o444);os.fsync(f.fileno())
+     legs=[dict(index=k+1,role='reference'if leg.startswith('R')else'candidate',
+@@ -86,7 +86,7 @@
+     previous=None
+     while True:
+         active=(read(G/'logs/managed-learning-20261015/state.json')or{}).get('active_quality_job')or{}
+-        if active.get('directory')!=str(S)or int(active.get('current_leg',1))!=1:return 0
++        if active.get('directory')!=str(S)or active.get('current_leg',1)not in(1,'R1'):return 0
+         intent=read(A/'original-R1-wrapper-intent.json')
+         terminal=read(A/'original-R1-wrapper-terminal.json')
+         owner=read(A/'actual-original-R1-live-owner.json')

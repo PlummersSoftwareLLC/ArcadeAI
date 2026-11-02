@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/LR9375-vs-frozenS2-fixedcutoff-screen-original01-20261031/future-Root-complete-pair-summary-source-only-original01/collect_closed_LR9375_pair_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/LR9375-vs-frozenS2-fixedcutoff-screen-original01-20261031/future-Root-complete-pair-summary-source-only-original01/collect_closed_LR9375_pair_R1bound_v2.py
+@@ -20,7 +20,7 @@
+ 
+ CASE = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/LR9375-vs-frozenS2-fixedcutoff-screen-original01-20261031')
+ PREPARED_SHA = '3722a9834fb33ad5cbf8ab151a5d8e4d3972bdbb606e0af2b97f96e0d0b59cc3'
+-REFERENCE_SUMMARY_SHA = 'ROOT_PENDING_FINAL_F_R1_SUMMARY_SHA256'
++REFERENCE_SUMMARY_SHA = '1ea64d67e0bc676954caba8018319321c14ef12d285e1e4e57957000fdeb5dd1'
+ NATIVE_SHA = '8c8b95fb12c2d12cc118c708bc2a379459ef3a7128b88b9330e974064e2b5fb3'
+ LUA_SHA = 'a631f02980b2e7cdddd2fc15066b74ee5d5ebfac3de90a40a5833b0a5d48b66d'
+ CONTROLLER_SHA = '81d4f779d299ba4160c3ae8d74f8a0582cf90f3fd9638b9528c3164e8b61e094'

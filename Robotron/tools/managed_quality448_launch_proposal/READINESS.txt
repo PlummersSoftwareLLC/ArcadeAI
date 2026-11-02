@@ -1,0 +1,54 @@
+FRESH448 EXCLUSIVE READINESS — REQUIRED ACTUAL ROOT RECEIPT, NOT A TEMPLATE PASS
+
+schema: robotron-quality448-exclusive-readiness-v1
+status: PASS
+observed_unix_s: actual observation time, age0..179.999s at launch (not filemtime)
+candidate: {source: ABSfresh3-448M.pt,sha256: ACTUAL,bytes: ACTUAL,
+            root_job_sha256: ACTUAL,cpu_proof_sha256: ACTUAL}
+main_owner: {pid:4140916,starttime_ticks:31570251,
+             invocation_id:cf4f26d3c5b84d9ab1302ded3a073519}
+fleet_owner: {pid:2258189,starttime_ticks:26614335,
+             invocation_id:5ade9b2810524877921946df11ea597e}
+inference_worker: {tid:4142023,starttime_ticks:31574570,mask:[0..71]}
+actors: exact192 {pid,starttime_ticks,slot,mask} from health27cbecb4, all masks0..71
+source_hashes: exact60 map from that held baseline
+control_hashes: exact2 map from that held baseline
+unit_files: nonempty current ABSfile->SHA closure, hash-checked again at launch
+environment_sha256: sha256(json.dumps(selected,sort_keys=True).encode()) where
+  selected is current /proc/4140916/environ keys starting DQN_,ROBOTRON_,CUDA_,
+  TORCHINDUCTOR_. This is exec-time environment evidence, not a probe of later
+  Python runtime environment. Actual GPU UUID ownership is checked separately.
+resources:
+  gpu0_uuid: GPU-b549355c-78bb-53d8-04a6-da34d45e1dd0
+  gpu1_uuid: GPU-c0c5d295-6f07-aab5-bbde-b592ea426ec1
+  GPU0_free_bytes: actual >=15032385536 (14GiB)
+  All following values must be actual true observations:
+  GPU0_no_compute_owner, GPU1_main_only, port9999_clear, lease_free,
+  no_competing_helpers, no_private_cgroup_tmpfs_processes, no_pending_save,
+  capture_and_CPU_units_released, commands_UID_cwd_exe_checked,
+  held_environment_checked, unit_files_checked.
+
+Root collector must bind actual trainer/fleet/192 original immutable process
+identities+UID/argv/cwd/exe, original masks and inference membership/start;
+full held recipe/API192 and advancing clocks;60 source/control2 hashes;
+current unit source closure and relevant env; actual GPU0free/no owner and GPU1
+only4140916; passive kernel9999 table clear (no connection/fake handshake);
+lease available, no leftover owned private cgroup/tmpfs process, competing
+performance/quality/forensic/checkpoint CPU jobs or scheduling carrier; no pending
+model-save. Completed448 watcher+CPU unit original exits must already be
+archived/released. No completed384 rearm or new model capture is needed.
+
+The carrier machine-checks exact declared candidate/job/CPU bindings, observed
+freshness, owners/thread/192/maps and all resource flags, then rechecks sources,
+unit hashes, main/fleet/actor start+masks, owned inference task start, selected
+env SHA, passive9999, lease, GPU actual owners/free and held API. The independent
+root collector supplies the broader UID/argv/private-resource inventory; its
+assertions must be backed by its saved source/raw observations. Booleans are
+not permission to invent checks or turn unknowns into success.
+
+Frozen source/boot closure: actual preview must equal old384 common12+4 hashes
+and exact sidecar-boot-assets-v1 snapshot, including3 original asset hashes.
+All16 initialized private48 boot files are checked by actual evaluator/startup
+and final original-row audits; prelaunch is not proof those future files exist.
+Full60 live source set includes dormant capture observer; no new ninth attempt
+or production recipe/source change belongs in this quality window.

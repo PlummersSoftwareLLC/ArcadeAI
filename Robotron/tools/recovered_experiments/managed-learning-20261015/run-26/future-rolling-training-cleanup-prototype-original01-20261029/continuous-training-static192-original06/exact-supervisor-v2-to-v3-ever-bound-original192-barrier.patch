@@ -1,0 +1,82 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/continuous_training_fleet_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/continuous_training_fleet_v3.py
+@@ -337,6 +337,39 @@
+             require(row['faults']<self.cfg['max_faults'],'Original slot repeatedly failed; quarantine')
+         return True
+ 
++    def barrier_partition(self,connections):
++        """Root-selected EVER-BOUND originals; never a simultaneous192 claim."""
++        if (self.initial_bound!=set(range(192))or self.errors
++                or set(self.records)!=set(range(192))):return None
++        live=set();closed=set()
++        for slot,row in self.records.items():
++            child=self.children[slot]['child']
++            if (row['incarnation']!=1 or row['faults']!=0
++                    or row['prior_fault_closure']is not None
++                    or row['quarantine_reason']is not None
++                    or row['connection_binding']is None):return None
++            if row['state']==('active_eval'if row['eval_only']else'active_train'):
++                if (child.poll()is not None or row['natural_result']is not None
++                        or row['closure']is not None):return None
++                live.add(slot)
++            elif row['eval_only']and row['state']=='closed_eval':
++                if child.poll()!=0 or row['natural_result']is None or row['closure']is None:return None
++                closure=read(row['closure'])['data']
++                if (closure['actual_exit']!=0 or closure['original_wait_reaped']is not True
++                        or closure['original_birth_absent']is not True
++                        or closure['natural_result']!=row['natural_result']
++                        or closure['restart_censored']is not False):return None
++                closed.add(slot)
++            else:return None  # Retiring EVAL must finish its positive closure.
++        if (len(live)<155 or len(closed)>37 or len(live)+len(closed)!=192
++                or len(connections)!=len(live)
++                or {c['client_slot']for c in connections}!=live
++                or len({c['token']for c in connections})!=len(live)
++                or any(c['token']!=self.children[c['client_slot']]['token']
++                       or c['eval_only']is not self.roles[str(c['client_slot'])]
++                       for c in connections)):return None
++        return dict(live_slots=sorted(live),closed_eval_slots=sorted(closed))
++
+     def snapshot(self):
+         counts={state:sum(r['state']==state for r in self.records.values())for state in
+             ('starting','active_train','active_eval','retiring_eval','closed_eval','fault_cleanup','quarantined')}
+@@ -370,8 +403,8 @@
+             require(initial['connections']==[],'Initial supervisor requires zero old/unowned connections')
+             # Observe each actual child promptly. A batch of192 HTTP/unit/fsync
+             # launches before the first bind could consume its exact5s bound.
+-            # Scientific selection still waits for the complete simultaneous
+-            # original192 connection roster and positive physical barrier.
++            # Scientific selection waits for all192 original live anchors and
++            # the current155TRAIN/remaining-active-EVAL plus closed-EVAL proof.
+             next_initial=0
+             while not self.stopping:
+                 try:
+@@ -410,15 +443,8 @@
+                     except Exception as error:
+                         row['state']='quarantined';row['quarantine_reason']=repr(error)
+                         self.errors.append(f'slot{slot}: {error}')
+-                if (self.barrier is None and self.initial_bound==set(range(192))and not self.errors
+-                        and len(batch['connections'])==192
+-                        and {c['client_slot']for c in batch['connections']}==set(range(192))
+-                        and len({c['token']for c in batch['connections']})==192
+-                        and all(r['incarnation']==1 and r['faults']==0
+-                            and r['state']in('active_train','active_eval')
+-                            and r['natural_result']is r['closure']is None
+-                            and self.children[slot]['child'].poll()is None
+-                            for slot,r in self.records.items())):
++                partition=None if self.barrier is not None else self.barrier_partition(batch['connections'])
++                if partition is not None:
+                     self.original_slots={str(slot):{k:row[k]for k in ORIGINAL_FIELDS}
+                                          for slot,row in self.records.items()}
+                     # Freeze a JSON copy; later operational fault bookkeeping
+@@ -429,7 +455,9 @@
+                     self.barrier=self.event('initial-all192-barrier',None,0,dict(
+                         slots=sorted(self.initial_bound),slot_eval=self.roles,physical_connections={
+                             str(k):r['connection_binding']for k,r in self.records.items()},
+-                        original_membership=self.original_membership))
++                        original_membership=self.original_membership,
++                        admission_basis='EVER_BOUND_ORIGINAL192_NOT_SIMULTANEOUS',
++                        live_slots=partition['live_slots'],closed_eval_slots=partition['closed_eval_slots']))
+                 if (next_initial<192 and not self.errors and not self.stopping
+                         and all(r['connection_binding']is not None for r in self.records.values())):
+                     batch_started=time.monotonic()

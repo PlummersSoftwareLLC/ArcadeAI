@@ -1,0 +1,107 @@
+PROCESS DISCOVERY REVISION — SOURCE-ONLY PREPARATION
+
+This is a new, unapplied sibling bundle. The original CUDA bundle and sealed
+storage_watcher_revision (parent077420acc0d643f345225c66b0e8430d7f30f49b45a80c136153be57916ea470,
+manifest5572396f25c0ee64943f75c4bc65cc994c02be2ddb18f2b897ea95893803176d)
+remain unchanged. original-storage-source-archive contains their seven exact
+source/metadata files, including the original reviewed storage tests and diff.
+
+Observed failure and scope
+--------------------------
+The actual storage-reviewed2 parent3479610/start29814424, invocation
+bed1d82d91f84dfb8834408c02a44ea7 failed in the inherited pinned helper's
+scan_quality_processes: initial /proc/PID/cmdline read raised ESRCH before
+classification. The BASE worker completed8 attempts (3 applied,5 skipped);
+OFF was terminated before an attempt and ON never ran. This is not a parity
+result and there is no result rescue, scientific retry policy or performance
+claim in this preparation.
+
+Independent operational evidence is retained at:
+Robotron/logs/managed-learning-20261015/run-26/
+  cuda-trace-parity-storage-reviewed2-independent-runtime-review-20261017/
+    terminal-cleanup-review.json
+      SHA2566c9daf13c166a08cad1bc44eea9f47cac9e499431061b553e6594f7e6e787eaf
+    unit-GC-scope-addendum.json
+      SHA256d21fc590a54aa0d3720df2695db3c594a4b60fde2f6fbdd7e96ea0e562a861a8
+The original failed service exit is root's separately retained evidence.
+Collected not-found/default-success fields after unit release are not exit
+proof. Parent/known children, owned cgroup/tmpfs and lease cleanup passed the
+independent operational checks; no tensor loading was part of that review.
+
+Exact correction
+----------------
+The new parent replaces only the helper module's process scanner function
+after loading verified original helper bytes. It does not edit that helper.
+Only ENOENT or ESRCH from the initial, unclassified cmdline open/read skips
+that candidate. The exact allowed-PID bypass and all-argv/module/benchmark
+predicate are retained. Directory enumeration, decoding, permission and other
+I/O failures remain fatal. Once argv matches a blocked process, every failure
+to establish identity remains fatal with PID context and the original cause.
+
+Each loaded helper instance keeps only three bounded fields: cumulative
+unclassified_cmdline_disappearances, last_pid, last_errno. A changed count is
+logged once after that process's resource-guard call, including if a later
+check fails. Logs include process_id and scope. Parent and workers load
+SEPARATE helper instances; their counts are process-local and are not a
+combined global total. Parent snapshots appear under the explicitly named
+parent_process_scan_observations key in the initial launch manifest, each
+owned child-exit, failure and successful aggregate receipt. Unchanged worker
+code reports its own counter changes in worker.log, not in phase-result.json.
+
+No number, budget, deadline, checkpoint, scaler, warmup, RNG, input, comparison,
+tolerance, source-lock or worker byte changes are included. The full reviewed
+storage watcher, strict final scan, token/identity/cgroup/PDEATH/signal cleanup
+and GPU ownership guards are retained. Only this parent's hash changes in a
+future launch manifest. HERE has the same depth as storage_watcher_revision;
+GAME remains HERE.parents[3]. Default invocation still prints a literal plan
+without importing helpers, reading sources/model data, querying runtime,
+creating output or launching a child.
+
+Prepared validation (NOT EXECUTED BY AUTHOR)
+-----------------------------------------
+test_process_scan.py contains18 stdlib/private-proc methods. They inject ESRCH
+at both cmdline open and subsequent read, actual ENOENT, preserve detection of
+another blocked process, and reject classified identity loss, permissions,
+EIO/ESTALE, enumeration and decode failures. They verify exact PID bypass,
+all-argv predicates, bounded counters, dynamic helper wiring, failure-time
+logging, unchanged storage/lifecycle AST, fixed bounds, sibling worker/lock
+hashes and literal default. All mocked proc paths are temporary private paths.
+
+test_storage_watcher.py is the exact25-test ca16a7f3... source copy, now bound
+by its relative import to the NEW parent. Its prior actual25 PASS belongs to
+the sealed storage revision; no new-bundle execution result is claimed here.
+
+Root and learning_review source-read parent38fab419...; learning_review also
+source-read new tests35b28282... and reported no remaining source blocker.
+These are SOURCE-ONLY reviews, not import/compile/test or runtime validation.
+
+Only after root authorizes a private CPU unit, the exact43-method command is:
+env -u LD_PRELOAD -u PYTHONPATH CUDA_VISIBLE_DEVICES='' PYTHONDONTWRITEBYTECODE=1 \
+  python3 -B -m unittest \
+  Robotron.tools.kl_priority_mixture_proposal.cuda_trace_validation_proposal.process_scan_revision.test_process_scan \
+  Robotron.tools.kl_priority_mixture_proposal.cuda_trace_validation_proposal.process_scan_revision.test_storage_watcher
+The command above has NOT been executed by this author or source peer.
+
+Future root-owned launch, only after actual CPU tests and fresh exclusive
+preflight review: use this sibling cuda_trace_parent.py --directory NEW_ABSOLUTE
+--launch; sibling worker and source-lock remain byte-identical ba0039d4... and
+d6ffdaae.... A distinct output/service/invocation is required. The previous
+BASE result is never reused. Root must pause only its verified waiting384M
+gate immediately before exclusive preflight, retain cancellation/deadline
+provenance, and rearm the same target/label/original deadline after cleanup.
+No gate stop/rearm or live launch is authorized by this document.
+
+Use the existing reviewed detached3s timer pattern, not a foreground --wait
+client (the unchanged all-argv guard would correctly see its parent filename).
+Retain the actual service with RemainAfterExit=yes, omit --collect, archive
+original invocation, PID identity, ExecMainCode/Status/Result and journal before
+explicit owned terminal-unit release. A successful active(exited) service is
+terminal, not an active controller. Check owned cleanup and GPU0 exclusivity
+before release/rearm. Do not mistake collected/default fields for original
+exit evidence. Root owns the concrete fresh command and decision.
+
+All source/metadata bytes are frozen before final handoff. revision-manifest
+pins this note and every executable/test/diff/archive byte. Any later actual
+test evidence must be saved separately rather than rewriting this preparation
+or its manifest. No author imports, tests, live queries, model data reads,
+services, signals, affinity or GPU actions were used in this revision work.

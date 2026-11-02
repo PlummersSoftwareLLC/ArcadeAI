@@ -1,0 +1,9 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/LR625-postdose-vs-frozenS2-fixedcutoff-screen-original01-20261031/selected-source/Root-observe-original-screen-and-learning-totals-v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/later-LR625-vs-frozenS2-fixedcutoff-screen-original01-20261031/selected-source/Root-observe-original-screen-and-learning-totals-v5.py
+@@ -1,5 +1,5 @@
+ import pathlib,json,time,urllib.request,csv,datetime,zoneinfo,hashlib
+-b=pathlib.Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26');j=b/'LR625-postdose-vs-frozenS2-fixedcutoff-screen-original01-20261031';m=b/'fleet-only-v6-overlap-handoff-original01-20261031';out=j/'Root-controller-runtime-original01'
++b=pathlib.Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26');j=b/'later-LR625-vs-frozenS2-fixedcutoff-screen-original01-20261031';m=b/'fleet-only-v6-overlap-handoff-original01-20261031';out=j/'Root-controller-runtime-original01'
+ def birth(pid):
+  try:return int(pathlib.Path('/proc',str(pid),'stat').read_text().rsplit(')',1)[1].split()[19])
+  except FileNotFoundError:return None

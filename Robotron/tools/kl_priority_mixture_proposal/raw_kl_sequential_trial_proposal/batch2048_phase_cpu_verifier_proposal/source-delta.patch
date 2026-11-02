@@ -1,0 +1,172 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/strict_phase_base.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_proposal/strict_phase_base_2048.py
+@@ -27,7 +27,7 @@
+ MODEL_NAMES = ('model.py', 'config.py', 'learning_control.py', '__init__.py')
+ CLOCKS = ('training_steps', 'optimized_samples', 'learner_frame_count', 'frame_count')
+ EXPECTED = dict(engine_version=28, state_size=11128, single_frame_state_size=2782, frame_stack=4)
+-HELD_RECIPE_CONTEXT = dict(batch_size=4096, baseline_batch_size=512, epsilon=.1, expert_ratio=.1,
++HELD_RECIPE_CONTEXT = dict(batch_size=2048, baseline_batch_size=512, epsilon=.1, expert_ratio=.1,
+     n_step=3, max_samples_per_frame=8, c51_target_smoothing=0, learning_control_lr_scale=.5,
+     lr_gear='climb', lr_anchor_step=0., optimizer_lr=2.5e-5, optimizer_eps=1.5e-4,
+     fused=True, gamma=.995, num_atoms=51, v_min=-10., v_max=50.)
+@@ -312,7 +312,7 @@
+     os.environ.update(CUDA_VISIBLE_DEVICES='', OMP_NUM_THREADS='2', MKL_NUM_THREADS='2',
+                       OPENBLAS_NUM_THREADS='2', NUMEXPR_NUM_THREADS='2',
+                       PYTHONDONTWRITEBYTECODE='1', DQN_FRAME_STACK='4',
+-                      DQN_BATCH_SIZE='4096', DQN_N_STEP='3', DQN_MAX_SAMPLES_PER_FRAME='8',
++                      DQN_BATCH_SIZE='2048', DQN_N_STEP='3', DQN_MAX_SAMPLES_PER_FRAME='8',
+                       DQN_C51_TARGET_SMOOTHING='0', DQN_FUSED_ADAM='1',
+                       ROBOTRON_DQN_MODEL_DIR=str(runtime / 'models'),
+                       ROBOTRON_DQN_CONTROL_PATH=str(runtime / 'control.json'),
+@@ -492,6 +492,7 @@
+     if not args.execute:
+         print('PLAN_ONLY: explicit root job required; no job/checkpoint/context reads, imports or output mutation')
+         return 0
++    raise RuntimeError('Private2048 numerical base: use the profile-bound phase entrypoint')
+     evidence = None
+     try:
+         require(os.environ.get('CUDA_VISIBLE_DEVICES') == '' and 'LD_PRELOAD' not in os.environ
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/verify_phase_snapshot.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_proposal/verify_phase_snapshot_2048.py
+@@ -1,6 +1,9 @@
+ #!/usr/bin/env python3
+ """One root-bound phase snapshot; default prints a literal PLAN without reads."""
+ import argparse
++import csv
++import io
++import shlex
+ import copy
+ import hashlib
+ import json
+@@ -16,12 +19,17 @@
+ HERE = Path(__file__).parent
+ ORIGINAL_PATH = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-maintenance-checkpoint-CPU-verifier-proposal-20261017/verify_maintenance_checkpoint.py')
+ ORIGINAL_SHA256 = '7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead'
+-STRICT_PATH = HERE / 'strict_phase_base.py'
+-STRICT_SHA256 = '9ef38e17e1b9eee3f6c43e40005812f2ebe3cff16d08bf61d3e820c2d41134c8'
+-SCHEMA = 'robotron-phase-snapshot-checkpoint-CPU-job-v1'
+-RESULT_SCHEMA = 'robotron-phase-snapshot-checkpoint-CPU-result-v1'
++STRICT_PATH = HERE / 'strict_phase_base_2048.py'
++STRICT_SHA256 = '47677509f170c4c3b6a1c03918e02ab13996af1ceafffac29b7536c2fad61f80'
++SCHEMA = 'robotron-batch2048-phase-snapshot-checkpoint-CPU-job-v1'
++RESULT_SCHEMA = 'robotron-batch2048-phase-snapshot-checkpoint-CPU-result-v1'
+ ACQUISITION_SCHEMA = 'robotron-owned-phase-snapshot-acquisition-v1'
+ PHASE_SCHEMA = 'robotron-priority-metric-phase-v1'
++PROFILE_PATH = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json')
++PROFILE_SHA256 = 'e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50'
++PROFILE_BYTES = 764
++PROFILE_SCHEMA = 'robotron-ce-batch2048-efficacy-profile-v1'
++BASE_4096_SHA256 = '9ef38e17e1b9eee3f6c43e40005812f2ebe3cff16d08bf61d3e820c2d41134c8'
+ CLOCKS = ('training_steps', 'optimized_samples', 'learner_frame_count', 'frame_count')
+ SOURCE_NAMES = ('__init__.py', 'model.py', 'config.py', 'learning_control.py',
+                 'agent.py', 'training.py', 'loss_kernel.py', 'priority_phase.py')
+@@ -59,11 +67,16 @@
+     require(hashlib.sha256(original).hexdigest() == ORIGINAL_SHA256, 'Original strict verifier changed')
+     data = STRICT_PATH.read_bytes()
+     require(hashlib.sha256(data).hexdigest() == STRICT_SHA256, 'Phase strict helper changed')
++    normalized = data.replace(b'HELD_RECIPE_CONTEXT = dict(batch_size=2048', b'HELD_RECIPE_CONTEXT = dict(batch_size=4096').replace(
++        b"DQN_BATCH_SIZE='2048'", b"DQN_BATCH_SIZE='4096'").replace(
++        b"    raise RuntimeError('Private2048 numerical base: use the profile-bound phase entrypoint')\n", b'')
++    require(hashlib.sha256(normalized).hexdigest() == BASE_4096_SHA256, 'Only exact batch/private-entry changes allowed')
++    data4096 = normalized
+     old = b'def validate_checkpoint(path, floor, evidence):'
+     new = b'def validate_checkpoint(path, floor, evidence, *, metadata_callback=None):'
+     hook = b'    if metadata_callback is not None:\n        metadata_callback(checkpoint, evidence)\n'
+     require(data.count(new) == 1 and data.count(hook) == 1 and
+-            data.replace(new, old).replace(hook, b'') == original,
++            data4096.replace(new, old).replace(hook, b'') == original,
+             'Only the optional signature/end-metadata callback may differ')
+     module = types.ModuleType('_phase_snapshot_strict_body')
+     module.__file__ = str(STRICT_PATH)
+@@ -93,7 +106,7 @@
+     require(base.fingerprint(path) == pin, 'Root job changed while parsing')
+     fields = {'schema', 'verifier_sha256', 'strict_phase_base_sha256', 'original_strict_base_sha256',
+               'experiment', 'source', 'verification_copy', 'clock_floor', 'source_control_context',
+-              'output_directory', 'phase_snapshot'}
++              'output_directory', 'phase_snapshot', 'batch2048_context'}
+     require(isinstance(job, dict) and set(job) == fields and job['schema'] == SCHEMA and
+             job['verifier_sha256'] == source['sha256'] and job['strict_phase_base_sha256'] == STRICT_SHA256 and
+             job['original_strict_base_sha256'] == ORIGINAL_SHA256, 'Phase root job/source schema differs')
+@@ -103,6 +116,74 @@
+     require(not output.exists() and output.parent.is_dir() and output.parent.stat().st_uid == os.getuid(),
+             'Output must be NEW under owned parent')
+     return job, pin, source, output
++
++
++def check_batch2048_context(job, base, evidence):
++    context = job['batch2048_context']
++    require(isinstance(context, dict) and set(context) == {'profile', 'role', 'producer_observation'}, 'Exact2048 profile/producer bindings required')
++    pin = context['profile']
++    require(pin['path'] == str(PROFILE_PATH) and pin['sha256'] == PROFILE_SHA256 and pin['bytes'] == PROFILE_BYTES,
++            'Only the exact reviewed2048 profile is accepted')
++    profile = immutable(pin, base, evidence, 'batch2048/profile', as_json=True)
++    require(profile['schema'] == PROFILE_SCHEMA and profile['profile_id'] == 'ce_batch2048_efficacy_screen_v1'
++            and profile['batch_size'] == 2048 and profile['before_batch_size'] == profile['return_batch_size'] == 4096
++            and profile['priority_metric'] == 'ce' and profile['LR_compensation'] is False
++            and profile['deliberate_recipe_changes'] == ['DQN_BATCH_SIZE']
++            and profile['held_recipe_context'] == base.HELD_RECIPE_CONTEXT, 'Exact2048 held recipe differs')
++    roles = {'treatment_startup': 'startup', 'early_insurance': 'candidate', 'candidate': 'candidate', 'newest_stopped': 'newest_stopped'}
++    role = context['role']; spec = job['phase_snapshot']
++    require(role in roles and spec['purpose'] == roles[role], 'Explicit producer role/acquisition purpose differs')
++    if role == 'treatment_startup':require(spec['observed_clients'] == 0, 'Treatment startup must be genuine client0')
++    if role == 'early_insurance':require(spec['observed_clients'] == 192, 'Early insurance must be genuine client192')
++    observation = immutable(context['producer_observation'], base, evidence, 'batch2048/producer', as_json=True)
++    fields = {'schema', 'experiment', 'profile_sha256', 'owner', 'source_checkpoint', 'acquisition_sha256',
++              'environment', 'trainer_unit', 'csv', 'csv_scope', 'csv_origin', 'producer_started_unix_s', 'observed_unix_s'}
++    require(isinstance(observation, dict) and set(observation) == fields
++            and observation['schema'] == 'robotron-root-batch2048-producer-observation-v1'
++            and observation['profile_sha256'] == PROFILE_SHA256 and observation['experiment'] == job['experiment']
++            and base.trainer_identity(observation['owner']) == job['phase_snapshot']['owner']
++            and observation['source_checkpoint'] == {k:job['source'][k] for k in ('path', 'sha256', 'bytes')}
++            and observation['acquisition_sha256'] == job['phase_snapshot']['acquisition']['sha256']
++            and job['phase_snapshot']['expected_phase']['metric'] == 'ce', 'Actual2048 producer/CE/acquisition/checkpoint join differs')
++    environment = immutable(observation['environment'], base, evidence, 'batch2048/environment', as_json=True)
++    require(isinstance(environment, dict) and environment.get('DQN_BATCH_SIZE') == '2048'
++            and environment.get('DQN_PER_PRIORITY_METRIC') == 'ce', 'Actual producer selected environment differs')
++    unit = immutable(observation['trainer_unit'], base, evidence, 'batch2048/trainer_unit', as_json=True)
++    owner = observation['owner']
++    require(unit['argv'] == ['systemctl', '--user', 'show', owner['unit'], '--all'] and unit['returncode'] == 0,
++            'Exact successful original producer unit show required')
++    shown = dict(line.split('=', 1) for line in unit['stdout'].splitlines() if '=' in line)
++    require(shown.get('MainPID') == shown.get('ExecMainPID') == str(owner['pid'])
++            and shown.get('InvocationID') == owner['invocation_id'] and shown.get('NRestarts') == '0'
++            and shown.get('Restart') == 'no' and shown.get('ControlGroup') == owner['cgroup'], 'Actual producer unit owner differs')
++    unit_env = dict(part.split('=', 1) for part in shlex.split(shown.get('Environment', '')) if '=' in part)
++    require(unit_env.get('DQN_BATCH_SIZE') == '2048' and unit_env.get('DQN_PER_PRIORITY_METRIC') == 'ce',
++            'Dedicated producer unit2048/CE environment missing')
++    immutable(observation['csv'], base, evidence, 'batch2048/csv')
++    rows = list(csv.DictReader(io.StringIO(Path(observation['csv']['path']).read_text())))
++    require(len(rows) == 1, 'One genuine archived CSV header/row required')
++    times = [observation[k] for k in ('producer_started_unix_s', 'observed_unix_s')]
++    require(all(type(v) in (int, float) and math.isfinite(v) and v > 0 for v in times) and times[0] <= times[1], 'Producer observation chronology differs')
++    verified = observation['csv_scope'] == 'producer2048'
++    if verified:
++        require(rows[0].get('batch_size') == '2048' and observation['csv_origin'] is None, 'Actual producer CSV2048 required')
++    else:
++        require(role == 'treatment_startup' and spec['purpose'] == 'startup' and spec['observed_clients'] == 0
++                and observation['csv_scope'] == 'pretransition_baseline4096' and rows[0].get('batch_size') == '4096',
++                'Only explicit treatment startup client0 may retain baseline CSV4096')
++        origin = immutable(observation['csv_origin'], base, evidence, 'batch2048/pretransition_csv_origin', as_json=True)
++        require(set(origin) == {'schema', 'scope', 'profile_sha256', 'owner', 'csv', 'captured_unix_s', 'transition_started_unix_s'}
++                and origin['schema'] == 'robotron-root-pretransition-batch2048-CSV-v1' and origin['scope'] == 'pretransition_baseline4096'
++                and origin['profile_sha256'] == PROFILE_SHA256 and origin['csv'] == observation['csv']
++                and base.trainer_identity(origin['owner']) != owner, 'Genuine existing pretransition CSV PIN/scope required')
++        before = [origin[k] for k in ('captured_unix_s', 'transition_started_unix_s')]
++        require(all(type(v) in (int, float) and math.isfinite(v) and v > 0 for v in before)
++                and before[0] <= before[1] < times[0] <= times[1]
++                and type(origin['csv']['identity'].get('mtime_ns')) is int
++                and origin['csv']['identity']['mtime_ns'] / 1e9 <= before[0], 'Pretransition CSV archive/start chronology differs')
++    evidence.update(batch2048_profile=profile, batch2048_producer=observation, configured_batch_size=2048,
++        producer_CSV_verified=verified, observed_CSV_batch_size=int(rows[0]['batch_size']), actual_producer_batch_size=2048 if verified else None,
++        producer_batch_scope='Root-pinned configured2048/CE environment+unit. A labeled treatment-startup baseline4096 CSV is not2048 producer evidence; all later roles require actual2048 CSV. Saved baseline512/boot profile never selects active batch.')
+ 
+ 
+ def historical_archive(pair, actual_path, base, evidence, label):
+@@ -255,6 +336,7 @@
+         require(base_pin['sha256'] == STRICT_SHA256 and original_pin['sha256'] == ORIGINAL_SHA256, 'Strict source changed')
+         evidence.update(strict_phase_base=base_pin, original_strict_base=original_pin)
+         model_dir = base.check_context(job, evidence)
++        check_batch2048_context(job, base, evidence)
+         spec, boot, record = check_acquisition(job, base, evidence, model_dir)
+         copied = base.check_root_copy(job, evidence)
+         base.validate_checkpoint(copied, job['clock_floor'], evidence, metadata_callback=lambda checkpoint, ev:

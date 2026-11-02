@@ -1,0 +1,317 @@
+{
+  "schema": "robotron-offline-amp-backward-diagnostic-proposal-v1",
+  "status": "DESIGN_ONLY_NOT_IMPLEMENTED_TESTED_OR_LAUNCHED",
+  "scope": "Frozen OLD reviewed2 forensics; not current merged snapshot qualification",
+  "seed": 20261016,
+  "case_order": [
+    {
+      "name": "fp16_amp_default",
+      "autocast": "float16",
+      "initial_scale": 65536
+    },
+    {
+      "name": "fp16_amp_scale1",
+      "autocast": "float16",
+      "initial_scale": 1,
+      "diagnostic_control_only": true
+    },
+    {
+      "name": "fp32_unscaled",
+      "autocast": false,
+      "initial_scale": null
+    }
+  ],
+  "backward_calls_per_case": 1,
+  "optimizer_steps_allowed": 0,
+  "scaler_steps_allowed": 0,
+  "scaler_updates_allowed": 0,
+  "retries_allowed": 0,
+  "old_failure_receipt": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/review-receipt.json",
+    "sha256": "c79fc4bc406a195def5a2b6a9663dfc30b5ed1cf7f24dc57dafc9e22d9b9d582"
+  },
+  "old_launch_manifest": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/launch-manifest.json",
+    "sha256": "1e637fe5b70d8ee54b336e7f64a18faacd8dba79d832851f76c00a45373a23fc"
+  },
+  "source_root": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn",
+  "source_files": {
+    "__init__.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/__init__.py",
+      "sha256": "a2b3412fc502b7631295d639092e320d73f848895b994edc16bf9eebf8b5054c",
+      "bytes": 219
+    },
+    "actor_tags.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/actor_tags.py",
+      "sha256": "fc5b868a7fb68d4ab7ba65ba872ea0e845759af6143edfe648239d57cb7f1591",
+      "bytes": 153
+    },
+    "agent.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/agent.py",
+      "sha256": "8ce1adaf02ad53981732a405de3ae36fec3c7ee16a72fc9820d094a5b0635b7c",
+      "bytes": 94563
+    },
+    "bank_output.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/bank_output.py",
+      "sha256": "85a161a445dc44e8bb0ef225a5630b485ff0c4d4874f9d04367544ab744caa9d",
+      "bytes": 9104
+    },
+    "config.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/config.py",
+      "sha256": "f2794754a14e9f13c82b613aa131698246a08dc9021c18f1b78fda7c4b484498",
+      "bytes": 116996
+    },
+    "dashboard_history.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/dashboard_history.py",
+      "sha256": "5dd229f7a0119d00a901ee6e570b53716b830ad0ed71929ed53a019f74e0b6cb",
+      "bytes": 2673
+    },
+    "exact_inference_graphs.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/exact_inference_graphs.py",
+      "sha256": "222d5b8ba06df940006fc2d4e1c152b1a44313ff056312c94c49fb6bae8145db",
+      "bytes": 16644
+    },
+    "experiment_status.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/experiment_status.py",
+      "sha256": "e7048ec8365bca60f7bd320794c635e491407b33113e37a617f06f9f9d56c237",
+      "bytes": 9734
+    },
+    "expert_fast.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/expert_fast.py",
+      "sha256": "eac28fe5bb753b7008c7824b90e90cc0da37ab8d0e549fd90b35bc860929ae9c",
+      "bytes": 3754
+    },
+    "frozen_evaluation.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/frozen_evaluation.py",
+      "sha256": "65430d472231e3a1bf0f794cc65603bf5e41c495c446d9a4bab59ad0d3a3a669",
+      "bytes": 4647
+    },
+    "game_journal.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/game_journal.py",
+      "sha256": "27c6143851aff73dd355db89e1ffaa65d90d215b91921406050387be5ad69029",
+      "bytes": 15565
+    },
+    "inference_actor.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/inference_actor.py",
+      "sha256": "7cc812adeab8dc7cb989f9024592767928afa786966b85f3488023fb8d6b34ce",
+      "bytes": 20486
+    },
+    "learning_control.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/learning_control.py",
+      "sha256": "29a74b25be391290b07373cdce4680ae7513db31596929f0bc9972aaf0ab220d",
+      "bytes": 4395
+    },
+    "learning_exposure.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/learning_exposure.py",
+      "sha256": "30d9191e9fc845d80e52a7a891244fcf0c7041cf60529f6559b15e6d47ac5c7f",
+      "bytes": 9123
+    },
+    "loss_kernel.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/loss_kernel.py",
+      "sha256": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a",
+      "bytes": 7957
+    },
+    "main.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/main.py",
+      "sha256": "c33d7a83225d04b89ba4b52be8cafd658e1d16b1a47493601f0f78ef04fad642",
+      "bytes": 68201
+    },
+    "managed_driver.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/managed_driver.py",
+      "sha256": "05407642f75a5dc883ba7f45512f36711ffb66f29bce41fc860aba182644dc36",
+      "bytes": 5639
+    },
+    "managed_measurement.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/managed_measurement.py",
+      "sha256": "9649d0ba199bdc0943202164da7a9058e5d578b9c411ce26a950b2595c7e96e6",
+      "bytes": 11427
+    },
+    "metrics_dashboard.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/metrics_dashboard.py",
+      "sha256": "5acbbaf2eba0ce1c21e5cd46189c5e2a3d08ff26b987947eb4f37b80f6da1b8d",
+      "bytes": 235455
+    },
+    "metrics_display.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/metrics_display.py",
+      "sha256": "e843a7d77df8bc8b7da7673b60f1088edcf25210277be33d0610485d1fd741ad",
+      "bytes": 25955
+    },
+    "model.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/model.py",
+      "sha256": "bcd174f05610c6f773ca8c53f9155206eba4f7b6a11383516ddd71f3b513eeb4",
+      "bytes": 42429
+    },
+    "native_sumtree.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/native_sumtree.py",
+      "sha256": "de0900aecd09668dc0551d4ecec118351a1228e2a664bc183c5c06b865e52250",
+      "bytes": 10691
+    },
+    "nstep_buffer.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/nstep_buffer.py",
+      "sha256": "e46f03e9a626b3a24dea702344b0bbf050f1fdc5af672fc8fc9d18e6afef74c1",
+      "bytes": 3592
+    },
+    "pipeline_telemetry.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/pipeline_telemetry.py",
+      "sha256": "fa866eaaba56883a9df28046238ec0c235248dbf43837496caf40560c0aa69b6",
+      "bytes": 6214
+    },
+    "prefetch.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/prefetch.py",
+      "sha256": "a07cc84b6d411fd2536b1a17fa56c6b8b0f5ac9861740e44ea94878894a8d217",
+      "bytes": 14929
+    },
+    "replay_buffer.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/replay_buffer.py",
+      "sha256": "28556797d15e0acf9387030b87f9ccce0b18e1e3cfa629b63c2d7239a4206238",
+      "bytes": 106436
+    },
+    "run_telemetry.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/run_telemetry.py",
+      "sha256": "fac30f1f75d4d5272d21b2cdb2eae865aa519e1f344c04b3efbfdd6436a25863",
+      "bytes": 13426
+    },
+    "socket_server.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/socket_server.py",
+      "sha256": "363576fc9c80933b4ae82f692c1f0931b35c5aba65f938948c318ca786ec665f",
+      "bytes": 134380
+    },
+    "sumtree.c": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/sumtree.c",
+      "sha256": "352badec2ee64b7c42852e743bf930c565a2e4279137df12ca859d2c396d8e5e",
+      "bytes": 3669
+    },
+    "test_bank_output.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_bank_output.py",
+      "sha256": "18a551d83503a1ba179e13731a1e7d1041ef74ee8cc3ee9c2239d6bc0b7308e5",
+      "bytes": 10764
+    },
+    "test_bank_persistence.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_bank_persistence.py",
+      "sha256": "773bfdc8a73118258830c85498a4f6f0d7d6a9a2514ce58aad853a49dc38fdc6",
+      "bytes": 17063
+    },
+    "test_dashboard_history.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_dashboard_history.py",
+      "sha256": "cc107d8f4938aea3bea7721b612a5925b233ca9257d473222e3f191319113d1b",
+      "bytes": 4229
+    },
+    "test_direct_replay.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_direct_replay.py",
+      "sha256": "dd3a718e1ebeb50f5ed052ed8cb22643b40de599a923723de975b7d61eb11a7b",
+      "bytes": 9180
+    },
+    "test_exact_inference_graphs.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_exact_inference_graphs.py",
+      "sha256": "bb4570adddbadc75353a2d9b1838e69688cd1d76bbc8ede770ceea4108a73027",
+      "bytes": 18427
+    },
+    "test_experiment_status.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_experiment_status.py",
+      "sha256": "c2f4ecbd7bdc6f466ce7374bd7f9d67e53aa3530150c7a758f8a00584ec246eb",
+      "bytes": 8343
+    },
+    "test_frozen_evaluation.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_frozen_evaluation.py",
+      "sha256": "d8bbb136d80e39185fc48fffd8b7d2ad96ad89572b5ef77b7f267bd2e74fc238",
+      "bytes": 3813
+    },
+    "test_game_journal.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_game_journal.py",
+      "sha256": "a6a5e77c0d50f1e5cfc9a17da84025689406fa98edebe32784637236b5c5f288",
+      "bytes": 11719
+    },
+    "test_inference_actor.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_inference_actor.py",
+      "sha256": "10d76102927f4db4cfedc16f93d95261d99e8d7092ef381c2c06bdc45c830c80",
+      "bytes": 23354
+    },
+    "test_learning_control.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_learning_control.py",
+      "sha256": "df4513e84a0cda72dbd0763b8014b3b6de3bce7eea0e138473cba5618e2c14e1",
+      "bytes": 4800
+    },
+    "test_learning_exposure.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_learning_exposure.py",
+      "sha256": "1bfbb9b2bf1f1ea2692a91db294c303a7b723b0ccd936fa6c1b2dbe8c4d4b784",
+      "bytes": 13437
+    },
+    "test_loss_kernel.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_loss_kernel.py",
+      "sha256": "216861dfaa9bcaa4d9ba2532a40408fe6b9f7832c6ef0da1c043ea30f63b5f2e",
+      "bytes": 17953
+    },
+    "test_managed_driver.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_managed_driver.py",
+      "sha256": "260fe9ce5bed95327102aa037897fdc118c41d6b9b9720b5cb20c61df23c8777",
+      "bytes": 4017
+    },
+    "test_managed_measurement.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_managed_measurement.py",
+      "sha256": "45ba1c1aaf9da7c335d8a159cac844d2ca06761501b67f5cd9bf6d4eea396212",
+      "bytes": 15601
+    },
+    "test_measurement_actor.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_measurement_actor.py",
+      "sha256": "4e76ea4723b8dbdc7b9545d029afcb78f18cc551afa3ce1085fd89813467d32f",
+      "bytes": 12687
+    },
+    "test_native_batch_update.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_native_batch_update.py",
+      "sha256": "5c1df4edb5d07543936ceb36de0d5b85f2d153b4b7f70a92423f1a73a2a3a82d",
+      "bytes": 9374
+    },
+    "test_native_sumtree.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_native_sumtree.py",
+      "sha256": "83864812b1f1f5fd01585acddba8cfb09f864f79899e2dec283f51bc451ad750",
+      "bytes": 11071
+    },
+    "test_performance.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_performance.py",
+      "sha256": "2127cede9f048c70454e65f51f334894878dc9c165ac2cc2738c053410dfa12a",
+      "bytes": 20556
+    },
+    "test_pipeline_telemetry.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_pipeline_telemetry.py",
+      "sha256": "d691ce4ae5e5655939cb9bcec05ffe8a4a19120aa4bec010bebd11e2d3d1c579",
+      "bytes": 17393
+    },
+    "test_prefetch_cuda.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_prefetch_cuda.py",
+      "sha256": "5e2deeef401aa1d85e8aa81333626fa4501b587d6bb2feb9328be33fb763b742",
+      "bytes": 8482
+    },
+    "test_replay_pressure.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_replay_pressure.py",
+      "sha256": "93fb64f6710f883cdf954ed94366b8752a49f732a8c5c8938e295b081ffe9cd1",
+      "bytes": 5195
+    },
+    "test_run_telemetry.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_run_telemetry.py",
+      "sha256": "8adf9b7ff4b8ad75aed64e04dcc3b5404a73bd702d36855227e37580b48eb4fb",
+      "bytes": 11171
+    },
+    "test_smoke.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/test_smoke.py",
+      "sha256": "519796d8ece3d2a51870a9bc46bb02cd995abaf9d045c335de76dd86c4a54b95",
+      "bytes": 61567
+    },
+    "training.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/training.py",
+      "sha256": "194081120faae4228b0af0d6127c1e12c6d6180acdfe7d7a6a8c7cbcf24b963f",
+      "bytes": 28993
+    },
+    "coherent_snapshot.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-reviewed2-failure-analysis/failed-run-copy/private/Robotron/Scripts/dqn/coherent_snapshot.py",
+      "sha256": "11e08dfc04cc7946a91a0b0d393f821b2b4a098463d0c4723c7e0375651396ef",
+      "bytes": 32806
+    }
+  },
+  "reusable_archived_helpers": {
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-harness-reviewed2-analysis/whole_agent_smoke.py": "dbdb86f37e7158876262949eaf37c0c6d8954bd136f6c5187bcc6c3fe04f37bf",
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-harness-reviewed2-analysis/whole_agent_smoke_worker.py": "c652ff7fcf5242ffcd6921d06301ad23c1ae5b088d920ca3d312e90ae492e038"
+  },
+  "proposal_text_sha256": "ad92cee9f1cbefe2451007e3a6c47a505905bcf5daf93877eb7362b7ee3cec48",
+  "current_ABA_policy": "No tests,numerical workloads,GPU imports,launch or bound-file edits until trial terminal",
+  "fresh_scaler_per_amp_case": true
+}

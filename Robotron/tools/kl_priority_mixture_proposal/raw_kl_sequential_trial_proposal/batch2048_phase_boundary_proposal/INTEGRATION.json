@@ -1,0 +1,48 @@
+{
+  "call_sites": [
+    {
+      "delta": "Require exact boundary spec/profile PIN, new accurate activate_batch2048|return_batch4096 mode, sources=[], exact installed candidate5, both current and new metricCE, actual beforebatch env. Retain all source/owner/insurance/quality-release checks. Replace historical KL-only readiness labels with actual2048 readiness evidence, never invent that proof.",
+      "source": "fd4e.read_job/validate_installed_phase"
+    },
+    {
+      "delta": "For after environment use boundary.selected_environment(beforeactualenv,spec,newrecordPIN); before remains actual unmodified beforeenv.",
+      "source": "fd4e.inspect"
+    },
+    {
+      "delta": "Call boundary.start_record(... actualnewestphaseCPU,requiredmaxfloor) and unchanged durable record publication. Use boundary.override_environment(beforeactualenv,spec,recordPIN) to write ONLY four owned keys into the same Restart=no override; preserve UnsetEnvironment capture flags. Do not write all inherited env into the dropin.",
+      "source": "fd4e.start_phase"
+    },
+    {
+      "delta": "In a NEW override retain original initial source/owner/insurance/lease/action body; replace only local batch4096 API-plan construction with csv_guard_plan(stagebefore). It uses actual beforebatch for activation4096 and return2048.",
+      "source": "fdf.Runtime.initial"
+    },
+    {
+      "delta": "Use csv_guard_plan(stage startup0|running192). At actor0 retain exact old baseline CSV and truthfully label its scope while actual startupenv proves afterbatch. Do not rewrite old CSV. After192 require genuine producer CSV matching afterbatch. Preserve all graph/native/bank/fault/epoch/positive-outcome checks.",
+      "source": "fd4e.ready_transport"
+    },
+    {
+      "delta": "Select boundary.phase_cpu_boundary using actual purpose/before-vs-afterproducer. Pin selected4096 or2048 wrapper/base/script/job+resultschemas; add exact2048context onlyfor2048. Archive current installed sources/control/unit/producer observations +all boot/context metadata independently0444 before launch. Existing original run argv/exit/no-retry ledger remain. Profiles must not be changed after failed CPU.",
+      "source": "fd4e.cpu_phase/phase_sources"
+    },
+    {
+      "delta": "Beforestop archive genuine4096 CSV plus immutable origin schema/profile/oldowner/captured/transition times. Treatmentstartup0 may bind that origin; every early/candidate/newest2048 proof needs actual2048 producerCSV. Bind environment/trainerunit/source/acquisition/currentowner and actualtimes exactly as frozen81fd CPUwrapper checks; pure boundary functions do not publish or authenticate these actuals.",
+      "source": "profile2048 producer publication"
+    }
+  ],
+  "existing_primitives_unchanged": [
+    "Known owner retirement/absence, no forced kill, 192 resume attempts/settings lifecycle",
+    "Unique request/matched completed inode/newindependentreadonly modelcopy and original CPU outcome archives",
+    "Both selected banks/9maps/128graphs/load+source proof",
+    "FirstLATCH candidate freeze then exact treatment stop BEFORE candidate/newest CPU; latest>=maxearly,LATCH,candidate; return4096from newest without rollback",
+    "Scoring/evaluator/RCRC/fulltail/freshreference gates"
+  ],
+  "principle": "Use these pure functions inside NEW fd4e/fdf companion adapters; do not accumulate another controller or install this slice as a runnable transition.",
+  "remaining_not_ready": [
+    "Real additive phase adapter integration and focused actual API guards",
+    "Legacy maintenance2048 early-insurance verifier/provenance and preactivation4096/current-owner insurance binding; phase purposecandidate alone cannot satisfy current7d/v4 runtime insurance API",
+    "Full one-trial/horizon/deadline accurate CE-batch source bindings and independent owner stop integration",
+    "Actual root-executed2048 train_step/packing/AMP/fusedAdam/native readiness",
+    "Future actual profile/owner/newest checkpoint/clocks/core/precommit/deadline/protected reference and full release"
+  ],
+  "status": "UNCONSUMED_NEXT_REAL_ADAPTER_INTEGRATION_REQUIRED"
+}

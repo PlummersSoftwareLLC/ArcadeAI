@@ -1,0 +1,64 @@
+{
+  "status": "UNSELECTED_SOURCE_ONLY",
+  "default_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/lr25_phase_cpu_verifier_proposal/verify_phase_snapshot_lr25.py"
+  ],
+  "guard_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/lr25_phase_cpu_verifier_proposal",
+    "-p",
+    "test_lr25_metadata.py",
+    "-v"
+  ],
+  "guard_methods": 8,
+  "guard_environment": {
+    "CUDA_VISIBLE_DEVICES": "",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "unset": [
+      "LD_PRELOAD",
+      "PYTHONPATH"
+    ]
+  },
+  "guard_limits": {
+    "CPUQuota": "100%",
+    "MemoryMax": "512M",
+    "MemorySwapMax": 0,
+    "TasksMax": 32,
+    "RuntimeMaxSec": 60
+  },
+  "future_numeric_argv": [
+    null,
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/lr25_phase_cpu_verifier_proposal/verify_phase_snapshot_lr25.py",
+    "--execute",
+    "--job",
+    null,
+    "--expected-job-sha256",
+    null,
+    "--expected-verifier-sha256",
+    "d73b7381adc6405af41cdfcaa910ec1f444bc66935616f6f94e6e804faad0b5f"
+  ],
+  "numeric_limits_PROPOSAL_ONLY": {
+    "CPUQuota": "200%",
+    "MemoryMax": "3G",
+    "RuntimeMaxSec": 120
+  },
+  "actual_guard_execution": null,
+  "actual_numeric_execution": null,
+  "actual_root_job": null,
+  "actual_owner": null,
+  "actual_candidate": null,
+  "actual_trial_precommit": null,
+  "actual_quality_outcome": null
+}

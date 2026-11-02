@@ -1,0 +1,44 @@
+{
+  "producer_manifest_sha256": "d7fcb2e36a7b08d472341d8f7f294d384f2591f17225832da83d350bff4e3316",
+  "producer_source_sha256": {
+    "agent.py": "05e2da8b4aa836635166ede19fd67c7234dc31b9a2e4aa23148e845b37a06353",
+    "executed_ce_trace.py": "d9b02b3108cdb7aa9cf895ce585810287ca5cde6ddc6b1b872721731e49648eb",
+    "loss_kernel.py": "ce527c840f1b0cce3f77fece52923c7023519605db92d7c5e691b1b573ee6d2f",
+    "prefetch.py": "02871bc515ba23f8d353131e9b6b6b4e390692803578febee7c8d643dd308a27",
+    "replay_buffer.py": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f",
+    "training.py": "c10cf8deaea99c9c74edbebf82d1f1c1badfdc4d33186f3874d6bc80c1e6a938"
+  },
+  "provenance": {
+    "acquisition_review_path": "/REPLACE_WITH/immutable-acquisition-review.json",
+    "acquisition_review_sha256": "REPLACE_WITH_ACTUAL_REVIEW_SHA256",
+    "agent_lifecycle_exercised": "REPLACE_WITH_BOOLEAN",
+    "agent_overlay_imported": "REPLACE_WITH_BOOLEAN",
+    "checkpoint_sha256": "REPLACE_WITH_REVIEWED_CHECKPOINT_SHA256",
+    "executed_prototype_source_sha256": {
+      "REPLACE_WITH_ACTUALLY_IMPORTED_PROTOTYPE_SOURCE_NAME": "REPLACE_WITH_PINNED_SHA256"
+    },
+    "population": "REPLACE_WITH_live_consecutive_draws_OR_private_fixed_batch_reuse",
+    "priority_recipe": "ce"
+  },
+  "schema": "robotron-ce-trace-analysis-input-binding-v1",
+  "trace_sha256": {
+    "attempt-01.json": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+    "attempt-01.npz": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+    "attempt-02.json": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+    "attempt-02.npz": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+    "attempt-03.json": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+    "attempt-03.npz": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+    "attempt-04.json": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+    "attempt-04.npz": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+    "attempt-05.json": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+    "attempt-05.npz": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+    "attempt-06.json": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+    "attempt-06.npz": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+    "attempt-07.json": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+    "attempt-07.npz": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+    "attempt-08.json": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+    "attempt-08.npz": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+    "context.json": "REPLACE_WITH_ORIGINAL_FILE_SHA256",
+    "status.json": "REPLACE_WITH_ORIGINAL_FILE_SHA256"
+  }
+}

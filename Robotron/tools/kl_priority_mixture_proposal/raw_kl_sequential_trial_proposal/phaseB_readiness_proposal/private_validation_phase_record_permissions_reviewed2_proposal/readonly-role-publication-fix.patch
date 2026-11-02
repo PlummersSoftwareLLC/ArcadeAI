@@ -1,0 +1,97 @@
+--- original/cuda_trace_parent.py
++++ reviewed2/cuda_trace_parent.py
+@@ -578,12 +578,12 @@
+         action='resume' if variant=='resume' else 'start',previous_metric='unknown' if variant=='kl18' else 'kl',
+         checkpoint={name:latest[name] for name in ('path','sha256','bytes')},model_dir=str(paths['models']),
+         root_precommit_sha256=manifest_sha)
+-    record_path=paths['root']/'phase-record.json';publish(base,record_path,record)
++    record_path=paths['root']/'phase-record.json';publish(base,record_path,record,read_only=True)
+     record_pin=stable_file(record_path,digest(record_path),record_path.stat().st_size)
+     value=dict(schema='robotron-raw-kl-stage-b-role-input-v1',variant=variant,
+         global_manifest_sha256=manifest_sha,source=source,latest=latest,phase_record=record_pin,
+         source_role_result=source_result,metric=metric)
+-    publish(base,paths['root']/'role-input.json',value)
++    publish(base,paths['root']/'role-input.json',value,read_only=True)
+     return value
+ 
+ 
+@@ -711,8 +711,27 @@
+     return True
+ 
+ 
+-def publish(base, path, value):
++def publish(base, path, value, *, read_only=False):
+     base.json_exclusive(path, value)
++    if read_only:
++        # Only NEW phase-record/role-input metadata requests this seal, before
++        # stable_file or a worker can consume it. Other publication is unchanged.
++        path=Path(path)
++        descriptor=os.open(path,os.O_RDONLY|os.O_NOFOLLOW)
++        try:
++            before=os.fstat(descriptor)
++            require(stat.S_ISREG(before.st_mode) and before.st_uid==os.getuid()
++                    and before.st_nlink==1 and 0<before.st_size<=2*MIB
++                    and file_identity(path.lstat())==file_identity(before),
++                    'Readonly role metadata FD/path identity differs before sealing')
++            os.fchmod(descriptor,0o444)
++            os.fsync(descriptor)
++            sealed=os.fstat(descriptor)
++            require(stat.S_IMODE(sealed.st_mode)==0o444
++                    and file_identity(path.lstat())==file_identity(sealed),
++                    'Readonly role metadata FD/path identity differs after sealing')
++        finally:
++            os.close(descriptor)
+     sync_directory(Path(path).parent)
+ 
+ 
+--- original/test_stage_b_parent.py
++++ reviewed2/test_stage_b_parent.py
+@@ -197,6 +197,48 @@
+             self.assertEqual(record['previous_metric'],'kl')
+             self.assertEqual(record['metric'],'ce' if role=='return_ce' else 'kl')
+ 
++    def test_real_writable_publisher_is_sealed_before_all_three_role_readers(self):
++        source=Path(self.temporary.name)/'initial448.pt';source.write_bytes(b'initial448');source.chmod(0o444)
++        manifest=self.root/'launch-manifest.json'
++        self.write_json(manifest,dict(nonce='fixture_nonce',trained_fixture=dict(source=self.pin(source))))
++        published=[];consumed=[];real_stable=parent.stable_file
++        def writable_publisher(path,value):
++            self.write_json(path,value,mode=0o644)
++            published.append((str(path),stat.S_IMODE(Path(path).stat().st_mode)))
++        def reader(path,*args,**kwargs):
++            if Path(path).name=='phase-record.json':
++                consumed.append(str(path));self.assertEqual(stat.S_IMODE(Path(path).stat().st_mode),0o444)
++            return real_stable(path,*args,**kwargs)
++        base=SimpleNamespace(json_exclusive=writable_publisher)
++        initial=parent.prepare_role_inputs(base,self.layout,manifest,'kl18',[])
++        self.assertEqual(parent.read_role_input(self.layout,'kl18',parent.digest(manifest)),initial)
++        self.target.write_bytes(b'newest18');self.target.chmod(0o444)
++        result=dict(status='OBSERVATIONS_COMPLETE',variant='kl18',actual_attempts=18,saved_checkpoint=self.pin(self.target))
++        self.write_json(self.directory/'phase-result.json',result)
++        with patch.object(parent,'stable_file',side_effect=reader):
++            for role,previous in (('resume',[result]),('return_ce',[result,dict(variant='resume')])):
++                value=parent.prepare_role_inputs(base,self.layout,manifest,role,previous)
++                self.assertEqual(parent.read_role_input(self.layout,role,parent.digest(manifest)),value)
++        self.assertEqual(len(published),6)
++        self.assertTrue(all(mode==0o644 for _,mode in published))
++        for role in parent.VARIANTS:
++            for name in ('phase-record.json','role-input.json'):
++                self.assertEqual(stat.S_IMODE((self.layout.phase(role)['root']/name).stat().st_mode),0o444)
++        self.assertTrue(all(str(self.layout.phase(role)['root']/'phase-record.json') in consumed for role in ('resume','return_ce')))
++
++    def test_failed_readonly_seal_retains_first_error_and_never_publishes_role_input(self):
++        source=Path(self.temporary.name)/'initial448.pt';source.write_bytes(b'initial448');source.chmod(0o444)
++        manifest=self.root/'launch-manifest.json'
++        self.write_json(manifest,dict(nonce='fixture_nonce',trained_fixture=dict(source=self.pin(source))))
++        base=SimpleNamespace(json_exclusive=lambda path,value:self.write_json(path,value,mode=0o644))
++        sentinel=OSError(errno.EACCES,'owned metadata chmod failed')
++        with patch.object(parent.os,'fchmod',side_effect=sentinel),self.assertRaises(OSError) as failure:
++            parent.prepare_role_inputs(base,self.layout,manifest,'kl18',[])
++        self.assertIs(failure.exception,sentinel)
++        self.assertEqual(stat.S_IMODE((self.directory/'phase-record.json').stat().st_mode),0o644)
++        self.assertFalse((self.directory/'role-input.json').exists())
++        self.assertTrue((self.layout.phase('kl18')['models']/'robotron_dqn_latest.pt').exists())
++
+     def test_completed_role_unknown_checkpoint_path_is_not_adopted(self):
+         source=Path(self.temporary.name)/'foreign.pt';source.write_bytes(b'foreign');source.chmod(0o444)
+         manifest=self.root/'launch-manifest.json';self.write_json(manifest,dict(nonce='fixture_nonce'))

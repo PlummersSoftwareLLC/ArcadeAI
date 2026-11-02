@@ -1,0 +1,70 @@
+{
+  "python": "3.14.8 free-threading build (main, Oct  9 2026, 15:22:36) [Clang 22.1.3 ]",
+  "Py_GIL_DISABLED": 1,
+  "gil_enabled": false,
+  "imports": [
+    {
+      "module": "torch",
+      "gil_enabled": false,
+      "version": "2.13.0+cu130"
+    },
+    {
+      "module": "numpy",
+      "gil_enabled": false,
+      "version": "2.5.4"
+    },
+    {
+      "module": "PIL",
+      "gil_enabled": false,
+      "version": "12.3.0"
+    },
+    {
+      "module": "aiohttp",
+      "gil_enabled": false,
+      "version": "3.14.5"
+    },
+    {
+      "module": "cffi",
+      "gil_enabled": false,
+      "version": "2.1.1"
+    },
+    {
+      "module": "pylibsrtp",
+      "gil_enabled": false,
+      "version": "1.0.0"
+    },
+    {
+      "module": "av",
+      "gil_enabled": false,
+      "version": "17.1.0"
+    },
+    {
+      "module": "cryptography",
+      "gil_enabled": false,
+      "version": "50.0.2"
+    },
+    {
+      "module": "OpenSSL",
+      "gil_enabled": false,
+      "version": "26.4.0"
+    },
+    {
+      "module": "google_crc32c",
+      "gil_enabled": false,
+      "version": null
+    },
+    {
+      "module": "aiortc",
+      "gil_enabled": false,
+      "version": "1.15.0"
+    }
+  ],
+  "srtp_roundtrip": true,
+  "peer_connection_lifecycle": true,
+  "wheel": "pylibsrtp-1.0.0-cp314-cp314t-linux_aarch64.whl",
+  "wheel_sha256": "5214921c2fe08c3d143b8c2fbb4b046f1e7ccef23be6d18e0c4d4c4344077752",
+  "webrtc_video_offer": true,
+  "av_frame_conversion": true,
+  "crc32c_implementation": "pure Python: installed upstream py3-none-any wheel contains no native extension",
+  "dependency_check_note": "uv pip check reports existing nvidia-cusparselt-cu13 py3-none-manylinux2014_sbsa tag unsupported on this interpreter. Package was not changed by aiortc installation."
+}

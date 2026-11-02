@@ -1,0 +1,81 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_health_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-v4-cohort-original03/continuous_physical192_health_v3.py
+@@ -18,8 +18,8 @@
+ LINUX=ROOT/'tools/quality_capacity_proposal/supervised_main_fleet_v2.py'
+ LINUX_SHA='1f41d360fa23632cb26d6dee33d3c822bec7f9cf79fdbb75e47f3418059ca5f0'
+ STATIC=('parent_pid','cgroup','command','environment','affinity','uids','executable')
+-REGISTRY=Path(__file__).with_name('continuous_physical192_registry_v2.py')
+-REGISTRY_SHA='71fc044d7b3bbbfceba5ef23f69a6c741eeff5700176050c6cdbe9e4794bba69'
++REGISTRY=Path(__file__).with_name('continuous_physical192_registry_v3.py')
++REGISTRY_SHA='c57b0ef9522101c69aa551b1488921c4a97af27fd10f1c52c95387fa873cf204'
+ 
+ def require(condition, reason):
+     if not condition:
+@@ -123,7 +123,7 @@
+     require(hashlib.sha256(REGISTRY.read_bytes()).hexdigest() == REGISTRY_SHA,
+             'Exact selected static192 registry verifier required')
+     import sys
+-    name = '_prospective_continuous_physical192_registry_v2'
++    name = '_prospective_continuous_physical192_registry_v3'
+     if name not in sys.modules:
+         spec = importlib.util.spec_from_file_location(name, REGISTRY)
+         value = importlib.util.module_from_spec(spec); spec.loader.exec_module(value)
+@@ -220,23 +220,30 @@
+     finally:os.close(fd)
+ 
+ 
+-def collect_eval_evidence(case, previous=None):
++def collect_eval_evidence(case, previous=None, prefix_capture=None):
+     root=Path(case['continuous']['eval_journal_directory'])
+     retirement=root/'completed_clients.jsonl';main=root/'games.jsonl'
+-    if not retirement.exists():
+-        require(previous is None or not previous.get('EVAL_journal_evidence'),
+-                'Previously accepted original EVAL retirement journal disappeared')
+-        return {}
++    began=time.monotonic();prefix,prefix_raw=registry().completed_prefix(case)
+     raw,retirement_id=read_producer_prefix(retirement,262144)
+-    require(not raw or raw.endswith(b'\n'), 'Uncommitted EVAL retirement tail')
+-    lines=raw.splitlines(keepends=True);require(len(lines)<=37,'More than37 original EVAL retirements')
++    require(all(retirement_id[k]==v for k,v in prefix['canonical_identity'].items())
++            and len(raw)>=prefix['prefix_bytes'] and raw[:prefix['prefix_bytes']]==prefix_raw,
++            'Current completed journal replaced/truncated/changed its held historical prefix')
++    suffix=raw[prefix['prefix_bytes']:]
++    require(not suffix or suffix.endswith(b'\n'), 'Uncommitted EVAL retirement tail')
++    lines=suffix.splitlines(keepends=True);require(len(lines)<=37,'More than37 original EVAL retirements')
++    if prefix_capture is not None:
++        prefix_capture.update(record=case['continuous']['completed_clients_prefix'],
++            canonical_path=str(retirement),canonical_identity=retirement_id,
++            raw_prefix_wire=prefix_raw.decode(),prefix_bytes=prefix['prefix_bytes'],
++            prefix_sha256=prefix['prefix_sha256'],before_monotonic_s=began,after_monotonic_s=time.monotonic())
+     old={} if previous is None else previous.get('EVAL_journal_evidence',{})
+-    entries={};new=[];offset=0
++    entries={};new=[];seen=set();offset=prefix['prefix_bytes']
+     for line in lines:
+         row=json.loads(line);slot=str(row['client_slot'])
+         require(type(row['client_slot']) is int and slot in case['slot_eval']
+                 and case['slot_eval'][slot] is True and row['eval_only'] is True
+-                and slot not in entries,'Unknown/duplicate/non-EVAL ordinary retirement row')
++                and slot not in seen,'Unknown/duplicate/non-EVAL ordinary retirement row')
++        seen.add(slot)
+         text=line.decode();digest=hashlib.sha256(line).hexdigest()
+         if slot in old:
+             require(old[slot]['raw_line']==text and old[slot]['raw_line_sha256']==digest,
+@@ -386,7 +393,8 @@
+         policy = get('/api/continuous_training_policy')
+         connections = get('/api/continuous_training_connections')
+         api = get('/api/now')
+-        eval_evidence = collect_eval_evidence(case, previous)
++        completed_prefix_capture={}
++        eval_evidence = collect_eval_evidence(case, previous, completed_prefix_capture)
+         probes = {slot: probe(row['original_child']['pid'], reader)
+                   for slot, row in case['continuous']['original_slots'].items() if slot not in actors}
+         eval_cleanup = collect_eval_cleanup(case, eval_evidence, probes)
+@@ -402,7 +410,7 @@
+                     original_children=child_ids, child_census=capture,
+                     api=api['value'], raw_API_wire=api['raw_wire'], api_wire_sha256=api['sha256'],
+                     policy_capture=policy, connections_capture=connections,
+-                    EVAL_journal_evidence=eval_evidence,
++                    EVAL_journal_evidence=eval_evidence,EVAL_completed_prefix_capture=completed_prefix_capture,
+                     EVAL_cleanup_captures=eval_cleanup,
+                     EVAL_kernel_exit_receipts=eval_kernel,EVAL_exit_witness_capture=eval_holder,
+                     PID_absence=probes, capture_started_monotonic_s=started,

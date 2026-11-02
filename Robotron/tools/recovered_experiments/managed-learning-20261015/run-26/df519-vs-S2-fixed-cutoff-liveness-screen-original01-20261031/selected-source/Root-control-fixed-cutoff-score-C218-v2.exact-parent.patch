@@ -1,0 +1,16 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-fleet-df519-vs-frozenS2-two-arm-screen-original01-20261031/selected-source/Root-control-newer-policy-vs-S2-C218-v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/df519-vs-S2-fixed-cutoff-liveness-screen-original01-20261031/selected-source/Root-control-fixed-cutoff-score-C218-v2.py
+@@ -65,11 +65,11 @@
+ def checked_config(config):
+     c = json.loads(Path(config).read_text())
+     require(set(c) == {'unit', 'output', 'argv', 'properties', 'pins', 'observation_s'}, 'Exact six-field compiled full-tail32 config required')
+-    require(c['unit'] in {'robotron-df519-vs-S2-score-'+leg+'-original01-20261031.service' for leg in ('r1','c1')}, 'Exact private compiled full-tail32 namespace required')
++    require(c['unit'] in {'robotron-df519-S2-fixedcutoff-score-'+leg+'-original01-20261031.service' for leg in ('r1','c1')}, 'Exact private compiled full-tail32 namespace required')
+     props = dict((x.split('=', 1) for x in c['properties']))
+     require(len(props) == len(c['properties']) and props == dict(CPUQuota='1200%', MemoryMax='24G', MemorySwapMax='0', RuntimeMaxSec='4260', TasksMax='512', TimeoutStopSec='30', KillMode='mixed', SendSIGKILL='no'), 'Exact bounded compiled32 resources required')
+     require(type(c['observation_s']) is int and c['observation_s'] == 4320, 'Fixed original runtime/shutdown observation required')
+-    expected = ['/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python', '-Xgil=0', '-I', '-B', '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-fleet-df519-vs-frozenS2-two-arm-screen-original01-20261031/selected-source/run_newer_policy_vs_frozenS2_screen_v1.py']
++    expected = ['/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python', '-Xgil=0', '-I', '-B', '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-fleet-df519-vs-frozenS2-two-arm-screen-original01-20261031/future-fixed-cutoff-score-stall-policy-source-original01/run_newer_policy_vs_frozenS2_fixed_cutoff_liveness_v2.py']
+     argv = c['argv']
+     require(type(argv) is list and len(argv) == 12 and (argv[:5] == expected) and (argv[5:7] == ['--execute', '--job']) and (argv[8] == '--job-sha256') and (argv[10] == '--source-sha256') and all((type(v) is str for v in argv)) and all((re.fullmatch('[0-9a-f]{64}', argv[i]) for i in (9, 11))), 'Exact compiled32 original runtime argv required')
+     job = Path(argv[7])

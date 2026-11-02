@@ -1,0 +1,20 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/quality_capacity_proposal/control_quality32_review_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/stop-sources/control_current227_stop_scope_v1.py
+@@ -54,14 +54,15 @@
+     require(set(c)=={'unit','output','argv','properties','pins','observation_s'},
+             'Use the existing exact audit config; omit result_path and expected_tests')
+     require(re.fullmatch(r'robotron-[A-Za-z0-9_-]+\.service',c['unit']), 'Exact audit service name required')
++    require(c['unit']=='robotron-scorecarry-current227-preserve-original01-20261027-controller.service', 'Exact current continuation stop unit required')
+     props=dict(x.split('=',1) for x in c['properties'])
+     require(len(props)==len(c['properties']) and props.get('CPUQuota')=='200%' and
+-        props.get('MemoryMax')=='4G' and props.get('RuntimeMaxSec')=='180' and
++        props.get('MemoryMax')=='4G' and props.get('RuntimeMaxSec')=='1800' and
+         set(props)<= {'CPUQuota','MemoryMax','RuntimeMaxSec','MemorySwapMax','TasksMax','TimeoutStopSec','SendSIGKILL'} and
+         props.get('SendSIGKILL')=='no' and
+         props.get('MemorySwapMax','0')=='0' and props.get('TasksMax','128') in ('128','256') and
+         props.get('TimeoutStopSec','5')=='5','Audit resource scope differs')
+-    require(type(c['observation_s']) in (int,float) and 180<=c['observation_s']<=300,
++    require(type(c['observation_s']) in (int,float) and c['observation_s']==1860,
+             'Bounded original audit observation required')
+     require(isinstance(c['argv'],list) and c['argv'] and all(isinstance(x,str) for x in c['argv']),
+             'Explicit selected auditor argv required')

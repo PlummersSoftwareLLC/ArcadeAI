@@ -1,0 +1,48 @@
+{
+  "schema": "robotron-deferred-dashboard-comparison-label-proposal-v1",
+  "status": "FROZEN_UNINSTALLED_SOURCE_ONLY",
+  "files": {
+    "PREPARATION.txt": {
+      "sha256": "7dc7dda38935cc46c76af09ac70623036cf1ed7a58278efe563367a33569ee35",
+      "bytes": 2400,
+      "mode": "0o444"
+    },
+    "experiment_status.py": {
+      "sha256": "55819c92247d3b26e6884d3207fd63013c6e9dd9dca9a28e9d0148aae3ad3b33",
+      "bytes": 9846,
+      "mode": "0o444"
+    },
+    "future-argv.json": {
+      "sha256": "faf78e1bbb5a6421afb70672db4538e8549de1a675a239e101718e6b527e5007",
+      "bytes": 831,
+      "mode": "0o444"
+    },
+    "test_comparison_label.py": {
+      "sha256": "90cb880d0445f9b903f093a0d48ba4fee0882832e8a72ccf1ecc3b29b2f2b182",
+      "bytes": 3438,
+      "mode": "0o444"
+    },
+    "unapplied.patch": {
+      "sha256": "e03bfac91d16577116ac89da2417f409fe05353e0c4f215456ec8f60a54af5a7",
+      "bytes": 421,
+      "mode": "0o444"
+    }
+  },
+  "installed_base": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/experiment_status.py",
+    "sha256": "e7048ec8365bca60f7bd320794c635e491407b33113e37a617f06f9f9d56c237",
+    "bytes": 9734,
+    "mode": "0o664"
+  },
+  "exact_executable_delta": "Three lines in ExperimentStatusReader._comparison; existing _text(active.get(comparison_label)) nonempty override precedes byte-unchanged fallback.",
+  "authored_test_methods": 3,
+  "author_imports_compile_tests_runtime_PT_reads": false,
+  "actual_test_execution": null,
+  "actual_installation": null,
+  "actual_metadata_write": null,
+  "adoption_gate": "Root only AFTER current campaign terminal/audits/owned cleanup/full source-freeze release; existing installedsource must still match e704.",
+  "proposed_future_metadata": {
+    "active_quality_job.comparison_label": "448M vs KL candidate (~512M total)"
+  },
+  "no_quality_or_learning_claim": true
+}

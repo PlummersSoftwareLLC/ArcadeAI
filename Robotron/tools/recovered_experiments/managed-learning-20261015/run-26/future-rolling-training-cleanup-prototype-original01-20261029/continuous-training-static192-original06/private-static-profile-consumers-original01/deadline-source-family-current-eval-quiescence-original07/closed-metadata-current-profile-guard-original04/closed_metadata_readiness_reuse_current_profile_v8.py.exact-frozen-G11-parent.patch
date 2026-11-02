@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-portable-namespace-guard-original03/closed_metadata_readiness_reuse_portable_namespace_v7.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-current-profile-guard-original04/closed_metadata_readiness_reuse_current_profile_v8.py
+@@ -24,7 +24,7 @@
+     return value
+ 
+ 
+-SOURCE_CONTRACT_SHA = '89a7a12f9d3de3b136622b1cfeb5f331cde615d64baa049e79662f23cb78482f'
++SOURCE_CONTRACT_SHA = '5941d773a16208201dbbe5110b9dc41a5f0b9b1b04ae8df39d7a0b92146865a9'
+ 
+ 
+ class ClosedMetadataReadiness:

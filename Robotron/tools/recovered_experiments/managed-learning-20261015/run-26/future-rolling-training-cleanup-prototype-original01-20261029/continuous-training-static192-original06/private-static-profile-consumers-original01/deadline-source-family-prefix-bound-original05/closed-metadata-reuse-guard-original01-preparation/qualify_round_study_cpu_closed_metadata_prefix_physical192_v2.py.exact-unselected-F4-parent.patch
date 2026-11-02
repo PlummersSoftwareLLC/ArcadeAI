@@ -1,0 +1,10 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-physical-original04/metadata600-resource-templates-original01/closed-metadata-reuse-guard-original01-preparation/qualify_round_study_cpu_closed_metadata_physical192_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/closed-metadata-reuse-guard-original01-preparation/qualify_round_study_cpu_closed_metadata_prefix_physical192_v2.py
+@@ -187,6 +187,7 @@
+                     proof=native.round_contract().validate_launch(subject,ctx,h)
+                 self.assertTrue(proof['raw_API_and_TCP_and_retirement_snapshots_replayed'])
+                 self.assertTrue(proof['accepted_evidence_and_projection_gaps_verified'])
++                self.assertTrue(proof['prior_completed_EVAL_prefix_and_current_suffix_verified'])
+                 self.assertEqual(proof['main_health_profile'],'PHYSICAL_ORIGINAL192_TRAIN_CURRENT_TCP_EVAL_ORIGINAL_ONCE')
+                 self.assertEqual(proof['verified_maximum_gap_s'],2.0)
+                 self.assertEqual(proof['proof_gap_contract'],'robotron-main-proof-gap-2s-v1')

@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_reviewed2_proposal/audit_completed_leg.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/audit_completed_leg.py
+@@ -29,7 +29,7 @@
+ CAMPAIGN_ROOT = GAME / "logs/managed-learning-20261015"
+ CPU_VERIFIER = GAME / "tools/phase_snapshot_cpu_verifier_proposal/verify_phase_snapshot.py"
+ BINDINGS_SOURCE = Path(__file__).with_name('quality_bindings.py')
+-BINDINGS_SHA = 'ecbe6ae896172ae7d44130de0004df7f25f33544b421106cdc325daa78f8cc59'
++BINDINGS_SHA = '2396f8247143945b6ea70dcfff2684f709f5092ee4c775822d7f47f9f4cae176'
+ BINDINGS = CFG = BUNDLE = BINDING_PIN = None
+ PLAN = "PLAN_ONLY: actual live CE candidate phaseCPU/current CE/reference/source bindings required; all4 diagnosticsTRUE/1200/2400/min50/all16/fulltails; no reads/imports/runtime/actions"
+ EVALUATOR_NAMES = {"tools/run_frozen_sidecar.py", "tools/sidecar_boot.py", "Scripts/main.lua", "Scripts/robotron_socket_wait.c"} | {

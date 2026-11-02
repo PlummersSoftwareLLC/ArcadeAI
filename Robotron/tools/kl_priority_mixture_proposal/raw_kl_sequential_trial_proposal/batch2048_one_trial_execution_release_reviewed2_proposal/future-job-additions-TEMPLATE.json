@@ -1,0 +1,29 @@
+{
+  "activation_job": {
+    "execution_prerequisites": null,
+    "helper_pins": {
+      "controller": null,
+      "execution_readiness": null
+    }
+  },
+  "actual_checkpoint": null,
+  "actual_job": null,
+  "actual_new_owner": null,
+  "actual_release_guard_result": null,
+  "actual_root_core": null,
+  "final_core": {
+    "activation_authorized": false,
+    "execution_prerequisites": null,
+    "status": null
+  },
+  "status": "INERT_NOT_AN_ACTUAL_JOB",
+  "trial_job": {
+    "execution_prerequisites": null,
+    "sources": {
+      "adapter": null,
+      "controller": null,
+      "deadline": null,
+      "execution_readiness": null
+    }
+  }
+}

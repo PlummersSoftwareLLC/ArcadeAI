@@ -1,0 +1,75 @@
+{
+  "actual_activation_or_runtime": null,
+  "actual_job": null,
+  "actual_test_execution": null,
+  "author_actions": {
+    "candidate_import_compile_default_tests": false,
+    "installed_source_state_control_changes": false,
+    "model_PT_replay_tensor_reads": false,
+    "runtime_API_proc_GPU_service_queries_actions": false,
+    "source_small_JSON_reads_new_unbound_writes_only": true
+  },
+  "authored_stdlib_test_methods": 18,
+  "created_utc": "2026-10-17T10:47:02.994550+00:00",
+  "files": {
+    "PREPARATION.txt": {
+      "bytes": 7636,
+      "mode": "0o444",
+      "sha256": "4f5d0f59412f7b4ea44542f37d58c5f7d8a271ef501d0ba4ad313ca062bdb332"
+    },
+    "future-argv-template.json": {
+      "bytes": 2292,
+      "mode": "0o444",
+      "sha256": "6a2d57d29a19e760f508928224d83737b459e087cc935a8131f615d1d02894a2"
+    },
+    "horizon_observer.py": {
+      "bytes": 15704,
+      "mode": "0o444",
+      "sha256": "25d70b4a3888dcba83ea9020c333cba32cfbd19c93b6e69037d6299b161fd7ec"
+    },
+    "job-template.json": {
+      "bytes": 1356,
+      "mode": "0o444",
+      "sha256": "9aab0e7f6fad2b29f9bba239769c88a8f0a475efa1a8f8627fb5811b5ca26328"
+    },
+    "source-lock.json": {
+      "bytes": 1771,
+      "mode": "0o444",
+      "sha256": "830834e6dd5e62ab3fc805bf19bb3bc8d17e9ad375ba24301aa6de95b85c0cd4"
+    },
+    "test_horizon_observer.py": {
+      "bytes": 15735,
+      "mode": "0o444",
+      "sha256": "7ffc2dfed110a287c06872bb8e631ede79a9d36b547cf03c9ba39c97345cd7ce"
+    }
+  },
+  "limitations": [
+    "Callback truth/freshness/physical stop requires root-owned wrapper and actual evidence",
+    "Actual source/default/guard execution remains pending; no trial activation/adoption or efficacy conclusion",
+    "Protected448 outcome and future owner/candidate/deadline/pass remain unknown here; no fabricated actual job",
+    "60min proposed root budget inactive until actual precommit; confirmation only after newest-state explicit CE return"
+  ],
+  "resource_proposal": {
+    "future_observer": "max3602 polls plus one terminal budget record;32MiB root-owned receipt budget; callback deadlines and actual stop owned by root",
+    "pure_tests": "CPU2/256MiB/Swap0/32tasks/60s/CUDAhidden; root exact18selection and original exit retention"
+  },
+  "schema": "robotron-raw-kl-horizon-observer-source-preparation-v1",
+  "scope": "Pure decision/validation and injected bounded poll receipts; no API/process/filesystem/checkpoint/service actions, no numerical/application imports. Root bridge alone authenticates actual upstream pins and acts.",
+  "source_changes_since_first_draft": [
+    "Actual availability follows since_epoch rather than total counts; both remain separately partitioned and monotonic",
+    "Invalid clock errors publish explicit unknown times rather than masking error",
+    "First/later >=30s observation gaps invalidate even fresh endpoint API",
+    "First immutable terminal/latch and no retry/candidate replacement",
+    "Terminal has one bounded raw endpoint/last valid API; no per-poll history retained"
+  ],
+  "source_peer_status": {
+    "audit_quality_result": "preliminary source read sound; final exact frozen receipt requested",
+    "runtime_review": "requested; no frozen final verdict claimed"
+  },
+  "status": "SOURCE_ONLY_UNEXECUTED",
+  "upstream_pinned_contracts": [
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/CONTRACT.txt",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/conditional-precommit-template.json",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/source-lock.json"
+  ]
+}

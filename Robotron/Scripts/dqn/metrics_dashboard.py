@@ -34,6 +34,18 @@ except ImportError:
     from config import RL_CONFIG, plateau_pulser, PlateauPulser, game_settings, ROBOTRON_SELECTABLE_LEVELS
 
 try:
+    from .run_telemetry import pipeline_snapshot
+except ImportError:
+    from run_telemetry import pipeline_snapshot
+
+try:
+    from .experiment_status import ExperimentStatusReader
+    from .dashboard_history import compact_history_row, bounded_history
+except ImportError:
+    from experiment_status import ExperimentStatusReader
+    from dashboard_history import compact_history_row, bounded_history
+
+try:
     from .metrics_display import get_dqn_window_averages, get_total_window_averages, get_eplen_1m_average, get_eplen_100k_average
 except ImportError:
     try:
@@ -47,6 +59,41 @@ except ImportError:
             return 0.0
         def get_eplen_100k_average():
             return 0.0
+
+
+def _json_safe_diagnostic_snapshot(snapshot):
+    """Keep a nonfinite optional gradient diagnostic explicit in valid JSON.
+
+    All other fields are left intact for strict serialization and health checks.
+    The source snapshot and numerical training metrics are never mutated.
+    """
+    value = snapshot.get("grad_norm")
+    if isinstance(value, float) and not math.isfinite(value):
+        snapshot = dict(snapshot)
+        snapshot["grad_norm"] = None
+        snapshot["grad_norm_nonfinite"] = (
+            "nan" if math.isnan(value) else
+            "positive_infinity" if value > 0 else "negative_infinity"
+        )
+    return snapshot
+
+
+def _training_gpu_compute_diagnostic(sample):
+    """Copy a completed diagnostic observation; never query or synchronize CUDA."""
+    unavailable = dict(available=False, elapsed_ms=None, sample_count=None,
+                       logical_training_step=None, observed_unix_s=None, device=None)
+    if type(sample) is not dict:
+        return unavailable
+    ms, count = sample.get('elapsed_ms'), sample.get('sample_count')
+    step, stamp, device = (sample.get(k) for k in
+                           ('logical_training_step', 'observed_unix_s', 'device'))
+    if not (type(ms) in (int, float) and math.isfinite(ms) and ms >= 0
+            and type(count) is int and count > 0 and type(step) is int and step >= 0
+            and type(stamp) in (int, float) and math.isfinite(stamp) and stamp > 0
+            and type(device) is str and 0 < len(device) <= 80 and device.isprintable()):
+        return unavailable
+    return dict(available=True, elapsed_ms=ms, sample_count=count,
+                logical_training_step=step, observed_unix_s=stamp, device=device)
 
 
 def _tail_mean(values, count: int = 20) -> float:
@@ -316,6 +363,7 @@ class _DashboardState:
         self._web_clients: dict[str, float] = {}
         self._cached_now_body = b"{}"
         self._model_desc: str | None = None
+        self._experiment_status = ExperimentStatusReader()
         # Agreement 1M window (frame-weighted EMA)
         self._agree_window: deque = deque()  # [(agreement, frame_delta), ...]
         self._agree_window_frames: int = 0
@@ -631,6 +679,8 @@ class _DashboardState:
             total_training_steps = int(self.metrics.total_training_steps)
             last_loss = float(self.metrics.last_loss)
             last_grad_norm = float(self.metrics.last_grad_norm)
+            gpu_compute_diagnostic = _training_gpu_compute_diagnostic(
+                getattr(self.metrics, 'last_train_gpu_compute_diagnostic', None))
             last_bc_loss = float(self.metrics.last_bc_loss)
             sample_dqn_frac = float(getattr(self.metrics, "last_sample_dqn_frac", 0.0))
             sample_epsilon_frac = float(getattr(self.metrics, "last_sample_epsilon_frac", 0.0))
@@ -668,6 +718,19 @@ class _DashboardState:
             reward_dqn = _tail_mean(self.metrics.dqn_rewards) * _prs
             reward_subj = _tail_mean(self.metrics.subj_rewards) * _prs
             reward_obj = _tail_mean(self.metrics.obj_rewards) * _prs
+
+        training_round = None
+        round_path = os.getenv("ROBOTRON_TRAINING_ROUND_STATUS", "")
+        if round_path:
+            try:
+                with open(round_path, "rb") as stream:
+                    raw_round = stream.read(262145)
+                if len(raw_round) <= 262144:
+                    candidate_round = json.loads(raw_round)
+                    if isinstance(candidate_round, dict):
+                        training_round = candidate_round
+            except (OSError, ValueError):
+                pass
 
         client_rows: list[dict[str, Any]] = []
         preview_selected_client_id = -1
@@ -725,9 +788,41 @@ class _DashboardState:
             except Exception:
                 q_min = q_max = None
 
+        # The shared low-rate read is cumulative and never drains producer
+        # counters. Keep it outside metrics.lock and model/inference locks.
+        pipeline = pipeline_snapshot(self.agent)
+        response_pipeline = dict(schema='robotron-socket-response-pipeline-v1', available=False)
+        try:
+            response_server = getattr(self.metrics, 'global_server', None)
+            response_getter = getattr(response_server, 'response_timing_snapshot', None)
+            if callable(response_getter): response_pipeline = response_getter()
+        except Exception as exc:
+            response_pipeline['observer_error'] = str(exc)[:256]
         return {
             "ts": now,
+            "host_pipeline": pipeline['pipeline'],
+            "socket_response_pipeline": response_pipeline,
+            "bank_persistence": pipeline['bank'],
+            "pipeline_snapshot_age_s": pipeline['age_s'],
+            "pipeline_read_error": pipeline['pipeline_read_error'],
+            "bank_persistence_read_error": pipeline['bank_read_error'],
+            "pipeline_timing_scope": "Sampled host elapsed milliseconds; not GPU kernel timing",
             "frame_count": frame_count,
+            "learner_frame_count": int(getattr(self.metrics, 'learner_frame_count', 0)),
+            "optimized_samples": int(getattr(self.metrics, 'total_optimized_samples', 0)),
+            "managed_experiment": str(getattr(self.metrics, 'managed_experiment', 'natural-schedule')),
+            "quality_campaign": self._experiment_status.snapshot(),
+            "measurement_active": bool(getattr(self.metrics, 'measurement_active', False)),
+            "measurement_frames": int(getattr(self.metrics, 'measurement_frame_count', 0)),
+            "managed_measurement": getattr(self.metrics, 'managed_measurement_status', {}),
+            "eval_games": (getattr(self.metrics, 'game_journal').summary(
+                experiment=getattr(self.metrics, 'managed_experiment', 'natural-schedule'))
+                if getattr(self.metrics, 'game_journal', None) is not None else {}),
+            "c51_diagnostics": {name: float(getattr(self.metrics, 'c51_' + name, 0))
+                for name in ('below_support_mass', 'above_support_mass', 'edge_atom_mass',
+                             'target_entropy', 'action_q_gap', 'categorical_kl')},
+            "eval_life_score": float(getattr(self.metrics, 'eval_score_1m_average', 0)),
+            "eval_life_count": int(getattr(self.metrics, 'eval_score_1m_count', 0)),
             "fps": fps,
             "training_steps": total_training_steps,
             "steps_per_sec": steps_per_sec,
@@ -738,6 +833,7 @@ class _DashboardState:
             "client_count": client_count,
             "web_client_count": web_client_count,
             "client_rows": client_rows,
+            "training_round": training_round,
             "preview_selected_client_id": preview_selected_client_id,
             "preview_capture_enabled": preview_capture_enabled,
             "game_preview_seq": game_preview_seq,
@@ -759,6 +855,17 @@ class _DashboardState:
             "train_sample_ms": float(getattr(self.metrics, "last_train_sample_ms", 0.0)),
             "train_transfer_ms": float(getattr(self.metrics, "last_train_transfer_ms", 0.0)),
             "train_compute_ms": float(getattr(self.metrics, "last_train_compute_ms", 0.0)),
+            "train_gpu_compute_ms": gpu_compute_diagnostic['elapsed_ms'],
+            "train_gpu_compute_diagnostic": gpu_compute_diagnostic,
+            "train_gpu_compute_timing_scope": (
+                "Latest completed diagnostic CUDA-event stream span; not an interval average, "
+                "exclusive GPU busy time or SM occupancy. Logical step is before its end-of-step "
+                "increment and may be AMP-skipped. Host observation time follows the existing "
+                "CPU readback; device is the existing training-device label, not a physical GPU mapping."),
+            "train_transfer_timing_scope": (
+                "Legacy mixed field: staged CUDA batches use copy-stream event elapsed when ready; "
+                "otherwise zero means unavailable. Synchronous fallback uses host elapsed time. "
+                "Transfer may overlap learner work; legacy CSV transfer_host_ms has this same scope."),
             "train_priority_ms": float(getattr(self.metrics, "last_train_priority_ms", 0.0)),
             "train_step_ms": float(getattr(self.metrics, "last_train_step_ms", 0.0)),
             "loss": last_loss,
@@ -826,7 +933,16 @@ class _DashboardState:
     def sample(self):
         with self.lock:
             self._update_web_client_count_locked()
-        snap = self._build_snapshot()
+        try:
+            snap = _json_safe_diagnostic_snapshot(self._build_snapshot())
+            body = json.dumps(snap, allow_nan=False).encode("utf-8")
+        except (TypeError, ValueError):
+            # Do not serve a previous healthy snapshot as the failed new one.
+            failure = {"ts": time.time(), "snapshot_error": "Metric snapshot is not valid finite JSON"}
+            with self.lock:
+                self.latest = failure
+                self._cached_now_body = json.dumps(failure, allow_nan=False).encode("utf-8")
+            raise
         with self.lock:
             now = time.time()
             if self._first_sample_time is None:
@@ -835,22 +951,59 @@ class _DashboardState:
             # Skip the first 10 samples or 2 seconds, whichever comes first
             if self._sample_count <= 10 and (now - self._first_sample_time) < 2.0:
                 self.latest = snap
-                self._cached_now_body = json.dumps(snap).encode("utf-8")
+                self._cached_now_body = body
                 return
             self.latest = snap
-            self.history.append(snap)
-            self._cached_now_body = json.dumps(snap).encode("utf-8")
+            # Charts use scalar values. Client tables and experiment records
+            # belong only in the latest snapshot, not in every history row.
+            self.history.append(compact_history_row(snap))
+            self._cached_now_body = body
 
     def payload(self) -> dict[str, Any]:
         with self.lock:
             return {
                 "now": self.latest,
-                "history": list(self.history),
+                "history": bounded_history(self.history),
             }
 
     def now_body(self) -> bytes:
         with self.lock:
             return self._cached_now_body
+
+    def rejected_gap_body(self) -> bytes:
+        """On-demand readonly metadata; never hold dashboard/metrics/client locks."""
+        response = dict(schema="robotron-rejected-gap-api-v1", available=False,
+                        reason="server_unavailable", snapshot=None)
+        try:
+            # Main publishes this reference after dashboard startup. Keep a local
+            # reference; the snapshot itself uses only its own diagnostic lock.
+            server = getattr(self.metrics, "global_server", None)
+            if server is not None:
+                getter = getattr(server, "rejected_gap_snapshot", None)
+                if not callable(getter):
+                    response["reason"] = "getter_unavailable"
+                else:
+                    snapshot = getter()
+                    if (not isinstance(snapshot, dict)
+                            or snapshot.get("schema") != "robotron-rejected-gap-observation-v1"
+                            or any(type(snapshot.get(k)) is not bool for k in
+                                   ("enabled", "available", "observer_error", "counter_saturated"))
+                            or (snapshot["available"] and (not snapshot["enabled"]
+                                or snapshot["observer_error"] or snapshot["counter_saturated"]))):
+                        raise ValueError("Invalid rejected-gap snapshot")
+                    reason = ("disabled" if not snapshot["enabled"] else
+                              "observer_error" if snapshot["observer_error"] else
+                              "counter_saturated" if snapshot["counter_saturated"] else
+                              "available" if snapshot["available"] else "observer_unavailable")
+                    response.update(available=snapshot["available"], reason=reason, snapshot=snapshot)
+            body = json.dumps(response, allow_nan=False, separators=(",", ":")).encode("utf-8")
+            if len(body) <= 128 * 1024:
+                return body
+            response.update(available=False, reason="response_too_large", snapshot=None)
+        except Exception:
+            # No exception text, client payload or zero-counter substitute.
+            response.update(available=False, reason="snapshot_error", snapshot=None)
+        return json.dumps(response, allow_nan=False, separators=(",", ":")).encode("utf-8")
 
     def game_preview_body(self, since_seq: int | None = None, wait_timeout_s: float = 0.0) -> bytes | None:
         since = None if since_seq is None else int(max(0, since_seq))
@@ -1713,6 +1866,13 @@ def _render_dashboard_html() -> str:
       white-space: nowrap;
       font-size: 12px;
     }
+    .activity-panel { margin-bottom: 14px; padding: 14px 18px; border: 1px solid rgba(0,229,255,.4); border-radius: 12px; background: rgba(5,15,30,.9); }
+    .activity-head { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; color:#bdefff; }
+    .activity-metrics { display:flex; flex-wrap:wrap; gap:10px 24px; margin:10px 0; font-size:14px; }
+    .activity-metrics strong { color:#fff; font-variant-numeric:tabular-nums; }
+    .activity-note { color:#9cb6d4; font-size:12px; line-height:1.6; }
+    .activity-legs { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+    .activity-leg { flex:1; min-width:170px; padding:7px 10px; border:1px solid rgba(100,180,255,.25); border-radius:6px; font-size:12px; line-height:1.6; color:#c8e8ff; white-space:pre-line; }
     /* ── Responsive breakpoints ───────────────────────────────────── */
     @media (max-width: 1300px) {
       .cards { grid-template-columns: repeat(8, minmax(0, 1fr)); }
@@ -1736,6 +1896,14 @@ def _render_dashboard_html() -> str:
   <video id="bgVideo" autoplay loop muted playsinline src="/api/html/Starfield.mov"></video>
   <div id="bgOverlay"></div>
   <main>
+    <section class="activity-panel" aria-label="Training and evaluation activity">
+      <div class="activity-head"><strong id="mTrainingStatus">Waiting for live training data…</strong><span id="mActivityUpdated">Connecting…</span></div>
+      <div class="activity-metrics"><span>Learner frames <strong id="mLearnerFrames">—</strong></span><span>Optimizer samples <strong id="mOptimizedSamples">—</strong></span><span>Training clients <strong id="mTrainingClients">—</strong></span><span>Frames/sec <strong id="mTrainingFps">—</strong></span></div>
+      <div class="activity-head" id="mWorkStage">Reading current work…</div>
+      <div class="activity-legs" id="mWorkDetails"></div>
+      <div class="activity-note" id="mCampaignStatus">Checking experiment results…</div>
+      <div class="activity-legs" id="mCampaignLegs"></div>
+    </section>
     <section class="preview-stage">
       <article class="card preview-panel" style="--card-border:rgba(80,170,255,0.72);--card-glow:rgba(60,150,255,0.30)">
         <div class="preview-panel-head">
@@ -1774,6 +1942,15 @@ def _render_dashboard_html() -> str:
           </table>
         </div>
       </article>
+    </section>
+    <section class="activity-panel" id="trainingRoundPanel" hidden>
+      <div class="activity-head"><strong>Completed games this round</strong><span id="trainingRoundProgress"></span></div>
+      <div class="client-table-wrap">
+        <table class="client-table" aria-label="Completed training game scores">
+          <thead><tr><th>Slot</th><th class="num">Final score</th><th class="num">Level</th><th class="num">Duration</th></tr></thead>
+          <tbody id="trainingRoundScores"></tbody>
+        </table>
+      </div>
     </section>
     <section class="cards">
       <article class="card gauge-card" style="--card-border:rgba(255,60,60,0.66);--card-glow:rgba(255,40,40,0.26)">
@@ -2954,8 +3131,12 @@ def _render_dashboard_html() -> str:
       return (n < 0 ? "-" : "+") + padded;
     }
 
+    function chartNumber(value) {
+      return value === null || value === undefined ? NaN : Number(value);
+    }
+
     function fmtPaddedFloat(v, intDigits = 2, decDigits = 2, padChar = "0") {
-      if (v === null || v === undefined || Number.isNaN(v)) return "0";
+      if (v === null || v === undefined || !Number.isFinite(Number(v))) return "--";
       const n = Math.abs(Number(v));
       const [ip, fp] = n.toFixed(decDigits).split(".");
       return ip.padStart(intDigits, padChar) + (fp !== undefined ? "." + fp : "");
@@ -3153,6 +3334,12 @@ def _render_dashboard_html() -> str:
     function setConnected(connected) {
       const dot = document.getElementById("statusDot");
       const text = document.getElementById("statusText");
+      if (connected && latestNow && Date.now() / 1000 - Number(latestNow.ts) > 5) {
+        dot.style.background = "#f59e0b";
+        text.textContent = "Metrics stale · reconnecting";
+        document.getElementById("mTrainingStatus").textContent = "Waiting for fresh training data";
+        return;
+      }
       if (connected) {
         dot.style.background = "#39ff14";
         dot.style.boxShadow = "0 0 0 7px rgba(57,255,20,0.22), 0 0 16px rgba(57,255,20,0.55)";
@@ -3161,6 +3348,7 @@ def _render_dashboard_html() -> str:
         dot.style.background = "#ff2a55";
         dot.style.boxShadow = "0 0 0 7px rgba(255,42,85,0.24), 0 0 16px rgba(255,42,85,0.55)";
         text.textContent = "Disconnected";
+        document.getElementById("mTrainingStatus").textContent = "Connection interrupted · retrying";
       }
     }
 
@@ -4210,7 +4398,7 @@ def _render_dashboard_html() -> str:
       const values = [];
       for (const row of points) {
         for (const s of seriesDefs) {
-          const v = Number(row[s.key]);
+          const v = chartNumber(row[s.key]);
           if (Number.isFinite(v)) {
             values.push(v);
           }
@@ -4413,9 +4601,13 @@ def _render_dashboard_html() -> str:
         const xFn = s.linearTime ? xAtLinear : xAtLog;
         const smoothAlpha = Number.isFinite(s.smooth_alpha) ? Number(s.smooth_alpha) : MINI_CHART_VALUE_SMOOTH_ALPHA;
         const mw = Number.isFinite(s.median_window) ? s.median_window : 0;
-        const readVal = mw >= 3
-          ? (i) => medianNeighbors(i, n, mw, (j) => Number(points[j][s.key]))
-          : (i) => Number(points[i][s.key]);
+        const readVal = (i) => {
+          const value = chartNumber(points[i][s.key]);
+          if (!Number.isFinite(value)) return NaN;
+          return mw >= 3
+            ? medianNeighbors(i, n, mw, (j) => chartNumber(points[j][s.key]))
+            : value;
+        };
         ctx.strokeStyle = s.color;
         ctx.globalAlpha = (s.key === "level_1m") ? 0.95 : 0.82;
         ctx.lineWidth = (s.key === "level_1m") ? 2.0 : 1.6;
@@ -4545,7 +4737,7 @@ def _render_dashboard_html() -> str:
           if (!key) continue;
           const alpha = Number.isFinite(def.alpha) ? Number(def.alpha) : 0.12;
 
-          const vNow = Number(row[key]);
+          const vNow = chartNumber(row[key]);
           if (Number.isFinite(vNow)) {
             sums[k] += vNow;
             counts[k] += 1;
@@ -4555,7 +4747,7 @@ def _render_dashboard_html() -> str:
             const rowStart = src[starts[k]] || {};
             const tsS = Number(rowStart.ts);
             if (!Number.isFinite(tsI) || !Number.isFinite(tsS) || (tsI - tsS) <= windowSec) break;
-            const vS = Number(rowStart[key]);
+            const vS = chartNumber(rowStart[key]);
             if (Number.isFinite(vS)) {
               sums[k] -= vS;
               counts[k] = Math.max(0, counts[k] - 1);
@@ -4563,6 +4755,10 @@ def _render_dashboard_html() -> str:
             starts[k] += 1;
           }
 
+          if (!Number.isFinite(vNow)) {
+            nextRow[key] = null;
+            continue;
+          }
           const avg = counts[k] > 0 ? (sums[k] / counts[k]) : (Number.isFinite(vNow) ? vNow : 0.0);
           emas[k] = (emas[k] === null) ? avg : (emas[k] + ((avg - emas[k]) * alpha));
           nextRow[key] = emas[k];
@@ -4685,12 +4881,35 @@ def _render_dashboard_html() -> str:
      * CARD UPDATER — Pushes latest snapshot values into DOM elements,
      * updates record highs, and sets model description.
      * ══════════════════════════════════════════════════════════════ */
+    function renderTrainingRound(round) {
+      const panel = document.getElementById("trainingRoundPanel");
+      if (!panel) return;
+      panel.hidden = !round;
+      if (!round) return;
+      document.getElementById("trainingRoundProgress").textContent =
+        `Round ${fmtInt(round.round)} · ${fmtInt(round.completed)}/${fmtInt(round.total)} completed · ${fmtInt(round.active)} active`;
+      const body = document.getElementById("trainingRoundScores");
+      const fragment = document.createDocumentFragment();
+      for (const result of (Array.isArray(round.results) ? round.results : [])) {
+        const row = document.createElement("tr");
+        for (const [index, value] of [fmtInt(result.slot), fmtInt(result.score), fmtInt(result.level), `${fmtFloat(Number(result.duration_s) / 60, 1)} min`].entries()) {
+          const cell = document.createElement("td");
+          if (index > 0) cell.className = "num";
+          cell.textContent = value;
+          row.appendChild(cell);
+        }
+        fragment.appendChild(row);
+      }
+      body.replaceChildren(fragment);
+    }
+
     function updateCards(now, smoothedSteps) {
       _lastNow = now;
       cards.clients.textContent = fmtInt(now.client_count);
       cards.web.textContent = fmtInt(now.web_client_count);
       syncPreviewPending(now);
       renderClientTable(now.client_rows || [], now.preview_selected_client_id);
+      renderTrainingRound(now.training_round);
       updatePreviewMeta(now);
       cards.level.textContent = fmtFloat(now.average_level, 2);
       cards.avgGameScore.textContent = fmtInt(now.average_game_score);
@@ -4791,9 +5010,130 @@ def _render_dashboard_html() -> str:
       }
     }
 
+    let currentWorkStatus = null;
+    let workStatusRequestBusy = false;
+    let workStatusReadFailed = false;
+    let workStatusRenderKey = "";
+
+    function workStatusView(payload, nowMs = Date.now()) {
+      if (!payload || payload.schema !== "robotron-prepared-policy-screening-status-v1") return null;
+      const work = payload.next_work;
+      if (!work || typeof work !== "object" || Array.isArray(work)) return null;
+      const text = value => typeof value === "string" ? value.trim() : "";
+      const stage = text(work.current_stage) || text(work.state).replaceAll("_", " ");
+      if (!stage) return null;
+      const stamp = Number.isFinite(work.updated_unix_s) ? work.updated_unix_s : payload.updated_unix_s;
+      const hasStamp = Number.isFinite(stamp) && stamp > 0;
+      const age = hasStamp ? Math.max(0, nowMs / 1000 - stamp) : null;
+      let when = text(work.eta) || "No completion estimate has been published yet.";
+      const estimate = work.estimated_completion_unix_s;
+      if (Number.isFinite(estimate) && estimate > 0) {
+        const minutes = Math.max(0, Math.ceil((estimate * 1000 - nowMs) / 60000));
+        when += minutes > 0 ? " About " + minutes + " min remaining at the observed rate." :
+          " The previous estimate has been reached; waiting for a progress update.";
+      }
+      return {stage, why: text(work.detail) || text(payload.detail) || "Details have not been published yet.",
+        waiting: text(work.waiting_for) || "No dependency has been reported.",
+        next: text(work.next_stage) || "The next step has not been published yet.", when,
+        updated: hasStamp ? new Date(stamp * 1000).toLocaleTimeString() : "time unavailable",
+        stale: age === null || age > 90};
+    }
+
+    function renderWorkStatus() {
+      const view = workStatusView(currentWorkStatus);
+      const stage = document.getElementById("mWorkStage");
+      const details = document.getElementById("mWorkDetails");
+      if (!view) {
+        stage.textContent = "Current work status is unavailable · retrying";
+        return;
+      }
+      const delayed = view.stale || workStatusReadFailed;
+      const label = "Current work: " + view.stage + " · updated " + view.updated +
+        (delayed ? " · refresh delayed; showing the last reported status" : "");
+      const key = JSON.stringify([label, view.why, view.waiting, view.next, view.when]);
+      if (key === workStatusRenderKey) return;
+      workStatusRenderKey = key;
+      stage.textContent = label;
+      details.replaceChildren(...[["Why", view.why], ["Waiting for", view.waiting],
+        ["Next", view.next], ["When", view.when]].map(([title, value]) => {
+        const card = document.createElement("div");
+        card.className = "activity-leg";
+        const heading = document.createElement("strong");
+        heading.textContent = title;
+        const body = document.createElement("div");
+        body.textContent = value;
+        card.append(heading, body);
+        return card;
+      }));
+    }
+
+    async function fetchWorkStatus() {
+      if (workStatusRequestBusy) return;
+      workStatusRequestBusy = true;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      try {
+        const response = await fetch("/api/html/next-policy-evaluation.json?t=" + Date.now(),
+          {cache: "no-store", signal: controller.signal});
+        if (!response.ok) throw new Error("Work status unavailable");
+        const payload = await response.json();
+        if (!workStatusView(payload)) throw new Error("Work status is incomplete");
+        currentWorkStatus = payload;
+        workStatusReadFailed = false;
+      } catch (error) {
+        workStatusReadFailed = true;
+      } finally {
+        clearTimeout(timer);
+        workStatusRequestBusy = false;
+        if (latestNow) renderActivity(latestNow);
+        else renderWorkStatus();
+      }
+    }
+
+    function renderActivity(now) {
+      const put = (id, value) => { document.getElementById(id).textContent = value; };
+      const age = Math.max(0, Date.now() / 1000 - Number(now.ts || 0));
+      const live = age < 5 && now.training_enabled && Number(now.fps) > 0 && Number(now.client_count) > 0;
+      put("mTrainingStatus", age >= 5 ? "Training metrics are stale · reconnecting" :
+        live ? "Training live" : now.training_enabled ? "Training enabled · waiting for game frames" : "Training paused");
+      put("mActivityUpdated", age < 5 ? "Updated " + new Date(Number(now.ts) * 1000).toLocaleTimeString() : "Last update " + Math.round(age) + " seconds ago");
+      put("mLearnerFrames", fmtInt(now.learner_frame_count));
+      put("mOptimizedSamples", fmtInt(now.optimized_samples));
+      put("mTrainingClients", fmtInt(now.client_count));
+      put("mTrainingFps", fmtInt(now.fps));
+      renderWorkStatus();
+      const campaign = now.quality_campaign || {};
+      const container = document.getElementById("mCampaignLegs");
+      if (!campaign.available) {
+        put("mCampaignStatus", campaign.read_error ? "Experiment results are temporarily unavailable · retrying" : "");
+        container.replaceChildren();
+        return;
+      }
+      const prefix = campaign.stale || campaign.read_error ? "A/B status delayed · " : "A/B evaluation · ";
+      const outcome = campaign.state === "finished" ? String(campaign.outcome || "complete").replaceAll("_", " ") :
+        "cohort " + (campaign.current_leg || 1) + " of " + (campaign.total_legs || 4);
+      put("mCampaignStatus", prefix + (campaign.comparison || "reference vs candidate") + " · " + outcome);
+      const nodes = (campaign.legs || []).map(leg => {
+        const card = document.createElement("div");
+        card.className = "activity-leg";
+        let state = leg.complete ? (leg.valid === false ? "Invalid" : "Complete") :
+          leg.phase === "draining" ? "Waiting for " + Number(leg.pending || 0) + " admitted game(s) to finish" :
+          leg.phase === "collecting" ? "Collecting games" : leg.state === "running" ? "Starting" : "Queued";
+        if (leg.phase === "collecting" && leg.admission_close_unix_s) {
+          state += " · " + Math.max(0, Math.ceil((leg.admission_close_unix_s - Date.now() / 1000) / 60)) + " min remaining";
+        }
+        let detail = Number(leg.count || 0) + " complete games";
+        if (leg.complete && leg.valid !== false && Number(leg.count) > 0) detail += " · mean " + fmtInt(leg.mean);
+        card.textContent = [leg.index + ". " + (leg.role === "reference" ? "Reference" : "Candidate"), state, detail].join(String.fromCharCode(10));
+        return card;
+      });
+      container.replaceChildren(...nodes);
+    }
+
     function render(payload) {
       _tickDisplayFps();
       if (!payload || !payload.now) return;
+      renderActivity(payload.now);
       const history = Array.isArray(payload.history) ? payload.history.slice(-MAX_HISTORY_POINTS) : [];
       const history60m = sliceHistoryLookback(history, 60 * 60);
       const history2m = sliceHistoryLookback(history, 2 * 60);
@@ -4827,6 +5167,11 @@ def _render_dashboard_html() -> str:
     let historyCache = [];
     let latestNow = null;
     let lastTs = -1;
+    let nowRequestBusy = false;
+
+    function chartHistoryRow(now) {
+      return Object.fromEntries(Object.entries(now).filter(([, value]) => value === null || typeof value !== "object"));
+    }
 
     function renderCurrent() {
       if (!latestNow) return;
@@ -4834,22 +5179,27 @@ def _render_dashboard_html() -> str:
     }
 
     async function fetchHistory() {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
       try {
-        const res = await fetch(`/api/history?cid=${encodeURIComponent(CLIENT_ID)}&t=${Date.now()}`, { cache: "no-store" });
+        const res = await fetch(`/api/history?cid=${encodeURIComponent(CLIENT_ID)}&t=${Date.now()}`, { cache: "no-store", signal: controller.signal });
         if (!res.ok) throw new Error("bad response");
         const payload = await res.json();
         const now = payload && payload.now ? payload.now : null;
+        if (now && now.snapshot_error) throw new Error(now.snapshot_error);
         const history = Array.isArray(payload && payload.history) ? payload.history : [];
         historyCache = history.slice(-MAX_HISTORY_POINTS);
-        latestNow = now || historyCache[historyCache.length - 1] || latestNow;
-        const ts = Number(latestNow && latestNow.ts);
+        if (now && (!latestNow || Number(now.ts) >= Number(latestNow.ts))) latestNow = now;
+        const ts = Number(historyCache.length ? historyCache[historyCache.length - 1].ts : -1);
         if (Number.isFinite(ts)) {
           lastTs = ts;
         }
         renderCurrent();
         setConnected(true);
       } catch (err) {
-        setConnected(false);
+        console.warn("Chart history unavailable; live updates continue", err);
+      } finally {
+        clearTimeout(timer);
       }
     }
 
@@ -4858,14 +5208,19 @@ def _render_dashboard_html() -> str:
      * maintains history cache, and triggers re-renders.
      * ══════════════════════════════════════════════════════════════ */
     async function fetchNow() {
+      if (nowRequestBusy) return;
+      nowRequestBusy = true;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
       try {
-        const res = await fetch(`/api/now?cid=${encodeURIComponent(CLIENT_ID)}&t=${Date.now()}`, { cache: "no-store" });
+        const res = await fetch(`/api/now?cid=${encodeURIComponent(CLIENT_ID)}&t=${Date.now()}`, { cache: "no-store", signal: controller.signal });
         if (!res.ok) throw new Error("bad response");
         const now = await res.json();
+        if (now && now.snapshot_error) throw new Error(now.snapshot_error);
         latestNow = now;
         const ts = Number(now && now.ts);
         if (Number.isFinite(ts) && ts > lastTs + 1e-9) {
-          historyCache.push(now);
+          historyCache.push(chartHistoryRow(now));
           if (historyCache.length > MAX_HISTORY_POINTS) {
             historyCache.shift();
           }
@@ -4875,6 +5230,9 @@ def _render_dashboard_html() -> str:
         setConnected(true);
       } catch (err) {
         setConnected(false);
+      } finally {
+        clearTimeout(timer);
+        nowRequestBusy = false;
       }
     }
 
@@ -4883,13 +5241,10 @@ def _render_dashboard_html() -> str:
         const res = await fetch(`/api/ping?cid=${encodeURIComponent(CLIENT_ID)}&t=${Date.now()}`, { cache: "no-store" });
         if (!res.ok) throw new Error("no ping");
         failedPings = 0;
-        setConnected(true);
+        if (latestNow) setConnected(true);
       } catch (err) {
         failedPings += 1;
         setConnected(false);
-        if (failedPings >= 3) {
-          try { window.close(); } catch (_) {}
-        }
       }
     }
 
@@ -4921,10 +5276,13 @@ def _render_dashboard_html() -> str:
     }
     loadAudioPlaylist().catch(() => {});
 
-    fetchHistory().then(() => fetchNow()).catch(() => {});
+    fetchNow().catch(() => {});
+    fetchHistory().catch(() => {});
+    fetchWorkStatus().catch(() => {});
     previewPumpLoop().catch(() => {});
     setInterval(fetchNow, DASH_REFRESH_MS);
     setInterval(heartbeat, 1000);
+    setInterval(fetchWorkStatus, 10000);
     window.addEventListener("resize", () => {
       renderCurrent();
       // Force gauge repaint since canvas dimensions changed
@@ -4967,7 +5325,9 @@ def _make_handler(state: _DashboardState):
                 self.send_response(200)
                 self.send_header("Content-Type", content_type)
                 self.send_header("Content-Length", str(size))
-                self.send_header("Cache-Control", "public, max-age=3600")
+                cache_control = ("no-store" if os.path.splitext(filepath)[1].lower()
+                                 in {".html", ".json"} else "public, max-age=3600")
+                self.send_header("Cache-Control", cache_control)
                 self.end_headers()
                 with open(filepath, "rb") as f:
                     shutil.copyfileobj(f, self.wfile, length=64 * 1024)
@@ -5049,6 +5409,65 @@ def _make_handler(state: _DashboardState):
                 return
             if path == "/api/now":
                 self._send(state.now_body(), "application/json")
+                return
+            if path == "/api/rejected_gaps":
+                self._send(state.rejected_gap_body(), "application/json")
+                return
+            if path in ("/api/continuous_training_policy", "/api/continuous_training_connections", "/api/connection_cleanup_token"):
+                try:
+                    server=getattr(state.metrics,"global_server",None)
+                    if path in ("/api/continuous_training_policy", "/api/continuous_training_connections"):
+                        if query:
+                            raise ValueError("Policy getter has no query actions")
+                        value=(server.continuous_training_policy_snapshot() if path == "/api/continuous_training_policy"
+                               else server.continuous_training_connections_snapshot())
+                    else:
+                        if (set(query)!={"token"} or len(query["token"])!=1
+                                or not 1<=len(query["token"][0])<=128 or len(parsed.query)>512):
+                            raise ValueError("Exact bounded original token required")
+                        value=server.connection_cleanup_by_token(query["token"][0])
+                    body=json.dumps(value,allow_nan=False,separators=(",",":")).encode()
+                    if len(body)>(524288 if path == "/api/continuous_training_connections" else 70000):
+                        raise ValueError("Continuous evidence exceeds response bound")
+                except (ValueError,KeyError,AttributeError):
+                    self._send(b'{"available":false}',"application/json",status=404)
+                    return
+                self._send(body,"application/json")
+                return
+            if path == "/api/connection_cleanup":
+                # Read-only, uncached server-local connection evidence. This
+                # never admits a replacement actor or proves its Popen identity.
+                try:
+                    if (len(parsed.query) > 512
+                            or set(query) not in ({"client_id", "slot"},
+                                                  {"client_id", "slot", "journal_game_id"})
+                            or any(len(values) != 1 for values in query.values())):
+                        raise ValueError("Exact bounded cleanup query required")
+                    cid, slot = int(query["client_id"][0]), int(query["slot"][0])
+                    if not 0 <= cid < 4096 or not 0 <= slot < 192:
+                        raise ValueError("Connection/slot outside declared domain")
+                    jid = query.get("journal_game_id", [None])[0]
+                    if jid is not None and (not 1 <= len(jid) <= 128
+                            or any(c not in "0123456789:" for c in jid)):
+                        raise ValueError("Exact original journal identity required")
+                except (TypeError, ValueError, KeyError):
+                    self._send(b'{"available":false,"reason":"invalid cleanup query"}',
+                               "application/json", status=400)
+                    return
+                try:
+                    server = getattr(state.metrics, "global_server", None)
+                    getter = getattr(server, "connection_cleanup_snapshot", None)
+                    if not callable(getter):
+                        raise ValueError("Cleanup evidence is not enabled")
+                    value = getter(cid, slot, jid)
+                    body = json.dumps(value, allow_nan=False, separators=(",", ":")).encode()
+                    if len(body) > 70000:
+                        raise ValueError("Cleanup evidence exceeds response bound")
+                except (ValueError, KeyError):
+                    self._send(b'{"available":false,"reason":"no exact cleanup evidence"}',
+                               "application/json", status=404)
+                    return
+                self._send(body, "application/json")
                 return
             if path == "/api/history":
                 body = json.dumps(state.payload()).encode("utf-8")

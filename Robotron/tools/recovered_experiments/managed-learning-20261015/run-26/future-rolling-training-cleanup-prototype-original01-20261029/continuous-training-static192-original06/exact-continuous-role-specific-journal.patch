@@ -1,0 +1,61 @@
+--- game_journal_parent.py
++++ game_journal_continuous_train_candidate_v1.py
+@@ -44,7 +44,7 @@
+ 
+ 
+ class GameJournal:
+-    def __init__(self, directory, lives_start=3, clock=time.time, retire_after_game=False):
++    def __init__(self, directory, lives_start=3, clock=time.time, retire_after_game=False, continuous_train=False):
+         self.directory = Path(directory)
+         self.directory.mkdir(parents=True, exist_ok=True)
+         self.games_path = self.directory / "games.jsonl"
+@@ -62,6 +62,9 @@
+         self.sequence = 0
+         self.run_id = str(time.time_ns())
+         self.retire_after_game = bool(retire_after_game)
++        self.continuous_train = bool(continuous_train)
++        if self.continuous_train and not self.retire_after_game:
++            raise ValueError("Continuous training requires late-confirmed durable journal mode")
+         self.retirements_path = self.directory / "completed_clients.jsonl"
+         self.retirements = {}
+ 
+@@ -72,7 +75,8 @@
+             directory = Path(model_dir).parent / "logs" / (
+                 "game-journal-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ"))
+         return cls(directory, lives_start=lives_start,
+-                   retire_after_game=os.getenv("ROBOTRON_RETIRE_AFTER_GAME", "0") == "1")
++                   retire_after_game=os.getenv("ROBOTRON_RETIRE_AFTER_GAME", "0") == "1",
++                   continuous_train=os.getenv("ROBOTRON_CONTINUOUS_TRAINING_MODE", "0") == "1")
+ 
+     def _write(self, path, row):
+         # One small append per life/game, outside the frame/inference critical
+@@ -163,7 +167,8 @@
+             start_context=game["start"], end_context=end,
+         )
+         self._write(self.games_path, row)
+-        if (self.retire_after_game and eligible and game["client_id"] not in self.retirements
++        if (self.retire_after_game and (not self.continuous_train or game["eval_only"])
++                and eligible and game["client_id"] not in self.retirements
+                 and reason in ("score_reset", "zero_score_restart")):
+             # Commit both the ordinary score and the supervisor's completion
+             # receipt before permitting an exit request on the action stream.
+@@ -173,7 +178,7 @@
+         game["result"] = row
+         self.completed.append(row)
+ 
+-    def observe(self, cid, frame, cs, *, new_game=False, context, boundary_inputs=None):
++    def observe(self, cid, frame, cs, *, new_game=False, context, boundary_inputs=None, confirmed_boundary=None):
+         """Observe one accepted, score-unwrapped frame without changing training.
+ 
+         ``new_game`` comes from the existing ingest classifier, without the
+@@ -198,6 +203,10 @@
+                   and game["deaths"] >= self.lives_start and game["restart_pulse"]
+                   and frame.player_alive and not game["last_alive"]):
+                 self._finish(game, context, "zero_score_restart", True)
++                if confirmed_boundary is not None:
++                    # Actual natural-boundary decision, after old final row is
++                    # durable and before the new game/any life row is created.
++                    confirmed_boundary("zero_score_restart", game["result"])
+                 game = self._begin(cid, frame, cs, context, True, "zero_score_restart",
+                                    boundary_inputs=boundary_inputs)
+             elif game["finished"]:

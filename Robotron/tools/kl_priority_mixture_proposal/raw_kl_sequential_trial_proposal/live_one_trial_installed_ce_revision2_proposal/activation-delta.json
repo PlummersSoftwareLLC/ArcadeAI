@@ -1,0 +1,31 @@
+{
+  "schema": "robotron-installed-CE-activation-job-delta-v1",
+  "status": "DECLARATIVE_ONLY_NOT_AN_ACTUAL_JOB",
+  "transition_schema": "robotron-raw-kl-installed-phase-transition-job-v3",
+  "mode": "activate_kl",
+  "sources": [],
+  "required_running_phase": {
+    "metric": "ce",
+    "record": null,
+    "boot_checkpoint": null,
+    "boot_verification": null,
+    "expected": null
+  },
+  "required_current_owner_insurance": {
+    "owner": null,
+    "mode": "insurance",
+    "client_count": 192,
+    "verification": null,
+    "actual_retained_execution": null
+  },
+  "fresh_final_core": null,
+  "fresh_phase_id": null,
+  "fresh_request_id": null,
+  "fresh_startup_tag": null,
+  "fresh_output": null,
+  "before_source_contract": "All five CANDIDATE hashes must already exist in the actual BEFORE map; no missing priority_phase.py and no install/rollback.",
+  "boot_contract": "Use actual current CE record/founder/historical boot and readonly proof; newest_stopped phase CPU validates NEWEST saved CE state before NEW KL record. Previous metric must be ce.",
+  "metadata_contract": "Every consumed boot report/context archived_control/archived_trainer_unit/provenance gets a fresh byte-identical owned0444 independent archive. cpu_phase returns the readonly result archive.",
+  "original_trial01_retried": false,
+  "actual_new_trial": null
+}

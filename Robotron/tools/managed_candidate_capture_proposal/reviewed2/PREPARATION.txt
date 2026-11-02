@@ -1,0 +1,28 @@
+ADDITIVE RETAINED-TERMINAL CGROUP CORRECTION — SOURCE ONLY
+
+Original3cc017 manifest /94e6 source /actual11PASS remain immutable. Root then
+actually invoked --execute once and it FAILED at terminal_watcher identity,
+before any preparation directory or candidate copy. This is an actual collector
+metadata failure, not CPU checkpoint verification or a failed model capture.
+The owned watcher itself exited0 under its original retained64907/7a0c identity.
+Root observed ControlGroup empty after process exit because systemd frees it.
+Root is preserving original failed invocation/tool output and watcher archive.
+
+Only eligibility correction: running owner still requires exact pretrigger CG.
+For MainPID0+terminal SubState+originalPID/inv/NRestarts0/ExecCode1/Status0/success,
+ControlGroup may be the pretrigger-bound path OR empty. Unexpected nonempty
+paths still fail. Numeric PID must be absent/reused and the AUTHORITATIVE original
+pretrigger cgroup must be absent or empty; blank terminal property never means
+skip those checks or adopt another group. Actual terminal property, including
+empty value, remains in archived full show and terminal identity.
+
+No source candidate chmod/link/body reads by author, no runtime query/action,
+helper import/default/compile or test execution. CPUjob/ea6 wrapper/model copy,
+all clocks/branch/sourcecontext and retained-unit/no-release contracts unchanged.
+Original PREPARATION.txt remains authoritative for the unchanged operations.
+
+Thirteen authored/unexecuted stdlib methods: original11 unchanged plus2 direct
+contracts. Empty originalterminalCG queries exact pretrigger oldgroup path;
+nonempty members in that oldgroup fail. RunningemptyCG or unrelatedterminalCG
+fail before a PID absence probe. Relative module path in planned-argv.json.
+Actual candidate and CPU result remain unknown to this source bundle.

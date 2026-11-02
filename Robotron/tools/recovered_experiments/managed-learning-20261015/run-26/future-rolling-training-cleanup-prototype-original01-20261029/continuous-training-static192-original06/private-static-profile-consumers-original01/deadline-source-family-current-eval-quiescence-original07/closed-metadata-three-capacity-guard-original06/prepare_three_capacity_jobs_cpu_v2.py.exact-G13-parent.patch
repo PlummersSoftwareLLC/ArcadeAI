@@ -1,0 +1,34 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-three-capacity-guard-original05/prepare_three_capacity_jobs_cpu_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-three-capacity-guard-original06/prepare_three_capacity_jobs_cpu_v2.py
+@@ -11,9 +11,9 @@
+ PARENT_PREPARED={'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/actual-closed-metadata-current-profile-guard-original04/prepared-CPU-NOT-LAUNCHED.json', 'sha256': '3d5025bbbfab85bba6ae6d901aff14391920a92afa95cc9ededbf1de681bdd7e', 'bytes': 8149, 'identity': {'device': 2304, 'inode': 85459713, 'bytes': 8149, 'mtime_ns': 1793317228520073492, 'ctime_ns': 1793317228520073492, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+ PARENT_CPU_JOB={'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/actual-closed-metadata-current-profile-guard-original04/job.json', 'sha256': '84ef03c6c13c0b804a2f8271db0ac41855c4b5e62bb0a14861b8952d216a3313', 'bytes': 437179, 'identity': {'device': 2304, 'inode': 85459711, 'bytes': 437179, 'mtime_ns': 1793317228426664765, 'ctime_ns': 1793317228426664765, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+ PARENT_SHIM={'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-current-profile-guard-original04/closed_metadata_readiness_reuse_current_profile_v8.py', 'sha256': '235aafdb90a1ea5d776b92191f2b7f077bf9bc585ddf76dc03cb502f7b80c3e5', 'bytes': 27770, 'identity': {'device': 2304, 'inode': 85459692, 'bytes': 27770, 'mtime_ns': 1793317172827728702, 'ctime_ns': 1793317172827728702, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+-AMENDMENT_PRODUCER={'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/remaining-three-main-journal128-amendment-original01/prepare_remaining_three_main_journal128_amendment_v1.py', 'sha256': '6ecf2d7ac03b58a514bcf3ea15c0297b2d4161e3595c3a17f7c19078337bd96a', 'bytes': 18465, 'identity': {'device': 2304, 'inode': 87556186, 'bytes': 18465, 'mtime_ns': 1793326293883632414, 'ctime_ns': 1793326483693411855, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
++AMENDMENT_PRODUCER={'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/remaining-three-main-journal128-amendment-original01/prepare_remaining_three_main_journal128_amendment_v2.py', 'sha256': '037c79e120a2ff891e1fb961f583e01ffe5213a5d0fedcae94fd574f0f65616e', 'bytes': 21205, 'identity': {'device': 2304, 'inode': 87556239, 'bytes': 21205, 'mtime_ns': 1793327288211443439, 'ctime_ns': 1793327518997144555, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+ DRIVER_SHA='22600f1824636431398f0c267058ce0ef7a78061e482383628876e1af299c444'
+-SHIM_SHA='80897097f2c36c1364d2daad47fef1e7654da9573126e2778f0b6179b7c982b4'
++SHIM_SHA='9a0a6255031018f7b7153d28f0c4a042fa1f7d2f023ea4e9d8f7fabbfbb1bcc2'
+ 
+ 
+ def require(value,reason):
+@@ -58,8 +58,8 @@
+             and mixed['original_R1_already_qualified']is True
+             and mixed['any_capacity_amended_payload_launched']is False,
+             'Exact three unused derived subjects with original R1 required')
+-    driver=h.pin(LOCAL/'qualify_three_capacity_jobs_cpu_v1.py')
+-    shim=h.pin(LOCAL/'closed_metadata_three_capacity_readiness_v1.py')
++    driver=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-three-capacity-guard-original05/qualify_three_capacity_jobs_cpu_v1.py'))
++    shim=h.pin(LOCAL/'closed_metadata_three_capacity_readiness_v2.py')
+     require(DRIVER_SHA is not None and SHIM_SHA is not None
+             and driver['sha256']==DRIVER_SHA and shim['sha256']==SHIM_SHA,
+             'Final frozen CPU driver and capacity adapter required')
+@@ -101,7 +101,7 @@
+         amendment_producer=AMENDMENT_PRODUCER)
+     adapter.ClosedMetadataReadiness(provisional,h,lambda *args,**kwargs:None)
+     output.mkdir(mode=0o700)
+-    unit='robotron-three-capacity-exact-CPU-'+prepared['mixed_manifest']['sha256'][:16]+'-original01-20261029.service'
++    unit='robotron-three-capacity-v2-exact-CPU-'+prepared['mixed_manifest']['sha256'][:16]+'-original01-20261029.service'
+     job=copy.deepcopy(old)
+     job.update(schema='robotron-deadline32-three-capacity-jobs-CPU-guard-v1',unit=unit,
+         output=str(output/'output-original01'),prepared_manifest=prepared['mixed_manifest'],prepared_amendment=selected,

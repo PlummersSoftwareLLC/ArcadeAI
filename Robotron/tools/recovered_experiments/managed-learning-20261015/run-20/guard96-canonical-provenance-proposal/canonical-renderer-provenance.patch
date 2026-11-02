@@ -1,0 +1,39 @@
+diff --git a/Robotron/logs/managed-learning-20261015/learning-and-throughput-progress.json b/Robotron/logs/managed-learning-20261015/learning-and-throughput-progress.json
+--- a/Robotron/logs/managed-learning-20261015/learning-and-throughput-progress.json
++++ b/Robotron/logs/managed-learning-20261015/learning-and-throughput-progress.json
+@@ -618,7 +618,7 @@
+     },
+     {
+       "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/render_learning_progress.py",
+-      "sha256": "58d07e2ce6d4fbd6010ccdcaee8fb1ab72c76817e5b53d77c41a3049dadadda1"
++      "sha256": "dd7f651b2a962dfb688051edf7b2b88b0a80768a4743e97476378dd1be7635ef"
+     },
+     {
+       "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-18/batch2048-4096-ABA-independent-decision.json",
+@@ -669,8 +669,8 @@
+       "sha256": "cb4207a9d0c7d1bc7c8de0b4f46988904188b47a68e528de227e130260efef49"
+     },
+     {
+-      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-20/guard96-reporting-proposal/proposed/render_learning_progress.py",
+-      "sha256": "dd7f651b2a962dfb688051edf7b2b88b0a80768a4743e97476378dd1be7635ef"
++      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-20/guard96-reporting-proposal/before/render_learning_progress.py",
++      "sha256": "58d07e2ce6d4fbd6010ccdcaee8fb1ab72c76817e5b53d77c41a3049dadadda1"
+     }
+   ],
+   "caption": "Quality: complete greedy wave-1 games at difficulty 5; mean \u00b11 SE, not formal confidence. Separate valid cohorts; recovery changes are not a causal ablation.\nA: historical GB300 (*4M/8M select-v1/1000 \u00b5s; earlier busy). B: earlier GPU0 transport. C: fixed transport; hollow 96M marker is one unpromoted cohort. Protected 64M and all tails remain.\nD: settled 2026-10-16 UTC A\u2013B\u2013A counter samples/s; GPU-only energy. Batch 4096 changes optimizer exposure; sequential policy/replay/RNG drift prevents learning-equivalence claims.\nFirst natural bank events: memmap 34 \u2192 stream 0 deadline lines; 32.813 \u2192 33.003s overall brackets. Descriptive observations, not proof of causality or a universal fix.",
+@@ -689,13 +689,11 @@
+     ],
+     "confirmed_stage": "64M (fixed-transport GPU0)",
+     "renderer": "/home/dave/source/repos/ArcadeAI/Robotron/tools/render_learning_progress.py",
+-    "renderer_sha256": "58d07e2ce6d4fbd6010ccdcaee8fb1ab72c76817e5b53d77c41a3049dadadda1",
++    "renderer_sha256": "dd7f651b2a962dfb688051edf7b2b88b0a80768a4743e97476378dd1be7635ef",
+     "score_axis_maximum": 90000,
+     "reproduction_command": "python Robotron/tools/render_learning_progress.py Robotron/logs/managed-learning-20261015/learning-and-throughput-progress.json",
+     "sidecar_score_axis_maximum": 110000,
+-    "fixed_transport_score_axis_maximum": 230000,
+-    "proposal_renderer_path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-20/guard96-reporting-proposal/proposed/render_learning_progress.py",
+-    "proposal_renderer_sha256": "dd7f651b2a962dfb688051edf7b2b88b0a80768a4743e97476378dd1be7635ef"
++    "fixed_transport_score_axis_maximum": 230000
+   },
+   "runtime_provenance": {
+     "4M_policy_sha256": "86a83392652272c96a15ebde51d31be54e254bc2b40544dc08d2cffcf9be5631",

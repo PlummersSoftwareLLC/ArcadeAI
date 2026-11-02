@@ -1,0 +1,166 @@
+{
+  "actual_GPU_execution": null,
+  "actual_test_execution": null,
+  "adoption_authorized": false,
+  "author_actions": "Source/smallJSON reads and source/doc/test authoring only; no imports/compile/tests/PT/model/replay/runtime/launch/install",
+  "authored_test_methods": {
+    "parent": 15,
+    "process": 18,
+    "storage": 25,
+    "total": 82,
+    "worker_stdlib": 12,
+    "worker_tiny_CPU": 12
+  },
+  "bounds": {
+    "CPU_threads": 2,
+    "allocator_GiB": 12,
+    "host_GiB": 16,
+    "owned_artifacts_GiB": 6,
+    "per_role_seconds": 600,
+    "process_VRAM_GiB": 13,
+    "tasks": 128,
+    "total_seconds": 2100
+  },
+  "files": {
+    "PARENT_NOTES.txt": {
+      "bytes": 6040,
+      "mode": "0o444",
+      "sha256": "976006ae34f7ffc1603874fb5970ea1e88b0d529fda8b35d4288ce5f4285807b"
+    },
+    "PREPARATION.txt": {
+      "bytes": 5310,
+      "mode": "0o444",
+      "sha256": "f02480148b6a09e6e8f3ce77c1a6bd7c9b10424f81502c43d3ff7cef3e8b9be9"
+    },
+    "PROTOCOL.txt": {
+      "bytes": 5427,
+      "mode": "0o444",
+      "sha256": "78a8c84afda0e273338ada8df93ed4272a1b6b85a18685bcf219fba09192cc03"
+    },
+    "cuda_trace_parent.py": {
+      "bytes": 56171,
+      "mode": "0o444",
+      "sha256": "cb2cb51b8be6d287f88380f6c7055bed1c23d4d5c817e7a933f7b9e4753095da"
+    },
+    "cuda_trace_worker.py": {
+      "bytes": 45048,
+      "mode": "0o444",
+      "sha256": "0e779fd52f1e3807b80720c4de275b13283c1b21e9e3ca9ac9b22397d9732a0b"
+    },
+    "future-argv.json": {
+      "bytes": 2572,
+      "mode": "0o444",
+      "sha256": "2512d5ab21df63cd462fdc60d92a0b3551be7a164ca3118ab0560312e341c251"
+    },
+    "parent-before-marker-coherence-fix/PARENT_NOTES.txt": {
+      "bytes": 5435,
+      "mode": "0o444",
+      "sha256": "5bfaf42bdbad2eacc52ad95b2328e59480efaa42d6bb33794ae533792719fe87"
+    },
+    "parent-before-marker-coherence-fix/archive-manifest.json": {
+      "bytes": 1146,
+      "mode": "0o444",
+      "sha256": "ed295ea6015031a6d676ed261a4d7e6e0a1a33f73ac24d9712e69c64abffbec4"
+    },
+    "parent-before-marker-coherence-fix/cuda_trace_parent.py": {
+      "bytes": 56033,
+      "mode": "0o444",
+      "sha256": "374823b72375b50ab2bcca91480eabb4a665ebd7774e533a87947601f477ff2a"
+    },
+    "parent-before-marker-coherence-fix/test_process_scan.py": {
+      "bytes": 19620,
+      "mode": "0o444",
+      "sha256": "80d38d79c23516bff6414a0b3abc271e260bc504a5b46549561a8579550bce1e"
+    },
+    "parent-before-marker-coherence-fix/test_stage_b_parent.py": {
+      "bytes": 10439,
+      "mode": "0o444",
+      "sha256": "bf7ed92a9f91d2f8d34cefac6ab80cd852e789ac0d5562ae9ed1d70c918c7b7b"
+    },
+    "parent-before-marker-coherence-fix/test_storage_watcher.py": {
+      "bytes": 23551,
+      "mode": "0o444",
+      "sha256": "cf31417b8d152cfe792c8663a47aee340e9e739126ba705215c598eacb46b0ac"
+    },
+    "parent-marker-coherence-fix.patch": {
+      "bytes": 4716,
+      "mode": "0o444",
+      "sha256": "412fadff8359c054a53309d0b752f1926578cdb4de3ae1b689ee61be4cf44c2e"
+    },
+    "source-lock.json": {
+      "bytes": 14079,
+      "mode": "0o444",
+      "sha256": "8edbe0082cb93939ebc9bfe6be922058f9c821addf72567f57d2c7a83b53b5fc"
+    },
+    "test_process_scan.py": {
+      "bytes": 19620,
+      "mode": "0o444",
+      "sha256": "80d38d79c23516bff6414a0b3abc271e260bc504a5b46549561a8579550bce1e"
+    },
+    "test_stage_b_contract.py": {
+      "bytes": 19417,
+      "mode": "0o444",
+      "sha256": "00bf9fd83d0d8a13bf03e8b2f66626147a3260d40d4bffab82f026f7a99ed10e"
+    },
+    "test_stage_b_parent.py": {
+      "bytes": 11909,
+      "mode": "0o444",
+      "sha256": "6a17de61c5f80346f4a83185138892085d96c375811915a1c113415e19ca2c3c"
+    },
+    "test_storage_watcher.py": {
+      "bytes": 23551,
+      "mode": "0o444",
+      "sha256": "cf31417b8d152cfe792c8663a47aee340e9e739126ba705215c598eacb46b0ac"
+    }
+  },
+  "frozen_design": {
+    "DESIGN.txt": {
+      "sha256": "ec8b7f0ec78e85b270eeafe6a2bdfcedb1fc49c84c643a823e9bcc6a8bcd8fe5",
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/DESIGN.txt"
+    },
+    "preparation-manifest.json": {
+      "sha256": "8d49d37b76d74507b0d8ef78097ffc7559b8ce1352b87d7c1309c005ae21a69e",
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/preparation-manifest.json"
+    },
+    "source-lock.json": {
+      "sha256": "308894b955622b8dd40ba53c01627b7e9e8dd04666c89bc1651e6b04b565827e",
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/source-lock.json"
+    }
+  },
+  "known_limits": [
+    "No full real ring/bank/serving-concurrency proof",
+    "Input is genuine old attempt01 repeated under448weights; synthetic512fleetframes perstep, no real ingestion",
+    "At leastone actual applied+parameter+moment progress required; allskip cannot qualify/no19",
+    "Actual CUDA constructor/compile/fusedAMP/native calls, runtime fit and post-save reload remain unexecuted",
+    "No policy learning/speed/quality or coherent anchor claim; StageA also required before adoption"
+  ],
+  "prior_optional_fixture_CPU21_scope": "separate corrected21 PASS from2863793; original17KeyError failure preserved; notStageB execution",
+  "qualification_pass": false,
+  "schema": "robotron-raw-kl-stageB-preparation-v1",
+  "scientific_source_files": {
+    "agent.py": {
+      "sha256": "865a0df717b39951b7f7c516e4a962e3d48cf4d3dc11295ff266e58653e6c74b",
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/agent.py"
+    },
+    "config.py": {
+      "sha256": "19abcbde4d08cf8465b82185ac6dd52eb8965adb8611584e0677c4c7ff21d1fd",
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/config.py"
+    },
+    "loss_kernel.py": {
+      "sha256": "23eb8fc0d8409c9f31ef26ec4596da9c2257e3985abbbfa7d5fbdcb337e21f67",
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/loss_kernel.py"
+    },
+    "priority_phase.py": {
+      "sha256": "ee3c0d02bc1eab55e92ffd605c3736fe5a0ef905a8a8ee242c687301ea2b7c5b",
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/priority_phase.py"
+    },
+    "training.py": {
+      "sha256": "90b847856f810cb4f52513a4bd0625b2d15d4801107bff398060faae25bc4be4",
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/training.py"
+    }
+  },
+  "scope": "Actual candidate constructor/load/128graphs followed by explicit private graph release,18isolated real train_step calls with fixed-input/native-tree adapter, then fresh KLresume and explicit CEreturn; all unexecuted",
+  "source_lock_sha256": "8edbe0082cb93939ebc9bfe6be922058f9c821addf72567f57d2c7a83b53b5fc",
+  "source_peer_review_at_seal": "scientific and ownership source review reported no remaining issue; separate final exact-file receipt pending",
+  "status": "SOURCE_ONLY_UNEXECUTED"
+}

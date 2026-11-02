@@ -1,0 +1,98 @@
+{
+  "schema": "robotron-ce2048-shared-recipe-integration-preparation-v1",
+  "status": "SOURCE_ONLY_UNSELECTED",
+  "files": {
+    "PREPARATION.txt": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/PREPARATION.txt",
+      "sha256": "b9bed330d545fb4e96eec73849acad070b1e301472c84f9b24dd1d21745b07d9",
+      "bytes": 3419,
+      "mode": "0o444"
+    },
+    "future-argv.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/future-argv.json",
+      "sha256": "178b4b5a7a441c29a6282e4e7b02ea49aa0aeb8942072db9abdbdf4d8a6252b7",
+      "bytes": 719,
+      "mode": "0o444"
+    },
+    "helpers/inference_worker_affinity.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/helpers/inference_worker_affinity.py",
+      "sha256": "579dafd9410f9e97872074c444e5fb0e79b24a67e7476568c27faaf3341fd9ed",
+      "bytes": 34706,
+      "mode": "0o444"
+    },
+    "helpers/parallel_state_fill_trial.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/helpers/parallel_state_fill_trial.py",
+      "sha256": "0993ed57c6c32ad629b7ed078133e77fb0c54b211c8a324ef9bf7327d62b97f3",
+      "bytes": 43951,
+      "mode": "0o444"
+    },
+    "helpers/test_fleet_actor_discovery.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/helpers/test_fleet_actor_discovery.py",
+      "sha256": "65f76c0b037f54c99f1f2d8741edfcb5ae4f4b8640176ecd5c425902884d3612",
+      "bytes": 7122,
+      "mode": "0o444"
+    },
+    "run_CE_batch_transition.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/run_CE_batch_transition.py",
+      "sha256": "c7374cec895b7d98470ef9d83590980200817f37b2e0745d98ab895148345ea5",
+      "bytes": 76813,
+      "mode": "0o444"
+    },
+    "selection-TEMPLATE.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/selection-TEMPLATE.json",
+      "sha256": "ecd5afe399121bee0f7ec4036f1ce39fb32f5dc00ee801dfd51f429e8b8b1d2a",
+      "bytes": 1805,
+      "mode": "0o444"
+    },
+    "source-lock.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/source-lock.json",
+      "sha256": "2a6adadcf891fd1033b5de50c5bb7566d4673b3c544031e013a978ead8c9887a",
+      "bytes": 5476,
+      "mode": "0o444"
+    },
+    "source-only.patch": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/source-only.patch",
+      "sha256": "d230650008cc7610dc877adcc86f92685861b2783d52fbeceb461aa98de4b91b",
+      "bytes": 9768,
+      "mode": "0o444"
+    },
+    "test_shared_recipe_chain.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/test_shared_recipe_chain.py",
+      "sha256": "8562e138955a77760080daa71f1bd1eac4d968c88a54dbce444a2462300f564f",
+      "bytes": 13489,
+      "mode": "0o444"
+    }
+  },
+  "selected_guard_class": "SharedRecipeContracts",
+  "authored_unexecuted_guard_count": 8,
+  "selected_guard_module": "test_shared_recipe_chain.py",
+  "actual_tests": null,
+  "actual_trial": null,
+  "source_lock": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal/source-lock.json",
+    "sha256": "2a6adadcf891fd1033b5de50c5bb7566d4673b3c544031e013a978ead8c9887a",
+    "bytes": 5476,
+    "mode": "0o444"
+  },
+  "independent_source_review": "PENDING_SEPARATE_RECEIPT",
+  "narrow_text_checks": {
+    "adapter_reverse_exact_after_removing_nested_batch_method_and_launch_refusal": true,
+    "live_inspect_exact_after_reverting_one_bindings_argument": true,
+    "live_describe_exact": true,
+    "unchanged_discovery_source": true,
+    "existing_recipe_global_unmodified": true
+  },
+  "limits": [
+    "No installed source edits or source selection",
+    "No controller/deadline copies or selected family",
+    "No runtime/model/PT reads, imports, tests or actions by author",
+    "Original trial01 FAILED and actual one update preserved",
+    "Current candidate quality work takes priority; root owns any later guard execution"
+  ],
+  "future_bindings": {
+    "root_precommit": null,
+    "owner": null,
+    "checkpoint": null,
+    "clocks": null
+  }
+}

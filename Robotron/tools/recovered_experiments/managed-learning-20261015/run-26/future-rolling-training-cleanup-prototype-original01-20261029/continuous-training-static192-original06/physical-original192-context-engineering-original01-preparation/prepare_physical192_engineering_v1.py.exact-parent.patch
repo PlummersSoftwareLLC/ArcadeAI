@@ -1,0 +1,129 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/new-static-context-engineering-original01-preparation/prepare_static192_engineering_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/physical-original192-context-engineering-original01-preparation/prepare_physical192_engineering_v1.py
+@@ -1,4 +1,4 @@
+-"""Default inert. Bind NEW actual static MAIN warmup/long/abort DATA only.
++"""Default inert. Bind three FRESH actual physical MAIN engineering contexts.
+ 
+ Root must first install/start/verify the preserved continuous main and bind its
+ ever-bound original192 case and exact inventory. This preparer does not collect
+@@ -13,15 +13,15 @@
+ ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ HERE = Path(__file__).resolve().parent
+ MODE_ROOT = HERE.parent
+-HC = MODE_ROOT/'health-consumer-original01'
+-PROFILE = MODE_ROOT/'private-static-profile-consumers-original01/static_profile_contract_v2.py'
++HC = MODE_ROOT/'health-consumer-physical-original192-original02'
++PROFILE = MODE_ROOT/'health-consumer-physical-original192-original02/prepare_physical_original192_case_v2.py'
+ HELPER = ROOT/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py'
+ HELPER_SHA = '2b6902933b502ac20dacbd444fbf786315d6c960fcad1d5b5bf223dd569708c1'
+-FAMILY_SHA = '72e03ed29d4f446bac8bdf4d7557a85b01536b43eb7a71c174e305521535c1af'
+-MAP_SHA = '4629c151898362a71c3aa1f011c2088154c1cd69b9abc8959efdad79103c7410'
+-PROFILE_SHA = '5260662e651c6f26cde42bb04cde913dd51015658d071499b6966e661e6a451b'
+-REGISTRY_SHA = '2f3eddaf75ee3b9a875d0a621a63eeea7274eae3afa75bcceb309002233316d1'
+-REVIEWER_SHA = 'f6dcd7b9ae7556bc1e669b3973a6c5797f845d89c23e2d62a4955b55b519590a'
++FAMILY_SHA = '0effd7170f23dfac8ecd811c2df4b74435972b330bf74ba61913c530ce7a35b5'
++MAP_SHA = 'ed8d6356a7ab12ef00824d4cfa25048ada2974d32e61cfc6e57f227c5dc68a80'
++PROFILE_SHA = '90067b3cf06a79acee214b42b765eee021dfe567f39e03e0d0757d46a1cf5331'
++REGISTRY_SHA = '71fc044d7b3bbbfceba5ef23f69a6c741eeff5700176050c6cdbe9e4794bba69'
++REVIEWER_SHA = '49517cda74226f60f12297c5a106a758d76a3e0e4682a0a2c9058124c4ad433f'
+ 
+ 
+ def require(value, reason):
+@@ -47,15 +47,15 @@
+     require(output.is_absolute() and output.parent.resolve(strict=True) == HERE and not output.exists(),
+             'One exclusive original context directory required')
+     case = json.loads(h.checked(selected).read_bytes())
+-    require(case['schema'] == 'robotron-continuous-static192-health-case-v1'
+-            and case['source_guard'] == str(HC/'continuous_static192_health_v1.py'),
++    require(case['schema'] == 'robotron-continuous-physical-original192-health-case-v2'
++            and case['source_guard'] == str(HC/'continuous_physical192_health_v2.py'),
+             'Old whole-round or unselected source case cannot be adopted')
+-    r = load(HC/'continuous_static192_registry_v1.py', REGISTRY_SHA, '_static_engineering_registry')
++    r = load(HC/'continuous_physical192_registry_v2.py', REGISTRY_SHA, '_static_engineering_registry')
+     r.validate_case(case)  # Pure held metadata/event joins; no census/proc/API.
+     profile = load(PROFILE, PROFILE_SHA, '_static_engineering_inventory')
+     profile.validate_inventory(case, h)
+-    family_pin = h.pin(HC/'prepared-continuous-static192-typed-health-and-observer-SOURCE-ONLY-NOT-QUALIFIED-v1.json')
+-    map_pin = h.pin(HC/'prospective-static192-eight-role-observer-source-map-v1.json')
++    family_pin = h.pin(HC/'prepared-physical-original192-typed-health-and-observer-SOURCE-ONLY-NOT-QUALIFIED-v2.json')
++    map_pin = h.pin(HC/'prospective-physical192-eight-role-observer-source-map-v2.json')
+     require(family_pin['sha256'] == FAMILY_SHA and map_pin['sha256'] == MAP_SHA,
+             'Exact frozen static source family and eight-role map required')
+     family = json.loads(h.checked(family_pin).read_bytes())
+@@ -65,16 +65,16 @@
+             'Exact static eight-role observer map required')
+     for value in observers.values():
+         h.checked(value)
+-    reviewer = h.pin(HC/'review_continuous_static192_observer_v1.py')
++    reviewer = h.pin(HC/'review_continuous_physical192_observer_v2.py')
+     require(reviewer['sha256'] == REVIEWER_SHA, 'Exact static raw reviewer required')
+     paths = [Path(value['path']) for value in observers.values()]
+     paths += [Path(value['path']) for value in (family_pin, map_pin, reviewer)]
+     paths += [PROFILE, HELPER,
+-        HC/'independent-continuous-static192-typed-health-and-observer-source-peer-v1.json',
++        HC/'independent-physical-original192-health-and-kernel-exit-consumer-source-peer-v1.json',
+         ROOT/'tools/training_connection_lifecycle_proposal_20261023/finalize_dedicated_main_health_v1.py']
+-    paths += [HERE/name for name in ('prepare_static192_engineering_v1.py',
+-                                    'probe_static192_engineering_v1.py',
+-                                    'close_static192_engineering_v1.py')]
++    paths += [HERE/name for name in ('prepare_physical192_engineering_v1.py',
++                                    'probe_physical192_engineering_v1.py',
++                                    'close_physical192_engineering_v1.py')]
+     sources = {str(path): h.pin(path) for path in paths}
+     # Basename keys retain the unchanged engineering closer/intents interface.
+     require(len({Path(key).name for key in sources}) == len(sources), 'Duplicate held source basename')
+@@ -87,42 +87,43 @@
+     records = []
+     for mode in ('warmup', 'long', 'abort'):
+         directory = output/(mode+'-original01'); directory.mkdir(mode=0o700)
+-        unit = 'robotron-static192-proof2s-%s-engineering-%s-original01-20261029.service' % (mode, case_sha[:16])
++        unit = 'robotron-physical192-proof2s-%s-engineering-%s-original01-20261029.service' % (mode, case_sha[:16])
+         command = ['systemd-run','--user','--unit='+unit,
+             '-p','CPUQuota=200%','-p','MemoryMax=4G','-p','MemorySwapMax=0','-p','TasksMax=128',
+-            '-p','RuntimeMaxSec=780','-p','RemainAfterExit=yes','-p','Restart=no',
++            '-p','RuntimeMaxSec='+str(1800 if mode=='long' else 780),'-p','RemainAfterExit=yes','-p','Restart=no',
+             '-p','TimeoutStopSec=5','-p','SendSIGKILL=no',
+             '-p','StandardOutput=append:'+str(directory/'console.txt'),
+             '-p','StandardError=append:'+str(directory/'console.txt'),
+             '/usr/bin/env','-u','LD_PRELOAD','-u','PYTHONPATH','CUDA_VISIBLE_DEVICES=',
+             'PYTHONDONTWRITEBYTECODE=1','/usr/bin/python3','-I','-B',
+-            str(HERE/'probe_static192_engineering_v1.py'),'--execute','--mode',mode,
++            str(HERE/'probe_physical192_engineering_v1.py'),'--execute','--mode',mode,
+             '--case',selected['path'],'--case-sha256',selected['sha256'],'--output',str(directory/'runtime')]
+         intent = h.put(directory/'original-launch-intent-NOT-EXECUTED.json', dict(
+-            schema='robotron-static192-observer-original-engineering-intent-v1',
++            schema='robotron-physical192-observer-original-engineering-intent-v1',
+             argv=command,unit=unit,attempt=1,no_retry=True,case=selected,sources=sources,
+             engineering_only=True,actual_live_owner=None,actual_original_tool=None,
+             source=own,simultaneous192_actors_claimed=False))
+-        records.append(dict(kind='main-static192',mode=mode,output=str(directory),unit=unit,
++        records.append(dict(kind='main-physical192',mode=mode,output=str(directory),unit=unit,
+             intent=intent,original_live_owner=None,actual_execution=None))
+     for value in sources.values():
+         h.checked(value)
+     require(h.pin(selected['path']) == selected and case['inputs'] == before_inputs,
+             'Actual selected case or held input domain changed during preparation')
+-    return h.put(output/'prepared-three-original-static192-contexts-NOT-LAUNCHED.json', dict(
+-        schema='robotron-static192-three-observer-engineering-preparation-v1',status='DATA_PREPARED_NOT_LAUNCHED',
++    return h.put(output/'prepared-three-original-physical192-contexts-NOT-LAUNCHED.json', dict(
++        schema='robotron-physical192-three-observer-engineering-preparation-v1',status='DATA_PREPARED_NOT_LAUNCHED',
+         source=own,source_family=family_pin,source_map=map_pin,case=selected,
+         input_inventory_authority=case['input_inventory_authority'],actual_held_input_count=len(case['inputs']),
+         historical_parent_main_input_count=247,held_case_and_inputs_unchanged=True,
+         sources=sources,observer_sources=observers,observer_reviewer=reviewer,
+         logical_observer_dependency_count=8,records=records,
+-        actual_launch_index_schema='robotron-static192-three-original-engineering-launches-v1',
++        actual_launch_index_schema='robotron-physical192-three-original-engineering-launches-v1',
+         after_actual_operator_launch='Root alone replaces None owner/execution fields in a NEW immutable actual index; this preparation never proves a launch.',
+-        warmup_work_s=0,long_work_s=600,abort_work_s=5,worker_initial_samples=100,
++        warmup_work_s=0,abort_work_s=5,long_minimum_work_s=600,long_maximum_work_s=1200,
++        long_minimum_observed_samples=3000,long_work_contract='MINIMUM600S_AND_VALIDATED3000_SAMPLES_HARD1200S',worker_initial_samples=100,
+         worker_interval_s=.2,worker_maximum_gap_s=2.0,cached_retired_API_TTL_s=.5,
+         observer_CPU_cores=2,observer_memory_bytes=4<<30,observer_runtime_s=4260,
+-        parent_CPU_cores=2,parent_memory_bytes=4<<30,parent_runtime_s=780,
+-        accepted_profile='STATIC_ORIGINAL192_NO_FAULT_ADOPTION',
++        parent_CPU_cores=2,parent_memory_bytes=4<<30,parent_runtime_s_by_mode=dict(warmup=780,long=1800,abort=780),
++        accepted_profile='PHYSICAL_ORIGINAL192_TRAIN_CURRENT_TCP_EVAL_ORIGINAL_ONCE',
+         admission_basis='EVER_BOUND_ORIGINAL192_NOT_SIMULTANEOUS',simultaneous192_actors_claimed=False,
+         actual_original_owners=None,actual_warmup_or_long_or_abort_closures=None,
+         actual_static_context_engineering_qualified=False,scientific_launch_qualified=False,

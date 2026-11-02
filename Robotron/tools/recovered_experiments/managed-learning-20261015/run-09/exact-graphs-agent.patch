@@ -1,0 +1,295 @@
+--- a/Robotron/Scripts/dqn/agent.py
++++ b/Robotron/Scripts/dqn/agent.py
+@@ -43,6 +43,7 @@
+     from .replay_buffer import PrioritizedReplayBuffer
+     from .prefetch import ReplayPrefetcher
+     from .pipeline_telemetry import PipelineTelemetry, unavailable_snapshot
++    from .exact_inference_graphs import ExactInferenceGraphs, ExactInferenceGraphError, disabled_snapshot
+ except ImportError:
+     from config import (RL_CONFIG, MODEL_DIR, LATEST_MODEL_PATH,
+                         metrics as config_metrics, RESET_METRICS, IS_INTERACTIVE, learning_control,
+@@ -54,6 +55,7 @@
+     from replay_buffer import PrioritizedReplayBuffer
+     from prefetch import ReplayPrefetcher
+     from pipeline_telemetry import PipelineTelemetry, unavailable_snapshot
++    from exact_inference_graphs import ExactInferenceGraphs, ExactInferenceGraphError, disabled_snapshot
+ 
+ metrics = config_metrics
+ 
+@@ -116,6 +118,22 @@
+         self.state_size = state_size
+         self.device = device
+         cfg = RL_CONFIG
++        # Graph mode is an explicit resume-only startup choice. Fail before
++        # allocation when main would skip load() and silently start fresh.
++        self._exact_inference_graphs = None
++        self._exact_graph_loaded = False
++        self._exact_graph_requested = os.getenv("DQN_EXACT_INFERENCE_GRAPHS", "0").strip().lower() in ("1", "true", "yes", "on")
++        self._exact_graph_checkpoint = None
++        if self._exact_graph_requested:
++            required = os.getenv("DQN_EXACT_GRAPH_CHECKPOINT", "").strip()
++            ratchet_on = bool(getattr(cfg, "ratchet_enabled", False)) or os.getenv("DQN_RATCHET", "").strip().lower() in ("1", "true", "yes", "on")
++            boot_path = LATEST_MODEL_PATH
++            incumbent = os.path.join(MODEL_DIR, "robotron_dqn_ratchet_incumbent.pt")
++            if ratchet_on and os.path.exists(incumbent):
++                boot_path = incumbent
++            if not required or not os.path.isfile(required) or os.path.realpath(required) != os.path.realpath(boot_path):
++                raise ExactInferenceGraphError("Graph resume requires an existing DQN_EXACT_GRAPH_CHECKPOINT matching main's boot path")
++            self._exact_graph_checkpoint = os.path.realpath(required)
+ 
+         # Counters and locks (must be created before _sync_inference)
+         self.training_steps = 0
+@@ -260,6 +278,11 @@
+         if bool(getattr(cfg, "use_torch_compile", False)):
+             self._setup_torch_compile()
+ 
++        # Startup-only capture, before either replay producer or learner exists.
++        # load() repeats exact parity under the existing paused/locked guard.
++        if self._exact_graph_requested:
++            self._setup_exact_inference_graphs()
++
+         self._prefetcher = None
+         if bool(getattr(cfg, "replay_prefetch", True)):
+             self._prefetcher = ReplayPrefetcher(
+@@ -270,6 +293,7 @@
+                 direct_state_fill=bool(getattr(cfg, "replay_direct_state_fill", False)),
+                 min_replay_size=max(int(cfg.min_replay_to_train), int(cfg.batch_size)),
+                 enabled_fn=lambda: self.running and self.training_enabled
++                and (not self._exact_graph_requested or self._exact_graph_loaded)
+                 and not self._prefetch_paused and getattr(metrics, "training_enabled", True)
+                 and not replay_pressure_reached(self),
+             )
+@@ -486,6 +510,40 @@
+             self.compiled_target_joint_dist = None
+             self.compiled_infer_q_joint = None
+ 
++    def _setup_exact_inference_graphs(self):
++        """Capture all exact sizes serially; no replay/optimizer construction here."""
++        if not self.use_separate_inference or self._inference_stream is None:
++            raise ExactInferenceGraphError("Exact graphs require the separate same-GPU inference stream")
++        try:
++            budget = int(os.getenv("DQN_EXACT_GRAPH_BUDGET_BYTES", str(10 * (1 << 30))))
++            self._exact_inference_graphs = ExactInferenceGraphs(
++                torch, self.infer_net, self.compiled_infer_q_joint,
++                stream=self._inference_stream, lock=self._sync_lock,
++                state_size=self.state_size, budget_bytes=budget)
++        except Exception as exc:
++            if isinstance(exc, ExactInferenceGraphError):
++                raise
++            raise ExactInferenceGraphError("Exact graph startup failed: " + str(exc)) from exc
++        return self._exact_inference_graphs
++
++    def _validate_exact_inference_graphs(self):
++        """All-shape checkpoint parity while load's learner/prefetch guard holds."""
++        graphs = getattr(self, "_exact_inference_graphs", None)
++        if graphs is None:
++            return
++        samples = None
++        memory = getattr(self, "memory", None)
++        if memory is not None:
++            # Fixed rows, never sample replay or advance its RNG/priorities.
++            with memory.lock:
++                count = min(128, len(memory))
++                if count:
++                    fixed = np.array(memory.states[:count], dtype=np.float32, copy=True)
++            if count:
++                samples = torch.from_numpy(np.tile(fixed, (math.ceil(128 / count), 1))[:128].copy())
++        graphs.validate(samples=samples)
++        self._exact_graph_loaded = True
++
+     def _sync_inference(self, force=False):
+         if not self.use_separate_inference:
+             return
+@@ -542,6 +600,9 @@
+                                 if timings is not None:
+                                     timings["copy_host_ms"] = (time.perf_counter() - copy_started) * 1000.0
+                         self.infer_net.eval()
++                        graphs = getattr(self, "_exact_inference_graphs", None)
++                        if graphs is not None:
++                            graphs.check_storage()
+                         self.last_inference_sync = self.training_steps
+                         self.last_inference_sync_samples = self.optimized_samples
+                         succeeded = True
+@@ -561,7 +622,10 @@
+         Reporting uses reset=False; reset=True is an optional atomic drain.
+         """
+         telemetry = getattr(self, "_pipeline_telemetry", None)
+-        return telemetry.snapshot(reset=reset) if telemetry is not None else unavailable_snapshot()
++        snapshot = telemetry.snapshot(reset=reset) if telemetry is not None else unavailable_snapshot()
++        graphs = getattr(self, "_exact_inference_graphs", None)
++        snapshot["inference_graphs"] = graphs.snapshot() if graphs is not None else disabled_snapshot()
++        return snapshot
+ 
+     def _validate_measurement_policy(self, state_dict):
+         """Require one complete compatible actor, never a partial warm load."""
+@@ -634,8 +698,11 @@
+             else:
+                 self.infer_net.load_state_dict(state_dict, strict=True)
+             self.infer_net.eval()
+-
+-    def _run_inference(self, fn, states_t: torch.Tensor, return_cpu=False):
++            graphs = getattr(self, "_exact_inference_graphs", None)
++            if graphs is not None:
++                graphs.check_storage()
++
++    def _run_inference(self, fn, states_t: torch.Tensor, return_cpu=False, *, graph_cpu=False):
+         """Dispatch on the dedicated stream with explicit tensor ownership.
+ 
+         CPU inputs are transferred on the inference stream so they do not
+@@ -643,6 +710,9 @@
+         that stream, avoiding a wait inserted into the trainer's default
+         stream. GPU-returning diagnostic callers receive a stream dependency.
+         """
++        graphs = getattr(self, "_exact_inference_graphs", None) if graph_cpu else None
++        if graph_cpu and (graphs is None or not return_cpu or self._inference_stream is None):
++            raise ExactInferenceGraphError("Invalid exact-graph inference route")
+         telemetry = getattr(self, "_pipeline_telemetry", None)
+         sampled = telemetry.begin_inference() if telemetry is not None else False
+         timings = {"batch_size": int(states_t.shape[0])} if sampled else None
+@@ -689,15 +759,18 @@
+                                 with torch.cuda.stream(self._inference_stream):
+                                     transfer_started = time.perf_counter() if sampled else 0.0
+                                     try:
+-                                        inputs = states_t.to(self.inference_device)
+-                                        if inputs.is_cuda:
+-                                            inputs.record_stream(self._inference_stream)
++                                        if graph_cpu:
++                                            inputs = graphs.prepare_input(states_t)
++                                        else:
++                                            inputs = states_t.to(self.inference_device)
++                                            if inputs.is_cuda:
++                                                inputs.record_stream(self._inference_stream)
+                                     finally:
+                                         if sampled:
+                                             timings["input_transfer_host_ms"] = (time.perf_counter() - transfer_started) * 1000.0
+                                     dispatch_started = time.perf_counter() if sampled else 0.0
+                                     try:
+-                                        result = fn(inputs)
++                                        result = graphs.replay_prepared(inputs) if graph_cpu else fn(inputs)
+                                     finally:
+                                         if sampled:
+                                             timings["dispatch_host_ms"] = (time.perf_counter() - dispatch_started) * 1000.0
+@@ -706,6 +779,8 @@
+                                         try:
+                                             result = (tuple(x.detach().cpu() for x in result)
+                                                       if isinstance(result, tuple) else result.detach().cpu())
++                                            if graph_cpu:
++                                                graphs.complete_cpu_return()
+                                         finally:
+                                             if sampled:
+                                                 timings["cpu_readback_host_ms"] = (time.perf_counter() - readback_started) * 1000.0
+@@ -718,6 +793,10 @@
+                                         output.record_stream(caller_stream)
+                             succeeded = True
+                             return result
++                    except Exception as exc:
++                        if graph_cpu:
++                            raise graphs.fail(exc) from exc
++                        raise
+                     finally:
+                         if sampled:
+                             timings["service_host_ms"] = (time.perf_counter() - service_started) * 1000.0
+@@ -736,11 +815,24 @@
+         net = self.infer_net if self.use_separate_inference else self.online_net
+         net.eval()
+ 
++        graphs = getattr(self, "_exact_inference_graphs", None)
++        if graphs is not None and self.compiled_infer_q_joint is not graphs.compiled:
++            raise graphs.fail(ExactInferenceGraphError("Captured compiled actor callable changed"))
++        if graphs is not None and not getattr(self, "_exact_graph_loaded", False):
++            raise graphs.fail(ExactInferenceGraphError("Graph checkpoint has not passed post-load validation"))
++        if graphs is not None and return_cpu:
++            return self._run_inference(self.compiled_infer_q_joint, states_t,
++                                       return_cpu=True, graph_cpu=True)
++
+         def forward(inputs):
++            if graphs is not None:
++                graphs.note_compiled_diagnostic()
+             fn = self.compiled_infer_q_joint or net.q_values_joint
+             try:
+                 return fn(inputs)
+             except Exception as e:
++                if graphs is not None:
++                    raise graphs.fail(e) from e
+                 if self.compiled_infer_q_joint is None:
+                     raise
+                 # Disable the failing callable immediately: repeated retracing
+@@ -933,6 +1025,10 @@
+     # ── Background training ─────────────────────────────────────────────
+     def _background_train(self):
+         while self.running:
++            # Resume-only opt-in never optimizes random weights before load.
++            if getattr(self, "_exact_graph_requested", False) and not self._exact_graph_loaded:
++                time.sleep(0.01)
++                continue
+             pending_batch = None
+             try:
+                 try:
+@@ -1270,6 +1366,12 @@
+ 
+     @_with_training_paused
+     def load(self, filepath, show_status=True) -> bool:
++        graph_requested = bool(getattr(self, "_exact_graph_requested", False))
++        if graph_requested:
++            self._exact_graph_loaded = False
++            required = getattr(self, "_exact_graph_checkpoint", None)
++            if not required or os.path.realpath(filepath) != required or not os.path.isfile(filepath):
++                raise ExactInferenceGraphError("Graph mode refuses a missing or unexpected checkpoint path")
+         if not os.path.exists(filepath):
+             return False
+         try:
+@@ -1279,7 +1381,11 @@
+             if show_status:
+                 self._text_progress("  Model load", 1.0)
+ 
++            if graph_requested and int(ckpt.get("engine_version", 0)) != ENGINE_VERSION:
++                raise ExactInferenceGraphError("Graph resume requires the exact checkpoint engine")
+             if int(ckpt.get("engine_version", 0)) < ENGINE_VERSION:
++                if graph_requested:
++                    raise ExactInferenceGraphError("Graph resume refuses an incompatible checkpoint engine")
+                 print("⚠  Incompatible checkpoint engine version — starting fresh.")
+                 return False
+ 
+@@ -1296,6 +1402,9 @@
+                 except Exception:
+                     arch_changed = True
+ 
++            if graph_requested and (arch_changed or (set(m1) - {"support"}) or u1
++                                    or (set(m2) - {"support"}) or u2):
++                raise ExactInferenceGraphError("Graph resume refuses a partial/changed checkpoint actor")
+             opt_sd = ckpt.get("optimizer_state_dict")
+             opt_loaded = False
+             if opt_sd and not arch_changed:
+@@ -1307,11 +1416,15 @@
+             elif opt_sd:
+                 print("Optimizer state skipped: checkpoint state shape differs from current frame stack.")
+ 
++            if graph_requested and not opt_loaded:
++                raise ExactInferenceGraphError("Graph resume refuses absent/failed optimizer restoration")
+             gs_sd = ckpt.get("grad_scaler_state_dict")
+             if gs_sd and hasattr(self, "grad_scaler") and self.grad_scaler is not None:
+                 try:
+                     self.grad_scaler.load_state_dict(gs_sd)
+                 except Exception as e:
++                    if graph_requested:
++                        raise ExactInferenceGraphError("Graph resume GradScaler restoration failed: " + str(e)) from e
+                     print(f"GradScaler state skipped: {e}")
+ 
+             self.training_steps = ckpt.get("training_steps", 0)
+@@ -1389,8 +1502,16 @@
+                 except Exception as e:
+                     print(f"  Replay buffer load failed: {e}")
+ 
++            if graph_requested:
++                if arch_changed:
++                    raise ExactInferenceGraphError("Graph resume refuses changed checkpoint geometry")
++                self._validate_exact_inference_graphs()
+             return True
+         except Exception as e:
++            if graph_requested:
++                graphs = getattr(self, "_exact_inference_graphs", None)
++                error = graphs.fail(e) if graphs is not None else ExactInferenceGraphError(str(e))
++                raise error from e
+             print(f"Error loading {filepath}: {e}")
+             traceback.print_exc()
+             return False

@@ -1,0 +1,11 @@
+--- 0ad741-current-fast.lua
++++ raw-format1-target.lua
+@@ -521,7 +521,7 @@
+ -- A max width/height <= 0 means native snapshot resolution.
+ PREVIEW_MAX_WIDTH = math.floor(env_number("ROBOTRON_PREVIEW_MAX_WIDTH", 0) or 0)
+ PREVIEW_MAX_HEIGHT = math.floor(env_number("ROBOTRON_PREVIEW_MAX_HEIGHT", 0) or 0)
+-PREVIEW_TRY_RLE = env_flag("ROBOTRON_PREVIEW_RLE", true)
++PREVIEW_TRY_RLE = false
+ PREVIEW_RLE_MIN_SAVINGS_BYTES = math.max(64, math.floor(env_number("ROBOTRON_PREVIEW_RLE_MIN_SAVINGS", 256) or 256))
+ PREVIEW_MAX_BYTES = 2000000
+ SOCKET_MAX_PAYLOAD_BYTES = 4194304

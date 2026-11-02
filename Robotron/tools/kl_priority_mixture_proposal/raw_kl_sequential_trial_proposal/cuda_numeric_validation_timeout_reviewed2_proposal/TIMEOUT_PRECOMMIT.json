@@ -1,0 +1,25 @@
+{
+  "old_unexecuted_timeouts": {
+    "total_s": 600,
+    "worker_s": 180
+  },
+  "original_manifest": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/cuda_numeric_validation_proposal/preparation-manifest.json",
+    "sha256": "dc9e324cbc7fed648b24f392274e7d2cf5b0fb1fc39ccf7cdb66a137a87c3683"
+  },
+  "parent_total_timeout_s": 900,
+  "reason": "Prior two-forward result94.44s gives naive three-forward142s and insufficient180s margin for three backward compilations/execution plus durable gradient writes. No hard source runtime bound exists.",
+  "remaining_limits": "Time feasibility is not proven. Any failure in the first actual run must be preserved; no subsequent rescue is authorized by this precommit.",
+  "root_authorization": "Root explicitly authorized timeout-only same-depth sibling before any execution; quality campaign remains active/no test or GPU action.",
+  "schema": "robotron-raw-kl-stage-a-timeout-only-precommit-v1",
+  "status": "SOURCE_ONLY_BEFORE_ANY_EXECUTION",
+  "unchanged": [
+    "exact3forward/3unscaledbackward calls",
+    "worker bytes",
+    "source-lock bytes",
+    "all science/tolerances",
+    "memory/GPU/storage/CPU/task caps",
+    "ownership/process/storage/child lifecycle functions"
+  ],
+  "worker_phase_timeout_s": 600
+}

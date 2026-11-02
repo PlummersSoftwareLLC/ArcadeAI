@@ -1,0 +1,18 @@
+{
+  "actual_execution": null,
+  "delta": "Only the two expected timeout constants in an ADDITIVE copy; all25 test methods/assertions otherwise exact. Parent/worker/lock/all science/58methods unchanged.",
+  "finding": "Original copied storage geometry test49-50 still expected180/600 although selected parent precommit is600/900.",
+  "methods": 58,
+  "modules": [
+    "Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.cuda_numeric_validation_timeout_reviewed2_proposal.test_process_scan",
+    "Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.cuda_numeric_validation_timeout_reviewed2_proposal.test_storage_watcher_timeout_reviewed3",
+    "Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.cuda_numeric_validation_timeout_reviewed2_proposal.test_stage_a_contract"
+  ],
+  "old_files_preserved": true,
+  "prior_manifest": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/cuda_numeric_validation_timeout_reviewed2_proposal/preparation-manifest-reviewed2.json",
+    "sha256": "cb9731e7953445cec1ea2c57728cb9b9db6ca72978160bdb8f84529ddeb6ba5d"
+  },
+  "schema": "robotron-raw-kl-stage-a-preexecution-test-binding-correction-v1",
+  "status": "SOURCE_ONLY_BEFORE_ANY_EXECUTION"
+}

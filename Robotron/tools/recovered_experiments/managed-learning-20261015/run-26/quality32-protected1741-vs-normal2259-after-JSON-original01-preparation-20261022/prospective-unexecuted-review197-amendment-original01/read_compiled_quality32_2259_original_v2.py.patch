@@ -1,0 +1,11 @@
+--- read_compiled_quality32_2259_original_v1.py
++++ read_compiled_quality32_2259_original_v2.py
+@@ -354,7 +354,7 @@
+                 lifecycle,entry,subject,permit,original_games['cohort_fingerprint'],policy,admission))
+         health=[];main=read(job['main_binding']);main_policy=read(main['supervision_policy'])
+         baseline=read(main['baseline_API']);previous=None
+-        require(len(main['held_hashes'])==196 and len(result['main_samples'])>=3,'Original main evidence incomplete')
++        require(len(main['held_hashes'])==197 and len(result['main_samples'])>=3,'Original main evidence incomplete')
+         for sample in result['main_samples']:
+             snapshot=read(sample['snapshot']);api=games.decode(read(sample['raw_API'],False))
+             current=sup.validate_snapshot(main_policy,snapshot,api['client_count'])

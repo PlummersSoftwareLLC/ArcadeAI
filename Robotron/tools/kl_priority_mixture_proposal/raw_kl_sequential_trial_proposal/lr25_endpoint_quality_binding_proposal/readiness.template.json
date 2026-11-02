@@ -1,0 +1,15 @@
+{
+  "schema": "robotron-lr25-first-durable-endpoint-exclusive-readiness-v1",
+  "status": null,
+  "observed_unix_s": null,
+  "candidate": null,
+  "main_owner": null,
+  "fleet_owner": null,
+  "inference_worker": null,
+  "actors": null,
+  "source_hashes": null,
+  "control_hashes": null,
+  "unit_files": null,
+  "environment_sha256": null,
+  "resources": null
+}

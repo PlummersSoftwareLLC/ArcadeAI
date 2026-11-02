@@ -1,0 +1,107 @@
+--- a/Robotron/Scripts/dqn/socket_server.py
++++ b/Robotron/Scripts/dqn/socket_server.py
+@@ -2109,7 +2109,8 @@
+                 if (_is_new_game and not measuring
+                         and not cs.get("replay_disabled", False)):
+                     self._reset_new_game_replay_segment(cid, cs, frame.game_score)
+-                self._rejected_gaps.event("after_reset", _gap_ticket, cs=cs, writable=self._replay_writable(cs))
++                if _gap_ticket is not None:
++                    self._rejected_gaps.event("after_reset", _gap_ticket, cs=cs, writable=self._replay_writable(cs))
+                 model_state = self._stack_model_state(cs, single_state)
+ 
+                 # Measurement is separate from per-life RL terminal handling.
+@@ -2191,7 +2192,8 @@
+                 if (cs.get("last_state") is not None and cs.get("last_action") is not None
+                         and not getattr(metrics, "measurement_active", False)
+                         and cs.get("prev_action_source") != "measurement"):
+-                    self._rejected_gaps.event("previous_step", _gap_ticket)
++                    if _gap_ticket is not None:
++                        self._rejected_gaps.event("previous_step", _gap_ticket)
+                     mv_i, fr_i = cs["last_action"]
+                     try:
+                         score_delta_probe = max(0, int(frame.game_score) - int(cs.get("last_game_score", frame.game_score)))
+@@ -2283,30 +2285,37 @@
+                                 cs["last_clear_frame"] = int(cs["frames"])
+                         nstep = cs.get("nstep")
+                         if nstep is not None:
+-                            self._rejected_gaps.event("nstep_before", _gap_ticket, nstep=nstep, actor=tag, done=bool(training_done))
++                            if _gap_ticket is not None:
++                                self._rejected_gaps.event("nstep_before", _gap_ticket, nstep=nstep, actor=tag, done=bool(training_done))
+                             joint = combine_action(mv_i, fr_i)
+                             matured = nstep.add(cs["last_state"], joint, total_r,
+                                                 model_state, bool(training_done),
+                                                 actor=tag, priority_reward=total_r,
+                                                 interest=interest)
+-                            self._rejected_gaps.event("nstep_after", _gap_ticket, count=len(matured))
++                            if _gap_ticket is not None:
++                                self._rejected_gaps.event("nstep_after", _gap_ticket, count=len(matured))
+                             for s0, a, Rn, pR, sn, dn, h, act, intr in matured:
+                                 mv_n, fr_n = split_joint_action(a)
+-                                self._rejected_gaps.event("enqueue_called", _gap_ticket)
++                                if _gap_ticket is not None:
++                                    self._rejected_gaps.event("enqueue_called", _gap_ticket)
+                                 self.async_buffer.step_async(
+                                     s0, (mv_n, fr_n), Rn, sn, bool(dn),
+                                     client_id=cid, actor=act, horizon=int(h), priority_reward=pR,
+                                     interest=intr)
+-                                self._rejected_gaps.event("enqueue_returned", _gap_ticket)
++                                if _gap_ticket is not None:
++                                    self._rejected_gaps.event("enqueue_returned", _gap_ticket)
+                         else:
+-                            self._rejected_gaps.event("one_step", _gap_ticket, actor=tag, done=bool(training_done))
+-                            self._rejected_gaps.event("enqueue_called", _gap_ticket)
++                            if _gap_ticket is not None:
++                                self._rejected_gaps.event("one_step", _gap_ticket, actor=tag, done=bool(training_done))
++                            if _gap_ticket is not None:
++                                self._rejected_gaps.event("enqueue_called", _gap_ticket)
+                             self.async_buffer.step_async(
+                                 cs["last_state"], (mv_i, fr_i), total_r,
+                                 model_state, bool(training_done), client_id=cid,
+                                 actor=tag, horizon=1, priority_reward=total_r,
+                                 interest=interest)
+-                            self._rejected_gaps.event("enqueue_returned", _gap_ticket)
++                            if _gap_ticket is not None:
++                                self._rejected_gaps.event("enqueue_returned", _gap_ticket)
+ 
+                     cs["total_reward"] += total_r
+                     cs["ep_subj_reward"] = cs.get("ep_subj_reward", 0.0) + subj_r
+@@ -2390,7 +2399,8 @@
+                     hist = cs.get("frame_history")
+                     if hist is not None:
+                         hist.clear()
+-                    self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_done_neutral_write_completed")
++                    if _gap_ticket is not None:
++                        self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_done_neutral_write_completed")
+                     continue
+ 
+                 if cs.get("was_done"):
+@@ -2430,7 +2440,8 @@
+                         ))
+                     except Exception:
+                         break
+-                    self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_inactive_neutral_write_completed")
++                    if _gap_ticket is not None:
++                        self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_inactive_neutral_write_completed")
+                     continue
+ 
+                 # ── Choose action ───────────────────────────────────────
+@@ -2481,7 +2492,8 @@
+                 cs["last_game_score"] = int(frame.game_score)
+                 cs["last_level_number"] = int(frame.level_number)
+                 cs["prev_action_source"] = action_source
+-                self._rejected_gaps.event("next_action", _gap_ticket, cs=cs)
++                if _gap_ticket is not None:
++                    self._rejected_gaps.event("next_action", _gap_ticket, cs=cs)
+ 
+                 move_cmd = action_index_to_wire_dir(int(mv_idx))
+                 fire_cmd = action_index_to_wire_dir(int(effective_fire))
+@@ -2527,7 +2539,8 @@
+                     ))
+                 except Exception:
+                     break
+-                self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_action_write_completed")
++                if _gap_ticket is not None:
++                    self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_action_write_completed")
+ 
+         except ConnectionError as e:
+             if not self.shutdown_event.is_set():

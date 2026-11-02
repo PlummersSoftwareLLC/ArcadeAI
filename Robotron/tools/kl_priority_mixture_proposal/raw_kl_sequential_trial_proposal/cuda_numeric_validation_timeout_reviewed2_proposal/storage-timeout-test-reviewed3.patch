@@ -1,0 +1,13 @@
+--- immutable-old/test_storage_watcher.py
++++ additive/test_storage_watcher_timeout_reviewed3.py
+@@ -46,8 +46,8 @@
+                          ('Robotron', 'Scripts', 'dqn', 'config.py'))
+         self.assertEqual(parent.VARIANTS, ('stage_a',))
+         self.assertEqual(parent.BOUNDS['artifact_bytes'], 6 * (1 << 30))
+-        self.assertEqual(parent.BOUNDS['phase_timeout_s'], 180)
+-        self.assertEqual(parent.BOUNDS['total_timeout_s'], 600)
++        self.assertEqual(parent.BOUNDS['phase_timeout_s'], 600)
++        self.assertEqual(parent.BOUNDS['total_timeout_s'], 900)
+         lock_bytes = (parent.HERE/'source-lock.json').read_bytes()
+         self.assertEqual(hashlib.sha256(lock_bytes).hexdigest(),
+                          'bcc1c696ed1ddbd18879e64cee01d55909b99c8401d908f636228d4c83b36551')

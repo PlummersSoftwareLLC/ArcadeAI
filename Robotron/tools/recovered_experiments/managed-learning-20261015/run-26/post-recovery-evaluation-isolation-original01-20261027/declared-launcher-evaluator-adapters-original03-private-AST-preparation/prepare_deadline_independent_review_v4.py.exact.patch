@@ -1,0 +1,21 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/prepare_deadline_independent_review_v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original03-private-AST-preparation/prepare_deadline_independent_review_v4.py
+@@ -11,7 +11,8 @@
+ import sys
+ import time
+ 
+-HERE = Path(__file__).resolve().parent
++HERE = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
++LOCAL = Path(__file__).resolve().parent
+ ROOT = HERE.parents[1]
+ BASE = ROOT/'logs/managed-learning-20261015/run-26'
+ ORDER = ['R1', 'C1', 'R2', 'C2']
+@@ -91,7 +92,7 @@
+         for pin in config['pins']:
+             require(controller.pin(pin['path']) == pin, 'Qualified native input changed')
+         family = read(job['source_family_manifest'])
+-        reviewer = h.pin(HERE/'review_deadline32_rounds_v11.py')
++        reviewer = h.pin(LOCAL/'review_deadline32_rounds_v11.py')
+         require(family['reviewer'] == reviewer, 'Exact held independent reviewer required')
+         require(not (root/'independent-review-prepared-original01.json').exists()
+                 and not (root/('root-'+case['leg']+'-independent-qualified.json')).exists(),

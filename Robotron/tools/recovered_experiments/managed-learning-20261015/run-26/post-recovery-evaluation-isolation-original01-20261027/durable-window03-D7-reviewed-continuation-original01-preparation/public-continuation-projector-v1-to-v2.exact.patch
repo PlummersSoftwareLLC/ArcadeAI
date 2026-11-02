@@ -1,0 +1,20 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-reviewed-continuation-original01-preparation/project_owned_W03_continuation_status_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-reviewed-continuation-original01-preparation/project_owned_W03_continuation_status_v2.py
+@@ -88,7 +88,7 @@
+         # The unchanged guard alone reads qualified score/seal values.
+         safe=display.display(S,leg)
+         require(safe['independently_qualified']is True,'Qualified display guard refused')
+-        row.update(safe,state='qualified',phase='complete');return row
++        row.update(safe,state='qualified',phase='complete',n_completed=safe.get('completed'));return row
+     result=read(native/'result.json')
+     review_result,review_live=controller_facts(folder,'independent-review-')
+     native_result,native_live=controller_facts(folder,'')
+@@ -183,7 +183,7 @@
+         if state in('failed','unresolved','stopped'):detail+=' Original evidence is preserved; no automatic retry or next action.'
+         if outcome and outcome.get('original_scope_still_running_preserved')and original_scope_live:detail+=' An original payload remains live and preserved.'
+         next_stage='Root screen verdict; separate fullgame confirmation only if eligible'if state=='closed'else'independent_review'if chosen['phase']in('collecting','closed_pending_independent_review','native_closed_waiting_original_controller')else'qualification'if 'review'in chosen['phase']else'next original leg only after qualification'
+-        value=dict(schema='robotron-prepared-policy-screening-status-v1',study_directory=str(S),state=state,stage=chosen['phase'],current_leg=chosen['leg'],updated_unix_s=time.time(),candidate_sha256=selection['candidate_sha256'],quality_qualified=False,promotion=False,detail=detail,legs=rows,next_stage=next_stage,limits_are_not_ETAs=True,original_payload_live=original_scope_live)
++        value=dict(schema='robotron-prepared-policy-screening-status-v1',study_directory=str(S),state='review_pending'if state=='waiting'else state,stage=chosen['phase'],current_leg=chosen['leg'],updated_unix_s=time.time(),candidate_sha256=selection['candidate_sha256'],quality_qualified=False,promotion=False,detail=detail,legs=rows,next_stage=next_stage,limits_are_not_ETAs=True,original_payload_live=original_scope_live)
+         if chosen.get('deadline_timing'):
+             value['deadline_timing']=chosen['deadline_timing']
+             value['deadline_anchor']=dict(anchor=chosen['deadline_timing']['anchor'],policy=dict(policy_sha256=chosen['deadline_timing']['policy_sha256']))

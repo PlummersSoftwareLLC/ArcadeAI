@@ -1,0 +1,148 @@
+{
+  "schema": "robotron-continuous-guard-same-lr25-additive-leg-plan-projection-preservation-v1",
+  "status": "SOURCE_ONLY_UNSELECTED_UNEXECUTED",
+  "original_blocked_family_manifest": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/preparation-manifest.json",
+    "sha256": "f255828afbf2a643c5893bdf10d2e0627c263f995c05c2986d9f64a13355299e",
+    "bytes": 60616,
+    "identity": {
+      "device": 2304,
+      "inode": 82575540,
+      "bytes": 60616,
+      "mtime_ns": 1792352016432999472,
+      "ctime_ns": 1792352016432999472,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "unchanged_base_preservation": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/source-preservation.json",
+    "sha256": "403c41732a57fafcaa6c8ddf941d432fd551a62772fdaf911ff931c733365552",
+    "bytes": 52377,
+    "identity": {
+      "device": 2304,
+      "inode": 82575539,
+      "bytes": 52377,
+      "mtime_ns": 1792352016419551325,
+      "ctime_ns": 1792352016419551325,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "pairs": [
+    {
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/audit_completed_leg.py",
+        "sha256": "c7f61c1cb538e70a8beb414e593cd1ae0e292678a5a3621e881fc08d4303a3d8",
+        "bytes": 36071,
+        "identity": {
+          "device": 2304,
+          "inode": 82575523,
+          "bytes": 36071,
+          "mtime_ns": 1792351626768767292,
+          "ctime_ns": 1792351733509486556,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "candidate": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/audit_completed_leg_reviewed2.py",
+        "sha256": "61b299b327fe6156571646aa809e38563f7bf71de980a48b36272c9f555551d2",
+        "bytes": 36228,
+        "identity": {
+          "device": 2304,
+          "inode": 82575542,
+          "bytes": 36228,
+          "mtime_ns": 1792352229713075471,
+          "ctime_ns": 1792352229713075471,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "finite_text_regions": [
+        {
+          "base_offset": 19543,
+          "candidate_offset": 19543,
+          "before": "                == dict(spec[\"job\"], checkpoint_sha256=receipt[\"checkpoint_sha256\"]),\n",
+          "after": "                == dict(spec[\"job\"], checkpoint_sha256=receipt[\"checkpoint_sha256\"],\n                        effective_implementation=plan[\"effective_implementation\"],\n                        canonical_source_hashes_are_base_provenance=True),\n"
+        }
+      ],
+      "reverse_exact": true
+    },
+    {
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/test_continuous_guard_metadata.py",
+        "sha256": "e8139e79508822e0f6dfdf7dece56ace42c34a653ace81a126491a95f2f21b27",
+        "bytes": 39248,
+        "identity": {
+          "device": 2304,
+          "inode": 82575533,
+          "bytes": 39248,
+          "mtime_ns": 1792351833483154896,
+          "ctime_ns": 1792351833483862099,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "candidate": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/test_continuous_guard_metadata_reviewed2.py",
+        "sha256": "3011c8585919c3bbfefa35807a1977f40c61df00f6900380f06d71a4605400d5",
+        "bytes": 42501,
+        "identity": {
+          "device": 2304,
+          "inode": 82575543,
+          "bytes": 42501,
+          "mtime_ns": 1792352229714719989,
+          "ctime_ns": 1792352229714719989,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "finite_text_regions": [
+        {
+          "base_offset": 547,
+          "candidate_offset": 547,
+          "before": "",
+          "after": "import textwrap\n"
+        },
+        {
+          "base_offset": 7838,
+          "candidate_offset": 7854,
+          "before": "",
+          "after": "        invalid_peer=C.pinned(self.G.CLOSED['invalid_peer'])\n"
+        },
+        {
+          "base_offset": 7877,
+          "candidate_offset": 7954,
+          "before": "            if p == self.G.CLOSED['invalid_peer']: return original(p)\n",
+          "after": "            if p == self.G.CLOSED['invalid_peer']: return copy.deepcopy(invalid_peer)\n"
+        },
+        {
+          "base_offset": 33138,
+          "candidate_offset": 33231,
+          "before": "                                  ('audit_completed_leg.py','c7f61c1cb538e70a8beb414e593cd1ae0e292678a5a3621e881fc08d4303a3d8')):\n",
+          "after": "                                  ('audit_completed_leg_reviewed2.py','61b299b327fe6156571646aa809e38563f7bf71de980a48b36272c9f555551d2')):\n"
+        },
+        {
+          "base_offset": 39201,
+          "candidate_offset": 39304,
+          "before": "",
+          "after": "\n    def test_actual_companion_leg_plan_projection_and_guard_keys_are_exact(self):\n        # Future root execution compiles ONLY these two pinned, pure metadata\n        # statements, not run(job), the auditor body, or a target project module.\n        # Producer job.plan/write_json and consumer decode/require are closed\n        # substitutes. No checkpoint, directory, subprocess, Torch or host fallback.\n        producer=Path(self.G.SELECTION['companion_evaluator']['path']).read_bytes()\n        self.assertEqual(hashlib.sha256(producer).hexdigest(),self.G.SELECTION['companion_evaluator']['sha256'])\n        producer=producer.decode();start=producer.index('    write_json(job.directory / \"plan.json\", dict(job.plan(), checkpoint_sha256=identity,')\n        end=producer.index('    # Imports occur only',start)\n        producer_statement=textwrap.dedent(producer[start:end])\n        consumer=(HERE/'audit_completed_leg_reviewed2.py').read_bytes()\n        self.assertEqual(hashlib.sha256(consumer).hexdigest(),'61b299b327fe6156571646aa809e38563f7bf71de980a48b36272c9f555551d2')\n        consumer=consumer.decode();start=consumer.index('        require(decode(payloads[str(legdir / \"plan.json\")])')\n        end=consumer.index('        journal = ',start)\n        consumer_statement=textwrap.dedent(consumer[start:end])\n        spec=dict(job=dict(label='synthetic',checkpoint='/synthetic/never-open.pt',continuous_guard_manifest=self.G.SELECTION['guard_manifest']['path']))\n        receipt=dict(checkpoint_sha256='a'*64);plan=dict(effective_implementation=copy.deepcopy(self.G.SELECTION))\n        directory=PurePosixPath('/synthetic/never-create');written={}\n        job=SimpleNamespace(directory=directory,plan=lambda:copy.deepcopy(spec['job']))\n        exec(producer_statement,{'__builtins__':{'dict':dict}},dict(job=job,identity=receipt['checkpoint_sha256'],\n            selected_guard=plan['effective_implementation'],write_json=lambda path,value:written.__setitem__(str(path),copy.deepcopy(value))))\n        def require(value,message):\n            if not value:raise ValueError(message)\n        def check(payload):\n            namespace=dict(legdir=directory,spec=spec,receipt=receipt,plan=plan,decode=json.loads,\n                payloads={str(directory/'plan.json'):json.dumps(payload).encode()},require=require)\n            exec(consumer_statement,{'__builtins__':{'dict':dict,'str':str}},namespace)\n        actual=written[str(directory/'plan.json')];check(actual)\n        self.assertEqual(actual['effective_implementation'],plan['effective_implementation'])\n        self.assertIs(actual['canonical_source_hashes_are_base_provenance'],True)\n        for mutate in (lambda p:p.pop('effective_implementation'),lambda p:p.pop('canonical_source_hashes_are_base_provenance'),\n                       lambda p:p.update(canonical_source_hashes_are_base_provenance=False),\n                       lambda p:p.update(checkpoint_sha256='b'*64),\n                       lambda p:p['effective_implementation']['effective_helper'].update(sha256='0'*64)):\n            bad=copy.deepcopy(actual);mutate(bad)\n            with self.assertRaises(ValueError):check(bad)\n\n\n"
+        }
+      ],
+      "reverse_exact": true
+    }
+  ],
+  "production_delta": "Only exact expected copied leg-plan projection adds genuine c3a2 effective_implementation plus canonical_source_hashes_are_base_provenance=True.",
+  "fixture_delta": "Preload authentic invalid-peer JSON before fingerprint mocking; select reviewed2 auditor default path/PIN; add one exact pinned producer-write / consumer-assert metadata guard.",
+  "original15_fixture_executed": false,
+  "reviewed2_16_fixture_executed": false,
+  "target_imports_AST_compile_executed": false,
+  "original_bytes_and_fullidentities_preserved": true
+}

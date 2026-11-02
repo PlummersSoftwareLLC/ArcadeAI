@@ -1,0 +1,32 @@
+{
+  "batch_boundary": null,
+  "batch_profile": null,
+  "future_actuals": {
+    "before": null,
+    "boot_four_clocks": null,
+    "candidate": null,
+    "current_completed_request": null,
+    "current_owner": null,
+    "deadline": null,
+    "insurance_receipt": null,
+    "insurance_verification": null,
+    "newest_checkpoint": null,
+    "newphase_id": null,
+    "producer_observation": null,
+    "protected_reference": null,
+    "request_id": null,
+    "return_owner": null,
+    "running_CE_phase": null,
+    "startup_tag": null,
+    "trial_core": null
+  },
+  "mode": null,
+  "note": "Use only after real adapter/collector/insurance/controller/CPU bindings are completed and independently reviewed, numerical readiness actually passes and root freezes an actual late-bound job. No source_frozen campaign may be interrupted by this proposal.",
+  "phase_verifier2048": null,
+  "prerequisites": {
+    "batch2048_actual_numeric_readiness": null,
+    "quality_release": null
+  },
+  "schema": "robotron-ce-batch-profile-transition-job-v1",
+  "status": "INVALID_PARTIAL_JOB_ADDITIONS_ONLY_NOT_EXECUTABLE"
+}

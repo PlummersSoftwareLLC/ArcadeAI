@@ -1,0 +1,99 @@
+{
+  "actual_execution": null,
+  "actual_job": null,
+  "actual_test_result": null,
+  "actual_transition_or_trial": null,
+  "author_actions": "Source and saved-small-JSON reads, hashes/AST syntax parse, isolated additive source/test/schema/docs writes only; no candidate/helper imports, tests, PT/tensor/replay bodies, live queries or runtime/state/control/source/unit actions",
+  "authored_tests": {
+    "count": 19,
+    "module": "tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.live_transition_adapter_proposal.test_transition_adapter",
+    "scope": "stdlib mocks and private metadata files only; no numerical execution or actual owner reload"
+  },
+  "contracts": [
+    "Literal PLAN default without reads/helper imports or actions",
+    "One activate_kl or return_ce; no trial loop, retry or old state rollback",
+    "Fresh actual current-owner insurance; return uses one early distinct KL-owner insurance, not an extra ending save",
+    "Required current_completed_request separately binds current slot after candidate overwrite",
+    "Exact known-owner stop before newest stopped CPU; first started/failed CPU not retried",
+    "Known candidate5 only; both flags unset, new phase actionstart with newest checkpoint and Restart=no",
+    "Attempt-all original192 identity-checked resume after every path",
+    "New phase startup model-only save and same-load metadata CPU proof before actor resume",
+    "Root verifies/decodes start_request and before_resume_api PINs for independent immutable horizon job"
+  ],
+  "created_utc": "2026-10-17T11:02:37.786939+00:00",
+  "files": {
+    "PREPARATION.txt": {
+      "bytes": 9769,
+      "mode": "0o444",
+      "sha256": "a76e464fb2e4ae7d386316fd10e07acc09544ced6d5306fc137a20b103686c5c"
+    },
+    "future-argv-template.json": {
+      "bytes": 1529,
+      "mode": "0o444",
+      "sha256": "6e12852eb5d6bf4f4c2af47c552c118ea6c04c651f13d27f722db744a5fdf357"
+    },
+    "job.schema.json": {
+      "bytes": 4738,
+      "mode": "0o444",
+      "sha256": "fbd192c1239471d2379ae5a0e86af6dc3d127aa3e17d1751dee8e3f178f61082"
+    },
+    "run_raw_kl_transition.py": {
+      "bytes": 47821,
+      "mode": "0o444",
+      "sha256": "8a606d4c152e85c867f5517555ce80fb05cc883decad1f84da0784e4d32bdd3c"
+    },
+    "test_transition_adapter.py": {
+      "bytes": 19393,
+      "mode": "0o444",
+      "sha256": "d342b299016dfae58a70426bb2fabc9b7097a018dd39018d03df1f2ff61aeb0b"
+    }
+  },
+  "limitations": [
+    "No actual193-process integration, CUDA, constructor/optimizer, replay/bank RAM or serving proof from authored mocks",
+    "No coherent shutdown/FIFO/optimizer/bank tail anchor or cross-thread RNG claim",
+    "Strict valid phase only; actual invalid saved metadata preserves failure for separate root-led reviewed forward repair",
+    "Root separately enforces3600s KL-owner deadline even if this one-shot refuses before stop",
+    "Stage A/B and final quality prerequisites remain required actual future evidence, never inferred from preparation"
+  ],
+  "schema": "robotron-raw-kl-owned-transition-source-preparation-v1",
+  "source_review": {
+    "audit_quality_result": "Source-only revised8a606d4c/d342b299 delta PASS; final all-file receipt pending",
+    "learning_review": "Source-only revised8a606d4c/d342b299 practical API PASS; final all-file binding pending",
+    "root_review_pending_final_all_file": true
+  },
+  "status": "SOURCE_ONLY_UNEXECUTED",
+  "upstream": {
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/cuda_numeric_validation_timeout_reviewed2_proposal/preparation-manifest-reviewed3.json": {
+      "bytes": 7788,
+      "sha256": "b56fdd5c4551502429430860cd9a1e594d6a96fe766c7ceb0d7ceb8cb4f25942"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/private_validation_proposal/preparation-manifest.json": {
+      "bytes": 7246,
+      "sha256": "2053218ba39354f6321e255abc493d7804a9f9cbe2f75de1948a69133d6012f2"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/preparation-manifest.json": {
+      "bytes": 5202,
+      "sha256": "1144139f168292b7c0648fcc76d24a945d7d7f295ec14d5f304f70d5ca5dfe11"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/ending_order_clarification_proposal/preparation-manifest.json": {
+      "bytes": 1244,
+      "sha256": "5141ed7c82e0a1e9f5f346cddf37916f9459f78afc375d543386d506b1781d8a"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/horizon_observer_proposal/preparation-manifest.json": {
+      "bytes": 3832,
+      "sha256": "8426b1f164463546ce5a65e2bdbc051c758e72524b27ee68bf0b87e65425567d"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/preparation-manifest.json": {
+      "bytes": 2159,
+      "sha256": "e94d4758a159d6b9b3c9c1d55f431b196c4988c6aa52fc00b95f2d14bf896c15"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision4/run_live8_maintenance.py": {
+      "bytes": 62971,
+      "sha256": "fdf7c8bfb123b494252acf83d724a51acda95bb7f00877eace28b60d0377ed18"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/preparation-manifest.json": {
+      "bytes": 4328,
+      "sha256": "df03306d5b82b8f81cd2372f191fa45fb445867fa0bf46325f52ecaf49c4b7a3"
+    }
+  }
+}

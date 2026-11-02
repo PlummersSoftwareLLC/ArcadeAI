@@ -1,0 +1,12 @@
+Parent revision2 changes only readonly role metadata publication.
+
+The parent source change is the explicit read_only option in publish and exactly
+two opting callsites in prepare_role_inputs. Every role passes through those same
+calls. Both phase-record and role-input must satisfy the unchanged strict readonly
+FD/path readers. Default metadata publication, guard/storage/process/cgroup/token/
+PDEATH/signal/cleanup code and science/resources/call budgets are unchanged.
+
+Original ancestor-PARENT_NOTES.txt, ancestor-PREPARATION.txt and original manifest
+are retained; their original82 test selection is historical. Use the selected84
+sibling modules in future-argv.json. Root owns tests and actual fresh runtime
+preflight/launch; author and both peers perform source review only.

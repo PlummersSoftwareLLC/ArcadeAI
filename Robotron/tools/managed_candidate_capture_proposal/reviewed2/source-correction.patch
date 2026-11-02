@@ -1,0 +1,21 @@
+--- Robotron/tools/managed_candidate_capture_proposal/prepare_448_candidate.py
++++ Robotron/tools/managed_candidate_capture_proposal/reviewed2/prepare_448_candidate.py
+@@ -136,12 +136,17 @@
+     text = command(['systemctl', '--user', 'show', UNIT])
+     value = fields(text)
+     require(value.get('InvocationID') == WATCHER['invocation_id']
+-            and value.get('ExecMainPID') == str(WATCHER['pid']) and value.get('ControlGroup') == WATCHER['cgroup']
++            and value.get('ExecMainPID') == str(WATCHER['pid'])
+             and value.get('NRestarts') == '0', 'Original retained watcher identity unavailable/different')
+     if value.get('MainPID') != '0' or value.get('SubState') not in ('exited', 'dead', 'failed'):
++        require(value.get('ControlGroup') == WATCHER['cgroup'], 'Running watcher cgroup differs')
+         return None, None  # WAIT, no output or candidate read.
+     require(value['ExecMainCode'] == '1' and value['ExecMainStatus'] == '0' and value['Result'] == 'success',
+             'Original watcher did not exit0; preserve failure for root, never fabricate candidate success')
++    # systemd may clear ControlGroup after the exact original process exits.
++    # The pretrigger-owned cgroup remains authoritative for absence checks;
++    # a different nonempty cgroup never becomes an eligible owner.
++    require(value.get('ControlGroup') in (WATCHER['cgroup'], ''), 'Terminal watcher cgroup differs')
+     try:
+         require(proc_start(WATCHER['pid']) != WATCHER['starttime_ticks'], 'Original watcher still exists')
+     except (FileNotFoundError, ProcessLookupError):

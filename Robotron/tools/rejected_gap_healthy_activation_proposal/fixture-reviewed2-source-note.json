@@ -1,0 +1,129 @@
+{
+  "schema": "robotron-rejected-gap-healthy-activation-guard-fixture-reviewed2-v1",
+  "status": "UNSELECTED_SOURCE_ONLY_UNEXECUTED",
+  "production_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_healthy_activation_proposal/run_healthy_activation.py",
+    "sha256": "ef50ee32880ff93a788d33c7a90ccba01f3de33caa015c849712e31ca910f78e",
+    "bytes": 30491,
+    "identity": {
+      "device": 2304,
+      "inode": 81531257,
+      "bytes": 30491,
+      "mtime_ns": 1792305901151279910,
+      "ctime_ns": 1792305951851111298,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "original_manifest": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_healthy_activation_proposal/preparation-manifest.json",
+    "sha256": "1d697fa071d699be80eb2ede50304c6b748bd163628f63ee50642ef2b614bdec",
+    "bytes": 18879,
+    "identity": {
+      "device": 2304,
+      "inode": 81531264,
+      "bytes": 18879,
+      "mtime_ns": 1792305951855665010,
+      "ctime_ns": 1792305951855665010,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "original_test": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_healthy_activation_proposal/test_healthy_activation.py",
+    "sha256": "881361ee7a11f73a01a185534c463d0b87d6867d157131009a6e87cf8d276924",
+    "bytes": 19552,
+    "identity": {
+      "device": 2304,
+      "inode": 81531259,
+      "bytes": 19552,
+      "mtime_ns": 1792305778900695647,
+      "ctime_ns": 1792305951851111298,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "selected_test": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_healthy_activation_proposal/test_healthy_activation_reviewed2.py",
+    "sha256": "3524b25b3e7440164001f427c908c1ff7fda9cc93acb482164266c94d9d920f0",
+    "bytes": 19587,
+    "identity": {
+      "device": 2304,
+      "inode": 81531265,
+      "bytes": 19587,
+      "mtime_ns": 1792306144714665563,
+      "ctime_ns": 1792306144714665563,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "original_failed_guard_execution": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-healthy-activation-original-seven-guard-failure-owned-closure-root-20261018/root-explicit-original-seven-guard-failure-and-autoGC-owned-closure.json",
+    "sha256": "ddefe2e7bc37101a791f557de8bb10c9fe86fdc21d3eaad6c51b88ea77b9ff18",
+    "bytes": 12169,
+    "identity": {
+      "device": 2304,
+      "inode": 83624420,
+      "bytes": 12169,
+      "mtime_ns": 1792306156042960706,
+      "ctime_ns": 1792306156042960706,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "original_outcome": {
+    "original": {
+      "pid": 2833042,
+      "starttime_ticks": 39704203,
+      "invocation_id": "2e57eed99f284f118ad51efc0bdd34de",
+      "unit": "robotron-rejected-gap-healthy-activation-seven-guards-original01-20261018.service",
+      "timer": "robotron-rejected-gap-healthy-activation-seven-guards-original01-20261018.timer",
+      "timer_invocation_id": "9c0ef31454f142b8acef04c24fd7c847",
+      "observed_live": true
+    },
+    "original_exec_code": 1,
+    "original_exit": 1,
+    "original_result": "exit-code",
+    "original_wrapper_exit": 1,
+    "tests_run": 7,
+    "tests_passed": 6,
+    "tests_failed": 1,
+    "tests_skipped": 0,
+    "original_archive_exit_codes": [
+      0,
+      0,
+      0,
+      0,
+      1,
+      0
+    ],
+    "all_six_archives_successful": false,
+    "second_timer_stop_attempted": false,
+    "source_unchanged": true,
+    "actual_runtime_activation_started": false,
+    "payload_or_observer_retried": false,
+    "unit_released": true
+  },
+  "correction": {
+    "scope": "One fake start metadata assignment only; production unchanged.",
+    "literal_addition": ";rt.record_pin={'path':'new-phase'}",
+    "cause": "The real fd4e.start_phase sets record_pin before returning; the route fake omitted it. activate success-result assembly reads it.",
+    "reverse_byte_equality_to_original": true,
+    "unchanged_test_methods": 7,
+    "guard_weakening": false
+  },
+  "deferred": {
+    "selected_fixture_execution": null,
+    "actual_activation": null
+  },
+  "limitations": [
+    "Original6PASS/1FAIL and timer autoGC cat1/stop5/incomplete-six archive remain preserved, never relabeled success.",
+    "A root execution of this changed fixture is a separate source selection, not a rerun of immutable881.",
+    "No code imports/tests/runtime/model/process/unit/API operations performed by the author; AST parsed only."
+  ]
+}

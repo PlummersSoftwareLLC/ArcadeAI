@@ -1,0 +1,164 @@
+{
+  "API_exposure_pending": true,
+  "actual_source_application": null,
+  "added_functions": [
+    "SocketServer.rejected_gap_snapshot"
+  ],
+  "base_socket_sha256": "4a1f6a3cc7c82d8c85e1af93ceac0ca7457663d5f5ba7c7d893e3c2b3003e26c",
+  "candidate_socket_bytes": 140259,
+  "candidate_socket_sha256": "0eed0f6176270c5abe51fa481f10085818b63ac2d59427ff59ea9615d1c9b698",
+  "changed_original_functions": [
+    "SocketServer.__init__",
+    "SocketServer.handle_client"
+  ],
+  "changes": [
+    {
+      "after_sha256": "2ecb8602a421185550e2dcda2a4a05e41e59fcfa1728cebf76a16f99a81966de",
+      "before_sha256": "c001a201938d863ed4fe8ca0533df7ec2e548c2f1d0b188bfca4eda8d427ff6d",
+      "label": "package import"
+    },
+    {
+      "after_sha256": "7c8444b876c341b3b07531aa6da28d8d5b3df32babd8ab0352929e37555d9489",
+      "before_sha256": "7fd64a14ea853d47994a2b6c7390eca97d19166176441f7ba3f0b7cfecd5df03",
+      "label": "script import"
+    },
+    {
+      "after_sha256": "5eac3f5c83b071b450ab27cc67c460fe2a5aab8df00b386f05183f908037f137",
+      "before_sha256": "f7ff4e3f844e4daa8bd72a9bfb7e597547dc5c4381a0b726d306964d0a9a386d",
+      "label": "main-only explicit enable"
+    },
+    {
+      "after_sha256": "d22a231761922f8be1ebed580c3be979542a3147ce2ac84b49b7f6b9702ff369",
+      "before_sha256": "ee60c43caccc402139f29a8833b21ae23744846f7377c0b4eb659aaf8ee133b0",
+      "label": "readonly getter"
+    },
+    {
+      "after_sha256": "308b1cdb3a0c428f69a78680f3d3cf2d0f52c0b41b7d93e22c23d2993165b793",
+      "before_sha256": "5c6fbc25c14728e16e0f250bdcd6eabb086ac9694fe365bbe63d4615b2d737ae",
+      "label": "connection bookkeeping"
+    },
+    {
+      "after_sha256": "a8f19fc85d110e4ca1a55b6461bed760b58922d307bac6ba227a2fba26b18d54",
+      "before_sha256": "ca3fb345487f2c0fe60500c4633b3266450f61b20fedfa6c7efad9cf88981326",
+      "label": "header idle"
+    },
+    {
+      "after_sha256": "ee15f7465397e37677f5b3696562e23591030e5f1340e9c253ba46093324785f",
+      "before_sha256": "dfd3525e35445fa586620b96bf4e5928baa620cdb0f8f8d516ff25969497a7db",
+      "label": "header EOF"
+    },
+    {
+      "after_sha256": "05fda16a9b3bfebfb1b0b247f726202544d3b721b156b7be330caed6d8878251",
+      "before_sha256": "7beed31d5d11387bb584eafa7b8fdc6df49a6179f4c4ba97d85e829019c06ad2",
+      "label": "invalid length"
+    },
+    {
+      "after_sha256": "536b02185e10ba1b6d60eb07d32f67b3508a88ac391be769e99d5f2515e33ef7",
+      "before_sha256": "1a334acb7e37db330df9618a074a13b59e40c5c0b4438540c56e78fbb74d27c1",
+      "label": "broken body"
+    },
+    {
+      "after_sha256": "f6b1cae179a18030052daa2a4b160eaee5ccce833406127b3f53bb22a3d4edb4",
+      "before_sha256": "b662cadd2a0891d50cc27a8cbff3744221d03a3431bbee0b2f8d462415e602f7",
+      "label": "received denominator"
+    },
+    {
+      "after_sha256": "52a77bc54d7d3b09114370e7bc75cf8e96c31e1738eadc0db0df35b85c1e3d88",
+      "before_sha256": "1e94f428f65ca09e9a00deb069523e0278312785939521c33125d4569b78e689",
+      "label": "parameter exit"
+    },
+    {
+      "after_sha256": "28395dd7617400853f240af5816cd0a248a83aee362e22c26473e5024ce278d6",
+      "before_sha256": "f47048d79fce0b430c435a477f5cf6a06a0976b0dc5a5ef79d65eaa7de913e0a",
+      "label": "short payload exit"
+    },
+    {
+      "after_sha256": "d17922b869f1d1203f9b9fa654701e58a22987e5ab2dd326a377ec4c29848308",
+      "before_sha256": "a02541e332b35f442cf39e14d18f3e7a6ad6f3e56cc7397d7946bd1e636e37b5",
+      "label": "silent parse-none gap"
+    },
+    {
+      "after_sha256": "29e5467d4ace8453878cd789024d9401bd4af7320ca306a23e53ee19e3913061",
+      "before_sha256": "f5399f85aaaca417411c0e882559c78e9f0af65a10f26693308ce317ad4ec198",
+      "label": "classifier reject gap"
+    },
+    {
+      "after_sha256": "2f4c2115925b516cf887fce7712ea63a464707931ea0337fb8bc9545c03359a3",
+      "before_sha256": "bbb7d66bd6453cd021ce4babdbbdad818a0db71689e8a8f54ccafb133b20be60",
+      "label": "first accepted before resets"
+    },
+    {
+      "after_sha256": "37f0ab7d311ef03be2d72d911086424a8792451379a070008c153727a30e988d",
+      "before_sha256": "028135896801c110cf79971a6c4874e6a328b2cb44778d0cac05d87199b2c319",
+      "label": "after real resets before stacking"
+    },
+    {
+      "after_sha256": "0350213417dbf33ecaa0a9fa00e06fad4140cb6cd919aba52dff6a8d824d558c",
+      "before_sha256": "0339d9e19f69837654efef4950fd20c83d799cc62a71caafe5354842a8be5753",
+      "label": "actual previous-step entry"
+    },
+    {
+      "after_sha256": "6f415c4126d2ed746611acf01944195d85c61e307a9c91994fc92ddea1eea34d",
+      "before_sha256": "4e937643676262e2ab480c43b59197775c7de97bc4b6a9a1bc66a54cf82d254d",
+      "label": "before nstep input"
+    },
+    {
+      "after_sha256": "325734f8ab34bccf9e6d23ed4cb569c8c7051915d9c3a70fe3ab3f720132a0af",
+      "before_sha256": "89557c819e9fb377b564d538624baba740a8238ad4a6a7f8749d81f3c72ca055",
+      "label": "actual matured and enqueue invocation"
+    },
+    {
+      "after_sha256": "ce07db2dd492beae81974bd5e9d415ce50117e0cbca8e00a89be5e77cb807423",
+      "before_sha256": "a1a48587eb56e2271bcca76a570be95695f4cdb37487d547c3559d8e20bfe415",
+      "label": "enqueue returns and one-step input"
+    },
+    {
+      "after_sha256": "a03b0c4c1af41bb051a5e3c3d623a667c51f0fed4a84dbf97f4aecf29fefafce",
+      "before_sha256": "286afde38d58ccdc6ba5273a7690a33244fe5b25ac075bff3c565349ed030093",
+      "label": "one-step return"
+    },
+    {
+      "after_sha256": "bd917027c0350d0a3b29d04c57af2acdce5a7473eb144781061865bd29abf80d",
+      "before_sha256": "9e86a8e9466331e3303b6fb41c0f9345fa0585bb47c6bebeb2a177daf1be5b31",
+      "label": "done accepted closure"
+    },
+    {
+      "after_sha256": "46cbccf9088330eb64e34e0bd7f598a95ec477a8736d7883546ed695d703b229",
+      "before_sha256": "6d050c61bd9ea8ce0eca915aefae683ff880401bca1b049d74c421aab61f47cd",
+      "label": "inactive accepted closure"
+    },
+    {
+      "after_sha256": "46091af45ee0a02e17abd2245b6ca20507737a2dcf579aba82878b69393b44d8",
+      "before_sha256": "a01d17b468f4e03d49d518c9dd840c6a91a4299f177c174f8d5db0a29055edd7",
+      "label": "next actual decision distinct from prior label"
+    },
+    {
+      "after_sha256": "6830b4580f4ac3b85a5e640b8d9287429a7aa911d9d08f60b16322f6cbbdc3de",
+      "before_sha256": "2f49937743617006e297842408575da07c629a9fa687c2972905f9508da9ecc8",
+      "label": "normal accepted closure"
+    },
+    {
+      "after_sha256": "c3817deb0e8b0b8e994203e204a25b0a5601f9343e89f46711a9a02c0f7b16e3",
+      "before_sha256": "792f700ad5f7eb7b7351f569ef958fd7c55654d8cffcb3073ba3d3800f00ef26",
+      "label": "bounded removal"
+    }
+  ],
+  "checks": "AST parsing and finite text comparison only; no import or execution.",
+  "combined_logging_patch_rebase_pending": true,
+  "final_helper_sha256": "d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd",
+  "finite_replacements": 26,
+  "future_helper_contents": "rejected_gap_telemetry_reviewed3.py",
+  "helper_deltas": [
+    "reviewed2: pre-lock return for disabled/no-ticket non-connect events",
+    "reviewed3: positive reject/before/after-reset UID equality, no-newgame; defer continuity until after actual reset"
+  ],
+  "helper_runtime_destination": "Scripts/dqn/rejected_gap_telemetry.py",
+  "new_import_requires_future_dependency_closure": true,
+  "original_function_count": 74,
+  "preserved_intermediate_helper_sha256": "33727b6533bfb8347fa9109fd4f54005abe2d5a67ed2ea58fa60afbe900d7da4",
+  "preserved_original_helper_sha256": "56cd5363769d51bdf32f43dca3d89f71beb825b935b4f518b866591a4a1b82f8",
+  "reverse_byte_equality": true,
+  "status": "SOURCE_ONLY_UNSELECTED_UNAPPLIED_TESTS_DEFERRED",
+  "tests_executed": 0,
+  "unchanged_original_functions": 72
+}

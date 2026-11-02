@@ -1,0 +1,125 @@
+--- a/Robotron/Scripts/dqn/replay_buffer.py
++++ b/Robotron/Scripts/dqn/replay_buffer.py
+@@ -936,21 +936,43 @@
+             weights.astype(np.float32),
+         )
+ 
+-    def update_priorities(self, indices, td_errors):
+-        """Update priorities based on TD errors (fully vectorised)."""
+-        with self.lock:
+-            idx = np.asarray(indices, dtype=np.int64)
+-            td = np.abs(np.asarray(td_errors).astype(np.float64))
+-            # HOF rows carry sentinel indices >= capacity and have no
+-            # sum-tree leaves — writing them would corrupt ring priorities.
+-            mask = idx < self.capacity
+-            if not mask.all():
+-                idx = idx[mask]
+-                td = td[mask]
+-            if idx.size == 0:
+-                return
+-            new_p = (td + 1e-6) ** self.alpha
+-            self.tree.batch_update(idx, new_p)
++    def update_priorities(self, indices, td_errors, timing_out=None):
++        """Update priorities; optional host timings are published after unlock.
++
++        The normal two-argument call performs no extra clock reads. Timed
++        calls preserve the same replay lock and operation order, including
++        early returns/errors; timing_out is a caller-owned dictionary.
++        """
++        measuring = timing_out is not None
++        started = time.perf_counter() if measuring else 0.0
++        acquired = finished = None
++        try:
++            with self.lock:
++                if measuring:
++                    acquired = time.perf_counter()
++                try:
++                    idx = np.asarray(indices, dtype=np.int64)
++                    td = np.abs(np.asarray(td_errors).astype(np.float64))
++                    # HOF rows carry sentinel indices >= capacity and have no
++                    # sum-tree leaves — writing them would corrupt ring priorities.
++                    mask = idx < self.capacity
++                    if not mask.all():
++                        idx = idx[mask]
++                        td = td[mask]
++                    if idx.size == 0:
++                        return
++                    new_p = (td + 1e-6) ** self.alpha
++                    self.tree.batch_update(idx, new_p)
++                finally:
++                    if measuring:
++                        finished = time.perf_counter()
++        finally:
++            if measuring and acquired is not None:
++                timing_out.update(
++                    replay_lock_wait_ms=(acquired - started) * 1000.0,
++                    locked_priority_ms=(finished - acquired) * 1000.0,
++                    replay_update_host_ms=(time.perf_counter() - started) * 1000.0,
++                )
+ 
+     def boost_priorities(self, indices, factor: float):
+         """Multiply existing priorities of the given indices by *factor*.
+--- a/Robotron/Scripts/dqn/training.py
++++ b/Robotron/Scripts/dqn/training.py
+@@ -387,8 +387,12 @@
+                 entropy_rows.mean(), (top_q[:, 0] - top_q[:, 1]).mean(),
+                 (ce_loss.detach().float() - entropy_rows).mean()])
+         packed = torch.cat((ce_loss.detach().float(), torch.stack(scalars)))
++    priority_telemetry = getattr(agent, "_pipeline_telemetry", None) if diagnostic_due else None
++    priority_timings = {} if priority_telemetry is not None else None
+     priority_t0 = time.perf_counter()
+     host = packed.cpu().numpy()
++    if priority_timings is not None:
++        priority_readback_done = time.perf_counter()
+     if gpu_timing is not None:
+         # The packed CPU readback above already waits for these events.
+         metrics.last_train_gpu_compute_ms = gpu_timing[0].elapsed_time(gpu_timing[1])
+@@ -399,8 +403,19 @@
+         for name, value in zip(('below_support_mass', 'above_support_mass', 'edge_atom_mass',
+                                 'target_entropy', 'action_q_gap', 'categorical_kl'), host[B+9:B+15]):
+             setattr(metrics, 'c51_' + name, float(value))
+-    agent.memory.update_priorities(indices, td_errors)
++    if priority_timings is None:
++        agent.memory.update_priorities(indices, td_errors)
++    else:
++        priority_update_started = time.perf_counter()
++        agent.memory.update_priorities(indices, td_errors, timing_out=priority_timings)
+     priority_ms = (time.perf_counter() - priority_t0) * 1000.0
++    if priority_timings is not None:
++        priority_timings.update(
++            readback_host_ms=(priority_readback_done - priority_t0) * 1000.0,
++            cpu_bookkeeping_ms=(priority_update_started - priority_readback_done) * 1000.0,
++            total_host_ms=priority_ms,
++        )
++        priority_telemetry.record_learner_priority(priority_timings)
+ 
+     # Per-slice TD diagnostics (2026-07-22 bank-poisoning tripwire): bank
+     # rows ride sentinel indices >= capacity (game HOF first, EpHOF from
+--- a/Robotron/Scripts/dqn/pipeline_telemetry.py
++++ b/Robotron/Scripts/dqn/pipeline_telemetry.py
+@@ -28,6 +28,10 @@
+         "service_host_ms", "total_host_ms",
+     ),
+     "target_refresh": ("host_ms",),
++    "learner_priority": (
++        "readback_host_ms", "cpu_bookkeeping_ms", "replay_lock_wait_ms",
++        "locked_priority_ms", "replay_update_host_ms", "total_host_ms",
++    ),
+ }
+ 
+ 
+@@ -116,6 +120,14 @@
+     def record_target_refresh(self, host_ms, *, error=False):
+         self._record("target_refresh", {"host_ms": host_ms}, error=error)
+ 
++    def record_learner_priority(self, measurements):
++        """Existing diagnostic cadence, successful completed phases only.
++
++        Caller has released replay lock; all values are host elapsed ms.
++        CPU readback may wait for previously enqueued CUDA work.
++        """
++        self._record("learner_priority", measurements)
++
+     def snapshot(self, reset=False):
+         with self._lock:
+             result = {

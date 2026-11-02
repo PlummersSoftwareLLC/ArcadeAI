@@ -1,0 +1,219 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/stop_current_continuous_main_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/stop_current_continuous_main_fifo_frontier_v2.py
+@@ -1,6 +1,7 @@
+ """One Root-selected continuous stop; exact inherited Linux/service kernels.
+ 
+-No work at import. No measurement probe, control edit, replacement or retry.
++No work at import. Only an explicitly selected zero-frame FIFO probe; no
++measurement/control edit, replacement or retry.
+ """
+ import argparse
+ import hashlib
+@@ -8,6 +9,8 @@
+ import json
+ import os
+ import signal
++import socket
++import struct
+ from pathlib import Path
+ import time
+ import urllib.parse
+@@ -16,6 +19,10 @@
+ ROOT=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ KERNEL=ROOT/'logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/stop-sources/stop_owned_current_round_training_v3.py'
+ KERNEL_SHA='fe4a804db13347a74af512bca37adaf9aeb4660025cc9efe373b22a086ded7db'
++FRONTIER_SOURCES={'connection_cleanup_receipts.py':'f27e38411238fcf62256e6b317836b757d31d5e0ac962ec8523dd380236d80ee',
++    'game_journal.py':'6aa78cb40434793853d17a1032cc6454ac86b0168828848d9d390336ba8678f0'}
++PROBE=dict(authorized=True,client_slot=1,eval_only=True,application_frames_to_send=0,
++    scientific_or_natural_game_claimed=False)
+ 
+ 
+ def require(value,reason):
+@@ -66,6 +73,12 @@
+                     and str((proc/'exe').resolve())==job['mame_executable']
+                     and(proc/'cmdline').read_bytes().decode().rstrip('\0').split('\0')==job['actor_command'],
+                     'Original physical actor birth/source/cgroup differs')
++            require(job['zero_frame_FIFO_probe']==PROBE,'Explicit Root-selected unused slot1 zero-frame EVAL probe required')
++            require(set(job['FIFO_frontier_sources'])==set(FRONTIER_SOURCES),'Exact FIFO source companions required')
++            for name,sha in FRONTIER_SOURCES.items():
++                selected=job['FIFO_frontier_sources'][name]
++                require(selected['path']==str(ROOT/'Scripts/dqn'/name)and selected['sha256']==sha
++                    and helper.pin(selected['path'])==selected,'FIFO/zero-frame source companion changed')
+             self.api();self.old_handlers=self.candidates()
+             self.event('current-stop-before-actions.json',dict(owner=self.owner,fleet=self.fleet,
+                 expected_current_cap=job['expected_current_cap'],actual_boot=self.anchor,
+@@ -83,7 +96,8 @@
+             return value
+ 
+         def close_inputs(self):
+-            self.hold('GAME','Thread-4 (start')  # Exact source-bound accept task, inherited threaded cgroup seal.
++            # Initially seal admission so no old actor reconnects during fleet closure.
++            self.hold('GAME_INITIAL','Thread-4 (start')
+             snapshot=self.uncached('/api/continuous_training_connections',524288)
+             require(snapshot['schema']=='robotron-continuous-active-connections-v1','Exact active-token getter required')
+             active={v['token']:v for v in snapshot['connections']}
+@@ -93,49 +107,125 @@
+                 value=self.uncached('/api/connection_cleanup_token?'+urllib.parse.urlencode({'token':token}),70000)
+                 require(all(value[a]==row[b]for a,b in [('token','token'),('client_id','client_id'),
+                     ('client_slot','client_slot'),('eval_only','eval_only'),('connection_ns','connection_ns'),
+-                    ('socket_endpoints','socket_endpoints')]), 'Original current TCP/token identity differs')
++                    ('socket_endpoints','socket_endpoints')]),'Original current TCP/token identity differs')
+                 originals[token]=value
+             for evidence in job['historical_cleanup_receipts']:
+                 value=helper.read(evidence);token=value['token']
+                 require(token not in originals,'Historical/current token alias refused');originals[token]=value
+             require(len(originals)<=512,'Bounded selected current/historical cleanup set required')
+             initial=self.event('initial-current-connection-identities.json',snapshot)
+-            self.close_population()  # Exactly one original fleet StopUnit, normal0/archive, all recorded births absent.
++            self.close_population()  # Unchanged one StopUnit/normal0/owned absence/client_count0 kernel.
++            def old_handlers_gone():
++                api=self.api();current=self.uncached('/api/continuous_training_connections',524288)
++                return api['client_count']==0 and api['client_rows']==[]and current['connections']==[]and not self.candidates()
++            self.wait(old_handlers_gone,60,'Old handler/Timer producer remains; no FIFO frontier can be created')
++            time.sleep(1.1);require(old_handlers_gone(),'Delayed old handler/Timer producer appeared')
+             captured={}
+-            def drained():
+-                for token,prior in originals.items():
+-                    if token in captured:continue
+-                    value=self.uncached('/api/connection_cleanup_token?'+urllib.parse.urlencode({'token':token}),70000)
+-                    require(value['schema']=='robotron-prospective-connection-cleanup-receipt-v2'
+-                        and all(value[k]==prior[k]for k in ('token','server_stamp','client_id','client_slot',
+-                            'eval_only','connection_ns','socket_endpoints','handler_native_id','server_cleanup_incarnation')),
+-                        'Original handler/connection identity changed')
+-                    flags=('original_handler_stopped','original_owned_timer_stopped','owned_timer_callback_succeeded',
+-                        'journal_disconnect_succeeded','FIFO_reset_executed','replay_consumer_healthy')
+-                    require(all(type(value[k])is bool for k in flags),'Typed exact cleanup primitive results required')
+-                    if not all(value[k]is True for k in flags):continue
+-                    require(value['replay_admission_open']is True,'Healthy open replay consumer required')
+-                    require(value['cleanup_error']is None or value['cleanup_error']=='Original connection cleanup failed',
+-                        'Unknown recorded cleanup error refused')
+-                    require(value['ready_for_external_join']is (value['cleanup_error']is None),
+-                        'Original error/ready semantics must remain unchanged')
+-                    # This is only no-more-producers/FIFO/Timer evidence. No game completion,
+-                    # original cleanup success, CID reuse, refill or actor replacement is claimed.
+-                    captured[token]=self.event('closed-token-'+hashlib.sha256(token.encode()).hexdigest()+'.json',value)
+-                api=self.api();now=self.uncached('/api/continuous_training_connections',524288)
+-                return len(captured)==len(originals)and api['client_count']==0 and api['client_rows']==[]and now['connections']==[]and not self.candidates()
+-            self.wait(drained,60,'Original handlers/FIFO/Timer cleanup not positively complete')
+-            time.sleep(1.1);require(drained(),'Delayed original handler/Timer appeared')
++            identity_keys=('token','server_stamp','client_id','client_slot','eval_only','connection_ns',
++                'socket_endpoints','handler_native_id','server_cleanup_incarnation')
++            for token,prior in originals.items():
++                value=self.uncached('/api/connection_cleanup_token?'+urllib.parse.urlencode({'token':token}),70000)
++                require(value['schema']=='robotron-prospective-connection-cleanup-receipt-v2'
++                    and all(value[k]==prior[k]for k in identity_keys),'Original handler/connection identity changed')
++                # Preserve original failures, raw readyFalse, and primitive results. This is
++                # not a retroactive historical cleanup-success or CID-reuse classification.
++                captured[token]=self.event('historical-token-'+hashlib.sha256(token.encode()).hexdigest()+'.json',value)
++            before=self.api()
++            require(before['client_count']==0 and before['client_rows']==[]and not self.candidates(),
++                'No ordinary handler may survive the initial GAME hold')
++            clock_keys=('frame_count','measurement_frames','learner_frame_count')
++            frame_floor={k:before[k]for k in clock_keys}
++            require(all(type(v)is int and v>=0 for v in frame_floor.values()),'Typed original frame clocks required')
++            game_floor={k:before[k]for k in('eval_games','eval_life_count')}
++            require(type(game_floor['eval_games'])is dict and type(game_floor['eval_life_count'])is int,
++                'Actual original eval-game/life summaries required')
++            gap_before=self.final_API
++            before_native=self.candidates();require(before_native=={},'Old producer appeared before owned admission gap')
++            intent=self.event('zero-frame-FIFO-probe-intent.json',dict(authority=job['zero_frame_FIFO_probe'],
++                before_API=gap_before,initial_GAME_hold=self.holds['GAME_INITIAL'],original_attempt=1,no_retry=True,
++                only_wire_bytes=struct.pack('>H',(1<<14)|(1<<1)).hex(),
++                selected_source_companions=job['FIFO_frontier_sources']))
++            # Only this admission gap is reopened. No application frame or marker is sent.
++            self.release('GAME_INITIAL')
++            self.probe=socket.create_connection(('127.0.0.1',9998),timeout=3)
++            self.probe.settimeout(3)
++            self.probe.sendall(struct.pack('>H',(1<<14)|(1<<1)))
++            endpoint=dict(server=list(self.probe.getpeername()),peer=list(self.probe.getsockname()))
++            probe_identity=None
++            def registered():
++                nonlocal probe_identity
++                api=self.api();current=self.uncached('/api/continuous_training_connections',524288)
++                require(all(api[k]==frame_floor[k]for k in clock_keys)
++                    and all(api[k]==v for k,v in game_floor.items()),'Unexpected frame/game/life during owned probe admission gap')
++                if api['client_count']!=1 or len(api['client_rows'])!=1 or len(current['connections'])!=1:return False
++                row=api['client_rows'][0];connection=current['connections'][0]
++                require(row['client_slot']==1 and row['eval']is True and row['session_seconds']==0
++                    and connection['client_id']==row['client_id']and connection['client_slot']==1
++                    and connection['eval_only']is True and connection['socket_endpoints']==endpoint
++                    and connection['token']not in originals,'Only exact owned zero-frame EVAL TCP is allowed')
++                value=self.uncached('/api/connection_cleanup_token?'+urllib.parse.urlencode({'token':connection['token']}),70000)
++                require(value['schema']=='robotron-prospective-connection-cleanup-receipt-v2'
++                    and all(value[k]==connection[k]for k in('token','client_id','client_slot','eval_only','connection_ns','socket_endpoints'))
++                    and value['original_handler_stopped']is False and value['terminal_receipt']is None,
++                    'Owned probe receipt/source identity differs or already ended')
++                if probe_identity is not None:
++                    require(all(value[k]==probe_identity[k]for k in identity_keys),'Owned probe token/native identity changed')
++                native=self.candidates();tid=value['handler_native_id']
++                require(type(tid)is int and tid not in before_native,'Owned probe native task was not fresh')
++                if set(native)!={tid}:return False
++                require(native[tid]['wchan'].startswith('poll_schedule_timeout'),'Owned probe is not in zero-frame receive wait')
++                if probe_identity is not None:
++                    require(native[tid]==self.probe_tid,'Original probe native birth/name/wait identity changed')
++                self.probe_tid=native[tid];self.probe_id=row['client_id'];probe_identity=value
++                return True
++            self.wait(registered,10,'Exact owned zero-frame EVAL probe did not register; never retry')
++            self.hold('GAME','Thread-4 (start')
++            require(registered(),'Unknown connection/task appeared before GAME reseal')
++            time.sleep(1.1);require(registered(),'Probe/frame/native identity changed after admission gap')
++            gap_after=self.final_API
++            probe_before=self.event('zero-frame-FIFO-probe-before-close.json',dict(receipt=probe_identity,
++                native=self.probe_tid,API=gap_after,frame_counts=frame_floor,eval_summaries=game_floor,GAME_hold=self.holds['GAME']))
++            # All other handlers and Timers have ended BEFORE this reset is enqueued.
++            # The selected sole consumer sets its ACK only after every older FIFO command.
++            self.probe.shutdown(socket.SHUT_RDWR);self.probe.close();self.probe=None
++            probe_closed=None
++            flags=('original_handler_stopped','original_owned_timer_stopped','owned_timer_callback_succeeded',
++                'journal_disconnect_succeeded','FIFO_reset_executed','replay_consumer_healthy')
++            def frontier_complete():
++                nonlocal probe_closed
++                value=self.uncached('/api/connection_cleanup_token?'+urllib.parse.urlencode({'token':probe_identity['token']}),70000)
++                require(value['schema']=='robotron-prospective-connection-cleanup-receipt-v2'
++                    and all(value[k]==probe_identity[k]for k in identity_keys),'Owned FIFO frontier identity changed')
++                require(all(type(value[k])is bool for k in flags),'Typed owned frontier primitive results required')
++                api=self.api();current=self.uncached('/api/continuous_training_connections',524288)
++                require(all(api[k]==frame_floor[k]for k in clock_keys)
++                    and all(api[k]==v for k,v in game_floor.items()),'A frame/game/life appeared after owned admission gap')
++                if not all(value[k]is True for k in flags):return False
++                require(value['replay_admission_open']is True and value['cleanup_error']is None
++                    and value['ready_for_external_join']is True and value['terminal_receipt']is None
++                    and value['terminal_line_sha256']is None,'Owned zero-frame cleanup frontier was not successful')
++                if api['client_count']!=0 or api['client_rows']!=[]or current['connections']!=[]or self.candidates():return False
++                probe_closed=value;return True
++            self.wait(frontier_complete,15,'Owned last FIFO reset/handler/Timer frontier incomplete')
++            time.sleep(1.1);require(frontier_complete(),'Post-frontier producer/frame/consumer changed')
++            probe_after=self.event('zero-frame-FIFO-probe-after-close.json',dict(receipt=probe_closed,API=self.final_API,
++                original_owned_probe_closed=True,all_older_FIFO_commands_completed=True,
++                measurement_pause_or_application_frame_sent=False,game_completion_or_refill_authority_claimed=False))
+             hold=self.holds['GAME'];group=Path(hold['path'])
+             require(dict(x.split()for x in(group/'cgroup.events').read_text().splitlines()).get('frozen')=='1'
+                 and set(map(int,(group/'cgroup.threads').read_text().split()))=={hold['tid']},'Original GAME accept hold changed')
+-            sourcepins=job['current_source_pins']
+             result=self.event('input-closure.json',dict(schema='robotron-Root-continuous-input-closure-v1',
+                 owner=self.owner,fleet=self.fleet,source=helper.pin(Path(__file__).resolve()),old_kernel=helper.pin(KERNEL),
+                 all_original_population_births_absent=True,all_GAME_handlers_and_FIFO_work_finished=True,
+                 no_deferred_callbacks_or_Timer_threads=True,GAME_listener_sealed_until_original_trainer_exit=True,
+-                GAME_hold=hold,initial_connections=initial,closed_tokens=captured,source_pins=sourcepins,
+-                evidence=[initial,*captured.values()],original_cleanup_success_CID_reuse_refill_or_quality_claimed=False))
++                GAME_hold=hold,initial_connections=initial,historical_tokens_preserved_without_success_reclassification=captured,
++                FIFO_frontier=dict(intent=intent,before_close=probe_before,after_close=probe_after,
++                    before_gap_API=gap_before,after_gap_API=gap_after,unchanged_frame_counts=frame_floor,
++                    unchanged_eval_summaries=game_floor,source_receipt_book_maximum_records=4096,
++                    source_capacity_at_least_original192_plus_probe=True,runtime_remaining_capacity_claimed=False,
++                    source_companions=job['FIFO_frontier_sources'],owned_probe_not_a_physical_actor=True),
++                source_pins=job['current_source_pins'],evidence=[initial,*captured.values(),intent,probe_before,probe_after],
++                original_cleanup_success_CID_reuse_refill_or_quality_claimed=False))
+             return result
+ 
+         def run(self):
+@@ -164,6 +254,9 @@
+             except BaseException as error:outcome['error']=repr(error)
+             finally:
+                 failures=[]
++                if self.probe is not None:
++                    try:self.probe.close();self.probe=None
++                    except BaseException as error:failures.append(dict(kind='owned-zero-frame-probe',error=repr(error)))
+                 for kind in list(self.holds):
+                     try:self.release(kind)
+                     except BaseException as error:failures.append(dict(kind=kind,error=repr(error)))

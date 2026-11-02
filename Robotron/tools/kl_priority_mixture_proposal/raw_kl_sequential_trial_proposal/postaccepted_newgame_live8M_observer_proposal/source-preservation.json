@@ -1,0 +1,74 @@
+{
+  "schema": "robotron-source-only-finite-observer-replacements-v1",
+  "base_observer": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/lr25_hot_window_observer_proposal/hot_window_observer.py",
+    "sha256": "f1faaa37da0fc91f943b00fccc96f1e1ff31fbfa741f00bcf30183a5e10f51ab",
+    "bytes": 23971
+  },
+  "replacements": [
+    {
+      "before": "\"\"\"Pure future hot-LR observations; all reads/publication are root callbacks.\n\nUNSELECTED SOURCE PREPARATION. No file, process, control or trainer actions.\nRoot authenticates the pinned raw baseline and all context before injecting B.\nAn observation alone never permits a candidate: timely durable evidence is also\nrequired. Default PLAN reads nothing. No healthy-owner retirement semantics.\n\"\"\"\n",
+      "after": "\"\"\"Pure future post-fix CE4096 observations; root owns every I/O callback.\n\nUNSELECTED SOURCE PREPARATION. No reads, control, owner, trainer or file actions.\nRoot authenticates the actual READY/closure/current phase and raw B before use.\nNEW prospective horizons: 8M learner frames AND 8M accepted DQN+epsilon inserts.\nOnly timely original durable first-LATCH evidence permits one model-only request.\n\"\"\"\n"
+    },
+    {
+      "before": "SCHEMA='robotron-lr25-hot-window-job-v1'",
+      "after": "SCHEMA='robotron-postaccepted-newgame-live8M-window-job-v1'"
+    },
+    {
+      "before": "OBSERVATION_SCHEMA='robotron-lr25-hot-window-observation-v1'",
+      "after": "OBSERVATION_SCHEMA='robotron-postaccepted-newgame-live8M-window-observation-v1'"
+    },
+    {
+      "before": "FOUNDER='9b3b839fe39044538412f0f78a8c28feae60170ea2d1c363d21efeead17d84d1'\n",
+      "after": ""
+    },
+    {
+      "before": "learning_control_lr_scale=0.25",
+      "after": "learning_control_lr_scale=0.5"
+    },
+    {
+      "before": "scheduled_lr=1.25e-5",
+      "after": "scheduled_lr=2.5e-5"
+    },
+    {
+      "before": "learner_accepted=6000000",
+      "after": "learner_accepted=8000000"
+    },
+    {
+      "before": "Active192 hot-window API scope differs",
+      "after": "Active192 post-fix window API scope differs"
+    },
+    {
+      "before": "def validate_job(job,baseline_api):\n    require(isinstance(job,dict) and set(job)=={'schema','experiment','owner','recipe','current_phase',\n            'proofs','barrier_completed_clock','baseline','policy'},'Exact hot-window job fields required')\n    require(job['schema']==SCHEMA and json.dumps(job['recipe'],sort_keys=True,allow_nan=False)==\n            json.dumps(RECIPE,sort_keys=True),'Exact CE4096/.25 recipe binding required')\n    policy=job['policy']\n    require(set(policy)==set(POLICY)|{'cutoff_s'} and all(type(policy[k]) is type(v) and policy[k]==v\n            for k,v in POLICY.items()),'Frozen hot-window management policy differs')\n    require(number(policy['cutoff_s'],'precommitted window cutoff')>0,'Future cutoff must be positive')\n    require(type(job['experiment']) is str and 0<len(job['experiment'])<=120 and\n            all(c.isascii() and (c.isalnum() or c in '_-') for c in job['experiment']),'Invalid future LR experiment')\n    require(set(job['owner'])==OWNER_KEYS and integer(job['owner']['pid'],'owner.pid')>0 and\n            integer(job['owner']['starttime_ticks'],'owner.start')>0,'Exact owned trainer fields required')\n    for key in ('unit','invocation_id','cgroup'):\n        require(type(job['owner'][key]) is str and job['owner'][key],'Missing owned field: '+key)\n    phase=job['current_phase']\n    require(isinstance(phase,dict) and set(phase)=={'record','boot_checkpoint','boot_verification','expected'},\n            'Authentic unchanged CE phase descriptor required')\n    for key in ('record','boot_checkpoint','boot_verification'):pin(phase[key],'current_phase.'+key)\n    expected=phase['expected']\n    require(expected['metric']=='ce' and expected['valid'] is True and\n            expected['founder_phase_record_sha256']==FOUNDER and phase['record']['sha256']==FOUNDER,\n            'Current unchanged CE9b3 founder required; hot LR creates no boot/phase')\n    require(set(job['proofs'])=={'root_precommit','control_after','entry_CPU','barrier'},'Four authenticated root proof PINs required')\n    for key,value in job['proofs'].items():pin(value,'proofs.'+key)\n    require(set(job['baseline'])=={'api','observed_clock'},'Exact raw B PIN/clock required')\n    pin(job['baseline']['api'],'baseline.api')\n    start=clock_value(job['baseline']['observed_clock'],'baseline')\n    barrier=clock_value(job['barrier_completed_clock'],'barrier')\n    require(start['boot_id']==barrier['boot_id'] and start['monotonic_s']>=barrier['monotonic_s'] and\n            start['wall_s']>=barrier['wall_s'],'Baseline must be observed after the actual completed barrier')\n    require(healthy_api(baseline_api,job,start),'Baseline B is stale or pipeline read failed')\n    require(number(baseline_api['ts'],'baseline API timestamp')-\n            number(baseline_api['pipeline_snapshot_age_s'],'baseline pipeline age')>=barrier['wall_s'],\n            'Conservative pipeline snapshot time predates the actual barrier')\n    baseline=normalise(baseline_api)\n    require(all(baseline['clocks'][key]>0 for key in CLOCKS) and baseline['accepted']>0 and\n            baseline['learner_accepted']>0 and baseline['optimizer']['applied']>0 and\n            baseline['optimizer']['outcomes_recorded']>0 and baseline['optimizer']['unavailable']==0 and\n            baseline['unclassified']==0 and baseline_api['host_pipeline']['learning_exposure']['optimizer']['available'] is True,\n            'Actual nonzero available pending0 B required; never reset process counters')\n    require(baseline['optimizer_identity']['process_id']==baseline['replay_identity']['process_id']==job['owner']['pid'],\n            'Baseline exposure belongs to another process')\n    require(len(json.dumps(job,allow_nan=False).encode())<=256<<10,'Strict job exceeds bounded metadata')\n    return copy.deepcopy(job),baseline,bounded(baseline_api,2<<20)\n",
+      "after": "def validate_job(job,baseline_api):\n    require(isinstance(job,dict) and set(job)=={'schema','experiment','owner','recipe','current_phase',\n            'proofs','recovery_ready_clock','baseline','policy'},'Exact post-fix window job fields required')\n    require(job['schema']==SCHEMA and json.dumps(job['recipe'],sort_keys=True,allow_nan=False)==\n            json.dumps(RECIPE,sort_keys=True),'Exact CE4096/.5 recipe binding required')\n    policy=job['policy']\n    require(set(policy)==set(POLICY)|{'cutoff_s'} and all(type(policy[k]) is type(v) and policy[k]==v\n            for k,v in POLICY.items()),'New prospective 8M+8M management policy differs')\n    require(number(policy['cutoff_s'],'precommitted window cutoff')>0,'Future cutoff must be positive')\n    require(type(job['experiment']) is str and 0<len(job['experiment'])<=120 and\n            all(c.isascii() and (c.isalnum() or c in '_-') for c in job['experiment']),'Invalid post-fix experiment')\n    require(set(job['owner'])==OWNER_KEYS and integer(job['owner']['pid'],'owner.pid')>0 and\n            integer(job['owner']['starttime_ticks'],'owner.start')>0,'Exact owned trainer fields required')\n    for key in ('unit','invocation_id','cgroup'):\n        require(type(job['owner'][key]) is str and job['owner'][key],'Missing owned field: '+key)\n    phase=job['current_phase']\n    require(isinstance(phase,dict) and set(phase)=={'record','boot_checkpoint','boot_verification','expected'},\n            'Authentic dynamic CE founder descriptor required')\n    for key in ('record','boot_checkpoint','boot_verification'):pin(phase[key],'current_phase.'+key)\n    expected=phase['expected']\n    require(isinstance(expected,dict) and set(expected)=={'metric','phase_id','root_precommit_sha256',\n            'founder_phase_record_sha256','last_resume_record_sha256','started_from','valid'} and\n            expected['metric']=='ce' and expected['valid'] is True and\n            expected['founder_phase_record_sha256']==phase['record']['sha256'] and\n            expected['last_resume_record_sha256'] is None,\n            'Genuine dynamically bound new CE start founder required')\n    require(type(expected['phase_id']) is str and 0<len(expected['phase_id'])<=100 and\n            all(c.isascii() and (c.isalnum() or c in '_-') for c in expected['phase_id']), 'Invalid actual CE phase ID')\n    digest=expected['root_precommit_sha256']\n    require(type(digest) is str and len(digest)==64 and all(c in '0123456789abcdef' for c in digest),\n            'Invalid actual phase root precommit digest')\n    origin=expected['started_from']\n    require(isinstance(origin,dict) and set(origin)=={'path','sha256','bytes','clocks'} and\n            all(origin[k]==phase['boot_checkpoint'][k] for k in ('path','sha256','bytes')) and\n            set(origin['clocks'])==set(CLOCKS) and all(integer(origin['clocks'][k],'boot.'+k)>0 for k in CLOCKS),\n            'Actual CE boot checkpoint and four-clock floor required')\n    require(set(job['proofs'])=={'root_precommit','recovery_result','recovery_release','control'},\n            'Four authenticated post-recovery root proof PINs required')\n    for key,value in job['proofs'].items():pin(value,'proofs.'+key)\n    require(set(job['baseline'])=={'api','observed_clock'},'Exact raw B PIN/clock required')\n    pin(job['baseline']['api'],'baseline.api')\n    start=clock_value(job['baseline']['observed_clock'],'baseline')\n    ready=clock_value(job['recovery_ready_clock'],'recovery READY')\n    require(start['boot_id']==ready['boot_id'] and start['monotonic_s']>=ready['monotonic_s'] and\n            start['wall_s']>=ready['wall_s'],'Baseline must be observed after actual recovery READY')\n    require(healthy_api(baseline_api,job,start),'Baseline B is stale or pipeline read failed')\n    require(number(baseline_api['ts'],'baseline API timestamp')-\n            number(baseline_api['pipeline_snapshot_age_s'],'baseline pipeline age')>=ready['wall_s'],\n            'Conservative pipeline snapshot time predates actual recovery READY')\n    baseline=normalise(baseline_api)\n    require(all(baseline['clocks'][key]>=origin['clocks'][key] for key in CLOCKS) and baseline['accepted']>0 and\n            baseline['learner_accepted']>0 and baseline['optimizer']['applied']>0 and\n            baseline['optimizer']['outcomes_recorded']>0 and baseline['optimizer']['unavailable']==0 and\n            baseline['unclassified']==0 and baseline_api['host_pipeline']['learning_exposure']['optimizer']['available'] is True,\n            'Actual post-READY nonzero available pending0 B at/after boot required')\n    require(baseline['optimizer_identity']['process_id']==baseline['replay_identity']['process_id']==job['owner']['pid'],\n            'Baseline exposure belongs to another process')\n    require(len(json.dumps(job,allow_nan=False).encode())<=256<<10,'Strict job exceeds bounded metadata')\n    return copy.deepcopy(job),baseline,bounded(baseline_api,2<<20)"
+    },
+    {
+      "before": "Owned healthy trainer changed or absent during hot window",
+      "after": "Owned healthy trainer changed or absent during post-fix window"
+    },
+    {
+      "before": "All deltas use the same nonzero post-barrier B; no cross-structure equality",
+      "after": "All deltas use the same nonzero post-READY B; no cross-structure equality"
+    },
+    {
+      "before": "replacement, replay, reanchoring or candidate. Root handles any LR reversal.",
+      "after": "replacement, replay, reanchoring or candidate. Root owns any later operation."
+    }
+  ],
+  "unchanged_pure_functions": [
+    "require",
+    "integer",
+    "number",
+    "bounded",
+    "identity",
+    "normalise",
+    "pin",
+    "clock_value",
+    "encoded",
+    "publication_pin",
+    "durable_event",
+    "ReceiptJournal",
+    "durable_result"
+  ],
+  "unchanged_accounting": "HorizonObserver numeric/accounting/clock/freshness/first-terminal bodies exact except two factual context strings; poll exact except factual final doc sentence."
+}

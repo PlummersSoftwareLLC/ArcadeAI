@@ -1,0 +1,57 @@
+{
+  "schema": "robotron-passive-transport-30m-followup-source-v1",
+  "purpose": "A separate fixed30-minute passive follow-up after the completed120-second prefix to seek a natural cap-reset/API event. No scientific cohort or learning window is retried.",
+  "original_probe_sha256": "7204b4729e9979b70165842c8567ce8e08baf9fb063bef8d348992ef061f397a",
+  "probe_replacements": [
+    {
+      "original": "One passive120-second API/actor-log prefix",
+      "effective": "One passive1800-second API/actor-log follow-up prefix"
+    },
+    {
+      "original": "--observe-original-passive120s",
+      "effective": "--observe-original-passive1800s"
+    },
+    {
+      "original": "out = D / 'passive-transport-prefix-v2-original01'",
+      "effective": "out = D / 'passive-transport-prefix-30m-original01'"
+    },
+    {
+      "original": "duration_s=120, poll_s=.2",
+      "effective": "duration_s=1800, poll_s=.2"
+    },
+    {
+      "original": "time.monotonic() - start < 120:",
+      "effective": "time.monotonic() - start < 1800:"
+    },
+    {
+      "original": "if not all(predicates.values()):",
+      "effective": "if not all(predicates.values()) or row['missing_API_slots']:"
+    }
+  ],
+  "original_controller_sha256": "218e7f861deb82c340527d218ed9f92ef5c5836c8cb9d32452c0598e61ff9a14",
+  "controller_replacements": [
+    {
+      "original": "props.get('RuntimeMaxSec')=='180'",
+      "effective": "props.get('RuntimeMaxSec')=='1860'"
+    },
+    {
+      "original": "180<=c['observation_s']<=300",
+      "effective": "1860<=c['observation_s']<=1980"
+    }
+  ],
+  "reverse_exact": true,
+  "entries": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/lr125_survival_trial_proposal_20261023/observe_transport_prefix_30m_v1.py",
+      "sha256": "27efbcaf0b152a72ef37ea8058ffd3a0e6ce0009a8287c5c7ff9d83284e28801",
+      "bytes": 6965
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/lr125_survival_trial_proposal_20261023/transport30m_controller_v1.py",
+      "sha256": "4f9b93b7d1a558e771a68156aa505dc009f412686deefeb25f5e777fba1dfa7c",
+      "bytes": 17293
+    }
+  ],
+  "production_source_changed": false,
+  "original_failed32M_requalified": false
+}

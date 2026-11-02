@@ -1,0 +1,26 @@
+{
+  "status": "UNAPPLIED_REVIEW_ONLY",
+  "explicit_startup_optin": "DQN_COHERENT_SNAPSHOT=1",
+  "source_files": {
+    "Robotron/Scripts/dqn/main.py": {
+      "base_sha256": "306d64e050160f745cbafc0153f4301d93c94287cf36832131a8bfb36e60cd52",
+      "proposed_sha256": "c33d7a83225d04b89ba4b52be8cafd658e1d16b1a47493601f0f78ef04fad642"
+    },
+    "Robotron/Scripts/dqn/socket_server.py": {
+      "base_sha256": "8fe556f7507547a97839072bbcecc98384c2b395c8ae789ac8ee062f55bca721",
+      "proposed_sha256": "363576fc9c80933b4ae82f692c1f0931b35c5aba65f938948c318ca786ec665f"
+    },
+    "Robotron/Scripts/dqn/metrics_dashboard.py": {
+      "base_sha256": "3013d511f1d933fe6012df5cecd7f8a8861824bdd41580cbe241b7498916f1c6",
+      "proposed_sha256": "5acbbaf2eba0ce1c21e5cd46189c5e2a3d08ff26b987947eb4f37b80f6da1b8d"
+    },
+    "Robotron/Scripts/dqn/agent.py": {
+      "base_sha256": "28977d6b925a4606a61b76438595f45ae054fc81aaaad989ab93e00d98a05668",
+      "proposed_sha256": "8ce1adaf02ad53981732a405de3ae36fec3c7ee16a72fc9820d094a5b0635b7c"
+    },
+    "Robotron/Scripts/dqn/coherent_snapshot.py": {
+      "base_sha256": null,
+      "proposed_sha256": "11e08dfc04cc7946a91a0b0d393f821b2b4a098463d0c4723c7e0375651396ef"
+    }
+  }
+}

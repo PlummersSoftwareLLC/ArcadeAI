@@ -1,0 +1,12 @@
+--- parent-training.py
++++ training-effective-cap-candidate-v1.py
+@@ -132,6 +132,9 @@
+     prefetch may finish in-flight work at the boundary, but must not keep
+     sampling batches that the learner will throw away.
+     """
++    budget = getattr(agent, "_effective_cap_budget", None)
++    if budget is not None:
++        return budget.replay_pressure_reached(agent, metrics, RL_CONFIG)
+     with metrics.lock:
+         frames = int(metrics.frame_count)
+         loaded_frames = int(getattr(metrics, "loaded_frame_count", 0))

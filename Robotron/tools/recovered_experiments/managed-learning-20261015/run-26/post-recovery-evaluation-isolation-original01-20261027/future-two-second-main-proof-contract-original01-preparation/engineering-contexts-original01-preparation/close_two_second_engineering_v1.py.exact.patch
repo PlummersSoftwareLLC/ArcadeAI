@@ -1,0 +1,43 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/readonly-mmap-source-validation-original02/close_declared_launcher_engineering_mmap_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-two-second-main-proof-contract-original01-preparation/engineering-contexts-original01-preparation/close_two_second_engineering_v1.py
+@@ -41,7 +41,7 @@
+     require(ip['sha256']==expected_sha,'Exact original engineering launch index required')
+     immutable=load('_reconnect_engineering_close_reader',ROOT/'tools/confirmed_game_boundary_proposal/protect_confirmed_winner_reviewed4.py')
+     def read(pin):return immutable.read_pin(pin)
+-    packet=read(ip);require(packet['schema']=='robotron-declared-launcher-two-original-engineering-launches-v1','Original launch index schema differs')
++    packet=read(ip);require(packet['schema']=='robotron-proof2s-two-original-engineering-launches-v1','Original launch index schema differs')
+     records=[row for row in packet['records']if row['kind']==kind and row['mode']==mode]
+     require(len(records)==1,'One exact original engineering scope required')
+     record=records[0];out=Path(record['output']);owner=read(record['original_live_owner']);intent=read(record['intent'])
+@@ -63,9 +63,12 @@
+             and report['private_policy_or_GPU_loaded']is report['main_runtime_changed']is report['quality_qualified']is False,
+             'Actual engineering result/domain differs')
+     require(report['scientific_launch_qualified']is False,'Engineering cannot qualify a scientific launch')
++    require(report['proof_gap_contract']=='robotron-main-proof-gap-2s-v1'and report['maximum_gap_s']==2.0,'Exact prospective2s report required')
+     native=read(report['original_job']);require(native['main_binding']==intent['case'],'Original case binding differs')
+     lifecycle=read(report['observer_lifecycle']);worker=read(lifecycle['worker_job']);outcome=read(lifecycle['outcome'])
+     actual_worker=read(outcome['owner']);worker_terminal=read(lifecycle['terminal_properties'])
++    require(worker['schema']=='robotron-round-observer-declared-launcher-proof2s-job-v1'and worker['maximum_gap_s']==2.0
++            and worker['interval_s']==.2 and worker['initial_samples']==100,'Exact prospective2s worker bounds required')
+     require(lifecycle['all_original_processes_reaped']is lifecycle['original_scope_released']is lifecycle['launcher_birth_absent']is True,
+             'Original worker/launcher did not positively close')
+     require(birth(actual_worker['pid'])!=actual_worker['birth']
+@@ -82,7 +85,8 @@
+         reviewed=report['independently_replayed_raw_review']
+         require(reviewed['status']=='PASS'and reviewed['accepted_samples']>=3000
+                 and reviewed['queued_publication_byte_joins_verified']is reviewed['fresh_final_sample_verified']
+-                is reviewed['legacy_500ms_evidence_and_projection_gaps_verified']is True
++                is reviewed['accepted_evidence_and_projection_gaps_verified']is True
++                and reviewed['proof_gap_contract']=='robotron-main-proof-gap-2s-v1'and reviewed['verified_maximum_gap_s']==2.0
+                 and outcome['success']is True and outcome['error']is None
+                 and worker_terminal['ExecMainCode']=='1'and worker_terminal['ExecMainStatus']=='0',
+                 'Original long probe/raw replay did not pass')
+@@ -101,7 +105,7 @@
+     try:os.fchmod(fd,0o444);os.fsync(fd)
+     finally:os.close(fd)
+     return h.put(out/'independent-original-engineering-closeout.json',dict(
+-        schema='robotron-source-bound-reconnect-original-engineering-closeout-v1',status='PASS_ENGINEERING_ONLY',
++        schema='robotron-proof2s-original-engineering-closeout-v1',status='PASS_ENGINEERING_ONLY',
+         kind=kind,mode=mode,launch_index=ip,original_live_owner=record['original_live_owner'],parent_terminal=terminal,
+         owned_stop=stop,released_properties=after,actual_probe_result=reportpin,worker_lifecycle=report['observer_lifecycle'],
+         accepted_samples=len(outcome['samples']),unaccepted_samples=len(outcome['unaccepted']),worker_actual_exit=0 if mode=='long'else 1,

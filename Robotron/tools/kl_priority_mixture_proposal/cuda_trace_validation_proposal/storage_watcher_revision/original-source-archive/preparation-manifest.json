@@ -1,0 +1,72 @@
+{
+  "schema": "robotron-cuda-executed-ce-trace-validation-preparation-v1",
+  "status": "SOURCE_ONLY_PREPARED_REVIEWED_NOT_EXECUTED",
+  "created_date_utc": "2026-10-17",
+  "files_sha256": {
+    "cuda_trace_parent.py": "34b9144f4b04ef121179d12befb1cd477189be662ceeb0bb59020448a4e7339e",
+    "cuda_trace_worker.py": "ba0039d406676f092309c6bf2248ddcf169af8960f60ed18b698ece1ea602f93",
+    "source-lock.json": "d6ffdaae63d97bce24a18d1b11ed165b9e12484d17d65365415aab3c08beb13b",
+    "RUNBOOK.txt": "65cd671f013415e2c8200721af3377096072bde1a249ac140dc8d91543326b6d"
+  },
+  "source_review": {
+    "root": "SOURCE_ONLY_PASS at parent34b9144f/workerba0039d4/lockd6ffdaae; no essential blocker",
+    "runtime_review": "SOURCE_ONLY ownership/launch PASS (worker identity/API prior e4b8c276; later native-counter/failure-archive changes are numerical/evidence scope), parent34b9144f",
+    "audit_quality_result": "SOURCE_ONLY numerical/schema PASS exact workerba0039d4/lockd6ffdaae",
+    "review_is_execution_or_launch_authorization": false
+  },
+  "prior_separate_cpu_evidence": {
+    "whole_step_test_sha256": "08061c2aed557135c824ce277440276430cabe6d6b96cbccbdd64d96af592901",
+    "root_reported_tests": 8,
+    "root_reported_result": "PASS in2.920s; owned original exit0; no CUDA claim",
+    "receipt": "Robotron/logs/managed-learning-20261015/run-26/whole-step-trace-cpu-validation-reviewed1-20261017/root-result-review-and-release.json",
+    "receipt_sha256": "0a0f28f12b6b6e5fe2e81bae4eaa26e518171374c8d624ecd2e5f29b496363bb",
+    "new_cuda_parent_worker_validated_by_this_cpu_run": false
+  },
+  "immutable_unmodified_dependencies": {
+    "executed_trace_manifest": "d7fcb2e36a7b08d472341d8f7f294d384f2591f17225832da83d350bff4e3316",
+    "sampler_manifest": "ff93d7970d9750cb15379ceefcef5503e8f57ae9e85e0639daadcc80f65a94b8",
+    "trained320_checkpoint_expected_sha256": "1225731cb8e976aacee925cb7bbac76a31ea6f81e404fedb5a909019a4373688",
+    "trained320_cpu_receipt_sha256": "0f1cf4820804971b7b13f02604a6d0f73e5579f34a68a45312d212d4a1a51068"
+  },
+  "scope": {
+    "variants": ["base", "off", "on"],
+    "real_network": "Current pinned RainbowNet11128/81actions/51atoms",
+    "batch_rows": 4096,
+    "max_consumed_attempts_per_variant": 8,
+    "compiled_off_return_count": 4,
+    "compiled_on_return_count": 5,
+    "actual_cuda_amp_and_fused_adam_required": true,
+    "native_batch_update_and_direct_fill_required": true,
+    "saved_scaler_scale": 1048576.0,
+    "synthetic_state_range": [0.0, 1.0],
+    "sampler_fixture_draws": 1,
+    "fixed_persisted_batch_reused": true,
+    "actual_live_eight_batch_acquisition": false,
+    "numerical_parity_from_actual_tensor_comparisons": true,
+    "hashes_alone_certify_tolerances": false,
+    "actual_first8_step_diagnostic_route": false,
+    "both_static_diagnostic_kernels_warmed_without_optimizer": true,
+    "full_actual_agent_lifecycle": false,
+    "matched_learning_anchor_or_quality_claim": false
+  },
+  "fixed_resource_plan": {
+    "cpu_threads": 2,
+    "host_memory_gib": 16,
+    "child_tasks": 128,
+    "torch_vram_allocator_gib": 12,
+    "nvidia_process_vram_gib": 13,
+    "owned_artifacts_gib": 6,
+    "private_tmpfs_mib": 128,
+    "variant_timeout_s": 180,
+    "total_work_timeout_s": 600,
+    "actual_fit_or_runtime_validated": false
+  },
+  "unperformed": [
+    "No default invocation, application/numerical import, compilation or new parent/worker CPU tests.",
+    "No checkpoint/replay data read, synthetic sample creation, model construction or GPU context/work.",
+    "No runtime/API/process/service query, production/state/control/unit mutation or launch.",
+    "No actual numerical capacity/parity/compiled AMP/fusedAdam or owned execution/cleanup validation."
+  ],
+  "future_action": "Root separately reviews exact hashes/stdlib prechecks, resolves its exact waiting384 gate and authorizes one owned launch. No actor/main stop, guard allowlist or adaptive numerical rescue.",
+  "manifest_self_hash": "Excluded; report SHA256 externally so this receipt remains immutable."
+}

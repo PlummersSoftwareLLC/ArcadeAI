@@ -1,0 +1,57 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/new-static-context-engineering-original01-preparation/probe_static192_engineering_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/new-static-context-engineering-original01-preparation/count-bounded-long-original02-preparation/probe_static192_countbounded_long_v2.py
+@@ -60,6 +60,8 @@
+     lock = threading.Lock()
+     watcher = None
+     initial = None
++    actual_long_work_s = None
++    last_validated_long_count = None
+     try:
+         initial = guard.start()
+         assert guard.initial['index'] == 99 and not initial['phase']['overlap_pending']
+@@ -76,10 +78,25 @@
+ 
+         watcher = threading.Thread(target=watch, name='engineering-native-health-watch')
+         watcher.start()
+-        until = time.monotonic()+(600 if args.mode == 'long' else 0 if args.mode == 'warmup' else 5)
+-        while time.monotonic() < until:
+-            assert not errors, errors
+-            time.sleep(.2)
++        if args.mode == 'long':
++            work_started = time.monotonic()
++            while True:
++                assert not errors, errors
++                with lock:
++                    count = (observations[-1] if observations else initial)['observed_samples']
++                elapsed = time.monotonic()-work_started
++                assert type(count) is int and count >= 100, 'Validated accepted-sample count required'
++                assert 0 <= elapsed <= 1200, 'Count-bounded original long work exceeded1200s'
++                if elapsed >= 600 and count >= 3000:
++                    actual_long_work_s = elapsed
++                    last_validated_long_count = count
++                    break
++                time.sleep(.2)
++        else:
++            until = time.monotonic()+(0 if args.mode == 'warmup' else 5)
++            while time.monotonic() < until:
++                assert not errors, errors
++                time.sleep(.2)
+     except Exception as failure:
+         errors.append(repr(failure))
+     finalizer_path = ROOT / 'tools/training_connection_lifecycle_proposal_20261023/finalize_dedicated_main_health_v1.py'
+@@ -101,11 +118,14 @@
+         assert terminal['Result'] == 'exit-code' and terminal['ExecMainStatus'] == '1'
+         assert lifecycle['success'] is False and lifecycle['original_scope_released'] is True
+         raw_review = None
+-    report = dict(schema='robotron-static192-health-actual-native-interface-probe-v1',
++    report = dict(schema='robotron-static192-health-countbounded-native-interface-probe-v2',
+         status='PASS_ENGINEERING_INTERFACE_ONLY', original_job=jp, initial=initial, mode=args.mode,
+         proof_gap_contract='robotron-main-proof-gap-2s-v1',maximum_gap_s=2.0,
+         independently_replayed_raw_review=raw_review,
+         actual_watch_observations=len(observations), elapsed_s=time.monotonic()-started,
++        long_work_contract='MINIMUM600S_AND_VALIDATED3000_SAMPLES_HARD1200S',
++        long_minimum_work_s=600,long_maximum_work_s=1200,long_minimum_observed_samples=3000,
++        actual_long_work_s=actual_long_work_s,last_validated_long_count=last_validated_long_count,
+         actual_unchanged_native_finalizer=h.pin(finalizer_path), closure=result,
+         observer_lifecycle=guard.lifecycle, sources=sources, retired_API_reviewer_source=reviewer_pin,
+         main_runtime_changed=False, private_policy_or_GPU_loaded=False,

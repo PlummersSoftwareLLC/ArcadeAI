@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-original02/run_deadline32_rounds_v11.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-original03/run_deadline32_rounds_v11.py
+@@ -106,7 +106,7 @@
+ 
+ def round_contract():
+     path=Path(__file__).with_name('deadline_round_contract_v11.py')
+-    require(hashlib.sha256(path.read_bytes()).hexdigest()=='fd2da3ae65d414947ec2041ff0f44574a5103d1317d140b246d24ec7ad00844a','Exact round contract source required')
++    require(hashlib.sha256(path.read_bytes()).hexdigest()=='6f50707f4a5c985387a87f0d4bfd5ccadaa9422927c67390e05b16276d149824','Exact round contract source required')
+     return load('_deadline_round_contract',path)
+ 
+ def validate_main_health_contract(job,protocol,family):

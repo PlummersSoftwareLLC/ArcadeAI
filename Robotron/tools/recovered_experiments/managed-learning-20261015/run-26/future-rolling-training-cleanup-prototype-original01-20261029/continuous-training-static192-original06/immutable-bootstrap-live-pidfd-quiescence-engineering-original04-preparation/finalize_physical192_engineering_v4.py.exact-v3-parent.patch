@@ -1,0 +1,157 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/immutable-bootstrap-live-pidfd-engineering-original03-preparation/finalize_physical192_engineering_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/immutable-bootstrap-live-pidfd-quiescence-engineering-original04-preparation/finalize_physical192_engineering_v4.py
+@@ -14,13 +14,13 @@
+ HERE = Path(__file__).resolve().parent
+ ENG = HERE
+ MODE_ROOT = HERE.parent
+-HC = MODE_ROOT/'health-consumer-immutable-bootstrap-live-pidfd-original04'
+-FAMILY_SHA = '0353bdff0986f6660538e260bdd1e3e2c75bd2c1e5b7bf749cf04f2987ba3c95'
+-MAP_SHA = 'b8a9cdfb15436d2473bd44d2aae37b1feb5038d5fd093347e4d7be9da5ede2a8'
+-PREPARE_SHA = '4018d9540f2b2b24354120296cb5391ec3efaf7b35b276edf8f839acd5dab2c9'
+-PROBE_SHA = '5052da877eaa1e34c32893ea41285832513b354b4a605eba5e82277338853919'
+-CLOSE_SHA = '8d9ebc5ba87bbc2500be28ca0acea382beace6a29ff2a25669f55ff986405e84'
+-REVIEW_SHA = '9d4442cd4bde938923c61a22182b50261a4ef0a1b6700770d05c97d92c04fb4d'
++HC = MODE_ROOT/'health-consumer-live-pidfd-current-EVAL-quiescence-original05'
++FAMILY_SHA = '9e00ed11b9ad56b8a16911eb38c3d48f9edd0a7fa7d0bb670749cc9ed75d0eac'
++MAP_SHA = '5d8ce346200f8737aae484b72a15b7f38dd8ea1da8ac463acc1c94531894f8b9'
++PREPARE_SHA = 'a81efc1abd89c361c78cf8357cc29334e3968a0b320105c8f384b197edec6f49'
++PROBE_SHA = '8b6e276fe0b0cf74c5fd917012cad4604a60a426ede79b798930b1bb9604c307'
++CLOSE_SHA = '8f812f5cefb8e4e77182062bfb73f77e48598279508dc2d8c2de5c2a8500b026'
++REVIEW_SHA = '30ea4d2eb6d97b5ccbd04e262f7b4c45e47af268f7644f7893ad88deba47a133'
+ MODES = ('warmup','long','abort')
+ LIMIT = 16 << 20
+ 
+@@ -87,18 +87,18 @@
+             'Exact frozen Root-selected finalizer required')
+     job_pin = pin(job_path);require(job_pin['sha256'] == job_sha,'Root job SHA differs')
+     job = read(job_pin)
+-    require(job['schema'] == 'robotron-root-finalize-original192-immutable-bootstrap-live-pidfd-engineering-job-v3'
++    require(job['schema'] == 'robotron-root-finalize-original192-immutable-bootstrap-live-pidfd-engineering-job-v4'
+             and set(job) == {'schema','prepared_contexts','launch_index','case','closeouts','output'}
+             and set(job['closeouts']) == set(MODES),'Exact three-scope Root selection required')
+     prepared = read(job['prepared_contexts']); index = read(job['launch_index']); case = read(job['case'])
+-    require(prepared['schema'] == 'robotron-original192-immutable-bootstrap-live-pidfd-three-engineering-preparation-v3'
++    require(prepared['schema'] == 'robotron-original192-immutable-bootstrap-live-pidfd-three-engineering-preparation-v4'
+             and prepared['status'] == 'DATA_PREPARED_NOT_LAUNCHED'
+             and prepared['source']['sha256'] == PREPARE_SHA
+             and pin(prepared['source']['path']) == prepared['source']
+             and prepared['case'] == job['case']
+-            and index['schema'] == 'robotron-original192-immutable-bootstrap-live-pidfd-three-original-launches-v3'
++            and index['schema'] == 'robotron-original192-immutable-bootstrap-live-pidfd-three-original-launches-v4'
+             and len(index['records']) == 3
+-            and case['schema'] == 'robotron-physical-original192-immutable-bootstrap-live-pidfd-health-case-v4',
++            and case['schema'] == 'robotron-original192-live-pidfd-current-eval-quiescence-case-v5',
+             'Exact actual NEW static case/preparation/index required')
+     family = prepared['source_family']; source_map = prepared['source_map']
+     require(family['sha256'] == FAMILY_SHA and source_map['sha256'] == MAP_SHA,
+@@ -110,7 +110,8 @@
+     inventory_pin = case['input_inventory_authority']; inventory = read(inventory_pin)
+     parent = read(inventory['parent_case'])
+     prior_physical = read(inventory['prior_physical_case'])
+-    require(inventory['schema'] == 'robotron-root-original192-immutable-bootstrap-live-pidfd-input-inventory-v4'
++    immediate_prior = read(inventory['immediate_prior_case'])
++    require(inventory['schema'] == 'robotron-root-original192-live-pidfd-current-eval-quiescence-input-inventory-v5'
+             and inventory['status'] == 'ROOT_SELECTED_EXACT_HELD_INPUTS'
+             and inventory['inputs'] == case['inputs']
+             and type(inventory['input_count']) is int and inventory['input_count'] == len(case['inputs'])
+@@ -120,7 +121,11 @@
+             and inventory['all_prior348_paths_retained'] is True
+             and prior_physical['schema'] == 'robotron-continuous-physical-original192-health-case-v2'
+             and len(prior_physical['inputs']) == 348
+-            and set(prior_physical['inputs']) <= set(case['inputs'])
++            and immediate_prior['schema'] == 'robotron-physical-original192-immutable-bootstrap-live-pidfd-health-case-v4'
++            and len(immediate_prior['inputs']) == 365 and inventory['all_v4_paths_retained'] is True
++            and set(prior_physical['inputs']) <= set(immediate_prior['inputs']) <= set(case['inputs'])
++            and inventory['immediate_prior_replacements'] == {p:dict(before=v,after=case['inputs'][p])
++                for p,v in immediate_prior['inputs'].items() if v != case['inputs'][p]}
+             and inventory['prior348_replacements'] == {p:dict(before=v,after=case['inputs'][p])
+                 for p,v in prior_physical['inputs'].items() if v != case['inputs'][p]}
+             and inventory['replacements'] == {p:dict(before=v,after=case['inputs'][p])
+@@ -132,8 +137,8 @@
+     require(pin(reviewed_source['path']) == reviewed_source,'Selected frozen reviewer source changed')
+     result = {}; parent_births = set(); worker_births = set()
+     for mode in MODES:
+-        records = [r for r in index['records'] if r['kind'] == 'main-immutable-bootstrap-live-pidfd192' and r['mode'] == mode]
+-        intents = [r for r in prepared['records'] if r['kind'] == 'main-immutable-bootstrap-live-pidfd192' and r['mode'] == mode]
++        records = [r for r in index['records'] if r['kind'] == 'main-current-once-EVAL-quiescence192' and r['mode'] == mode]
++        intents = [r for r in prepared['records'] if r['kind'] == 'main-current-once-EVAL-quiescence192' and r['mode'] == mode]
+         require(len(records) == len(intents) == 1, 'One exact original per mode required')
+         record = records[0]; intent = read(record['intent']); expected = intents[0]
+         require(record['intent'] == expected['intent'] and record['unit'] == expected['unit']
+@@ -142,8 +147,8 @@
+                 and intent['no_retry'] is True and intent['engineering_only'] is True,
+                 'Original mode/intent/no-retry case join differs')
+         owner = read(record['original_live_owner']); close_pin = job['closeouts'][mode]; close = read(close_pin)
+-        require(close['schema'] == 'robotron-original192-immutable-bootstrap-live-pidfd-original-engineering-closeout-v3'
+-                and close['status'] == 'PASS_ENGINEERING_ONLY' and close['kind'] == 'main-immutable-bootstrap-live-pidfd192'
++        require(close['schema'] == 'robotron-original192-immutable-bootstrap-live-pidfd-original-engineering-closeout-v4'
++                and close['status'] == 'PASS_ENGINEERING_ONLY' and close['kind'] == 'main-current-once-EVAL-quiescence192'
+                 and close['mode'] == mode and close['launch_index'] == job['launch_index']
+                 and close['original_live_owner'] == record['original_live_owner']
+                 and close['source']['sha256'] == CLOSE_SHA
+@@ -165,14 +170,14 @@
+         pair = (owner['pid'],owner['birth'])
+         require(pair not in parent_births,'Reused original parent handle');parent_births.add(pair)
+         report = read(close['actual_probe_result'])
+-        require(report['schema'] == 'robotron-original192-immutable-bootstrap-live-pidfd-health-interface-probe-v3'
++        require(report['schema'] == 'robotron-original192-immutable-bootstrap-live-pidfd-health-interface-probe-v4'
+                 and report['status'] == 'PASS_ENGINEERING_INTERFACE_ONLY' and report['mode'] == mode
+                 and report['sources'] == mapped and report['retired_API_reviewer_source'] == reviewed_source
+                 and report['observer_lifecycle'] == close['worker_lifecycle']
+                 and report['case_inventory_authority'] == inventory_pin
+                 and report['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1'
+                 and report['maximum_gap_s'] == 2.0
+-                and report['main_health_profile'] == 'PHYSICAL_ORIGINAL192_IMMUTABLE_BOOTSTRAP_LIVE_PIDFD_V4'
++                and report['main_health_profile'] == 'PHYSICAL_ORIGINAL192_LIVE_PIDFD_CURRENT_EVAL_QUIESCENCE_V5'
+                 and report['simultaneous192_actors_claimed'] is False
+                 and report['main_runtime_changed'] is report['private_policy_or_GPU_loaded']
+                     is report['scientific_launch_qualified'] is report['quality_qualified'] is False,
+@@ -197,9 +202,10 @@
+                 and worker['case'] == job['case'] and worker['sources'] == mapped
+                 and worker['parent']['pid'] == owner['pid'] and worker['parent']['birth'] == owner['birth']
+                 and worker['parent']['invocation_id'] == owner['invocation_id']
+-                and worker['schema'] == 'robotron-original192-immutable-bootstrap-live-pidfd-observer-proof2s-job-v4'
++                and worker['schema'] == 'robotron-original192-live-pidfd-current-eval-quiescence-observer-proof2s-job-v5'
+                 and worker['immutable_original192_bootstrap_certificate'] is True
+                 and worker['fresh_original_keeper_pidfd_census'] is True
++                and worker['source_bound_current_once_only_EVAL_quiescence_after_recorded_disconnect_exception'] is True
+                 and worker['maximum_gap_s'] == 2.0 and worker['interval_s'] == .2
+                 and worker['initial_samples'] == 100 and worker['work_s'] == 4200 and worker['runtime_s'] == 4260
+                 and worker['attempt'] == 1 and worker['no_retry'] is True,
+@@ -225,14 +231,15 @@
+                     and reviewed['full_main_input_count'] == len(case['inputs'])
+                     and reviewed['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1'
+                     and reviewed['verified_maximum_gap_s'] == 2.0
+-                    and reviewed['main_health_profile'] == 'PHYSICAL_ORIGINAL192_IMMUTABLE_BOOTSTRAP_LIVE_PIDFD_V4'
++                    and reviewed['main_health_profile'] == 'PHYSICAL_ORIGINAL192_LIVE_PIDFD_CURRENT_EVAL_QUIESCENCE_V5'
++                    and reviewed['original_cleanup_deadline_handoff_CID_reuse_or_refill_success_from_exception_claimed'] is False
+                     and all(reviewed[k] is True for k in ('source_bound_original192_physical_bootstrap_verified',
+                         'TRAIN155_original_physical_and_current_TCP_verified',
+                         'EVAL37_original_connection_and_strict_retirement_evidence_verified',
+                         'EVAL_closed_slots_have_positive_normal0_reap_and_cleanup_verified',
+                     'prior_completed_EVAL_prefix_and_current_suffix_verified',
+                         'immutable_original192_bootstrap_certificate_verified','fresh_original_keeper_pidfd_census_verified',
+-                        'authentic_published_normal0_exit_facts_and_monotone_coverage_verified',
++                        'authentic_published_normal0_exit_facts_and_monotone_coverage_verified','current_once_only_EVAL_quiescence_with_historical_error_and_ready_false_preserved_verified',
+                         'accepted_evidence_and_projection_gaps_verified','fresh_final_sample_verified',
+                         'queued_publication_byte_joins_verified','actual_resources_and_exit_and_owned_release_verified'))
+                     and outcome['success'] is True and outcome['error'] is None and lifecycle['success'] is True
+@@ -250,14 +257,16 @@
+     output = Path(job['output'])
+     require(output.is_absolute() and output.parent.resolve(strict=True) == Path(job_path).parent.resolve(strict=True)
+             and not output.exists(),'One exclusive Root-selected joint output beside job required')
+-    return put(output,dict(schema='robotron-original192-immutable-bootstrap-live-pidfd-joint-engineering-readiness-v3',
++    return put(output,dict(schema='robotron-original192-immutable-bootstrap-live-pidfd-joint-engineering-readiness-v4',
+         status='ENGINEERING_PASS_AT_RECORDED_OBSERVED_LOAD_ONLY',source=own,job=job_pin,
+         source_family=family,observer_sources=mapped,observer_reviewer=reviewed_source,
+         case=job['case'],input_inventory_authority=inventory_pin,historical_main_input_count=247,
+         actual_held_input_count=len(case['inputs']),engineering=result,
+         lifecycle=result['long']['lifecycle'],independent_raw_review=result['long']['independent_raw_review'],
+         proof_gap_contract='robotron-main-proof-gap-2s-v1',maximum_gap_s=2.0,interval_s=.2,
+-        main_health_profile='PHYSICAL_ORIGINAL192_IMMUTABLE_BOOTSTRAP_LIVE_PIDFD_V4',
++        main_health_profile='PHYSICAL_ORIGINAL192_LIVE_PIDFD_CURRENT_EVAL_QUIESCENCE_V5',
++        current_once_only_EVAL_quiescence_with_historical_error_and_ready_false_preserved_verified=True,
++        original_cleanup_deadline_handoff_CID_reuse_or_refill_success_from_exception_claimed=False,
+         admission_basis='EVER_BOUND_ORIGINAL192_NOT_SIMULTANEOUS',simultaneous192_actors_claimed=False,
+         all_original_engineering_scopes_closed_at_recorded_closer=True,
+         all_three_modes_are_fresh_originals_for_this_physical_case=True,

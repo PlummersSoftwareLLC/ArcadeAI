@@ -1,0 +1,55 @@
+{
+  "schema": "robotron-live8-four-readout-analysis-preparation-v1",
+  "status": "SOURCE_ONLY_UNEXECUTED",
+  "files": {
+    "analyse_four_readouts.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/four_readout_analysis_proposal/analyse_four_readouts.py",
+      "sha256": "76106f208d0ad7f1a517ee85da6e6a840d83032935a407eaa84cdd8821a5323a",
+      "bytes": 23366
+    },
+    "test_four_readouts.py": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/four_readout_analysis_proposal/test_four_readouts.py",
+      "sha256": "994a56a87ba4162b3d027b741e9867308b7f0b1adbafa2aae00b5fd17cc489b0",
+      "bytes": 8810
+    },
+    "PREPARATION.txt": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/four_readout_analysis_proposal/PREPARATION.txt",
+      "sha256": "d88d7ff6c5a8d12a60e5bcf8bc20ed0d7df23116016be43336b3494c0be2a943",
+      "bytes": 7445
+    },
+    "job.schema.json": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/four_readout_analysis_proposal/job.schema.json",
+      "sha256": "1c109b231141c2a34d2a6485345ec987f9669d452734eb9b51e3826e6706fcc3",
+      "bytes": 1491
+    },
+    "source-lock.json": {
+      "source": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/four_readout_analysis_proposal/source-lock.json",
+      "sha256": "4b361b13216dba769f427e6c6f3b60df9a6932aefd0cce40480e5996249e16da",
+      "bytes": 3269
+    }
+  },
+  "authored_tests": 12,
+  "author_executed_tests": 0,
+  "actual_data_reads_by_author": false,
+  "actual_future_execution": null,
+  "source_peer_review": null,
+  "scope": "Eight CE-selected conditional sensitivities; original CE tolerances; no executed target, candidate population, gradient/LR/quality inference",
+  "future_root_envelope": {
+    "cpu_threads": 2,
+    "memory_bytes": 3221225472,
+    "tasks": 128,
+    "timeout_s": 120,
+    "new_output_bytes": 16777216,
+    "CUDA_VISIBLE_DEVICES": ""
+  },
+  "remaining_validation": [
+    "Independent source peer",
+    "Future bounded CPU synthetic tests",
+    "Actual eight-result binding after retained reconstruction terminal",
+    "Actual small-output tensor decode/resource validation"
+  ],
+  "preseal_source_corrections": [
+    "Stored-leaf sensitivity does not isolate age: unknown metric/generation and insertion/death/elite boosts remain confounded.",
+    "Selected-min equivalence is conditional on the source raw-weight denominator floor; the hypothetical floor status is not measured."
+  ]
+}

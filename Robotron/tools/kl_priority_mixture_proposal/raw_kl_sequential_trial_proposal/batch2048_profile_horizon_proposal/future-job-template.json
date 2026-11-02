@@ -1,0 +1,66 @@
+{
+  "future_root_precommit": null,
+  "job": {
+    "activation_receipt_sha256": null,
+    "batch_size": 2048,
+    "before_resume_api": null,
+    "boot_four_clocks": null,
+    "healthy192_monotonic_s": null,
+    "owner": null,
+    "policy": {
+      "API_age_s": 5,
+      "ceiling_s": 3600,
+      "cutoff_s": 3240,
+      "learner_frames": 8000000,
+      "no_applied_s": 60,
+      "physical_adds": 6000000,
+      "pipeline_age_s": 5,
+      "poll_s": 1,
+      "unobservable_s": 30
+    },
+    "profile_binding": {
+      "pin": {
+        "bytes": 764,
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json",
+        "sha256": "e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50"
+      },
+      "value": {
+        "LR_compensation": false,
+        "batch_size": 2048,
+        "before_batch_size": 4096,
+        "deliberate_recipe_changes": [
+          "DQN_BATCH_SIZE"
+        ],
+        "held_recipe_context": {
+          "baseline_batch_size": 512,
+          "batch_size": 2048,
+          "c51_target_smoothing": 0,
+          "epsilon": 0.1,
+          "expert_ratio": 0.1,
+          "fused": true,
+          "gamma": 0.995,
+          "learning_control_lr_scale": 0.5,
+          "lr_anchor_step": 0.0,
+          "lr_gear": "climb",
+          "max_samples_per_frame": 8,
+          "n_step": 3,
+          "num_atoms": 51,
+          "optimizer_eps": 0.00015,
+          "optimizer_lr": 2.5e-05,
+          "v_max": 50.0,
+          "v_min": -10.0
+        },
+        "priority_metric": "ce",
+        "profile_id": "ce_batch2048_efficacy_screen_v1",
+        "return_batch_size": 4096,
+        "schema": "robotron-ce-batch2048-efficacy-profile-v1"
+      }
+    },
+    "schema": "robotron-ce-batch2048-horizon-job-v1",
+    "start_request": null,
+    "trial_core_sha256": null
+  },
+  "qualification_pass": false,
+  "scope": "Root must authenticate exact profile bytes and freeze a genuine new job after current full quality/audits/cleanup/release. No current owner/checkpoint/deadline/outcome is bound.",
+  "status": "UNACTIVATED_INVALID_TEMPLATE_REQUIRED_ACTUALS_NULL"
+}

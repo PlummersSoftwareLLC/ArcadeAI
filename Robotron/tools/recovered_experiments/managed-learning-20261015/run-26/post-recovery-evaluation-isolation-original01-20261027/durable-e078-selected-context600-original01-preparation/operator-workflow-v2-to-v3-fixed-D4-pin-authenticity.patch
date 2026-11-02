@@ -1,0 +1,34 @@
+--- Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-selected-context600-original01-preparation/prepare_e078_selected_workflow_v2.py
++++ Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-selected-context600-original01-preparation/prepare_e078_selected_workflow_v3.py
+@@ -57,7 +57,13 @@
+ 
+ def metadata_inputs(h):
+     construction,_=sealed(h,D/'source-construction.json','c7e379d9967bfcd2f8facd7ba56ce217441a2bf5dee669d8c9e8e4cafba801c8')
+-    return [h.pin(Path(row['source']['path']))for row in construction['records']]
++    values=[]
++    for row in construction['records']:
++        selected=row['source'];actual=h.pin(Path(selected['path']))
++        require(all(actual[key]==value for key,value in selected.items()),
++            'Current D4 source differs from immutable selected construction')
++        values.append(actual)
++    return values
+ 
+ 
+ def prepare_metadata(h):
+@@ -143,6 +149,7 @@
+ 
+ 
+ def prepare_reviews(h):
++    selected_D4_inputs=metadata_inputs(h)  # Before importing or writing any review metadata.
+     report=closed_metadata(h);guardroot=STUDY/'four-exact-contexts-CPU-original01'
+     guards,_=sealed(h,guardroot/'all-four-exact-native-guard-receipts.json')
+     require(guards['status']=='PASS' and len(guards['guards'])==4,'Actual exactfourjobguard closeout required')
+@@ -150,7 +157,7 @@
+     rp=p.precommit(Path(report['native_prepared']['path']),guardroot/'all-four-exact-native-guard-receipts.json',STUDY/'review-precommit-original01')
+     packet=json.loads(h.checked(rp).read_bytes());driver=h.pin(D/'check_deadline_review_preparation_cpu_v3.py')
+     root=STUDY/'deadline-review-preparation-CPU-original01';require(not root.exists(),'Fresh original reviewCPU path required');root.mkdir(mode=0o700)
+-    values=metadata_inputs(h)+[rp,report['native_prepared'],h.pin(guardroot/'all-four-exact-native-guard-receipts.json')]
++    values=selected_D4_inputs+[rp,report['native_prepared'],h.pin(guardroot/'all-four-exact-native-guard-receipts.json')]
+     for case in packet['cases']:
+         job=json.loads(h.checked(case['native_job']).read_bytes());values += [case['native_job'],case['native_config'],case['guard'],*job['inputs']]
+     inputs=list({value['path']:value for value in values}.values())

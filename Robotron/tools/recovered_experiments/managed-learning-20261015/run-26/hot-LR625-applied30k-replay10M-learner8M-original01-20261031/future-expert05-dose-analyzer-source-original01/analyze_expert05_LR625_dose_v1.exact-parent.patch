@@ -1,0 +1,39 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/hot-LR625-applied30k-replay10M-learner8M-original01-20261031/selected-source/analyze_LR625_dose_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/hot-LR625-applied30k-replay10M-learner8M-original01-20261031/future-expert05-dose-analyzer-source-original01/analyze_expert05_LR625_dose_v1.py
+@@ -1,7 +1,7 @@
+-"""Pure LR625 dose analysis; no observations, control writes or actions."""
++"""Pure expert5% at LR625 dose analysis; no observations, control writes or actions."""
+ from math import isfinite, isclose
+ OWNER = {'pid': 208501, 'birth': 27823352}
+-TARGETS = {'applied_updates': 30000, 'replay_additions': 10000000, 'learner_frames': 8000000}
++TARGETS = {'applied_updates': 60000, 'replay_additions': 20000000, 'learner_frames': 16000000}
+ OP = {'attempted': 'attempts_started', 'outcomes': 'outcomes_recorded', 'applied': 'applied', 'skipped': 'amp_skipped', 'unavailable': 'unavailable'}
+ SRC = ('dqn', 'epsilon', 'expert', 'eval', 'unattributed')
+ IDS = ('process_id', 'instance_monotonic_ns', 'epoch', 'epoch_reason')
+@@ -51,9 +51,11 @@
+ def analyze(anchor, sample):
+   """Optional sample.previous={counters,api_ts} uses the prior VALID output."""
+   try:
+-    need(anchor['schema'] == 'robotron-LR625-dose-anchor-v1' and anchor['main_owner'] == OWNER, 'Wrong anchor/Main')
++    need(anchor['schema'] == 'robotron-LR625-expert05-dose-anchor-v1' and anchor['main_owner'] == OWNER, 'Wrong anchor/Main')
+     need(anchor['targets'] == TARGETS and all(type(v) is int for v in anchor['targets'].values()), 'Wrong targets')
+     need(type(anchor['expected_lr']) in (int, float) and anchor['expected_lr'] == 6.25e-6, 'Wrong LR')
++    need(type(anchor['expected_expert']) in (int, float) and anchor['expected_expert'] == 0.05, 'Wrong expert ratio')
++    need(type(anchor['expected_epsilon']) in (int, float) and anchor['expected_epsilon'] == 0.1, 'Wrong epsilon')
+     control = sha(anchor['control_sha256']); start = number(anchor['observed_unix_s']); base_ts = number(anchor['api_ts'])
+     need(0 < base_ts <= start, 'Invalid anchor time')
+     ids = {k: identity(anchor[k + '_identity']) for k in ('optimizer', 'replay')}
+@@ -88,6 +90,13 @@
+     need(o['available'] is True, 'Optimizer not settled')
+     need(api['training_enabled'] is policy['training_enabled'] is policy['replay_admission_open'] is True and api['measurement_active'] is policy['measurement_active'] is False and policy['continuous_training_mode'] is policy['main_measurement_entry_disabled'] is True, 'Main not learning')
+     need(isclose(number(api['lr']), anchor['expected_lr'], rel_tol=1e-9, abs_tol=0), 'Selected LR not observed')
++    expert_pct = api['game_settings']['expert_pct']
++    need(type(expert_pct) is int, 'Expert override observation unavailable')
++    if expert_pct != 5 or not isclose(number(api['expert_ratio']), anchor['expected_expert'], rel_tol=1e-9, abs_tol=1e-12):
++      raise Rejected('Selected manual expert5% setting changed')
++    if not isclose(number(api['epsilon']), anchor['expected_epsilon'], rel_tol=1e-9, abs_tol=1e-12):
++      raise Rejected('Selected epsilon changed')
++    if policy.get('ratchet_frozen') is not False: raise Rejected('Main ratchet state changed')
+     elapsed = now - start
+     d = dict(applied_updates=c['applied'] - base['applied'], replay_additions=c['replay'] - base['replay'], learner_frames=c['learner_frames'] - base['learner_frames'])
+     remaining = {k: max(0, TARGETS[k] - d[k]) for k in TARGETS}; rates = {k: d[k] / elapsed for k in TARGETS}

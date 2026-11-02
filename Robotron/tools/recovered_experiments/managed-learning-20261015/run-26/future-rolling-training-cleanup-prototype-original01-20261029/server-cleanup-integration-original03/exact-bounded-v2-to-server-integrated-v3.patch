@@ -1,0 +1,157 @@
+--- socket_server_bounded_cleanup_candidate_v2.py
++++ socket_server_cleanup_receipts_candidate_v3.py
+@@ -31,8 +31,10 @@
+ import numpy as np
+ try:
+     from .response_telemetry import ResponseTelemetry
++    from .connection_cleanup_receipts import ConnectionCleanupReceipts, current_server_stamp
+ except ImportError:
+     from response_telemetry import ResponseTelemetry
++    from connection_cleanup_receipts import ConnectionCleanupReceipts, current_server_stamp
+ from collections import deque
+ from dataclasses import dataclass
+ from typing import Optional
+@@ -1210,6 +1212,42 @@
+                     self.inference_batcher.stop()
+                 raise RuntimeError("Inference-only server requires a full-game journal") from exc
+ 
++        self._cleanup_receipts = None
++        cleanup_mode = os.getenv("ROBOTRON_ROLLING_TRAINING_CLEANUP", "0")
++        if cleanup_mode not in ("0", "1"):
++            raise ValueError("Explicit rolling cleanup mode0/1 required")
++        if cleanup_mode == "1":
++            if (not self.replay_enabled or self.async_buffer is None
++                    or self.game_journal is None or not self.game_journal.retire_after_game):
++                raise RuntimeError("Rolling cleanup requires replay and durable one-game retirement journal")
++            self._cleanup_receipts = ConnectionCleanupReceipts(
++                current_server_stamp(__file__), self.async_buffer.cleanup_health)
++
++    def _require_connection_producer(self, cid, cs):
++        """Only the original live handler may mutate this connection's replay segment."""
++        if self._cleanup_receipts is None:
++            return
++        with self.client_lock:
++            if (self.clients.get(cid) is not threading.current_thread()
++                    or self.client_states.get(cid) is not cs
++                    or type(cs.get("_cleanup_token")) is not str):
++                raise RuntimeError("Stale or non-owner connection replay producer")
++        # No client_lock is held across preserving replay enqueue. This exact
++        # handler cannot enter its own finally/release while this call runs.
++
++    def connection_cleanup_snapshot(self, cid, slot, journal_game_id=None):
++        if self._cleanup_receipts is None:
++            raise ValueError("Connection cleanup receipts are not enabled")
++        if journal_game_id is None:
++            value = self._cleanup_receipts.lookup_active(cid, slot)
++        else:
++            value = self._cleanup_receipts.lookup_terminal(journal_game_id, cid, slot)
++        active, generation = self._measurement_snapshot()
++        value.update(observed_unix_s=time.time(), observed_monotonic_ns=time.monotonic_ns(),
++                     measurement_active=active, measurement_generation=generation)
++        value["training_refill_candidate"] &= not active
++        return value
++
+     @staticmethod
+     def _journal_experiment_label():
+         value = (getattr(metrics, "measurement_label", "measurement")
+@@ -1243,6 +1281,7 @@
+         active, generation = self._measurement_snapshot()
+         if (cs.get("measurement_generation") != generation
+                 or cs.get("measurement_active") != active):
++            self._require_connection_producer(cid, cs)
+             reset_client_replay_segment(cs, current_score)
+             cs["last_game_score"] = int(current_score)
+             cs["last_clear_frame"] = -1
+@@ -1264,6 +1303,7 @@
+         If the old natural terminal was observed, its counters are already
+         clear and the fresh life retains ordinary admission semantics.
+         """
++        self._require_connection_producer(cid, cs)
+         partial_life = bool(cs.get("replay_episode_partial", False)
+                             or cs.get("last_state") is not None
+                             or int(cs.get("ep_frames", 0)) > 0)
+@@ -1822,6 +1862,7 @@
+         _response_trace = None
+         _response_ordinal = 0
+         _response_connection_ns = time.monotonic_ns()
++        _cleanup_token = None
+         _response_recorder = getattr(self, "_response_timing", None)
+         _gap_connection = self._rejected_gaps.event("connect", cid=cid)
+         _gap_ticket = None
+@@ -1854,6 +1895,15 @@
+                     elif eval_mode == 2:
+                         self._eval_override[cid] = False
+                         cs0["eval_only"] = False
++                if self._cleanup_receipts is not None:
++                    if (self.clients.get(cid) is not threading.current_thread()
++                            or not isinstance(cs0, dict) or eval_mode not in (1, 2)):
++                        raise RuntimeError("Exact owned handler and explicit slot role required")
++                    _cleanup_token = self._cleanup_receipts.begin(
++                        cid, int(client_slot), bool(cs0["eval_only"]),
++                        _response_connection_ns, threading.current_thread(),
++                        endpoints=dict(server=list(sock.getsockname()), peer=list(sock.getpeername())))
++                    cs0["_cleanup_token"] = _cleanup_token
+                 _, changed = self._ensure_preview_client_selected_locked()
+             if eval_mode in (1, 2):
+                 print(f"Client {cid} (slot {client_slot}) forced "
+@@ -2714,6 +2764,9 @@
+             except Exception:
+                 pass
+             with self.client_lock:
++                if (self._cleanup_receipts is not None
++                        and self.clients.get(cid) is not threading.current_thread()):
++                    raise RuntimeError("Original cleanup handler no longer owns its CID reservation")
+                 _dead_cs = self.client_states.pop(cid, None)
+                 if _dead_cs is not None and _dead_cs.get("raw_score_prev") is not None:
+                     self._unwrap_stash[cid] = {
+@@ -2727,9 +2780,16 @@
+                 _, preview_changed = self._ensure_preview_client_selected_locked()
+                 self._sync_client_count_locked()
+             _cid_cleanup_ok = True
++            _cleanup_terminal = None
++            _cleanup_journal_ok = False
+             if self.game_journal is not None and _dead_cs is not None:
+                 try:
++                    # Preserve the OLD natural terminal before disconnect
++                    # removes the retirement flag and finishes the next partial.
++                    if _cleanup_token is not None:
++                        _cleanup_terminal = self.game_journal.retirement_for_client(cid)
+                     self.game_journal.disconnect(cid, lambda: self._journal_context(_dead_cs))
++                    _cleanup_journal_ok = True
+                 except Exception as exc:
+                     _cid_cleanup_ok = False
+                     self._fail_inference_only(f"Disconnect journal failed: {exc}")
+@@ -2738,6 +2798,7 @@
+                 self._fail_inference_only(f"Client {cid} handler ended before intentional shutdown")
+             if preview_changed:
+                 self._clear_preview_cache()
++            _cid_reset_ack = None
+             if self.async_buffer is not None:
+                 try:
+                     _cid_reset_ack = self.async_buffer.remove_client(cid)
+@@ -2755,7 +2816,24 @@
+                     metrics.ratchet_note_eval_abandoned(float(_dead_cs.get("game_t0", 0.0)))
+             except Exception:
+                 pass
+-            threading.Timer(1.0, self._cleanup).start()
++            if _cleanup_token is None:
++                threading.Timer(1.0, self._cleanup).start()
++            else:
++                _cleanup_timer_done = threading.Event()
++                def _owned_cleanup():
++                    self._cleanup()
++                    _cleanup_timer_done.set()  # Only after the actual callback succeeds.
++                _cleanup_timer = threading.Timer(1.0, _owned_cleanup)
++                _cleanup_timer.start()
++                try:
++                    self._cleanup_receipts.finish(_cleanup_token,
++                        journal_ok=_cleanup_journal_ok, reset_ack=_cid_reset_ack,
++                        timer=_cleanup_timer, timer_done=_cleanup_timer_done,
++                        terminal_receipt=_cleanup_terminal,
++                        error=None if _cid_cleanup_ok else "Original connection cleanup failed")
++                except Exception as exc:
++                    _cid_cleanup_ok = False
++                    print(f"[CLEANUP] receipt publication failed; CID remains reserved: {exc}")
+             # Last per-CID write. Failure leaves the original Thread reserved;
+             # a cleanup timeout never authorizes reuse or a successful handoff.
+             with self.client_lock:

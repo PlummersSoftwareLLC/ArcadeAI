@@ -1,0 +1,58 @@
+--- frozen/deadline_guard.py
++++ execution_release/deadline_guard.py
+@@ -7,6 +7,7 @@
+ import contextlib
+ import fcntl
+ import hashlib
++import importlib.util
+ import json
+ import os
+ from pathlib import Path
+@@ -16,10 +17,7 @@
+ import time
+ 
+ SCHEMA = 'robotron-one-ce-batch2048-trial-job-v1'
+-EXECUTION_BLOCKERS = ('actual2048 producer capture/bind integration is incomplete',
+-    'honest phase early-insurance return consumer/provenance integration is incomplete',
+-    'current private CE2048 numerical readiness is unbound',
+-    'future actual root precommit and owner/checkpoint bindings are unbound')
++EXECUTION_BLOCKERS = ()  # Actual proof validation below replaces the preserved unconditional refusal.
+ PROFILE_PATH = '/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json'
+ PROFILE_SHA = 'e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50'
+ PROFILE_BYTES = 764
+@@ -30,6 +28,25 @@
+ CEILING_S = 3600
+ FINAL_CORE_STATUS = 'FINAL_PRECOMMITTED_ROOT_AUTHORIZED'
+ 
++
++
++RELEASE_VALIDATOR = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_proposal/execution_readiness.py')
++RELEASE_VALIDATOR_SHA = 'c01e71f00345f64996b469ff7b7a257a2e73e7d8e016914bc8225d3647df321f'
++
++def execution_readiness():
++    require(RELEASE_VALIDATOR==RELEASE_VALIDATOR.resolve(strict=True) and not RELEASE_VALIDATOR.is_symlink(),
++        'Noncanonical execution prerequisite helper')
++    before=RELEASE_VALIDATOR.stat()
++    require(before.st_uid==os.getuid() and before.st_nlink==1 and before.st_mode&0o777==0o444
++        and 0<before.st_size<=1<<20,'Execution prerequisite helper must be owned readonly source')
++    data=RELEASE_VALIDATOR.read_bytes()
++    stamp=lambda value:(value.st_dev,value.st_ino,value.st_size,value.st_mtime_ns,value.st_ctime_ns,value.st_uid,value.st_nlink,value.st_mode)
++    require(stamp(RELEASE_VALIDATOR.stat())==stamp(before) and hashlib.sha256(data).hexdigest()==RELEASE_VALIDATOR_SHA,
++        'Execution prerequisite validator source differs')
++    spec=importlib.util.spec_from_file_location('_CE2048_actual_execution_readiness',RELEASE_VALIDATOR)
++    module=importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(module)
++    return module
+ 
+ def require(value, message):
+     if not value:
+@@ -328,8 +345,8 @@
+     if not args.execute:
+         print('PLAN_ONLY: independent one-trial exact-owner deadline; no reads/actions')
+         return 0
+-    require(not EXECUTION_BLOCKERS, 'UNCONSUMED CE2048: ' + '; '.join(EXECUTION_BLOCKERS))
+     require(args.job and args.expected_job_sha256 and args.expected_source_sha256, 'Explicit root bindings required')
++    execution_readiness().preflight_trial(args.job,args.expected_job_sha256,__file__,args.expected_source_sha256)
+     self_pin, _ = pin(__file__)
+     require(self_pin['sha256'] == args.expected_source_sha256, 'Deadline source changed')
+     jp, _ = pin(args.job); require(jp['sha256'] == args.expected_job_sha256, 'Job changed')

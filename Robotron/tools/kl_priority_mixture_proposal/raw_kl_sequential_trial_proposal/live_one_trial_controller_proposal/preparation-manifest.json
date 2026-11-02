@@ -1,0 +1,124 @@
+{
+  "schema": "robotron-one-raw-kl-trial-preparation-manifest-v1",
+  "status": "FROZEN_SOURCE_PREPARATION_ONLY",
+  "files": {
+    "PREPARATION.txt": {
+      "sha256": "479b8d819ad4a0ac8e885f883cb736677c2d94a0ec87dc38029e9582446444c1",
+      "bytes": 7632,
+      "mode": "0o444"
+    },
+    "deadline_guard.py": {
+      "sha256": "8df7491a59025e07387bdf0d392ca2b748511d7adae3cf087abf342a5acfe36a",
+      "bytes": 17865,
+      "mode": "0o444"
+    },
+    "early_insurance.py": {
+      "sha256": "0112da455fd0c3c7b711cda2ff59f8575a637f2544ec37f9ad68ad2698b0dab4",
+      "bytes": 32808,
+      "mode": "0o444"
+    },
+    "future-argv.json": {
+      "sha256": "38d6be71c4a9f9fbb6f1f030db4c3c3eabb1c897b8cbb6fb227f5a1c6306460b",
+      "bytes": 3126,
+      "mode": "0o444"
+    },
+    "job.schema.json": {
+      "sha256": "e60fa64b8efb24a362025e3fa97b3e84dcbff45a9ab367cbad26e3110a8b22fa",
+      "bytes": 5589,
+      "mode": "0o444"
+    },
+    "run_one_trial.py": {
+      "sha256": "de5e9070b224b8671ff85c41ae475fdcc7cc2837f12394da879d6971f97218a5",
+      "bytes": 46159,
+      "mode": "0o444"
+    },
+    "source-lock.json": {
+      "sha256": "0d2977359aa61de3980120692a9f17080ba3496ab604c7ee7ddf457c5b4b1396",
+      "bytes": 3520,
+      "mode": "0o444"
+    },
+    "test_early_insurance.py": {
+      "sha256": "dd3a4744a40fe8ec5603be3a8d1a267973a437c2187daf3f9039353337473ee2",
+      "bytes": 18800,
+      "mode": "0o444"
+    },
+    "test_one_trial.py": {
+      "sha256": "b70ca535b17e6bc9536b4f3bb746b9400376e946ce5a025c6dbc2c571d683138",
+      "bytes": 30150,
+      "mode": "0o444"
+    }
+  },
+  "authored_test_methods": 47,
+  "test_selection": [
+    "Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.live_one_trial_controller_proposal.test_one_trial",
+    "Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.live_one_trial_controller_proposal.test_early_insurance"
+  ],
+  "author_execution": false,
+  "actual_root_guard_execution": null,
+  "actual_job": null,
+  "actual_KL_owner": null,
+  "actual_candidate": null,
+  "actual_result": null,
+  "root_only_runtime_and_state_writer": true,
+  "frozen_upstream_unchanged": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_transition_post_stop_floor_companion/run_raw_kl_transition.py",
+      "sha256": "7d0aa20b5ef4fc1d6c889718ee688387cd684cf702cced503714435132b949d6",
+      "bytes": 59862,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_transition_post_stop_floor_companion/preparation-manifest.json",
+      "sha256": "ea4c6a0d9a6d45ad641aa9e589b2fff4e92d411c3b42d786004cd024063b39da",
+      "bytes": 4502,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/horizon_observer_proposal/horizon_observer.py",
+      "sha256": "25d70b4a3888dcba83ea9020c333cba32cfbd19c93b6e69037d6299b161fd7ec",
+      "bytes": 15704,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/horizon_observer_proposal/preparation-manifest.json",
+      "sha256": "8426b1f164463546ce5a65e2bdbc051c758e72524b27ee68bf0b87e65425567d",
+      "bytes": 3832,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/ending_order_clarification_proposal/preparation-manifest.json",
+      "sha256": "5141ed7c82e0a1e9f5f346cddf37916f9459f78afc375d543386d506b1781d8a",
+      "bytes": 1244,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/preparation-manifest.json",
+      "sha256": "df03306d5b82b8f81cd2372f191fa45fb445867fa0bf46325f52ecaf49c4b7a3",
+      "bytes": 4328,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/verify_phase_snapshot.py",
+      "sha256": "b2e732dc731b2b601f7499d2cafd5841896daf2b0713d496b98cb6b8d7279519",
+      "bytes": 21460,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision4/run_live8_maintenance.py",
+      "sha256": "fdf7c8bfb123b494252acf83d724a51acda95bb7f00877eace28b60d0377ed18",
+      "bytes": 62971,
+      "mode": "0o444"
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-maintenance-checkpoint-CPU-verifier-proposal-20261017/verify_maintenance_checkpoint.py",
+      "sha256": "7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead",
+      "bytes": 33521,
+      "mode": "0o444"
+    }
+  ],
+  "limitations": [
+    "Source readiness and authored mocks only; no whole live trial executed.",
+    "No learning/quality benefit, coherent anchor, full-ring numeric proof or automatic protected promotion.",
+    "Invalid or failed first candidate retains its first decision and requires root-led forward repair; no relabel/retry/older boot."
+  ]
+}

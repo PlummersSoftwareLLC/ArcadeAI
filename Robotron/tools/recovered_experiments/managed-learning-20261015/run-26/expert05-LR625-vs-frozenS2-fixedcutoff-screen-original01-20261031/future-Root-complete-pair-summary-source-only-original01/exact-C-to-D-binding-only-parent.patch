@@ -1,0 +1,65 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/later-LR625-vs-frozenS2-fixedcutoff-screen-original01-20261031/future-Root-complete-pair-summary-source-only-original01/collect_closed_later_LR625_pair_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/expert05-LR625-vs-frozenS2-fixedcutoff-screen-original01-20261031/future-Root-complete-pair-summary-source-only-original01/collect_closed_expert05_pair_v1.py
+@@ -1,6 +1,6 @@
+ """Root-only, offline sealed-metadata comparison. Never imports runtime code.
+ 
+-Run only after Root independently observes original tool session 99269 exit 0,
++Run only after Root independently observes original tool session 67093 exit 0,
+ the original outer/report thread closed, and the original owners absent. These
+ live facts are an explicit Root prerequisite, not inferred from file absence.
+ This program authenticates bounded closed JSON/text only, never model bytes,
+@@ -18,15 +18,15 @@
+ import statistics
+ import time
+ 
+-CASE = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/later-LR625-vs-frozenS2-fixedcutoff-screen-original01-20261031')
+-PREPARED_SHA = '1d3342a824b17482c298fef24958f20a5ca3fe5050fde71d10e5a1181d91585d'
+-REFERENCE_SUMMARY_SHA = '17410e375beb92ec7f2b2a6207e8f3d8eeea99f6b76bbc3039c0657124dbc747'
++CASE = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/expert05-LR625-vs-frozenS2-fixedcutoff-screen-original01-20261031')
++PREPARED_SHA = '151ab01918c1879536dd4ad8e2de006bb5271e3e027939de29eb9aadb4332f39'
++REFERENCE_SUMMARY_SHA = '06b966117d83e41a904e6d533d7d2bb2629230e20ec7d483c6dbb3c6ee445fee'
+ NATIVE_SHA = '8c8b95fb12c2d12cc118c708bc2a379459ef3a7128b88b9330e974064e2b5fb3'
+ LUA_SHA = 'a631f02980b2e7cdddd2fc15066b74ee5d5ebfac3de90a40a5833b0a5d48b66d'
+-CONTROLLER_SHA = 'b683ed3d6e4d4e3f7a7436d558be538af6bc4e3a2dc68f122593ab52dd05b09f'
++CONTROLLER_SHA = '4e0815686c40f9e1205c83433e86eed0f96c699b5c925bfc0277df8a31707d5b'
+ OUTER_SHA = 'e0c416b58b3041fa732f8cabc906f877cd921c94d0c9c4947c5c9e9bb9dcb314'
+ REFERENCE_SHA = '06558cbc185b76b2b44229ddfe469d2a92037e70f89de2481e8fb055f2c736ad'
+-CANDIDATE_SHA = 'bf91eba8265fef78b9e2ec0eff5425eb3b6f53ff6f597dad1b5dc225f5195c0d'
++CANDIDATE_SHA = 'f1c369372c027987bcad328c76924c3abd34feaa13913a02d1f927c1a5354e39'
+ SLOTS = list(range(4096, 4128))
+ AGE_NS = 3_500_000_000
+ HORIZON_NS = 3_600_000_000_000
+@@ -116,7 +116,7 @@
+ 
+ 
+ def controller_closed(reader, leg, controller, result, config):
+-    unit = 'robotron-later-LR625-S2-fixedcutoff-score-' + leg.lower() + '-original01-20261031.service'
++    unit = 'robotron-expert05-LR625-S2-fixedcutoff-score-' + leg.lower() + '-original01-20261031.service'
+     require(config['unit'] == unit and controller['original']['unit'] == unit
+             and controller['original']['timer'] == unit[:-8] + '.timer', 'Exact fresh original unit/timer')
+     require(controller['original_exit'] == 0 and type(controller['original_exit']) is int
+@@ -440,8 +440,8 @@
+     reader.finish()
+     changes = dict(mean=mean_ratio-1, median=median_ratio-1, first_game_frames=candidate['first_game_frame_exposure']/reference['first_game_frame_exposure']-1,
+                    gain_per_first_game_frame=candidate['gain_per_first_game_frame']/reference['gain_per_first_game_frame']-1)
+-    return dict(schema='robotron-offline-closed-later-LR625-pair-metadata-comparison-v1', status='PASS_CLOSED_METADATA_AND_ALL64_SCORE_ARITHMETIC',
+-                observed_unix_s=time.time(), case=str(CASE), original_outer_tool_session=99269,
++    return dict(schema='robotron-offline-closed-expert05-LR625-pair-metadata-comparison-v1', status='PASS_CLOSED_METADATA_AND_ALL64_SCORE_ARITHMETIC',
++                observed_unix_s=time.time(), case=str(CASE), original_outer_tool_session=67093,
+                 subjects=dict(prepared_DATA=reader.pin(prepared_path), outer_result=reader.pin(outer_path), reference=r_subject, candidate=c_subject),
+                 reference=reference, candidate=candidate, candidate_change_fractions=changes,
+                 management_gate=dict(mean_floor=reference['mean']*1.05, median_floor=reference['median']*1.02,
+@@ -458,11 +458,11 @@
+ 
+ def main():
+     parser = argparse.ArgumentParser(description=__doc__)
+-    parser.add_argument('--Root-confirmed-original-session99269-terminal0-and-owners-absent', action='store_true')
++    parser.add_argument('--Root-confirmed-original-session67093-terminal0-and-owners-absent', action='store_true')
+     parser.add_argument('--source-sha256', required=True)
+     parser.add_argument('--output-directory', required=True)
+     args = parser.parse_args()
+-    require(args.Root_confirmed_original_session99269_terminal0_and_owners_absent, 'Explicit Root terminal/owner prerequisite required')
++    require(args.Root_confirmed_original_session67093_terminal0_and_owners_absent, 'Explicit Root terminal/owner prerequisite required')
+     require(hashlib.sha256(Path(__file__).read_bytes()).hexdigest() == args.source_sha256, 'Exact collector source SHA required')
+     output = Path(args.output_directory)
+     require(output.parent == CASE and output.name.startswith('Root-offline-complete-pair-collection-') and not output.exists()

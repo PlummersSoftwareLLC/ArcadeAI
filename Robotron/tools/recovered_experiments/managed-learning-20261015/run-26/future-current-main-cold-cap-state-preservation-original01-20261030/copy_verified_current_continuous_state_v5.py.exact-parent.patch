@@ -1,0 +1,46 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/backup-sources/copy_verified_stopped_training_state_v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/copy_verified_current_continuous_state_v5.py
+@@ -21,15 +21,13 @@
+ G=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ B=G/'logs/managed-learning-20261015/run-26'
+ H=B/'future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01'
+-VERIFIER=H/'state-sources/verify_stopped_full_training_state_v2.py'
+-VERIFIER_SHA='560bdf7dc1045252949c02afebd3ae8f8d45f34f7809e7b2d4025145388a8f88'
++VERIFIER=Path(__file__).with_name('verify_current_continuous_stopped_fullstate_v3.py')
++VERIFIER_SHA='a0c940eba476b01f28797347f642f199fdb0cfc53d067c475d20314e04257f83'
+ ARCHIVE=G/'tools/eval_capacity_proposal/review_original_pilot_raw_API_v1.py'
+ ARCHIVE_SHA='2ed5fde26fe50a23bc9572965e483ae6634b31ffbe5d4147c9f5bc338396d445'
+ DESCRIPTORS=G/'tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision4/bank_state_revision2.py'
+ DESCRIPTORS_SHA='e0c69fb38f5fec86e117edf42b4ff1ce2ff44b82b979c5240116121a7a1ce54f'
+-FLEET=dict(pid=304184,starttime_ticks=1393808,unit='robotron-mame.service',
+-    invocation_id='eb39f6457baf4c0faede72d85b74b25d',
+-    cgroup='/user.slice/user-1001.slice/user@1001.service/app.slice/robotron-mame.service')
++FLEET=None  # Exact selected completed cold incarnation, never the old population.
+ SOURCE_NAMES=('__init__.py','model.py','config.py','learning_control.py','agent.py',
+     'replay_buffer.py','training.py','priority_phase.py','main.py','socket_server.py',
+     'managed_driver.py','managed_measurement.py','loss_kernel.py')
+@@ -247,6 +245,7 @@
+ 
+ 
+ def execute(args):
++    global FLEET
+     require(os.environ.get('CUDA_VISIBLE_DEVICES')==''and 'LD_PRELOAD'not in os.environ and 'PYTHONPATH'not in os.environ,
+         'CPU-hidden isolated backup required')
+     self_pin=pin(Path(__file__).resolve());require(self_pin['sha256']==args.source_sha256,'Exact backup source required')
+@@ -254,7 +253,7 @@
+     job=read_pin(jp)
+     require(job['schema']=='robotron-verified-stopped-full-training-backup-job-v1'and job['source']==self_pin
+         and job['original_attempt']==1 and job['no_retry']is True,'One original explicit backup job required')
+-    require(job['unit']=='robotron-stopped-full-training-backup-original01-20261029.service','Exact unique backup unit required')
++    require(job['unit']=='robotron-current-continuous-backup3600-'+job['strict_CPU_report']['sha256'][:16]+'.service','Exact unique backup unit required')
+     show=subprocess.check_output(['systemctl','--user','show',job['unit']],text=True,timeout=10)
+     fields=dict(x.split('=',1)for x in show.splitlines()if'='in x)
+     expected=dict(Id=job['unit'],MainPID=str(os.getpid()),InvocationID=os.environ['INVOCATION_ID'],
+@@ -265,6 +264,7 @@
+     descriptors=load(DESCRIPTORS,DESCRIPTORS_SHA,'_backup_ring_descriptors')
+     for value in job['inputs']:read_pin(value,False)
+     report=read_pin(job['strict_CPU_report']);manifest=read_pin(job['restoration_manifest'])
++    v.select_context(read_pin(report['original_job']));FLEET=v.FLEET
+     require(report['schema']=='robotron-stopped-full-training-state-CPU-result-v1'and report['status']=='PASS'
+         and report['source']['sha256']==VERIFIER_SHA and report['restoration_manifest']==job['restoration_manifest']
+         and manifest['schema']=='robotron-stopped-full-training-state-restoration-manifest-v1'

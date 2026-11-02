@@ -1,0 +1,161 @@
+LIVE8 CONDITIONAL5 RECONSTRUCTION — SOURCE/SAVED-METADATA PROPOSAL ONLY
+
+Decision: a narrow additive replay-only adapter is required. The immutable
+private_rehearsal_proposal parent90e31926/worker53ab4831 cannot be executed by
+merely rebinding inputs: read_lock/copy_fixture require the synthetic320M fixture,
+roles include a new actual capture, recompute requires that own capture result
+and attempt01 path, and setup rewrites replay/bank/config values for the fixture.
+Those checks must not be bypassed or live8 relabelled as the old private fixture.
+Keep every old source/actual result unchanged. Additive parent/worker sources
+are now DRAFT and unreviewed/unexecuted. Planned argv is an implementation
+contract, not execution readiness or authorization to execute it.
+
+PRECOMMITTED POPULATION
+Exactly the original eight consecutive consumed live attempts in
+run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8.
+Original context/final/result/rootjob/acquisition audit and each row/payload
+remain sealed and unmodified. Bind existing input-binding.json0c2a528a (which
+already lists all eight original payload hashes/bytes) and saved metadata audit
+5c73ef65; independently rejoin original rows/context/final at actual preparation.
+All8 original outcomes are applied_admission; all8 remain included. Row7 used
+original_compiled4_diagnostics; rows1..6,8 used original_compiled4. Restore the
+EACH-payload kernel_constants.diagnostics value and require its row route agrees.
+Never force ordinary diagnostics or substitute an attempt after a mismatch.
+Each payload is507784113 bytes; existing eight source payloads total4062272904B.
+No tensor/model/payload-body read or hashing occurred during this source task.
+
+NEW MINIMAL ENTRYPOINTS AND SOURCE REUSE
+Future new sibling cuda_trace_parent.py +cuda_trace_worker.py +source-lock.json.
+Default parent prints literal PLAN_ONLY with no helper/source/data read/import,
+runtime query, directory, child or device action. Explicit --launch only.
+Copy/reuse EXACT reviewed storage traversal/process scanner/owned cgroup/token/
+PDEATHSIG/parent-child identity/signal lifetime/Popen cleanup functions from
+parent90e31926. Do not invoke old parent.launch/read_lock/copy_fixture or old
+worker.bootstrap/setup/capture/recompute directly. Their synthetic bindings and
+actual-capture role are inapplicable. New bootstrap changes only schema/source/
+input bindings, role name and trained-fixture absence; ownership predicates stay.
+
+Reuse pinned worker53ab scientific FUNCTIONS where compatible: compile_loss
+(dynamic=False,options={'triton.cudagraphs':False},held default profile/Dynamo
+limits), save_payload, compare_ce (native dtype original isclose), RNG/CPU tree
+digest helpers through their pinned ba003 source. Refactor conditional_forward's
+output binding parameter only if needed; raw outputs/RNG must still be durable
+BEFORE ABI/finite/comparison gates. Keep original four-output loss de9621e3,
+modelbcd174f0/configf2794754 and conditional five-output ce527c84 byte-exact.
+Bind all source modules actually imported, private sibling closure and original
+revision2 producer manifest356b8b09; verify copied module paths/hashes. No old
+source_manifest bypass, new loss expression, live five-output compile or six-file
+production prototype. New source paths/hashes require review before execution.
+
+ONE FRESH OFFLINE CHILD, EXACTLY8 FORWARDS
+Use one fresh process on spare GPU0, isolated from live trainer and historical
+rehearsal. It sequentially reconstructs all8 original PRE payloads; no actual
+training attempt, new sampler draw, replay opening or checkpoint load occurs.
+Only one507MB source payload and its device batch are active at a time. Existing
+source files stay external readonly inputs, not copied4GB into new output.
+New owned output/cache/tmpfs is bounded separately; input sources are fingerprinted
+before/after reads and again at completion. Never modify/chmod original evidence.
+
+After numerical preimport/bootstrap guards, load each exact source through CPU
+weights_only=True. Validate full row/session/index/hash/outcome/draw/lease/schema,
+8input ABI/full4096x11128 FP32 states, finite PRE/model/input tensors and exact
+recorded dtype/device provenance. Payloads were actual logical cuda:0 under the
+main process mapping; the new visible logical cuda:0 MUST be stable spareGPU0
+UUID. Logical device equality does not imply the same physical training GPU.
+
+Construct source RainbowNet online+target from captured primitive configuration,
+setting private config BEFORE model construction; original module/global geometry
+constants must match captured geometry. Strict load EACH PRE online/target state,
+including support buffers; restore recorded online/target modes and source-default
+requires_grad flags. No POST weights or old320 fixture. Private environment model/
+control/journal/cache paths stay owned; scientific captured config is retained
+unchanged for loss construction. Only explicitly listed nonnumerical path bindings
+may differ; never open captured /dev/shm or live models/control paths. No replay,
+agent, training, native tree or producer is instantiated merely to build two nets.
+
+Match EACH PRE flags: Torch/CUDA/profile, grad enabled, AMP cuda/float16, TF32/
+matmul precision/cudnn flags, exact8input tensors, FP32 schedule and all loss
+constants. Two source-equivalent compiled variants ordinary/diagnostic may be
+cached in this one private process; use captured diagnostics for each row. There
+are no eager/warmup/calibration/extra forward calls. Each reconstruction uses one
+grad-enabled five-output forward (never torch.no_grad around the outer forward).
+Restore its sequential Python/NumPy/CPU/owned-CUDA RNG observations immediately
+before that forward and verify PRE hashes. Report POST changes/requires_review;
+these observations do not establish a coherent all-thread live RNG anchor.
+
+Reuse the actual forbidden-owned-update guard or an equally explicit reviewed
+model-only no-update contract. If an inert private optimizer/scaler is constructed
+solely for its guard, do not claim its empty state equals the original live Adam/
+scaler. No optimizer/scaler step/update or explicit worker backward is allowed;
+retain actual attempted-call counters, model state before==after and all gradsNone.
+Inductor/AOT internal autograd is not independently counted by that label.
+Original actual optimizer outcomes are observed input provenance, not replayed.
+Dispose of each output graph, inputs, raw payload and PRE refs after synchronous
+save/hash/drain before loading the next. No raw tensor references in result rows.
+
+RETAINED SCIENTIFIC EVIDENCE AND FIXED DECISION
+For EVERY attempt write create-only separate retained raw five outputs (projected
+target/entropy/KL and other10 conditional vectors), original actual four outputs,
+input receipt/PRE fingerprints, exact config/constants/modes/flags, full PRE/POST
+RNG, actual source outcome and complete native CE mismatch mask. Save/fsync/hash
+BEFORE finite/ABI/comparison assertions, preserving nonfinite output on failure.
+Expected vectors are the actual captured CE, never a prior recomputation. Use
+torch.isclose native dtype/equal_nan=False with ORIGINAL rtol0.0002/atol0.00002.
+Store4096 mismatch bits, count/max/errors/coordinate examples for every attempt.
+Finite mismatches continue through all8 and produce truthful comparison false;
+no tolerance, batch, scale, seed, backend, source, warmup or replacement rescue.
+Structural/nonfinite/runtime/persistence/ownership/bounds faults are fatal with
+retained partial evidence and incomplete status. Original eight inputs remain.
+
+Raw weighted-loss/BC/diagnostics are retained; only CE is governed by this fixed
+CE comparison, not full-four-output parity. Offlining does not observe the actual
+executed target: all projected-target/entropy/KL values are CONDITIONAL RECOMPUTED.
+Even exact CE agreement cannot bound missing actual entropy/KL or replay-priority
+ranks. Later analysis should retain four distinct vectors: original emitted
+weights/leaves; fresh actual-CE-derived leaves; fresh conditional-CE-derived
+leaves; fresh conditional-KL-derived leaves. Those comparisons separate aged
+stored leaves, reconstruction discrepancy and conditional entropy; no priority
+change or learning claim is authorized by this reconstruction.
+
+Aggregate OBSERVATIONS_COMPLETE only after all8 complete and all control guards
+hold. qualification_pass=false always; comparison_pass is all8 original CE
+comparisons and must be labelled CONDITIONAL CE ONLY. Exit0 may retain finite
+CE mismatches, not PARITY/full-agent-lifecycle/learning approval. No pooled
+reconstruction can rescue an individual failing row. Preserve all per-row routes,
+times and missing results honestly; no main-training throughput comparison.
+
+UNCHANGED BOUNDED OWNERSHIP AND ACTUAL ROOT HANDOFF
+Single child phase180s; overall600s.2CPU/16GiB host/12GiB Torch allocator/
+13GiB process GPU/128tasks/6GiB NEW owned artifacts/128MiB tmpfs. Require spare
+GPU0 free>=14GiB before import and>=13GiB after context as before. FourGiB
+external existing inputs are separate from6GiB new artifact allowance. This is a
+bound/proposal, not a measured guarantee of completion time/cache/disk usage.
+Do not widen bounds if a cap is hit. Root reviews/tests fresh adapter first.
+
+Root must fresh-bind current main+fleet192/source/control/masks, passive9999,
+GPU0onlychild/GPU1onlymain/no competing jobs/lease/private cgroups. A future
+waiting448 helper remains a blocker under unchanged scanner; only root may stop
+the exact owned waiting helper immediately before fresh strict preflight, retaining
+original target452629023/label/deadline and cancelled wait provenance. Never
+rearm completed384. No timer/helper actions occur during this source proposal.
+
+Retained service prefix robotron-snapshot-smoke-,Delegate=cpu memory pids,
+DelegateSubgroup=snapshot-supervisor,Type=exec/RemainAfterExit=yes, no--collect,
+outerMemorySwapMax0 plus unchanged outer16GiB/CPU2/Tasks128/bounded deadline.
+Root schedules detached3s timer and proves carrier reaped BEFORE trigger, never
+foreground--wait. Capture actual parent/Popen PID-start/pgid/cgroup/token and
+original SAME invocation/ExecMainCode/Status/Result/fullshow/cat/journal BEFORE
+release. During run only light JSON monitoring, no competing numerical work.
+At terminal verify exact owned children absent/cgroup/tmpfs removed/leasefree/
+GPU0free/main+192held, then root releases exact terminal service and rearms
+waiting448 only with preserved target/label/original deadline. Collected default
+ExecStatus0 is not original-exit evidence. No automatic scientific retry.
+
+IMPLEMENTATION/TEST READINESS (NOT YET SATISFIED)
+Draft additive parent+worker bind this protocol, original functions/input metadata/
+source pins. Remaining: immutable review and meaningful stdlib mocks for
+eight exact indices/diagnostic7/per-row PRE/config paths/no fixture reads, finite
+mismatch continuation, output-before-assert and owned cleanup. Reuse43 guard
+contracts against new parent. Only root may execute bounded CPU tests or actual
+GPU job after review. No adapter/default/test/model/tensor/runtime execution was
+performed by this proposal's author; no claim that the future argv already works.

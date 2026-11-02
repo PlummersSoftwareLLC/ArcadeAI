@@ -1,0 +1,93 @@
+{
+  "status": "SOURCE_ONLY_FIXTURE_CORRECTION_UNEXECUTED",
+  "original_failed_guard_release": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/LR25-continuation-22-metadata-guards-original01-root-execution-20261018/root-original-result-and-owned-release.json",
+    "sha256": "f108e64585413ad36fd78623cd023339bbfa3beb366d30a290a2f03eef3d414b",
+    "bytes": 21630,
+    "identity": {
+      "device": 2304,
+      "inode": 81288212,
+      "bytes": 21630,
+      "mtime_ns": 1792325887844336825,
+      "ctime_ns": 1792325887844336825,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "original_closed_stderr": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/LR25-continuation-22-metadata-guards-original01-root-execution-20261018/stderr.txt",
+    "sha256": "a9d12b371534379780c79f501b39c40e9a4cf242dec0339ccb3bf92756cf35d0",
+    "bytes": 8097,
+    "identity": {
+      "device": 2304,
+      "inode": 81288167,
+      "bytes": 8097,
+      "mtime_ns": 1792325886242330779,
+      "ctime_ns": 1792325886242330779,
+      "mode": "0o664",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "original_outcome": {
+    "tests": 22,
+    "passed": 20,
+    "errors": 2,
+    "skipped": 0,
+    "original_exit": 1
+  },
+  "preserved_manifest": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/draft-history-common-release-abi-20261018/before-original22-fixture-fix-preparation-manifest.json",
+    "sha256": "191d998dbe03b46bff01b2341f3cbbe8f805337a1d798e807ec03f6754054342",
+    "bytes": 25602,
+    "identity": {
+      "device": 2304,
+      "inode": 81288214,
+      "bytes": 25602,
+      "mtime_ns": 1792325944865026929,
+      "ctime_ns": 1792325944865026929,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "preserved_fixture": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/draft-history-common-release-abi-20261018/before-original22-fixture-fix-test_recipe_capture_metadata.py",
+    "sha256": "baed11775ac86fe5fed1b11c92895f0f58ccafc3bc26239485f9d3ec7be921b6",
+    "bytes": 22545,
+    "identity": {
+      "device": 2304,
+      "inode": 81288213,
+      "bytes": 22545,
+      "mtime_ns": 1792325944862289575,
+      "ctime_ns": 1792325944863552075,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "selected_fixture": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/test_recipe_capture_metadata.py",
+    "sha256": "8503e95ad8ff4444cc2fd27238fe387adc1b0cc0c8b14630ecd008c8f6b97deb",
+    "bytes": 22891,
+    "identity": {
+      "device": 2304,
+      "inode": 81288128,
+      "bytes": 22891,
+      "mtime_ns": 1792325944865787508,
+      "ctime_ns": 1792325944865787508,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "production_changed": false,
+  "corrections": [
+    "Preload authentic closed environment/resources before mocked control fingerprint and return those already authenticated fixture objects from the injected metadata reader.",
+    "Preflight injected validate context now contains recipe, matching actual validate return."
+  ],
+  "actual_LR_control_or_capture_started": false,
+  "author_execution": false,
+  "selected_corrected_fixture_execution": null
+}

@@ -1,0 +1,76 @@
+{
+  "acquisition": null,
+  "actual_owner": null,
+  "bind_job": {
+    "acquisition": null,
+    "capture": null,
+    "operation": "bind",
+    "output_directory": null,
+    "schema": "robotron-batch2048-producer-collector-job-v1",
+    "source": null
+  },
+  "capture_job": {
+    "operation": "capture",
+    "output_directory": null,
+    "schema": "robotron-batch2048-producer-collector-job-v1",
+    "spec": {
+      "argv": null,
+      "boot_id": null,
+      "boot_verification": null,
+      "cwd": null,
+      "environment": null,
+      "exe": null,
+      "experiment": null,
+      "game_root": null,
+      "owner": null,
+      "owner_pin": null,
+      "phase_record": null,
+      "profile": null,
+      "schema": "robotron-batch2048-producer-live-capture-spec-v1",
+      "source_pins": null
+    }
+  },
+  "checkpoint": null,
+  "execution_argv": [
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_producer_collector_proposal/collect_producer.py",
+    "--execute",
+    "--job",
+    "UNBOUND",
+    "--expected-job-sha256",
+    "UNBOUND",
+    "--expected-source-sha256",
+    "UNBOUND"
+  ],
+  "guard_count": 17,
+  "guards": {
+    "argv": [
+      "/usr/bin/python3.12",
+      "-I",
+      "-B",
+      "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_producer_collector_proposal/test_collect_producer.py",
+      "ProducerCollectorGuards",
+      "-v"
+    ],
+    "environment": {
+      "CUDA_VISIBLE_DEVICES": "",
+      "MKL_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1"
+    },
+    "future_unit_properties": {
+      "CPUQuota": "100%",
+      "MemoryMax": "512M",
+      "RemainAfterExit": true,
+      "RuntimeMaxSec": 60,
+      "TasksMax": 64
+    },
+    "lifecycle": "Root retains exact original PID/inv/start/exit plus both unit archives before timer-first owned release.",
+    "unset_environment": [
+      "LD_PRELOAD",
+      "PYTHONPATH"
+    ]
+  },
+  "phase_CPU_result": null,
+  "qualification_pass": false,
+  "status": "SOURCE_ONLY_UNCONSUMED_ACTUALS_UNBOUND"
+}

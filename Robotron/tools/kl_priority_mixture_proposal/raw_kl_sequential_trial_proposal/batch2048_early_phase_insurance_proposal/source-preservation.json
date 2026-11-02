@@ -1,0 +1,31 @@
+{
+  "changes": [
+    "CE2048 typed phase job/result/provenance, no legacy7d alias",
+    "Separate unchanged Python environment identity checks from historical old7d success claims",
+    "Only new owned JSON sealed444; NaN only exact snapshot/trigger-API.json",
+    "Original numeric0644 report retained, independent444 via pinned archive_metadata",
+    "Background liveproducer capture ->finalsnapshot/acquisition->historicalbind->ONEretainedphaseCPU",
+    "Empty invocation journal only is honest bounded archive; original exit/owner still strict"
+  ],
+  "original": {
+    "bytes": 32808,
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_one_trial_installed_ce_revision2_proposal/early_insurance.py",
+    "sha256": "0112da455fd0c3c7b711cda2ff59f8575a637f2544ec37f9ad68ad2698b0dab4"
+  },
+  "status": "SOURCE_AST_ONLY_NO_EXECUTION",
+  "tests_executed": false,
+  "unchanged_AST": [
+    "Snapshot:wholeclass",
+    "EarlyPhaseInsurance._spawn",
+    "EarlyPhaseInsurance.register_request",
+    "EarlyPhaseInsurance.adopt_cpu",
+    "EarlyPhaseInsurance.registration",
+    "EarlyPhaseInsurance.record_terminal",
+    "EarlyPhaseInsurance.record_release",
+    "EarlyPhaseInsurance.schedule",
+    "EarlyPhaseInsurance.result",
+    "EarlyPhaseInsurance.start",
+    "RetainedCPU.__init__",
+    "RetainedCPU.show"
+  ]
+}

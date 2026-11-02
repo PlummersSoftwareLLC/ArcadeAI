@@ -1,0 +1,17 @@
+{
+  "schema": "robotron-deferred-comparison-label-future-guards-v1",
+  "status": "SOURCE_ONLY_UNEXECUTED",
+  "execute_only_after": "Full campaign terminal +original audits +owned cleanup +root source-freeze release",
+  "authored_test_methods": 3,
+  "test_module": "Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.dashboard_comparison_label_proposal.test_comparison_label",
+  "argv": [
+    "python3",
+    "-I",
+    "-B",
+    "-c",
+    "import sys,unittest;sys.path.insert(0,'/home/dave/source/repos/ArcadeAI');unittest.main(module=None,argv=['unittest', 'Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.dashboard_comparison_label_proposal.test_comparison_label', '-v'])"
+  ],
+  "actual_test_execution": null,
+  "actual_installation": null,
+  "actual_metadata_write": null
+}

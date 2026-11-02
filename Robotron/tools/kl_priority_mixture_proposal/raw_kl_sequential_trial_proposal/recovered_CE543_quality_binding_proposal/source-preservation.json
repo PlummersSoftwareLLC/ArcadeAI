@@ -1,0 +1,12 @@
+{
+  "carrier_only_change": "Exact binding helper SHA",
+  "auditor_only_change": "Exact binding helper SHA",
+  "complete_original_row_tail_scoring_block": {
+    "bytes": 16083,
+    "sha256": "54a42967ea1340acda0fac6f7ab8ab2729248713861e8d978d351a9592312022"
+  },
+  "evaluator_unchanged": "574e56f28499c751c639ee8a3474eecd5ca8de8c896da3dd44d5e4fc2fe60128",
+  "sidecar_unchanged": "cd034413c2fd8a56bb9d22f8df86889939edfad041ee4e2e0210a831b5f9fe90",
+  "source_or_JSON_operations_only": true,
+  "actual_numerical_or_quality_claim": false
+}

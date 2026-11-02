@@ -1,0 +1,31 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/postguard-owned-operations-original01/durable-R1-launch-original01/prepare_owned_physical_R1_launch_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/postguard-namespace-compatible-owned-operations-original02/durable-R1-launch-original01/prepare_owned_physical_R1_launch_v1.py
+@@ -49,8 +49,26 @@
+         and selected['source_family']==sources['source_family'] and selected['source_peer']==sources['source_peer'],
+         'Exact newly qualified fresh-capture/current-quiescence selection required')
+     family=read(sources['source_family'],h)
+-    require(family['sources']['prepare_round_study_v10.py']==sources['study_preparer'],
+-        'Exact source-catalogue study preparer required')
++    original=sources['study_preparer_parent'];actual=sources['study_preparer']
++    overlay=read(sources['study_preparer_overlay'],h)
++    require(family['sources']['prepare_round_study_v10.py']==original
++        and overlay['schema']=='robotron-explicit-study-preparer-namespace-overlay-v1'
++        and overlay['status']=='SOURCE_ONLY_METADATA_PREPARER_OVERRIDE'
++        and overlay['parent_family']==sources['source_family'] and overlay['parent_source_peer']==sources['source_peer']
++        and overlay['logical_role']=='prepare_round_study_v10.py'
++        and overlay['parent_preparer']==original and overlay['selected_preparer']==actual
++        and overlay['unchanged_native_controller']==sources['controller']
++        and overlay['only_one_generated_native_and_measurement_namespace_prefix_changed']is True
++        and overlay['selected_preparer_same_parent_as_native_controller']is True
++        and overlay['failed_M8_authority_reused']is False,
++        'Exact selected metadata namespace overlay and unchanged catalogue parent required')
++    h.checked(overlay['exact_parent_patch'])
++    parent_path=h.checked(original);actual_path=h.checked(actual)
++    before="'deadline32-current-eval-quiescence-proof2s-'";after="'deadline32-physical192-proof2s-'"
++    parent_text=parent_path.read_text();actual_text=actual_path.read_text()
++    require(parent_path.parent==actual_path.parent==Path(sources['controller']['path']).parent
++        and parent_text.count(before)==1 and actual_text==parent_text.replace(before,after),
++        'Only the one native/measurement namespace literal may differ; capture eligibility must remain byte-identical')
+     preparer=load('_current_fresh_R1_capture_eligibility',h.checked(sources['study_preparer']),sources['study_preparer']['sha256'])
+     case=read(selected['main_case'],h)
+     candidate,evidence=preparer.completed_capture(h,selected,case)

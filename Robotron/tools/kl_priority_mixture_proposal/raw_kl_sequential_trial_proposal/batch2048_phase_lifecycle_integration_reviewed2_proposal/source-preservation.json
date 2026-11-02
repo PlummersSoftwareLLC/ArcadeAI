@@ -1,0 +1,355 @@
+{
+  "changes": [
+    {
+      "after": {
+        "bytes": 66748,
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_reviewed2_proposal/run_CE_batch_transition.py",
+        "sha256": "ed9c0af623047cfb8adbfecc016e9eec858add6b52b8f27c5dcd4701279bad8b"
+      },
+      "before": {
+        "bytes": 65911,
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_proposal/run_CE_batch_transition.py",
+        "sha256": "28c554c13d260a1aaab246df81f1b7514e167d2bfe6dbf164472d35af9a6010c"
+      },
+      "finite_replacements": [
+        {
+          "after": "_reviewed2",
+          "before": "",
+          "new_offset": 826,
+          "old_offset": 826
+        },
+        {
+          "after": "reviewed2_",
+          "before": "",
+          "new_offset": 2664,
+          "old_offset": 2654
+        },
+        {
+          "after": "1953eb12dcb20bfafdbed",
+          "before": "",
+          "new_offset": 2721,
+          "old_offset": 2701
+        },
+        {
+          "after": "",
+          "before": "7",
+          "new_offset": 2744,
+          "old_offset": 2703
+        },
+        {
+          "after": "026e20b8",
+          "before": "",
+          "new_offset": 2746,
+          "old_offset": 2706
+        },
+        {
+          "after": "25d",
+          "before": "",
+          "new_offset": 2755,
+          "old_offset": 2707
+        },
+        {
+          "after": "",
+          "before": "e759",
+          "new_offset": 2759,
+          "old_offset": 2708
+        },
+        {
+          "after": "89e2c26820",
+          "before": "f",
+          "new_offset": 2761,
+          "old_offset": 2714
+        },
+        {
+          "after": "8cd84",
+          "before": "5",
+          "new_offset": 2772,
+          "old_offset": 2716
+        },
+        {
+          "after": "94",
+          "before": "83",
+          "new_offset": 2778,
+          "old_offset": 2718
+        },
+        {
+          "after": "d",
+          "before": "1f903117b301bcc1",
+          "new_offset": 2781,
+          "old_offset": 2721
+        },
+        {
+          "after": "",
+          "before": "3620202e4bec29775",
+          "new_offset": 2784,
+          "old_offset": 2739
+        },
+        {
+          "after": "",
+          "before": "157e18a6",
+          "new_offset": 2785,
+          "old_offset": 2757
+        },
+        {
+          "after": "{'script': {'path': '/home/dave/source/repos/ArcadeAI/Robotr",
+          "before": "N",
+          "new_offset": 2894,
+          "old_offset": 2874
+        },
+        {
+          "after": "/tools/kl_priority_mixtur",
+          "before": "",
+          "new_offset": 2956,
+          "old_offset": 2877
+        },
+        {
+          "after": "_proposal/raw_kl_seq",
+          "before": "  # R",
+          "new_offset": 2982,
+          "old_offset": 2878
+        },
+        {
+          "after": "e",
+          "before": "",
+          "new_offset": 3003,
+          "old_offset": 2884
+        },
+        {
+          "after": "",
+          "before": "me peer is prep",
+          "new_offset": 3007,
+          "old_offset": 2887
+        },
+        {
+          "after": "l_t",
+          "before": "",
+          "new_offset": 3008,
+          "old_offset": 2903
+        },
+        {
+          "after": "",
+          "before": "ng ",
+          "new_offset": 3013,
+          "old_offset": 2905
+        },
+        {
+          "after": "l_",
+          "before": " NEW ",
+          "new_offset": 3014,
+          "old_offset": 2909
+        },
+        {
+          "after": "posal/batch2048_phase_cpu_",
+          "before": "",
+          "new_offset": 3019,
+          "old_offset": 2917
+        },
+        {
+          "after": "rifi",
+          "before": "nanc",
+          "new_offset": 3047,
+          "old_offset": 2919
+        },
+        {
+          "after": "r_",
+          "before": "-",
+          "new_offset": 3052,
+          "old_offset": 2924
+        },
+        {
+          "after": "2_proposal/verify_phase_snapshot_2048.py',",
+          "before": "",
+          "new_offset": 3062,
+          "old_offset": 2933
+        },
+        {
+          "after": "'sha256': 'a331b550191a48ab219cf92f2e1c42fc394e038c93609ecac4fb9a722b75e5cd', 'bytes': 37695}, 'strict_base': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/",
+          "before": "w",
+          "new_offset": 3105,
+          "old_offset": 2934
+        },
+        {
+          "after": "w_kl_sequential_trial_",
+          "before": "",
+          "new_offset": 3304,
+          "old_offset": 2937
+        },
+        {
+          "after": "ro",
+          "before": "",
+          "new_offset": 3327,
+          "old_offset": 2938
+        },
+        {
+          "after": "osal/batch2048_phase_cpu_v",
+          "before": "",
+          "new_offset": 3330,
+          "old_offset": 2939
+        },
+        {
+          "after": "ifier_reviewed2_proposal/strict_phase_base_2048.py', 'sha256': '47677509f170c4c3b6a1c03918e02ab13996af1ceafffac29b7536c2fad61f80', 'bytes': 33727}}  # Exact frozen reviewed2 source triples",
+          "before": "",
+          "new_offset": 3358,
+          "old_offset": 2941
+        },
+        {
+          "after": "",
+          "before": "\n    'reviewed2 CPU2048 source binding is unresolved',",
+          "new_offset": 3566,
+          "old_offset": 2961
+        },
+        {
+          "after": "",
+          "before": " and CPU2048_BINDING is not None",
+          "new_offset": 4323,
+          "old_offset": 3772
+        },
+        {
+          "after": "selected2048=job['phase_verifier2048']\n    require(set(selected2048)=={'script','strict_base'} and\n        {name:triple(selected2048[name]) for name in ('script','strict_base')}==CPU2048_BINDING,\n        'Wrong exact reviewed2 CPU2048 source family')\n    for value in selected2048.values():base.pin(value,base.MAX_SOURCE)\n    ",
+          "before": "",
+          "new_offset": 25263,
+          "old_offset": 24744
+        },
+        {
+          "after": "Coll",
+          "before": "N",
+          "new_offset": 25618,
+          "old_offset": 24773
+        },
+        {
+          "after": "",
+          "before": "ver a",
+          "new_offset": 25623,
+          "old_offset": 24775
+        },
+        {
+          "after": "",
+          "before": " with unkn",
+          "new_offset": 25625,
+          "old_offset": 24782
+        },
+        {
+          "after": "",
+          "before": "wn CPU/produce",
+          "new_offset": 25626,
+          "old_offset": 24793
+        },
+        {
+          "after": "/numerical prerequisites",
+          "before": "",
+          "new_offset": 25637,
+          "old_offset": 24818
+        },
+        {
+          "after": "m",
+          "before": "",
+          "new_offset": 25664,
+          "old_offset": 24821
+        },
+        {
+          "after": "",
+          "before": "d",
+          "new_offset": 25666,
+          "old_offset": 24822
+        },
+        {
+          "after": " fatal",
+          "before": "ess",
+          "new_offset": 25668,
+          "old_offset": 24825
+        },
+        {
+          "after": "self.batch_boundary.phase_producer_batch",
+          "before": "",
+          "new_offset": 42583,
+          "old_offset": 41737
+        },
+        {
+          "after": ",",
+          "before": "['before_batch_size'] if ",
+          "new_offset": 42650,
+          "old_offset": 41764
+        },
+        {
+          "after": "",
+          "before": "=='newest_stopped' else self.job['batch_boundary']['after_batch_size']",
+          "new_offset": 42658,
+          "old_offset": 41796
+        },
+        {
+          "after": "\n",
+          "before": "",
+          "new_offset": 43017,
+          "old_offset": 42225
+        },
+        {
+          "after": "",
+          "before": "CPU2048_BINDING",
+          "new_offset": 43019,
+          "old_offset": 42226
+        },
+        {
+          "after": "              {name:tr",
+          "before": "",
+          "new_offset": 43020,
+          "old_offset": 42242
+        },
+        {
+          "after": "pl",
+          "before": "s not Non",
+          "new_offset": 43043,
+          "old_offset": 42243
+        },
+        {
+          "after": "(",
+          "before": " and ",
+          "new_offset": 43046,
+          "old_offset": 42253
+        },
+        {
+          "after": "[name]) for name in ('script','strict_base')}",
+          "before": "",
+          "new_offset": 43053,
+          "old_offset": 42264
+        },
+        {
+          "after": "Exact",
+          "before": "Unresolved",
+          "new_offset": 43134,
+          "old_offset": 42300
+        },
+        {
+          "after": " differs",
+          "before": "",
+          "new_offset": 43172,
+          "old_offset": 42343
+        }
+      ],
+      "restored_sha256": "28c554c13d260a1aaab246df81f1b7514e167d2bfe6dbf164472d35af9a6010c",
+      "reverse_reconstruction_byte_equal": true
+    },
+    {
+      "after": {
+        "bytes": 60968,
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_reviewed2_proposal/owned_lifecycle.py",
+        "sha256": "6f961e5c724ae70bb4abf4641f7a3a6a27d55579e9acb2808ee15de08960d8ac"
+      },
+      "before": {
+        "bytes": 60968,
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_proposal/owned_lifecycle.py",
+        "sha256": "6f961e5c724ae70bb4abf4641f7a3a6a27d55579e9acb2808ee15de08960d8ac"
+      },
+      "finite_replacements": [],
+      "restored_sha256": "6f961e5c724ae70bb4abf4641f7a3a6a27d55579e9acb2808ee15de08960d8ac",
+      "reverse_reconstruction_byte_equal": true
+    }
+  ],
+  "old_packages_unchanged": true,
+  "predecessor_manifest": {
+    "bytes": 5500,
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_proposal/preparation-manifest.json",
+    "sha256": "22101da1b734bd31eb965c5b48f9113838508ede25d26235ef829a78e0b84ca1"
+  },
+  "schema": "robotron-unconsumed-reviewed2-source-delta-v1",
+  "status": "SOURCE_TEXT_ONLY_NO_EXECUTION"
+}

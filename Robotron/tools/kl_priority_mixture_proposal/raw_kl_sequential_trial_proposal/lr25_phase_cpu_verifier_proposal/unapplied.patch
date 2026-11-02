@@ -1,0 +1,171 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/strict_phase_base.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/lr25_phase_cpu_verifier_proposal/strict_phase_base_lr25.py
+@@ -28,8 +28,8 @@
+ CLOCKS = ('training_steps', 'optimized_samples', 'learner_frame_count', 'frame_count')
+ EXPECTED = dict(engine_version=28, state_size=11128, single_frame_state_size=2782, frame_stack=4)
+ HELD_RECIPE_CONTEXT = dict(batch_size=4096, baseline_batch_size=512, epsilon=.1, expert_ratio=.1,
+-    n_step=3, max_samples_per_frame=8, c51_target_smoothing=0, learning_control_lr_scale=.5,
+-    lr_gear='climb', lr_anchor_step=0., optimizer_lr=2.5e-5, optimizer_eps=1.5e-4,
++    n_step=3, max_samples_per_frame=8, c51_target_smoothing=0, learning_control_lr_scale=.25,
++    lr_gear='climb', lr_anchor_step=0., optimizer_lr=1.25e-5, optimizer_eps=1.5e-4,
+     fused=True, gamma=.995, num_atoms=51, v_min=-10., v_max=50.)
+ # Assigned ONLY after --execute has authenticated a root job; defaults do no path resolution/read.
+ DIRECTORY = GAME = SOURCE = None
+@@ -199,7 +199,7 @@
+         check_pin(pin, evidence, 'model/' + name, metadata=True)
+         SOURCE_HASHES[name] = pin['sha256']
+     control = pinned_json(context['archived_control'], evidence, 'archived_control')
+-    require(control['experiment'] == job['experiment'] and control['lr_scale'] == .5
++    require(control['experiment'] == job['experiment'] and control['lr_scale'] == .25
+             and control['epsilon_ramp']['start'] == control['epsilon_ramp']['end'] == .1,
+             'Archived held-control experiment/recipe differs')
+     check_pin(context['archived_trainer_unit'], evidence, 'archived_trainer_unit', metadata=True)
+@@ -489,6 +489,8 @@
+     parser.add_argument('--expected-job-sha256')
+     parser.add_argument('--expected-verifier-sha256')
+     args = parser.parse_args(argv)
++    if args.execute:
++        raise RuntimeError('Use verify_phase_snapshot_lr25.py: explicit hot-change context and CE lineage required')
+     if not args.execute:
+         print('PLAN_ONLY: explicit root job required; no job/checkpoint/context reads, imports or output mutation')
+         return 0
+
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/verify_phase_snapshot.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/lr25_phase_cpu_verifier_proposal/verify_phase_snapshot_lr25.py
+@@ -16,15 +16,23 @@
+ HERE = Path(__file__).parent
+ ORIGINAL_PATH = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-maintenance-checkpoint-CPU-verifier-proposal-20261017/verify_maintenance_checkpoint.py')
+ ORIGINAL_SHA256 = '7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead'
+-STRICT_PATH = HERE / 'strict_phase_base.py'
+-STRICT_SHA256 = '9ef38e17e1b9eee3f6c43e40005812f2ebe3cff16d08bf61d3e820c2d41134c8'
+-SCHEMA = 'robotron-phase-snapshot-checkpoint-CPU-job-v1'
+-RESULT_SCHEMA = 'robotron-phase-snapshot-checkpoint-CPU-result-v1'
++STRICT_PATH = HERE / 'strict_phase_base_lr25.py'
++STRICT_SHA256 = '0854f1437510a4264bc922d241e76350ee3209963bd4f28ce9b8a826e6cb159b'
++SCHEMA = 'robotron-lr25-phase-snapshot-checkpoint-CPU-job-v1'
++RESULT_SCHEMA = 'robotron-lr25-phase-snapshot-checkpoint-CPU-result-v1'
+ ACQUISITION_SCHEMA = 'robotron-owned-phase-snapshot-acquisition-v1'
+ PHASE_SCHEMA = 'robotron-priority-metric-phase-v1'
+ CLOCKS = ('training_steps', 'optimized_samples', 'learner_frame_count', 'frame_count')
+ SOURCE_NAMES = ('__init__.py', 'model.py', 'config.py', 'learning_control.py',
+                 'agent.py', 'training.py', 'loss_kernel.py', 'priority_phase.py')
++
++BASE_REPLACEMENTS = ((b'learning_control_lr_scale=.5', b'learning_control_lr_scale=.25'),
++    (b'optimizer_lr=2.5e-5', b'optimizer_lr=1.25e-5'),
++    (b"control['lr_scale'] == .5", b"control['lr_scale'] == .25"))
++BASE_CLI_REFUSAL = b"    if args.execute:\n        raise RuntimeError('Use verify_phase_snapshot_lr25.py: explicit hot-change context and CE lineage required')\n"
++FOUNDER_SHA256 = '9b3b839fe39044538412f0f78a8c28feae60170ea2d1c363d21efeead17d84d1'
++ENTRY_PHASE_SHA256 = 'b2e732dc731b2b601f7499d2cafd5841896daf2b0713d496b98cb6b8d7279519'
++ENTRY_STRICT_SHA256 = '9ef38e17e1b9eee3f6c43e40005812f2ebe3cff16d08bf61d3e820c2d41134c8'
+ 
+ 
+ def require(value, message):
+@@ -57,15 +65,24 @@
+ def load_base():
+     original = ORIGINAL_PATH.read_bytes()
+     require(hashlib.sha256(original).hexdigest() == ORIGINAL_SHA256, 'Original strict verifier changed')
++    previous_path = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/strict_phase_base.py')
++    previous = previous_path.read_bytes()
++    require(hashlib.sha256(previous).hexdigest() == '9ef38e17e1b9eee3f6c43e40005812f2ebe3cff16d08bf61d3e820c2d41134c8', 'Sealed4096 phase base changed')
+     data = STRICT_PATH.read_bytes()
+-    require(hashlib.sha256(data).hexdigest() == STRICT_SHA256, 'Phase strict helper changed')
++    require(hashlib.sha256(data).hexdigest() == STRICT_SHA256, 'LR25 strict helper changed')
++    reversed_data = data
++    for before, after in BASE_REPLACEMENTS:
++        require(reversed_data.count(after) == 1, 'Exact finite LR25 source delta required')
++        reversed_data = reversed_data.replace(after, before)
++    require(reversed_data.count(BASE_CLI_REFUSAL) == 1 and reversed_data.replace(BASE_CLI_REFUSAL, b'') == previous,
++            'Only held LR25 values/control guard and direct-CLI refusal may differ from sealed9ef')
+     old = b'def validate_checkpoint(path, floor, evidence):'
+     new = b'def validate_checkpoint(path, floor, evidence, *, metadata_callback=None):'
+     hook = b'    if metadata_callback is not None:\n        metadata_callback(checkpoint, evidence)\n'
+-    require(data.count(new) == 1 and data.count(hook) == 1 and
+-            data.replace(new, old).replace(hook, b'') == original,
+-            'Only the optional signature/end-metadata callback may differ')
+-    module = types.ModuleType('_phase_snapshot_strict_body')
++    require(previous.count(new) == 1 and previous.count(hook) == 1 and
++            previous.replace(new, old).replace(hook, b'') == original,
++            'Original numerical body/callback provenance differs')
++    module = types.ModuleType('_phase_snapshot_lr25_strict_body')
+     module.__file__ = str(STRICT_PATH)
+     exec(compile(data, str(STRICT_PATH), 'exec'), module.__dict__)
+     return module
+@@ -93,7 +110,7 @@
+     require(base.fingerprint(path) == pin, 'Root job changed while parsing')
+     fields = {'schema', 'verifier_sha256', 'strict_phase_base_sha256', 'original_strict_base_sha256',
+               'experiment', 'source', 'verification_copy', 'clock_floor', 'source_control_context',
+-              'output_directory', 'phase_snapshot'}
++              'output_directory', 'phase_snapshot', 'lr25_context'}
+     require(isinstance(job, dict) and set(job) == fields and job['schema'] == SCHEMA and
+             job['verifier_sha256'] == source['sha256'] and job['strict_phase_base_sha256'] == STRICT_SHA256 and
+             job['original_strict_base_sha256'] == ORIGINAL_SHA256, 'Phase root job/source schema differs')
+@@ -212,6 +229,61 @@
+     return spec, boot, record
+ 
+ 
++def check_lr25_context(job, base, evidence):
++    """Root-authenticated hot-change metadata; original phase boot is not a new LR boot."""
++    context = job['lr25_context']
++    require(isinstance(context, dict) and set(context) == {'schema', 'precommit', 'entry_CPU'} and
++            context['schema'] == 'robotron-live-CE-lr25-hot-control-context-v1', 'Explicit LR25 hot-control context required')
++    pre = immutable(context['precommit'], base, evidence, 'lr25_precommit', as_json=True)
++    fields = {'schema', 'status', 'experiment', 'owner', 'current_phase', 'entry_checkpoint', 'entry_CPU',
++              'source_freeze_release', 'quality_closed', 'lr_scale_before', 'lr_scale_after',
++              'optimizer_lr_before', 'optimizer_lr_after', 'no_weight_or_optimizer_reset', 'no_replay_clear'}
++    require(isinstance(pre, dict) and set(pre) == fields and
++            pre['schema'] == 'robotron-live-CE-lr25-hot-change-precommit-v1' and
++            pre['status'] == 'ROOT_PRECOMMITTED_AFTER_QUALITY_CLOSURE_AND_FREEZE_RELEASE' and
++            pre['quality_closed'] is True and pre['no_weight_or_optimizer_reset'] is True and pre['no_replay_clear'] is True,
++            'Actual future root precommit/closed-quality/no-reset declaration required')
++    spec = job['phase_snapshot']; phase = pre['current_phase']
++    require(isinstance(phase, dict) and set(phase) == {'record', 'boot_checkpoint', 'boot_verification', 'expected'} and
++            spec['purpose'] in ('candidate', 'newest_stopped') and
++            (spec['purpose'] != 'candidate' or spec['observed_clients'] == 192) and
++            pre['experiment'] == job['experiment'] and pre['owner'] == spec['owner'] and
++            phase['record'] == spec['phase_record'] and phase['boot_checkpoint'] == spec['boot_checkpoint'] and
++            phase['boot_verification'] == spec['boot_verification'] and phase['expected'] == spec['expected_phase'] and
++            phase['expected']['metric'] == 'ce' and phase['expected']['valid'] is True and
++            phase['expected']['founder_phase_record_sha256'] == FOUNDER_SHA256,
++            'Actual same owner/current CE founder and original phase boot required; no invented LR startup')
++    require(type(pre['lr_scale_before']) in (int, float) and pre['lr_scale_before'] == .5 and
++            type(pre['lr_scale_after']) in (int, float) and pre['lr_scale_after'] == .25 and
++            type(pre['optimizer_lr_before']) in (int, float) and pre['optimizer_lr_before'] == 2.5e-5 and
++            type(pre['optimizer_lr_after']) in (int, float) and pre['optimizer_lr_after'] == 1.25e-5,
++            'Sole explicit scale .5 to .25/effective LR2.5e-5 to1.25e-5 required')
++    released = immutable(pre['source_freeze_release'], base, evidence, 'lr25_quality_source_freeze_release', as_json=True)
++    require(released.get('source_freeze_released') is True, 'Actual prior quality source-freeze release required')
++    require(context['entry_CPU'] == pre['entry_CPU'], 'Fresh verified pre-change entry proof differs')
++    entry = immutable(context['entry_CPU'], base, evidence, 'lr25_prechange_entry_CPU', as_json=True)
++    entry_job = entry['root_job']; es = entry_job['phase_snapshot']
++    require(entry['schema'] == 'robotron-phase-snapshot-checkpoint-CPU-result-v1' and entry['status'] == 'PASS' and
++            entry['phase_metadata_verified'] is True and entry['script']['sha256'] == ENTRY_PHASE_SHA256 and
++            entry['strict_phase_base']['sha256'] == ENTRY_STRICT_SHA256 and
++            entry_job['source_control_context']['held_recipe_context'] == dict(base.HELD_RECIPE_CONTEXT,
++                learning_control_lr_scale=.5, optimizer_lr=2.5e-5) and
++            es['purpose'] == 'candidate' and es['observed_clients'] == 192 and es['owner'] == spec['owner'] and
++            es['expected_phase'] == spec['expected_phase'] and
++            entry['saved_priority_metric_phase']['metric'] == 'ce' and
++            entry['saved_priority_metric_phase']['valid'] is True and
++            entry['saved_priority_metric_phase']['phase_record_sha256'] == FOUNDER_SHA256 and
++            pre['entry_checkpoint'] == {k:entry_job['source'][k] for k in ('path','sha256','bytes')} and
++            entry['sha256'] == pre['entry_checkpoint']['sha256'] and entry['bytes'] == pre['entry_checkpoint']['bytes'],
++            'Genuine newest-state pre-change .5 CE4096 snapshot/CPU proof required; no protected rollback or legacy alias')
++    triple(pre['entry_checkpoint'], 'pre-change live entry checkpoint')
++    entry_clocks = {k:entry['clocks'][k] for k in CLOCKS}; clocks(entry_clocks, 'pre-change entry clocks')
++    require(all(job['clock_floor'][k] >= entry_clocks[k] for k in CLOCKS), 'LR25 acquisition predates genuine entry state')
++    evidence.update(lr25_hot_context_verified=True, lr25_precommit=context['precommit'],
++                    lr25_entry_checkpoint=pre['entry_checkpoint'], lr25_entry_clocks=entry_clocks,
++                    lr25_scope='Hot control only; same CE founder/owner; original boot is historical; no exact first-new-LR call, coherent replay or causal efficacy claim')
++
++
+ def verify_phase(checkpoint, evidence, expected, boot_clocks, floor, action, predecessor=None):
+     phase = checkpoint.get('priority_metric_phase')
+     require(isinstance(phase, dict) and phase.get('schema') == PHASE_SCHEMA and phase.get('valid') is True and
+@@ -256,6 +328,7 @@
+         evidence.update(strict_phase_base=base_pin, original_strict_base=original_pin)
+         model_dir = base.check_context(job, evidence)
+         spec, boot, record = check_acquisition(job, base, evidence, model_dir)
++        check_lr25_context(job, base, evidence)
+         copied = base.check_root_copy(job, evidence)
+         base.validate_checkpoint(copied, job['clock_floor'], evidence, metadata_callback=lambda checkpoint, ev:
+             verify_phase(checkpoint, ev, spec['expected_phase'], evidence['actual_boot_clocks'], job['clock_floor'],

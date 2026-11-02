@@ -1,0 +1,672 @@
+{
+  "schema": "robotron-CE2048-trial02-first-LATCH-policy-followup-quality-bindings-v1",
+  "experiment": "best10M-fresh3-eps10-cap8-nosmooth",
+  "reference": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-incumbents/freshCE-543M-confirmed.pt",
+    "sha256": "8b86546355ade166937a8287a008c7854276ed773a103eb815287dde00d6fb7e",
+    "bytes": 275192614,
+    "metadata": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-incumbents/freshCE-543M-confirmed.pt.json",
+      "sha256": "b080f538f84e9c76739b9d142a2065a55d1292c3dbdcb01806003a14339956d5",
+      "bytes": 285284,
+      "identity": {
+        "device": 2304,
+        "inode": 79991769,
+        "bytes": 285284,
+        "mtime_ns": 1792258685902039522,
+        "ctime_ns": 1792258685905567023,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "candidate": {
+    "tag": "CE2048-first-8M-20261017-trial02",
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-checkpoints/CE2048-first-8M-20261017-trial02.pt",
+    "sha256": "36775eed46ad0b65c58250909a20fe976634e297ce14f0a859396fd7a55827fa",
+    "bytes": 275192165
+  },
+  "evidence": {
+    "outer_job": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-final-root-preparation-20261017/one-trial-job-FINAL.json",
+      "sha256": "ae8379e7e5f95c0ca43338a6b1fd2dc12a84ca4c0645767045ed9389b1226893",
+      "bytes": 12428,
+      "identity": {
+        "device": 2304,
+        "inode": 81156703,
+        "bytes": 12428,
+        "mtime_ns": 1792270167864512218,
+        "ctime_ns": 1792270167864512218,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "activation_job": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-final-root-preparation-20261017/activation-job-FINAL.json",
+      "sha256": "79b572fe448a78d654f4b7b1b8d745e407759fae8c2089815564ccbff03854ee",
+      "bytes": 376510,
+      "identity": {
+        "device": 2304,
+        "inode": 81156702,
+        "bytes": 376510,
+        "mtime_ns": 1792270167862445393,
+        "ctime_ns": 1792270167862445393,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "trial_core": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-final-root-preparation-20261017/trial-core-FINAL.json",
+      "sha256": "4055452bf522d8d2b66d83825cf9c11738b2b1320150aaf8d5238aeebbde2fd9",
+      "bytes": 2299,
+      "identity": {
+        "device": 2304,
+        "inode": 81156701,
+        "bytes": 2299,
+        "mtime_ns": 1792270167850700866,
+        "ctime_ns": 1792270167850700866,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "activation": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-activation-20261017/result.json",
+      "sha256": "7d7ae0a041ebe5438550d456e9d7d6c46a9015fb6eae93f1365794aee0c0feeb",
+      "bytes": 321894,
+      "identity": {
+        "device": 2304,
+        "inode": 81156888,
+        "bytes": 321894,
+        "mtime_ns": 1792270403456174734,
+        "ctime_ns": 1792270403456174734,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "trial_result": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-controller-20261017/result.json",
+      "sha256": "fbb6b71425bee026aaaa49646fa550fe1b9e8435a7da81c10844eefb9c35b6b0",
+      "bytes": 21794,
+      "identity": {
+        "device": 2304,
+        "inode": 81160189,
+        "bytes": 21794,
+        "mtime_ns": 1792272491003180932,
+        "ctime_ns": 1792272491003180932,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "failed_return": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-return4096-20261017/result.json",
+      "sha256": "ef8e6cf97a85e61dbc837eccb8b9223732be629b5b47a1d2df7fb78384cb7f97",
+      "bytes": 6643,
+      "identity": {
+        "device": 2304,
+        "inode": 81160187,
+        "bytes": 6643,
+        "mtime_ns": 1792272490975727026,
+        "ctime_ns": 1792272490975727026,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "return_job": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-controller-20261017/return-job.json",
+      "sha256": "2973f3271098a7e8e5cec8aba1f92ad4c22f19a44e28de8d8a5c986ff7531a58",
+      "bytes": 377318,
+      "identity": {
+        "device": 2304,
+        "inode": 81160036,
+        "bytes": 377318,
+        "mtime_ns": 1792272398829472659,
+        "ctime_ns": 1792272398829472659,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "phase_cpu_job": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-return4096-20261017/ending-candidate-CPU/cpu-job.json",
+      "sha256": "4f2ab15421062f3550a2bbfa2af6ff4bba009317eb7ceafdf319049742921316",
+      "bytes": 26275,
+      "identity": {
+        "device": 2304,
+        "inode": 81160069,
+        "bytes": 26275,
+        "mtime_ns": 1792272399269785142,
+        "ctime_ns": 1792272399269785142,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "phase_cpu_report": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-return4096-20261017/ending-candidate-CPU/cpu-report-readonly.json",
+      "sha256": "af1efad2cc0887dffd760c2899d1e762cebb8b5b5ae1e04a95394981ac836e6e",
+      "bytes": 84785,
+      "identity": {
+        "device": 2304,
+        "inode": 81160084,
+        "bytes": 84785,
+        "mtime_ns": 1792272401827594349,
+        "ctime_ns": 1792272401827594349,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "phase_cpu_completion": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-return4096-20261017/ending-candidate-CPU/cpu-completion.json",
+      "sha256": "d6a174d18791cecc96a8c19ddc80b3af5c7ff15e0c2a2422da275039b6c48d18",
+      "bytes": 723,
+      "identity": {
+        "device": 2304,
+        "inode": 81160083,
+        "bytes": 723,
+        "mtime_ns": 1792272401813795700,
+        "ctime_ns": 1792272401813795700,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "failed_startup_CPU_report": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-return4096-20261017/startup-phase-CPU/cpu-report-readonly.json",
+      "sha256": "0d58fc5d8bb3805169ab5f0ccacfc70052d3c3a93350e575c945dcb67141d775",
+      "bytes": 68505,
+      "identity": {
+        "device": 2304,
+        "inode": 81160184,
+        "bytes": 68505,
+        "mtime_ns": 1792272452713643049,
+        "ctime_ns": 1792272452713643049,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "failed_trial_closure": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-original-failure-archives-and-owned-closure-root-20261017/root-actual-original-failed-trial-owned-cleanup.json",
+      "sha256": "4c129ecea77e04bb7d834731e304b912292059d0068b7f56f4673f5c3d154ba1",
+      "bytes": 12666,
+      "identity": {
+        "device": 2304,
+        "inode": 81160240,
+        "bytes": 12666,
+        "mtime_ns": 1792272731754206938,
+        "ctime_ns": 1792272731754206938,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "maintenance_job": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-failed-return-forward4096-recovery-root-preparation-20261017/forward-CE4096-repair-job.json",
+      "sha256": "7c76945bc2861145cf525bbb5851be556734e7afc48c4a3f4895de78af2c3456",
+      "bytes": 7289,
+      "identity": {
+        "device": 2304,
+        "inode": 81160299,
+        "bytes": 7289,
+        "mtime_ns": 1792272998458342823,
+        "ctime_ns": 1792272998458342823,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "maintenance_result": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-failed-return-forward-CE4096-repair-20261017/result.json",
+      "sha256": "b4019062ff5275e842156a643818a6d8205d702e0fce0c5a51ab18d493f5d3b0",
+      "bytes": 442760,
+      "identity": {
+        "device": 2304,
+        "inode": 81160405,
+        "bytes": 442760,
+        "mtime_ns": 1792273205401961930,
+        "ctime_ns": 1792273205401961930,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "maintenance_closure": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-failed-return-forward4096-recovery-root-execution-20261017/root-actual-maintenance-READY0-and-owned-cleanup.json",
+      "sha256": "b0b27f8fcc214ba67e4287011c94cd6859f4c6a3a26de120ad961d4678c55fc0",
+      "bytes": 4108,
+      "identity": {
+        "device": 2304,
+        "inode": 81160427,
+        "bytes": 4108,
+        "mtime_ns": 1792273278301905535,
+        "ctime_ns": 1792273278301905535,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "maintenance_release": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-failed-return-forward4096-recovery-root-execution-20261017/root-explicit-maintenance-source-freeze-release.json",
+      "sha256": "610d949c1f6a7b051f5fc4226960ea0832acfc9c1511fc51c0a8f681d59a8e9a",
+      "bytes": 1332,
+      "identity": {
+        "device": 2304,
+        "inode": 81160428,
+        "bytes": 1332,
+        "mtime_ns": 1792273278302598497,
+        "ctime_ns": 1792273278302598497,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "followup_precommit": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-retained-first-candidate-frozen-quality-followup-root-precommit-20261017/precommit-FINAL.json",
+      "sha256": "e467dedfddb25e7b8d8f04f92b631cee734d3679004b51526cdf1de64db56abe",
+      "bytes": 9870,
+      "identity": {
+        "device": 2304,
+        "inode": 81160431,
+        "bytes": 9870,
+        "mtime_ns": 1792273354939637540,
+        "ctime_ns": 1792273354939653924,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "observer": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-controller-20261017/observer-job.json",
+      "sha256": "077102cb972bca1bd09fab447f42c103901a95a95f69f1e0155e41d728779d77",
+      "bytes": 27698,
+      "identity": {
+        "device": 2304,
+        "inode": 81156889,
+        "bytes": 27698,
+        "mtime_ns": 1792270403459815037,
+        "ctime_ns": 1792270403459815037,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "decision": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-controller-20261017/observation-1509.json",
+      "sha256": "144e2af455060e6b83176b6d1a59a330bcaf5f11c77c38fb1050c7d113570f8a",
+      "bytes": 104698,
+      "identity": {
+        "device": 2304,
+        "inode": 81160022,
+        "bytes": 104698,
+        "mtime_ns": 1792272362272715053,
+        "ctime_ns": 1792272362272715053,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "durability": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-controller-20261017/durability-1509.json",
+      "sha256": "3fbbb704d3df1e57c2697846c109c8af6a0e93245d25097c72694223a882f2cb",
+      "bytes": 755,
+      "identity": {
+        "device": 2304,
+        "inode": 81160023,
+        "bytes": 755,
+        "mtime_ns": 1792272362274560084,
+        "ctime_ns": 1792272362274560084,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "early_phase_insurance": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-controller-20261017/early-insurance/result.json",
+      "sha256": "99c16da3bb0e3d150b7449fbecf2a74be5396c11e25eddf22d5217539fb2fdc5",
+      "bytes": 14059,
+      "identity": {
+        "device": 2304,
+        "inode": 81156981,
+        "bytes": 14059,
+        "mtime_ns": 1792270411830389890,
+        "ctime_ns": 1792270411830389890,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "deadline_result": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-controller-20261017/deadline-result.json",
+      "sha256": "82ac2dac139b05d15f17ba685ed627543d99cecdf0be24a1ea51eb8a3aa37afb",
+      "bytes": 4079,
+      "identity": {
+        "device": 2304,
+        "inode": 81160032,
+        "bytes": 4079,
+        "mtime_ns": 1792272398779635172,
+        "ctime_ns": 1792272398779635172,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "runtime_baseline": null,
+  "runtime_anchor": null,
+  "original_executions": {
+    "deadline": {
+      "owner": {
+        "invocation_id": "965f9ebae0cc4a3fa70cd63cd360a24e",
+        "pid": 1522057,
+        "unit": "robotron-ce2048-trial02-deadline-20261017.service",
+        "cgroup": "/user.slice/user-1001.slice/user@1001.service/app.slice/robotron-ce2048-trial02-deadline-20261017.service",
+        "starttime_ticks": 36125526
+      },
+      "show": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-original-failure-archives-and-owned-closure-root-20261017/deadline-original-show.txt",
+        "sha256": "4049ffab3a1e9d1256326f3e1b6535d09423f9b048685f79214ceafa12b7cead",
+        "bytes": 12607,
+        "identity": {
+          "device": 2304,
+          "inode": 81160191,
+          "bytes": 12607,
+          "mtime_ns": 1792272578216880887,
+          "ctime_ns": 1792272578216880887,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "cat": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-original-failure-archives-and-owned-closure-root-20261017/deadline-original-cat.txt",
+        "sha256": "703db98d9dc5fb0cf2e396045a4407ab0c5198c391ce11d6456c24e87ed5bec7",
+        "bytes": 2501,
+        "identity": {
+          "device": 2304,
+          "inode": 81160193,
+          "bytes": 2501,
+          "mtime_ns": 1792272578245876015,
+          "ctime_ns": 1792272578245876015,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "journal": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-original-failure-archives-and-owned-closure-root-20261017/deadline-original-journal.txt",
+        "sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e",
+        "bytes": 17,
+        "identity": {
+          "device": 2304,
+          "inode": 81160195,
+          "bytes": 17,
+          "mtime_ns": 1792272578251773447,
+          "ctime_ns": 1792272578251773447,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "timer": {
+        "unit": "robotron-ce2048-trial02-deadline-20261017.timer",
+        "invocation_id": "4ec754870c6c420a86e30f94241d404f",
+        "observed_already_absent": false,
+        "cat_unavailable_because_already_collected": false,
+        "show": {
+          "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-original-failure-archives-and-owned-closure-root-20261017/deadline-timer-original-show.txt",
+          "sha256": "7a92b0d4ecf5233439ccdfff230ec6e3988d31023c603660c48d66bc5166bed6",
+          "bytes": 3566,
+          "identity": {
+            "device": 2304,
+            "inode": 81160197,
+            "bytes": 3566,
+            "mtime_ns": 1792272578286213430,
+            "ctime_ns": 1792272578286336470,
+            "mode": "0o444",
+            "uid": 1001,
+            "nlink": 1
+          }
+        },
+        "cat": {
+          "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-original-failure-archives-and-owned-closure-root-20261017/deadline-timer-original-cat.txt",
+          "sha256": "e424cc1a7068c8ae55e40f1a8e2ae7c58dc7fa3b1bb9a028987836b52952d232",
+          "bytes": 1121,
+          "identity": {
+            "device": 2304,
+            "inode": 81160199,
+            "bytes": 1121,
+            "mtime_ns": 1792272578296757665,
+            "ctime_ns": 1792272578296757665,
+            "mode": "0o444",
+            "uid": 1001,
+            "nlink": 1
+          }
+        },
+        "journal": {
+          "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-original-failure-archives-and-owned-closure-root-20261017/deadline-timer-original-journal.txt",
+          "sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e",
+          "bytes": 17,
+          "identity": {
+            "device": 2304,
+            "inode": 81160201,
+            "bytes": 17,
+            "mtime_ns": 1792272578305833671,
+            "ctime_ns": 1792272578305833671,
+            "mode": "0o444",
+            "uid": 1001,
+            "nlink": 1
+          }
+        },
+        "first_running_show": {
+          "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-original-failure-archives-and-owned-closure-root-20261017/deadline-timer-first-running-show-extracted-from-authenticated-original.txt",
+          "sha256": "8ac65310732e43f091ebee122252efd9e8cb18ea19be5f1353fd50bb7ee1a718",
+          "bytes": 3566,
+          "identity": {
+            "device": 2304,
+            "inode": 81160209,
+            "bytes": 3566,
+            "mtime_ns": 1792272638073975441,
+            "ctime_ns": 1792272638073975441,
+            "mode": "0o444",
+            "uid": 1001,
+            "nlink": 1
+          }
+        }
+      },
+      "original_exec_main_code": 1,
+      "original_exit": 0,
+      "original_result": "success",
+      "archived_before_release": true,
+      "released": true
+    },
+    "trial_controller": {
+      "owner": {
+        "invocation_id": "cdff5d945b9a4b79b81e4d73488a4920",
+        "pid": 1523035,
+        "unit": "robotron-ce2048-trial02-controller-20261017.service",
+        "cgroup": "/user.slice/user-1001.slice/user@1001.service/app.slice/robotron-ce2048-trial02-controller-20261017.service",
+        "starttime_ticks": 36128977
+      },
+      "show": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-original-failure-archives-and-owned-closure-root-20261017/trial_controller-original-show.txt",
+        "sha256": "9fbec1352fa9ea919ff4b39269ae2f6d03d6e35a988e375038954e22492d80fe",
+        "bytes": 12977,
+        "identity": {
+          "device": 2304,
+          "inode": 81160203,
+          "bytes": 12977,
+          "mtime_ns": 1792272578341275450,
+          "ctime_ns": 1792272578341275450,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "cat": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-original-failure-archives-and-owned-closure-root-20261017/trial_controller-original-cat.txt",
+        "sha256": "9af9c85f293b6a1af50ba7efaa5f9b1648563d8d81ca846beca4cbc76d1d4b62",
+        "bytes": 2746,
+        "identity": {
+          "device": 2304,
+          "inode": 81160205,
+          "bytes": 2746,
+          "mtime_ns": 1792272578349639452,
+          "ctime_ns": 1792272578349639452,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "journal": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-original-failure-archives-and-owned-closure-root-20261017/trial_controller-original-journal.txt",
+        "sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e",
+        "bytes": 17,
+        "identity": {
+          "device": 2304,
+          "inode": 81160207,
+          "bytes": 17,
+          "mtime_ns": 1792272578357780414,
+          "ctime_ns": 1792272578357780414,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "timer": {
+        "unit": "robotron-ce2048-trial02-controller-20261017.timer",
+        "invocation_id": "bd666aa152894dd6b9ebb9fc81f0631f",
+        "observed_already_absent": true,
+        "cat_unavailable_because_already_collected": true,
+        "show": {
+          "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-original-failure-archives-and-owned-closure-root-20261017/trial_controller-timer-original-show.txt",
+          "sha256": "e5034e732ad27ee08ebf31b0b758b3ac16f3ea81bab685ac3541e4d0043dc87f",
+          "bytes": 2247,
+          "identity": {
+            "device": 2304,
+            "inode": 81160210,
+            "bytes": 2247,
+            "mtime_ns": 1792272638133687848,
+            "ctime_ns": 1792272638133687848,
+            "mode": "0o444",
+            "uid": 1001,
+            "nlink": 1
+          }
+        },
+        "cat": {
+          "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-original-failure-archives-and-owned-closure-root-20261017/trial_controller-timer-original-cat.txt",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0,
+          "identity": {
+            "device": 2304,
+            "inode": 81160212,
+            "bytes": 0,
+            "mtime_ns": 1792272638155774404,
+            "ctime_ns": 1792272638157073513,
+            "mode": "0o444",
+            "uid": 1001,
+            "nlink": 1
+          }
+        },
+        "journal": {
+          "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-original-failure-archives-and-owned-closure-root-20261017/trial_controller-timer-original-journal.txt",
+          "sha256": "19c4e28b2f54ea8f217db4e622b0a5c758efa7b77ce2dc0394b6d159568c0b2e",
+          "bytes": 17,
+          "identity": {
+            "device": 2304,
+            "inode": 81160214,
+            "bytes": 17,
+            "mtime_ns": 1792272638159705044,
+            "ctime_ns": 1792272638159748340,
+            "mode": "0o444",
+            "uid": 1001,
+            "nlink": 1
+          }
+        },
+        "first_running_show": {
+          "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-original-failure-archives-and-owned-closure-root-20261017/trial_controller-timer-first-running-show-extracted-from-authenticated-original.txt",
+          "sha256": "503cd3d7fff4c353dbac6ba73a1a1f2305ea6e54cf8e686cbf361f0128c2ee8e",
+          "bytes": 3672,
+          "identity": {
+            "device": 2304,
+            "inode": 81160216,
+            "bytes": 3672,
+            "mtime_ns": 1792272638163677540,
+            "ctime_ns": 1792272638163677540,
+            "mode": "0o444",
+            "uid": 1001,
+            "nlink": 1
+          }
+        }
+      },
+      "original_exec_main_code": 1,
+      "original_exit": 1,
+      "original_result": "exit-code",
+      "archived_before_release": true,
+      "released": true
+    }
+  },
+  "actual_launch_identities": {
+    "trial_controller": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-root-execution-20261017/controller/root-observed-identity-361303817863879.json",
+      "sha256": "8c640c1bdcb3a365f7631d17c20973ad8156ac5ad6195ffef74816457fb916bb",
+      "bytes": 281,
+      "identity": {
+        "device": 2304,
+        "inode": 81156758,
+        "bytes": 281,
+        "mtime_ns": 1792270298605933535,
+        "ctime_ns": 1792270298605933535,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "deadline": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-root-execution-20261017/deadline/root-observed-identity-361276534666574.json",
+      "sha256": "2528b1e830a7568902662a6021cfbb72123a3535ae497a8a1e2958402d892db4",
+      "bytes": 279,
+      "identity": {
+        "device": 2304,
+        "inode": 81156745,
+        "bytes": 279,
+        "mtime_ns": 1792270271323227272,
+        "ctime_ns": 1792270271323227272,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "predecessor_quality_plan": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-CE543M-vs-postRecoveryCE-candidate02-20261017/plan.json",
+    "sha256": "e7419e89f607a95e091085b1afeda49064af3d6af038fff7a06201c17b9e2121",
+    "bytes": 277475,
+    "identity": {
+      "device": 2304,
+      "inode": 82444606,
+      "bytes": 277475,
+      "mtime_ns": 1792263013789300973,
+      "ctime_ns": 1792263013791300977,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "campaign": {
+    "output_directory": null,
+    "preview_directory": null,
+    "execution_directory": null,
+    "unit": null,
+    "reference_label": "protected543",
+    "candidate_label": "original-first-LATCH-CE2048-policy",
+    "hypothesis": "Frozen-policy quality only; original trial remains FAILED and separate maintenance is not trial qualification."
+  }
+}

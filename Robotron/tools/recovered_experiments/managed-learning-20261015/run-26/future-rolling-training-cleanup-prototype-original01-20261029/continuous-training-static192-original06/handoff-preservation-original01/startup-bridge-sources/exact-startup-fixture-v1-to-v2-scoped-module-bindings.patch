@@ -1,0 +1,51 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/startup-bridge-sources/test_continuous_startup_bridge_actual_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/startup-bridge-sources/test_continuous_startup_bridge_actual_v2.py
+@@ -8,6 +8,7 @@
+ """
+ import ast
+ import copy
++from contextlib import contextmanager
+ import hashlib
+ import importlib.util
+ import json
+@@ -54,6 +55,18 @@
+         MODE='CONTINUOUS_TRAIN155_EVAL37_ONCE',TOOLS_SHA=TOOLS_SHA)
+     exec(compile(ast.fix_missing_locations(ast.Module(body=body,type_ignores=[])),str(path),'exec'),ns)
+     return SimpleNamespace(**{k:v for k,v in ns.items()if callable(v)}),ns
++
++
++@contextmanager
++def module_bindings(selected):
++    """Restore only synthetic names; preserve lazy Torch imports/registrations."""
++    missing=object();before={name:sys.modules.get(name,missing)for name in selected}
++    sys.modules.update(selected)
++    try:yield
++    finally:
++        for name,previous in before.items():
++            if previous is missing:sys.modules.pop(name,None)
++            else:sys.modules[name]=previous
+ 
+ 
+ class ToyAgent(SimpleNamespace):pass
+@@ -208,7 +221,7 @@
+         modules={'_synthetic_bridge_package':package,'_synthetic_bridge_package.config':cfg,
+             '_synthetic_held_agent':agent_module,'_synthetic_held_replay':replay_module,'_synthetic_bridge_AST':bridge_module,
+             'dqn.main':main_module,'dqn.config':cfg}
+-        with patch.dict(sys.modules,modules),patch.dict(os.environ,self.environment,clear=True),\
++        with module_bindings(modules),patch.dict(os.environ,self.environment,clear=True),\
+              patch.dict(self.ns,unit_owner=unit_owner,publish=publish),\
+              patch.object(time,'sleep',side_effect=sealed_timeout):
+             self.ns['verify_restoration_and_wait'](self.agent,self.metrics,str(self.checkpoint))
+@@ -229,9 +242,9 @@
+         self.counter=0;self.root=Path(self.temp.name)
+         unused,self.ns=actual_functions(BRIDGE,BRIDGE_SHA)
+         self.agent_module=ModuleType('_synthetic_held_agent');self.agent_module.ENGINE_VERSION=28
+-        self.agent_patch=patch.dict(sys.modules,{'_synthetic_held_agent':self.agent_module});self.agent_patch.start()
+-
+-    def tearDown(self):self.agent_patch.stop();self.temp.cleanup()
++        self.agent_patch=module_bindings({'_synthetic_held_agent':self.agent_module});self.agent_patch.__enter__()
++
++    def tearDown(self):self.agent_patch.__exit__(None,None,None);self.temp.cleanup()
+ 
+     def toy(self):
+         self.counter+=1

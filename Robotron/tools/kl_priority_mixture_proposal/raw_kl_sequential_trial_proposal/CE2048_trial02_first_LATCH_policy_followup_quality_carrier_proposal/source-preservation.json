@@ -1,0 +1,37 @@
+{
+  "status": "SOURCE_ONLY_UNAPPLIED",
+  "original": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_quality_carrier_proposal/root_quality_carrier.py",
+    "sha256": "73adaf9ea02a643208439810e30a071d317bf5956720f88e3e22b0ce4fced78b",
+    "bytes": 23836
+  },
+  "candidate": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_carrier_proposal/root_quality_carrier.py",
+    "sha256": "4159ef7818d2bd90c82682d007dcaabf2ea9ae3b74e3c707ba77d9496f7915c2",
+    "bytes": 24084
+  },
+  "unchanged_function_text_sha256": {
+    "require": "4b08c72723cc9d0197676e48d580746ddf02640a1d9417516ccb26d77b4bef92",
+    "sha": "bf837a6f5154f26eabdff021dd120438dae0f8d7fd52c9c8c69e496b0ad1d8e2",
+    "write": "cb5fc5b9512e5998b9908fc4c1314ed986b9701fa8c2f1dfb45a8811a881a01b",
+    "call": "f257cdc527ba545b54484c8cdce1eb53bc88948e5e157ee5b7816e1da0f5831d",
+    "show": "d601d26ada2cab89825eb9dce40e13e08d8c90413f309f10179217fb53ecd8d4",
+    "pinned_json": "309794d9750f6f1f71833a17414a0053117ee481d469ec6d9d2acec3d08bda5f",
+    "default_argv": "69e60583070d1b1126c9065af5439f046497a27f887f2d1452aff740010c5376",
+    "launch_argv": "fde88d0061597c5b999b63839062f7fe113f4f0966f028a65cce3eaa514fa51a",
+    "validate_plan": "059fcd00afa5cb29e8c714ff8891d9330c307a0a17e39c62058edd6d64c96a6d",
+    "source_checks": "bd3bf4d4784030110f6a629480e8ee52719dc5501271ca70b52e82ff48725373",
+    "prepare": "7e34cce3b8f3214ee7055f971acea2ec4a8d6c4669113853f6010bb3e1bbfb1b",
+    "launch": "793857ed6d0b67cc508e4c0dd9de5a160d8fd72a2bf906fbf49382b6377bed80",
+    "observe": "256c77deab4e02f2549db0d31014c9e395dfcb41dcd91a79b6dd3085d7235f62",
+    "archive": "0b39bc581c606856cd2b8833dcf2b61b8a8e52568a48512b1e1fb37175899284"
+  },
+  "changed_functions": [
+    "inputs",
+    "readiness_contract",
+    "fast_runtime",
+    "configure",
+    "main"
+  ],
+  "comparison": "Exact source-text segments checked by AST parsing only; no imports/tests/actions. Fourteen evaluator protocol and campaign lifecycle functions remain unchanged."
+}

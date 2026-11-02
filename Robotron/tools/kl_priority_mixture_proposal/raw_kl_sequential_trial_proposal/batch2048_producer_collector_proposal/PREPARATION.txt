@@ -1,0 +1,43 @@
+UNCONSUMED SOURCE PREPARATION; NO AUTHOR IMPORTS, TESTS OR RUNTIME ACTIONS
+
+This collector supplies the previously missing producer capture/bind seam for
+reviewed2 CPU manifest e1c7/a331. It is not an activation controller. Default main
+prints a literal PLAN before any reads. Explicit --execute requires exact root
+job/source hashes, CUDA hidden, LD_PRELOAD and PYTHONPATH absent. No signals,
+service mutations, API, GPU, application imports, PT/model/replay body access or state
+writes occur. Only new bounded metadata output is written by explicit execution.
+
+The live stage brackets the actual adopted owner PID/kernel start/UID/command/
+cwd/exe/cgroup, selected process environment, exact UTC-us original unit show,
+and real source CSV FD/path identities. The owned canonical run directory must
+match ROBOTRON_RUN_DIR. It archives the genuine header and last complete row
+within the original file-size snapshot, retaining exact source byte offsets and
+hashes; append is allowed, replacement/truncation is refused. Each row must be
+UTC >= exact microsecond owner start and <= actual completed collection, with
+matching experiment, nonmeasurement False and all four clocks >= genuine boot.
+There is no5s CSV age gate: the actual writer cadence is30s. API5s evidence is a
+separate future controller responsibility. Live collection spans <=10 monotonic
+seconds and retains unchanged boot ID, clock brackets and immutable metadata.
+
+Bounds: <=4MiB each artifact and <=32MiB new artifact total per stage; source
+metadata <=4MiB per file; CSV header <=32768 bytes, suffix <=256KiB; proc reads
+explicit allowlist and individual limits; two systemctl show reads timeout3s
+and bounded stdout/stderr. No retry loops, unit scheduling, stop or promotion.
+A refusal may leave create-only evidence; root retains it rather than reusing
+or overwriting a directory. Original source/checkpoints/CPU reports untouched.
+
+Focused guards:17 authored stdlib methods. They use private temporary files and
+FakeHost; the real ReadOnlyHost path is tested only with OS reads mocked. A
+real selected a331 check_batch2048_context consumes captured/bound metadata
+without loading the numerical base or application. Tests are UNEXECUTED by the
+author. No current620749 proof, futureowner, acquisition, trial or CPU result is
+invented. Root alone executes future guards and owns all actual runtime tools.
+
+Integration remaining: select exact collector source/manifest in the new honest
+early-insurance and lifecycle/controller siblings; independently archive their
+owner/phase/boot/context metadata0444 before passing it; capture while alive;
+call bind only after FINAL acquisition exists; keep strict phase CPU and real
+future CE2048 private numerical readiness; validate actual source/control and
+owner/deadline/runtime before activation. Existing frozen families are unchanged.
+Root may run metadata guards during current quality; actual producer collection
+requires a separately precommitted2048 owner after all4 closure/freeze release.

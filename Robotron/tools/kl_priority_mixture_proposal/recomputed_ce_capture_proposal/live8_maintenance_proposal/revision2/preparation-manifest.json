@@ -1,0 +1,36 @@
+{
+  "schema": "robotron-live8-maintenance-source-preparation-v2",
+  "status": "SOURCE_PREPARED_NOT_EXECUTED_BY_AUTHORS",
+  "selected_controller": "run_live8_maintenance.py",
+  "selected_bank_helper": "bank_state_revision2.py",
+  "files": {
+    "run_live8_maintenance.py": {"sha256": "02f4fa028d4885fb59cad47eacf607d36df86b0b7ef41fddf5bd176cfb0891ea", "bytes": 51743},
+    "test_live8_maintenance.py": {"sha256": "ccfa8d7bc34021d6e5c9d279a344170fa2e978efb762ce925d144f4a691a2003", "bytes": 23175},
+    "bank_state_revision2.py": {"sha256": "e0c69fb38f5fec86e117edf42b4ff1ce2ff44b82b979c5240116121a7a1ce54f", "bytes": 16047},
+    "test_bank_state_revision2.py": {"sha256": "20f43e310d80fabaab7247e9e1e5afdffa9536e9d65f9adf9fbe95f131fc0769", "bytes": 14164},
+    "job.schema.json": {"sha256": "a784233f88f6b1802b702e2c9c756b037ad18fba7a22f1b34e2c9de7d51cad55", "bytes": 3918},
+    "PREPARATION.txt": {"sha256": "1cf0127ae42fcd5a615207c546b9325da69d1694d73577e1d095bc5c5e528ac3", "bytes": 3639},
+    "future-argv.json": {"sha256": "31fa255aa26cdc9b99e2f76dea8e00cd7913649e77318ffd3573329ecc6b79e9", "bytes": 1361},
+    "controller-source.patch": {"sha256": "616c8ef469c0130e608905f7dffd74a412df5f62a9e42647b1b162dc27db24c5", "bytes": 3482},
+    "test-source.patch": {"sha256": "9e4d685469725ec0b546d598250b699966a7b7ffab1b09c8be565d78d472d5e8", "bytes": 2363}
+  },
+  "preserved_original": {
+    "manifest": "../preparation-manifest.json",
+    "manifest_sha256": "8ee75d0d14d0cbed339a4799d5c62b5bcdaeb590f63d6245b03b053ed9ad0d58",
+    "controller_sha256": "8e61fd698f87c0da9fd09f09bb0452b9f4fb626b5403ecb4ed144f67a0a73e2c",
+    "test_sha256": "afb8eca5d3620b8e76df3885ad69300f18af1830a06abc7fdca4c005e635c304",
+    "independent_source_review_sha256": "e9814e73e8c662d312cf4ee8af3e015f923f5ab0d363f5b0db918541e0df0dbe",
+    "actual_original_tests": "Root reported35PASS, originalunitexit0 archived/released under run-26/live8-maintenance-guards-root-execution-reviewed1-20261017; not executed by source authors.",
+    "actual_preflight_refusal_sha256": "f44978fc7442f8d0a02a9178b37ee06cada019b2e1c836ae301cdb82cee3d61f",
+    "actual_preflight_scope": "read_job safely refused before output/actor/trainer/source actions because normal held MODEL_DIR env was absent; no live maintenance trial began"
+  },
+  "revision_scope": "Only a pure source-pinned held_boot_paths resolver plus read_job call replacement. Pinned configf279 default or exact explicit modeldir accepted without environment mutation; original ratchet0/latest/exact-graph/source/control/ownership/capture/recovery predicates remain unchanged.",
+  "boot_config_sha256": "f2794754a14e9f13c82b613aa131698246a08dc9021c18f1b78fda7c4b484498",
+  "authored_tests": {"unchanged_controller_contracts": 24, "new_boot_default_contracts": 3, "unchanged_bank_contracts": 11, "total_selected": 38, "author_executed": false},
+  "source_review": {"root": "Source-only narrow diff/test PASS reported before root-owned execution.", "audit_quality_result": "Independent SOURCE_ONLY narrow controller02f4/testccfa PASS; separate final all-file receipt follows.", "learning_review": "Independent SOURCE_ONLY narrow controller02f4/testccfa PASS; no imports/tests/runtime actions."},
+  "root_execution": null,
+  "actual_maintenance": null,
+  "insurance": {"receipt_sha256": "26bd3789f971db3c07bad91298bcd940fb964447f819c9bf8b09f73e4bcd166c", "CPU_proof_sha256": "83c898697675bae6445cbf3ec93c5a8134eb1ded8a13a9ca9e8a4fda34470e39", "saved_floor": {"training_steps": 2042467, "optimized_samples": 6918356992, "learner_frame_count": 423154160, "frame_count": 846584430}, "new_request": false},
+  "runtime_policy": "Root reviewed2 service Typeexec/RemainAfterExit with effective4800s runtime bound,900s graceful stop and no forced kill; original oneshot35test timing-bound limitation retained. No service created by authors.",
+  "limitations": ["No actual reload/live8 capture validated by this preparation", "No model/replay/tensor reads or numerical execution by authors", "FirstPREclock equality/bankselector+header evidence is not a coherent actor/FIFO/RNG/RAM anchor", "Actual CE only; targets/entropy/KL remain conditional; no learning/quality improvement claimed", "No protected/insurance rollback, ninth capture or unknownPID adoption"]
+}

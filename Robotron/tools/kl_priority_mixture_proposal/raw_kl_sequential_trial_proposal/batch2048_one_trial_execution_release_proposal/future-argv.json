@@ -1,0 +1,22 @@
+{
+  "actual_guard_execution": null,
+  "authored_methods": 5,
+  "future_controller_argv": null,
+  "future_deadline_argv": null,
+  "future_transition_argv": null,
+  "guard_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_proposal/test_execution_release.py",
+    "ExecutionReleaseContracts",
+    "-v"
+  ],
+  "guard_limits": {
+    "CUDA_VISIBLE_DEVICES": "",
+    "address_bytes": 536870912,
+    "cpu_s": 30,
+    "wall_timeout_s": 40
+  },
+  "status": "UNEXECUTED_SOURCE_ONLY_RELEASE_GUARDS"
+}

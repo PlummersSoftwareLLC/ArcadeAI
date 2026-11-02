@@ -1,0 +1,124 @@
+{
+  "schema": "robotron-first-LATCH-followup-observed-original-leg-audit-commands-v1",
+  "actual_plan": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-CE543M-vs-retained-CE2048-first8M-trial02-20261017/plan.json",
+    "sha256": null
+  },
+  "quality_owner": {
+    "pid": null,
+    "starttime_ticks": null,
+    "unit": "robotron-quality-CE543M-vs-CE2048-first8M-trial02-followup-20261017.service",
+    "invocation_id": null,
+    "cgroup": null
+  },
+  "R1_evaluator": {
+    "pid": null,
+    "starttime_ticks": null
+  },
+  "commands": [
+    {
+      "leg": 1,
+      "argv": [
+        "/usr/bin/python3.12",
+        "-I",
+        "-B",
+        "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_binding_proposal/audit_completed_leg.py",
+        "--execute",
+        "--game",
+        "/home/dave/source/repos/ArcadeAI/Robotron",
+        "--campaign",
+        "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-CE543M-vs-retained-CE2048-first8M-trial02-20261017",
+        "--plan-sha256",
+        null,
+        "--source-sha256",
+        "cf64e229a4e02042f43bc458c0c36936da00a8decc4df23babd153679fe7ea31",
+        "--binding-job",
+        "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-first-LATCH-followup-quality-root-preparation-20261017/root-quality-binding-job.json",
+        "--binding-job-sha256",
+        "25bde9295865770d9a0317ad32a65efa464abb3f71ec3d68f8adc0c8978eeb5b",
+        "--leg",
+        "1",
+        "--output",
+        "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-first-LATCH-followup-quality-original-row-leg01-audit"
+      ]
+    },
+    {
+      "leg": 2,
+      "argv": [
+        "/usr/bin/python3.12",
+        "-I",
+        "-B",
+        "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_binding_proposal/audit_completed_leg.py",
+        "--execute",
+        "--game",
+        "/home/dave/source/repos/ArcadeAI/Robotron",
+        "--campaign",
+        "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-CE543M-vs-retained-CE2048-first8M-trial02-20261017",
+        "--plan-sha256",
+        null,
+        "--source-sha256",
+        "cf64e229a4e02042f43bc458c0c36936da00a8decc4df23babd153679fe7ea31",
+        "--binding-job",
+        "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-first-LATCH-followup-quality-root-preparation-20261017/root-quality-binding-job.json",
+        "--binding-job-sha256",
+        "25bde9295865770d9a0317ad32a65efa464abb3f71ec3d68f8adc0c8978eeb5b",
+        "--leg",
+        "2",
+        "--output",
+        "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-first-LATCH-followup-quality-original-row-leg02-audit"
+      ]
+    },
+    {
+      "leg": 3,
+      "argv": [
+        "/usr/bin/python3.12",
+        "-I",
+        "-B",
+        "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_binding_proposal/audit_completed_leg.py",
+        "--execute",
+        "--game",
+        "/home/dave/source/repos/ArcadeAI/Robotron",
+        "--campaign",
+        "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-CE543M-vs-retained-CE2048-first8M-trial02-20261017",
+        "--plan-sha256",
+        null,
+        "--source-sha256",
+        "cf64e229a4e02042f43bc458c0c36936da00a8decc4df23babd153679fe7ea31",
+        "--binding-job",
+        "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-first-LATCH-followup-quality-root-preparation-20261017/root-quality-binding-job.json",
+        "--binding-job-sha256",
+        "25bde9295865770d9a0317ad32a65efa464abb3f71ec3d68f8adc0c8978eeb5b",
+        "--leg",
+        "3",
+        "--output",
+        "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-first-LATCH-followup-quality-original-row-leg03-audit"
+      ]
+    },
+    {
+      "leg": 4,
+      "argv": [
+        "/usr/bin/python3.12",
+        "-I",
+        "-B",
+        "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_binding_proposal/audit_completed_leg.py",
+        "--execute",
+        "--game",
+        "/home/dave/source/repos/ArcadeAI/Robotron",
+        "--campaign",
+        "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/quality-CE543M-vs-retained-CE2048-first8M-trial02-20261017",
+        "--plan-sha256",
+        null,
+        "--source-sha256",
+        "cf64e229a4e02042f43bc458c0c36936da00a8decc4df23babd153679fe7ea31",
+        "--binding-job",
+        "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-first-LATCH-followup-quality-root-preparation-20261017/root-quality-binding-job.json",
+        "--binding-job-sha256",
+        "25bde9295865770d9a0317ad32a65efa464abb3f71ec3d68f8adc0c8978eeb5b",
+        "--leg",
+        "4",
+        "--output",
+        "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/CE2048-trial02-first-LATCH-followup-quality-original-row-leg04-audit"
+      ]
+    }
+  ]
+}

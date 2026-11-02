@@ -1,0 +1,11 @@
+--- Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/run_immutable_bootstrap_live_pidfd_health_focused_CPU_v4.py
++++ Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/run_immutable_bootstrap_live_pidfd_health_focused_CPU_v5.py
+@@ -67,7 +67,7 @@
+         elapsed_s=time.monotonic()-started,Torch_imported=False,GPU_or_MAME_launched=False,
+         pure_SHA_bound_actual_registry_health_and_transport_functions=True,
+         temporary_immutable_synthetic_events_and_TCP_API_evidence=True,
+-        actual_selected_keeper_descriptor_collector_with_synthetic_readers_exercised=True,
++        selected_fixture_includes_actual_keeper_descriptor_collector_with_synthetic_readers=True,
+         live_proc_API_unit_pidfd_or_ioctl_operations_called=False,
+         actual_MAME_model_or_score_bodies_read=False,
+         actual_startup_authority_or_192_runtime_qualified=False,

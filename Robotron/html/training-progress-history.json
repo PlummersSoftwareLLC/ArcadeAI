@@ -1,0 +1,40 @@
+{
+  "status": "completed_candidate_rejected",
+  "metric": "First-game score at one-hour cutoff;32 games per leg, including unfinished games",
+  "legs": {
+    "R1": {
+      "n_scored": 32,
+      "n_completed": 0,
+      "n_censored": 32,
+      "mean_score": 6138171.875,
+      "median_score": 6130650.0,
+      "score_sum": 196421500
+    },
+    "C1": {
+      "n_scored": 32,
+      "n_completed": 21,
+      "n_censored": 11,
+      "mean_score": 4198343.75,
+      "median_score": 4019687.5,
+      "score_sum": 134347000
+    },
+    "R2": {
+      "n_scored": 32,
+      "n_completed": 1,
+      "n_censored": 31,
+      "mean_score": 6077397.65625,
+      "median_score": 6168512.5,
+      "score_sum": 194476725
+    },
+    "C2": {
+      "n_scored": 32,
+      "n_completed": 18,
+      "n_censored": 14,
+      "mean_score": 4632284.375,
+      "median_score": 5429850.0,
+      "score_sum": 148233100
+    }
+  },
+  "full_game_quality_qualified": false,
+  "policy_decision": "Protected model retained"
+}

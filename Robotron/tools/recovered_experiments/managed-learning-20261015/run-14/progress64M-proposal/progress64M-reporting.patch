@@ -1,0 +1,117 @@
+--- a/Robotron/tools/render_learning_progress.py
++++ b/Robotron/tools/render_learning_progress.py
+@@ -186,7 +186,7 @@
+         "B  GPU0 compiled · earlier transport", "Own 8M reference → 16M · ±1 SE",
+         "own 8M baseline", "#8064a2")
+     fixed_upper, fixed_gain = quality_series_axis(fixed_ax, data["fixed_transport_learning"],
+-        "C  GPU0 compiled · fixed transport, 3s", "Fresh 16M reference → 32M · ±1 SE",
++        "C  GPU0 compiled · fixed transport, 3s", "16M reference → 32M → 64M · latest +25.5% vs 32M",
+         "own fixed-transport 16M baseline", "#b87536")
+ 
+     trials = data["throughput"]["select_v1"]
+@@ -241,8 +241,7 @@
+         loc="upper left", bbox_to_anchor=(0, -.25), ncol=3, frameon=False, fontsize=9, columnspacing=1.5)
+     stage = data["plotting"]["confirmed_stage"]
+     fig.text(.07, .965, "Robotron · confirmed learning progress and training throughput", fontsize=20, fontweight="bold")
+-    fig.text(.07, .925, f"Confirmed quality through {stage}; three separate quality series · selected training layout: "
+-             f"{selected['actors']} actors / select-v1 / {selected['wait_us']} µs", fontsize=11, color="#536171")
++    fig.text(.07, .925, f"Confirmed quality through {stage}; three separate quality series · throughput panel shows historical trials", fontsize=11, color="#536171")
+     for y, line in zip([.115, .085, .055, .025], data["caption"].splitlines()):
+         fig.text(.07, y, line, fontsize=8.2, color="#647582", va="top")
+     fig.canvas.draw()
+@@ -265,7 +264,11 @@
+                 sidecar_score_axis_maximum=sidecar_upper,
+                 sidecar_gain_vs_same_backend_8M_pct=sidecar_gain,
+                 fixed_transport_score_axis_maximum=fixed_upper,
+-                fixed_transport_gain_32M_vs_16M_pct=fixed_gain,
++                fixed_transport_gain_32M_vs_16M_pct=(data["fixed_transport_learning"][1]["mean"] /
++                    data["fixed_transport_learning"][0]["mean"] - 1) * 100,
++                fixed_transport_gain_latest_vs_16M_pct=fixed_gain,
++                fixed_transport_gain_64M_vs_32M_pct=(data["fixed_transport_learning"][-1]["mean"] /
++                    data["fixed_transport_learning"][-2]["mean"] - 1) * 100,
+                 matplotlib=matplotlib.__version__, sources_unchanged=True,
+                 canvas_text_bounds_checked=True, png_integrity_verified=True)
+ 
+--- a/Robotron/DELL_SETUP.md
++++ b/Robotron/DELL_SETUP.md
+@@ -426,7 +426,7 @@
+ ./startmame.sh 128 novideo --supervise
+ ```
+ 
+-The wrapper requires an explicit interval of 100–1000 microseconds and applies
++The wrapper requires an explicit interval of 100–10000 microseconds and applies
+ `LD_PRELOAD` only when executing MAME, including supervisor respawns. The normal
+ launcher remains opt-in and retains its original behavior without the wrapper.
+ Confirm a current-PID `[robotron-socket-wait]` line for every actor (slot 0 logs
+@@ -436,13 +436,13 @@
+ fell about 97.2%; production gains depend on actor count. Paired evidence and
+ independent review are in `run-05/select-wait-embedded-summary.json` and
+ `run-05/select-wait-independent-review.json` under the campaign directory.
+-The current selected training layout is 128 actors at 1000 microseconds. Initial
++The initial 2026-10-15 trials selected 128 actors at 1000 microseconds. Initial
+ interval measurements produced about 66,040 samples/second and 61% GPU utilization,
+ versus 35,233 and 37% for 32 actors with busy polling. The 192-actor pilot yielded
+ only about 67,531 samples/second and averaged 7.5 samples per frame against the
+ configured cap of 8. These are sequential trials with a changing policy, not a
+-controlled timing benchmark; retain the lower-cost 128 layout pending a longer
+-confirmation. Frozen policy comparisons continue to use exactly 16 actors.
++controlled timing benchmark. Later 2026-10-16 trials below use a different main
++inference implementation and select 192 actors. Frozen policy comparisons continue to use exactly 16 actors.
+ 
+ `tools/run_frozen_sidecar.py` can evaluate an immutable checkpoint on the RTX PRO
+ 2000 while GB300 training continues. It constructs an inference-only actor with
+@@ -517,12 +517,50 @@
+ `50a374d33250713ba205024f85aaed3e50b62db913c29b2c2fb8c28392f051af`;
+ `logs/managed-learning-20261015/sidecar-fresh3-32M-confirmed-campaign.json` records
+ the exact source/boot/backend/checkpoint identities, saved clocks, and all tails.
+-The progress figure shows this fixed-transport 16M-to-32M series separately from
++The progress figure shows this fixed-transport 16M-to-32M-to-64M series separately from
+ the earlier GPU0 and GB300 curves. It does not connect the earlier 16M mean of
+ 100,100 to the 32M point or infer a cross-segment gain.
+ CPU regression evidence and exact applied hashes are recorded in
+ `logs/managed-learning-20261015/run-06/socket-recovery-applied.json`.
+ 
+-Host inference/refresh telemetry is documented in `tools/PIPELINE_REPORTING.md`.
+-Its CPU tests validate reporting and operation order; they do not establish live
+-overhead or a throughput improvement in the newly starting run09.
++The saved 64M policy passed another two independent full-tail GPU0 compiled
++cohorts on the same fixed-transport/3s protocol: 110 and 107 complete games,
++with means 144,405 and 160,058. Each leg independently exceeded the pooled
++32M mean by at least 5% and its median of 124,125. The descriptive 217-game
++pool has mean 152,123, median 146,575 and SE 3,283: +25.47% versus the two
++separately valid 32M cohorts pooled above. All started games, including late
++tails, completed; all 16 private slots were represented. Game and paired-slot
++bootstrap ratio sensitivities were [1.184, 1.330] and [1.207, 1.306]. These
++retain the same sequential-selection and host-pacing caveats, not formal
++confirmatory confidence. The policy is protected at
++`models_dqn/managed-incumbents/fresh3-64M-confirmed.pt`, SHA256
++`fe88785bf9475c50a7a3df6cd04ab52caf46b706a7f6e22c36b99c21bcc93244`;
++`logs/managed-learning-20261015/sidecar-fresh3-64M-confirmed-campaign.json`
++records both real receipts, saved policy clocks and unchanged private backend.
++
++Later efficiency evidence is dated 2026-10-16 UTC and uses fixed first-180s
++counter windows after settling. The 192-actor run13 reference at
++07:15:49.799–07:18:49.971 measured 64,825 samples/s. Run14 with native priority
++updates at 07:27:46.891–07:30:46.907 measured 66,918 samples/s: +3.23% against
++that recent reference (+1.31% against the older 66,052 reference), below both
++5% gain gates. Native execution counters confirmed successes with no fallback
++or native error in these windows. The 256-actor trial at
++07:34:05.934–07:37:06.048 fell to 60,537 samples/s (−9.54% versus native192)
++while samples/frame remained about 8; it was rejected and 192 restored. The
++main layout at this dated observation uses exact-size CUDA graphs, a 1ms
++collector wait and 1000µs native socket readiness. These sequential operational
++trials are not randomized same-policy tests or proof that every rate change
++was caused by the tested implementation. Evidence is in
++`logs/managed-learning-20261015/run-14/nativebatch-fleet-pilot-campaign.json`.
++
++The performance windows above had no main inference-deadline errors. Later,
++six main-only deadline errors clustered at 07:55:40.206 UTC, with affected
++connections closing and reconnecting; the entire live run is therefore not
++error-free. They were outside those performance windows and neither private
++64M quality cohort had a runtime timeout. Main graph/native fatal and fallback
++counters remained zero in the recorded observation. The nearby archive/save
++activity is correlation, not an established cause. See
++`run-14/sidecar-64M-confirm01-main-deadline-observation.json` under the campaign
++directory. Host inference/refresh telemetry is documented in
++`tools/PIPELINE_REPORTING.md`; its timers are host elapsed time, not GPU kernel
++time, and its CPU tests do not establish controlled live instrumentation overhead.

@@ -1,0 +1,81 @@
+{
+  "root_quality_carrier.py": {
+    "base_path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/root_quality_carrier.py",
+    "base_sha256": "4f3a0444c071781a09349a2020d0575bd12f95c78e56f4b3efbcdeaaa15d658d",
+    "unchanged_functions": {
+      "require": "4b08c72723cc9d0197676e48d580746ddf02640a1d9417516ccb26d77b4bef92",
+      "sha": "bf837a6f5154f26eabdff021dd120438dae0f8d7fd52c9c8c69e496b0ad1d8e2",
+      "write": "cb5fc5b9512e5998b9908fc4c1314ed986b9701fa8c2f1dfb45a8811a881a01b",
+      "call": "f257cdc527ba545b54484c8cdce1eb53bc88948e5e157ee5b7816e1da0f5831d",
+      "show": "d601d26ada2cab89825eb9dce40e13e08d8c90413f309f10179217fb53ecd8d4",
+      "pinned_json": "309794d9750f6f1f71833a17414a0053117ee481d469ec6d9d2acec3d08bda5f",
+      "launch_argv": "fde88d0061597c5b999b63839062f7fe113f4f0966f028a65cce3eaa514fa51a",
+      "source_checks": "bd3bf4d4784030110f6a629480e8ee52719dc5501271ca70b52e82ff48725373",
+      "prepare": "7e34cce3b8f3214ee7055f971acea2ec4a8d6c4669113853f6010bb3e1bbfb1b",
+      "launch": "793857ed6d0b67cc508e4c0dd9de5a160d8fd72a2bf906fbf49382b6377bed80",
+      "observe": "256c77deab4e02f2549db0d31014c9e395dfcb41dcd91a79b6dd3085d7235f62",
+      "archive": "0b39bc581c606856cd2b8833dcf2b61b8a8e52568a48512b1e1fb37175899284",
+      "configure": "c8c5ff9627437efb274e879f208a389f36a4a0ec565d416a8627e816fb936081",
+      "main": "a214e88008e1a21fa7e06fb225caea31d4e29b5f5484a5b1413fd67d2ea28a41"
+    },
+    "changed_functions": [
+      "inputs",
+      "default_argv",
+      "validate_plan",
+      "readiness_contract",
+      "fast_runtime"
+    ]
+  },
+  "audit_completed_leg.py": {
+    "base_path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/audit_completed_leg.py",
+    "base_sha256": "cbfee2947710b4ea8ffb2afeb8761f0d2658ad6eb222731d3baaed2158ce7698",
+    "unchanged_functions": {
+      "require": "c40d3ac8196e4ffcd6b0aab606bca6595c6543ec0f53f3274de08d4dd26b8445",
+      "digest": "7cae4bfc8c3cf52979aff7e17b43069cbaaa72560544581ce66a4a7af08d6911",
+      "unique_object": "8ea8d4c5f9c1fccdf604179f12166ec20505c180aa7122b08ae328a4c1b2d453",
+      "decode": "df16412b3134031a6505a207d818a97151d227ac76c48a228d6fc922a210fbdd",
+      "lines": "73a74b963f4c3c8dfe5ba05c333b9097d59d41957116ede9e2b50635f7869a8f",
+      "indexed": "df4b9ab56edc3507ca25040959b4c990a55899cc6f74f491cdaf2452fc748f5b",
+      "immutable": "98c7d81141d9528613f64692656da049e8fca2544d49c18480a574563e7d2181",
+      "validate_cpu_proof": "aa53345c112adc575894115534de63226880c3e8f6fc0584518a854dd6e36c24",
+      "validate_original_context": "ce33d4dff409854e256b1faeab6a3292621fa5b702e93448cd1e45de549b4505",
+      "classify_actor_lines": "76984a0012b82873c8a2df674ebc83f64fc1346b7f5e9424149269fc9cc04220",
+      "configure": "3ec8971a8dfe5717687f7a32b523403de62fdfce7d1760c3edc7182eba071b4e",
+      "main": "64f126090841fc1d9f256cc389c0d5fd1ae289020ef8b1fa0efc4cf0cfcf20be"
+    },
+    "changed_functions": [
+      "validate_future_plan",
+      "audit"
+    ]
+  },
+  "audit_scoring_body_exact_after_factual_provenance_normalization": true,
+  "quality_bindings.py": {
+    "b2e_base_path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/quality_bindings.py",
+    "b2e_base_sha256": "2396f8247143945b6ea70dcfff2684f709f5092ee4c775822d7f47f9f4cae176",
+    "unchanged_from_b2e": {
+      "require": "c40d3ac8196e4ffcd6b0aab606bca6595c6543ec0f53f3274de08d4dd26b8445",
+      "identity": "b6fbb34341b936bb3274d022a140893390804ac6ce2f0c80572841e04fd137b2",
+      "four": "3042ae949d0fd8143ddab8428d267613a9777f1d733d2fc3b52baa823b6eed94",
+      "flat": "db4808dddbd058aebcb7b09b7711c65d36381d84c2748f38ff6ccf0e066772c1",
+      "candidate_descriptor": "e69c8b2b4f256e0a83825d0b31d56519d7f64d2923b377211112b8c4c64c473a"
+    },
+    "check_cpu_original_prefix_exact": true,
+    "unchanged_from_proven_LR_metadata": {
+      "require": "c40d3ac8196e4ffcd6b0aab606bca6595c6543ec0f53f3274de08d4dd26b8445",
+      "identity": "b6fbb34341b936bb3274d022a140893390804ac6ce2f0c80572841e04fd137b2",
+      "read_bytes": "2fee1722d37d8af8433d48d3c7c987a9be147a44e055c82bd2809eaab848ec26",
+      "four": "3042ae949d0fd8143ddab8428d267613a9777f1d733d2fc3b52baa823b6eed94",
+      "flat": "db4808dddbd058aebcb7b09b7711c65d36381d84c2748f38ff6ccf0e066772c1",
+      "triple": "226ce38074a42a8d9cbfa013f503d04b22c8d296fd6af5f0acbf46fd731e3ee7",
+      "owner": "f62017427bbbcfa129a147e7bca4b4482bd3af4e312a2e139b20873ada3f3514",
+      "check_reference": "975b6a37709cb815a91d13ece7fa8a8873da5b51120371c53629088b69d1308a",
+      "terminal": "47bdf3e1f7aee8d47f52b00bce2ef01c2ac8b2abfe733e915735be4e15af9767",
+      "read": "61a2f429e3202c71fc0ec1d1086737510b15858c09728594f1b55bd4b5163991",
+      "read_raw": "2b5c4480cc5aa9ff06dd6c37d8f68c0e3f1b9cd04f31094021496d59b3d9cabd",
+      "same_raw": "43222d97699b3771c2b9143af499644d903ef3efe5585f501df22033b5e41c2a",
+      "finite": "5169f79ae64f72c7170bd3d8b481280e3f5ca72adaf7f4fb026e3ddd45b9ba64",
+      "check_CPU_command": "cc8df925e3d04dbd852393072c47c96187a081be5ebb5ffb8e5d812d06a0394c"
+    },
+    "new_truthful_scope": "OriginalCE.5 b2e snapshot+firstdurable8+8. Actualcapture NO payload_result vs historical393 genuinepayload. Strict sameowner phase/source4a; exact six original numerical archives and timer ownership/release chronology. No LR.25 transaction or lifecycle copies."
+  }
+}

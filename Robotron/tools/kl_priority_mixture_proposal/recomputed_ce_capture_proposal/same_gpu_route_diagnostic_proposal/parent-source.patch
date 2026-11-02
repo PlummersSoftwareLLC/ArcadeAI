@@ -1,0 +1,162 @@
+--- Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_recompute_proposal/cuda_trace_parent.py
++++ Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/same_gpu_route_diagnostic_proposal/cuda_trace_parent.py
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env python3
+-"""SOURCE-ONLY conditional reconstruction of eight existing live PRE captures.
++"""SOURCE-ONLY fixed attempt01 original4-versus-conditional5 route diagnostic.
+ 
+ Default prints a literal plan without helper/source/data reads or live queries.
+ Future --launch requires a separately reviewed exclusive resource window and a
+@@ -28,14 +28,14 @@
+ HERE = Path(__file__).parent
+ GAME = HERE.parents[3]
+ REPO = GAME.parent
+-SCHEMA = 'robotron-live8-conditional-ce-reconstruction-v1'
++SCHEMA = 'robotron-predeclared-attempt01-same-gpu-route-diagnostic-v1'
+ SEED = 20261017
+-VARIANTS = ('recompute8',)
++VARIANTS = ('route1',)
+ GIB, MIB = 1 << 30, 1 << 20
+ BOUNDS = dict(cpu_threads=2, memory_bytes=16*GIB, vram_allocator_bytes=12*GIB,
+               vram_process_bytes=13*GIB, artifact_bytes=6*GIB, tmpfs_bytes=128*MIB,
+               tasks=128, phase_timeout_s=180, total_timeout_s=600)
+-SOURCE_LOCK_SHA256 = '683278660704999645e93dfbc7aad1b20423a5755080a76ccad8f3af54c3c82f'
++SOURCE_LOCK_SHA256 = 'cb8874f65753b6f95a3c777b3dcd0d34e3af14227fd58a8c1feed0adcb2b97db'
+ LOCK_SHA = SOURCE_LOCK_SHA256
+ BLOCKED_NAMES = {
+     'cuda_trace_parent.py', 'cuda_trace_worker.py', 'checkpoint_at_frame.py',
+@@ -263,7 +263,8 @@
+     require(hashlib.sha256(data).hexdigest() == SOURCE_LOCK_SHA256, 'Reviewed source lock changed')
+     lock = json.loads(data)
+     require(lock['schema'] == SCHEMA and lock['seed'] == SEED and lock['variants'] == list(VARIANTS)
+-            and lock['attempts'] == 8 and lock['actual_training_attempts'] == 0 and lock['conditional_forwards'] == 8
++            and lock['attempts'] == 1 and lock['retained_acquisition_attempts'] == 8
++            and lock['actual_training_attempts'] == 0 and lock['conditional_forwards'] == 1 and lock['original4_forwards'] == 1
+             and lock['compiled_loss_outputs'] == 4
+             and lock['offline_outputs'] == 5 and lock['qualification_pass'] is False
+             and lock['batch_rows'] == 4096
+@@ -271,8 +272,9 @@
+             'Fixed trace validation protocol changed')
+     require('checkpoint' not in lock and 'fixture_recipe' not in lock
+             and lock['tolerances']['ce'] == dict(rtol=2e-4,atol=2e-5)
+-            and lock['reconstruction_policy']['attempt_indices'] == list(range(1,9))
+-            and lock['reconstruction_policy']['diagnostics_indices'] == [7], 'Live8 population/tolerance changed')
++            and lock['reconstruction_policy']['attempt_indices'] == [1]
++            and lock['reconstruction_policy']['forward_routes'] == ['original4','conditional5']
++            and lock['reconstruction_policy']['diagnostics_indices'] == [], 'Live8 population/tolerance changed')
+     for group in ('immutable_helpers', 'source_files'):
+         for name, item in lock[group].items():
+             if group == 'source_files':
+@@ -284,7 +286,11 @@
+             ('frozen_science_helpers', 'ba0039d406676f092309c6bf2248ddcf169af8960f60ed18b698ece1ea602f93'),
+             ('original_numeric_lock', 'd6ffdaae63d97bce24a18d1b11ed165b9e12484d17d65365415aab3c08beb13b'),
+             ('conditional_helpers','53ab48313f79bc6cdae6ba2ab70969a229ec478ff94b7d52a331c8c64dd37464'),
+-            ('acquisition_audit','5c73ef6520c36ff26ddf7334782ae7407692c566f4d526d24e087c6725feaaf4')):
++            ('acquisition_audit','5c73ef6520c36ff26ddf7334782ae7407692c566f4d526d24e087c6725feaaf4'),
++            ('reconstruction_helpers','182f008a969f55c2aa5952612f1631b3435cab61cbc5ae42fcd708c4f91a03a7'),
++            ('predecessor_parent','02af5b4ab846c1fe2579ceeba4ceabff8f05a4686c6debe490df56c1978779ba'),
++            ('prior_conditional8_result','29e9befde24e973573751b0dd65d8e5e6f7eed81ac560d32ab1242b75b564a86'),
++            ('prior_conditional8_cleanup_review','34ec366eeef3a52285946930663eea1bc60ae5b24e90737495b77c60b1a441c8')):
+         item = lock[name]
+         source = Path(item['source'])
+         require(item['sha256'] == expected and source.is_absolute() and source == source.resolve()
+@@ -492,23 +498,31 @@
+ def result_contract(result,variant):
+     require(result.get('status')=='OBSERVATIONS_COMPLETE' and result.get('variant')==variant
+             and result.get('qualification_pass') is False and isinstance(result.get('comparison_pass'),bool)
+-            and isinstance(result.get('interpretation_requires_review'),bool),'Role did not certify fixed scope/identity')
+-    require(result.get('optimizer_steps')==0 and result.get('explicit_worker_backward_calls')==0
+-            and result.get('update_guard_counts')==dict(optimizer_step=0,scaler_step=0,scaler_update=0)
+-            and result.get('grad_enabled') is True and result.get('conditional_recomputed') is True
+-            and result.get('executed_target_observed') is False and result.get('actual_attempts_in_this_process')==0,
+-            'Offline phase exceeded conditional grad-enabled forward scope')
+-    rows=result.get('attempts',[])
+-    require([row['index'] for row in rows]==list(range(1,9)) and all(row['status']=='OBSERVATIONS_COMPLETE'
+-            and row['qualification_pass'] is False and isinstance(row['comparison_pass'],bool)
+-            and row['comparison_pass']==row['ce_comparison']['passed']
+-            and row['ce_comparison']['tolerance']==dict(rtol=2e-4,atol=2e-5)
+-            and row['diagnostics'] is (row['index']==7) and row['original_optimizer_outcome']=='applied_admission'
+-            and row['update_guard_counts']==dict(optimizer_step=0,scaler_step=0,scaler_update=0) for row in rows),
+-            'Exactly all8 original routes/results at original CE tolerance required')
+-    require(result['comparison_pass']==all(row['comparison_pass'] for row in rows)
+-            and result['interpretation_requires_review']==any(row['interpretation_requires_review'] for row in rows),
+-            'Aggregate comparison/review flags disagree with original8 rows')
++            and isinstance(result.get('interpretation_requires_review'),bool), 'Diagnostic identity/scope differs')
++    require(result.get('selected_original_index')==1 and result.get('forward_routes')==['original4','conditional5']
++            and result.get('attempted_forward_routes')==['original4','conditional5']
++            and result.get('actual_attempts_in_this_process')==0 and result.get('executed_target_observed') is False
++            and result.get('grad_enabled') is True and result.get('explicit_worker_backward_calls')==0,
++            'Fixed first-index two-forward policy differs')
++    routes=result.get('routes',[])
++    zero=dict(optimizer_step=0,scaler_step=0,scaler_update=0)
++    require([row['route'] for row in routes]==['original4','conditional5'] and all(
++            row['index']==1 and row['status']=='OBSERVATIONS_COMPLETE' and row['diagnostics'] is False
++            and row['output_arity']==(4 if row['route']=='original4' else 5)
++            and row['update_guard_counts']==zero and row['model_before']==row['model_after']
++            and row['all_grads_none'] is True and isinstance(row['rng_observations']['post_changed'],bool)
++            for row in routes), 'Both unchanged-state same-PRE routes required')
++    require(routes[0]['model_before']==routes[1]['model_before']
++            and routes[0]['rng_observations']['pre']==routes[1]['rng_observations']['pre'],
++            'Independent routes did not restore the same PRE state/RNG')
++    comparisons=result.get('comparisons',{})
++    require(set(comparisons)=={'original4_vs_captured_actual','conditional5_vs_local_original4'} and all(
++            isinstance(row['passed'],bool) and row['tolerance']==dict(rtol=2e-4,atol=2e-5)
++            for row in comparisons.values()), 'Both separate original-tolerance comparisons required')
++    require(result['comparison_pass']==all(row['passed'] for row in comparisons.values())
++            and result['interpretation_requires_review']==(not result['comparison_pass'] or
++                any(row['rng_observations']['post_changed'] for row in routes)),
++            'Comparison/review flags disagree with retained observations')
+ 
+ 
+ def run_variant(base, layout, manifest_path, variant, cgroup, main, overall_deadline):
+@@ -638,10 +652,11 @@
+                     paths[name].mkdir(parents=True, mode=0o700)
+                 for name in ('inductor', 'triton', 'cuda', 'torch', 'extensions', 'tmp'):
+                     (paths['cache']/name).mkdir(mode=0o700)
+-                publish(base, paths['control'], dict(experiment='isolated-live8-conditional-ce', lr_scale=.5))
++                publish(base, paths['control'], dict(experiment='isolated-attempt01-same-gpu-route', lr_scale=.5))
+             cgroup = base.OwnedCgroup(delegated, nonce)
+             manifest = dict(schema=SCHEMA, explicit_launch=True, seed=SEED, variants=list(VARIANTS),
+-                attempts=8, actual_training_attempts=0, compiled_loss_outputs=4, offline_outputs=5, qualification_pass=False,
++                attempts=1, retained_acquisition_attempts=8, selected_original_index=1, forward_routes=['original4','conditional5'],
++                actual_training_attempts=0, compiled_loss_outputs=4, offline_outputs=5, qualification_pass=False,
+                 source_lock_sha256=SOURCE_LOCK_SHA256,
+                 parent_sha256=digest(__file__), worker_sha256=digest(HERE/'cuda_trace_worker.py'),
+                 launch_token=uuid.uuid4().hex, nonce=nonce, parent=base.identity(), output=str(directory),
+@@ -697,19 +712,21 @@
+                     raise RuntimeError('Owned cleanup requires recovery: ' + repr(errors))
+         aggregate = dict(status='OBSERVATIONS_COMPLETE', schema=SCHEMA, variants=results,
+             qualification_pass=False, comparison_pass=all(result['comparison_pass'] for result in results),
+-            comparison_scope='CONDITIONAL offline CE only, all8 at original CE tolerances; no four-output parity or learning qualification',
++            comparison_scope='Fixed attempt01: separate original4-vs-captured-actual and conditional5-vs-local-original4 CE; no all8 rescue or qualification',
+             interpretation_requires_review=any(result['interpretation_requires_review'] for result in results),
+             comparison_summary=[dict(variant=result['variant'], comparison_pass=result['comparison_pass'],
+                 interpretation_requires_review=result['interpretation_requires_review'],
+-                actual_training_capture=False,conditional_attempts=8) for result in results],
++                actual_training_capture=False,selected_original_index=1,forward_routes=['original4','conditional5']) for result in results],
+             source_lock_sha256=SOURCE_LOCK_SHA256, owned_cleanup_complete=True,
+             parent_process_scan_observations=dict(base.process_scan_observations),
+             limitations=['Completed diagnostic may include original-tolerance mismatches; exit0 is not parity qualification',
+-                         'Original8 actual captured PRE payloads retained without new actual attempt or replacement',
+-                         'Fresh offline grad-enabled five-output forwards have no explicit worker backward or owned optimizer step',
++                         'All8 original acquisition bindings preserved; only predeclared index1 is forwarded, with no new training attempt or selection',
++                         'Two fixed offline grad-enabled original4 then conditional5 forwards have no explicit worker backward or owned optimizer step',
++                         'Same-GPU route contrast alone does not exclude nondeterminism or uniquely establish a lowering cause',
++                         'Any result on index1 cannot rescue the prior original-tolerance all8 comparison failure',
+                          'Offline target/entropy/KL are conditional RECOMPUTED quantities, not the executed target',
+                          'Matching CE does not bound unobserved target entropy, KL, or replay priority ranking',
+-                         'Eight observed consumed batches do not establish replay-population or learning-quality conclusions',
++                         'One predeclared batch does not establish replay-population or learning-quality conclusions',
+                          'No actual live Rainbow agent/server lifecycle or throughput comparison',
+                          'Storage watcher is cooperative, not a filesystem quota',
+                          'Parent service original exit must be independently archived by root before release'])
+@@ -724,7 +741,8 @@
+     args = parser.parse_args(argv)
+     if not args.launch:
+         print(json.dumps(dict(status='PLAN_ONLY_UNEXECUTED', schema=SCHEMA, launch=False,
+-            variants=list(VARIANTS), batch_rows=4096, attempts=8, actual_training_attempts=0, compiled_loss_outputs=4, offline_outputs=5,
++            variants=list(VARIANTS), batch_rows=4096, attempts=1, selected_original_index=1, forward_routes=['original4','conditional5'],
++            actual_training_attempts=0, compiled_loss_outputs=4, offline_outputs=5,
+             qualification_pass=False, bounds=BOUNDS,
+             source_lock_sha256=SOURCE_LOCK_SHA256, numerical_imports=False,
+             runtime_queries=False, outputs_created=False, automatic_retry=False), indent=2))

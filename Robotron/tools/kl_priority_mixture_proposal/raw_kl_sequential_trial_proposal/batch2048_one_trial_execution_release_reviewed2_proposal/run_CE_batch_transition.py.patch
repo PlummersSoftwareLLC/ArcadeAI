@@ -1,0 +1,20 @@
+--- preserved6a/run_CE_batch_transition.py
++++ reviewed2/run_CE_batch_transition.py
+@@ -54,7 +54,7 @@
+ DRAFT_BLOCKERS = ()  # Explicit actual CE2048 prerequisites are validated before any lifecycle work.
+ PHASE_EARLY = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_early_phase_insurance_proposal/early_phase_insurance.py')
+ PHASE_EARLY_SHA = '2565f59040051a34d676bfa1aeb0eb028ecb758249152784fcb244a5180ea980'
+-PHASE_EARLY_MANIFEST_SHA = '58df4a4a395cd84445718a9030577dace400ed600912f2f81fc20f387fcbd22d6'
++PHASE_EARLY_MANIFEST_SHA = '58df4a4a395cd84445718a9030577dace400ed600912f2f81fc20f387fcbd22d'
+ _BOUNDARY = None
+ 
+ 
+@@ -75,7 +75,7 @@
+ 
+ 
+ 
+-RELEASE_VALIDATOR = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_proposal/execution_readiness.py')
++RELEASE_VALIDATOR = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_reviewed2_proposal/execution_readiness.py')
+ RELEASE_VALIDATOR_SHA = 'c01e71f00345f64996b469ff7b7a257a2e73e7d8e016914bc8225d3647df321f'
+ 
+ def execution_readiness():

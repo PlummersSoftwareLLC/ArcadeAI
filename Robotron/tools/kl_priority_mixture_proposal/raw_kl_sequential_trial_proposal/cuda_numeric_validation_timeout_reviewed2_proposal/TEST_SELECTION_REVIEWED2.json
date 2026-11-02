@@ -1,0 +1,31 @@
+{
+  "actual_test_or_GPU_execution": null,
+  "code_science_worker_lock_changed": false,
+  "future_env": {
+    "CUDA_VISIBLE_DEVICES": "",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "unset": [
+      "LD_PRELOAD",
+      "PYTHONPATH"
+    ]
+  },
+  "methods": 58,
+  "modules": [
+    "Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.cuda_numeric_validation_timeout_reviewed2_proposal.test_process_scan",
+    "Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.cuda_numeric_validation_timeout_reviewed2_proposal.test_storage_watcher",
+    "Robotron.tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.cuda_numeric_validation_timeout_reviewed2_proposal.test_stage_a_contract"
+  ],
+  "no_broad_discovery": true,
+  "original_source_manifest": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/cuda_numeric_validation_timeout_reviewed2_proposal/preparation-manifest.json",
+    "sha256": "0f547542b1afbb843243a0cc0292b7e96ab7dc52ae1c5cc5eb2f540a9d51936e"
+  },
+  "schema": "robotron-raw-kl-stage-a-timeout-reviewed2-test-selection-v1",
+  "status": "SOURCE_ONLY_UNEXECUTED",
+  "supersedes": "Only the stale original-package unittest lines in timeout-reviewed2 PREPARATION.txt. All selected actual modules must be from this600/900 sibling.",
+  "timing_authority": {
+    "parent_total_s": 900,
+    "source": "Selected sibling cuda_trace_parent.py BOUNDS, manifest TIMEOUT_PRECOMMIT and actual launch manifest. Inherited worker limitation text180s is superseded, never actual timeout authority.",
+    "worker_phase_s": 600
+  }
+}

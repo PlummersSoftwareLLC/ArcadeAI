@@ -1,0 +1,53 @@
+{
+  "schema": "robotron-game-boundary-diagnostics-activation-bound-source-v2",
+  "status": "SOURCE_ONLY_UNAPPLIED_UNEXECUTED",
+  "base_sha256": {
+    "Robotron/Scripts/dqn/socket_server.py": "8fe556f7507547a97839072bbcecc98384c2b395c8ae789ac8ee062f55bca721",
+    "Robotron/Scripts/dqn/game_journal.py": "27c6143851aff73dd355db89e1ffaa65d90d215b91921406050387be5ad69029",
+    "Robotron/tools/run_frozen_sidecar.py": "1b3610c23c0fc94075796259195840471f60575166223bc3a3da51484e863a2b",
+    "Robotron/tools/run_quality_campaign.py": "2485394451ab9bbce5c0c55fa50f07fcbab793380c5f3b84a594c051e7874e63"
+  },
+  "new_files_sha256": {
+    "socket_server_candidate.py": "d99dd2782fc3e8f67670aefb398ed0dfdc1fd859432e24c8bd8dea4da2825214",
+    "game_journal_candidate.py": "10827d786becfd19c386bddfbce85f1ab5ace5349d87717305e4044a2843edb0",
+    "run_frozen_sidecar_candidate.py": "cd034413c2fd8a56bb9d22f8df86889939edfad041ee4e2e0210a831b5f9fe90",
+    "run_quality_campaign_candidate.py": "574e56f28499c751c639ee8a3474eecd5ca8de8c896da3dd44d5e4fc2fe60128",
+    "test_game_boundary_diagnostics.py": "74cf39871ee26a75b2668a7559e4f8f9663c802aabfb982ac3db0808532c8e13",
+    "PREPARATION.txt": "9fe13b06fe8f282b6a8e7acb5c31f064134dbee265d6018b8251aee1d606247c",
+    "unapplied.patch": "aabeeff0f549da3c73022bb5a1b6ea2f83e65ed36fdec2f75cb9af9a16edfb76"
+  },
+  "preserved_original_revision": {
+    "source_lock_sha256": "6141c48d36a7654be62b9dd11c7fe8e3627a15763361cb24f0b9274fe7d14583",
+    "all_five_pinned_files_unchanged": true,
+    "root_actual_ten_test_completion": "Robotron/logs/managed-learning-20261015/run-26/game-boundary-diagnostics-private-tests-reviewed1-20261017/execution-completion.json",
+    "completion_sha256": "183b92120f9169aef9554badc5f4fbb99eb1f27175d25bcf2726f0f4dd1901a7",
+    "actual_original_test_exit": 1,
+    "original_nine_semantic_tests_passed": true,
+    "original_exact_diff_failure_preserved": true
+  },
+  "activation": {
+    "default": false,
+    "same_bool_all_four_legs": true,
+    "job_plan_receipt_and_campaign_command_bound": true,
+    "ambient_environment_overridden": true,
+    "requires_private_replay_disabled_server": true,
+    "legacy_missing_receipt_flag_means_false": true
+  },
+  "first_bad_play_supplement": {
+    "normal_completion_or_disconnect_record_only": true,
+    "admission_line_rewritten": false,
+    "additional_write": false,
+    "crash_durable_before_normal_write": false,
+    "eligibility_changed": false
+  },
+  "validation": {
+    "authored_stdlib_private_methods": 15,
+    "methods_executed": 0,
+    "application_imports_or_compile": false,
+    "patch_application": false,
+    "live_or_gpu_or_model_or_replay_queries": false,
+    "full_handle_client_lifecycle_validated": false,
+    "existing_journal_suite_on_revision_validated": false,
+    "source_peer_review": "requested separately; pending"
+  }
+}

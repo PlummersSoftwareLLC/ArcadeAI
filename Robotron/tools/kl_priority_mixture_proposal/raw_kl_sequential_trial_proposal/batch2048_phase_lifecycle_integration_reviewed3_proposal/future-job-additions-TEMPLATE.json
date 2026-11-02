@@ -1,0 +1,36 @@
+{
+  "status": "SOURCE_ONLY_PARTIAL_UNBOUND_NOT_AN_EXECUTABLE_JOB",
+  "schema": "robotron-ce-batch-profile-transition-job-reviewed3-v1",
+  "activate_additions": {
+    "mode": "activate_batch2048",
+    "phase_early_insurance_result": null,
+    "producer_capture": null,
+    "producer_collector": null,
+    "helper_pins": {
+      "phase_early": null
+    },
+    "prerequisites": {
+      "actual_CE2048_numeric": null,
+      "root_precommit": null
+    }
+  },
+  "return_additions": {
+    "mode": "return_batch4096",
+    "phase_early_insurance_result": null,
+    "producer_capture": null,
+    "producer_collector": null,
+    "insurance_verification": null,
+    "insurance_receipt": null,
+    "verifier": {
+      "python": null,
+      "python_identity": null,
+      "context": null
+    }
+  },
+  "actual_activation_job": null,
+  "actual_return_job": null,
+  "actual_owner": null,
+  "actual_checkpoints": null,
+  "actual_numeric_readiness": null,
+  "actual_precommit": null
+}

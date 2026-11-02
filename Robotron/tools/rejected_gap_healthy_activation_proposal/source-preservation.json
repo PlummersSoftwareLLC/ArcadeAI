@@ -1,0 +1,75 @@
+{
+  "schema": "robotron-rejected-gap-healthy-activation-source-preservation-v1",
+  "status": "SOURCE_ONLY_UNEXECUTED",
+  "reused_by_reference": {
+    "healthy": {
+      "source": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/accepted-newgame-healthy-CE-maintenance-source-preparation-20261017/run_healthy_ce_maintenance.py",
+        "sha256": "f007ad2723fd5fe5b2fd4c0c95723e23b931c60c0938b63114f73e1f71c4b1ae",
+        "bytes": 33875,
+        "identity": {
+          "device": 2304,
+          "inode": 81794484,
+          "bytes": 33875,
+          "mtime_ns": 1792287528749942480,
+          "ctime_ns": 1792287803122543525,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "functions": {
+        "runtime_class": "b495e7463571ede2e7aa5447fab39a40fc3bc3ab9e47069b9e14bc846107e049",
+        "archive_report": "ec7b825c0341ed781ce8846352a9d852d2327eb6e60255976a58c363c52b2b46",
+        "start_repair_CE4096": "27e78c2a6f4610f0bf3e7cddc73879c1a421e6e71df519574e439d54314572a5",
+        "ready_with_budget": "cb4cc675b757df83b7030953f51293ab7f35573f32f9ab66bb339732aff2720e"
+      }
+    },
+    "coverage": {
+      "source": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/accepted-newgame-failed-maintenance-forward-recovery-source-preparation-20261017/run_forward_recovery.py",
+        "sha256": "b6d06f94c454cb4106aab0bf6316c62f9b85e134744f176f6389004e976f606e",
+        "bytes": 26804,
+        "identity": {
+          "device": 2304,
+          "inode": 81920331,
+          "bytes": 26804,
+          "mtime_ns": 1792289574120918820,
+          "ctime_ns": 1792289650769910479,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "functions": {
+        "TransitionCoverage": "b17383982738ae964f5526cb984a35093882eb437357902779c98daa7dfa46e7",
+        "reconnect_and_strict": "94e4c63e1cd4e9338d9a02aa849ae2cde9ab898382db6b27ffaf308573a09691"
+      }
+    }
+  },
+  "never_selected": [
+    "f007.validate",
+    "f007.maintain",
+    "f007.wait_current_CSV4096",
+    "b6.validate",
+    "b6.runtime_for_absence",
+    "b6.recover"
+  ],
+  "added": [
+    "truthful healthy validator",
+    "four exact source destination hashes",
+    "current release and original43 joins",
+    "explicit poststart telemetry1 env",
+    "trainer-only command gate",
+    "full original192/supervisor/mask/global actor guard",
+    "newest-before-write one-start ordering"
+  ],
+  "held_source_edits": false,
+  "project_imports": false,
+  "tests_executed": false,
+  "actual_owner": null,
+  "actual_newest_checkpoint": null,
+  "actual_new_phase": null,
+  "actual_result": null,
+  "ctime_policy": "Seal each owned file once; later declared/observed metadata differences must be recorded rather than hidden."
+}

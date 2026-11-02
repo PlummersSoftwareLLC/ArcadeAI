@@ -1,0 +1,39 @@
+--- a/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_transition_adapter_proposal/job.schema.json
++++ b/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_transition_post_stop_floor_companion/job.schema.json
+@@ -1,6 +1,6 @@
+ {
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+-  "title": "Root raw-KL one-shot transition actual job; no future job supplied",
++  "title": "Root raw-KL transition v2 with explicit post-stop ending floor; no actual job",
+   "type": "object",
+   "required": [
+     "schema",
+@@ -36,11 +36,12 @@
+     "timeouts",
+     "insurance_verification",
+     "insurance_receipt",
+-    "current_completed_request"
++    "current_completed_request",
++    "ending_proof"
+   ],
+   "properties": {
+     "schema": {
+-      "const": "robotron-raw-kl-owned-transition-job-v1"
++      "const": "robotron-raw-kl-owned-transition-job-v2"
+     },
+     "mode": {
+       "enum": [
+@@ -191,6 +192,13 @@
+     },
+     "current_completed_request": {
+       "$ref": "#/$defs/pin"
++    },
++    "ending_proof": {
++      "description": "Null activation; return binds exact observer job, activation receipt and first terminal decision plus one candidate descriptor iff LATCH. Pure code validates full semantics.",
++      "type": [
++        "object",
++        "null"
++      ]
+     }
+   },
+   "additionalProperties": false,

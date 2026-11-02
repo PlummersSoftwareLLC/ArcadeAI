@@ -1,0 +1,13 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/stop_current_continuous_closed_fleet_continuation_v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/stop_current_continuous_closed_fleet_continuation_v5.py
+@@ -141,8 +141,8 @@
+     history=job['released_continuation_failure']
+     require(set(history)=={'job','config','outcome','controller_closeout'},'Exact second failed maintenance history required')
+     prior=read(history['job']);cfg=read(history['config']);outcome=read(history['outcome']);closed=read(history['controller_closeout'])
+-    require(prior['source']['path']==str(Path(__file__).with_name('stop_current_continuous_closed_fleet_continuation_v3.py'))
+-        and prior['source']['sha256']=='9ed5fe275ea7cb43eb8a21663e8ed057c5b67bbbadb18440a0f8a60ef78554c7'
++    require(prior['source']['path']==str(Path(__file__).with_name('stop_current_continuous_closed_fleet_continuation_v4.py'))
++        and prior['source']['sha256']=='38049acf464dedb27767c6f37fa4b891d7343ba3c45408899c3b96a5f51c87aa'
+         and prior['trainer']==job['trainer']and prior['fleet']==job['fleet']
+         and prior['closed_fleet_continuation']==job['closed_fleet_continuation']
+         and prior['original_population']==job['original_population']

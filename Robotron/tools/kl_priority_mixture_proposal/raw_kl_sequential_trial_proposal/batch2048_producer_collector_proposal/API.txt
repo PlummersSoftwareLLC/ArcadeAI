@@ -1,0 +1,40 @@
+SOURCE-ONLY TWO-STAGE CE2048 PRODUCER API
+
+capture_live(spec, output, host=None) -> capture FULL_PIN
+  spec has exactly schema, profile, owner, owner_pin, phase_record,
+  boot_verification, source_pins, game_root, environment, argv, cwd, exe,
+  experiment, boot_id. schema is robotron-batch2048-producer-live-capture-spec-v1.
+  owner_pin is independently owned0444 JSON decoding to the exact five-key owner.
+  profile is the exact e755/764-byte profile FULL_PIN. source_pins maps the eight
+  phase CPU source basenames to actual as-of-capture FULL_PINs; installed sources
+  may be writable, but every independent captured archive is owned0444/nlink1.
+  phase_record and boot_verification are immutable independent metadata; never
+  pass a writable legacy CPU report. The phase record is a new CE->CE founder.
+  environment is the exact actual selected DQN_/ROBOTRON_/CUDA_/TORCHINDUCTOR_
+  process map. Both dormant capture flags must be absent. argv/cwd/exe and boot_id
+  describe the actual adopted future2048 owner, never current620749 by inference.
+  output is a NEW directory. Default host performs only bounded exact-owner
+  proc reads, precise UTC-us systemctl show, and bounded source CSV FD reads.
+  Injected host has clock(), observe(owner), csv(path), used only by stdlib guards.
+
+bind_capture(capture_FULL_PIN, opaque_source_FULL_PIN, FINAL_acquisition_FULL_PIN,
+             output) -> producer_observation FULL_PIN
+  Call only after the actual acquisition has been published. The source .pt PIN
+  is opaque metadata: the collector never opens/hashes/stats the checkpoint.
+  The immutable acquisition joins the same actual owner/phase/boot/experiment
+  and exact source triple. It may be a later historical newest_stopped capture.
+  No retired process/unit, original growing CSV or installed source is reopened.
+  Original UTC microsecond unit start, MainPID, observation times, CSV source
+  offsets/FD identities and environment remain unchanged in the bound evidence.
+  The resulting exact a331 observation is PENDING phase CPU validation; it never
+  claims finite tensors, valid saved phase, optimizer proof or trial readiness.
+
+Ordering: live capture while the owner is alive -> save/freeze or stop/freeze ->
+actual FINAL acquisition publication -> bind_capture -> selected a331 phase CPU.
+An early-insurance snapshot may complete before collection, but the same owner
+must remain alive through collection; the managed save changes no actor flags.
+No background callback may suppress the independent deadline or 1Hz observer.
+
+The selected CPU wrapper remains the schema/semantic authority. Capture only
+accepts actual2048 rows. Startup client0 with no2048 row must use the separately
+reviewed historical4096 exception; this collector never fabricates that path.

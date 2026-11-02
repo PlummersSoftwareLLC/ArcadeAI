@@ -1,0 +1,120 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_registry_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-v4-cohort-original03/continuous_physical192_registry_v3.py
+@@ -167,6 +167,50 @@
+             and tcp['remote'] == conn['socket_endpoints']['server']
+             and tcp['remote'][1] == 9998, 'Initial process-owned TCP endpoint join differs')
+     return conn
++
++
++def completed_prefix(case):
++    """Exact immutable old-cohort bytes; never an authority for new EVAL rows."""
++    c=case['continuous'];record_pin=c['completed_clients_prefix'];value=read_pin(record_pin)
++    require(set(value)=={'schema','canonical_path','canonical_identity','archive','prefix_bytes',
++                        'prefix_sha256','cohort_min_spawn_unix_s'}
++            and value['schema']=='robotron-prior-cohort-EVAL-completed-prefix-v1'
++            and value['canonical_path']==str(Path(c['eval_journal_directory'])/'completed_clients.jsonl')
++            and set(value['canonical_identity'])=={'device','inode','mode','uid','nlink'}
++            and value['canonical_identity']['uid']==os.getuid()
++            and value['canonical_identity']['nlink']==1
++            and type(value['prefix_bytes'])is int and 0<=value['prefix_bytes']<=262144
++            and value['archive']['bytes']==value['prefix_bytes']
++            and value['archive']['sha256']==value['prefix_sha256'],
++            'Exact immutable prior-cohort completed prefix authority required')
++    for entry in (record_pin,value['archive']):
++        require(case['inputs'].get(entry['path'])==dict(sha256=entry['sha256'],identity=entry['identity']),
++                'Completed-prefix record/archive must be exact held inputs')
++    raw=read_pin(value['archive'],as_json=False)
++    require(len(raw)==value['prefix_bytes'] and hashlib.sha256(raw).hexdigest()==value['prefix_sha256']
++            and (not raw or raw.endswith(b'\n')),'Prior completed prefix bytes/commit boundary differs')
++    cutoff=number(value['cohort_min_spawn_unix_s']);require(cutoff>0,'Actual new-cohort spawn cutoff required')
++    for line in raw.splitlines(keepends=True):
++        row=json.loads(line)
++        require(number(row['start_unix_s'])<number(row['end_unix_s'])<cutoff,
++                'Skipped completed row is not strictly before the new cohort')
++    return value,raw
++
++
++def validate_completed_prefix_capture(case,sample):
++    value,raw=completed_prefix(case);capture=sample['EVAL_completed_prefix_capture']
++    require(capture['record']==case['continuous']['completed_clients_prefix']
++            and capture['canonical_path']==value['canonical_path']
++            and capture['raw_prefix_wire'].encode()==raw
++            and capture['prefix_bytes']==value['prefix_bytes']
++            and capture['prefix_sha256']==value['prefix_sha256']
++            and all(capture['canonical_identity'][k]==v for k,v in value['canonical_identity'].items())
++            and type(capture['canonical_identity']['bytes'])is int
++            and value['prefix_bytes']<=capture['canonical_identity']['bytes']<=262144
++            and sample['capture_started_monotonic_s']<=number(capture['before_monotonic_s'])
++            <=number(capture['after_monotonic_s'])<=sample['capture_ended_monotonic_s']<=sample['monotonic_s'],
++            'Actual completed prefix capture/identity/bytes/bracket differs')
++    return value
+ 
+ 
+ def validate_case(case):
+@@ -236,7 +280,9 @@
+             and b['original_membership'] == c['original_membership']
+             and set(b['physical_connections']) == SLOTS,
+             'No complete immutable original192 physical bootstrap barrier')
++    prefix,_=completed_prefix(case)
+     births, cids, tokens = set(), set(), set()
++    spawn_starts=[]
+     for slot, row in c['original_slots'].items():
+         require(set(row) == set(ORIGINAL_FIELDS) and row['eval_only'] is case['slot_eval'][slot],
+                 'Immutable original row fields/role differ')
+@@ -244,6 +290,7 @@
+         require(b['physical_connections'][slot] == row['connection_binding'],
+                 'Barrier lacks this original physical connection')
+         intent = event(case, row['spawn_intent'], 'spawn-intent', int(slot))
++        spawn_starts.append(number(intent['unix_s']))
+         spawned = event(case, row['original_child_receipt'], 'original-child', int(slot))
+         input_env = c['input_environment_by_slot'][slot]
+         require(input_env['ROBOTRON_CLIENT_SLOT'] == slot and input_env['ROBOTRON_ACTOR_ROUND'] == '1'
+@@ -278,6 +325,8 @@
+         require(pair not in births and conn['client_id'] not in cids and conn['token'] not in tokens,
+                 'Duplicate original physical birth/CID/connection token')
+         births.add(pair); cids.add(conn['client_id']); tokens.add(conn['token'])
++    require(prefix['cohort_min_spawn_unix_s']==min(spawn_starts),
++            'Historical-prefix cutoff is not the actual earliest new original spawn')
+     require(Path(c['eval_journal_directory']).is_absolute(), 'Exact ordinary main journal directory required')
+     witness=c.get('eval_exit_witness')
+     if witness is not None:
+@@ -401,7 +450,7 @@
+     return result
+ 
+ 
+-def eval_natural(case, sample, slot, row, previous=None):
++def eval_natural(case, sample, slot, row, previous=None, completed=None):
+     """Independent exact producer lines; never backdate a supervisor event."""
+     evidence = sample.get('EVAL_journal_evidence',{}).get(slot)
+     if evidence is None:
+@@ -418,6 +467,13 @@
+             and evidence['main_path'] == str(Path(case['continuous']['eval_journal_directory'])/'games.jsonl')
+             and evidence['retirement_path'] == str(Path(case['continuous']['eval_journal_directory'])/'completed_clients.jsonl'),
+             'Exact fsynced main/retirement canonical journal-line join differs')
++    prefix=completed if completed is not None else completed_prefix(case)[0]
++    require(type(evidence['retirement_line_offset'])is int
++            and evidence['retirement_line_offset']>=prefix['prefix_bytes']
++            and type(evidence['retirement_prefix_identity']['bytes'])is int
++            and evidence['retirement_line_offset']+len(raw)<=evidence['retirement_prefix_identity']['bytes']<=262144
++            and all(evidence['retirement_prefix_identity'][k]==v for k,v in prefix['canonical_identity'].items()),
++            'New EVAL evidence is not within the exact current-cohort journal suffix')
+     original = case['continuous']['original_slots'][slot]
+     conn = binding(case,slot,original['connection_binding'],original['original_child'])
+     spawn = event(case,original['spawn_intent'],'spawn-intent',int(slot))
+@@ -533,6 +589,7 @@
+ def validate_snapshot(case, sample, previous=None):
+     """Physical TRAIN truth comes from raw actors/current handlers, never labels."""
+     c=case['continuous'];value=sample['status']
++    completed=validate_completed_prefix_capture(case,sample)
+     require(value['schema']==SCHEMA and value['mode']==MODE and value['epoch']==c['epoch']
+             and value['supervisor']==c['supervisor'] and value['trainer']==c['trainer']
+             and value['rolemap']==c['rolemap'] and value['source_authority']==c['source_authority']
+@@ -563,7 +620,7 @@
+             require(slot in actors and slot in current, 'Original TRAIN lacks current physical actor/handler/TCP')
+             state='active_train'
+         else:
+-            proof=eval_natural(case,sample,slot,row,previous)
++            proof=eval_natural(case,sample,slot,row,previous,completed)
+             if proof is None:
+                 require(slot in actors and slot in current, 'Original EVAL vanished without exact natural terminal')
+                 state='active_eval'

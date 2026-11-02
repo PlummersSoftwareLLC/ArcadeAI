@@ -1,0 +1,191 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/lr125_phase_cpu_verifier_proposal_20261023/verify_recipe_phase_snapshot.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-preview-LR0625-hot-verifier-original01-preparation-20261027/verify_recipe_phase_snapshot_lr0625_v1.py
+@@ -1,9 +1,9 @@
+ #!/usr/bin/env python3
+ """Recipe-bound CE phase CPU snapshot; default prints a read-free literal PLAN.
+ 
+-The raw 9ef source remains pinned. Only three declared context/LR literals may
+-be specialized in memory for .125; no checkpoint metadata is normalized. The
+-actual saved Adam LR must match 6.25e-6 or 2.5e-5 for the chosen full recipe.
++The raw 9ef source remains pinned. Only three declared context/LR literals are specialized in memory for .0625.
++The actual saved Adam LR must match3.125e-6; actual boot .125 metadata remains
++historical and unchanged. A mandatory one-field HOT transition is checked.
+ Authorship is not execution, syntax verification or numerical proof.
+ """
+ import argparse
+@@ -25,9 +25,9 @@
+ STRICT_PATH = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/strict_phase_base.py')
+ STRICT_SHA256 = '9ef38e17e1b9eee3f6c43e40005812f2ebe3cff16d08bf61d3e820c2d41134c8'
+ RECIPE_PATH = HERE / 'recipe.py'
+-RECIPE_SHA256 = '063c41f3717023098738ac8549f4b682b16ad775a1f5d11a8fc9e1fe52e3b1f4'
+-SCHEMA = 'robotron-phase-snapshot-checkpoint-CPU-job-v1'
+-RESULT_SCHEMA = 'robotron-phase-snapshot-checkpoint-CPU-result-v1'
++RECIPE_SHA256 = '907345a666319033bb422e426438b101bff95ce7418a1ede97e092e377ed2f4b'
++SCHEMA = 'robotron-LR0625-hot-transition-phase-snapshot-CPU-job-v1'
++RESULT_SCHEMA = 'robotron-LR0625-hot-transition-phase-snapshot-CPU-result-v1'
+ ACQUISITION_SCHEMA = 'robotron-owned-phase-snapshot-acquisition-v1'
+ PHASE_SCHEMA = 'robotron-priority-metric-phase-v1'
+ CLOCKS = ('training_steps', 'optimized_samples', 'learner_frame_count', 'frame_count')
+@@ -85,21 +85,21 @@
+     lr_gear='climb', lr_anchor_step=0., optimizer_lr=2.5e-5, optimizer_eps=1.5e-4,
+     fused=True, gamma=.995, num_atoms=51, v_min=-10., v_max=50.)
+ RECIPE_REPLACEMENTS = (
+-    (b'learning_control_lr_scale=.5,', b'learning_control_lr_scale=.125,'),
+-    (b'optimizer_lr=2.5e-5,', b'optimizer_lr=6.25e-6,'),
+-    (b"control['lr_scale'] == .5", b"control['lr_scale'] == .125"),
++    (b'learning_control_lr_scale=.5,', b'learning_control_lr_scale=.0625,'),
++    (b'optimizer_lr=2.5e-5,', b'optimizer_lr=3.125e-6,'),
++    (b"control['lr_scale'] == .5", b"control['lr_scale'] == .0625"),
+ )
+ 
+ 
+ def infer_recipe(context):
+-    """Exactly two full held contexts; never relabel saved .125 as historical .5."""
++    """Only the full .0625 saved context; never relabel an actual .125 checkpoint."""
+     require(type(context) is dict and set(context) == set(HISTORICAL_HELD_CONTEXT),
+             'Exact full held recipe context required')
+     require(all(type(context[k]) is type(v) for k, v in HISTORICAL_HELD_CONTEXT.items()),
+             'Held recipe types differ')
+     scale = context['learning_control_lr_scale']
+-    require(scale in (.125, .5), 'Only separately reviewed .125 or .5 LR scale allowed')
+-    scheduled = 6.25e-6 if scale == .125 else 2.5e-5
++    require(type(scale) is float and scale == .0625, 'This companion accepts only the prospective .0625 snapshot recipe')
++    scheduled = 3.125e-6
+     expected = dict(HISTORICAL_HELD_CONTEXT, learning_control_lr_scale=scale, optimizer_lr=scheduled)
+     require(context == expected, 'Full recipe differs beyond the selected LR scale/scheduled LR')
+     return dict(priority_metric='ce', batch_size=4096, learning_control_lr_scale=scale,
+@@ -113,7 +113,7 @@
+     recipe = infer_recipe(context)
+     effective = data
+     replacements = []
+-    if recipe['learning_control_lr_scale'] == .125:
++    if recipe['learning_control_lr_scale'] == .0625:
+         for old, new in RECIPE_REPLACEMENTS:
+             require(effective.count(old) == 1 and effective.count(new) == 0,
+                     'Recipe specialization literal boundary differs')
+@@ -168,7 +168,7 @@
+         return historical, provenance
+     module = types.ModuleType('_recipe_specialized_phase_snapshot_strict_body')
+     module.__file__ = str(STRICT_PATH)
+-    filename = str(STRICT_PATH) + '::recipe125-effective-' + provenance['effective_source_sha256']
++    filename = str(STRICT_PATH) + '::recipe0625-effective-' + provenance['effective_source_sha256']
+     exec(compile(effective, filename, 'exec'), module.__dict__)
+     require(module.HELD_RECIPE_CONTEXT == context, 'Effective strict context differs')
+     return module, provenance
+@@ -196,7 +196,7 @@
+     require(base.fingerprint(path) == pin, 'Root job changed while parsing')
+     fields = {'schema', 'verifier_sha256', 'strict_phase_base_sha256', 'original_strict_base_sha256',
+               'experiment', 'source', 'verification_copy', 'clock_floor', 'source_control_context',
+-              'output_directory', 'phase_snapshot'}
++              'output_directory', 'phase_snapshot', 'hot_lr_transition'}
+     require(isinstance(job, dict) and set(job) == fields and job['schema'] == SCHEMA and
+             job['verifier_sha256'] == source['sha256'] and job['strict_phase_base_sha256'] == STRICT_SHA256 and
+             job['original_strict_base_sha256'] == ORIGINAL_SHA256, 'Phase root job/source schema differs')
+@@ -315,6 +315,99 @@
+     return spec, boot, record
+ 
+ 
++def check_hot_lr_transition(job, base, evidence, boot):
++    """Historical .125 boot + one-field HOT change; no model metadata relabel."""
++    proof = immutable(job['hot_lr_transition'], base, evidence, 'hot_lr_transition', as_json=True)
++    fields = {'schema','root_plan','owner','current_registry','before_control','after_control',
++              'writer_receipt','before_API','first_applied_API','anchor_API'}
++    require(type(proof) is dict and set(proof) == fields and
++            proof['schema'] == 'robotron-owned-one-field-hot-LR125-to-LR0625-transition-v1',
++            'Explicit same-state HOT LR transition required')
++    owner = base.trainer_identity(proof['owner'])
++    require(owner == job['phase_snapshot']['owner'] and owner['pid'] == 1369090,
++            'HOT transition must remain on the actual current trainer incarnation')
++    plan = immutable(proof['root_plan'], base, evidence, 'hot_lr_root_plan', as_json=True)
++    require(proof['root_plan']['sha256'] == 'e1518cfd08485f0f74bfd42cc0562fdbc13287af778edca3956a0c5428e91186'
++            and plan['next_knob'] == dict(lr_scale_before=.125,lr_scale_after=.0625,
++                optimizer_lr_before=6.25e-6,optimizer_lr_after=3.125e-6), 'Prospective ROOT knob selection differs')
++    registry = immutable(proof['current_registry'], base, evidence, 'hot_lr_current_registry', as_json=True)
++    require(proof['current_registry']['sha256'] == '6bfe2e5ceac0be42fce70f95ee65fbd160b8daff3b4a5e15f691b6586ad131fd'
++            and registry['owner'] == owner and len(registry['actors']) == 192
++            and registry['active_resume_phase_record'] == job['phase_snapshot']['phase_record'],
++            'Exact precommitted current192 owner registry/resume phase differs')
++    before = immutable(proof['before_control'], base, evidence, 'hot_lr_before_control', as_json=True)
++    require(proof['before_control']['sha256'] == registry['held_hashes'][str(base.GAME/'models_dqn/learning_control.json')],
++            'Before-control archive must match the exact registered current source')
++    after = immutable(proof['after_control'], base, evidence, 'hot_lr_after_control', as_json=True)
++    context_after = immutable(job['source_control_context']['archived_control'], base, evidence,
++                              'hot_lr_acquisition_control', as_json=True)
++    recipe_api, _ = load_recipe_api(base)
++    recipe = recipe_api.from_held(job['source_control_context']['held_recipe_context'])
++    recipe_api.check_control(before, after, job['experiment'], recipe)
++    require(recipe_api.typed(context_after) == recipe_api.typed(after), 'Acquired snapshot control differs from selected HOT recipe')
++    expected_boot = dict(HISTORICAL_HELD_CONTEXT,learning_control_lr_scale=.125,optimizer_lr=6.25e-6)
++    require(boot['script']['sha256'] == '08c165ed917b8633ab658a8efbc915f81e37adff21c1330cd5806cd3148f4051'
++            and recipe_api.typed(boot['held_recipe_context']) == recipe_api.typed(expected_boot),
++            'Actual .125 boot must keep its original .125 CPU qualification')
++    writer = immutable(proof['writer_receipt'], base, evidence, 'hot_lr_writer_receipt', as_json=True)
++    require(writer['schema'] == 'robotron-owned-one-field-hot-LR-control-publication-v1'
++            and writer['owner_before'] == writer['owner_after'] == owner
++            and writer['changed_fields'] == ['lr_scale'] and writer['atomic_replace'] is True
++            and writer['weights_optimizer_scaler_replay_loaded_or_reset'] is False
++            and writer['phase_record_changed'] is False
++            and writer['before_current_control']['path'] == writer['after_current_control']['path'] == str(base.GAME/'models_dqn/learning_control.json')
++            and writer['before_current_control']['sha256'] == proof['before_control']['sha256']
++            and writer['after_current_control']['sha256'] == proof['after_control']['sha256'],
++            'Owned one-field publication receipt differs')
++    snapshots = []
++    for label, scale in (('before_API',6.25e-6),('first_applied_API',3.125e-6),('anchor_API',3.125e-6)):
++        witness = proof[label]
++        require(type(witness) is dict and set(witness) == {'raw_API','before_unix_s','after_unix_s'},
++                'Bounded historical API observation bracket required')
++        api = immutable(witness['raw_API'], base, evidence, 'hot_lr_'+label, as_json=True)
++        lo, hi = witness['before_unix_s'], witness['after_unix_s']
++        require(all(type(v) in (int,float) and math.isfinite(v) for v in (lo,hi,api['ts']))
++                and 0 < lo <= hi and hi-lo <= 5 and 0 <= hi-api['ts'] <= 5
++                and type(api['pipeline_snapshot_age_s']) in (int,float)
++                and math.isfinite(api['pipeline_snapshot_age_s']) and 0 <= api['pipeline_snapshot_age_s'] <= 5,
++                'Historical applied-LR API snapshot was stale or unbracketed')
++        require(api['client_count'] == 192 and api['training_enabled'] is True and api['measurement_active'] is False
++                and api['memory_buffer_size'] == 6000000 and api['lr'] == scale and api['managed_experiment'] == job['experiment']
++                and api['pipeline_read_error'] == api['bank_persistence_read_error'] == '' and api['host_pipeline']['available'] is True,
++                'Actual HOT applied recipe/client/replay scope differs')
++        exposure = api['host_pipeline']['learning_exposure']
++        for kind in ('optimizer','replay'):
++            require(exposure[kind]['enabled'] is True and exposure[kind]['available'] is True
++                    and exposure[kind]['process_id'] == owner['pid'] and exposure[kind]['epoch'] == 1
++                    and exposure[kind]['epoch_reason'] == ('optimizer_restore_begin' if kind == 'optimizer' else 'directory_adopt_begin'),
++                    'Actual original producer incarnation differs')
++        snapshots.append((api,exposure,witness))
++    for kind in ('optimizer','replay'):
++        first = snapshots[0][1][kind]
++        require(all(all(e[kind][key] == first[key] for key in ('process_id','instance_monotonic_ns','epoch','epoch_reason'))
++                    for _,e,_ in snapshots), 'A HOT change must not reload/reset optimizer or replay epochs')
++    times = [writer['publication_begin_unix_s'],writer['publication_complete_unix_s']]
++    require(all(type(t) in (int,float) and math.isfinite(t) and t > 0 for t in times)
++            and snapshots[0][2]['after_unix_s'] <= times[0] <= times[1] <= snapshots[1][2]['before_unix_s']
++            and snapshots[1][2]['after_unix_s'] <= snapshots[2][2]['before_unix_s'], 'Owned HOT transition chronology differs')
++    applied = [e['optimizer']['total']['applied'] for _,e,_ in snapshots]
++    require(all(type(value) is int and value >= 0 for value in applied)
++            and applied == sorted(applied) and applied[2] > applied[1],
++            'Prospective window anchor requires a later applied update after first target-LR observation')
++    accepted = [e['replay']['accepted_total'] for _,e,_ in snapshots]
++    require(all(type(value) is int and value >= 0 for value in accepted) and accepted == sorted(accepted),
++            'Replay admissions regressed during the HOT change')
++    for key in CLOCKS:
++        values = [api[key] for api,_,_ in snapshots]
++        require(all(type(v) is int and v > 0 for v in values) and values == sorted(values)
++                and job['clock_floor'][key] >= values[-1], 'HOT clocks regressed or acquisition predates actual applied anchor')
++    evidence['hot_lr_transition_verified'] = True
++    evidence['actual_boot_recipe_preserved'] = expected_boot
++    evidence['actual_saved_recipe_expected'] = copy.deepcopy(job['source_control_context']['held_recipe_context'])
++    evidence['hot_lr_applied_anchor_clocks'] = {k:snapshots[-1][0][k] for k in CLOCKS}
++    evidence['hot_lr_scope'] = 'Root-owned one-field control/publication and unchanged producer epochs; not a continuous-window or bitwise no-update claim.'
++
++
+ def verify_phase(checkpoint, evidence, expected, boot_clocks, floor, action, predecessor=None):
+     phase = checkpoint.get('priority_metric_phase')
+     require(isinstance(phase, dict) and phase.get('schema') == PHASE_SCHEMA and phase.get('valid') is True and
+@@ -361,6 +454,7 @@
+                         recipe_specialization=recipe_specialization)
+         model_dir = base.check_context(job, evidence)
+         spec, boot, record = check_acquisition(job, base, evidence, model_dir)
++        check_hot_lr_transition(job, base, evidence, boot)
+         copied = base.check_root_copy(job, evidence)
+         base.validate_checkpoint(copied, job['clock_floor'], evidence, metadata_callback=lambda checkpoint, ev:
+             verify_phase(checkpoint, ev, spec['expected_phase'], evidence['actual_boot_clocks'], job['clock_floor'],

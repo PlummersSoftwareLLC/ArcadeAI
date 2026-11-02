@@ -1,0 +1,83 @@
+{
+  "schema": "robotron-rawKL-trial02-quality-binding-future-argv-v1",
+  "actual_job": null,
+  "actual_execution": null,
+  "guards": {
+    "argv": [
+      "/usr/bin/python3.12",
+      "-I",
+      "-B",
+      "-c",
+      "import sys,unittest;sys.path.insert(0,'/home/dave/source/repos/ArcadeAI/Robotron');m=__import__('tools.kl_priority_mixture_proposal.raw_kl_sequential_trial_proposal.fresh_quality_trial02_binding_companions_proposal.test_quality_bindings',fromlist=['QualityBindingContracts']);s=unittest.defaultTestLoader.loadTestsFromTestCase(m.QualityBindingContracts);assert s.countTestCases()==13;raise SystemExit(not unittest.TextTestRunner(verbosity=2).run(s).wasSuccessful())"
+    ],
+    "methods": 13,
+    "CUDA_VISIBLE_DEVICES": "",
+    "resource_proposal": {
+      "CPUQuota": "100%",
+      "MemoryMax": "512M",
+      "MemorySwapMax": 0,
+      "TasksMax": 64,
+      "TimeoutStartSec": 60
+    },
+    "scope": "stdlib metadata/source guards only; root owns retained original-unit archive/release"
+  },
+  "carrier_prepare": {
+    "argv": [
+      "/usr/bin/python3.12",
+      "-I",
+      "-B",
+      "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/fresh_quality_trial02_binding_companions_proposal/root_quality_carrier.py",
+      "--execute",
+      "--action",
+      "prepare",
+      "--binding-job",
+      "<ACTUAL_ROOT_BINDING_JOB>",
+      "--binding-job-sha256",
+      "<ACTUAL_JOB_SHA256>",
+      "--expected-source-sha256",
+      "7c1e1978dea7565d682cf3d7cdc31fbbf27aedfb8542ceb7a17fef302e46ab86"
+    ],
+    "requires": "Actual selected FIRST candidate phaseCPU, all final cleanup, newCEreturn and fresh postreturn baseline. No invocation from null template."
+  },
+  "carrier_launch": {
+    "additional_required_args": [
+      "--action",
+      "launch",
+      "--plan-sha256",
+      "<ACTUAL_DEFAULT_PLAN_SHA>",
+      "--plan-review",
+      "<ACTUAL_INDEPENDENT_PASS_REVIEW>",
+      "--plan-review-sha256",
+      "<REVIEW_SHA>",
+      "--runtime-readiness",
+      "<ACTUAL_FRESH_READINESS>",
+      "--runtime-readiness-sha256",
+      "<READINESS_SHA>"
+    ],
+    "same_binding_and_source_digests": true
+  },
+  "auditor": {
+    "argv": [
+      "/usr/bin/python3.12",
+      "-I",
+      "-B",
+      "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/fresh_quality_trial02_binding_companions_proposal/audit_completed_leg.py",
+      "--execute",
+      "--binding-job",
+      "<SAME_ACTUAL_ROOT_BINDING_JOB>",
+      "--binding-job-sha256",
+      "<SAME_ACTUAL_JOB_SHA>",
+      "--campaign",
+      "<ACTUAL_CAMPAIGN_DIRECTORY>",
+      "--plan-sha256",
+      "<ACTUAL_PLAN_SHA>",
+      "--source-sha256",
+      "fad4437bfde6ad123c631e439b0f90b58e1cd5e5d05f7aaafabfcea728376d88",
+      "--leg",
+      "<1|2|3|4>",
+      "--output",
+      "<NEW_DISTINCT_AUDIT_DIRECTORY>"
+    ],
+    "requires": "Exactly one completed actual original leg; root owns execution and receipt closure"
+  }
+}

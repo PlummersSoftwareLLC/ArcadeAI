@@ -1,0 +1,48 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/observer-engineering-family-original01/prepare_observer_engineering_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/readonly-mmap-source-validation-original02/prepare_observer_engineering_mmap_v2.py
+@@ -8,11 +8,11 @@
+ 
+ ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ HERE = Path(__file__).resolve().parent
+-COMPONENT = HERE.parent
++COMPONENT = HERE
+ ORIGINAL = ROOT/'tools/post_recovery_evaluation'
+ HELPER = ROOT/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py'
+ HELPER_SHA = '2b6902933b502ac20dacbd444fbf786315d6c960fcad1d5b5bf223dd569708c1'
+-UNIT_BASE = 'robotron-declared-launcher-deadline-{}-engineering-original01-20261029.service'
++UNIT_BASE = 'robotron-declared-launcher-deadline-{}-engineering-original02-20261029.service'
+ 
+ 
+ def load(name,path):
+@@ -27,16 +27,18 @@
+     assert own['identity']['mode']=='0o444'
+     original_case=h.pin(case_path.resolve());assert original_case['sha256']==case_sha
+     assert not output.exists() and output.parent.resolve(strict=True)==HERE
+-    source_paths=[COMPONENT/name for name in ('launcher_census_v1.py','round_main_health_launcher_v1.py',
+-        'round_health_transport_launcher_v1.py','round_observer_launcher_v1.py')]
+-    source_paths += [HERE/name for name in ('round_observer_client_launcher_v1.py','review_round_observer_launcher_v1.py',
+-        'probe_declared_launcher_observer_v1.py','close_declared_launcher_engineering_v1.py','prepare_observer_engineering_v1.py')]
++    source_paths=[COMPONENT/name for name in ('round_main_health_launcher_mmap_v2.py',
++        'round_health_transport_launcher_mmap_v2.py','round_observer_launcher_mmap_v2.py')]
++    source_paths.append(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/launcher_census_v1.py'))
++    source_paths += [HERE/name for name in ('round_observer_client_launcher_mmap_v2.py','review_round_observer_launcher_mmap_v2.py',
++        'probe_declared_launcher_observer_mmap_v2.py','close_declared_launcher_engineering_mmap_v2.py','prepare_observer_engineering_mmap_v2.py')]
+     source_paths += [ORIGINAL/name for name in ('api_reconnect_projection_v1.py','round_admission_proof_v2.py',
+         'buffered_raw_writer_v2.py','volatile_live_control_v1.py')]
+     sources={path.name:h.pin(path)for path in source_paths}
+     assert all(value['identity']['mode']=='0o444' for path,value in sources.items() if Path(value['path']).parent in (COMPONENT,HERE))
+     launch=load('_declared_launcher_case_preparation',h.checked(sources['launcher_census_v1.py']))
+     case=launch.prepare_case(json.loads(h.checked(original_case).read_bytes()))
++    case['source_guard']=str(HERE/'round_main_health_launcher_mmap_v2.py')
+     output.mkdir(mode=0o700)
+     binding=h.put(output/'declared-launcher-main-case.json',case)
+     records=[]
+@@ -51,7 +53,7 @@
+             '-p','StandardError=append:'+str(directory/'console.txt'),
+             '/usr/bin/env','-u','LD_PRELOAD','-u','PYTHONPATH','CUDA_VISIBLE_DEVICES=',
+             'PYTHONDONTWRITEBYTECODE=1','/usr/bin/python3','-I','-B',
+-            str(HERE/'probe_declared_launcher_observer_v1.py'),'--execute','--mode',mode,
++            str(HERE/'probe_declared_launcher_observer_mmap_v2.py'),'--execute','--mode',mode,
+             '--case',binding['path'],'--case-sha256',binding['sha256'],'--output',str(directory/'runtime')]
+         intent=h.put(directory/'original-launch-intent-NOT-EXECUTED.json',dict(
+             schema='robotron-declared-launcher-observer-original-engineering-intent-v1',

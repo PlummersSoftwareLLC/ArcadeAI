@@ -1,0 +1,12 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/preview-flags-preserveRAM-trainer-restart-original01/stop-sources/control_current192_rescue_scope_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/preview-flags-preserveRAM-trainer-restart-original01/stop-sources/control_current192_rescue_scope_v2.py
+@@ -58,7 +58,8 @@
+     props=dict(x.split('=',1) for x in c['properties'])
+     require(len(props)==len(c['properties']) and props.get('CPUQuota')=='200%' and
+         props.get('MemoryMax')=='4G' and props.get('RuntimeMaxSec')=='2200' and
+-        set(props)<= {'CPUQuota','MemoryMax','RuntimeMaxSec','MemorySwapMax','TasksMax','TimeoutStopSec','SendSIGKILL'} and
++        set(props)<= {'CPUQuota','MemoryMax','RuntimeMaxSec','MemorySwapMax','TasksMax','TimeoutStopSec','SendSIGKILL','After'} and
++        props.get('After')=='robotron-managed-run-26-continuation-raw4hz-original01-20261027-trainer.service' and
+         props.get('SendSIGKILL')=='no' and
+         props.get('MemorySwapMax','0')=='0' and props.get('TasksMax','128') in ('128','256') and
+         props.get('TimeoutStopSec','5')=='5','Audit resource scope differs')

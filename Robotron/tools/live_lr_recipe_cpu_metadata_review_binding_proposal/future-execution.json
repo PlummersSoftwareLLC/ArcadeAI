@@ -1,0 +1,61 @@
+{
+  "status": "UNSELECTED_UNEXECUTED",
+  "guard_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_cpu_metadata_review_binding_proposal",
+    "-p",
+    "test_cpu_metadata_review.py",
+    "-v"
+  ],
+  "expected_tests": 6,
+  "recommended_limits": {
+    "CPUQuota": "100%",
+    "MemoryMax": "512M",
+    "MemorySwapMax": "0",
+    "TasksMax": "128",
+    "RuntimeMaxSec": "60",
+    "TimeoutStopSec": "5"
+  },
+  "collector_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_cpu_metadata_review_binding_proposal/collect_quality_readiness.py",
+    "--execute",
+    "--expected-source-sha256",
+    "04667604937aea91afa9516e1fdcbda623d47a6ea34cd6ecb1d53a6e37663094",
+    "--case",
+    null,
+    "--expected-case-sha256",
+    null,
+    "--output",
+    null
+  ],
+  "carrier_prepare_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_cpu_metadata_review_binding_proposal/root_quality_carrier.py",
+    "--execute",
+    "--action",
+    "prepare",
+    "--binding-job",
+    null,
+    "--binding-job-sha256",
+    null,
+    "--expected-source-sha256",
+    "99d8e8eb3464c710bbffafdda8a461de062d52b5d07968e717260be546e5ec57"
+  ],
+  "future_root_review": null,
+  "augmented_execution": null,
+  "quality_binding": null,
+  "actual_tests": null,
+  "actual_quality": null,
+  "no_numerical_rerun": true
+}

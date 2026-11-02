@@ -1,0 +1,85 @@
+--- before/cpu_reservation_trial.py
++++ after/cpu_reservation_trial.py
+@@ -151,8 +151,12 @@
+         online = sorted(self.base.online_cpus())
+         nodes = {node.name: (node / 'cpulist').read_text().strip()
+                  for node in sorted(Path('/sys/devices/system/node').glob('node[0-9]*'))}
+-        require(online == list(ALL) and len(nodes) == 1 and list(nodes.values()) == ['0-71'],
+-                'Require all72 CPUs online on the expected single NUMA node')
++        # Memory-only NUMA nodes have an empty cpulist. Retain them in the
++        # binding while requiring all CPUs on exactly one CPU-bearing node.
++        cpu_nodes = {name: cpus for name, cpus in nodes.items() if cpus}
++        require(online == list(ALL) and len(cpu_nodes) == 1
++                and list(cpu_nodes.values()) == ['0-71'],
++                'Require all72 CPUs online on exactly one CPU-bearing NUMA node')
+         return dict(online=online, numa_nodes=nodes)
+ 
+     def no_competitors(self):
+--- before/test_cpu_reservation_trial.py
++++ after/test_cpu_reservation_trial.py
+@@ -174,6 +174,65 @@
+     return system, journal, state
+ 
+ 
++class ReservationTopologyTests(unittest.TestCase):
++    def topology(self, nodes, online=trial.ALL):
++        # Only a private temp directory can satisfy the adapter's sysfs path.
++        # Construct without System.__init__, so no real Host is instantiated.
++        with tempfile.TemporaryDirectory() as directory:
++            root = Path(directory)
++            for name, cpus in nodes.items():
++                node = root / name
++                node.mkdir()
++                if cpus is not None:
++                    (node / 'cpulist').write_text(cpus + '\n')
++            adapter = object.__new__(trial.System)
++            adapter.base = SimpleNamespace(online_cpus=lambda: set(online))
++            def private_path(value):
++                self.assertEqual(value, '/sys/devices/system/node')
++                return root
++            with patch.object(trial, 'Path', side_effect=private_path):
++                return adapter.topology()
++
++    def test_single_cpu_node_remains_valid(self):
++        self.assertEqual(self.topology({'node0': '0-71'}),
++                         dict(online=list(trial.ALL), numa_nodes={'node0': '0-71'}))
++
++    def test_memory_only_nodes_allowed_and_all_empty_lists_retained(self):
++        nodes = {'node0': '0-71', **{f'node{index}': '' for index in range(1, 9)}}
++        result = self.topology(nodes)
++        self.assertEqual(result['numa_nodes'], nodes)
++        self.assertEqual(result['online'], list(trial.ALL))
++        changed = dict(nodes, node8='70-71')
++        with self.assertRaisesRegex(RuntimeError, 'one CPU-bearing NUMA node'):
++            self.topology(changed)
++
++    def test_split_missing_extra_overlapping_and_absent_node_cpus_rejected(self):
++        cases = [
++            {'node0': '0-35', 'node1': '36-71'},
++            {'node0': '0-70', 'node1': ''},
++            {'node0': '0-72', 'node1': ''},
++            {'node0': '0-71', 'node1': '71'},
++            {'node0': '0-71', 'node1': '0-71'},
++            {'node0': '', 'node1': ''},
++            {},
++        ]
++        for nodes in cases:
++            with self.subTest(nodes=nodes), self.assertRaisesRegex(RuntimeError, 'one CPU-bearing NUMA node'):
++                self.topology(nodes)
++
++    def test_missing_or_extra_online_cpu_rejected_even_with_expected_node(self):
++        for online in (range(71), range(73), [*range(70), 71, 72]):
++            with self.subTest(online=list(online)), self.assertRaisesRegex(RuntimeError, 'all72 CPUs online'):
++                self.topology({'node0': '0-71', 'node1': ''}, online)
++
++    def test_missing_or_unreadable_node_cpulist_fails_closed(self):
++        with self.assertRaises(FileNotFoundError):
++            self.topology({'node0': '0-71', 'node1': None})
++        with patch.object(Path, 'read_text', side_effect=PermissionError('private unreadable cpulist')):
++            with self.assertRaises(PermissionError):
++                self.topology({'node0': '0-71', 'node1': ''})
++
++
+ class ReservationSafetyTests(unittest.TestCase):
+     def assert_all_broad(self, system, except_tasks=()):
+         for pid, tasks in system.tasks.items():

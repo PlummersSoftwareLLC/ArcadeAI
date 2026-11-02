@@ -1,0 +1,119 @@
+SAMPLER CALIBRATION PREPARATION — SOURCE ONLY, 2026-10-17
+
+Status: IMPLEMENTED PROPOSAL / UNEXECUTED. No patch applied. No helper/default
+invocation, application/framework imports, syntax compilation, tests, numerical
+workloads, sampling, checkpoint/replay reads, runtime/API/proc/GPU/service queries
+or production changes were performed for this preparation. Existing DESIGN.txt,
+source-lock.json, old optional KL proposal and evidence receipts are unchanged.
+
+Sequencing: root expressly authorized new unbound preparation files during the
+live320M quality source freeze. This supersedes only the old design's timing of
+implementation. It does not authorize execution, live capture, deployment or KL.
+Root agreed to prioritize the smaller actual-sampler fixture boundary because
+a sound integrated eight-executed-attempt trace crosses sampler, prefetch lease,
+compiled output, training/outcome and exception lifetime contracts.
+
+What is prepared
+----------------
+replay_buffer_candidate.py is a copy of pinned actual production replay_buffer
+28556797... with only the unapplied sampler-metadata-unapplied.patch added.
+The explicit sample_with_metadata(...,capture_id=...) API returns the ordinary
+ten-field batch and detached selected-row metadata, or(None,None). It is bounded
+to1..4096 rows and is not called by any current production path. Ordinary sample
+and sample_into still pass the defaultNone observation hook: no additional draw,
+RNG call or metadata array copy. No learner, loss/kernel or compiled caller file
+changes; the existing four-output TrainingLoss ABI remains untouched. These are
+source-reviewed intentions, not executed parity results yet.
+
+Within the existing replay lock, ON records the actual local origin boundaries,
+ordered ring/bank sentinel indices and bank slots, draw beta, alpha, selected
+raw/clamped leaves, actual preexisting float64 raw IS weights/normalizer and
+float64 supplied weights before their float32 cast. Recent/interesting weights
+stay1 and banks retain the actual mean-PER-float64 coupling. Tree total,
+historical maximum, pointer/size/process-local add clock and bank valid counts,
+admission/staleness clocks, RAM revisions/load epochs are retained at that same
+boundary. Small batch fields are copied read-only; no disk/device work, full
+tree scan, callbacks or trace/file locks are introduced inside the replay lock.
+The metadata dictionary is caller-owned; array storage is detached/read-only.
+
+Declared unknowns are deliberate: neither priority metric nor tree-metric
+identity is independently identified by these untagged leaves. Held CE context
+requires separate caller/run provenance; a draw is not labelled CE by this API.
+There is no maintained global tree minimum, persistent
+ring load/slot insertion generation, per-leaf metric/conversion age or disk bank
+CURRENT generation can be reconstructed honestly from this boundary. Capture_id
+is caller-supplied observation context, NOT an optimizer/prefetch/generation
+ticket. Full states and next states are not retained by the metadata. None of
+these unknowns is silently relabelled or repaired using a later tree/file read.
+
+sampler_fixture.py is plan-only by default (not invoked even in that mode yet).
+Explicit future execution copies nine hash-pinned actual source files into two
+new private packages, overlaying only candidate replay_buffer.py in one. It
+imports the real config/replay/native modules after private model/settings,
+control, journal/cache/tmpfs paths and CUDA-hidden/two-thread environment are
+set. This does not AST-extract or reimplement the production sampler. Native
+sum-tree helpers may build only in the copied package's sibling __pycache__;
+native availability/fallback is recorded and must be interpreted honestly.
+
+Fixtures synthesize width8 states, capacity8192 and4096-row batches. Bank valid
+tables are fixture-populated, not acquired through actual bank admissions.
+Five scenarios cover nominal bank eligibility, bank-under-threshold shortfall,
+stale banks, invalid/stale interesting-bank entries and duplicate origins.
+test_sampler_fixture.py contains12 unexecuted meaningful unittest methods:
+ordinary OFF exact bytes/RNG across scenarios/betas, OFF direct-fill parity,
+ON bytes/RNG/default901/737/1434/410/614 mix, actual quota shortfalls/staleness,
+float64 selected-PER normalizer/bank recoupling, duplicates crossing origins,
+detached metadata after tree/ring/bank writes and another draw, direct-slot
+reuse, missing/invalid draws, default safety and private/no-Torch imports.
+
+Execution remains a later root decision
+--------------------------------------
+Only AFTER an explicit quality/fixed-window release and CPU-work authorization:
+
+env -u LD_PRELOAD -u PYTHONPATH CUDA_VISIBLE_DEVICES='' OMP_NUM_THREADS=2 \
+ OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+ /home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python -I -B \
+ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/sampler_fixture.py \
+ --execute-fixture \
+ --output /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/kl-sampler-fixture-reviewed1
+
+Output must be a new directly owned run-26/kl-sampler-fixture-* directory.
+No overwrite/reuse, live paths, checkpoint, persisted replay or full-ring copy.
+The prospective process is bounded to2GiB address space,90CPU seconds,64MiB per
+file and two numerical-library threads. Native compiler calls have the actual
+helper's30s timeout. The command retains private source copies/native caches,
+test-output.txt and fixture-report.json; source pin failures/setup/test errors
+must remain failures. The default only emits a plan; it does not read sources,
+import copied packages, inspect live inventory or create artifacts. Pre-start
+LD_PRELOAD/PYTHONPATH removal is necessary; scrubbing inside Python cannot undo
+an already loaded external library.
+
+Precise remaining blockers/limits
+--------------------------------
+ALL12 tests, source loading/private paths, native builds and fixture numerics
+are unexecuted. No PASS/readiness claim is made. No current proposal application
+or numerical work is authorized. The small fixture cannot certify full11128
+state geometry, production4096 CUDA/AMP/compiled loss, priority migration,
+real population distribution, learning efficacy or playing quality. Even a
+future fixture pass would only validate the declared synthetic sampler mechanics.
+
+EIGHT CONSECUTIVE ACTUAL EXECUTED CE ATTEMPTS ARE NOT IMPLEMENTED OR ACQUIRED.
+Current ReplayPrefetcher calls memory.sample/sample_into, then tuple(batch);
+it does not retain this side-channel metadata or bind it to lease epoch/lifetime.
+TrainingLoss currently returns four outputs and does not expose per-row target,
+taken-action log-probs or expert auxiliary terms. A further reviewed startup-only
+integration must statically build a trace-enabled loss while OFF keeps exactly
+the four outputs and existing readback offsets. It must arm before producer/
+learner start, retain eight consumed/executed attempts including AMP skips and
+failed attempts, distinguish invalidated/unconsumed prefetch tickets, copy small
+outputs before lease release, and join actual optimizer exposure/packed found_inf
+outcomes rather than infer updates from no-step gradients. Trace errors cannot
+silently trigger agent's compile-disable/fallback handler or replace a failed
+attempt with a ninth favorable one. Bound storage by eight consumed attempts
+plus fixed prefetch depth; no extra sampler/forward/RNG or numerical changes.
+
+After that integration is independently validated, the design's three same-row
+vectors (actual emitted, fresh CE, fresh KL, each with bank recoupling) can be
+calibrated. No such target/CE/KL vectors exist from this preparation. No KL switch,
+gradient/LR compensation, new recipe, anchor capture, branch or learning trial
+is implemented or authorized here.

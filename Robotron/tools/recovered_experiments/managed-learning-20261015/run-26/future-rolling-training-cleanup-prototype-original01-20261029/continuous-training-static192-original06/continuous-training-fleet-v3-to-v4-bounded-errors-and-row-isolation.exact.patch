@@ -1,0 +1,204 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/continuous_training_fleet_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/continuous_training_fleet_v4.py
+@@ -139,6 +139,8 @@
+         self.root.mkdir(mode=0o700);(self.root/'events').mkdir(mode=0o700);(self.root/'actors').mkdir(mode=0o700)
+         self.epoch=f"{self.owner['pid']}:{self.owner['birth']}:{self.owner['invocation_id']}"
+         self.sequence=0;self.stopping=False;self.errors=[];self.children={};self.records={}
++        self.error_occurrences=0;self.error_distinct_details=0;self.last_error_detail=None
++        self.error_counts_by_scope={};self.error_counts_by_slot={};self.error_latest_digest={}
+         self.completed_train=0;self.completed_eval=0;self.partial_games=0;self.train_score_sum=0
+         self.seen_jids=set();self.initial_bound=set();self.barrier=None;self.policy_generation=None
+         self.original_membership=None;self.original_slots={};self.reaped_history=[]
+@@ -171,6 +173,53 @@
+             kind=kind,slot=slot,incarnation=incarnation,supervisor=self.owner,
+             trainer=self.cfg['trainer'],source_authority=self.cfg['source_authority'],
+             unix_s=time.time(),monotonic_ns=time.monotonic_ns(),data=data))
++
++    def record_error(self,scope,slot,error,context=None):
++        """Bound display state; retain every distinct full error immutably.
++
++        Repeated occurrences update exact counters without repeated fsync/files.
++        One latest digest/pin per fixed scope/slot bounds memory. Changed details use
++        a content-addressed immutable file; older details remain on disk.
++        """
++        require(scope in ('observation','original-birth','slot','initial-spawn','journal')
++            and (slot is None or type(slot)is int and 0<=slot<192),'Declared error scope/slot required')
++        message=str(error)
++        detail=dict(scope=scope,slot=slot,error_type=type(error).__name__,message=message,context=context)
++        digest=hashlib.sha256(json.dumps(detail,sort_keys=True,separators=(',',':'),
++            ensure_ascii=True,allow_nan=False).encode()).hexdigest()
++        key=(scope,slot)
++        recent=self.error_latest_digest.get(key)
++        if recent is None or recent['digest']!=digest:
++            path=self.root/'events'/('error-detail-'+digest+'.json')
++            if path.exists():
++                entry=pin(path);prior=read(entry)
++                require(prior['schema']=='robotron-continuous-supervisor-error-detail-v1'
++                    and prior['epoch']==self.epoch and prior['detail']==detail,
++                    'Existing immutable error detail differs')
++            else:
++                entry=exclusive(path,dict(schema='robotron-continuous-supervisor-error-detail-v1',
++                    epoch=self.epoch,supervisor=self.owner,trainer=self.cfg['trainer'],
++                    unix_s=time.time(),monotonic_ns=time.monotonic_ns(),detail=detail))
++                self.error_distinct_details+=1
++            recent=dict(digest=digest,pin=entry)
++            self.error_latest_digest[key]=recent
++        self.last_error_detail=recent['pin']
++        self.error_occurrences+=1
++        self.error_counts_by_scope[scope]=self.error_counts_by_scope.get(scope,0)+1
++        if slot is not None:
++            label=str(slot);self.error_counts_by_slot[label]=self.error_counts_by_slot.get(label,0)+1
++        display=(scope+(''if slot is None else ' slot'+str(slot))+': '+message).encode(
++            'ascii','backslashreplace').decode('ascii')[:256]
++        if display not in self.errors and len(self.errors)<32:self.errors.append(display)
++        # self.errors stays truthy after the first error, sealing admission as
++        # before. Its finite display is never the full error evidence authority.
++
++    def error_summary(self):
++        return dict(occurrences=self.error_occurrences,distinct_immutable_details=self.error_distinct_details,
++            counts_by_scope=dict(self.error_counts_by_scope),counts_by_slot=dict(self.error_counts_by_slot),
++            last_detail=self.last_error_detail,detail_directory=str(self.root/'events'),
++            detail_filename_rule='error-detail-<SHA256(canonical-detail-JSON)>.json',
++            inline_errors_maximum=32,inline_message_maximum_chars=256)
+ 
+     def get(self,path,query=None):
+         began=time.monotonic_ns()
+@@ -233,8 +282,8 @@
+         except Exception as error:
+             self.records[slot]=dict(eval_only=self.roles[str(slot)],incarnation=inc,state='quarantined',
+                 original_child=dict(pid=child.pid,birth=None),spawn_intent=intent,connection_binding=None,
+-                natural_result=None,closure=None,prior_fault_closure=None,quarantine_reason=repr(error),faults=item['faults'])
+-            self.errors.append(f'slot{slot}: original birth unavailable: {error}')
++                natural_result=None,closure=None,prior_fault_closure=None,quarantine_reason=repr(error).encode('ascii','backslashreplace').decode('ascii')[:256],faults=item['faults'])
++            self.record_error('original-birth',slot,error)
+ 
+     def bind(self,slot,connections):
+         row=self.records[slot];item=self.children[slot];child=item['child']
+@@ -262,36 +311,49 @@
+ 
+     def journals(self):
+         for result,line in self.tail.poll():
+-            jid=result.get('journal_game_id');slot=result.get('client_slot')
+-            if type(jid)is not str or jid in self.seen_jids:continue
+-            require(type(slot)is int and slot in self.records,'Journal row for undeclared slot')
+-            row=self.records[slot]
+-            require(result.get('eval_only')is row['eval_only'],'Durable journal role changed')
+-            self.seen_jids.add(jid)
+-            raw=exclusive(self.root/'events'/f'journal-{hashlib.sha256(line).hexdigest()}.jsonl',raw=line)
+-            natural=(all(result.get(k)is True for k in ('complete','eligible','known_start'))
+-                and result.get('boundary_reason')in('score_reset','zero_score_restart'))
+-            event=self.event('natural-result'if natural else'partial-result',slot,row['incarnation'],
+-                dict(raw_line=raw,result=result,natural_complete=natural))
+-            if not natural:self.partial_games+=1;continue
+-            require(type(result.get('score'))is int and result['score']>=0,'Exact full unwrapped score required')
+-            require(row['connection_binding']is not None,'Natural row lacks an observed original physical connection')
+-            conn=read(row['connection_binding'])['data']['connection']
+-            intent=read(row['spawn_intent'])
+-            require(type(result.get('client_id'))is int and result['client_id']==conn['client_id']
+-                and result['start_unix_s']>=intent['unix_s']
+-                and result['start_context']['measurement_generation']==self.policy_generation
+-                and result['start_context']['measurement_active']is False
+-                and result['start_context']['ratchet_frozen']is False,
+-                'Natural row is not this original physical connection and fixed policy incarnation')
+-            if row['eval_only']:
+-                require(row['natural_result']is None,'An EVAL slot completed more than one eligible game')
+-                row['natural_result']=event;row['state']='retiring_eval';self.completed_eval+=1
+-                self.children[slot]['result_seen']=time.monotonic()
+-            else:
+-                # TRAIN keeps the SAME Popen and live connection. No stop,
+-                # SIGSTOP, removal, generation increment or spawn happens here.
+-                self.completed_train+=1;self.train_score_sum+=result['score']
++            try:
++                self.journal_row(result,line)
++            except Exception as error:
++                # The tail consumed this batch already. Preserve this row and
++                # continue so one rejected TRAIN connection cannot drop EVAL.
++                path=self.root/'events'/('journal-'+hashlib.sha256(line).hexdigest()+'.jsonl')
++                raw=pin(path)if path.exists()else exclusive(path,raw=line)
++                require(selected_bytes(raw)==line,'Failed journal row evidence changed')
++                slot=result.get('client_slot')if isinstance(result,dict)else None
++                if type(slot)is not int or not 0<=slot<192:slot=None
++                self.record_error('journal',slot,error,dict(raw_line=raw))
++
++    def journal_row(self,result,line):
++        jid=result.get('journal_game_id');slot=result.get('client_slot')
++        if type(jid)is not str or jid in self.seen_jids:return
++        require(type(slot)is int and slot in self.records,'Journal row for undeclared slot')
++        row=self.records[slot]
++        require(result.get('eval_only')is row['eval_only'],'Durable journal role changed')
++        self.seen_jids.add(jid)
++        raw=exclusive(self.root/'events'/f'journal-{hashlib.sha256(line).hexdigest()}.jsonl',raw=line)
++        natural=(all(result.get(k)is True for k in ('complete','eligible','known_start'))
++            and result.get('boundary_reason')in('score_reset','zero_score_restart'))
++        event=self.event('natural-result'if natural else'partial-result',slot,row['incarnation'],
++            dict(raw_line=raw,result=result,natural_complete=natural))
++        if not natural:self.partial_games+=1;return
++        require(type(result.get('score'))is int and result['score']>=0,'Exact full unwrapped score required')
++        require(row['connection_binding']is not None,'Natural row lacks an observed original physical connection')
++        conn=read(row['connection_binding'])['data']['connection']
++        intent=read(row['spawn_intent'])
++        require(type(result.get('client_id'))is int and result['client_id']==conn['client_id']
++            and result['start_unix_s']>=intent['unix_s']
++            and result['start_context']['measurement_generation']==self.policy_generation
++            and result['start_context']['measurement_active']is False
++            and result['start_context']['ratchet_frozen']is False,
++            'Natural row is not this original physical connection and fixed policy incarnation')
++        if row['eval_only']:
++            require(row['natural_result']is None,'An EVAL slot completed more than one eligible game')
++            row['natural_result']=event;row['state']='retiring_eval';self.completed_eval+=1
++            self.children[slot]['result_seen']=time.monotonic()
++        else:
++            # TRAIN keeps the SAME Popen and live connection. No stop,
++            # SIGSTOP, removal, generation increment or spawn happens here.
++            self.completed_train+=1;self.train_score_sum+=result['score']
+ 
+     def close_original(self,slot):
+         row=self.records[slot];item=self.children[slot];child=item['child'];code=child.poll()
+@@ -390,7 +452,7 @@
+             source_authority=self.cfg['source_authority'],initial_admission=dict(complete=self.barrier is not None,
+                 slots_ever_bound=sorted(self.initial_bound),immutable_all192_barrier=self.barrier),
+             original_membership=self.original_membership,
+-            slots=compact,counts=counts,errors=list(self.errors),
++            slots=compact,counts=counts,errors=list(self.errors),error_summary=self.error_summary(),
+             completed_train_games=self.completed_train,completed_eval_games=self.completed_eval,
+             partial_or_censored_games=self.partial_games,train_full_game_score_sum=self.train_score_sum,
+             train_full_game_mean=None if not self.completed_train else self.train_score_sum/self.completed_train,
+@@ -413,8 +475,7 @@
+                     require(batch['continuous_training_mode']is True and batch['main_measurement_entry_disabled']is True,
+                             'Actual permanent main-policy mode disappeared')
+                 except Exception as error:
+-                    message=f'continuous observation/admission sealed: {error}'
+-                    if message not in self.errors:self.errors.append(message)
++                    self.record_error('observation',None,error)
+                     self.snapshot();time.sleep(1);continue
+                 for slot,item in list(self.children.items()):
+                     row=self.records[slot]
+@@ -441,8 +502,8 @@
+                         if row['state']=='fault_cleanup'and row['closure']is not None and not self.errors:
+                             self.spawn(slot)
+                     except Exception as error:
+-                        row['state']='quarantined';row['quarantine_reason']=repr(error)
+-                        self.errors.append(f'slot{slot}: {error}')
++                        row['state']='quarantined';row['quarantine_reason']=repr(error).encode('ascii','backslashreplace').decode('ascii')[:256]
++                        self.record_error('slot',slot,error)
+                 partition=None if self.barrier is not None else self.barrier_partition(batch['connections'])
+                 if partition is not None:
+                     self.original_slots={str(slot):{k:row[k]for k in ORIGINAL_FIELDS}
+@@ -467,7 +528,7 @@
+                         try:
+                             self.spawn(next_initial);next_initial+=1
+                         except Exception as error:
+-                            self.errors.append(f'initial slot{next_initial}: {error}')
++                            self.record_error('initial-spawn',next_initial,error)
+                             break
+                 self.snapshot();time.sleep(.2)
+         finally:
+@@ -485,7 +546,7 @@
+                 code=child.wait(timeout=5)
+                 terminal.append(dict(slot=slot,incarnation=item['incarnation'],pid=child.pid,actual_exit=code))
+             self.event('owned-supervisor-terminal',None,0,dict(children=terminal,errors=self.errors,
+-                prior_original_reaped_closures=self.reaped_history,
++                error_summary=self.error_summary(),prior_original_reaped_closures=self.reaped_history,
+                 all_original_children_reaped=True,quality_qualified=False))
+ 
+ 

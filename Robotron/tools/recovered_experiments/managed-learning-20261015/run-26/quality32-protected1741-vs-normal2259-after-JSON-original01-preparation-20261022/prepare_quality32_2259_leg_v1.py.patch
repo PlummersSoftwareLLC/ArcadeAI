@@ -1,0 +1,38 @@
+--- prepare_quality32_leg_v1.py
++++ prepare_quality32_2259_leg_v1.py
+@@ -34,7 +34,7 @@
+         and readiness['leg_preparer']==h.pin(__file__)and leg in ORDER,
+         'Exact new readiness/preparer/leg required')
+     pair=json.loads(h.checked(readiness['quality_pair']).read_text())
+-    require(readiness['quality_pair']['sha256']=='79ae0a32e8d924d36517dbd76e6b97bb34309f695d0b913a28da514b3a269b90',
++    require(readiness['quality_pair']['sha256']=='ad0ff9558602611227651bdf472ca4d2685d7038711c934dbe123142f6639d6e',
+         'Fixed original pair required')
+     root=Path(readiness['campaign_directory']);index=ORDER.index(leg);directory=root/FOLDERS[index]
+     require(root.is_relative_to(R)and root.resolve()==root and not directory.exists(),'Fresh exact original leg required')
+@@ -113,7 +113,7 @@
+         quality_leg=leg,quality_pair_precommit=readiness['quality_pair'],quality_launch_readiness=readiness_pin,
+         minimum_completed_games=50,expected_policy_clocks=runtime.POLICIES[ROLES[leg]]['clocks'],
+         checkpoint=selected['policy'],admission_s=5400,whole_cohort_timeout_s=9000,wall_limit_s=9600,
+-        label='quality1741-vs-normal2202-start-certified-'+leg.lower()+'-original01-20261022',
++        label='quality1741-vs-normal2259-after-JSON-'+leg.lower()+'-original01-20261022',
+         main_binding=mp,sessions={str(slot):secrets.token_hex(16)for slot in runtime.SLOTS},
+         connections={str(slot):secrets.token_hex(16)for slot in runtime.SLOTS},
+         selected_change='Fresh same-backend frozen quality leg with certified first starts, fixed5400/min50 and every admitted full tail; strict source/runtime/main health. No learning change or promotion.',
+@@ -130,7 +130,7 @@
+         quality_leg=leg,quality_pair=readiness['quality_pair'],launch_readiness=readiness_pin,
+         requirements=pair,preflight=health,private_preflight=resource)
+     ap=h.put(directory/'precommitted-acceptance-scope.json',scope)
+-    cfg=dict(unit='robotron-compiled-full-tail32-integration-quality1741-2202-'+leg.lower()+'-original01-20261022.service',
++    cfg=dict(unit='robotron-compiled-full-tail32-integration-quality1741-2259-json-'+leg.lower()+'-original01-20261022.service',
+         output=str(directory/'execution-original01'),
+         argv=['/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python','-Xgil=0','-I','-B',job['runtime']['path'],
+             '--execute','--job',jp['path'],'--job-sha256',jp['sha256'],'--source-sha256',job['runtime']['sha256']],
+@@ -145,7 +145,7 @@
+         acceptance=ap,controller_config=cp,sources=sources)
+     rjp=h.put(directory/'independent-review-job.json',review_job)
+     cpu=load('_prepared_quality_cpu_control',h.checked(readiness['CPU_controller']))
+-    review_cfg=dict(unit='robotron-quality32-'+leg.lower()+'-independent-review-original01-20261022.service',
++    review_cfg=dict(unit='robotron-quality32-2259json-'+leg.lower()+'-independent-review-original01-20261022.service',
+         output=str(directory/'independent-review-execution-original01'),
+         argv=['/usr/bin/python3.12','-I','-B',readiness['leg_reviewer']['path'],'--observe','--job',rjp['path'],
+             '--job-sha256',rjp['sha256'],'--expected-source-sha256',readiness['leg_reviewer']['sha256']],

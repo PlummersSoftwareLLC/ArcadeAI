@@ -1,0 +1,23 @@
+--- connection_cleanup_receipts_continuous_candidate_v1.py
++++ connection_cleanup_receipts_continuous_candidate_v2.py
+@@ -149,6 +149,20 @@
+                     or row['recorded'] or not handler.is_alive()):
+                 raise ValueError('Stale or mismatched connection producer token')
+ 
++    def active_identity_rows(self, tokens):
++        # Called with a copied set of actual client-state tokens; no client_lock
++        # is held while the receipt registry is read.
++        with self.lock:
++            rows=[]
++            for token in tokens:
++                row=self.records.get(token)
++                if row is None or row['recorded'] or not row['handler'].is_alive():
++                    continue
++                rows.append(dict(token=token,client_id=row['cid'],client_slot=row['slot'],
++                    eval_only=row['eval_only'],connection_ns=row['connection_ns'],
++                    socket_endpoints=copy.deepcopy(row['endpoints'])))
++            return rows
++
+     def lookup_token(self, token):
+         if type(token) is not str or not 1 <= len(token) <= 128:
+             raise ValueError('Exact original connection token required')

@@ -1,0 +1,87 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/prepare_round_study_v10.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original01-preparation/prepare_round_study_v10.py
+@@ -16,11 +16,12 @@
+ import sys
+ import time
+ 
+-ROOT = Path(__file__).resolve().parents[2]
++ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ BASE = ROOT/'logs/managed-learning-20261015/run-26'
+-HERE = Path(__file__).resolve().parent
++HERE = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
++LOCAL = Path(__file__).resolve().parent
+ PREVIOUS = BASE/'deadline-score32-fixed-fleet-admission-original03-preparation-20261026/fixed-RCRC-deadline32-study-original03'
+-CAPTURE = BASE/'post-reconnect-next-candidate-20261028-original01'
++CAPTURE = BASE/'post-natural-turnover-durable-next-candidate-20261029-original01'
+ PROTECTED_SHA = 'b23152ece3bb614831a278fe0572c07433f1bee59c5accef5a1ab7d3007af883'
+ LEGS = ('R1', 'C1', 'R2', 'C2')
+ 
+@@ -128,11 +129,12 @@
+ 
+ def capture_binding(template_pin, h):
+     template = read(template_pin, h)
+-    health = load('_prepare_round_health', HERE/'round_health_transport_v7.py')
+-    collector = load('_prepare_round_raw_API', HERE/'round_observer_v10.py')
++    health = load('_prepare_round_health', Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/round_health_transport_launcher_v1.py'))
++    collector = load('_prepare_round_raw_API', Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/round_observer_launcher_v1.py'))
+     deadline = time.monotonic()+30
+     while True:
+-        case = copy.deepcopy(template)
++        launcher = load('_prepare_exact_declared_launchers',Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/launcher_census_v1.py'))
++        case = launcher.prepare_case(template)
+         case['source_guard'] = str(HERE/'round_main_health_v7.py')
+         case['initial_round'] = json.loads((Path(case['round_root'])/'status.json').read_bytes())['round']
+         try:
+@@ -207,18 +209,18 @@
+     baseline_pin = h.put(output/'main-baseline.raw.json', baseline)
+     case.update(baseline_snapshot=baseline_pin, experiment=reference['training_experiment'])
+     binding = h.put(output/'main-binding.json', case)
+-    runtime = h.pin(HERE/'run_deadline32_rounds_v11.py')
+-    reviewer = h.pin(HERE/'review_deadline32_rounds_v11.py')
+-    controller = h.pin(HERE/'control_deadline32_rounds_v11.py')
+-    contract_pin = h.pin(HERE/'deadline_round_contract_v11.py')
++    runtime = h.pin(LOCAL/'run_deadline32_rounds_v11.py')
++    reviewer = h.pin(LOCAL/'review_deadline32_rounds_v11.py')
++    controller = h.pin(LOCAL/'control_deadline32_rounds_v11.py')
++    contract_pin = h.pin(LOCAL/'deadline_round_contract_v11.py')
+     native = load('_prepare_actual_round_native', Path(runtime['path']))
+     control = load('_prepare_actual_round_controller', Path(controller['path']))
+     contract = native.round_contract()
+-    protocol = h.put(output/'main-health-protocol.json', dict(schema='robotron-native-round-main-health-protocol-v10',
++    protocol = h.put(output/'main-health-protocol.json', dict(schema='robotron-native-round-main-health-declared-launcher-protocol-v1',
+         case=binding, raw_API_required=True, close_requires_final_sample=True, hot_max_gap_s=.5, initial_samples=100,
+-        raw_queue_protocol='pending-byte-digest-v2', volatile_live_tmpfs=True,source_bound_API_reconnect_projection=True,source_bound_natural_round_admission=True))
+-    observer = dict(client=h.pin(HERE/'round_observer_client_v11.py'), worker=h.pin(HERE/'round_observer_v10.py'),
+-        health=h.pin(HERE/'round_health_transport_v7.py'),health_base=h.pin(HERE/'round_main_health_v7.py'),API_projection=h.pin(HERE/'api_reconnect_projection_v1.py'),round_admission=h.pin(HERE/'round_admission_proof_v2.py'), durability=h.pin(HERE/'buffered_raw_writer_v2.py'), control=h.pin(HERE/'volatile_live_control_v1.py'), interpreter=h.pin(Path('/usr/bin/python3').resolve()))
++        raw_queue_protocol='pending-byte-digest-v2', volatile_live_tmpfs=True,source_bound_API_reconnect_projection=True,source_bound_natural_round_admission=True,source_bound_declared_launcher_census=True))
++    observer = dict(client=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/observer-engineering-family-original01/round_observer_client_launcher_v1.py')), worker=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/round_observer_launcher_v1.py')),
++        health=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/round_health_transport_launcher_v1.py')),health_base=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/round_main_health_launcher_v1.py')),API_projection=h.pin(HERE/'api_reconnect_projection_v1.py'),round_admission=h.pin(HERE/'round_admission_proof_v2.py'),launcher_census=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/launcher_census_v1.py')), durability=h.pin(HERE/'buffered_raw_writer_v2.py'), control=h.pin(HERE/'volatile_live_control_v1.py'), interpreter=h.pin(Path('/usr/bin/python3').resolve()))
+     old_family = read(old_candidate['source_family_manifest'], h)
+     study = h.put(output/'study-precommit.json', dict(schema='robotron-deadline32-fixed-fresh-RCRC-study-v1',
+         created_unix_s=time.time(), ordered_legs=list(LEGS), horizon_ns=old_ref['horizon_ns'],
+@@ -253,8 +255,8 @@
+                     token = secrets.token_hex(16)
+                 fresh.add(token)
+                 job[key][str(slot)] = token
+-        family = dict(schema='robotron-deadline32-round-main-source-family-v11', runtime=runtime,
+-            reviewer=reviewer, main_observer=observer, round_observer_reviewer=h.pin(HERE/'review_round_observer_v11.py'),
++        family = dict(schema='robotron-deadline32-declared-launcher-source-family-v1', runtime=runtime,
++            reviewer=reviewer, main_observer=observer, round_observer_reviewer=h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/observer-engineering-family-original01/review_round_observer_launcher_v1.py')),
+             main_health_finalizer=old_family['main_health_finalizer'], deadline_components=job['components'],
+             private_parent_job=h.pin(PREVIOUS/'C2/job.json'), current_main_binding=binding,
+             lease_recovery_authority=lease_recovery, main_domain_hot_review=main_proof, native_launch_qualified=not engineering,
+@@ -269,12 +271,12 @@
+             selected['immutable_numerical_or_protection_authority'], *evidence, *prior]
+         job['inputs'] = list({value['path']:value for value in inputs}.values())
+         context = native.validate_completed_context(job, h)
+-        require(len(context['package_pins']) == 123 and len(context['main_binding']['inputs']) == 243,
++        require(len(context['package_pins']) == 123 and len(context['main_binding']['inputs']) == 247,
+                 'Actual prepared private/main source inventories differ')
+         if not engineering:
+             contract.validate_launch(job, context, h)
+         jp = h.put(directory/'job.json', job)
+-        config = dict(unit='robotron-deadline32-rounds-v11-'+leg.lower()+'-original01-20261028.service',
++        config = dict(unit='robotron-deadline32-launcher-v1-'+leg.lower()+'-original01-20261029.service',
+             output=str(directory/'execution-original01'), argv=[str(ROOT.parent/'.venv-gb300/bin/python'),
+                 '-Xgil=0','-I','-B',runtime['path'],'--execute','--job',jp['path'],
+                 '--job-sha256',jp['sha256'],'--source-sha256',runtime['sha256']],

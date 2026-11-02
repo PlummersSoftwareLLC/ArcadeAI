@@ -1,0 +1,13 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/round_health_transport_launcher_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/readonly-mmap-source-validation-original02/round_health_transport_launcher_mmap_v2.py
+@@ -14,8 +14,8 @@
+ import sys
+ import time
+ 
+-BASE = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/round_main_health_launcher_v1.py')
+-BASE_SHA = '44371d76f1be25453050a1a508afb70325a86bcec965fe19fbd47a0ab3bf65ef'
++BASE = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/readonly-mmap-source-validation-original02/round_main_health_launcher_mmap_v2.py')
++BASE_SHA = '6953c0a7a11fc08886cf99b69fa19968606e2252c68bde9bcc94e5400171565a'
+ PORT = 9998
+ 
+ 

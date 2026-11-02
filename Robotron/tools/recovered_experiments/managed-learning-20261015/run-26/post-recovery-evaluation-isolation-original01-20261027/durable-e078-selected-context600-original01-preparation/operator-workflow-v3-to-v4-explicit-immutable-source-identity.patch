@@ -1,0 +1,20 @@
+--- Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-selected-context600-original01-preparation/prepare_e078_selected_workflow_v3.py
++++ Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-selected-context600-original01-preparation/prepare_e078_selected_workflow_v4.py
+@@ -7,6 +7,7 @@
+ import hashlib
+ import importlib.util
+ import json
++import os
+ from pathlib import Path
+ import sys
+ 
+@@ -62,6 +63,9 @@
+         selected=row['source'];actual=h.pin(Path(selected['path']))
+         require(all(actual[key]==value for key,value in selected.items()),
+             'Current D4 source differs from immutable selected construction')
++        require(actual['identity']['mode']=='0o444' and actual['identity']['uid']==os.getuid()
++            and actual['identity']['nlink']==1 and not Path(selected['path']).is_symlink(),
++            'Selected D4 source must remain owned, readonly and independently linked')
+         values.append(actual)
+     return values
+ 

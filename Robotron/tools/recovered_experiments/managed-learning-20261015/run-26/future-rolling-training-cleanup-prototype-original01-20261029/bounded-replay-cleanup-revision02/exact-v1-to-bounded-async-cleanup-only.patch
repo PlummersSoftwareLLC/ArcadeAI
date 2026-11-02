@@ -1,0 +1,174 @@
+--- socket_server_cid_cleanup_candidate_v1.py
++++ socket_server_bounded_cleanup_candidate_v2.py
+@@ -707,6 +707,9 @@
+         self.batch_size = batch_size
+         self.queue = queue.Queue(maxsize=max_queue_size)
+         self.running = True
++        self._admission = threading.Condition()
++        self._consumer_error = None
++        self._drain_complete = threading.Event()
+         self._lookback = int(getattr(RL_CONFIG, "pre_death_lookback", 120))
+         self._client_indices = {}          # client_id -> deque(maxlen=lookback)
+         self._episode_indices = {}         # client_id -> replay indices for current episode
+@@ -724,7 +727,6 @@
+         self._last_drop_warn = 0.0
+         self._thread = threading.Thread(target=self._consume, daemon=True)
+         self._thread.start()
+-
+     def _record_drop(self, n=1):
+         with self._drop_lock:
+             self.dropped_steps += n
+@@ -741,14 +743,27 @@
+             print(f"[WARN] Replay queue saturated — dropped {total:,} non-terminal "
+                   f"transitions so far (consumer can't keep up)")
+ 
+-    def _enqueue_preserving(self, item):
+-        while self.running:
+-            try:
+-                self.queue.put(item, timeout=0.1)
+-                return
+-            except queue.Full:
+-                continue
+-
++    def _enqueue_preserving(self, item, *, timeout_s=None):
++        if timeout_s is not None and not (type(timeout_s) in (int, float) and 0 < timeout_s <= 5.0):
++            raise ValueError("Replay enqueue timeout must be in (0, 5] seconds")
++        deadline = None if timeout_s is None else time.monotonic() + timeout_s
++        # One admission fence covers the running check and actual insertion.
++        # Never hold it while waiting for capacity or while executing replay.
++        with self._admission:
++            while self.running:
++                if self._consumer_error is not None or not self._thread.is_alive():
++                    raise RuntimeError("Replay consumer unavailable; command was not enqueued")
++                if deadline is not None and time.monotonic() >= deadline:
++                    raise TimeoutError("Replay command was not enqueued before its deadline")
++                try:
++                    self.queue.put_nowait(item)
++                    return
++                except queue.Full:
++                    remaining = None if deadline is None else deadline - time.monotonic()
++                    if remaining is not None and remaining <= 0:
++                        raise TimeoutError("Replay command was not enqueued before its deadline")
++                    self._admission.wait(timeout=.1 if remaining is None else min(.1, remaining))
++            raise RuntimeError("Replay admission sealed; command was not enqueued")
+     def step_async(self, *args, client_id=None, **kwargs):
+         # Preserve every transition under transient bank-save/CPU pressure.
+         # Queueing may slow the actor; silently dropping experience corrupts
+@@ -763,12 +778,12 @@
+         self._enqueue_preserving(("elite", client_id,
+             (int(score), int(level), float(total_reward), int(ep_len), int(ep_score), int(game_uid)), None))
+ 
+-    def reset_client_async(self, client_id):
+-        """Discard episode indices in FIFO order after pre-boundary commands."""
++    def reset_client_async(self, client_id, *, enqueue_timeout_s=None):
++        """ACK only after the sole consumer executes the FIFO reset."""
+         acknowledged = threading.Event()
+-        self._enqueue_preserving(("reset_client", client_id, None, {"event": acknowledged}))
++        self._enqueue_preserving(("reset_client", client_id, None, {"event": acknowledged}),
++                                 timeout_s=enqueue_timeout_s)
+         return acknowledged
+-
+     def barrier_async(self):
+         """A nonblocking acknowledgment after all preceding replay commands."""
+         acknowledged = threading.Event()
+@@ -776,10 +791,14 @@
+         return acknowledged
+ 
+     def _consume(self):
+-        while self.running:
++        while True:
+             try:
+                 item = self.queue.get(timeout=0.01)
+             except queue.Empty:
++                with self._admission:
++                    if not self.running and self.queue.empty():
++                        self._drain_complete.set()
++                        return
+                 continue
+             batch = [item]
+             while len(batch) < self.batch_size:
+@@ -787,6 +806,8 @@
+                     batch.append(self.queue.get_nowait())
+                 except queue.Empty:
+                     break
++            with self._admission:
++                self._admission.notify_all()
+             for cmd, cid, a, kw in batch:
+                 try:
+                     if cmd == "step":
+@@ -815,8 +836,11 @@
+                     elif cmd == "barrier":
+                         kw["event"].set()
+                 except Exception as e:
++                    with self._admission:
++                        if self._consumer_error is None:
++                            self._consumer_error = repr(e)
++                        self._admission.notify_all()
+                     print(f"AsyncReplayBuffer error: {e}")
+-
+     def _do_boost(self, client_id):
+         indices = self._client_indices.get(client_id)
+         if not indices:
+@@ -936,30 +960,38 @@
+             indices.clear()
+ 
+     def remove_client(self, client_id):
+-        return self.reset_client_async(client_id)
+-
+-    def stop(self):
+-        self.running = False
+-        while True:
+-            try:
+-                cmd, cid, a, kw = self.queue.get_nowait()
+-                if cmd == "step" and a is not None:
+-                    self.agent.step(*a, **kw)
+-                elif cmd == "boost":
+-                    self._do_boost(cid)
+-                elif cmd == "elite":
+-                    self._do_elite_episode_boost(cid, *(a or (0, 0, 0.0, 0)))
+-                elif cmd == "reset_client":
+-                    self._client_indices.pop(cid, None)
+-                    self._episode_indices.pop(cid, None)
+-                    kw["event"].set()
+-                elif cmd == "barrier":
+-                    kw["event"].set()
+-            except queue.Empty:
+-                break
+-            except Exception:
+-                pass
+-        self._thread.join(timeout=5.0)
++        # Ordinary boundary resets retain preserving backpressure. Disconnect
++        # cleanup has an explicit enqueue bound; timeout never grants reuse.
++        return self.reset_client_async(client_id, enqueue_timeout_s=1.0)
++    def stop(self, *, timeout_s=5.0):
++        if not (type(timeout_s) in (int, float) and 0 < timeout_s <= 5.0):
++            raise ValueError("Replay stop timeout must be in (0, 5] seconds")
++        if threading.current_thread() is self._thread:
++            raise RuntimeError("Replay consumer cannot stop/join itself")
++        with self._admission:
++            self.running = False
++            self._admission.notify_all()
++        # The original consumer alone drains all commands admitted before the
++        # fence. No caller-thread replay/reset execution races its local batch.
++        self._thread.join(timeout=timeout_s)
++        if self._thread.is_alive():
++            raise TimeoutError("Replay consumer remains alive; stop is incomplete")
++        if not self.queue.empty():
++            raise RuntimeError("Replay commands remain undrained; stop is incomplete")
++        if not self._drain_complete.is_set():
++            raise RuntimeError("Replay consumer never acknowledged the sealed drain")
++        if self._consumer_error is not None:
++            raise RuntimeError("Replay consumer failed; persistence is unqualified: " + self._consumer_error)
++
++    def cleanup_health(self):
++        """Read only: shutdown is not permission to refill a training slot."""
++        with self._admission:
++            alive = self._thread.is_alive()
++            error = self._consumer_error
++            if not alive and (self.running or not self._drain_complete.is_set()):
++                error = error or "Replay consumer ended without a sealed drain acknowledgment"
++            return dict(admission_open=bool(self.running and alive and error is None),
++                        consumer_error=error)
+ 
+ 
+ class _InferenceRequest:

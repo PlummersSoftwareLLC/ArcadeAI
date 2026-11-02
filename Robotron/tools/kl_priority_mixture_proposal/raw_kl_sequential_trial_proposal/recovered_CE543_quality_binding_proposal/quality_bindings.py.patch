@@ -1,0 +1,175 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_reviewed2_proposal/quality_bindings.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/quality_bindings.py
+@@ -11,20 +11,34 @@
+ import stat
+ 
+ GAME = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+-SCHEMA = 'robotron-live-CE-candidate-quality-bindings-v1'
++SCHEMA = 'robotron-recovered-CE543-candidate-quality-bindings-v1'
+ PHASE = GAME / 'tools/phase_snapshot_cpu_verifier_proposal/verify_phase_snapshot.py'
+ PHASE_SHA = 'b2e732dc731b2b601f7499d2cafd5841896daf2b0713d496b98cb6b8d7279519'
+ STRICT_SHA = '9ef38e17e1b9eee3f6c43e40005812f2ebe3cff16d08bf61d3e820c2d41134c8'
+ BASE_SHA = '7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead'
+-PREDECESSOR_PLAN = GAME / 'logs/managed-learning-20261015/quality-448M-vs-rawKL-trial02-first8M-20261017/plan.json'
+-PREDECESSOR_PLAN_SHA = 'b502625ed8e39f01fa57af1c9f9cc8283794aa14e351e2b9bc9ec1268b267ecf'
+-FREEZE_RELEASE = GAME / 'logs/managed-learning-20261015/run-26/rawKL-trial02-quality-root-freeze-release-20261017/root-explicit-source-freeze-release.json'
+-FREEZE_RELEASE_SHA = '6d509af8bab78803f2f57088f5ef62efa1b07be4f107da45cde906ce6aade34f'
+-REFERENCES = {
+-    str(GAME/'models_dqn/managed-incumbents/fresh3-448M-confirmed.pt'):
+-        '1e085a128e237c2bb0636b073e5053dd8bf5be932bcbd8249543b3af20e23021',
+-    str(GAME/'models_dqn/managed-incumbents/rawkl-trial02-512M-confirmed.pt'):
+-        '1b2fb26bb01842ac43e71681d92ce3f7cdad38bfcdd2279e2c9058b2e760f7d8',
++RUN = GAME/'logs/managed-learning-20261015/run-26'
++PREDECESSOR_PLAN = GAME/'logs/managed-learning-20261015/quality-448M-vs-CE543M-20261017/plan.json'
++PREDECESSOR_PLAN_SHA = '25aaded11bf956b715cc5fb58be1901d236a30444e74253594461f8d11c00d75'
++FREEZE_RELEASE = RUN/'CE543M-quality-root-freeze-release-20261017/root-explicit-source-freeze-release.json'
++FREEZE_RELEASE_SHA = 'c1abbbb5da36836830a367c6f4a165d890ee550120a79014d1d6aa8ca2191f2a'
++REFERENCES = {str(GAME/'models_dqn/managed-incumbents/freshCE-543M-confirmed.pt'):
++    '8b86546355ade166937a8287a008c7854276ed773a103eb815287dde00d6fb7e'}
++PREVIOUS_PINS = {
++    'closure': (RUN/'CE543M-quality-terminal-closure-root-reviewed1-20261017/cleanup-receipt.json',
++        '58834fa0cb661b3a649eae0779a9f03bebd519276fdf6f045e3b25201c84ed9e'),
++    'source_freeze_release': (FREEZE_RELEASE, FREEZE_RELEASE_SHA),
++    'publication': (RUN/'CE543M-protected-publication-original-root-execution-20261017/root-protected-readback.json',
++        'ea74c5eb0c6a1cd3dedbf3cb3236912d375e6f82f0443db92fcb7e0f404caeef'),
++    'adoption': (RUN/'CE543M-managed-incumbent-adoption-root-20261017/root-promotion-and-goal-continuation-receipt.json',
++        'bfe5c1d327dc5eaaac7335bba2cf5faa2ed0dec4802d4b8e2e3f02a57efb0972'),
++}
++RECOVERY_PINS = {
++    'result': (RUN/'CE2048-trial01-forward-CE4096-repair-20261017/result.json',
++        '6580fe4845c3616cdc2a01d4d2c5e382455724628215e6e2d74750b6c2ed3f24'),
++    'job': (RUN/'CE2048-trial01-forward4096-recovery-root-preparation-20261017/forward-CE4096-repair-job.json',
++        'dd848556d8fab45d09b70c58aabc1b3eeb612a1a8fdb158a88841a73336edf42'),
++    'release': (RUN/'CE2048-trial01-forward4096-recovery-root-preparation-20261017/repair-execution/root-PASS-and-owned-release.json',
++        'f849c857b04baddebd142ca208b248ac76cf37853c4e57c1487dfb4e847550c1'),
+ }
+ CLOCKS = ('training_steps', 'optimized_samples', 'learner_frame_count', 'frame_count')
+ OWNER_KEYS = {'pid', 'starttime_ticks', 'unit', 'invocation_id', 'cgroup'}
+@@ -141,23 +155,51 @@
+         and saved['last_resume_record_sha256'] == expected['last_resume_record_sha256'], 'Saved CE founder/resume differs')
+ 
+ 
++def triple(pin):
++    return {k:pin[k] for k in ('path','sha256','bytes')}
++
++
++def fixed_pin(pin, path, digest):
++    require(isinstance(pin,dict) and pin.get('path') == str(path) and pin.get('sha256') == digest, 'Wrong actual historical evidence PIN')
++
++
+ def check_reference(reference, metadata, closure):
+     require(set(reference) == {'path','sha256','bytes','metadata'}
+         and reference['path'] in REFERENCES and reference['sha256'] == REFERENCES[reference['path']]
+-        and type(reference['bytes']) is int and 0 < reference['bytes'] <= 512 << 20,
+-        'Root must explicitly select protected448 or actually protected512')
++        and reference['bytes'] == 275192614, 'Actual protected543 reference required')
+     require(reference['metadata']['path'] == reference['path']+'.json'
++        and reference['metadata']['sha256'] == 'b080f538f84e9c76739b9d142a2065a55d1292c3dbdcb01806003a14339956d5'
+         and metadata['schema'] == 'robotron-protected-quality-winner-v1'
+         and metadata['protected_checkpoint'] == reference['path']
+         and metadata['checkpoint_sha256'] == reference['sha256']
+-        and metadata['assessment']['qualified_improvement'] is True,
+-        'Actual create-only qualified protected metadata required')
+-    outcome = closure['accepted_quality_outcome']
+-    require(outcome in ('qualified_improvement','not_improved'), 'Previous outcome is not a completed valid campaign')
+-    is512 = reference['path'].endswith('/rawkl-trial02-512M-confirmed.pt')
+-    require(is512 == (outcome == 'qualified_improvement'), 'Reference must follow actual previous outcome; no synthetic promotion')
+-    if is512:
+-        require(metadata['plan_sha256'] == PREDECESSOR_PLAN_SHA, 'Protected512 must come from actual preceding campaign')
++        and metadata['plan_sha256'] == PREDECESSOR_PLAN_SHA
++        and metadata['assessment']['qualified_improvement'] is True
++        and closure['accepted_quality_outcome'] == 'qualified_improvement',
++        'Actually published qualified543 metadata required')
++
++
++def check_recovery(capture, phase, spec, reader):
++    job = reader(capture['root_job']); pins = job['recovery']
++    require(set(pins) == set(RECOVERY_PINS), 'Actual forward-recovery evidence required')
++    for key,(path,digest) in RECOVERY_PINS.items(): fixed_pin(pins[key],path,digest)
++    recovered, repair, released = (reader(pins[k]) for k in ('result','job','release'))
++    require(recovered['status'] == 'READY_CE_FORWARD_REPAIR' and recovered['original_trial_failed'] is True
++        and recovered['trial_retried'] is False and recovered['manual_recovery_required'] is False
++        and recovered['recovery_target_batch_size'] == 4096 and recovered['root_job'] == pins['job']
++        and recovered['owner'] == job['expected_owner'] == spec['owner'], 'Genuine recovered CE4096 owner required')
++    historical = recovered['startup']['phase']
++    require(all(phase[k] == historical[k] for k in ('record','boot_checkpoint','expected'))
++        and triple(phase['boot_verification'])['sha256'] == historical['boot_verification']['sha256']
++        and phase['boot_verification']['bytes'] == historical['boot_verification']['bytes'],
++        'Recovered founder/original boot differs; archive may only change boot-proof path/inode')
++    require(released['status'] == 'PASS' and released['owner'] == spec['owner']
++        and triple(released['result']) == triple(pins['result'])
++        and released['original_exec_code'] == 1 and released['original_exit'] == 0
++        and released['original_result'] == 'success' and released['original_archived_before_release'] is True
++        and released['unit_released'] is True
++        and recovered['final_resume']['all_matching_actors_resumed'] is True
++        and not recovered['final_resume']['failures'], 'Original recovery terminal/owned release required')
++    return recovered
+ 
+ 
+ def validate(binding, *, reader=read, api_reader=None):
+@@ -180,6 +222,8 @@
+     require(record['metric'] == 'ce' and record['checkpoint'] == phase['boot_checkpoint']
+         and boot['status'] == 'PASS' and (boot['sha256'],boot['bytes']) ==
+         (phase['boot_checkpoint']['sha256'],phase['boot_checkpoint']['bytes']), 'Actual CE boot proof differs; a startup snapshot is not its boot')
++    recovered = check_recovery(capture, phase, spec, reader)
++    require(record['previous_metric'] == 'ce', 'Actual recovered CE predecessor must remain CE')
+     acquisition = reader(spec['acquisition'])
+     require(acquisition['schema'] == 'robotron-owned-phase-snapshot-acquisition-v1'
+         and acquisition['purpose'] == 'candidate' and acquisition['client_count'] == 192
+@@ -206,12 +250,9 @@
+         and four(trigger) == four(cpu['clock_floor']),
+         'Trigger must be actual unpaused192 training on the captured CE owner')
+     previous = binding['previous_campaign']
+-    require(set(previous) == {'closure','source_freeze_release'} and isinstance(previous['source_freeze_release'],dict)
+-        and previous['source_freeze_release']['path'] == str(FREEZE_RELEASE)
+-        and previous['source_freeze_release']['sha256'] == FREEZE_RELEASE_SHA,
+-        'Actual root explicit source-freeze release required before preparing new quality')
+-    release = reader(previous['source_freeze_release'])
+-    closure = reader(previous['closure'])
++    require(set(previous) == set(PREVIOUS_PINS), 'Actual543 closure/release/publication/adoption required')
++    for key,(path,digest) in PREVIOUS_PINS.items(): fixed_pin(previous[key],path,digest)
++    closure,release,publication,adoption = (reader(previous[k]) for k in ('closure','source_freeze_release','publication','adoption'))
+     require(closure['status'] == 'PASS_ORIGINAL_QUALITY_ARCHIVED_OWNED_CLEANUP_COMPLETE'
+         and closure['owned_cleanup_complete'] is True and closure['main192_and_resources_healthy'] is True
+         and closure['original_execution']['exec_code'] == 1 and closure['original_execution']['exit_status'] == 0
+@@ -219,22 +260,31 @@
+         and closure['original_execution']['archived_before_release'] is True,
+         'Actual prior campaign original terminal/owned cleanup required')
+     closure_job = reader(closure['root_job'])
+-    require(closure_job['schema'] == 'robotron-trial02-quality-owned-closure-job-v1'
+-        and closure_job['binding_job']['sha256'] == '3b16c36da91c63fd4fb218f1fed3c1c5a5fe8caff73534d880aeaeccfe4c81fe'
++    require(closure_job['schema'] == 'robotron-CE543M-quality-owned-closure-job-v1'
++        and closure_job['binding_job']['sha256'] == 'f43719ed4dc60a4c275a7414995aa79d0f40062c76964200cf8700a8abe50dc3'
+         and closure_job['terminal_summary']['path'] == str(PREDECESSOR_PLAN.parent/'summary.json'),
+-        'Closure is not the preceding actual b502 campaign')
+-    require(release['schema'] == 'robotron-quality-campaign-root-source-freeze-release-v1'
+-        and release['source_freeze_released'] is True and release['actual_plan_sha256'] == PREDECESSOR_PLAN_SHA
+-        and release['campaign_outcome'] == closure['accepted_quality_outcome']
+-        and release['actual_quality_cleanup'] == {k:previous['closure'][k] for k in ('path','sha256','bytes')}
+-        and release['protected_incumbent'] == {k:binding['reference'][k] for k in ('path','sha256','bytes')},
+-        'Actual freeze release/cleanup/protected reference differs')
++        'Closure must bind the actual preceding CE543 campaign')
++    require(release['source_freeze_released'] is True and release['owned_cleanup_complete'] is True
++        and release['actual_plan_sha256'] == PREDECESSOR_PLAN_SHA
++        and triple(release['actual_owned_closure']) == triple(previous['closure'])
++        and release['qualification_pass'] is True, 'Actual source freeze release/cleanup differs')
+     check_reference(binding['reference'],reader(binding['reference']['metadata']),closure)
++    require(publication['status'] == 'PASS_CREATE_ONLY_PROTECTED_CE543M_PUBLISHED'
++        and triple(publication['protected_checkpoint']) == triple(binding['reference'])
++        and triple(publication['metadata']) == triple(binding['reference']['metadata'])
++        and triple(publication['source_freeze_release']) == triple(previous['source_freeze_release'])
++        and adoption['status'] == 'PASS_CE543M_PROTECTED_WINNER_CANONICALLY_ADOPTED_GOAL_CONTINUES'
++        and str(GAME/adoption['protected_checkpoint']) == binding['reference']['path']
++        and adoption['checkpoint_sha256'] == binding['reference']['sha256']
++        and triple(adoption['actual_publication']) == triple(previous['publication'])
++        and adoption['live_learner_restored'] is False and adoption['goal_remains_active'] is True,
++        'Actual543 publication/adoption provenance differs')
+     baseline = reader(binding['runtime_baseline']); anchor = binding['runtime_anchor']
+     require(baseline['status'] == 'PASS' and baseline['main_owner'] == anchor['main_owner'] == spec['owner']
+         and all(baseline[k] == anchor[k] for k in ('fleet_owner','inference_worker','actors','source_hashes','control_hashes','unit_files','environment_sha256')),
+         'Fresh actual same-CE-owner baseline differs')
+     require(len(anchor['actors']) == 192 and len({a['pid'] for a in anchor['actors']}) == 192
++        and {a['pid'] for a in anchor['actors']} == {a['pid'] for a in recovered['healthy192']['binding']['bindings']['actors']}
+         and len(anchor['control_hashes']) == 2 and len(anchor['source_hashes']) >= 61, 'Complete192/source/control closure required')
+     for name,digest in CANDIDATE_SOURCES.items():
+         require(anchor['source_hashes'][str(GAME/'Scripts/dqn'/name)] == digest, 'Installed candidate5 source differs')

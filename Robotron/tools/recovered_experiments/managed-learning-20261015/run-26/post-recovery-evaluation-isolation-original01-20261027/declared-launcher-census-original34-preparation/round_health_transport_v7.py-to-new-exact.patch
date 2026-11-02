@@ -1,0 +1,84 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/round_health_transport_v7.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/round_health_transport_launcher_v1.py
+@@ -14,8 +14,8 @@
+ import sys
+ import time
+ 
+-BASE = Path(__file__).with_name('round_main_health_v7.py')
+-BASE_SHA = 'daa4503f193a94540a3547f254aea108b2ec07c1a70b0b653d32bb4a609ccc49'
++BASE = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/round_main_health_launcher_v1.py')
++BASE_SHA = '44371d76f1be25453050a1a508afb70325a86bcec965fe19fbd47a0ab3bf65ef'
+ PORT = 9998
+ 
+ 
+@@ -26,7 +26,7 @@
+ 
+ def base():
+     require(hashlib.sha256(BASE.read_bytes()).hexdigest() == BASE_SHA, 'Round reader source changed')
+-    name = '_pinned_round_transport_base_v7'
++    name = '_pinned_round_transport_declared_launchers_v1'
+     if name not in sys.modules:
+         spec = importlib.util.spec_from_file_location(name, BASE)
+         module = importlib.util.module_from_spec(spec)
+@@ -72,29 +72,38 @@
+ 
+ 
+ def collect(case, previous=None):
+-    started = time.monotonic()
+-    module = base()
+-    sample = module.collect(case,previous=previous)
+-    processes = dict(trainer=sample['owners']['trainer']['process'], **sample['actors'])
+-    kernel = {}
+-    for name in ('tcp', 'tcp6'):
+-        kernel[name] = Path('/proc/net', name).read_text()
+-    rows = tcp_rows(kernel['tcp']) + tcp_rows(kernel['tcp6'], ipv6=True)
+-    inodes = {role: socket_inodes(process['pid']) for role, process in processes.items()}
+-    namespaces = {role: os.readlink('/proc/%d/ns/net' % process['pid'])
+-                  for role, process in processes.items()}
+-    for name in ('tcp', 'tcp6'):
+-        require(tcp_rows(Path('/proc/net', name).read_text(), ipv6=name == 'tcp6') ==
+-                tcp_rows(kernel[name], ipv6=name == 'tcp6'), 'TCP roster raced capture')
+-    reader = module.linux()
+-    for process in processes.values():
+-        current = reader.process_stat(process['pid'])
+-        require(current is not None and current['starttime_ticks'] == process['starttime_ticks'],
+-                'TCP owner birth changed during capture')
+-    require(time.monotonic() - started <= 5, 'Round and TCP census exceeded5s')
+-    sample['transport'] = dict(raw_tables=kernel, socket_inodes=inodes, namespaces=namespaces,
+-                               collector_namespace=os.readlink('/proc/self/ns/net'))
+-    return sample
++    sample = None
++    try:
++        started = time.monotonic()
++        module = base()
++        sample = module.collect(case,previous=previous)
++        processes = dict(trainer=sample['owners']['trainer']['process'], **sample['actors'])
++        kernel = {}
++        for name in ('tcp', 'tcp6'):
++            kernel[name] = Path('/proc/net', name).read_text()
++        rows = tcp_rows(kernel['tcp']) + tcp_rows(kernel['tcp6'], ipv6=True)
++        inodes = {role: socket_inodes(process['pid']) for role, process in processes.items()}
++        namespaces = {role: os.readlink('/proc/%d/ns/net' % process['pid'])
++                      for role, process in processes.items()}
++        for name in ('tcp', 'tcp6'):
++            require(tcp_rows(Path('/proc/net', name).read_text(), ipv6=name == 'tcp6') ==
++                    tcp_rows(kernel[name], ipv6=name == 'tcp6'), 'TCP roster raced capture')
++        reader = module.linux()
++        for process in processes.values():
++            current = reader.process_stat(process['pid'])
++            require(current is not None and current['starttime_ticks'] == process['starttime_ticks'],
++                    'TCP owner birth changed during capture')
++        require(time.monotonic() - started <= 5, 'Round and TCP census exceeded5s')
++        sample['transport'] = dict(raw_tables=kernel, socket_inodes=inodes, namespaces=namespaces,
++                                   collector_namespace=os.readlink('/proc/self/ns/net'))
++        return sample
++    except (OSError,ValueError,KeyError) as failure:
++        if getattr(failure,'raw_snapshot',None) is not None:
++            raise
++        evidence=dict(stage='transport-capture',failure=repr(failure),partial_main_snapshot=sample)
++        if 'kernel' in locals():evidence['partial_raw_TCP_tables']=kernel
++        if 'inodes' in locals():evidence['partial_socket_inodes']=inodes
++        raise base().launchers().CensusFailure(repr(failure),evidence) from failure
+ 
+ 
+ def validate_transport(sample):

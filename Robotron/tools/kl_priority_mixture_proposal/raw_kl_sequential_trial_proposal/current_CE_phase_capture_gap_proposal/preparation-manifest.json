@@ -1,0 +1,139 @@
+{
+  "schema": "robotron-currentCE-capture-gap-source-preparation-v1",
+  "status": "SOURCE_SAVED_METADATA_ONLY_NO_CURRENT_CAPTURE_PROVEN",
+  "files": {
+    "NOTE.txt": {
+      "sha256": "ac450d5ac7d710fd3f8d1e6429731f9ca89f3030b575c36bf6f3888982c41df0",
+      "bytes": 5130,
+      "mode": "0o444"
+    },
+    "inventory.json": {
+      "sha256": "f40473ba17e0cc262064e6fcdcf510150cefc20702b9a7ba8fe58f46c061816a",
+      "bytes": 7986,
+      "mode": "0o444"
+    }
+  },
+  "input_pins": {
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-return-CE-20261017/phase-record.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-return-CE-20261017/phase-record.json",
+      "sha256": "3475a048151c08bbc4fdc58a9b4336c7df67cb7e6668779523239d3a35274308",
+      "bytes": 552
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-return-CE-20261017/owned-start-request.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-return-CE-20261017/owned-start-request.json",
+      "sha256": "e83ac9f5fee1d6b13f902014e3cfa6d5e6ae6c43fc1bae442821ec26e57ddc91",
+      "bytes": 1930
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-return-CE-20261017/startup-phase-CPU/cpu-job.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-return-CE-20261017/startup-phase-CPU/cpu-job.json",
+      "sha256": "b4c2edba5f7e09aef7bc8d6b8dcd68a024537a080a42426ec84a39e998a2a472",
+      "bytes": 22605
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-first-horizon-candidate-and-CE-return-independent-saved-review-20261017/review-receipt.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-first-horizon-candidate-and-CE-return-independent-saved-review-20261017/review-receipt.json",
+      "sha256": "b18dc615b7695741ed582cbbe179d35e093ac5524592240bf0d0d6128f60d3e6",
+      "bytes": 55472
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/context.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/context.json",
+      "sha256": "358b55a2b67d8da91b53e5600243f4a2d5c0bc95d2b14996d7b8f3233b3f15cd",
+      "bytes": 9537
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/attempt-01.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/attempt-01.json",
+      "sha256": "39fded4b1d7fd133182f2a6d4f533a99e6e7362007e50ddec7e143d00b029bc2",
+      "bytes": 5313
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/attempt-02.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/attempt-02.json",
+      "sha256": "b31b741d24e4e02caaa9916da990513ec3c30e649a346a8c34c06976c0b332b6",
+      "bytes": 5330
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/attempt-03.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/attempt-03.json",
+      "sha256": "adda3c98ca10f437e9913f2dda999a5fd2d7c69b6a68c12ea81ce09994b2985c",
+      "bytes": 5332
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/attempt-04.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/attempt-04.json",
+      "sha256": "38f621a4796b518fa8ecb435b7a83d9a22eb93208be06803d5e30fd79cd3d138",
+      "bytes": 5330
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/attempt-05.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/attempt-05.json",
+      "sha256": "b6dfa5acb754b083677e89ff4461692b5b69cf852972c365a7d2ad40b3a2423e",
+      "bytes": 5332
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/attempt-06.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/attempt-06.json",
+      "sha256": "625d3e66ef10777b331f11975684f3d5ce8b82451654b3d645c02259e50e74fa",
+      "bytes": 5331
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/attempt-07.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/attempt-07.json",
+      "sha256": "c819616d525e37aafe98f1858782737def9f85bafb201bd9ad57cdb5881337f0",
+      "bytes": 5343
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/attempt-08.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/attempt-08.json",
+      "sha256": "ceef2dda37516a60181b90f32214f02d7163842f274e151d1049df3b7a492997",
+      "bytes": 5332
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-actual-CE-analysis-source-preflight-20261017/input-binding.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-actual-CE-analysis-source-preflight-20261017/input-binding.json",
+      "sha256": "0c2a528a3b1611b6e746e9ca09653297b62c750e35887bfaa1982dd8258351cf",
+      "bytes": 7374
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/cuda_numeric_validation_timeout_reviewed2_proposal/source-lock.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/cuda_numeric_validation_timeout_reviewed2_proposal/source-lock.json",
+      "sha256": "bcc1c696ed1ddbd18879e64cee01d55909b99c8401d908f636228d4c83b36551",
+      "bytes": 13584
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/private_validation_phase_record_permissions_reviewed2_proposal/source-lock.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/private_validation_phase_record_permissions_reviewed2_proposal/source-lock.json",
+      "sha256": "8edbe0082cb93939ebc9bfe6be922058f9c821addf72567f57d2c7a83b53b5fc",
+      "bytes": 14079
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_recompute_proposal/source-lock.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_recompute_proposal/source-lock.json",
+      "sha256": "683278660704999645e93dfbc7aad1b20423a5755080a76ccad8f3af54c3c82f",
+      "bytes": 8268
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/same_gpu_route_diagnostic_proposal/source-lock.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/same_gpu_route_diagnostic_proposal/source-lock.json",
+      "sha256": "cb8874f65753b6f95a3c777b3dcd0d34e3af14227fd58a8c1feed0adcb2b97db",
+      "bytes": 9707
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/agent.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/agent.py",
+      "sha256": "865a0df717b39951b7f7c516e4a962e3d48cf4d3dc11295ff266e58653e6c74b",
+      "bytes": 98429
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/training.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/training.py",
+      "sha256": "90b847856f810cb4f52513a4bd0625b2d15d4801107bff398060faae25bc4be4",
+      "bytes": 35009
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/recomputed_ce_capture.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/recomputed_ce_capture.py",
+      "sha256": "6c3ef3735342295154f24b37f7fe0f54c2f05bd13789629c856214441e087263",
+      "bytes": 26538
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/replay_buffer.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/replay_buffer.py",
+      "sha256": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f",
+      "bytes": 113613
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_one_trial_installed_ce_revision2_proposal/run_raw_kl_transition.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_one_trial_installed_ce_revision2_proposal/run_raw_kl_transition.py",
+      "sha256": "fd4e9d7b9b562c2bd6c663b9651d02b4167a3f552fcacb71cb8571440f3e9bf5",
+      "bytes": 62575
+    }
+  },
+  "selected_floor": false,
+  "implementation": null,
+  "actual_observation": null,
+  "actual_PRE_payload": null,
+  "model_or_runtime_actions": false,
+  "full_source_freeze_preserved": true
+}

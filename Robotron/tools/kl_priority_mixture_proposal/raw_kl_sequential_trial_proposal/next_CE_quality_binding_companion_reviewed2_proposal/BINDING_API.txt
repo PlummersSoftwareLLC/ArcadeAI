@@ -1,0 +1,62 @@
+Root writes one NEW owned0444 binding job only after an actual CE capture and
+strict CPU success. The supplied template is inert and is not an executable job.
+
+Full PIN means exactly {path,sha256,bytes,identity:{device,inode,bytes,mtime_ns,
+ctime_ns,mode,uid,nlink}}. Consumed JSON/source metadata is bounded4MiB, regular,
+canonical, owned0444/singlelink, SHA- and opened-FD/path-identity bracketed. Reports
+and historical mutable context are independently archived before this boundary.
+The binder never decodes PT. The explicit root carrier later hashes the actual
+candidate and reference as the unchanged evaluator does.
+
+candidate = {tag,path,sha256,bytes}; path is exactly managed-checkpoints/<tag>.pt,
+actual dynamic0<bytes<=512MiB. No old fixed448 serialization length is required.
+reference = {path,sha256,bytes,metadata:PIN}; actual protected metadata must be
+generic e459 qualified metadata for that exact protected path/hash. Previous
+campaign release6d509 resolves the present reference to448/1e085, not512.
+
+evidence contains FOUR actual PINs:
+ capture_result: source helper result CAPTURED_PENDING_CPU, with source,
+ verification_copy,acquisition,cpu_job,trigger_API,current_phase,owner,
+ capture_completion PIN. capture_completion contains COMPLETE,tag,owner_before,
+ owner_after,transition (the exact acquisition completed_slot_transition).
+ phase_cpu_job: exact b2e job, purposecandidate,observed_clients192,metricce.
+ phase_cpu_report: actual PASS report's independently archived0444 bytes.
+ phase_cpu_completion: genuine numerical {argv,exit_code}; exact b2e -Xgil=0
+ -I -B --execute --job --expected-job-sha256 --expected-verifier-sha256 ordering,
+ original exit0. A root retained unit may supply this command and actual original
+ exit from its archived execution; do not invent an inline run or CPU owner.
+ Retain that outer original invocation/archive/release separately as root launch
+ prerequisites. A planned cpu_argv is not a completion.
+
+current_ce_phase = {record:PIN,boot_checkpoint:triple,boot_verification:PIN,
+expected:actual b2e expected_phase}. It is exactly the capture's actual phase and
+CPU job phase fields. Readonly archive paths may differ from historical originals;
+content/founder/started_from remain fixed. A startup snapshot is not a boot proof.
+
+previous_campaign = {closure:actual cleanup PIN,source_freeze_release:PIN}. The
+release is exact6d509, which joins actual cleanup62b2 and protected448. The cleanup
+must bind its real closure job/3b16/b502 summary identity and original parent0.
+The release authenticates the outcome; the mutable original summary is not reopened.
+No KL trial result, activation, LATCH, early insurance, ending floor, deadline or
+CE-return event is needed for the future plain CE candidate.
+
+runtime_anchor and separately PINned runtime_baseline repeat exact main_owner,
+fleet_owner,inference_worker,actors192,source_hashes>=61,control_hashes2,unit_files,
+environment_sha256. The main owner is the captured CE owner. The complete actual
+dictionaries are compared; >=61 is not a substitute for equality. Environment SHA
+uses json.dumps(selected,sort_keys=True).encode() with default spaces, selecting
+DQN_/ROBOTRON_/CUDA_/TORCHINDUCTOR_ variables, as the unchanged carrier checks.
+Current620749 is a seed, never a guessed future identity or replacement adoption.
+
+predecessor_quality_plan is exact b502 plan with the same current12+4 and boot
+assets. campaign explicitly chooses NEW unique output/preview/execution dirs,
+unit, labels and hypothesis. Actual default plan, source checks, independent
+plan review, <180s fresh readiness and immediate launch guards remain unchanged.
+The new readiness schema is robotron-live-CE-exclusive-readiness-v1; its fields
+are identical to the prior carrier except honest current CE binding.
+
+The prior trial02 binding builder cannot simply be rerun: replace its trial/
+LATCH/CE-return assembly with these four capture/CPU inputs, actual current phase,
+root release and protected reference. Its fresh Host.describe/full source/control/
+192 owner/masks/unitfiles/normalized env collection remains reusable. No new
+collector is introduced here. Root owns actual job assembly and launch.

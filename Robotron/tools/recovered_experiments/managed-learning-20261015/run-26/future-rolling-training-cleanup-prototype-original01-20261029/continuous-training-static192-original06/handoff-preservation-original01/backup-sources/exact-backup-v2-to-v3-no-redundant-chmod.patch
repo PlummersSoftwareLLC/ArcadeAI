@@ -1,0 +1,13 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/backup-sources/copy_verified_stopped_training_state_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/backup-sources/copy_verified_stopped_training_state_v3.py
+@@ -235,7 +235,9 @@
+         # Retain partial bytes read-only even on signal, I/O or source failure.
+         try:
+             if target_fd is not None:
+-                try:os.fchmod(target_fd,0o444);os.fsync(target_fd)
++                try:
++                    if stat.S_IMODE(os.fstat(target_fd).st_mode)!=0o444:os.fchmod(target_fd,0o444)
++                    os.fsync(target_fd)
+                 finally:os.close(target_fd)
+         finally:os.close(source_fd)
+     fd=os.open(target.parent,os.O_RDONLY|os.O_DIRECTORY)

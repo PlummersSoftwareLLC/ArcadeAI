@@ -1,0 +1,331 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_reviewed2_proposal/run_CE_batch_transition.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_reviewed3_proposal/run_CE_batch_transition.py
+@@ -8,6 +8,8 @@
+ import argparse
+ import base64
+ import copy
++import csv
++import io
+ import errno
+ import hashlib
+ import importlib.util
+@@ -23,9 +25,9 @@
+ import time
+ import traceback
+ 
+-SCHEMA = 'robotron-ce-batch-profile-transition-job-v1'
+-RESULT_SCHEMA = 'robotron-ce-batch-profile-transition-result-v1'
+-V4 = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_reviewed2_proposal/owned_lifecycle.py')
++SCHEMA = 'robotron-ce-batch-profile-transition-job-reviewed3-v1'
++RESULT_SCHEMA = 'robotron-ce-batch-profile-transition-result-reviewed3-v1'
++V4 = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_reviewed3_proposal/owned_lifecycle.py')
+ V4_SHA = '6f961e5c724ae70bb4abf4641f7a3a6a27d55579e9acb2808ee15de08960d8ac'
+ PHASE = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/phase_snapshot_cpu_verifier_proposal/verify_phase_snapshot.py')
+ PHASE_SHA = 'b2e732dc731b2b601f7499d2cafd5841896daf2b0713d496b98cb6b8d7279519'
+@@ -50,10 +52,12 @@
+ ORIGINAL_STRICT_SHA = '7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead'
+ CPU2048_BINDING = {'script': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/verify_phase_snapshot_2048.py', 'sha256': 'a331b550191a48ab219cf92f2e1c42fc394e038c93609ecac4fb9a722b75e5cd', 'bytes': 37695}, 'strict_base': {'path': '/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_cpu_verifier_reviewed2_proposal/strict_phase_base_2048.py', 'sha256': '47677509f170c4c3b6a1c03918e02ab13996af1ceafffac29b7536c2fad61f80', 'bytes': 33727}}  # Exact frozen reviewed2 source triples.
+ DRAFT_BLOCKERS = (
+-    'actual producer-observation collector is not implemented',
+-    'legacy2048 maintenance-insurance/verifier provenance is unresolved',
+     'actual2048 numerical readiness and future root precommit are unbound',
++    'new typed producer/phase-insurance proof transport awaits complete source review',
+ )
++PHASE_EARLY = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_early_phase_insurance_proposal/early_phase_insurance.py')
++PHASE_EARLY_SHA = '2565f59040051a34d676bfa1aeb0eb028ecb758249152784fcb244a5180ea980'
++PHASE_EARLY_MANIFEST_SHA = '58df4a4a395cd84445718a9030577dace400ed600912f2f81fc20f387fcbd22d6'
+ _BOUNDARY = None
+ 
+ 
+@@ -173,6 +177,61 @@
+     return {key:max(four(value)[key] for value in values) for key in CLOCKS}
+ 
+ 
++def phase_early_module(base):
++    require(isinstance(PHASE_EARLY_SHA,str) and len(PHASE_EARLY_SHA)==64,
++        'Unbound final phase early-insurance helper; no import')
++    require(base.fingerprint(PHASE_EARLY,base.MAX_SOURCE)['sha256']==PHASE_EARLY_SHA,
++        'Exact phase early-insurance source differs')
++    require(base.fingerprint(PHASE_EARLY.parent/'preparation-manifest.json',base.MAX_SOURCE)['sha256']==PHASE_EARLY_MANIFEST_SHA,
++        'Exact phase early-insurance manifest differs')
++    return base.load_module(str(PHASE_EARLY),'_CE2048_honest_phase_insurance')
++
++
++def before_owner(job,owner):
++    process=job['before']['bindings']['worker']['trainer']
++    trainer=job['before']['trainer']
++    require(set(owner)=={'pid','starttime_ticks','unit','invocation_id','cgroup'} and
++        type(owner['pid']) is int and type(owner['starttime_ticks']) is int and owner['starttime_ticks']>0 and
++        int(trainer['MainPID'])==process['pid']==owner['pid'] and
++        process['starttime_ticks']==owner['starttime_ticks'] and owner['unit']==job['trainer_unit'] and
++        owner['cgroup']==trainer['ControlGroup'] and re.fullmatch('[0-9a-f]{32}',owner['invocation_id'] or ''),
++        'Insurance owner differs from actual before PID/start/unit/cgroup')
++    # LiveHost.before deliberately has no InvocationID property. The authentic
++    # CPU/acquisition proof carries it; initial() later checks actual trainer_id.
++    return copy.deepcopy(owner)
++
++
++def insurance_context(job,base,*,hash_executable):
++    """4096 preactivation retains7d; CE2048 return has its own phase provenance."""
++    if job['mode']=='activate_batch2048':
++        require(job.get('phase_early_insurance_result') is None and job.get('producer_capture') is None,
++            'Preactivation cannot fabricate treatment phase insurance')
++        base.validate_python_binding(job['verifier'],job['insurance_verification'],hash_executable=hash_executable)
++        proof=base.read_json(job['insurance_verification']);saved=base.read_json(job['insurance_receipt'])
++        require(proof['status']=='PASS' and proof['mode']=='insurance' and
++            proof['root_job']['experiment']==job['experiment'] and
++            proof['root_job']['source_control_context']['model_dir']==job['model_dir'] and
++            saved['tag']==proof['root_job']['insurance']['tag'] and
++            saved['source']['sha256']==proof['root_job']['source']['sha256'], 'Wrong original4096 insurance')
++        value=dict(owner=proof['root_job']['insurance']['trainer'],clock_floor=four(proof['clocks']),
++            tag=proof['root_job']['insurance']['tag'],report=job['insurance_verification'],legacy_7d_insurance=True)
++    else:
++        require(job['mode']=='return_batch4096' and job.get('insurance_verification') is None and
++            job.get('insurance_receipt') is None and 'python_binding' not in job['verifier'],
++            'Return must not relabel phase CPU as legacy7d insurance')
++        helper=phase_early_module(base);pin=job['phase_early_insurance_result']
++        result=helper.readonly_json(base,pin)
++        value=helper.phase_insurance_floor(base,pin,before_owner(job,result['owner']),job['running_phase']['record'],job['batch_profile'])
++        require(result['producer_capture']==job['producer_capture'] and result['python']==job['verifier']['python'],
++            'Typed insurance capture/interpreter differs')
++        report=helper.readonly_json(base,value['report'])
++        require(report['root_job']['experiment']==job['experiment'] and
++            report['root_job']['source_control_context']['model_dir']==job['model_dir'], 'Typed insurance branch differs')
++        helper.check_python_identity(base,job['verifier'],hash_executable=hash_executable)
++    require(value['owner']==before_owner(job,value['owner']),'Actual before owner and insurance provenance differ')
++    return value
++
++
+ def validate_ending(job,base):
+     """Read small pinned observations only; never open candidate/model bytes.
+ 
+@@ -192,7 +251,7 @@
+     horizon=base.load_module(str(HORIZON),'raw_kl_ending_horizon_contract')
+     observer=base.read_json(ending['observer_job']);_,baseline=horizon.validate_job(observer)
+     activation=base.read_json(ending['activation_receipt']);decision=base.read_json(ending['decision'])
+-    insurance=base.read_json(job['insurance_verification']);insured=insurance['root_job']['insurance']['trainer']
++    insurance=insurance_context(job,base,hash_executable=False);insured=insurance['owner']
+     start=base.read_json(activation['start_request'])
+     before_resume=base.read_json(activation['before_resume_api_PIN'])
+     require(ending['activation_receipt']['sha256']==observer['activation_receipt_sha256'] and
+@@ -214,7 +273,7 @@
+     latched=decision['state']=='LATCH'
+     raw=decision['first_eligible_observation'] if latched else (
+         decision.get('terminal_observation') or decision.get('last_valid_observation'))
+-    clocks=four(insurance['clocks'])
++    clocks=four(insurance['clock_floor'])
+     if raw is not None:
+         current=horizon.normalise(raw)
+         require(current['optimizer_identity']==baseline['optimizer_identity'] and
+@@ -247,7 +306,7 @@
+         acquisition=base.read_json(candidate['acquisition'])
+         tag=acquisition['tag'];require(re.fullmatch(r'[A-Za-z0-9_-]{1,80}',tag or '') and
+             source['path']==str(Path(job['model_dir'])/'managed-checkpoints'/(tag+'.pt')) and
+-            tag!=insurance['root_job']['insurance']['tag'] and tag!=job['startup_tag'],
++            tag!=insurance['tag'] and tag!=job['startup_tag'],
+             'Candidate tag is not unique/distinct from insurance/startup')
+         require(acquisition['schema']=='robotron-owned-phase-snapshot-acquisition-v1' and
+             acquisition['purpose']=='candidate' and acquisition['owner_before']==acquisition['owner_after']==insured and
+@@ -257,7 +316,7 @@
+             acquisition.get('stopped_absence','missing') is None and
+             acquisition['phase_record_sha256']==job['running_phase']['record']['sha256'] and
+             acquisition['boot_checkpoint']==job['running_phase']['boot_checkpoint'] and
+-            acquisition['clock_floor']==clock_max(insurance['clocks'],clocks),
++            acquisition['clock_floor']==clock_max(insurance['clock_floor'],clocks),
+             'Historical candidate acquisition/first-LATCH floor differs')
+         transition=acquisition.get('completed_slot_transition')
+         require(isinstance(transition,dict) and set(transition)=={
+@@ -290,7 +349,7 @@
+         require(horizon.POLICY['cutoff_s']<=decision['elapsed_s']<horizon.POLICY['ceiling_s'],
+             'Incomplete ending must be at actual cutoff before owner ceiling')
+     return dict(state=decision['state'],decision=ending['decision'],observer_job=ending['observer_job'],
+-        observation_floor=clocks,floor=clock_max(insurance['clocks'],clocks),
++        observation_floor=clocks,floor=clock_max(insurance['clock_floor'],clocks),
+         candidate=copy.deepcopy(ending['candidate']),owner=copy.deepcopy(insured))
+ 
+ 
+@@ -369,7 +428,10 @@
+         {name:triple(selected2048[name]) for name in ('script','strict_base')}==CPU2048_BINDING,
+         'Wrong exact reviewed2 CPU2048 source family')
+     for value in selected2048.values():base.pin(value,base.MAX_SOURCE)
+-    require_execution_ready()  # Collector/insurance/numerical prerequisites remain fatal.
++    require(job['helper_pins']['phase_early']['path']==str(PHASE_EARLY) and
++        job['helper_pins']['phase_early']['sha256']==PHASE_EARLY_SHA, 'Recurring typed phase helper differs')
++    phase_early_module(base).load_collector(base,job['producer_collector'])
++    require_execution_ready()  # Actual numeric/root precommit and full transport remain fatal.
+     validate_installed_phase(job,base,game,env)
+     capture = env.get(FLAGS[0])
+     require(not env.get(FLAGS[1]),'Unknown old trace session forbidden')
+@@ -383,7 +445,7 @@
+         'Current completion must bind the actual mutable model slot')
+     base.pin(job['current_completed_request'],MAX_JSON)
+     validate_ending(job,base)
+-    base.validate_python_binding(job['verifier'],job['insurance_verification'],hash_executable=True)
++    insurance_context(job,base,hash_executable=True)
+     return job,job_pin
+ 
+ 
+@@ -452,6 +514,8 @@
+ 
+ 
+ def runtime_class(base):
++    helper=phase_early_module(base)
++    base=helper.ReadonlyMetadataBase(base)  # New local JSON only; originals/model-copy rules unchanged.
+     fingerprint,read_json,publish = base.fingerprint,base.read_json,base.publish
+     class Runtime(base.Runtime):
+         def __init__(self,job,output):
+@@ -475,16 +539,74 @@
+             self.cpu_attempts={};self.verification_failed=False;self.lease_fd=None;self.pending=None
+             self.current_completed=copy.deepcopy(job['current_completed_request'])
+             self.settings=base.SettingsLifecycle(job['settings_lifecycle'],job['model_dir'])
+-            self.insurance=read_json(job['insurance_verification']);self.insured=self.insurance['root_job']['insurance']['trainer'];self.floor=four(self.insurance['clocks'])
+-            require(self.insurance['status']=='PASS' and self.insurance['mode']=='insurance' and self.insurance['root_job']['experiment']==job['experiment'] and
+-                self.insurance['root_job']['source_control_context']['model_dir']==job['model_dir'],'Wrong fresh insurance scope')
+-            saved=read_json(job['insurance_receipt']);require(saved['tag']==self.insurance['root_job']['insurance']['tag'] and
+-                saved['source']['sha256']==self.insurance['root_job']['source']['sha256'],'Wrong insurance request')
++            self.insurance=insurance_context(job,base,hash_executable=False)
++            self.insured=self.insurance['owner'];self.floor=four(self.insurance['clock_floor'])
+             self.original_dropin=None if job['original_dropin']['content_base64'] is None else base64.b64decode(job['original_dropin']['content_base64'])
+             require(self.host._dropin_bytes()==self.original_dropin,'Owned phase override drift')
+             self.host.dropin_expected=self.original_dropin;self.record=None;self.record_pin=None;self.start_request=None
+             self.recovery_dropin=None;self.dropin=None
+             self.ending=validate_ending(job,base)
++
++        def static(self):
++            self.exclusive()
++            for value in self.job['helper_pins'].values():base.pin(value,base.MAX_SOURCE)
++            self.settings.check()
++            for value in self.job['static_pins']:base.pin(value,base.MAX_SOURCE)
++            insurance_context(self.job,base,hash_executable=False)
++
++        def publish_raw_API(self,name,value):
++            require(name in ('API-before-resume.json','API-after192.json'), 'Only two exact owned raw API archives')
++            path=self.output/name
++            require(path.parent==self.output and path.suffix=='.json','Raw API destination escaped')
++            result=helper.publish_text(base,path,json.dumps(value,indent=2,allow_nan=True)+'\n')
++            descriptor=os.open(path,os.O_RDONLY|os.O_NOFOLLOW)
++            try:
++                require(base.identity(os.fstat(descriptor))==result['identity'],'Raw API file changed before durability')
++                os.fsync(descriptor)
++            finally:os.close(descriptor)
++            base.fsync_directory(self.output)
++            return result
++
++        def producer_expectation(self,label):
++            """Derive actual NEW owner metadata only after adoption, never precommit a future PID."""
++            self.static();owner=self.trainer_id();current=self.inspect('after')
++            collector=helper.load_collector(base,self.job['producer_collector'])
++            observed=collector.ReadOnlyHost().observe(owner)
++            expected=selected_environment(self.job['before']['environment'],self.job['batch_boundary'],self.record_pin)
++            expected={k:v for k,v in expected.items() if k.startswith(('DQN_','ROBOTRON_','CUDA_','TORCHINDUCTOR_'))}
++            require(expected.get('DQN_BATCH_SIZE')=='2048' and expected.get('DQN_PER_PRIORITY_METRIC')=='ce'
++                and observed['environment']==expected,'Actual selected treatment environment differs')
++            process=observed['process']
++            require(process['pid']==owner['pid'] and process['starttime_ticks']==owner['starttime_ticks'],
++                'Expectation is not the exact adopted owner')
++            return publish(self.output/(label+'-producer-expectation.json'),dict(
++                schema='robotron-root-CE2048-producer-expectation-v1',owner=owner,boot_id=self.job['boot_id'],
++                argv=process['argv'],cwd=process['cwd'],exe=process['exe'],environment=expected))
++
++        def capture_startup_producer(self,label,owner,phase,pairs):
++            """Actual client0 CSV2048, inside the original start-origin600s readiness bound."""
++            collector=helper.load_collector(base,self.job['producer_collector'])
++            expectation_pin=self.producer_expectation(label);expectation=read_json(expectation_pin)
++            host=collector.ReadOnlyHost();run=Path(expectation['environment']['ROBOTRON_RUN_DIR'])/'training.csv'
++            until=read_json(self.start_request)['monotonic_s']+self.job['timeouts']['ready_s']
++            while True:
++                require(self.trainer_id()==owner and time.monotonic()<=until,'Startup producer CSV not ready within original bound')
++                try:
++                    rows=list(csv.DictReader(io.StringIO(host.csv(run)['raw'].decode())))
++                    ready=len(rows)==1 and rows[0].get('batch_size')=='2048'
++                except FileNotFoundError:ready=False
++                except RuntimeError as error:
++                    require(str(error)=='No bounded complete data row', 'Startup CSV metadata invalid: '+str(error))
++                    ready=False
++                if ready:break
++                time.sleep(.25)
++            owner_pin=publish(self.output/(label+'-producer-owner.json'),owner)
++            spec=dict(schema='robotron-batch2048-producer-live-capture-spec-v1',profile=self.job['batch_profile'],
++                owner=owner,owner_pin=owner_pin,phase_record=phase['record'],boot_verification=phase['boot_verification'],
++                source_pins={name:pair['current'] for name,pair in pairs.items()},game_root=self.job['game_root'],
++                environment=expectation['environment'],argv=expectation['argv'],cwd=expectation['cwd'],exe=expectation['exe'],
++                experiment=self.job['experiment'],boot_id=self.job['boot_id'])
++            return collector.capture_live(spec,self.output/(label+'-producer-live-capture'))
+ 
+         def request_guard(self):
+             path=Path(self.job['model_dir'])/'managed_save.request.json'
+@@ -585,28 +707,36 @@
+                 dict(argv=unit_argv,returncode=observed.returncode,stdout=observed.stdout,stderr=observed.stderr))
+             return pairs,context
+ 
+-        def collect_producer_observation(self,label,purpose,owner,source,acquisition):
+-            raise RuntimeError('DRAFT: actual2048 producer collector is not implemented; no fabricated observation')
+-
+         def cpu_phase(self,label,purpose,owner,source,copied,phase,acquisition,ledger_key):
+             require(ledger_key not in self.cpu_attempts,'Phase CPU already attempted; no retry')
+             root=self.output/label;root.mkdir(mode=0o700)
+-            route=self.batch_boundary.phase_cpu_boundary(self.job['batch_boundary'],purpose,
+-                **({} if self.batch_boundary.phase_producer_batch(self.job['batch_boundary'],purpose)==4096 else
+-                    dict(profile_pin=self.job['batch_profile'],
+-                         producer_observation=self.collect_producer_observation(label,purpose,owner,source,acquisition))))
++            batch=self.batch_boundary.phase_producer_batch(self.job['batch_boundary'],purpose)
++            pairs,context=self.phase_sources(label)
++            phase,context,archives=phase_metadata(base,phase,context,root/'metadata')
++            publish(root/'metadata-archives.json',archives)
++            acquisition_pin=publish(root/'acquisition.json',acquisition)  # FINAL before historical binding.
++            additional={}
++            if batch==2048:
++                collector=helper.load_collector(base,self.job['producer_collector'])
++                capture=(self.capture_startup_producer(label,owner,phase,pairs) if purpose=='startup'
++                    else self.job['producer_capture'])
++                saved=helper.readonly_json(base,capture)
++                require(saved['spec']['owner']==owner and
++                    saved['spec']['phase_record']['sha256']==phase['record']['sha256'] and
++                    all(saved['spec']['source_pins'][name]['sha256']==pairs[name]['current']['sha256'] for name in SOURCE_NAMES),
++                    'Historical producer capture owner/founder/source differs')
++                producer=collector.bind_capture(capture,source,acquisition_pin,root/'producer-binding')
++                additional=dict(profile_pin=self.job['batch_profile'],producer_observation=producer)
++                context['provenance']=list(context.get('provenance',[]))+[capture,producer]
++            route=self.batch_boundary.phase_cpu_boundary(self.job['batch_boundary'],purpose,**additional)
+             family=self.job['phase_verifier'] if route['batch_size']==4096 else self.job['phase_verifier2048']
+             require(route['batch_size']==4096 or
+                 {name:triple(family[name]) for name in ('script','strict_base')}==CPU2048_BINDING,
+                 'Exact reviewed2 CPU2048 source binding differs')
+             script=family['script'];strict=family['strict_base']
+             base.pin(script,base.MAX_SOURCE);base.pin(strict,base.MAX_SOURCE)
+-            pairs,context=self.phase_sources(label)
+             context['held_recipe_context']=copy.deepcopy(self.batch_boundary.PROFILE_BINDING['value']['held_recipe_context'])
+             context['held_recipe_context']['batch_size']=route['batch_size']
+-            phase,context,archives=phase_metadata(base,phase,context,root/'metadata')
+-            publish(root/'metadata-archives.json',archives)
+-            acquisition_pin=publish(root/'acquisition.json',acquisition)
+             spec=dict(purpose=purpose,owner=owner,observed_clients=acquisition['client_count'],phase_record=phase['record'],
+                 boot_checkpoint=phase['boot_checkpoint'],boot_verification=phase['boot_verification'],expected_phase=phase['expected'],
+                 acquisition=acquisition_pin,sources=pairs)
+@@ -615,7 +745,7 @@
+                 verification_copy=copied,clock_floor=acquisition['clock_floor'],source_control_context=context,
+                 output_directory=str(root/'cpu-output'),phase_snapshot=spec)
+             job.update(route['additional_job_fields'])
+-            jp=publish(root/'cpu-job.json',job);base.validate_python_binding(self.job['verifier'],self.job['insurance_verification'],hash_executable=True)
++            jp=publish(root/'cpu-job.json',job);insurance_context(self.job,base,hash_executable=True)
+             env=dict(os.environ,CUDA_VISIBLE_DEVICES='',OMP_NUM_THREADS='2',MKL_NUM_THREADS='2',OPENBLAS_NUM_THREADS='2')
+             for key in ('LD_PRELOAD','PYTHONPATH'):env.pop(key,None)
+             argv=[self.job['verifier']['python'],'-Xgil=0','-I','-B',script['path'],'--execute','--job',jp['path'],
+@@ -832,7 +962,7 @@
+         raw=r.raw_api();require(raw['client_count']==0,'Original fleet admitted before startup proof')
+         zero_replay(raw,owner['pid']);startup=r.startup_snapshot(raw)
+         before_resume=r.raw_api();require(before_resume['client_count']==0,'Unexpected startup clients')
+-        zero_replay(before_resume,owner['pid']);before_pin=base.publish(r.output/'API-before-resume.json',before_resume)
++        zero_replay(before_resume,owner['pid']);before_pin=r.publish_raw_API('API-before-resume.json',before_resume)
+         r.inspect('after');r.banks.assert_unchanged(banks,r.job['bank_spec'])
+         event('loaded_before_resume',proof=loaded,startup=startup,API=before_pin)
+         resumed=base.resume_all(r.host);result['initial_resume']=resumed
+@@ -840,7 +970,7 @@
+         healthy=r.ready_transport('after',banks,actors=True)
+         post=r.raw_api();require(post['client_count']==192,'Fresh healthy192 sample absent')
+         require(post['host_pipeline']['learning_exposure']['optimizer']['process_id']==owner['pid'],'Healthy API owner changed')
+-        post_pin=base.publish(r.output/'API-after192.json',post)
++        post_pin=r.publish_raw_API('API-after192.json',post)
+         result.update(status='READY',owner=owner,start_request=r.start_request,phase_record=r.record_pin,
+             phase_record_spec=r.record,trial_core=r.job['trial_core'],boot_checkpoint=boot,
+             boot_four_clocks=four(base.read_json(boot['verification'])['clocks']),startup_phase_proof=startup,

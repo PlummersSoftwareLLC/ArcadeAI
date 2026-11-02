@@ -1,0 +1,26 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original07-proof2s-preparation/source-family-original01/qualify_round_study_cpu_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-original02/qualify_round_study_cpu_v6.py
+@@ -149,9 +149,9 @@
+                 with self.subTest(leg=case['leg']):
+                     ctx=native.validate_completed_context(subject,h)
+                     self.assertEqual(len(ctx['modules']),12)
+-                    self.assertEqual(len(ctx['main_binding']['inputs']),247)
++                    self.assertEqual(len(ctx['main_binding']['inputs']),native.round_contract().static_profile().validate_inventory(ctx['main_binding'],h)['input_count'])
+                     baseline=json.loads(h.checked(ctx['main_binding']['baseline_snapshot']).read_bytes())
+-                    self.assertEqual(set(baseline['actors'])|set(baseline['results'])|set(baseline.get('round_admission',{}).get('pending',[])),set(map(str,range(192))))
++                    native.round_contract().static_profile().sample_domain(ctx['main_binding'],baseline)
+                     prebody.append(dict(leg=case['leg'],native_job=case['native_job'],runtime=case['runtime'],
+                         component_count=len(ctx['modules']),package_source_count=len(ctx['package_pins']),main_binding=subject['main_binding'],
+                         actual_full_health_contract_checked=True,protocol_provenance=ctx['protocol_provenance'],
+@@ -209,9 +209,10 @@
+                     proof=native.round_contract().validate_launch(subject,ctx,h)
+                 self.assertTrue(proof['raw_API_and_TCP_and_retirement_snapshots_replayed'])
+                 self.assertTrue(proof['accepted_evidence_and_projection_gaps_verified'])
++                self.assertEqual(proof['main_health_profile'],'STATIC_ORIGINAL192_NO_FAULT_ADOPTION')
+                 self.assertEqual(proof['verified_maximum_gap_s'],2.0)
+                 self.assertEqual(proof['proof_gap_contract'],'robotron-main-proof-gap-2s-v1')
+-                self.assertEqual(proof['full_main_input_count'],247)
++                self.assertEqual(proof['full_main_input_count'],len(ctx['main_binding']['inputs']))
+             self.assertEqual(proof_counts,dict(fresh=1,reused=3))
+     tests=load('_deadline_actual_CPU_NEW_native_chain_tests',h.checked(job['new_native_chain_tests']))
+     actual_new_count=unittest.defaultTestLoader.loadTestsFromTestCase(tests.Tests).countTestCases()

@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original07-proof2s-preparation/source-family-original01/prepare_selected_admission_study_cpu_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-original02/prepare_selected_admission_study_cpu_v1.py
+@@ -40,7 +40,7 @@
+     output=Path(job['output']);output.mkdir(mode=0o700);started=time.monotonic()
+     preparer=load('_selected_admission_actual_preparer',LOCAL/'prepare_round_study_v10.py')
+     prepared=preparer.prepare(Path(job['study_directory']),job['reference_profile'],job['candidate_profile'],
+-        main_domain_proof=job['deadline_readiness'],lease_recovery=job['lease_recovery'],engineering=False)
++        main_domain_proof=job['deadline_readiness'],lease_recovery=job['lease_recovery'],selection_pin=job['context_selection'],engineering=False)
+     manifest=json.loads(h.checked(prepared).read_bytes());assert manifest['engineering_only']is False
+     study=json.loads(h.checked(manifest['study_precommit']).read_bytes())
+     assert study['policies']['candidate']['checkpoint']['sha256']==job['candidate_sha256']

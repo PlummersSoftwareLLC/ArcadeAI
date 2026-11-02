@@ -1,0 +1,60 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-25/watch_main_coast.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-25/watch_main_coast_to256.py
+@@ -33,8 +33,8 @@
+     parser.add_argument('--supervisor-pid', required=True, type=int)
+     parser.add_argument('--actor-manifest', required=True, type=Path)
+     parser.add_argument('--slot0-log', required=True, type=Path)
+-    parser.add_argument('--gate', required=True, type=Path, help='Existence/stat only; never reads future checkpoint/quality data')
+-    parser.add_argument('--deadline-utc', default='2026-10-16T20:00:00+00:00')
++    parser.add_argument('--gate', default=RUN.parent / 'run-23/fresh3-256M-gate.json', type=Path, help='Existence/stat only; never reads future checkpoint/quality data')
++    parser.add_argument('--deadline-utc', default='2026-10-16T22:00:00+00:00')
+     args = parser.parse_args()
+     deadline = datetime.fromisoformat(args.deadline_utc).timestamp()
+     helper_path = TOOLS / 'observe_collector.py'
+@@ -83,13 +83,13 @@
+         if len(values) == len(csv_fields):
+             item = dict(zip(csv_fields, values)); latest_csv = {key:item[key] for key in guard.CSV_FIELDS}
+     drops = int(latest_csv['replay_dropped']) if latest_csv else None
+-    output = RUN / 'main-coast-to224-health.jsonl'
+-    completion_path = RUN / 'main-coast-to224-complete.json'
+-    startup_path = RUN / 'main-coast-to224-startup.json'
++    output = RUN / 'main-coast-to256-health.jsonl'
++    completion_path = RUN / 'main-coast-to256-complete.json'
++    startup_path = RUN / 'main-coast-to256-startup.json'
+     if any(path.exists() for path in (output, completion_path, startup_path)):
+         raise FileExistsError('Refuse existing/partial coast evidence')
+     started, mono = time.time(), time.monotonic()
+-    startup = dict(schema='robotron-main-coast-to224-startup-v1',started_utc=guard.utc(started),observer_pid=os.getpid(),
++    startup = dict(schema='robotron-main-coast-to256-startup-v1',started_utc=guard.utc(started),observer_pid=os.getpid(),
+         trainer_pid=args.trainer_pid,trainer_start_ticks=trainer['start_ticks'],supervisor_pid=args.supervisor_pid,
+         supervisor_start_ticks=supervisor['start_ticks'],period_s=5,deadline_utc=guard.utc(deadline),gate=str(args.gate),
+         helper=dict(path=str(helper_path),sha256=HELPER_SHA),exposure_checker=checker_pin,
+@@ -110,7 +110,7 @@
+         while True:
+             wall, tick = time.time(), time.monotonic()
+             if wall >= deadline:
+-                end_reason = 'fixed2000UTC_deadline'; break
++                end_reason = 'fixed2200UTC_deadline'; break
+             row = dict(utc=guard.utc(wall),ts=wall,elapsed_s=tick-mono,issues=[],notices=[])
+             if last_tick is not None:
+                 gap = tick-last_tick; max_gap=max(max_gap,gap)
+@@ -180,16 +180,16 @@
+             row['append_offsets']=dict(console=console.offset,csv=csv_reader.offset,actor_logs_in_startup_path_order=[reader.offset for reader in actor_logs.values()])
+             if args.gate.exists():
+                 if gate_seen is None:gate_seen=wall
+-                q=args.gate.stat();row['queued224_gate_observed']=dict(first_seen_unix_s=gate_seen,size=q.st_size,mtime_ns=q.st_mtime_ns,inode=q.st_ino)
++                q=args.gate.stat();row['queued256_gate_observed']=dict(first_seen_unix_s=gate_seen,size=q.st_size,mtime_ns=q.st_mtime_ns,inode=q.st_ino)
+             row['issues']=sorted(set(row['issues']));row['notices']=sorted(set(row['notices']))
+             for issue in row['issues']:issues_seen[issue]=issues_seen.get(issue,0)+1
+             for notice in row['notices']:notices_seen[notice]=notices_seen.get(notice,0)+1
+             if row['issues'] and row['issues']!=last_issues:print(json.dumps(dict(ALERT=row['utc'],issues=row['issues'])),flush=True)
+             last_issues=row['issues'];stream.write(json.dumps(guard.safe(row),allow_nan=False,separators=(',',':'))+'\n');stream.flush();rows+=1
+             if gate_seen is not None and wall>=gate_seen+120:
+-                end_reason='actual224_gate_plus120s';break
++                end_reason='actual256_gate_plus120s';break
+             time.sleep(max(0,mono+rows*5-time.monotonic()))
+-    report=dict(schema='robotron-main-coast-to224-complete-v1',started_utc=guard.utc(started),finished_utc=guard.utc(),observer_pid=os.getpid(),
++    report=dict(schema='robotron-main-coast-to256-complete-v1',started_utc=guard.utc(started),finished_utc=guard.utc(),observer_pid=os.getpid(),
+         rows=rows,elapsed_s=time.monotonic()-mono,end_reason=end_reason,gate_first_seen_unix_s=gate_seen,largest_poll_gap_s=max_gap,gaps=gaps,
+         issues=issues_seen,notices=notices_seen,bank_signature_changes=bank_changes,bank_pair_metadata_brackets=bank_pairs,
+         unfinished_bank_pair=active_pair,main_pid=args.trainer_pid,supervisor_pid=args.supervisor_pid,

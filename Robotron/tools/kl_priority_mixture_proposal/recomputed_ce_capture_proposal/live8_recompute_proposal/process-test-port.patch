@@ -1,0 +1,33 @@
+--- Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/private_rehearsal_proposal/test_process_scan.py	2026-10-16 23:39:38.907215987 -0500
++++ Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_recompute_proposal/test_process_scan.py	2026-10-17 03:27:50.009969973 -0500
+@@ -306,7 +306,7 @@
+ 
+         self.assertEqual(ast.dump(RemoveBase().visit(copy.deepcopy(predicate(current)))), ast.dump(predicate(old)))
+         for name in ('storage_directory_identity', 'owned_byte_count', 'scan_quality_processes',
+-                     'helpers', 'command', 'stable_file', 'copy_fixture'):
++                     'helpers', 'command', 'stable_file'):
+             before, after = function(storage, name), function(current, name)
+             self.assertEqual(ast.dump(before), ast.dump(after), name)
+ 
+@@ -333,8 +333,10 @@
+         self.assertEqual(result['status'], 'PLAN_ONLY_UNEXECUTED')
+         self.assertFalse(result['runtime_queries'])
+         self.assertEqual(parent.GAME, Path(__file__).parents[4])
+-        self.assertEqual(parent.VARIANTS, ('capture', 'recompute'))
+-        self.assertEqual(result['attempts'], 1)
++        self.assertEqual(parent.VARIANTS, ('recompute8',))
++        self.assertEqual(result['attempts'], 8)
++        self.assertEqual(result['actual_training_attempts'], 0)
++        self.assertFalse(hasattr(parent, 'copy_fixture'))
+         self.assertEqual(result['compiled_loss_outputs'], 4)
+         self.assertEqual(result['offline_outputs'], 5)
+         self.assertFalse(result['qualification_pass'])
+@@ -344,7 +346,7 @@
+             phase_timeout_s=180, total_timeout_s=600))
+         lock_bytes = (parent.HERE / 'source-lock.json').read_bytes()
+         self.assertEqual(hashlib.sha256(lock_bytes).hexdigest(),
+-                         '28870c3cf7594cc0ac8f73eb3760e3665d5d4448668f4bf9010268427ec80dd3')
++                         '683278660704999645e93dfbc7aad1b20423a5755080a76ccad8f3af54c3c82f')
+         lock = json.loads(lock_bytes)
+         frozen = lock['frozen_science_helpers']
+         self.assertEqual(frozen['sha256'],

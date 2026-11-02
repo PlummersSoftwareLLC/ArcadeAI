@@ -1,0 +1,203 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/next-output207-to-fast-readonly-reconciliation-original01/prepare_next_slot163_output_readonly_reconciliation_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/raw-preview-readonly-reconciliation-original01/prepare_RAW_slot163_output_readonly_reconciliation_v2.py
+@@ -10,10 +10,9 @@
+ import math
+ 
+ SLOT = '163'
+-TARGET_SHA = '0ad741f9048aaf1c9598b23d71b65546a4c3d6e6bb5547ac8e762e675d28db7e'
+-REQUIRED_EXTRA = {'installed_wrapper', 'next_helper', 'accepted_guards', 'parent_collector',
+-                  'next_authority', 'target_lua', 'capture_equivalence_proof',
+-                  'root_selection', 'reconciler'}
++TARGET_SHA = 'cbd8109f8d62f65c26c38ea91c73b3285fda0812895ee5e5fbf4e8565afedbd1'
++REQUIRED_EXTRA = {'installed_wrapper', 'next_helper', 'next_authority', 'target_lua',
++                  'capture_equivalence_proof', 'root_selection', 'reconciler'}
+ FACTS = {'prior_binding', 'before_snapshot', 'after_old_birth_probe_snapshot',
+          'new_registry_snapshot', 'before_API', 'after_API', 'trial_claim'}
+ 
+@@ -52,7 +51,7 @@
+ 
+ def prepare(plan, read, selected, normalise, window):
+     """Validate FUTURE facts and return objects; never publish or rebind anything."""
+-    require(plan['schema'] == 'robotron-slot163-next-output-reconciliation-plan-v1'
++    require(plan['schema'] == 'robotron-slot163-RAW-output-reconciliation-plan-v1'
+             and plan['root_selection'] is not None,
+             'Future ROOT freeze-release authority required')
+     selection = read(plan['root_selection'])
+@@ -61,6 +60,11 @@
+             and selection['one_original_exec_only'] is True
+             and selection['persistent_or_rollout_acceptance'] is False,
+             'Exact ROOT one-use NEXT experiment selection required')
++    expected_count = selection.get('expected_held_input_count')
++    raw_wire_policy = dict(format=1, name='raw_rgb565be', RLE_enabled=False)
++    require(type(expected_count) is int and 215 <= expected_count <= 4096
++            and selection.get('wire_policy') == raw_wire_policy,
++            'Exact ROOT-selected existing held count and RAW wire policy required')
+     release = read(selection['root_freeze_release'])
+     require(release['schema'] == 'robotron-root-fixed03-preview-freeze-release-v1'
+             and release['all_four_legs_qualified'] is True
+@@ -73,26 +77,29 @@
+     require(type(plan['max_handoff_s']) is int and 0 < plan['max_handoff_s'] <= 600,
+             'ROOT must preselect bounded operational handoff time')
+     require(plan['selected_was_historical_original_actor'] is False,
+-            'Current658236 OUTPUT is already a replacement, never a historical survivor')
++            'Current OUTPUT is already a replacement, never a historical survivor')
+     facts = {key: read(pin) for key, pin in plan['facts'].items()}
+     old = facts['prior_binding']; policy = read(old['supervision_policy'])
+     before = facts['before_snapshot']; after = facts['after_old_birth_probe_snapshot']
+     ready = facts['new_registry_snapshot']; first_api, last_api = facts['before_API'], facts['after_API']
+-    require(plan['facts']['prior_binding']['sha256'] ==
+-            'd1661e1c52eb990281f2ebdf1eca63f042abf97863656b706d76b0bfa9515d23'
+-            and len(old['held_hashes']) == 207, 'Exact current207 OUTPUT binding required')
+-    core = read(old['prior_binding'])
++    require(plan['facts']['prior_binding'] == selection['current_output_binding']
++            and len(old['held_hashes']) == expected_count,
++            'Exact ROOT-selected current OUTPUT binding/count required')
++    require(plan['core197_binding']['sha256'] ==
++            '07b2e23220d9d4d5950a6a6259f268bcc71102f4b228f694cc0f3cbe1505f468',
++            'Exact retained original core197 authority required')
++    core = read(plan['core197_binding'])
+     require(len(core['held_hashes']) == 197
+             and all(old['held_hashes'].get(path) == sha for path, sha in core['held_hashes'].items()),
+-            'Original core197 must still be retained in current207')
++            'Original core197 must still be retained in the ROOT-selected current binding')
+     require(all(type(pin) is dict and type(pin.get('path')) is str
+                 for pin in plan['extra_pins'].values()), 'Exact extra source paths required')
+     extra_paths = [pin['path'] for pin in plan['extra_pins'].values()]
+     wrapper_path = '/home/dave/source/repos/ArcadeAI/Robotron/tools/mame_with_socket_wait.sh'
+-    require(len(extra_paths) == len(set(extra_paths)) == 9
++    require(len(extra_paths) == len(set(extra_paths)) == 7
+             and set(extra_paths).intersection(old['held_hashes']) == {wrapper_path}
+             and wrapper_path not in core['held_hashes'],
+-            'Exactly eight DISTINCT new paths and the owned existing wrapper path required')
++            'Exactly six DISTINCT new paths and the owned existing wrapper path required')
+     selected.validate_snapshot(policy, before, first_api['client_count'])
+     wanted = {str(slot) for slot in range(192)}
+     require(set(after['actors']) == set(ready['actors']) == wanted
+@@ -118,9 +125,10 @@
+     expected['pid'] = new_actor['pid']; expected['starttime_ticks'] = new_actor['starttime_ticks']
+     argv = expected['command']; require(argv.count('-autoboot_script') == 1, 'Exact Lua argument required')
+     old_lua = argv[argv.index('-autoboot_script') + 1]
+-    require(old['held_hashes'].get(old_lua) ==
+-            '507f3f5a799d49791d2c6cbca3f4600167a166c4a410723d4d29225d18b6e0ab',
+-            'Current OUTPUT507 source authority differs')
++    require(old['held_hashes'].get(old_lua) == old['preview_expected_target_sha256']
++            == old['preview_extra_source_pins']['target_lua']['sha256']
++            and old_lua == old['preview_extra_source_pins']['target_lua']['path'],
++            'Exact ROOT-selected current OUTPUT source authority differs')
+     argv[argv.index('-autoboot_script') + 1] = target['path']
+     require(expected['environment']['ROBOTRON_EVAL_MODE'] == '1', 'Current OUTPUT EVAL1 role required')
+     expected['environment']['ROBOTRON_EVAL_MODE'] = '1'
+@@ -157,7 +165,8 @@
+             and authority['prior_actor'] == selection['prior_actor'] == old_actor
+             and authority['output_lua'] == selection['output_lua'] == target
+             and authority['base_manifest'] == selection['base_manifest']
+-            == old['preview_extra_source_pins']['launch_input_manifest']
++            and authority['base_manifest']['sha256'] ==
++                '494797d8c8e0f6e9511ce93cb295baa03ec796928c7b606ca20f5deecc9c411d'
+             and authority['claim_directory'] == selection['claim_directory']
+             and authority['supervisor_owner'] == policy['fleet']
+             and authority['supervisor_process'] == before['owners']['fleet']['process'],
+@@ -175,18 +184,19 @@
+             'Actual NEXT claim must retire current OUTPUT, never original cached INPUT')
+     proof = read(plan['extra_pins']['capture_equivalence_proof'])
+     require(selection['capture_equivalence_proof'] == plan['extra_pins']['capture_equivalence_proof']
+-            and proof['schema'] == 'robotron-preview-fast-capture-byte-equivalence-and-CPU-source-package-v2'
++            and proof['schema'] == 'robotron-preview-decoded-RGB565-and-wire-policy-v1'
+             and proof['parent'] == old['preview_extra_source_pins']['target_lua']
+-            and proof['candidate'] == target and proof['preview_bytes_only'] is True
+-            and proof['gameplay_tensor_input_transport_timer_source_unchanged'] is True,
+-            'Exact preview-only source equivalence proof required')
++            and proof['candidate'] == target and proof['decoded_RGB565_equality_all_cases'] is True
++            and proof['encoded_bytes_equality_required'] is False
++            and proof['wire_policy'] == selection['wire_policy'] == raw_wire_policy
++            and proof['gameplay_tensor_input_transport_timer_source_unchanged'] is True
++            and proof['exact_single_line_delta_verified'] is True,
++            'Exact decoded-RGB565 equality and explicit RAW-wire-policy proof required')
+     benchmark = read(proof['benchmark'])
+-    require(benchmark['schema'] == 'robotron-offline-exact-Lua54-preview-capture-benchmark-v1'
+-            and benchmark['actual_lua'] == 'Lua 5.4'
+-            and benchmark['actual_source_syntax_both_pass'] is True
+-            and benchmark['raw_and_compressed_preview_byte_equality_all_cases'] is True
+-            and benchmark['exact_whole_source_allowed_delta_verified'] is True
+-            and len(benchmark['cases']) >= 6, 'Original exact-Lua capture proof failed')
++    require(benchmark['schema'] == 'robotron-preview-actual314t-RLE-vs-RAW-AST-benchmark-v1'
++            and benchmark['actual_free_threaded'] is True
++            and benchmark['decoded_RGB565_equality_all_cases'] is True
++            and len(benchmark['cases']) >= 2, 'Original actual314t RAW/RLE decoder proof failed')
+     # Engineering-only CID49 reuse is a new connection incarnation, never a fake CID.
+     # Earlier positive old-birth absence/newPID/newbirth and the exact claim join
+     # above remain mandatory. The public connected_seconds clock must reset
+@@ -222,13 +232,13 @@
+     held = copy.deepcopy(old['held_hashes'])
+     require(plan['extra_pins']['installed_wrapper']['path'] == wrapper_path
+             and old['held_hashes'][wrapper_path] ==
+-                'd38e6c2e689f22d2b89eabea0cae77f206fa1ec9d50da95f94484a900fa93004'
++                old['preview_extra_source_pins']['installed_wrapper']['sha256']
+             and plan['extra_pins']['installed_wrapper']['sha256'] != old['held_hashes'][wrapper_path]
+             and plan['extra_pins']['next_helper']['sha256'] ==
+-                '320c7b872a22d4e48d806b1868fe98ee85567b5e74ed1018248af4b06c89be48'
+-            and plan['extra_pins']['accepted_guards']['sha256'] ==
++                'ecdb78d2843e240ba75286c6647be7b9acdf4a232dce45e6af5b1266318641c6'
++            and old['preview_extra_source_pins']['accepted_guards']['sha256'] ==
+                 '9a8fe7c08e1e941e2d26a2cc3c65124b27129b9f470a0020453e33010bf32027'
+-            and plan['extra_pins']['parent_collector']['sha256'] ==
++            and old['preview_extra_source_pins']['parent_collector']['sha256'] ==
+                 '1f41d360fa23632cb26d6dee33d3c822bec7f9cf79fdbb75e47f3418059ca5f0',
+             'Only exact owned NEXT wrapper/helper/accepted guards/parent collector allowed')
+     wrapper = read(plan['extra_pins']['installed_wrapper'], False).decode('utf-8')
+@@ -237,8 +247,11 @@
+                 and wrapper.count(plan['extra_pins'][role]['sha256']) == 1,
+                 'Actual wrapper must invoke exact NEXT helper and authority')
+     for role in ('accepted_guards', 'parent_collector'):
+-        require(wrapper.count(plan['extra_pins'][role]['path']) == 1,
+-                'Actual wrapper must select exact reviewed source dependencies')
++        retained = old['preview_extra_source_pins'][role]
++        require(old['held_hashes'].get(retained['path']) == retained['sha256']
++                and wrapper.count(retained['path']) == 1,
++                'Actual wrapper must retain exact already-held source dependencies')
++        read(retained, False)
+     for role, pin in plan['extra_pins'].items():
+         require(not pin['path'].endswith('.pt') and 0 < pin['bytes'] <= 2_000_000,
+                 'Extra holds are small source/config files, never model bodies')
+@@ -246,10 +259,10 @@
+         require(pin['path'] == wrapper_path or pin['path'] not in old['held_hashes'],
+                 'Only the exact existing wrapper may be rewritten')
+         held[pin['path']] = pin['sha256']
+-    require(len(held) == 215
++    require(len(held) == expected_count + 6
+             and all(held[path] == sha for path, sha in old['held_hashes'].items() if path != wrapper_path)
+             and all(held[path] == sha for path, sha in core['held_hashes'].items()),
+-            'Core197/all206 unchanged holds plus eight distinct NEXT pins required')
++            'Core197/all prior nonwrapper holds plus six distinct RAW pins required')
+     new_policy = copy.deepcopy(policy)
+     new_policy['baseline_actors'] = copy.deepcopy(ready['actors'])
+     new_policy['baseline_owners'] = copy.deepcopy(ready['owners'])
+@@ -263,10 +276,11 @@
+                    preview_slot163_transition=None, prior_binding=plan['facts']['prior_binding'],
+                    preview_actual_roles=last_roles, preview_before_exposure=first,
+                    preview_expected_target_sha256=TARGET_SHA,
+-                   preview_extra_source_pins=copy.deepcopy(plan['extra_pins']),
++                   preview_extra_source_pins=dict(copy.deepcopy(old['preview_extra_source_pins']),
++                                                  **copy.deepcopy(plan['extra_pins'])),
+                    preview_next_root_selection=plan['root_selection'],
+                    preview_previous_output_binding=plan['facts']['prior_binding'],
+-                   preview_current_binding_reason='Owned163 OUTPUT507 to exact preview-only fastLua; EVAL1/trainer/191 actors retained. New prospective binding only.')
++                   preview_current_binding_reason='Owned163 current OUTPUT to decoded-equivalent RAW-format1 Lua; EVAL1/trainer/191 actors retained. New prospective binding only.')
+     binding['historical_original_actor_survivors'] = old['historical_original_actor_survivors'] - int(plan['selected_was_historical_original_actor'])
+     binding['verified_between_study_replacement_count'] = old['verified_between_study_replacement_count'] + 1
+     binding['owned_preview_actor_transition_count'] = old.get('owned_preview_actor_transition_count', 0) + 1
+@@ -277,10 +291,12 @@
+                  selected_connection_incarnation=connection_incarnation,
+                  old_lua=old_lua, private_target=target, actual_claim_joined_to_live_MAME=True,
+                  old_held_count=len(old['held_hashes']), new_held_count=len(held),
+-                 core197_hashes_retained=True, all206_nonwrapper_hashes_retained=True,
++                 core197_hashes_retained=True, all_prior_nonwrapper_hashes_retained=True,
+                  old_wrapper_sha256=old['held_hashes'][wrapper_path],
+                  new_wrapper=plan['extra_pins']['installed_wrapper'],
+-                 capture_equivalence_proof_verified=True, extra_pins=copy.deepcopy(plan['extra_pins']),
++                 capture_equivalence_proof_verified=True, decoded_RGB565_equivalence_verified=True,
++                 wire_policy=raw_wire_policy, encoded_bytes_equality_required=False,
++                 extra_pins=copy.deepcopy(plan['extra_pins']),
+                  original_exposure=first, actual_after_exposure=last,
+                  model_weights_replay_optimizer_not_reloaded_by_this_component=True,
+                  weights_continue_evolving_under_training=True,

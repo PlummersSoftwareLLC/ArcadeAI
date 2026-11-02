@@ -1,0 +1,143 @@
+{
+  "schema": "robotron-bank-coefficient-mass-saved-clarification-v1",
+  "scope": "Historical actualCE8only; exact saved scalar/coefficient arithmetic. Not currentCE620749/KLphase,gradientvotes,effectiveLR or retention evidence.",
+  "hypothetical_all_PER_bank_partition": {
+    "PER_rows": 3072,
+    "bank_rows": 1024,
+    "bank_fraction_of_weighted_rowmass": 0.25,
+    "condition": "Banks and all3072PER rows have same mean coefficient."
+  },
+  "actual_historical_mixture": {
+    "PER": 901,
+    "interesting": 737,
+    "recent": 1434,
+    "HOF": 410,
+    "EpHOF": 614,
+    "total": 4096
+  },
+  "rows": [
+    {
+      "index": 1,
+      "bank_coefficient_rowmass_share": 0.10394383895120117,
+      "bank_Bellman_scalar_share": 0.09976194950025961,
+      "bank_coefficient_per_row": 0.27389228343963623,
+      "PER_coefficient_per_row": 0.2738922752654976,
+      "bank_share_within_PER_plus_banks": 0.5319480593786794,
+      "bank_weighted_average_CE": 2.074331222247565,
+      "PER_weighted_average_CE": 2.132423213960453,
+      "whole_batch_weighted_average_CE": 2.161284453409645
+    },
+    {
+      "index": 2,
+      "bank_coefficient_rowmass_share": 0.13865413306815982,
+      "bank_Bellman_scalar_share": 0.13442777251834873,
+      "bank_coefficient_per_row": 0.3975984454154968,
+      "PER_coefficient_per_row": 0.3975984436520825,
+      "bank_share_within_PER_plus_banks": 0.5319480530523161,
+      "bank_weighted_average_CE": 2.090983595138823,
+      "PER_weighted_average_CE": 2.1542402957297746,
+      "whole_batch_weighted_average_CE": 2.1567233631290326
+    },
+    {
+      "index": 3,
+      "bank_coefficient_rowmass_share": 0.1567961715865253,
+      "bank_Bellman_scalar_share": 0.15133771746758776,
+      "bank_coefficient_per_row": 0.4713650941848755,
+      "PER_coefficient_per_row": 0.4713651063571892,
+      "bank_share_within_PER_plus_banks": 0.5319480455185255,
+      "bank_weighted_average_CE": 2.094493039548979,
+      "PER_weighted_average_CE": 2.1558815797190953,
+      "whole_batch_weighted_average_CE": 2.1700372882010757
+    },
+    {
+      "index": 4,
+      "bank_coefficient_rowmass_share": 0.1146652294921753,
+      "bank_Bellman_scalar_share": 0.1090815760739015,
+      "bank_coefficient_per_row": 0.3099062442779541,
+      "PER_coefficient_per_row": 0.3099062439616559,
+      "bank_share_within_PER_plus_banks": 0.5319480522021666,
+      "bank_weighted_average_CE": 2.0666089806609307,
+      "PER_weighted_average_CE": 2.1340029720473654,
+      "whole_batch_weighted_average_CE": 2.1723942902835662
+    },
+    {
+      "index": 5,
+      "bank_coefficient_rowmass_share": 0.14069996855768452,
+      "bank_Bellman_scalar_share": 0.1361698234447584,
+      "bank_coefficient_per_row": 0.4055747091770172,
+      "PER_coefficient_per_row": 0.40557470099460935,
+      "bank_share_within_PER_plus_banks": 0.5319480569711719,
+      "bank_weighted_average_CE": 2.0889913906466973,
+      "PER_weighted_average_CE": 2.1216390539025127,
+      "whole_batch_weighted_average_CE": 2.158488683805207
+    },
+    {
+      "index": 6,
+      "bank_coefficient_rowmass_share": 0.08881500615220234,
+      "bank_Bellman_scalar_share": 0.08633622753945595,
+      "bank_coefficient_per_row": 0.2260379195213318,
+      "PER_coefficient_per_row": 0.22603791637902254,
+      "bank_share_within_PER_plus_banks": 0.5319480554092855,
+      "bank_weighted_average_CE": 2.106142954612551,
+      "PER_weighted_average_CE": 2.1247093912739072,
+      "whole_batch_weighted_average_CE": 2.166611917179791
+    },
+    {
+      "index": 7,
+      "bank_coefficient_rowmass_share": 0.15269133840908514,
+      "bank_Bellman_scalar_share": 0.1477969735289266,
+      "bank_coefficient_per_row": 0.45405682921409607,
+      "PER_coefficient_per_row": 0.4540568173560133,
+      "bank_share_within_PER_plus_banks": 0.5319480584503602,
+      "bank_weighted_average_CE": 2.0915981567486597,
+      "PER_weighted_average_CE": 2.1487489850070216,
+      "whole_batch_weighted_average_CE": 2.16086239347399
+    },
+    {
+      "index": 8,
+      "bank_coefficient_rowmass_share": 0.15385127837237178,
+      "bank_Bellman_scalar_share": 0.1475463847139796,
+      "bank_coefficient_per_row": 0.45890969038009644,
+      "PER_coefficient_per_row": 0.45890969576957025,
+      "bank_share_within_PER_plus_banks": 0.5319480490240179,
+      "bank_weighted_average_CE": 2.068129729363136,
+      "PER_weighted_average_CE": 2.128168710251647,
+      "whole_batch_weighted_average_CE": 2.1565042296307695
+    }
+  ],
+  "ranges": {
+    "bank_coefficient_rowmass_share": [
+      0.08881500615220234,
+      0.1567961715865253
+    ],
+    "bank_Bellman_scalar_share": [
+      0.08633622753945595,
+      0.15133771746758776
+    ],
+    "bank_coefficient_per_row": [
+      0.2260379195213318,
+      0.4713650941848755
+    ],
+    "PER_coefficient_per_row": [
+      0.22603791637902254,
+      0.4713651063571892
+    ],
+    "bank_share_within_PER_plus_banks": [
+      0.5319480455185255,
+      0.5319480593786794
+    ],
+    "bank_weighted_average_CE": [
+      2.0666089806609307,
+      2.106142954612551
+    ],
+    "PER_weighted_average_CE": [
+      2.1216390539025127,
+      2.1558815797190953
+    ],
+    "whole_batch_weighted_average_CE": [
+      2.1565042296307695,
+      2.1723942902835662
+    ]
+  },
+  "conclusion": "MeanPER bank weights intentionally give equal average per-row coefficient vsPER. Their lower wholebatch rowmass than25% is explained by recent/interesting weights1 plus heterogeneous PERweights; Bellman scalar adds CE magnitudes. Neither proves insufficient gradients or retention. No floorbenefit is established."
+}

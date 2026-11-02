@@ -1,0 +1,61 @@
+--- initial-source-archive/audit_payloads.py
++++ audit_payloads.py
+@@ -27,7 +27,7 @@
+ ARCHIVE_SHA = 'b6383ddf1a31db763a42f287355a41ea646d6d656d8f29306ca18d4f6895e4c1'
+ LOCK_SHA = '20057c290b1a9f121a03dfb5e81d33c67170a2d51807c0c149e295f393fa359e'
+ WORKER_SHA = '59b3e81dead476bae25637b848b8c880043ca1b7f9b817e1d1b7c83846e4320c'
+-MAX_JSON = 4*1024**2
++MAX_JSON = 8*1024**2
+ MAX_PAYLOAD = 80*1024**2
+ RUN_ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26')
+ 
+@@ -203,7 +203,14 @@
+         else:require(value==saved[key],'Statistic mismatch '+computed['path']+'/'+key)
+ 
+ 
+-def validate_payload(torch,payload,row,role,case,input_sha,state_sha,rng_sha):
++def parameter_names(phase):
++    names=phase['before']['steps']
++    require(isinstance(names,dict) and len(names)==99 and all(type(name) is str for name in names),
++            'Expected exactly99 captured named parameter steps')
++    return set(names)
++
++
++def validate_payload(torch,payload,row,role,case,input_sha,state_sha,rng_sha,expected_gradient_names):
+     require(set(payload)=={'variant','case','numerical','pre_rng','post_rng','pre_state_sha256',
+                           'post_state_sha256','input_manifest_sha256','update_calls'},'Payload field set')
+     require(payload['variant']==role and payload['case']==case and payload['input_manifest_sha256']==input_sha,'Payload case/input identity')
+@@ -221,6 +228,7 @@
+     require(values['ce'].shape==(4096,) and values['ce'].dtype==torch.float32 and
+             values['diagnostic_output'].shape==(12,) and values['diagnostic_output'].dtype==torch.float32,'Fixed numerical output geometry')
+     require(type(values['loss']) is float and type(values['bc_loss']) is float and isinstance(values['gradient'],dict),'Loss/gradient structure')
++    require(set(values['gradient'])==expected_gradient_names,'Gradient name coverage differs from captured parameter steps')
+     require(all(value is None or isinstance(value,torch.Tensor) and value.dtype==torch.float32
+                 for value in values['gradient'].values()),'Native gradient types')
+     return values
+@@ -268,6 +276,7 @@
+     run,prior=prepare(pins)
+     allowed={Path(path) for path in pins['payloads']}
+     phases={role:read_json(run/role/'phase-result.json',pins['json_inputs'][str(run/role/'phase-result.json')]['sha256']) for role in ROLES}
++    gradient_names={role:parameter_names(phase) for role,phase in phases.items()}
+     input_sha=sha_file(run/'inputs/inputs.json')
+     state_sha=prior['scientific_control_summary']['persistent_scientific_state_sha256']
+     rng_sha=prior['scientific_control_summary']['rng_sha256']
+@@ -286,7 +295,7 @@
+         path=Path(baseline_row['actual']['path'])
+         require(baseline_row['actual']==pins['payloads'][str(path)],'BASE payload receipt differs')
+         base=load_payload(torch,path,pins['payloads'][str(path)],allowed)
+-        expected=validate_payload(torch,base,baseline_row,'base_a',case,input_sha,state_sha,rng_sha)
++        expected=validate_payload(torch,base,baseline_row,'base_a',case,input_sha,state_sha,rng_sha,gradient_names['base_a'])
+         results.append(dict(role='base_a',case=case,payload_sha256=baseline_row['actual']['sha256'],reference_only=True,
+                             gradient_tensors=sum(isinstance(v,torch.Tensor) for v in expected['gradient'].values()),
+                             gradient_none=sum(v is None for v in expected['gradient'].values())))
+@@ -294,7 +303,7 @@
+             row=phases[role]['cases'][idx];path=Path(row['actual']['path'])
+             require(row['actual']==pins['payloads'][str(path)],'Compared payload receipt differs')
+             payload=load_payload(torch,path,pins['payloads'][str(path)],allowed)
+-            actual=validate_payload(torch,payload,row,role,case,input_sha,state_sha,rng_sha)
++            actual=validate_payload(torch,payload,row,role,case,input_sha,state_sha,rng_sha,gradient_names[role])
+             records,masks,none_paths=recompute(torch,actual,expected,name)
+             saved=row['comparisons']
+             require([r['path'] for r in records]==[r['path'] for r in saved],'Comparison record coverage/order differs')

@@ -1,0 +1,85 @@
+{
+  "base": {
+    "agent.py": {
+      "bytes": 93981,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/agent.py",
+      "sha256": "28977d6b925a4606a61b76438595f45ae054fc81aaaad989ab93e00d98a05668"
+    },
+    "config.py": {
+      "bytes": 116996,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/config.py",
+      "sha256": "f2794754a14e9f13c82b613aa131698246a08dc9021c18f1b78fda7c4b484498"
+    },
+    "learning_exposure.py": {
+      "bytes": 9123,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/learning_exposure.py",
+      "sha256": "30d9191e9fc845d80e52a7a891244fcf0c7041cf60529f6559b15e6d47ac5c7f"
+    },
+    "loss_kernel.py": {
+      "bytes": 7957,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/loss_kernel.py",
+      "sha256": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a"
+    },
+    "model.py": {
+      "bytes": 42429,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/model.py",
+      "sha256": "bcd174f05610c6f773ca8c53f9155206eba4f7b6a11383516ddd71f3b513eeb4"
+    },
+    "prefetch.py": {
+      "bytes": 14929,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/prefetch.py",
+      "sha256": "a07cc84b6d411fd2536b1a17fa56c6b8b0f5ac9861740e44ea94878894a8d217"
+    },
+    "replay_buffer.py": {
+      "bytes": 106436,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/replay_buffer.py",
+      "sha256": "28556797d15e0acf9387030b87f9ccce0b18e1e3cfa629b63c2d7239a4206238"
+    },
+    "training.py": {
+      "bytes": 28993,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/training.py",
+      "sha256": "194081120faae4228b0af0d6127c1e12c6d6180acdfe7d7a6a8c7cbcf24b963f"
+    }
+  },
+  "capture": {
+    "artifact_bytes": 6442450944,
+    "atoms": 51,
+    "attempt_limit": 8,
+    "batch_rows": 4096,
+    "compiled_outputs": 4,
+    "publication": "create-only; no temp names or replacements",
+    "raw_tensor_bytes": 671088640,
+    "state_width": 11128
+  },
+  "reused_byte_identical": {
+    "prefetch.py": {
+      "bytes": 15674,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/executed_trace_proposal/prefetch.py",
+      "sha256": "02871bc515ba23f8d353131e9b6b6b4e390692803578febee7c8d643dd308a27"
+    },
+    "replay_buffer.py": {
+      "bytes": 113613,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/executed_trace_proposal/replay_buffer.py",
+      "sha256": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f"
+    }
+  },
+  "revision": 2,
+  "schema": "robotron-recomputed-ce-capture-source-lock-v1",
+  "source_fixture_whole_step": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/executed_trace_validation_proposal/test_whole_train_step.py",
+    "sha256": "08061c2aed557135c824ce277440276430cabe6d6b96cbccbdd64d96af592901"
+  },
+  "source_only_authorization": "root task2026-10-17 after actual warmup observations and CPU numerical audit; no execution/live adoption",
+  "status": "SOURCE_ONLY_UNEXECUTED",
+  "supersedes_source_review_manifest": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/manifest-source-review-v1.json",
+    "sha256": "76b62cb993fca7ef59c2ead23d0282eab022cbfc04c994d3a52f8320ed51295f"
+  },
+  "unchanged_loss_sha256": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a",
+  "unknown": {
+    "actual_online_target_entropy_KL_rank": "not observed",
+    "one_attempt_CUDA_rehearsal": "not implemented/launched",
+    "private_CPU_validation": "not executed",
+    "runtime_checkpoint_provenance": "external owner binding required"
+  }
+}

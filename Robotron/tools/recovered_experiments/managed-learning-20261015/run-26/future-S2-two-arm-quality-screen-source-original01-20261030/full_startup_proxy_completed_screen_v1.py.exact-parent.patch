@@ -1,0 +1,29 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/deadline-score60min-protocol-original01-preparation-20261026/private-startup-clock32-original01/full_startup_proxy_deadline32_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-S2-two-arm-quality-screen-source-original01-20261030/full_startup_proxy_completed_screen_v1.py
+@@ -29,7 +29,7 @@
+         if _DEPENDENCIES_READY:return
+         loaded={}
+         for name,sha in DEPENDENCIES.items():
+-            path=Path(__file__).parent/name;raw=path.read_bytes()
++            path=Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/deadline-score60min-protocol-original01-preparation-20261026/private-startup-clock32-original01')/name;raw=path.read_bytes()
+             require(hashlib.sha256(raw).hexdigest()==sha,'Private deadline32 dependency changed: '+name)
+             spec=importlib.util.spec_from_file_location('_deadline32_'+path.stem,path)
+             module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+@@ -475,8 +475,15 @@
+             self.emit(dict(kind='original_drained_peer_EOF',receipt=self.stop_receipt,
+                            ledger=self.final_ledger,closed_prefix=self.trace.closed_pin))
+             self.peer_eof.set()
+-            require(self.stop_event.wait(120),'Owner did not intentionally close completed full-tail origin')
+-            require(self.server.shutdown_event.is_set(),'Origin must stop before bridge release')
++            if self.stop_receipt.get('screen_first_game_complete') is True:
++                self.completed_retirement_parked.set()
++                require(self.completed_retirement_authorized.wait(120),
++                        'Owner did not positively reap the completed original child')
++                require(self.stop_event.wait(4200),'Completed original origin must stay parked until common shutdown')
++                require(self.server.shutdown_event.is_set(),'Origin must stop before completed bridge release')
++            else:
++                require(self.stop_event.wait(120),'Owner did not intentionally close completed full-tail origin')
++                require(self.server.shutdown_event.is_set(),'Origin must stop before bridge release')
+         except Exception as error:
+             self.error=repr(error)
+             self.emit(dict(kind='original_proxy_failure',sequence=self.sequence,error=self.error,

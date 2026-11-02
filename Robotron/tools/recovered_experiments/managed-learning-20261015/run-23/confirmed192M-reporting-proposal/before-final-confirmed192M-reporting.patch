@@ -1,0 +1,173 @@
+--- a/Robotron/tools/render_learning_progress.py
++++ b/Robotron/tools/render_learning_progress.py
+@@ -46,7 +46,8 @@
+     seen, protocols, cohorts = set(), {}, 0
+     backend_references = {}
+     for group in [*data["learning"], *data.get("sidecar_learning", []),
+-                  *data.get("fixed_transport_learning", []), *data.get("observational_guards", [])]:
++                  *data.get("fixed_transport_learning", []), *data.get("observational_guards", []),
++                  *data.get("unplotted_guard_history", [])]:
+         rows, labels, counts = [], [], []
+         series = group.get("backend_series", "historical-gb300")
+         checkpoint = None
+@@ -115,6 +116,10 @@
+         if (guard["role"] != "single-cohort-regression-guard" or guard["promoted"] is not False
+                 or len(guard["source_receipts"]) != 1):
+             raise ValueError("Guard must remain a separate unpromoted single cohort")
++    for guard in data.get("unplotted_guard_history", []):
++        if (guard["role"] != "unpromoted-regression-guard-history" or guard["promoted"] is not False
++                or guard["plotted"] is not False or len(guard["source_receipts"]) != 1):
++            raise ValueError("Unplotted guards must remain separate unpromoted original cohorts")
+     event = data.get("bank_output_first_events")
+     if event is not None:
+         compared = json.loads(Path(event["comparison_source"]).read_bytes())
+@@ -297,8 +302,8 @@
+     timeline = data.get("fixed_transport_plot_order")
+     positions = None if timeline is None else [timeline.index(group["label"]) for group in fixed_groups]
+     fixed_upper, fixed_gain = quality_series_axis(fixed_ax, fixed_groups,
+-        "C  GPU0 compiled · fixed transport, 3s", "128M incumbent · hollow diamond: single-cohort 96M guard",
+-        "64M", "#b87536", positions=positions, gain_reference_index=-2)
++        "C  GPU0 compiled · fixed transport, 3s", "192M incumbent · hollow: single-cohort 96M guard",
++        "128M", "#b87536", positions=positions, gain_reference_index=-2)
+ 
+     fixed_upper = observational_guard_overlay(fixed_ax, fixed_groups,
+         data.get("observational_guards", []), order=timeline)
+@@ -306,7 +311,7 @@
+     batch_aba_axis(rate_ax, data["batch_aba_throughput"])
+     stage = data["plotting"]["confirmed_stage"]
+     fig.text(.07, .965, "Robotron · learning progress and training throughput", fontsize=20, fontweight="bold")
+-    fig.text(.07, .925, f"Confirmed through 128M; 96M guard unpromoted · three separate quality series · batch 4096 / 192 actors", fontsize=11, color="#536171")
++    fig.text(.07, .925, f"Confirmed through 192M; 96M / 160M guards unpromoted · three separate quality series · batch 4096 / 192 actors", fontsize=11, color="#536171")
+     for y, line in zip([.115, .085, .055, .025], data["caption"].splitlines()):
+         fig.text(.07, y, line, fontsize=8.2, color="#647582", va="top")
+     fig.canvas.draw()
+@@ -332,7 +337,8 @@
+                 fixed_transport_gain_32M_vs_16M_pct=(data["fixed_transport_learning"][1]["mean"] /
+                     data["fixed_transport_learning"][0]["mean"] - 1) * 100,
+                 fixed_transport_gain_latest_vs_16M_pct=(fixed_groups[-1]["mean"] / fixed_groups[0]["mean"] - 1) * 100,
+-                fixed_transport_gain_128M_vs_64M_pct=fixed_gain,
++                fixed_transport_gain_128M_vs_64M_pct=(fixed_groups[3]["mean"] / fixed_groups[2]["mean"] - 1) * 100,
++                fixed_transport_gain_192M_vs_128M_pct=fixed_gain,
+                 fixed_transport_gain_64M_vs_32M_pct=(data["fixed_transport_learning"][2]["mean"] /
+                     data["fixed_transport_learning"][1]["mean"] - 1) * 100,
+                 matplotlib=matplotlib.__version__, sources_unchanged=True,
+--- a/Robotron/DELL_SETUP.md
++++ b/Robotron/DELL_SETUP.md
+@@ -587,7 +587,7 @@
+ `50a374d33250713ba205024f85aaed3e50b62db913c29b2c2fb8c28392f051af`;
+ `logs/managed-learning-20261015/sidecar-fresh3-32M-confirmed-campaign.json` records
+ the exact source/boot/backend/checkpoint identities, saved clocks, and all tails.
+-The progress figure shows this fixed-transport 16M-to-32M-to-64M-to-128M series separately from
++The progress figure shows this fixed-transport 16M-to-32M-to-64M-to-128M-to-192M series separately from
+ the earlier GPU0 and GB300 curves. It does not connect the earlier 16M mean of
+ 100,100 to the 32M point or infer a cross-segment gain.
+ CPU regression evidence and exact applied hashes are recorded in
+@@ -731,8 +731,8 @@
+ The 96M guard remains a separate unpromoted single cohort and enters neither
+ this 148-game pool nor the 217-game reference.
+ 
+-Root protected and promoted 128M at 12:45:15.271 UTC. It is now the managed
+-incumbent and reference; the prior 64M policy, metadata, campaign and original
++Root protected and promoted 128M at 12:45:15.271 UTC. It became the managed
++incumbent and reference at that point; the prior 64M policy, metadata, campaign and original
+ comparison rows remain preserved. The new independent readonly protected copy is
+ `models_dqn/managed-incumbents/fresh3-128M-confirmed.pt`, SHA256
+ `70bf8218fa761de97bc89c30981dfd1d779484b459ec6837ed27213735e908f1`.
+@@ -747,7 +747,58 @@
+ 907,002 steps. These clocks and timestamped process-local application counters
+ remain distinct. The learned trajectory includes the disclosed batch-size and
+ rejected compiler trials; this quality gain does not isolate their causal effects
+-or establish learning equivalence. Panel C now connects only confirmed policies
++or establish learning equivalence. At that publication, panel C connected confirmed policies
+ through 128M, placing the unconnected hollow 96M marker chronologically between
+ 64M and 128M. The other quality backends and dated throughput A–B–A data remain
+ unchanged.
++
++
++The fixed 192M assessment completed both prescribed full-tail cohorts on the
++same GPU0 compiled FP32/TF32, 16-slot, fixed-transport/3s backend. All 52 and
++61 admitted games remain: means 288,144.71 and 247,667.62, medians 271,225 and
++222,650. Each independently passed mean >=216,946.3176 (1.05 times the original
++128M 148-game mean) and median >=166,112.5. Both counts meet the existing
++50-whole-game validity floor; N<64 is a precision caveat, not grounds for an
++extra valid cohort or pooled rescue. Both legs covered all 16 private slots,
++retained every late tail and had zero measured runtime errors.
++
++The descriptive original-row pool has 113 games: mean 266,294.25, median
++230,150 and SE 11,652.97, a 28.8839% mean gain over the fixed original 128M
++reference. All 16 pooled actor-slot mean contrasts were positive. Fixed
++10,000-draw game and paired-slot bootstrap ratio sensitivities were
++[1.160, 1.430] and [1.200, 1.389]. They are descriptive, without repeated-look,
++policy-selection or shared-trajectory corrections, not formal confidence.
++The 96M single cohort and both completed 160M regression guards remain unpromoted
++history and enter neither the 113-game candidate pool nor the 148-game reference.
++The 160M guards are retained in the figure JSON but are not plotted; the 96M
++guard remains a separate hollow marker.
++
++Root protected and promoted 192M at 16:52:44.318 UTC on 2026-10-16. It is the new
++managed incumbent/reference; 128M and all earlier protected artifacts remain
++preserved. The independent readonly copy is
++`models_dqn/managed-incumbents/fresh3-192M-confirmed.pt`, SHA256
++`5076199285752a8748ce9566bc74c6b67210a03ae7f04f132f92b786dea102da`.
++Its `.pt.json` and
++`logs/managed-learning-20261015/sidecar-fresh3-192M-confirmed-campaign.json`
++link the final root CPU lineage, original receipts, strict two-leg analysis and
++positive final isolation/cleanup audits. The promotion receipt is
++`logs/managed-learning-20261015/run-23/quality192M-root-promotion-audit.json`.
++
++The confirmation retains eight generic raw health-alert rows and ten tracebacks
++classified as `Inference batcher stopped before completion`, raised only during
++deliberate post-cutoff batcher shutdown. Source-order and log evidence are
++preserved in `run-23/quality192M-confirm01-shutdown-stack-classification.json`;
++they were not erased or recast as healthy runtime inference. This classified
++cleanup evidence and both full-game validators support the positive final audit.
++
++Saved clocks were 1,156,456 logical updates, 3,289,255,936 optimized samples and
++196,632,084 learner frames; the 81 Adam states each recorded 1,155,946 steps.
++These clocks remain distinct from process-local applied/AMP-skip counters; no
++whole-interval outcome reconciliation is inferred. Supporting all-row medians
++rose from level 9 to 12 and 7,914 to10,065 playable frames; observed deaths 9 to 12
++can reflect longer games and earned extra lives. Wall duration 84.36 to 109.16s
++includes host and inactive intervals. These are diagnostics, not new gates.
++The learning recipe remained unchanged. The gain does not establish a causal
++batch-size/compiler effect. Panel C appends confirmed 192M to the same backend
++curve; all older quality series, bank caveats and dated throughput A–B–A data
++remain unchanged.
+--- a/Robotron/tools/PIPELINE_REPORTING.md
++++ b/Robotron/tools/PIPELINE_REPORTING.md
+@@ -112,7 +112,7 @@
+ result. The final evidence is `exposure-health-independent-summary.json` and
+ `exposure-health-final-independent-audit.json` in run23. These operational
+ observations do not themselves select or rebase a quality reference. The separately
+-confirmed 128M promotion and preserved 64M/96M history are documented in
++confirmed 128M and 192M promotions and preserved 64M/96M/160M history are documented in
+ `../DELL_SETUP.md`; subsequent quality checks must name their fixed reference.
+ 
+ ## Bank field output phases
+@@ -176,3 +176,26 @@
+ Header/geometry/size and sampled valid/padded-row checks are not exhaustive
+ payload equality or a filesystem durability proof. GC/snapshot/unmap causality
+ and a faster whole save remain unestablished.
++
++
++## Confirmed 192M quality reporting
++
++The 192M reference update is separate from host pipeline or exposure telemetry.
++Two original full-tail cohorts (52 and 61 games) independently passed the fixed
++5% mean-gain and median-floor gates against the original 128M 148-game reference.
++The descriptive 113-row pool is mean 266,294.25, median 230,150 and SE 11,652.97
++(+28.8839% mean); it is not a fabricated valid measurement receipt. Root promoted
++the protected 192M policy at 16:52:44.318 UTC on 2026-10-16; 128M is preserved.
++Both 160M guards and the single 96M guard remain unpromoted history, not baseline.
++The official 50-whole-game floor, 16-slot/full-tail protocol and runtime failure
++rules remain unchanged. Low N and bootstrap/SE precision limits are disclosed.
++
++The final 192M campaign and root promotion audit are linked from `../DELL_SETUP.md`.
++The confirmation's eight raw generic alerts and ten intentional batcher-stop
++cleanup tracebacks are retained with explicit post-cutoff source-order evidence;
++the two full cohorts have zero measured runtime errors. Host elapsed duration,
++maximum observed level, playable frames and recorded deaths are supporting
++diagnostics only. More deaths can accompany earned lives and longer games.
++Logical updates/optimized samples, actual saved Adam steps and timestamped
++process/epoch application counters stay separate; no whole-interval AMP claim,
++new schedule, new telemetry column or causal batch/compiler conclusion follows.

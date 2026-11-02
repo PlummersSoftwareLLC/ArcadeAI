@@ -1,0 +1,44 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-physical-original04/metadata600-resource-templates-original01/closed-metadata-reuse-guard-original01-preparation/prepare_round_cpu_guard_physical192_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/closed-metadata-reuse-guard-original01-preparation/prepare_round_cpu_guard_prefix_physical192_v2.py
+@@ -9,9 +9,9 @@
+ HERE = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
+ LOCAL = Path(__file__).resolve().parent
+ REUSE = LOCAL
+-SOURCE_CONTRACT_SHA = '1504401ad9fcffd33f56c2997de7e2b24bb9f014615b027484339aa01631b461'
+-DRIVER_SHA = 'b072b64470b3c6084a8886f24d7d036177e123de5bf878731e1801b8d3c00276'
+-SHIM_SHA = '7390cea683ae09ffb16ee82c2dcfec7f71bbdc69438dde3a72141cfd65f97a27'
++SOURCE_CONTRACT_SHA = '7b1d2b37b3396016b2b8de8c768246cd292e3a92b1e009c31f09a3691e52957d'
++DRIVER_SHA = '87e85dfee7b2f03df3fb79c319bce620da21f00f75821d633f4085b72b7dad68'
++SHIM_SHA = '93c75e0db4658cb289cb9087fd808e9e864353994204289df48da0cacfb303d5'
+ 
+ 
+ def load(name, path):
+@@ -26,7 +26,7 @@
+     study_pin = h.pin(Path(manifest).resolve())
+     study = json.loads(h.checked(study_pin).read_bytes())
+     assert [row['leg'] for row in study['cases']] == ['R1', 'C1', 'R2', 'C2']
+-    policy_pin = h.pin(LOCAL/'selected-physical192-prospective-source-contract.json')
++    policy_pin = h.pin(LOCAL/'selected-prefix-physical192-prospective-source-contract-v2.json')
+     assert policy_pin['sha256'] == SOURCE_CONTRACT_SHA
+     authority = json.loads(h.checked(authority_pin).read_bytes())
+     assert authority['schema'] == 'robotron-physical192-closed-metadata-and-raw-readiness-predicate-reuse-authority-v1'
+@@ -39,8 +39,8 @@
+     control = load('_round_CPU_prepare_controller', Path(controller['path']))
+     old_directory = BASE/'deadline-score32-fixed-fleet-admission-original03-preparation-20261026/actual-four-job-prebody-and-native-chain-CPU-original01'
+     old = json.loads((old_directory/'job.json').read_bytes())
+-    driver = h.pin(REUSE/'qualify_round_study_cpu_closed_metadata_physical192_v1.py')
+-    shim = h.pin(REUSE/'closed_metadata_readiness_reuse_physical192_v1.py')
++    driver = h.pin(REUSE/'qualify_round_study_cpu_closed_metadata_prefix_physical192_v2.py')
++    shim = h.pin(REUSE/'closed_metadata_readiness_reuse_prefix_physical192_v2.py')
+     assert driver['sha256'] == DRIVER_SHA and shim['sha256'] == SHIM_SHA
+     def authority_pins(value):
+         if isinstance(value, dict):
+@@ -82,7 +82,7 @@
+     witness = json.loads(h.checked(old['interpreter_symlink_binding']).read_bytes())
+     large[witness['source_pin']['path']] = witness['source_pin']
+     assert study['engineering_only'] is False
+-    unit = 'robotron-round-four-exact-contexts-CPU-physical192-reuse-' + study_pin['sha256'][:16] + '-original01-20261029.service'
++    unit = 'robotron-round-four-exact-contexts-CPU-prefix-physical192-reuse-' + study_pin['sha256'][:16] + '-original01-20261029.service'
+     job = dict(schema='robotron-deadline32-four-actual-jobs-CPU-guard-v2', unit=unit,
+         output=str(output/'output-original01'), prepared_manifest=study_pin, helpers=old['helpers'],
+         new_native_chain_tests=old['new_native_chain_tests'], interpreter_symlink_binding=old['interpreter_symlink_binding'],

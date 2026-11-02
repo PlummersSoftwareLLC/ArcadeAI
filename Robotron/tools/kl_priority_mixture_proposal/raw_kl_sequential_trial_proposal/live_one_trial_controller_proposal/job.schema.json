@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "robotron-one-raw-kl-trial-job-v1",
+  "title": "One final root-owned KL trial; same immutable job for independently retained deadline and main",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "sources",
+    "activation_job",
+    "trial_core",
+    "old_owner",
+    "boot_id",
+    "output_directory",
+    "deadlines",
+    "observation_budget_bytes",
+    "early_insurance",
+    "candidate_tag",
+    "return_intent"
+  ],
+  "properties": {
+    "schema": {
+      "const": "robotron-one-raw-kl-trial-job-v1"
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "controller",
+        "deadline",
+        "early_insurance",
+        "adapter",
+        "horizon"
+      ],
+      "properties": {
+        "controller": {
+          "$ref": "#/$defs/pin"
+        },
+        "deadline": {
+          "$ref": "#/$defs/pin"
+        },
+        "early_insurance": {
+          "$ref": "#/$defs/pin"
+        },
+        "adapter": {
+          "$ref": "#/$defs/pin"
+        },
+        "horizon": {
+          "$ref": "#/$defs/pin"
+        }
+      }
+    },
+    "activation_job": {
+      "$ref": "#/$defs/pin"
+    },
+    "trial_core": {
+      "$ref": "#/$defs/pin"
+    },
+    "old_owner": {
+      "$ref": "#/$defs/owner"
+    },
+    "boot_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "output_directory": {
+      "type": "string",
+      "pattern": "^/"
+    },
+    "deadlines": {
+      "const": {
+        "latch_s": 3240,
+        "stop_intent_s": 3310,
+        "owner_ceiling_s": 3600
+      }
+    },
+    "observation_budget_bytes": {
+      "const": 33554432
+    },
+    "early_insurance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "cpu_unit",
+        "save_timeout_s",
+        "cpu_timeout_s"
+      ],
+      "properties": {
+        "tag": {
+          "$ref": "#/$defs/tag"
+        },
+        "cpu_unit": {
+          "type": "string",
+          "pattern": "^robotron-[A-Za-z0-9_-]+\\.service$"
+        },
+        "save_timeout_s": {
+          "const": 60
+        },
+        "cpu_timeout_s": {
+          "const": 120
+        }
+      }
+    },
+    "candidate_tag": {
+      "$ref": "#/$defs/tag"
+    },
+    "return_intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase_id",
+        "request_id",
+        "startup_tag",
+        "output_directory"
+      ],
+      "properties": {
+        "phase_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,100}$"
+        },
+        "request_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,120}$"
+        },
+        "startup_tag": {
+          "$ref": "#/$defs/tag"
+        },
+        "output_directory": {
+          "type": "string",
+          "pattern": "^/"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "pin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "bytes",
+        "identity"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^/"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "identity": {
+          "type": "object",
+          "required": [
+            "device",
+            "inode",
+            "bytes",
+            "mtime_ns",
+            "ctime_ns",
+            "mode",
+            "uid",
+            "nlink"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "device": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "inode": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "mtime_ns": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "ctime_ns": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "uid": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "nlink": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "mode": {
+              "type": "string",
+              "pattern": "^0o[0-7]+$"
+            }
+          }
+        }
+      }
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pid",
+        "starttime_ticks",
+        "unit",
+        "invocation_id",
+        "cgroup"
+      ],
+      "properties": {
+        "pid": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "starttime_ticks": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "unit": {
+          "type": "string",
+          "pattern": "^robotron-managed-.*-trainer\\.service$"
+        },
+        "invocation_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "cgroup": {
+          "type": "string",
+          "pattern": "^/"
+        }
+      }
+    },
+    "tag": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,80}$"
+    }
+  },
+  "$comment": "No actual job is provided. Final trial core must be authorized/status FINAL_PRECOMMITTED_ROOT_AUTHORIZED. Derived armed/start/owner/ending receipts must not be hashed back into that core."
+}

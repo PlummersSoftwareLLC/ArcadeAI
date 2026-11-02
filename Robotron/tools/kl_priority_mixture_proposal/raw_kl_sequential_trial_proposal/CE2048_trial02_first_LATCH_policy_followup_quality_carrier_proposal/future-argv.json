@@ -1,0 +1,200 @@
+{
+  "status": "UNBOUND_SOURCE_ONLY_NOT_EXECUTED",
+  "format": "Each parameter object must be replaced by one genuine root-authenticated argument before any future command. This is data, not a new launcher.",
+  "parameters": {
+    "root_verified_stdlib_python_absolute": null,
+    "binding_job_absolute": null,
+    "binding_job_sha256": null,
+    "actual_plan_sha256": null,
+    "independent_plan_review_absolute": null,
+    "independent_plan_review_sha256": null,
+    "fresh_readiness_absolute": null,
+    "fresh_readiness_sha256": null,
+    "future_campaign_absolute": null,
+    "leg_number": null,
+    "fresh_audit_output_absolute": null
+  },
+  "source_parameters": {
+    "final_carrier_sha256": "4159ef7818d2bd90c82682d007dcaabf2ea9ae3b74e3c707ba77d9496f7915c2",
+    "final_auditor_sha256": "cf64e229a4e02042f43bc458c0c36936da00a8decc4df23babd153679fe7ea31"
+  },
+  "actual_future": {
+    "candidate_sha256": null,
+    "candidate_clocks": null,
+    "readiness": null,
+    "quality_plan": null,
+    "quality_controller": null,
+    "quality_outcome": null,
+    "playing_quality_qualification": null
+  },
+  "literal_PLAN_argv": [
+    {
+      "parameter": "root_verified_stdlib_python_absolute"
+    },
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_carrier_proposal/root_quality_carrier.py"
+  ],
+  "authored_guard_argv": [
+    {
+      "parameter": "root_verified_stdlib_python_absolute"
+    },
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_carrier_proposal",
+    "-p",
+    "test_carrier_contract.py",
+    "-v"
+  ],
+  "authored_guard_method_count": 4,
+  "authored_guard_execution": null,
+  "prepare_argv_template": [
+    {
+      "parameter": "root_verified_stdlib_python_absolute"
+    },
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_carrier_proposal/root_quality_carrier.py",
+    "--execute",
+    "--binding-job",
+    {
+      "parameter": "binding_job_absolute"
+    },
+    "--binding-job-sha256",
+    {
+      "parameter": "binding_job_sha256"
+    },
+    "--expected-source-sha256",
+    "4159ef7818d2bd90c82682d007dcaabf2ea9ae3b74e3c707ba77d9496f7915c2",
+    "--action",
+    "prepare"
+  ],
+  "launch_argv_template": [
+    {
+      "parameter": "root_verified_stdlib_python_absolute"
+    },
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_carrier_proposal/root_quality_carrier.py",
+    "--execute",
+    "--binding-job",
+    {
+      "parameter": "binding_job_absolute"
+    },
+    "--binding-job-sha256",
+    {
+      "parameter": "binding_job_sha256"
+    },
+    "--expected-source-sha256",
+    "4159ef7818d2bd90c82682d007dcaabf2ea9ae3b74e3c707ba77d9496f7915c2",
+    "--action",
+    "launch",
+    "--plan-sha256",
+    {
+      "parameter": "actual_plan_sha256"
+    },
+    "--plan-review",
+    {
+      "parameter": "independent_plan_review_absolute"
+    },
+    "--plan-review-sha256",
+    {
+      "parameter": "independent_plan_review_sha256"
+    },
+    "--runtime-readiness",
+    {
+      "parameter": "fresh_readiness_absolute"
+    },
+    "--runtime-readiness-sha256",
+    {
+      "parameter": "fresh_readiness_sha256"
+    }
+  ],
+  "observe_argv_template": [
+    {
+      "parameter": "root_verified_stdlib_python_absolute"
+    },
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_carrier_proposal/root_quality_carrier.py",
+    "--execute",
+    "--binding-job",
+    {
+      "parameter": "binding_job_absolute"
+    },
+    "--binding-job-sha256",
+    {
+      "parameter": "binding_job_sha256"
+    },
+    "--expected-source-sha256",
+    "4159ef7818d2bd90c82682d007dcaabf2ea9ae3b74e3c707ba77d9496f7915c2",
+    "--action",
+    "observe"
+  ],
+  "archive_argv_template": [
+    {
+      "parameter": "root_verified_stdlib_python_absolute"
+    },
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_carrier_proposal/root_quality_carrier.py",
+    "--execute",
+    "--binding-job",
+    {
+      "parameter": "binding_job_absolute"
+    },
+    "--binding-job-sha256",
+    {
+      "parameter": "binding_job_sha256"
+    },
+    "--expected-source-sha256",
+    "4159ef7818d2bd90c82682d007dcaabf2ea9ae3b74e3c707ba77d9496f7915c2",
+    "--action",
+    "archive"
+  ],
+  "one_original_leg_audit_argv_template": [
+    {
+      "parameter": "root_verified_stdlib_python_absolute"
+    },
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_first_LATCH_policy_followup_quality_binding_proposal/audit_completed_leg.py",
+    "--execute",
+    "--game",
+    "/home/dave/source/repos/ArcadeAI/Robotron",
+    "--campaign",
+    {
+      "parameter": "future_campaign_absolute"
+    },
+    "--plan-sha256",
+    {
+      "parameter": "actual_plan_sha256"
+    },
+    "--source-sha256",
+    "cf64e229a4e02042f43bc458c0c36936da00a8decc4df23babd153679fe7ea31",
+    "--binding-job",
+    {
+      "parameter": "binding_job_absolute"
+    },
+    "--binding-job-sha256",
+    {
+      "parameter": "binding_job_sha256"
+    },
+    "--leg",
+    {
+      "parameter": "leg_number"
+    },
+    "--output",
+    {
+      "parameter": "fresh_audit_output_absolute"
+    }
+  ],
+  "audit_scope": "Select leg1/2/3/4 only after its original evaluator terminal0/fulltails; each original audit has a unique output and original execution identity/archive. Future retained wrapper/release is root-owned and not implemented by this carrier.",
+  "unit_release": "No release command is provided. Root archives original terminal service+timer identities/show/cat/invocation journals before exact timer-first owned release and separately proves current resources; never target main, original192 fleet or a replacement unit.",
+  "gates": "Unchanged fresh R/C/R/C; each C separately mean>=1.05*pooled fresh R mean and median>=fresh R median; all legs valid/fulltails and explicit root finalization remain required.",
+  "distinction": "Original trial/return remain FAILED; actual separate maintenance READY is consumed by genuine maintenance fields, with root pre-score followup-precommit-FINAL e467. No retry/alias."
+}

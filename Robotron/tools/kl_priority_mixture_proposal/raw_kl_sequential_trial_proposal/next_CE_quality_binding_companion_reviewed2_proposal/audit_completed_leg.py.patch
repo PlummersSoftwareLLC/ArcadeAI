@@ -1,0 +1,69 @@
+--- frozen-trial02/audit_completed_leg.py
++++ unconsumed-live-CE/audit_completed_leg.py
+@@ -24,14 +24,14 @@
+ SLOTS = list(range(4096, 4112))
+ TEMPLATE_SHA256 = '2576d4449b12d6b4a3b17898ab9938c6ff8c762829f61a29e3d510f73d585c21'
+ VERIFIER_SHA256 = "b2e732dc731b2b601f7499d2cafd5841896daf2b0713d496b98cb6b8d7279519"
+-REFERENCE_SHA256 = "1e085a128e237c2bb0636b073e5053dd8bf5be932bcbd8249543b3af20e23021"
++REFERENCE_SHA256 = None
+ GAME = Path("/home/dave/source/repos/ArcadeAI/Robotron")
+ CAMPAIGN_ROOT = GAME / "logs/managed-learning-20261015"
+ CPU_VERIFIER = GAME / "tools/phase_snapshot_cpu_verifier_proposal/verify_phase_snapshot.py"
+ BINDINGS_SOURCE = Path(__file__).with_name('quality_bindings.py')
+-BINDINGS_SHA = '34fc09683176ddb1ef9182e30d3cfb2f980fac744407bc818a706cfc92ca57b5'
++BINDINGS_SHA = 'ecbe6ae896172ae7d44130de0004df7f25f33544b421106cdc325daa78f8cc59'
+ BINDINGS = CFG = BUNDLE = BINDING_PIN = None
+-PLAN = "PLAN_ONLY: actual first trial02 candidate phaseCPU/CE return/source bindings required; all4 diagnosticsTRUE/1200/2400/min50/all16/fulltails; no reads/imports/runtime/actions"
++PLAN = "PLAN_ONLY: actual live CE candidate phaseCPU/current CE/reference/source bindings required; all4 diagnosticsTRUE/1200/2400/min50/all16/fulltails; no reads/imports/runtime/actions"
+ EVALUATOR_NAMES = {"tools/run_frozen_sidecar.py", "tools/sidecar_boot.py", "Scripts/main.lua", "Scripts/robotron_socket_wait.c"} | {
+     "Scripts/dqn/"+name for name in ("config.py", "model.py", "actor_tags.py", "socket_server.py", "game_journal.py", "managed_measurement.py", "inference_actor.py", "nstep_buffer.py")}
+ EXECUTION_NAMES = {str(GAME/"tools"/name) for name in ("run_quality_campaign.py", "run_frozen_sidecar.py", "compare_sidecar_measurements.py", "compare_frozen_measurements.py")}
+@@ -97,8 +97,8 @@
+             'Exact reviewed current12+4 source bindings required')
+     checkpoints = plan['checkpoints']
+     require(checkpoints['reference']['sha256'] == REFERENCE_SHA256
+-            and checkpoints['candidate']['sha256'] == args.candidate_sha256, 'Protected448/actual first candidate differs')
+-    for role,source in (('reference',BINDINGS.REFERENCE),('candidate',BINDINGS.CANDIDATE)):
++            and checkpoints['candidate']['sha256'] == args.candidate_sha256, 'Protected reference/actual CE candidate differs')
++    for role,source in (('reference',CFG['reference']['path']),('candidate',CFG['candidate']['path'])):
+         require(checkpoints[role]['source'] == str(source)
+                 and checkpoints[role]['snapshot'] == str(directory/'checkpoints'/(role+'.pt')), 'Checkpoint path differs')
+     require([spec["index"] for spec in plan["legs"]] == [1,2,3,4]
+@@ -132,7 +132,7 @@
+ 
+ def validate_cpu_proof(proof, args):
+     require(proof == BUNDLE['proof'] and args.cpu_job_sha256 == CFG['evidence']['phase_cpu_job']['sha256'],
+-            'Exact selected first-candidate phaseCPU report/job required')
++            'Exact selected CE-candidate phaseCPU report/job required')
+     BINDINGS.check_cpu(BUNDLE['cpu_job'], proof, BUNDLE['completion'], CFG['candidate'])
+     require(proof['sha256'] == args.candidate_sha256 and proof['bytes'] == args.candidate_bytes,
+             'Actual candidate CPU identity differs')
+@@ -260,9 +260,10 @@
+         require(hashlib.sha256(proof_raw).hexdigest() == args.cpu_proof_sha256, "Actual future CPU proof SHA differs")
+         proof = decode(proof_raw)
+         validate_cpu_proof(proof, args)
+-        report['trial02_binding'] = dict(candidate_sha256=args.candidate_sha256,candidate_bytes=args.candidate_bytes,
++        report['live_CE_candidate_binding'] = dict(candidate_sha256=args.candidate_sha256,candidate_bytes=args.candidate_bytes,
+             cpu_proof_sha256=args.cpu_proof_sha256,cpu_job_sha256=args.cpu_job_sha256,
+-            root_binding_job=BINDING_PIN,first_latch=CFG['evidence']['decision'],CE_return=CFG['evidence']['ce_return'])
++            root_binding_job=BINDING_PIN,capture=CFG['evidence']['capture_result'],current_ce_phase=CFG['current_ce_phase'],
++            reference=CFG['reference'],previous_campaign=CFG['previous_campaign'])
+         legdir = directory / f"{args.leg:02d}-{spec['role']}"
+         require(Path(spec["receipt_path"]) == legdir / "receipt.json"
+                 and Path(spec["job"]["directory"]) == legdir,
+@@ -486,13 +487,14 @@
+ 
+ 
+ def configure(args):
+-    global BINDINGS,CFG,BUNDLE,BINDING_PIN
++    global BINDINGS,CFG,BUNDLE,BINDING_PIN,REFERENCE_SHA256
+     require(digest(BINDINGS_SOURCE)==BINDINGS_SHA,'Shared binding source changed')
+     spec=importlib.util.spec_from_file_location('_original_row_trial02_bindings',BINDINGS_SOURCE)
+     BINDINGS=importlib.util.module_from_spec(spec);spec.loader.exec_module(BINDINGS)
+     path=args.binding_job.resolve(strict=True);info=path.lstat()
+     BINDING_PIN=dict(path=str(path),sha256=args.binding_job_sha256,bytes=info.st_size,identity=BINDINGS.identity(info))
+     CFG=BINDINGS.read(BINDING_PIN);BUNDLE=BINDINGS.validate(CFG)
++    REFERENCE_SHA256=CFG['reference']['sha256']
+     args.candidate_sha256=CFG['candidate']['sha256'];args.candidate_bytes=CFG['candidate']['bytes']
+     args.cpu_job_sha256=CFG['evidence']['phase_cpu_job']['sha256']
+     args.cpu_proof=Path(CFG['evidence']['phase_cpu_report']['path']);args.cpu_proof_sha256=CFG['evidence']['phase_cpu_report']['sha256']

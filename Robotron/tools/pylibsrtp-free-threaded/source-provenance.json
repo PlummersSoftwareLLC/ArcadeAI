@@ -1,0 +1,9 @@
+{
+  "package": "pylibsrtp",
+  "version": "1.0.0",
+  "source_url": "https://files.pythonhosted.org/packages/0d/a6/6e532bec974aaecbf9fe4e12538489fb1c28456e65088a50f305aeab9f89/pylibsrtp-1.0.0.tar.gz",
+  "sha256": "b39dff075b263a8ded5377f2490c60d2af452c9f06c4d061c7a2b640612b34d4",
+  "patch_file": "free-threaded-wheel-tag.patch",
+  "patch_sha256": "7878e4e0114c2e33824a8268ee67534ff1cd366336dc4afa069088f97fe04115",
+  "scope": "Packaging only: keep setuptools cp314/cp314t native wheel tag when Py_GIL_DISABLED; conventional CPython ABI3 tagging unchanged. No extension or protocol code modified."
+}

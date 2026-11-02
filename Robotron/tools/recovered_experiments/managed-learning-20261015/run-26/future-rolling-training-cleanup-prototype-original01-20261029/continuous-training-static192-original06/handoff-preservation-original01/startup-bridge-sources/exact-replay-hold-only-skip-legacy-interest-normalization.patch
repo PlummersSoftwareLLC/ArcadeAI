@@ -1,0 +1,17 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/replay_buffer.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/startup-bridge-sources/replay_buffer_continuous_exact_resume_candidate_v1.py
+@@ -2115,6 +2115,14 @@
+         quota behave like another generic sampler.  Keep terminal, scoring, and
+         high-priority surprises, then cap the partition so it remains sparse.
+         """
++        if (os.getenv("ROBOTRON_CONTINUOUS_STARTUP_HOLD", "0") == "1"
++                and not getattr(self, "_continuous_exact_resume_consumed", False)):
++            if os.getenv("ROBOTRON_CONTINUOUS_TRAINING_MODE", "0") != "1":
++                raise RuntimeError("Exact replay restoration requires continuous MAIN hold mode")
++            # Preserve the stopped current rows, including interest flags.
++            # The startup bridge independently compares every scalar payload.
++            self._continuous_exact_resume_consumed = True
++            return
+         if n <= 0:
+             return
+         max_frac = max(0.0, min(1.0, float(getattr(RL_CONFIG, "max_interesting_replay_fraction", 0.30))))

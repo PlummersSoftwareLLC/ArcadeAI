@@ -1,0 +1,141 @@
+{
+  "status": "UNSELECTED_UNEXECUTED",
+  "patch": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/reviewed2-failed-step-history-20261018/unapplied.patch",
+    "sha256": "1bfe41d72d6b96004b30a28e25aa24dc5b8039f7344f58dcbbc43ff54c75d556",
+    "bytes": 52556,
+    "identity": {
+      "device": 2304,
+      "inode": 81297763,
+      "bytes": 52556,
+      "mtime_ns": 1792335737453351022,
+      "ctime_ns": 1792335737453453678,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "preservation": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_receipt_fix_proposal/reviewed2-failed-step-history-20261018/source-preservation.json",
+    "sha256": "c7678faec3ff7a3889c2ef725b6d552966c8e77c13509ae72028123f1b91f3c5",
+    "bytes": 24055,
+    "identity": {
+      "device": 2304,
+      "inode": 81297764,
+      "bytes": 24055,
+      "mtime_ns": 1792335737456252920,
+      "ctime_ns": 1792335737456252920,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "selected_nodes": {
+    "replay_buffer.py": {
+      "SumTree": [
+        "__init__",
+        "_propagate",
+        "total",
+        "add",
+        "batch_update"
+      ],
+      "PrioritizedReplayBuffer": [
+        "__init__",
+        "_storage_specs",
+        "_invalidate_ring_receipts_locked",
+        "_indices_from_receipts_locked",
+        "add",
+        "add_with_receipt",
+        "_add_record",
+        "clear",
+        "flush",
+        "_bank_span",
+        "_bank_admit",
+        "hof_admit",
+        "ephof_admit",
+        "_hof_rebuild_flat_locked",
+        "_ephof_rebuild_flat_locked",
+        "boost_priorities",
+        "apply_pre_death_penalty",
+        "_append_interesting_bank_locked",
+        "mark_interesting",
+        "_restore_from_arrays",
+        "_try_adopt_mmap_directory",
+        "ensure_live_mmap",
+        "_promote_to_live_mmap",
+        "_sanitize_interesting_after_load_locked",
+        "_rebuild_interesting_bank_locked"
+      ]
+    },
+    "agent.py": {
+      "RainbowAgent": [
+        "step",
+        "step_with_receipt",
+        "_step_record"
+      ]
+    },
+    "socket_server.py": {
+      "_ReplayReceiptHistory": "WHOLE_SMALL_CLASS",
+      "AsyncReplayBuffer": [
+        "__init__",
+        "_record_step",
+        "_consume",
+        "_do_elite_episode_boost",
+        "_do_boost",
+        "stop"
+      ]
+    },
+    "model.py": {
+      "module": [
+        "combine_action"
+      ]
+    }
+  },
+  "extra_sources": {
+    "model.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/model.py",
+      "sha256": "bcd174f05610c6f773ca8c53f9155206eba4f7b6a11383516ddd71f3b513eeb4",
+      "bytes": 42429,
+      "identity": {
+        "device": 2304,
+        "inode": 79696088,
+        "bytes": 42429,
+        "mtime_ns": 1791931870132810020,
+        "ctime_ns": 1791931870132810020,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "actor_tags.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/actor_tags.py",
+      "sha256": "fc5b868a7fb68d4ab7ba65ba872ea0e845759af6143edfe648239d57cb7f1591",
+      "bytes": 153,
+      "identity": {
+        "device": 2304,
+        "inode": 79725280,
+        "bytes": 153,
+        "mtime_ns": 1792119887012144236,
+        "ctime_ns": 1792119887012144236,
+        "mode": "0o664",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "baseline_characterization": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/elite_bank_replay_slot_freshness_proposal/preparation-manifest.json",
+    "sha256": "1e487838f00e202f757a4065299efa91a106e4ce1e9058858402e32bed3ec73d",
+    "bytes": 4721,
+    "identity": {
+      "device": 2304,
+      "inode": 81295420,
+      "bytes": 4721,
+      "mtime_ns": 1792332403856813573,
+      "ctime_ns": 1792332403857085030,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  }
+}

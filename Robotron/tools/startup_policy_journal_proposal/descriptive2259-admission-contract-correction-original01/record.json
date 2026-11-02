@@ -1,0 +1,8 @@
+{
+  "classification": "AD_HOC_DESCRIPTIVE_PROBE_EXIT1_BEFORE_OUTPUT_CREATION",
+  "error": "AssertionError: all eligible journal IDs differ from fixed admitted cohort IDs",
+  "reason": "The raw journal also retains games started after the fixed admission close. They are not members of the original admitted cohort.",
+  "correction": "Require exact original reviewer admitted IDs and exact native admitted rows, and verify time-window membership for every eligible row. Preserve all original cohort rows; no scientific job or reviewer is rerun.",
+  "original_source_sha256": "e80066826b3fd38b93ca7c5e1934c391b9b229a3732075aaf258e16487e67c80",
+  "production_changed": false
+}

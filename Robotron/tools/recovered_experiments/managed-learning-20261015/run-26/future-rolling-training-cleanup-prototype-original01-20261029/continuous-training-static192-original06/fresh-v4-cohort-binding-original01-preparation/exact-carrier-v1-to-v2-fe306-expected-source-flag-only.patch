@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/fresh-v4-cohort-binding-original01-preparation/prepare_new_v4_cohort_pidfd_anchor_carrier_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/fresh-v4-cohort-binding-original01-preparation/prepare_new_v4_cohort_pidfd_anchor_carrier_v2.py
+@@ -153,7 +153,7 @@
+         unit=witness_unit,output=str(witness_output),original_case=carrier,capability=FIXED['capability'],originals=selected))
+     payload=['/usr/bin/python3.12','-I','-B',FIXED['witness_source']['path'],'--execute',
+         '--selection',selection['path'],'--selection-sha256',selection['sha256'],
+-        '--source-sha256',FIXED['witness_source']['sha256']]
++        '--expected-source-sha256',FIXED['witness_source']['sha256']]
+     return put(output/'prepared-new-v4-pre-pidfd-carrier-and-selection-NOT-QUALIFIED.json',dict(
+         schema='robotron-new-v4-original192-pre-pidfd-carrier-preparation-v1',status='DATA_PREPARED_NOT_HEALTH_OR_LAUNCH_QUALIFIED',
+         source=own,retained_inputs=FIXED,carrier=carrier,witness_selection=selection,witness_source=FIXED['witness_source'],

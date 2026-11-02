@@ -1,0 +1,61 @@
+"""Root-only fresh physical review precommit+CPU data; default inert, never launches."""
+import argparse
+import importlib.util
+import json
+from pathlib import Path
+
+G=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+F=Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07')
+FAMILY={'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/prepared-current-EVAL-quiescence-profile-deadline13-corrected-guard-SOURCE-ONLY-v6.json', 'sha256': '997ca21fabf6fd2a1edc183ff6857ee60d97119b2ff352580632a609e7260e26', 'bytes': 31130, 'identity': {'device': 2304, 'inode': 85358608, 'bytes': 31130, 'mtime_ns': 1793312011317572079, 'ctime_ns': 1793312011317572079, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+PEER={'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/independent-current-EVAL-quiescence-readiness120-private13-and-fresh-capture-association-source-peer-v6.json', 'sha256': 'ae3e5b6deb2c5fef092411d65e7428679ea991ee9052cc2d8b22a0dd5c79cca8', 'bytes': 25692, 'identity': {'device': 2304, 'inode': 85358806, 'bytes': 25692, 'mtime_ns': 1793312070106492592, 'ctime_ns': 1793312070106492592, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+MIXED=Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/remaining-three-main-journal128-amendment-original01/mixed-review-continuation-source-original01')
+CAPACITY={'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/remaining-three-main-journal128-amendment-original01/prepared-remaining-three-main-journal128-private-ports-and-metadata-producer-SOURCE-ONLY-v2.json', 'sha256': 'b3d0f32f01d910a731eca5d8801102adf3c6ea4bad2821c6477e73dc5381d8b0', 'bytes': 24993, 'identity': {'device': 2304, 'inode': 87556244, 'bytes': 24993, 'mtime_ns': 1793327519004069612, 'ctime_ns': 1793327519004069612, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+
+def require(v,reason):
+    if not v:raise ValueError(reason)
+
+def load(name,path):
+    spec=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
+
+def prepare(manifest,guards):
+    h=load('_physical_review_CPU_h',G/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py')
+    read=lambda p:json.loads(h.checked(p).read_bytes())
+    h.checked(FAMILY);h.checked(PEER);h.checked(CAPACITY)
+    ap,gp=[h.pin(path.resolve())for path in(manifest,guards)]
+    wrapper=read(ap);g=read(gp);m=read(wrapper['mixed_manifest'])
+    root=Path(m['cases'][0]['native_job']['path']).parent.parent
+    p=load('_mixed_review_preparer',MIXED/'prepare_mixed_main_journal128_reviews_v1.py')
+    p.validate_three_publication(g)
+    require(g['prepared_capacity_amendment']==ap,'Fresh guards belong to a different prepared amendment')
+    rp=p.precommit(manifest.resolve(),guards.resolve(),root/'review-precommit-main-journal128-original02')
+    packet=read(rp);driver=h.pin(MIXED/'check_mixed_review_preparation_cpu_v1.py')
+    CPU=root/'deadline-review-preparation-main-journal128-CPU-original02'
+    require(not CPU.exists(),'One fresh mixed review-preparation CPU only')
+    values=[*read(FAMILY)['sources'].values(),FAMILY,PEER,CAPACITY,rp,ap,gp,h.pin(Path(__file__).resolve()),
+        h.pin(MIXED/'prepare_mixed_main_journal128_reviews_v1.py'),h.pin(MIXED/'sequence_mixed_main_journal128_study_v1.py'),
+        driver,h.pin(MIXED/'test_mixed_review_preparation_v1.py'),*packet['retained_R1'].values(),
+        *read(CAPACITY)['private_sources'].values(),read(CAPACITY)['producer']]
+    for case in packet['cases']:
+        job=read(case['native_job']);values.extend([case['native_job'],case['native_config'],case['guard'],*job['inputs']])
+    inputs=list({v['path']:v for v in values}.values())
+    classification=p.metadata_input_classification(inputs,h)
+    CPU.mkdir(mode=0o700)
+    job=dict(schema='robotron-deadline-review-preparation-CPU-engineering-job-v1',
+        unit='robotron-mixed-reviewprep-'+ap['sha256'][:16]+'-original02.service',output=str(CPU/'runtime'),
+        source=driver,review_precommit=rp,mixed_review_preparer=packet['source'],metadata_input_classification=classification,
+        original_attempt=1,no_retry=True,inputs=inputs)
+    jp=h.put(CPU/'job.json',job);control=load('_physical_review_CPU_controller',G/'tools/quality_capacity_proposal/control_quality32_review_v1.py')
+    cfg=dict(unit=job['unit'],output=str(CPU/'execution-original01'),
+        argv=['/usr/bin/python3','-I','-B',driver['path'],'--execute','--job',jp['path'],'--job-sha256',jp['sha256'],'--source-sha256',driver['sha256']],
+        properties=['CPUQuota=200%','MemoryMax=4G','MemorySwapMax=0','RuntimeMaxSec=180','TasksMax=128','TimeoutStopSec=5','SendSIGKILL=no'],
+        observation_s=240,pins=[control.pin(v['path'])for v in[jp,*classification['metadata_inputs']]])
+    cp=h.put(CPU/'controller-config.json',cfg);require(control.checked_config(cp['path'])==cfg,'Exact review CPU config differs')
+    return h.put(CPU/'prepared-physical-review-precommit-CPU-NOT-LAUNCHED.json',dict(review_precommit=rp,CPU_job=jp,config=cp,
+        source=h.pin(Path(__file__).resolve()),Root_controller_argv=['/usr/bin/python3.12','-I','-B',str(G/'tools/quality_capacity_proposal/control_quality32_review_v1.py'),'--execute','--config',cp['path'],'--expected-source-sha256',h.pin(G/'tools/quality_capacity_proposal/control_quality32_review_v1.py')['sha256']],
+        Root_close_argv=['/usr/bin/python3.12','-I','-B',str(G/'tools/post_recovery_evaluation/close_engineering_cpu_scope_v2.py'),'--close','--directory',str(CPU)],
+        actual_CPU_launched=False,scientific_launch_qualified=False,quality_qualified=False))
+
+if __name__=='__main__':
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--prepare',action='store_true');p.add_argument('--manifest',type=Path);p.add_argument('--guards',type=Path);a=p.parse_args()
+    if a.prepare:print(json.dumps(prepare(a.manifest,a.guards)),flush=True)
+    else:print('PLAN_ONLY_NO_READS_IMPORTS_OR_ACTIONS')

@@ -1,0 +1,477 @@
+{
+  "status": "SOURCE_TEXT_ONLY_UNSELECTED_UNEXECUTED",
+  "comparisons": {
+    "capture_candidate.py": {
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/capture_candidate.py",
+        "sha256": "e01a36c197c889d1994e72bee82a8622c8d7fad72477d6d0eaffef2c5e5aefbe",
+        "bytes": 28840,
+        "identity": {
+          "device": 2304,
+          "inode": 86245518,
+          "bytes": 28840,
+          "mtime_ns": 1792307833989361019,
+          "ctime_ns": 1792308669957330828,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "selected": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/capture_candidate.py",
+        "sha256": "96f7035b30e827c1d16cedb9073a6c89d7ccee6dea1e95b9b1433d34529dfbae",
+        "bytes": 36047,
+        "identity": {
+          "device": 2304,
+          "inode": 81288110,
+          "bytes": 36047,
+          "mtime_ns": 1792325725929510306,
+          "ctime_ns": 1792325725929510306,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "unchanged_whole_nodes": [
+        "require",
+        "fingerprint",
+        "pinned",
+        "load",
+        "text",
+        "properties"
+      ],
+      "unchanged_node_sha256": {
+        "require": "8e28cf9f98a62545ac88209bbd89eb2349fcf2e13763f50856f227c46b143721",
+        "fingerprint": "2a7ad8e553c9e470b8a7b0ccbe7ba8403ff1e6b36a42254851d42b42bd322a28",
+        "pinned": "d8b6f006c10c768b94b956a997aa2bbd54fe1ef62000c000b46da39d70c80c41",
+        "load": "bb5d7fb4d9cdd70c9e3e2c3127c160e58debfbfece485271fb29d3948f498d18",
+        "text": "efd7cb5662c59b0bfb19bc94bfef1d408b19c7a345a8f233512767c2177e3794",
+        "properties": "c4c23968e6ebff342618cbe61c74d9a98aead54c6b522363929de0d024ee5b06"
+      },
+      "changed_or_new_nodes": [
+        "activation_context",
+        "validate",
+        "Continuation",
+        "build_CPU_job",
+        "run",
+        "main"
+      ]
+    },
+    "observer.py": {
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/observer.py",
+        "sha256": "579f2eee9afe9a4429f52b809c428f15696013a2834b2ca50a80a047d5c4194a",
+        "bytes": 25083,
+        "identity": {
+          "device": 2304,
+          "inode": 86245517,
+          "bytes": 25083,
+          "mtime_ns": 1792307833984129414,
+          "ctime_ns": 1792308669945330785,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "selected": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/observer.py",
+        "sha256": "11380275b544eb7196d33d92b1fbe28a1ae057404120419a2cfa447410c7e430",
+        "bytes": 25378,
+        "identity": {
+          "device": 2304,
+          "inode": 81288104,
+          "bytes": 25378,
+          "mtime_ns": 1792325262797859775,
+          "ctime_ns": 1792325262797859775,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "unchanged_whole_nodes": [
+        "require",
+        "integer",
+        "number",
+        "bounded",
+        "identity",
+        "normalise",
+        "pin",
+        "clock_value",
+        "encoded",
+        "publication_pin",
+        "durable_event",
+        "ReceiptJournal",
+        "durable_result",
+        "poll"
+      ],
+      "unchanged_node_sha256": {
+        "require": "f2185c5ed61a2851c7ebdfaae1dc671501cdf77122e51f1cb5aa37bf783cf564",
+        "integer": "6427d94d085a7d5439f5c248a5bc104b105e8598050136a179e8bb090cfaff5a",
+        "number": "653b455f9904dc2a027fdc0c798eeb88bb21dcede859404b893904879e646ab9",
+        "bounded": "2978abbfb66cb60c7846c8d05cc5af0682fb53c3e9d7440ef342b2a772ccc557",
+        "identity": "70bdad2c5decdb3f0c4fe7a08afe0450e2a57b1c84ed11a5f3f06b319bf7faaa",
+        "normalise": "f07e038da2f3a5afe79c129ec501334149dad759c034b13618013fbe3d33b647",
+        "pin": "8888e4df9fdcf86cb3430ee82bf46c8f2bf8660f14415874e7f5f39347f4af97",
+        "clock_value": "2b61068801803cc3b9c2f7df5149497c132909a9f7393eca97ceadd4f02dd607",
+        "encoded": "9ddb63bdf929088a8361c2de83960755148158458e79ff3368afd64ee46afbe8",
+        "publication_pin": "f2ae366ea2e299e27467d986d2d624e7760a14cc5bf4b7b2c14ce3132ac5c7e3",
+        "durable_event": "86661bd452a24033c3c6c3bcd5e5159f50396376aedc3960d65d0a84edf0bde2",
+        "ReceiptJournal": "3003fabc1669f1cd2d31483f844f9e979eb8eb832d3e0a559035de20a12dee9e",
+        "durable_result": "b7e2b334bcc9d8283b376885f55cae6a077fbbc4673578a0351a7040eb4bc013",
+        "poll": "1e919450d92e453a278b4bfe71b8aedcbc281283b40a4bdffecd44747d4115da"
+      },
+      "changed_or_new_nodes": [
+        "configure_recipe",
+        "checked_recipe",
+        "healthy_api",
+        "validate_job",
+        "HorizonObserver",
+        "main"
+      ]
+    },
+    "quality_bindings.py": {
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/quality_bindings_payload_metadata.py",
+        "sha256": "e00c135d93ea83e0da23dd5b0a13e323f79023f0c3a111de4d2627bde1d13596",
+        "bytes": 45318,
+        "identity": {
+          "device": 2304,
+          "inode": 86245533,
+          "bytes": 45318,
+          "mtime_ns": 1792311776203337399,
+          "ctime_ns": 1792311776203337399,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "selected": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/quality_bindings.py",
+        "sha256": "c50dae942b52a68f293c2567f5a8c822de0e7d05018eb251332676681ac48556",
+        "bytes": 49461,
+        "identity": {
+          "device": 2304,
+          "inode": 81288112,
+          "bytes": 49461,
+          "mtime_ns": 1792325725930205124,
+          "ctime_ns": 1792325725930205124,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "unchanged_whole_nodes": [
+        "require",
+        "identity",
+        "read_bytes",
+        "four",
+        "flat",
+        "triple",
+        "owner",
+        "check_reference",
+        "terminal",
+        "read",
+        "read_raw",
+        "same_raw",
+        "finite",
+        "load_selector",
+        "check_historical_sources",
+        "check_diagnostic_sources",
+        "check_CPU_command",
+        "candidate_descriptor",
+        "archived_bytes",
+        "archive_text",
+        "check_root_capture",
+        "check_CPU_release"
+      ],
+      "unchanged_node_sha256": {
+        "require": "c40d3ac8196e4ffcd6b0aab606bca6595c6543ec0f53f3274de08d4dd26b8445",
+        "identity": "b6fbb34341b936bb3274d022a140893390804ac6ce2f0c80572841e04fd137b2",
+        "read_bytes": "2fee1722d37d8af8433d48d3c7c987a9be147a44e055c82bd2809eaab848ec26",
+        "four": "3042ae949d0fd8143ddab8428d267613a9777f1d733d2fc3b52baa823b6eed94",
+        "flat": "db4808dddbd058aebcb7b09b7711c65d36381d84c2748f38ff6ccf0e066772c1",
+        "triple": "226ce38074a42a8d9cbfa013f503d04b22c8d296fd6af5f0acbf46fd731e3ee7",
+        "owner": "f62017427bbbcfa129a147e7bca4b4482bd3af4e312a2e139b20873ada3f3514",
+        "check_reference": "c63fa4da9ad0e432515f96c9fa594730e60f1fc3199114142839d09a0c37e856",
+        "terminal": "47bdf3e1f7aee8d47f52b00bce2ef01c2ac8b2abfe733e915735be4e15af9767",
+        "read": "61a2f429e3202c71fc0ec1d1086737510b15858c09728594f1b55bd4b5163991",
+        "read_raw": "2b5c4480cc5aa9ff06dd6c37d8f68c0e3f1b9cd04f31094021496d59b3d9cabd",
+        "same_raw": "43222d97699b3771c2b9143af499644d903ef3efe5585f501df22033b5e41c2a",
+        "finite": "5169f79ae64f72c7170bd3d8b481280e3f5ca72adaf7f4fb026e3ddd45b9ba64",
+        "load_selector": "63de611ad0c29e37feaa0e38d72b08c21b5fdb284f50b9d03bac2488a9fbf534",
+        "check_historical_sources": "973e912c65bf5984b76aabab494dad5403fded2face8c45da3cf1583401d6549",
+        "check_diagnostic_sources": "5fbdd314ce91ee676527f985001a0928d7c100e11c5e455bcb125d754edfa8ae",
+        "check_CPU_command": "cc8df925e3d04dbd852393072c47c96187a081be5ebb5ffb8e5d812d06a0394c",
+        "candidate_descriptor": "e69c8b2b4f256e0a83825d0b31d56519d7f64d2923b377211112b8c4c64c473a",
+        "archived_bytes": "209bcd51f37e9db52d79c17d286a4106574b2283774550add347036844600772",
+        "archive_text": "cb0182e663ff6ba430c0ec2f05a267dd1f12284773464519dd040565dc21ee7f",
+        "check_root_capture": "a0b550e0c1255b117096871bd931147ef04f115efab6002b3bd87427a3132973",
+        "check_CPU_release": "b4e2f30941596799a54aabcd2b1a878e7ffe3298b8b90bb89d2f65a4cf933953"
+      },
+      "changed_or_new_nodes": [
+        "load_observer",
+        "check_cpu",
+        "check_window",
+        "check_transition",
+        "validate"
+      ]
+    },
+    "root_quality_carrier.py": {
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/root_quality_carrier_payload_metadata.py",
+        "sha256": "161a50f6ddaf860fbbe5e7ad50c361d8af5281a632862f0549360bd82c639d25",
+        "bytes": 24267,
+        "identity": {
+          "device": 2304,
+          "inode": 86245534,
+          "bytes": 24267,
+          "mtime_ns": 1792311866096433453,
+          "ctime_ns": 1792311866096433453,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "selected": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/root_quality_carrier.py",
+        "sha256": "57b87d0ec0275ef9f945109b1209d1c63e60f1271bac32c4b3e6c647c2923dc6",
+        "bytes": 24188,
+        "identity": {
+          "device": 2304,
+          "inode": 81288113,
+          "bytes": 24188,
+          "mtime_ns": 1792325725931128968,
+          "ctime_ns": 1792325725931128968,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "unchanged_whole_nodes": [
+        "require",
+        "sha",
+        "write",
+        "call",
+        "show",
+        "pinned_json",
+        "inputs",
+        "default_argv",
+        "launch_argv",
+        "validate_plan",
+        "source_checks",
+        "prepare",
+        "launch",
+        "observe",
+        "archive",
+        "configure",
+        "main"
+      ],
+      "unchanged_node_sha256": {
+        "require": "4b08c72723cc9d0197676e48d580746ddf02640a1d9417516ccb26d77b4bef92",
+        "sha": "bf837a6f5154f26eabdff021dd120438dae0f8d7fd52c9c8c69e496b0ad1d8e2",
+        "write": "cb5fc5b9512e5998b9908fc4c1314ed986b9701fa8c2f1dfb45a8811a881a01b",
+        "call": "f257cdc527ba545b54484c8cdce1eb53bc88948e5e157ee5b7816e1da0f5831d",
+        "show": "d601d26ada2cab89825eb9dce40e13e08d8c90413f309f10179217fb53ecd8d4",
+        "pinned_json": "309794d9750f6f1f71833a17414a0053117ee481d469ec6d9d2acec3d08bda5f",
+        "inputs": "729c56d0c0538cdc63beba8f2b4c52c3e201f580ce893b635b55c752a9f3ba98",
+        "default_argv": "5fa4ff6224557d96989e9d6a6798816b6c7648ff4df9912963a81bb9e1f73cdf",
+        "launch_argv": "fde88d0061597c5b999b63839062f7fe113f4f0966f028a65cce3eaa514fa51a",
+        "validate_plan": "97ed4b3a8e78a034d0f6c56e991cfe0862cfb9bcf1009598d43cf54177916170",
+        "source_checks": "08cb70c01b4239a677e8404d4009df5c18ec88c450022e0bffeca0eeeb87ee69",
+        "prepare": "7e34cce3b8f3214ee7055f971acea2ec4a8d6c4669113853f6010bb3e1bbfb1b",
+        "launch": "793857ed6d0b67cc508e4c0dd9de5a160d8fd72a2bf906fbf49382b6377bed80",
+        "observe": "256c77deab4e02f2549db0d31014c9e395dfcb41dcd91a79b6dd3085d7235f62",
+        "archive": "0b39bc581c606856cd2b8833dcf2b61b8a8e52568a48512b1e1fb37175899284",
+        "configure": "c8c5ff9627437efb274e879f208a389f36a4a0ec565d416a8627e816fb936081",
+        "main": "a214e88008e1a21fa7e06fb225caea31d4e29b5f5484a5b1413fd67d2ea28a41"
+      },
+      "changed_or_new_nodes": [
+        "readiness_contract",
+        "fast_runtime"
+      ]
+    },
+    "collect_quality_readiness.py": {
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/collect_quality_readiness_payload_metadata.py",
+        "sha256": "ef1fbbdbf7b30e2a0fc0daf675ea70611c175a9db4f8cb96f2fe1ea34b27bdbe",
+        "bytes": 20173,
+        "identity": {
+          "device": 2304,
+          "inode": 86245535,
+          "bytes": 20173,
+          "mtime_ns": 1792311866098592885,
+          "ctime_ns": 1792311866098592885,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "selected": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/collect_quality_readiness.py",
+        "sha256": "faddfd422483a23f24fc2a942f4ce57bfd1e8533dae7d5942d284fadab573809",
+        "bytes": 20691,
+        "identity": {
+          "device": 2304,
+          "inode": 81288115,
+          "bytes": 20691,
+          "mtime_ns": 1792325725931761898,
+          "ctime_ns": 1792325725931761898,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "unchanged_whole_nodes": [
+        "require",
+        "load",
+        "main"
+      ],
+      "unchanged_node_sha256": {
+        "require": "8e28cf9f98a62545ac88209bbd89eb2349fcf2e13763f50856f227c46b143721",
+        "load": "78e23475409d735296cc4cd74e2ecb0df4aefb66df4b07ef6a3ebd5ad9490240",
+        "main": "bccc09d15dcd4511dfe80f09e836d59f2720c390d91a40b3f03cc1e0b0be9977"
+      },
+      "changed_or_new_nodes": [
+        "collect"
+      ]
+    },
+    "audit_completed_leg.py": {
+      "base": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/audit_completed_leg_payload_metadata.py",
+        "sha256": "27745c52bff13bb98d70e870ff1e0c146224caf1e6cabee401937fe59f8a5eba",
+        "bytes": 34356,
+        "identity": {
+          "device": 2304,
+          "inode": 86245536,
+          "bytes": 34356,
+          "mtime_ns": 1792311866099295416,
+          "ctime_ns": 1792311866099295416,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "selected": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/audit_completed_leg.py",
+        "sha256": "9967c1f4b68b7049c02c579f79772b97af806258d61bd5bdb3079ce83e6d1f71",
+        "bytes": 34322,
+        "identity": {
+          "device": 2304,
+          "inode": 81288114,
+          "bytes": 34322,
+          "mtime_ns": 1792325725932476685,
+          "ctime_ns": 1792325725932476685,
+          "mode": "0o444",
+          "uid": 1001,
+          "nlink": 1
+        }
+      },
+      "unchanged_whole_nodes": [
+        "require",
+        "digest",
+        "unique_object",
+        "decode",
+        "lines",
+        "indexed",
+        "immutable",
+        "validate_future_plan",
+        "validate_cpu_proof",
+        "validate_original_context",
+        "classify_actor_lines",
+        "audit",
+        "configure",
+        "main"
+      ],
+      "unchanged_node_sha256": {
+        "require": "c40d3ac8196e4ffcd6b0aab606bca6595c6543ec0f53f3274de08d4dd26b8445",
+        "digest": "7cae4bfc8c3cf52979aff7e17b43069cbaaa72560544581ce66a4a7af08d6911",
+        "unique_object": "8ea8d4c5f9c1fccdf604179f12166ec20505c180aa7122b08ae328a4c1b2d453",
+        "decode": "df16412b3134031a6505a207d818a97151d227ac76c48a228d6fc922a210fbdd",
+        "lines": "73a74b963f4c3c8dfe5ba05c333b9097d59d41957116ede9e2b50635f7869a8f",
+        "indexed": "df4b9ab56edc3507ca25040959b4c990a55899cc6f74f491cdaf2452fc748f5b",
+        "immutable": "98c7d81141d9528613f64692656da049e8fca2544d49c18480a574563e7d2181",
+        "validate_future_plan": "1d5be9b6ae87e2c6795154fd2495480f9b2e41faa129e19b3198b6aeff266a9c",
+        "validate_cpu_proof": "aa53345c112adc575894115534de63226880c3e8f6fc0584518a854dd6e36c24",
+        "validate_original_context": "ce33d4dff409854e256b1faeab6a3292621fa5b702e93448cd1e45de549b4505",
+        "classify_actor_lines": "76984a0012b82873c8a2df674ebc83f64fc1346b7f5e9424149269fc9cc04220",
+        "audit": "e929355066835b6cd01aefc1cadcd41dbdd2e3e923806fd96e8f36f0354f2484",
+        "configure": "3ec8971a8dfe5717687f7a32b523403de62fdfce7d1760c3edc7182eba071b4e",
+        "main": "64f126090841fc1d9f256cc389c0d5fd1ae289020ef8b1fa0efc4cf0cfcf20be"
+      },
+      "changed_or_new_nodes": []
+    }
+  },
+  "observer_base": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postdiagnostic_ce_quality_binding_proposal/observer.py",
+    "sha256": "579f2eee9afe9a4429f52b809c428f15696013a2834b2ca50a80a047d5c4194a",
+    "bytes": 25083,
+    "identity": {
+      "device": 2304,
+      "inode": 86245517,
+      "bytes": 25083,
+      "mtime_ns": 1792307833984129414,
+      "ctime_ns": 1792308669945330785,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "observer_unchanged_nodes": [
+    "require",
+    "integer",
+    "number",
+    "bounded",
+    "identity",
+    "normalise",
+    "pin",
+    "clock_value",
+    "encoded",
+    "publication_pin",
+    "durable_event",
+    "ReceiptJournal",
+    "durable_result",
+    "poll"
+  ],
+  "numeric_preservation": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/recipe-CPU-source-preservation.json",
+    "sha256": "6d3545d9c634a748de9dddbd6890d636d33d050e962348be4cb14730b8c13d5f",
+    "bytes": 12525,
+    "identity": {
+      "device": 2304,
+      "inode": 81288105,
+      "bytes": 12525,
+      "mtime_ns": 1792325182875697092,
+      "ctime_ns": 1792325182875697092,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "draft_history": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/draft-history-common-release-abi-20261018/numeric-author-preservation.json",
+    "sha256": "52a29d619d42113094500c97c82e8d83ddbbf1899cf1e922bfa25dcb0102792a",
+    "bytes": 5016,
+    "identity": {
+      "device": 2304,
+      "inode": 81288123,
+      "bytes": 5016,
+      "mtime_ns": 1792324882367596577,
+      "ctime_ns": 1792324882367596577,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "history_selection": false,
+  "finite_numeric_model_phase_bodies_changed": false,
+  "auditor_row_scoring_classifier_bodies_changed": false,
+  "campaign_generic_sources_changed": false,
+  "old_E12_X4_maps_preserved_independently": true,
+  "current_E13_X4_source17_and_source62_unchanged": true,
+  "source_analysis": "Raw text boundaries and SHA comparisons only; no AST/compile/import/test execution by authors.",
+  "concrete_preselection_fixes": [
+    "Actual567c original192actors_preserved is a list, not boolean; exact192 identity/mask predicates and baseline join added.",
+    "Postwrite health uses actual f9 EntryHealth required(label,lr) signature via None,None; stale88a source and permissive fixture preserved.",
+    "Observer default prints a literal null recipe/scales, never an undefined old constant."
+  ]
+}

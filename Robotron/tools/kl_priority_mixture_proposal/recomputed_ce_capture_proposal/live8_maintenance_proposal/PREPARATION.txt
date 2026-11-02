@@ -1,0 +1,183 @@
+LIVE8 MAINTENANCE ADAPTER — SOURCE PREPARATION, UNEXECUTED BY AUTHORS
+
+This is a NEW maintenance adapter, not either historical A/B/A executor. No
+production source, service, actor, checkpoint request or model has been changed
+by its authors. The root owns fresh job construction, review, bounded private
+tests, exclusive-window preflight and any actual launch. No default execution,
+imports, compilation or tests were performed by the authors.
+
+CLI
+  python3 -B run_live8_maintenance.py
+prints a literal PLAN and does not resolve/read a job, import runtime helpers,
+query the host, create output, stop a process or write a service/source file.
+
+Explicit operation after root review:
+  python3 -B run_live8_maintenance.py --launch --job ABS_NEW_ROOT_JOB \
+    --expected-job-sha256 ROOT_JOB_SHA \
+    --expected-controller-sha256 FROZEN_CONTROLLER_SHA
+Use a unique retained user service with explicit named argv, a detached3s timer,
+and proof the scheduling carrier exited before its trigger. Do not use --wait.
+Root must retain original InvocationID/ExecMainPID/ExecMainCode/ExecMainStatus,
+full show/cat and invocation journal before releasing the owned terminal unit.
+Use RemainAfterExit=yes and omit --collect; active(exited) is terminal, not a
+live controller. Root supplies sufficiently large host/disk/Tasks/time budgets
+for a120s CPU checkpoint verifier plus the independently running trainer. The
+controller never creates another service. Every trainer stop is SIGINT/240s,
+SendSIGKILL=no; no force kill, fleet restart or global process signal exists.
+Readiness and capture are individually bounded600s; recovery has its own bounded
+stop/CPU/start/readiness. Outer unit timeout must allow graceful recovery, not
+force-kill actors or this undo path. Root controls its stop policy explicitly.
+
+INPUT JOB (schema robotron-live8-maintenance-job-v1)
+Required fields consumed by the controller:
+  game_root,model_dir,experiment,output_directory,capture_directory;
+  trainer_unit,fleet_unit,before,actor_masks,worker_mask,baseline_csv;
+  sources,helper_pins,static_pins,original_dropin,bank_spec;
+  insurance_receipt,insurance_verification,verifier;
+  readiness_timeout_s=600,capture_timeout_s=600.
+Every path is absolute/canonical. output must be NEW under GAME/logs. capture
+is its NEW direct child named ce-recomputed-capture-*. No run resumes/overwrites.
+No future rootjob is manufactured here; actual identities are unknown until its
+fresh binding. Use only the completed insurance request below, never another.
+
+PIN format matches the independent verifier:
+  {path,sha256,bytes,identity:{device,inode,bytes,mtime_ns,ctime_ns,
+    mode:octal_string,uid,nlink}}
+No atime comparison. Checkpoint size is actual serialization length, not the old
+275181008 constant. Copies are independent owned0444 inodes and fsynced.
+
+before is the EXACT describe() dictionary from the pinned LiveHost primitives
+WITH runtime_dropin() redirected to the new90-recomputed-ce-live8.conf path.
+Its default80-parallel path is NOT the same exclusion! Root can temporarily set
+host.runtime_dropin=lambda:Path(NEW90PATH) before its read-only describe().
+Do not invoke the old trial prepare/run/restart_phase/verify/ready functions.
+actor_masks maps each exact192 original PID string to0..71; worker_mask=0..71.
+baseline_csv is the actual held replay_dropped/batch_size/replay_sample_cap row.
+The initial API must be healthy, owned by the insured PID, and >=SAVED insurance
+clocks. Source/control/environment/unit/fleet/log/mask bindings remain exact.
+
+sources is exactly four destination replacements agent.py/training.py/
+replay_buffer.py/prefetch.py plus NEW recomputed_ce_capture.py, under Scripts/dqn.
+Each {destination,before:PIN_or_null,after:PIN}; only the observer has null before.
+after pins come from immutable revision2manifest356b8b09, not new loss math.
+The staged before/after bytes and permissions are durably archived. Source
+installation requires full oldPID+cgroup absence before every atomic replace.
+Known partial writes can reconcile to a whole before set; unknown bytes never
+boot a mixed pair. Unique owned temp inodes are cleaned without deleting an
+unknown replacement. The original four-output loss remains unchanged.
+
+helper_pins is a name->PIN map containing controller,live_host,metrics,identity,
+protection,bank_state. Root pins the full transitive stdlib helper closure in
+static_pins as well. bank_state MUST use bank_state_revision2.py; original9abe
+and its original tests are preserved. static_pins also include all unrelated
+sources, current control/settings, source/context manifests and protected
+metadata/provenance. All are <=4MiB. Do not include changing overlay destinations
+as static before PINs: their explicit before/after transaction is the binding.
+The dynamic full source map still checks every existing module plus newobserver.
+Include actual bank_output.py and current main/config/training-loader sources.
+
+original_dropin={path:NEW90PATH,content_base64:null,mode:null}; it must be absent.
+Maintenance writes only that path, sets Restart=no and the capture flag, and
+unsets the old executed-target flag. The current held environment must have
+DQN_RATCHET=0, MODEL_DIR=declared model_dir and DQN_EXACT_GRAPH_CHECKPOINT=latest.
+No previous override, learning control, model directory or protected policy is
+rewritten. Recovery uses Restart=no/flagsOFF until a healthy before-source boot
+and192 reconnect proof, then restores the original absent override/policy.
+
+bank_spec={ring:ACTUAL_RING_DIR,model_dir:MODEL_DIR,capacity:6000000,
+ state_size:11128,episode_capacity:192,bank_strides:{hof:1536,ephof:2048}}.
+Root must independently bind ring path from actual held config/constructor and
+MODEL_DIR; no arbitrary alternate replay is an authorized boot input.
+The helper reads only bounded metadata and array headers/stat identities, not
+267GB bodies. It binds BOTH CURRENT selectors, selected generations/meta/counts,
+all array headers and9 persistent writable-shared ring mappings. Revision2
+permits only the exact source-defined ring posix_fallocate extent alternative;
+bank arrays/priorities retain exact NPY extents. Startup disk/header identity
+must remain unchanged; legitimate pruning/tail changes are not silently waived.
+Positive HOF/EPHOF count prints must exactly match both selected metadata sets.
+This is source-derived intended generation evidence, not RAM byte equality.
+
+verifier={script:PIN,python:ABS_REVIEWED_PYTHON,timeout_s:120,
+ context:EXACT_SOURCE_CONTROL_CONTEXT_FROM_VERIFIER_SCHEMA}.
+script is reviewed7d1103da. Context has game_root,model_dir,model_package with
+four current model/config/control/__init__ PINs, archived_control,
+archived_trainer_unit,provenance and exact held_recipe_context. Experiment is
+top-level, not an extra context key. The controller never imports its numerics.
+It copies actual stopped latest0444, publishes absence+CPU job, invokes one
+fresh CUDA-hidden CPU child, retains its original stdout/stderr/exit and PASS
+receipt, and rechecks exact latest before start. A failed CPU proof is not retried.
+
+COMPLETED INSURANCE — ONE REQUEST ONLY
+insurance_receipt PIN:
+ run-26/live8-insurance-20261017T071915Z-root-acquisition/saved-insurance-receipt.json
+ SHA26bd3789f971db3c07bad91298bcd940fb964447f819c9bf8b09f73e4bcd166c
+insurance_verification PIN:
+ .../insurance-CPU-verification-reviewed1-20261017/cpu-verification.json
+ SHA83c898697675bae6445cbf3ec93c5a8134eb1ded8a13a9ca9e8a4fda34470e39
+SAVED floor: steps2042467,samples6918356992,learner423154160,frame846584430.
+These saved clocks, not earlier trigger clocks, are the stopped-latest floor.
+Actual bytes275191013/SHA7b8f0e56...; insurance is NEVER a normal boot input.
+
+ACTUAL OPERATION AND EVIDENCE
+The controller holds the existing private GPU0 diagnostic lease without creating
+or chmodding it, rejects competing named eval/perf/checkpoint/private helpers,
+pending saves/private tmpfs/live private cgroups and port9999, and keeps the
+fleet alive. Root's fresh full exclusive preflight still covers actual GPU
+ownership/free memory and any unknown job; this tool does not open a GPU context.
+It registers actor ownership before SIGSTOP, stops only the exact known trainer,
+verifies newest persisted latest, freezes stopped replay/banks, stages/installs
+the five known files, starts only the named trainer and adopts only that explicit
+requested start. Bank/graph/native/recipe/control/source checks precede resume.
+New stdout must contain exactly one successful agentv28+main load pair for latest,
+postload128graphs/640validations and no optimizer/scaler/replay/bank fallback.
+Raw API loaded counters are absent in current dashboard source; absence is
+recorded, not zeroed. Before actor resume the completed authentic attempt01
+must additionally prove EXACT equality of PRE before.training_steps/samples
+and locked frame_context.frame_count/learner_frame_count with the CPU-verified
+stopped latest four clocks. Its AMPskip is valid evidence; no replacement is
+attempted. File/loader/refusal proofs and current>=saved complement this direct
+PRE clock equality, rather than substituting for an exact restore check.
+At least one recorded optimizer outcome is awaited before strict startup API
+guards; one normal pending optimizer ticket remains allowed. Before reconnect,
+CSV is explicitly the held baseline; actual new CSV/logs are checked after192.
+Runtime log arming overlaps the final transition scan to avoid an evidence gap.
+
+First8 consumed rows may start before actor resume. Completion requires8 exact
+successful capture receipts, genuine draw/session/lease joins and actual outcome
+applied_admission or AMPskip. There is no ninth/substitute/retry attempt. Parent
+reads metadata/headers only during capture; producer fsync+SHA are retained for
+the payloads, and an independent later byte/tensor audit remains necessary.
+No4GiB payload rehash/tensor load is performed by this observer parent.
+
+All failures retain the primary error and independent recovery errors. Recovery
+stops only a known requested new PID, re-verifies its NEWEST forward save using
+the approved immutable start-request/adopted-lineage proof and original insurance
+floor, restores a whole known before source group, flagsOFF, boots that latest,
+and requires positive banks/graphs then192 health. Failed unowned PID0 startup
+can reuse only the unchanged already-proved latest when the unit is INACTIVE;
+ActiveState=failed is explicitly manual (no reset/stop/adoption expansion).
+Changed unknown latest is manual. Unknown replacement PID, invalid latest or
+unknown source bytes is manual.
+No automatic insurance/protected rollback or repeat capture occurs.
+Failed SIGCONT records stay registered across a later partial re-pause. Finally
+attempts every exact owned task independently of source/control/journal health,
+keeps handlers active and blocks repeated handled signals through actor undo.
+
+LIMITS AND TEST HANDOFF
+Normal main.finally model/replay save precedes server/agent stop; later optimizer,
+FIFO reset/admission or bank tails may be outside that save. This is not a coherent
+anchor, exact actor/RNG continuation, all-parameter-update or learning-quality
+proof. Offline CE/targets remain conditional; missing entropy/KL/ranks are unknown.
+
+Authored mock tests cover actual source transaction temp write/replace failures,
+unknown bytes, live-owner refusal, partial pause/signal, failed-resume suffix plus
+partial re-pause, unknown replacement, PID0 failure, invalid CPU proof/no retry,
+forward recovery/latest lineage flow, positive banks/manual status, journal
+failure, base/control/env/unit drift, real-shaped lease joins and boot prints.
+Bank tests use tiny stdlib NPY/NPZ/proc fixtures only. No numerical imports.
+There are24 controller contracts plus11 selected revision2 bank contracts.
+Root's future bounded command (AUTHORED, NOT RUN):
+ python3 -B -m unittest \
+ Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_maintenance_proposal.test_live8_maintenance \
+ Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_maintenance_proposal.test_bank_state_revision2
+The old bank helper/tests remain immutable evidence, not the selected revision.

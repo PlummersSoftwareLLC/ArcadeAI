@@ -1,0 +1,27 @@
+{
+  "status": "SOURCE_ONLY_UNBOUND_NOT_ACTUAL_EVIDENCE",
+  "producer_observation": {
+    "schema": "robotron-root-batch2048-producer-observation-v1",
+    "experiment": null,
+    "profile_sha256": "e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50",
+    "owner": null,
+    "source_checkpoint": null,
+    "acquisition_sha256": null,
+    "environment": null,
+    "trainer_unit": null,
+    "csv": null,
+    "csv_scope": null,
+    "csv_origin": null,
+    "producer_started_unix_s": null,
+    "observed_unix_s": null
+  },
+  "optional_treatment_startup_baseline_origin": {
+    "schema": "robotron-root-pretransition-batch2048-CSV-v1",
+    "scope": "pretransition_baseline4096",
+    "profile_sha256": "e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50",
+    "owner": null,
+    "csv": null,
+    "captured_unix_s": null,
+    "transition_started_unix_s": null
+  }
+}

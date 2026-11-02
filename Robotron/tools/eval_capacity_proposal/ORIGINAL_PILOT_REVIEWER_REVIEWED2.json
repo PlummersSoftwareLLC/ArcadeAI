@@ -1,0 +1,145 @@
+{
+  "schema": "robotron-original-capacity-pilot-reviewer-selection-v1",
+  "status": "CPU122_AND_ACTUAL_NOT_READY_GUARD_PASS_12GIB_FUTURE_ONLY",
+  "source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/eval_capacity_proposal/review_original_pilot_reviewed3.py",
+    "sha256": "d64ccfc1c072e3b00fb622523391ca2a85a3e882bd4c72a21fbb16cf9ba8e9b7",
+    "bytes": 27541,
+    "identity": {
+      "device": 2304,
+      "inode": 81671435,
+      "bytes": 27541,
+      "mtime_ns": 1792405677779630530,
+      "ctime_ns": 1792405677779630530,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "tests": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/eval_capacity_proposal/test_review_original_pilot_reviewed4.py",
+    "sha256": "95f979b53a3c7619be5137c4028e711f1e106844df9b430bbf8c62d6cff8cfd5",
+    "bytes": 27896,
+    "identity": {
+      "device": 2304,
+      "inode": 81671436,
+      "bytes": 27896,
+      "mtime_ns": 1792405677785108024,
+      "ctime_ns": 1792405677785108024,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "job": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/confirmed-scoring-quality-original01-preparation-20261018/future-capacity32-runtime-pilot-preparation-20261019/independent-original-review-job-reviewed2.json",
+    "sha256": "cf7ce9543281eb4ce0875d6a4b97c16187f611d9cad90f9640ae0e121894844c",
+    "bytes": 6446,
+    "identity": {
+      "device": 2304,
+      "inode": 81671437,
+      "bytes": 6446,
+      "mtime_ns": 1792405677786198333,
+      "ctime_ns": 1792405677786198333,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "CPU_report": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/capacity12GiB-full-reviewer-CPU-original01-preparation-20261019/CPU-report.json",
+    "sha256": "a366900452523bf6afcae13686589316fe95f903939ac1003330659ca3d3aa25",
+    "bytes": 251,
+    "identity": {
+      "device": 2304,
+      "inode": 81671432,
+      "bytes": 251,
+      "mtime_ns": 1792405730541335315,
+      "ctime_ns": 1792405730541335315,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "CPU_original_closure": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/capacity12GiB-full-reviewer-CPU-original01-preparation-20261019/execution/root-original-result-and-owned-release.json",
+    "sha256": "d2ad4ca12e8e801d1b8f3dabf4e2fbd3690d83d6f1736573c06c63c6caf13907",
+    "bytes": 21588,
+    "identity": {
+      "device": 2304,
+      "inode": 81671498,
+      "bytes": 21588,
+      "mtime_ns": 1792405732372088571,
+      "ctime_ns": 1792405732372088571,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "actual_not_ready_guard": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/capacity12GiB-full-reviewer-CPU-original01-preparation-20261019/actual-review-not-ready-original01/result.json",
+    "sha256": "3f2d6d2bfc1861726f338fa0173a14be3577bc5a606f2447724d696669510418",
+    "bytes": 22764,
+    "identity": {
+      "device": 2304,
+      "inode": 81671521,
+      "bytes": 22764,
+      "mtime_ns": 1792405799834747614,
+      "ctime_ns": 1792405799834747614,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "actual_guard_original_closure": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/capacity12GiB-full-reviewer-CPU-original01-preparation-20261019/actual-review-not-ready-original01-execution/root-original-result-and-owned-release.json",
+    "sha256": "11d343a2366f90b080417e95f528b37650f6c7b06b80389698ffb31d05c4a825",
+    "bytes": 22664,
+    "identity": {
+      "device": 2304,
+      "inode": 81671559,
+      "bytes": 22664,
+      "mtime_ns": 1792405801890811624,
+      "ctime_ns": 1792405801890811624,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "supersedes_unlaunched_8GiB_reviewer": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/eval_capacity_proposal/ORIGINAL_PILOT_REVIEWER.json",
+    "sha256": "5089e0a05e5b226bf702cf53cc93ec813d11e20d57200bade502e39e92c51176",
+    "bytes": 7712,
+    "identity": {
+      "device": 2304,
+      "inode": 81668790,
+      "bytes": 7712,
+      "mtime_ns": 1792398611481032851,
+      "ctime_ns": 1792398611481032851,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "memory_revision": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/confirmed-scoring-quality-original01-preparation-20261018/future-capacity32-runtime-pilot-preparation-20261019/memory-headroom-revision-preparation.json",
+    "sha256": "435facff0f08c83075a728bfa3a217fb2d034b73eb60ed92ccaa407abb18a79b",
+    "bytes": 5628,
+    "identity": {
+      "device": 2304,
+      "inode": 81671438,
+      "bytes": 5628,
+      "mtime_ns": 1792405677787509026,
+      "ctime_ns": 1792405677787509026,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "current_quality_still_running": true,
+  "actual_GPU_or_MAME_validation": false,
+  "capacity_speedup_verified": false,
+  "learning_speed_gain_verified": false,
+  "quality_qualified": false,
+  "promotion": false
+}

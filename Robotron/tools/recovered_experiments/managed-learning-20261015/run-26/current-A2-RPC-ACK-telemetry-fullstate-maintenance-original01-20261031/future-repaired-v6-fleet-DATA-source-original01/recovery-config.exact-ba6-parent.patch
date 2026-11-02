@@ -1,0 +1,10 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/power-outage-recovery-20261027-original01/fleet-runtime-config-rounds-jitter-v2.json
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-A2-RPC-ACK-telemetry-fullstate-maintenance-original01-20261031/future-repaired-v6-fleet-DATA-source-original01/fleet-runtime-config-same15537-repaired-Lua120-v1.json
+@@ -9,6 +9,6 @@
+   },
+   "canonical_lua": {
+     "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/main.lua",
+-    "sha256": "2d478f7f5f8b7d954dcb22367b1367ac82c8d88d66762657df16e4a72b242b83"
++    "sha256": "bc7df0d6ca18da11cd6498867a5b77e3638d8b721094264f056fe6a949d75f76"
+   }
+ }

@@ -1,0 +1,22 @@
+{
+  "cpu_python": null,
+  "expected_owner": null,
+  "experiment": null,
+  "history": {
+    "CE_return": null,
+    "activation": null,
+    "activation_job": null,
+    "outer_job": null
+  },
+  "model_dir": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn",
+  "output_directory": null,
+  "root_release": {
+    "freeze_release": null,
+    "quality_cleanup": null,
+    "source_freeze_released": null
+  },
+  "save_timeout_s": 60,
+  "schema": "robotron-one-live-ce-candidate-capture-job-v1",
+  "startup_tag": null,
+  "tag": null
+}

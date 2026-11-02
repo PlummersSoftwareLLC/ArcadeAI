@@ -1,0 +1,118 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/postguard-owned-operations-original01/sequence_physical_deadline_study_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/remaining-three-main-journal128-amendment-original01/mixed-review-continuation-source-original01/sequence_mixed_main_journal128_study_v1.py
+@@ -18,7 +18,7 @@
+ import traceback
+ 
+ HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
+-REVIEW_PREPARER_SHA='d0955c345dd46d08d261cf6c20c8dff87e1335c4977d55d75a8ed895fac99be0'
++REVIEW_PREPARER_SHA='2773083959c548370193a962a9b9f4a407f65bf6af2086258d90510ec8af7deb'
+ ROOT=HERE.parents[1]
+ STATE=ROOT/'logs/managed-learning-20261015/state.json'
+ ORDER=['R1','C1','R2','C2']
+@@ -42,7 +42,7 @@
+             'Actual original review precommit required')
+     source=packet['source'];path=h.checked(source)
+     require(source['sha256']==REVIEW_PREPARER_SHA and source['identity']['mode']=='0o444'
+-            and path.name=='prepare_deadline_independent_review_v4.py',
++            and path.name=='prepare_mixed_main_journal128_reviews_v1.py',
+             'Exact reviewed preparation source required')
+     return load('_deadline_sequence_review_preparation',path)
+ 
+@@ -63,7 +63,7 @@
+     return records,assess(records)
+ 
+ 
+-def prepare(review_precommit,R1_owner,output):
++def prepare(review_precommit,R1_owner,output,review_preparation_CPU):
+     p=preparation(review_precommit);h,read,pp,packet,case=p.selected(review_precommit,'R1')
+     ownerpin=h.pin(R1_owner.resolve());original=read(ownerpin)
+     helper=load('_deadline_sequence_prepare_original_helper',h.checked(packet['sources']['sequence']))
+@@ -82,40 +82,44 @@
+         subject=read(row['native_job']);cfg=read(row['native_config']);legroot=Path(row['native_job']['path']).parent
+         require(not Path(subject['output']).exists()and not Path(cfg['output']).exists()
+                 and not (legroot/'controller-original-launch.json').exists(), 'Future original leg already consumed')
++    cpu_pin=h.pin(review_preparation_CPU.resolve())
++    validate_review_CPU(read(cpu_pin),pp,packet,h,read)
+     output.mkdir(mode=0o700)
+     return h.put(output/'sequence-precommit.json',dict(schema='robotron-deadline32-original-sequence-precommit-v1',
+         source=h.pin(Path(__file__).resolve()),review_precommit=pp,review_preparer=packet['source'],R1_prequalified=qualified,
+         R1_original_owner=ownerpin,study_directory=str(root),output=str(output),ordered_legs=ORDER,
+         original_attempt=1,no_retry=True,boot_id=Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
+         source_helper=packet['sources']['sequence'],assessor=h.pin(HERE/'assess_screen_study.py'),
+-        review_preparation_CPU=h.pin(Path(pp['path']).parent.parent/'deadline-review-preparation-CPU-original01/independent-original-CPU-scope-closeout.json'),
++        review_preparation_CPU=cpu_pin,
+         full_game_quality_qualified=False,promotion=False))
+ 
+ 
+ def verify_existing_R1(review_precommit,expected=None):
+-    """Read-only replay of the unchanged exact qualification/release checks.
+-
+-    The publication hook accepts only the already sealed identical R1 artifact.
+-    Missing/different evidence cannot be created, rewritten or manufactured.
+-    """
++    """Retain R1's actual old precommit/source, never new-qualify or republish it."""
+     p=preparation(review_precommit);h,read=p.dependencies()
+     _,_,_,packet,case=p.selected(review_precommit,'R1')
+-    target=Path(case['native_job']['path']).parent/'root-R1-independent-qualified.json'
+-    pin=h.pin(target);value=read(pin)
+-    require(expected is None or pin==expected,'Existing original R1 qualification changed')
+-    original_put=h.put;original_dependencies=p.dependencies
+-    def existing_only(path,record):
+-        require(Path(path)==target and record==value and h.pin(target)==pin,
+-                'Read-only qualification replay cannot publish or change evidence')
+-        return pin
+-    try:
+-        h.put=existing_only
+-        p.dependencies=lambda:(h,read)
+-        replayed=p.qualify(review_precommit,'R1')
+-    finally:
+-        h.put=original_put;p.dependencies=original_dependencies
+-    require(replayed==pin,'Existing exact R1 qualification replay differs')
+-    return pin
++    retained=packet['retained_R1']
++    require(expected is None or expected==retained['qualification'],'Original R1 qualification selection changed')
++    old=load('_mixed_sequence_original_R1_verifier',h.checked(retained['sequence']))
++    result=old.verify_existing_R1(Path(retained['precommit']['path']),retained['qualification'])
++    require(result==retained['qualification'],'Read-only original R1 replay differs')
++    return result
++
++
++def validate_review_CPU(cpu,precommit,packet,h,read):
++    require(cpu['actual_exit']==0 and cpu['status']=='PASS_ENGINEERING_ONLY'
++            and cpu['all_six_original_descriptors_and_resources_argv_birth_unit_timer_cgroup_and_owned_release_verified']is True
++            and cpu['actual_CPU_cores']==2 and cpu['actual_memory_bytes']==4<<30 and cpu['actual_runtime_limit_s']==180,
++            'Fresh bounded mixed-review metadata CPU closure required')
++    job=read(cpu['original_job']);report=read(cpu['actual_report'])
++    require(cpu['source']==h.pin(ROOT/'tools/post_recovery_evaluation/close_engineering_cpu_scope_v2.py')
++            and job['source']==h.pin(Path(__file__).with_name('check_mixed_review_preparation_cpu_v1.py')),
++            'Exact selected driver and unchanged independent CPU closer required')
++    require(job['review_precommit']==precommit and job['mixed_review_preparer']==packet['source']
++            and report['original_job']==cpu['original_job'] and report['status']=='PASS' and report['tests_run']==6
++            and report['review_precommit']==precommit and report['mixed_review_preparer']==packet['source']
++            and report['metadata_input_classification']==job['metadata_input_classification'],
++            'Old review CPU proof cannot qualify the new mixed constructor/source joins')
+ 
+ 
+ def atomic(path,value,suffix):
+@@ -142,9 +146,7 @@
+         _,_,pp,self.packet,_=self.p.selected(self.review_precommit,'R1')
+         require(pp==self.job['review_precommit'],'Original review precommit changed')
+         cpu=self.read(self.job['review_preparation_CPU'])
+-        require(cpu['actual_exit']==0 and cpu['status']=='PASS_ENGINEERING_ONLY'
+-                and cpu['all_six_original_descriptors_and_resources_argv_birth_unit_timer_cgroup_and_owned_release_verified']is True,
+-                'Independent review preparation CPU closure required')
++        validate_review_CPU(cpu,pp,self.packet,self.h,self.read)
+         require(self.job.get('R1_prequalified')is not None,'Continuation requires an already independently qualified original R1')
+         verify_existing_R1(self.review_precommit,self.job['R1_prequalified'])
+         self.helper=load('_deadline_sequence_owned_controller',h.checked(self.job['source_helper']))
+@@ -307,8 +309,8 @@
+ def main():
+     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--prepare',action='store_true');parser.add_argument('--run',action='store_true')
+     parser.add_argument('--review-precommit',type=Path);parser.add_argument('--R1-owner',type=Path);parser.add_argument('--output',type=Path)
+-    parser.add_argument('--precommit',type=Path);parser.add_argument('--precommit-sha256');parser.add_argument('--source-sha256');args=parser.parse_args()
+-    if args.prepare:print(json.dumps(prepare(args.review_precommit,args.R1_owner,args.output)),flush=True)
++    parser.add_argument('--review-preparation-CPU',type=Path);parser.add_argument('--precommit',type=Path);parser.add_argument('--precommit-sha256');parser.add_argument('--source-sha256');args=parser.parse_args()
++    if args.prepare:print(json.dumps(prepare(args.review_precommit,args.R1_owner,args.output,args.review_preparation_CPU)),flush=True)
+     elif args.run:
+         require(hashlib.sha256(Path(__file__).read_bytes()).hexdigest()==args.source_sha256,'Original sequence source changed')
+         return Sequence(args.precommit,args.precommit_sha256).run()

@@ -1,0 +1,32 @@
+{
+  "actual_capture_or_job": null,
+  "actual_execution": null,
+  "files": [
+    {
+      "bytes": 7547,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/post_quality_live_CE_candidate_capture_proposal/RUNBOOK.txt",
+      "sha256": "c53bbdf5866cb944996ebb2d20b9549bdeccca80f31faf8bd1f5730aad60afb8"
+    },
+    {
+      "bytes": 6750,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/post_quality_live_CE_candidate_capture_proposal/late-bound-inputs.template.json",
+      "sha256": "a96837b7ecdd2097b3b74c61fc7c256ee642dfff84d233317f4e81b88a282e21"
+    },
+    {
+      "bytes": 1436,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/post_quality_live_CE_candidate_capture_proposal/future-CPU-argv.template.json",
+      "sha256": "7872ca82423666106db730eda7fdb88c5468f6709b11689d1859f6c857f1ca22"
+    },
+    {
+      "bytes": 5303,
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/post_quality_live_CE_candidate_capture_proposal/source-lock.json",
+      "sha256": "bf2797a693d68b32fed4de2ef09b72ceee95595b537027c2ded7503452cebcd9"
+    }
+  ],
+  "new_executable_or_verifier_companion_required": false,
+  "quality_source_freeze_held": true,
+  "reason": "Existing b2e purposecandidate accepts actual liveCE acquisition; late-bound root metadata and guarded acquisition remain necessary.",
+  "schema": "robotron-source-preparation-manifest-v1",
+  "source_peer": null,
+  "status": "SOURCE_ONLY_CONDITIONAL_LIVE_CE_CAPTURE_RUNBOOK_AND_INERT_TEMPLATES"
+}

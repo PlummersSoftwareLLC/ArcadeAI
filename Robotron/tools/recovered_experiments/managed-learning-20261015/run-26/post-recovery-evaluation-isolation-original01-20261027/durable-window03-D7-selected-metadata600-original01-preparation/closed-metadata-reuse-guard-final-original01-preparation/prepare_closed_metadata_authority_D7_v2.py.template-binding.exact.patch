@@ -1,0 +1,13 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-selected-metadata600-original01-preparation/closed-metadata-reuse-guard-template-original01-preparation/prepare_closed_metadata_authority_D7_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-selected-metadata600-original01-preparation/closed-metadata-reuse-guard-final-original01-preparation/prepare_closed_metadata_authority_D7_v2.py
+@@ -12,8 +12,8 @@
+ 
+ ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ LOCAL = Path(__file__).resolve().parent
+-SOURCE_CONTRACT_SHA = None  # UNFILLED; this template cannot qualify or prepare a guard.
+-SHIM_SHA = None  # UNFILLED; this template cannot qualify or prepare a guard.
++SOURCE_CONTRACT_SHA = '5eb7f9b8cdb10be8635b839dbb0eb762ef87cfea8a7e90d6648b5f716b2e090a'
++SHIM_SHA = '7390cea683ae09ffb16ee82c2dcfec7f71bbdc69438dde3a72141cfd65f97a27'
+ HELPERS_SHA = '2b6902933b502ac20dacbd444fbf786315d6c960fcad1d5b5bf223dd569708c1'
+ 
+ 

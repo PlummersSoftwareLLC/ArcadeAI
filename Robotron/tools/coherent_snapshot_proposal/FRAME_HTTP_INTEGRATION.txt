@@ -1,0 +1,50 @@
+Focused CPU frame/settings/disconnect integration — no MAME or GPU
+
+The earlier20 protocol tests execute the real HTTP POST method through AST with
+fake settings, test a synthetic frame-gate worker, and test AST consumer ordering.
+They do not run the actual frame parser/handler, n-step maturation, asynchronous
+ingestion, real settings writer and disconnect cleanup together.
+
+test_frame_http_integration.py adds one focused subprocess integration. It copies
+the54-module candidate from the sealed harness receipt into a fresh writable
+private tree, verifies all source hashes/module paths, and uses private model,
+control, settings, journal, cache and nonce tmpfs paths before imports. The sealed
+source tree and prior patch/tests/receipts are never modified. Native sum-tree
+cache writes stay in the copied tree. CUDA is hidden; zero visible devices and
+no initialized CUDA context are asserted.
+
+The test invokes actual proposed SocketServer.handle_client with complete binary
+Robotron v2 frames over a Unix socketpair, actual n-step/FIFO/real mmap replay,
+the AST-extracted actual agent.step method and a deterministic fake act method.
+It uses the actual BaseHTTPRequestHandler from _make_handler for real HTTP bytes,
+actual GameSettings setters/save and the same registered-worker gate. There is
+no listening socket, actual game client, MAME process, neural network or optimizer.
+The socketpair adapter omits only the TCP_NODELAY option, which AF_UNIX lacks.
+
+The integration proves:
+* Closing the gate during frame4 cannot finish before that frame's action and
+  local counter flush complete. An already-admitted settings POST held between
+  its RAM setter and actual file save must also finish before gate proof.
+* A queued fifth frame and a new actual settings POST remain blocked while the
+  gate is closed: no action/reply, counter, replay or settings-file mutation.
+* Opening the gate resumes both. Five frames produce exactly two real mature
+  horizon3 replay rows; two unfinished n-step tails remain connection-local.
+* Disconnect retains gate membership through real consumer reset enqueue.
+  Gate proof then permits the FIFO barrier to acknowledge reset and clear the
+  consumer/client histories. Unfinished connection tails cause no extra writes.
+* The real replay saver persists matching pointer/size. The actual delayed
+  bookkeeping timer is joined/asserted finished and changes neither replay-file
+  hashes nor frame/learner clocks.
+
+Reproduce (CPU only, about3s):
+
+  CUDA_VISIBLE_DEVICES='' OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 \
+    .venv-gb300/bin/python -B -m unittest \
+    Robotron.tools.coherent_snapshot_proposal.test_frame_http_integration -v
+
+This closes a specific source-wiring gap. It does not validate TCP action
+deadlines/disconnect timing, real emulator game semantics, the full capture_snapshot
+transaction/neural-network/optimizer archive, whole trainer main/boot flow,
+full-size archive I/O or merged
+parallel replay behavior. Pending n-step tails are omitted on disconnect, not
+restored. No staged-source bug was found; no production change is proposed here.

@@ -1,0 +1,38 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-v4-cohort-original03/observe_continuous_physical192_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/observe_continuous_physical192_v4.py
+@@ -17,7 +17,7 @@
+ import time
+ import urllib.request
+ 
+-SCHEMA = 'robotron-continuous-physical-original192-observer-proof2s-job-v2'
++SCHEMA = 'robotron-original192-immutable-bootstrap-live-pidfd-observer-proof2s-job-v4'
+ 
+ 
+ def require(value, message):
+@@ -124,8 +124,8 @@
+     raw = sample['raw_API_wire'].encode('utf-8')
+     require(len(raw) <= 1 << 20 and hashlib.sha256(raw).hexdigest() == sample['api_wire_sha256']
+             and json.loads(raw) == sample['api'], 'Original raw API census differs')
+-    require(health.base().stable_round_status(read(Path(case['round_root']) / 'status.json'))
+-            == health.base().stable_round_status(sample['status']), 'Static original192 publication raced raw API capture')
++    require(sample['status']==health.base().registry().bootstrap_projection(case),
++            'Held historical bootstrap certificate differs')
+     sample['unix_s'] = time.time()
+     sample['monotonic_s'] = time.monotonic()
+     require(sample['monotonic_s'] - started <= 5, 'Raw API/TCP capture exceeded5s')
+@@ -139,10 +139,12 @@
+     require(job.get('source_bound_retired_API_projection') is True
+             and job.get('source_bound_original192_physical_bootstrap') is True
+             and job.get('source_bound_physical_original192_partition') is True
++            and job.get('immutable_original192_bootstrap_certificate') is True
++            and job.get('fresh_original_keeper_pidfd_census') is True
+             and set(job['sources']) == {'client','worker','health','health_base','registry','durability','control','interpreter'}
+-            and job['sources']['health_base'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-v4-cohort-original03/continuous_physical192_health_v3.py'))
+-            and job['sources']['registry'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-v4-cohort-original03/continuous_physical192_registry_v3.py'))
+-            and job['sources']['health'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-v4-cohort-original03/continuous_physical192_transport_v3.py')),
++            and job['sources']['health_base'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/continuous_physical192_health_v4.py'))
++            and job['sources']['registry'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/continuous_physical192_registry_v4.py'))
++            and job['sources']['health'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/continuous_physical192_transport_v4.py')),
+             'Exact source-bound physical original192 observer dependencies required')
+     require(len(job['nonce']) == 32 and all(c in '0123456789abcdef' for c in job['nonce']), 'Fresh nonce required')
+     require(pin(Path(__file__).resolve()) == job['sources']['worker'], 'Actual worker source differs')

@@ -1,0 +1,10 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/actual-selected-preview30-trial-original01-20261027/engineering-reconciliation600-and-CID49-adapter-original01/prepare_slot163_readonly_reconciliation_engineering600_v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/preview-selected-client-wallclock-original01-preparation-20261027/actual-selected-preview30-trial-original01-20261027/engineering-reconciliation600-and-CID49-adapter-original01/prepare_slot163_readonly_reconciliation_engineering600_v4.py
+@@ -159,6 +159,7 @@
+                 and claim['claimant_pid'] == new_actor['pid']
+                 and claim['claimant_birth'] == new_actor['starttime_ticks']
+                 and connection_start_s >= reserved_ns / 1e9 - 5.0
++                and connection_start_s <= reserved_ns / 1e9 + 5.0
+                 and reserved_ns / 1e9 <= api_stamp + 5.0,
+                 'Reused CID49 is not joined to the new claimed actor/connection after old-birth absence')
+         connection_incarnation.update(connection_start_unix_s=connection_start_s,

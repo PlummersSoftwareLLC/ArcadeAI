@@ -1,0 +1,116 @@
+{
+  "schema": "robotron-continuous-guard-same-lr25-reviewed3-source-preparation-note-v1",
+  "status": "SOURCE_PREPARED_UNSELECTED_UNEXECUTED",
+  "base_manifest": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/preparation-reviewed2-manifest.json",
+    "sha256": "67047fd75c44d96b71c9b7697307f49e3028d96da55d8ed4f28d332f168b7d44",
+    "bytes": 65336,
+    "identity": {
+      "device": 2304,
+      "inode": 82575546,
+      "bytes": 65336,
+      "mtime_ns": 1792352280737871268,
+      "ctime_ns": 1792352280737871268,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "actual_original_reviewed2_result": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/continuous-guard-same-LR25-family-sixteen-guards-original01-root-execution-20261018/root-original-result-and-owned-release.json",
+    "sha256": "ea6f8758e62994f257808b876c9d3f1c481c205bf58f8e082b79848c1f6d0ce7",
+    "bytes": 22166,
+    "identity": {
+      "device": 2304,
+      "inode": 82575607,
+      "bytes": 22166,
+      "mtime_ns": 1792352391606614686,
+      "ctime_ns": 1792352391606614686,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "actual_original_reviewed2_outcome": {
+    "native_exit": 1,
+    "result": "exit-code",
+    "tests": 16,
+    "passed": 15,
+    "errors": 1,
+    "scope": "Root-reported test_exact_invalid914_disposition_is_separate_from_confirmed845 expected ValueError while actual rejection is RuntimeError. Original nonzero/full raw lifecycle remains unchanged.",
+    "controller_status": "ORIGINAL_AUDIT_NONZERO_PRESERVED_ARCHIVED_AND_RELEASED",
+    "all_six_original_archive_commands_succeeded": false,
+    "unit_released": true,
+    "lifecycle_complete": true,
+    "payload_retried": false,
+    "error": null
+  },
+  "correction": "Only the exact mutated invalid914M optimizer-epoch rejection assertion changes ValueError to RuntimeError. Production correctly rejected mismatched exposure epochs; no guard/gate is removed.",
+  "selected_fixture": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/test_continuous_guard_metadata_reviewed3.py",
+    "sha256": "1a50df2ffe11a72d4a5d196f427f80ef7c41b276e20100e793769cd458f4d613",
+    "bytes": 42503,
+    "identity": {
+      "device": 2304,
+      "inode": 82575609,
+      "bytes": 42503,
+      "mtime_ns": 1792352462695482029,
+      "ctime_ns": 1792352462695482029,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "selected_auditor": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/audit_completed_leg_reviewed2.py",
+    "sha256": "61b299b327fe6156571646aa809e38563f7bf71de980a48b36272c9f555551d2",
+    "bytes": 36228,
+    "identity": {
+      "device": 2304,
+      "inode": 82575542,
+      "bytes": 36228,
+      "mtime_ns": 1792352229713075471,
+      "ctime_ns": 1792352229713075471,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "preservation": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/source-preservation-reviewed3.json",
+    "sha256": "d645ee51793bd3165294335b925562ee6b7cbd2ed59593ba9de46b93a57883ae",
+    "bytes": 7369,
+    "identity": {
+      "device": 2304,
+      "inode": 82575610,
+      "bytes": 7369,
+      "mtime_ns": 1792352462698644729,
+      "ctime_ns": 1792352462698644729,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "expected_tests": 16,
+  "guard_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal",
+    "-p",
+    "test_continuous_guard_metadata_reviewed3.py",
+    "-v"
+  ],
+  "corrected_fixture_executed": false,
+  "original_run_will_not_be_relabelled_or_rerun": true,
+  "core_capture_binder_recipe_provenance_auditor_unchanged": true,
+  "limitations": [
+    "Source-only fixture correction, not corrected execution or runtime success.",
+    "Original f255 blocked15 and reviewed2 actual15PASS/1ERROR/native1 all retained byte-exact.",
+    "No production/control/case/model/replay/canonical/runtime action."
+  ]
+}

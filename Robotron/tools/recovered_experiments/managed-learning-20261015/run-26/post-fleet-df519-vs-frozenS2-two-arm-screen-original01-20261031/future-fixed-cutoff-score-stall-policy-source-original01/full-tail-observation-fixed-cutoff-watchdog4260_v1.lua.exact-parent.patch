@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/full-tail-wire-v2-contract-original01-preparation-20261022/full-tail-observation-main.lua
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-fleet-df519-vs-frozenS2-two-arm-screen-original01-20261031/future-fixed-cutoff-score-stall-policy-source-original01/full-tail-observation-fixed-cutoff-watchdog4260_v1.lua
+@@ -2308,7 +2308,7 @@
+ -- here lets the startmame.sh supervisor respawn this slot cleanly (it
+ -- logs "[SUPERVISOR] respawned client N").  A paused MAME stops the frame
+ -- callback entirely, so pausing can never trip this.
+-STALL_EXIT_SECS = 180
++STALL_EXIT_SECS = 4260
+ hud_stall_score = nil
+ hud_stall_t0 = nil
+ 

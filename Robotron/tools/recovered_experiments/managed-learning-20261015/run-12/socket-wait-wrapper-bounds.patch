@@ -1,0 +1,30 @@
+--- a/Robotron/tools/mame_with_socket_wait.sh
++++ b/Robotron/tools/mame_with_socket_wait.sh
+@@ -2,13 +2,13 @@
+ # Opt-in wrapper: preload the readiness helper into MAME only, including respawns.
+ set -euo pipefail
+ : "${ROBOTRON_SOCKET_WAIT_LIBRARY:?Set the absolute library path from build_socket_wait.py}"
+-: "${ROBOTRON_SOCKET_WAIT_US:?Set a readiness interval between 100 and 1000 microseconds}"
++: "${ROBOTRON_SOCKET_WAIT_US:?Set a readiness interval between 100 and 10000 microseconds}"
+ if [[ "$ROBOTRON_SOCKET_WAIT_LIBRARY" != /* || ! -f "$ROBOTRON_SOCKET_WAIT_LIBRARY" || "$ROBOTRON_SOCKET_WAIT_LIBRARY" == *[[:space:]:]* ]]; then
+     echo 'Expected an existing absolute library path without whitespace or colons' >&2
+     exit 2
+ fi
+-if [[ ! "$ROBOTRON_SOCKET_WAIT_US" =~ ^([1-9][0-9]{2}|1000)$ ]]; then
+-    echo 'Readiness interval must be between 100 and 1000 microseconds' >&2
++if [[ ! "$ROBOTRON_SOCKET_WAIT_US" =~ ^([1-9][0-9]{2,3}|10000)$ ]]; then
++    echo 'Readiness interval must be between 100 and 10000 microseconds' >&2
+     exit 2
+ fi
+ exec env LD_PRELOAD="$ROBOTRON_SOCKET_WAIT_LIBRARY" \
+--- a/Robotron/tools/build_socket_wait.py
++++ b/Robotron/tools/build_socket_wait.py
+@@ -2,7 +2,7 @@
+ """Build the optional select readiness preload and print its absolute cache path.
+ 
+ The output belongs in LD_PRELOAD for the MAME child only. Enable bounded waits
+-with ROBOTRON_SOCKET_WAIT_US=100..1000; the default is disabled. No running
++with ROBOTRON_SOCKET_WAIT_US=100..10000 (0.1..10 ms); the default is disabled. No running
+ trainer, MAME process, Lua headers or external Python packages are required.
+ """
+ 

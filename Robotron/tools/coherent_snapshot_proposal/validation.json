@@ -1,0 +1,47 @@
+{
+  "status": "UNAPPLIED_REVIEW_ONLY",
+  "production_sources_unchanged": {
+    "Robotron/Scripts/dqn/main.py": true,
+    "Robotron/Scripts/dqn/socket_server.py": true,
+    "Robotron/Scripts/dqn/metrics_dashboard.py": true,
+    "Robotron/Scripts/dqn/agent.py": true,
+    "Robotron/Scripts/dqn/coherent_snapshot.py": true
+  },
+  "patch_sha256": "31dd8553f505f383c21b3df5631efb5a8064dab73c4503b30176940f15f70717",
+  "tests": "20 CPU/mocked tests plus 2 strengthened real CPU round-trip tests passed",
+  "test_log_sha256": "f484e49340a0e181c446ec4b2e42dc27c15b69df0b08e15c7d534b05d3ef599d",
+  "git_apply_check": "PASS",
+  "live_capture_launched": false,
+  "production_patch_applied": false,
+  "gpu_work_launched": false,
+  "original_cpu_mocked_tests": {
+    "count": 20,
+    "result": "PASS",
+    "test_log": "test-results.txt",
+    "test_log_sha256": "f484e49340a0e181c446ec4b2e42dc27c15b69df0b08e15c7d534b05d3ef599d",
+    "original_manifest_sha256": "7122018ed63f0d23ac8fa6a572426662f7c1bac128f1130c80f413ba032a52e9"
+  },
+  "real_cpu_roundtrip": {
+    "count": 2,
+    "result": "PASS",
+    "command": "CUDA_VISIBLE_DEVICES='' OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 .venv-gb300/bin/python -Xgil=0 -B -m unittest Robotron.tools.coherent_snapshot_proposal.test_real_replay_roundtrip -v",
+    "source": "test_real_replay_roundtrip.py",
+    "source_sha256": "51634208837d612219b68cf5ef9cecd7d954ce2b96097f3bf4c8186fe0d44e43",
+    "independent_reviewer": "/root/audit_quality_result",
+    "independent_run_seconds": 1.28,
+    "captured_run_seconds": 1.278,
+    "log": "Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-analysis/real-cpu-test-results.txt",
+    "log_sha256": "11fbb56d51234740d1d17673959383d0151f11ab4716051210586beb091fa277",
+    "cuda_initialized": false
+  },
+  "patch_unchanged_since_original_validation": true,
+  "review_evidence_directory": "Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-analysis",
+  "immutable_review_receipt": "Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-analysis/review-receipt.json",
+  "immutable_review_receipt_digest": "Robotron/logs/managed-learning-20261015/run-26/coherent-snapshot-analysis/review-receipt.sha256",
+  "remaining_validation": [
+    "Actual Rainbow network save/load and complete trainer integration",
+    "Fused CUDA optimizer, owned-device synchronization and flag recovery on real CUDA",
+    "Full-size ring/bank copy, filesystem failures and large-storage I/O",
+    "Future branch launcher application of runtime.json, manual LR scale and configuration"
+  ]
+}

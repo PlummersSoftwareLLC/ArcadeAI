@@ -1,0 +1,153 @@
+{
+  "schema": "robotron-live-ce-lr-continuation-quality-bindings-v1",
+  "activation_authorized": false,
+  "experiment": null,
+  "candidate": null,
+  "reference": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-incumbents/freshCE-accepted-newgame-704M-confirmed-20261018.pt",
+    "sha256": "eba19578c91b2380859754b99b9a8510efaed11f3ec2f672e89c5988e50ad74c",
+    "bytes": 275202741,
+    "metadata": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/managed-incumbents/freshCE-accepted-newgame-704M-confirmed-20261018.pt.json",
+      "sha256": "34190c0dcbfe2383bcf0c5dec31adb318ca02822c8c0d8d2289607447e075eae",
+      "bytes": 295025,
+      "identity": {
+        "device": 2304,
+        "inode": 79991567,
+        "bytes": 295025,
+        "mtime_ns": 1792304815553535724,
+        "ctime_ns": 1792304815556703833,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "evidence": {
+    "CPU_execution": null,
+    "capture_case": null,
+    "capture_release": null,
+    "capture_result": null,
+    "decision": null,
+    "durability": null,
+    "historical_invalid49_plan": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/lr25-first8M-frozen-quality-root-preparation-20261017/actual-native-plan-readonly-copy.json",
+      "sha256": "3a9dc2b00f3e03fd93dd23aa1252fe019983d589bfd5f04a38e01482fb2be834",
+      "bytes": 277518,
+      "identity": {
+        "device": 2304,
+        "inode": 81793879,
+        "bytes": 277518,
+        "mtime_ns": 1792283869504987013,
+        "ctime_ns": 1792283869504987013,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "historical_invalid49_release": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/lr25-first8M-partial-invalid49-owned-closure-root-20261017/root-explicit-current-partial-invalid49-quality-source-freeze-release.json",
+      "sha256": "a7d7f523674d8135535779da782eb4ab3aa342b012695960f1ccef03b0fd6e7f",
+      "bytes": 3993,
+      "identity": {
+        "device": 2304,
+        "inode": 81794487,
+        "bytes": 3993,
+        "mtime_ns": 1792287424304762607,
+        "ctime_ns": 1792287424304762607,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "phase_cpu_completion": null,
+    "phase_cpu_job": null,
+    "phase_cpu_report": null,
+    "trigger_API": null,
+    "window_job": null,
+    "window_result": null,
+    "control_transition": null,
+    "barrier": null
+  },
+  "current_ce_phase": {
+    "record": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-healthy-activation-original01-20261018/phase-record.json",
+      "sha256": "75ec8703405edfb250100006cab8ff44a364cbc84e33583697a985306fd21f10",
+      "bytes": 558,
+      "identity": {
+        "device": 2304,
+        "inode": 83624609,
+        "bytes": 558,
+        "mtime_ns": 1792306968272028430,
+        "ctime_ns": 1792306968272028430,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "boot_checkpoint": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/robotron_dqn_latest.pt",
+      "sha256": "1c304327761f224cdd54ded9001cb0ad33c804e74bd8ea6470f931075f6e8dda",
+      "bytes": 275185816
+    },
+    "boot_verification": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-healthy-activation-original01-20261018/newest-stopped/cpu-report-readonly.json",
+      "sha256": "0cd8fd97f0dc492f600769c665f41cf28cb4bf1c700d3e3d74cd066043e0848c",
+      "bytes": 61052,
+      "identity": {
+        "device": 2304,
+        "inode": 83624608,
+        "bytes": 61052,
+        "mtime_ns": 1792306967585227335,
+        "ctime_ns": 1792306967585227335,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "expected": {
+      "metric": "ce",
+      "phase_id": "ce4096_rejected_gap_observer_20261018",
+      "root_precommit_sha256": "ea67d2e1cd74548377de435b345e1af79bb8d97c37aa52ea6a3019741f87a7d0",
+      "founder_phase_record_sha256": "75ec8703405edfb250100006cab8ff44a364cbc84e33583697a985306fd21f10",
+      "last_resume_record_sha256": null,
+      "started_from": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/robotron_dqn_latest.pt",
+        "sha256": "1c304327761f224cdd54ded9001cb0ad33c804e74bd8ea6470f931075f6e8dda",
+        "bytes": 275185816,
+        "clocks": {
+          "training_steps": 3394106,
+          "optimized_samples": 12326463488,
+          "learner_frame_count": 761680518,
+          "frame_count": 1522594006
+        }
+      },
+      "valid": true
+    }
+  },
+  "runtime_baseline": null,
+  "runtime_anchor": null,
+  "predecessor_quality_plan": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/accepted-newgame-forward-recovery-root-control-20261017/actual-native-postaccepted-quality-plan-readonly.json",
+    "sha256": "4093225c8fdec659880cc06a5c54549139708909f7a011696ac03f298d3338e8",
+    "bytes": 277619,
+    "identity": {
+      "device": 2304,
+      "inode": 81925238,
+      "bytes": 277619,
+      "mtime_ns": 1792293608329492343,
+      "ctime_ns": 1792293608329492343,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "campaign": null,
+  "recipe": {
+    "priority_metric": "ce",
+    "batch_size": 4096,
+    "learning_control_lr_scale": 0.25,
+    "scheduled_lr": 1.25e-05,
+    "max_samples_per_frame": 8
+  }
+}

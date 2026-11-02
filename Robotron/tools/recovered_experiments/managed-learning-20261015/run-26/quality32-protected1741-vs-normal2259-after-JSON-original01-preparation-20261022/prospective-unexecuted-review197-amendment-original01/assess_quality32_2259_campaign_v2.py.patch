@@ -1,0 +1,21 @@
+--- assess_quality32_2259_campaign_v1.py
++++ assess_quality32_2259_campaign_v2.py
+@@ -146,7 +146,8 @@
+             require(review_job['native_job']==native_pin and review_job['controller_config']==cfg_pin
+                 and review_job['acceptance']==scope_pin and review_job['sources']['runtime']==native_job['runtime'],
+                 'Independent original review selected different native evidence')
+-            cpucfg_pin=h.pin(root/'independent-review-controller-config.json');cpucfg=read(cpucfg_pin)
++            cpucfg_name=('independent-review-controller-config-prospective197-original01.json' if role=='R1' else 'independent-review-controller-config.json')
++            cpucfg_pin=h.pin(root/cpucfg_name);cpucfg=read(cpucfg_pin)
+             ctl.checked_config(cpucfg_pin['path'])
+             expected_argv=['/usr/bin/python3.12','-I','-B',job['sources']['leg_reviewer']['path'],
+                 '--observe','--job',review_job_pin['path'],'--job-sha256',review_job_pin['sha256'],
+@@ -196,7 +197,7 @@
+                     'Original raw game/start/life payload changed')
+             main=read(native_job['main_binding'])
+             if main_sources is None:main_sources=main['held_hashes']
+-            require(main['held_hashes']==main_sources and len(main_sources)==196,'Held main sources changed between legs')
++            require(main['held_hashes']==main_sources and len(main_sources)==197,'Held main sources changed between legs')
+             legs.append(dict(role=role,policy_sha256=policy['checkpoint_sha256'],cohort=cohort,
+                 evidence_verified=True,original_attempt=1,no_retry=True,
+                 native_identity=[owner['pid'],owner['starttime_ticks'],owner['invocation_id']],

@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-proof2s-fullgame-confirmation-original01-preparation/source-family-original01/control_fullgame_rounds_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/fullgame-source-family-original03/control_fullgame_rounds_v6.py
+@@ -63,7 +63,7 @@
+     require(type(c['observation_s'])is int and c['observation_s']==22320,
+             'Fixed original runtime/shutdown observation required')
+     expected=['/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python','-Xgil=0','-I','-B',
+-        '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-proof2s-fullgame-confirmation-original01-preparation/source-family-original01/run_fullgame_rounds_v7.py']
++        '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/fullgame-source-family-original03/run_fullgame_rounds_v7.py']
+     argv=c['argv']
+     require(type(argv)is list and len(argv)==12 and argv[:5]==expected
+         and argv[5:7]==['--execute','--job']and argv[8]=='--job-sha256'and argv[10]=='--source-sha256'

@@ -1,0 +1,92 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/prepare_round_cpu_guard_v9.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/exact-resume-guard-constructor-original01-preparation/prepare_round_cpu_guard_with_exact_resume_v1.py
+@@ -7,7 +7,56 @@
+ ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ BASE = ROOT/'logs/managed-learning-20261015/run-26'
+ HERE = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
+-LOCAL = Path(__file__).resolve().parent
++LOCAL = Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05')
++
++
++# The fifth control is an exact immutable resume record already held by the
++# selected original192 case. This is not a directory-wide JSON/model exception.
++SELECTED_RESUME_RECORD = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/resume-records/resume-f3dcfa4e6893fe8111afc53bc14204943d7535b6c152d05d6018db9f1d8be0e0.json', 'sha256': 'ad351d26a04afd2f99eb1deb628f86f6b470fad3093b1fd0b7516c722da481f0', 'bytes': 559, 'identity': {'bytes': 559, 'ctime_ns': 1793280707389499730, 'device': 2304, 'inode': 84699900, 'mode': '0o444', 'mtime_ns': 1793280707389499730, 'nlink': 1, 'uid': 1001}}
++UNCHANGED_DRIVER = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-prefix-bound-original05/qualify_round_study_cpu_v6.py', 'sha256': '43f3f2272bbc5e5c2b055c97c026adee97c4014a6ae449d8e2fafde7335ae39a', 'bytes': 18331, 'identity': {'device': 2304, 'inode': 85333915, 'bytes': 18331, 'mtime_ns': 1793297226281745266, 'ctime_ns': 1793297226281745266, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
++MODELS = ROOT/'models_dqn'
++SMALL_MODEL_METADATA_PATHS = frozenset({MODELS/'game_settings.json', MODELS/'learning_control.json',
++    MODELS/'managed_save.request.json.completed',
++    MODELS/'managed-measurements/scorecarry-previewflags-preserveRAM-original01-20261027-final.json',
++    Path(SELECTED_RESUME_RECORD['path'])})
++
++
++def preflight_held_inputs(inputs):
++    """Pure classification only: no file reads, stat, model imports or outputs.
++
++    Call before the expensive raw proof. All selected pins remain in the input
++    domain. Unknown model controls fail; checkpoints/MAME stay stat-only.
++    """
++    assert type(inputs) is list, 'Selected held fullpin list required'
++    small, large, other, paths = [], [], [], {}
++    for value in inputs:
++        assert type(value) is dict and set(value) == {'path','sha256','bytes','identity'}, 'Exact fullpin required'
++        identity = value['identity']
++        assert type(identity) is dict and set(identity) == {'device','inode','bytes','mtime_ns','ctime_ns','mode','uid','nlink'}, 'Exact full8 identity required'
++        assert all(type(identity[k]) is int and identity[k] >= 0 for k in ('device','inode','bytes','mtime_ns','ctime_ns','uid','nlink')) and type(identity['mode']) is str, 'Typed full8 file identity required'
++        assert type(value['path']) is str and type(value['sha256']) is str and len(value['sha256']) == 64 and all(c in '0123456789abcdef' for c in value['sha256']), 'Canonical held path and SHA required'
++        path = Path(value['path'])
++        assert path.is_absolute() and '..' not in path.parts and str(path) == value['path'], 'Lexically canonical held path required'
++        assert type(value['bytes']) is int and type(identity['bytes']) is int and 0 <= value['bytes'] == identity['bytes'], 'Held byte count differs'
++        if str(path) in paths:
++            assert paths[str(path)] == value, 'Conflicting selected pins for one path'
++            continue  # Equal aliases are retained in the caller's unchanged list.
++        paths[str(path)] = value
++        if path.suffix == '.pt' or path == Path('/usr/games/mame'):
++            large.append(value)
++        elif path.is_relative_to(MODELS):
++            assert path in SMALL_MODEL_METADATA_PATHS, 'Unexpected model-directory control input: ' + str(path)
++            assert 0 < value['bytes'] <= 1_048_576 and identity['uid'] == 1001 and identity['nlink'] == 1 and identity['mode'] in ('0o444','0o644','0o664'), 'Bounded owned single-link control metadata required'
++            if path == Path(SELECTED_RESUME_RECORD['path']):
++                assert value == SELECTED_RESUME_RECORD, 'Exact selected immutable559-byte resume record required'
++            small.append(value)
++        else:
++            other.append(value)
++    return dict(schema='robotron-exact-resume-held-input-classification-v1',
++        input_entries=len(inputs),unique_paths=len(paths),small_model_metadata=small,
++        large_stat_only=large,other_held_inputs=other,all_input_paths_preserved=True,
++        filesystem_or_body_reads_performed=False,model_directory_scope_broadened=False)
++
+ 
+ 
+ def load(name, path):
+@@ -29,13 +78,13 @@
+     old_directory = BASE/'deadline-score32-fixed-fleet-admission-original03-preparation-20261026/actual-four-job-prebody-and-native-chain-CPU-original01'
+     old = json.loads((old_directory/'job.json').read_bytes())
+     driver = h.pin(LOCAL/'qualify_round_study_cpu_v6.py')
++    assert driver == UNCHANGED_DRIVER, 'Exact unchanged F5 guard driver required'
+     sources = [study_pin, controller, driver, h.pin(Path(__file__).resolve()), h.pin(Path(old['helpers']['path'])),
+                old['new_native_chain_tests'], old['interpreter_symlink_binding'], old['previous_qualification_CPU_scope']]
+     large = {}
+     metadata = {}
+     models = ROOT/'models_dqn'
+-    allowed = {models/'game_settings.json', models/'learning_control.json', models/'managed_save.request.json.completed',
+-               models/'managed-measurements/scorecarry-previewflags-preserveRAM-original01-20261027-final.json'}
++    allowed = SMALL_MODEL_METADATA_PATHS
+     for row in study['cases']:
+         job = json.loads(h.checked(row['native_job']).read_bytes())
+         sources += [row['native_job'], row['runtime'], row['native_controller'], row['unqualified_controller_config'],
+@@ -44,8 +93,14 @@
+         for name in case['inputs']:
+             path = Path(name)
+             if path.is_relative_to(models):
++                selected = dict(path=name,sha256=case['inputs'][name]['sha256'],
++                    bytes=case['inputs'][name]['identity']['bytes'],identity=case['inputs'][name]['identity'])
++                preflight_held_inputs([selected])
+                 assert path in allowed, 'Unexpected model-directory control input'
+-                metadata[str(path)] = h.pin(path)
++                assert path.resolve(strict=True) == path and not path.is_symlink() and path.is_file(), 'Canonical regular non-symlink control metadata required'
++                actual = h.pin(path)
++                assert actual == selected, 'Selected full8 control metadata changed; never refresh it implicitly'
++                metadata[str(path)] = actual
+     sources += list(metadata.values())
+     small = {}
+     for value in sources:

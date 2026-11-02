@@ -1,0 +1,32 @@
+{
+  "scope": "SOURCE_ONLY templates; root must late-bind real terminal job and exact source/job hashes. No invocation by author.",
+  "closure_template": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/quality_trial02_terminal_closure_proposal/close_quality_trial02.py",
+    "--execute",
+    "--job",
+    "ACTUAL_FINAL_READONLY_JOB_PATH",
+    "--expected-job-sha256",
+    "ACTUAL_FINAL_JOB_SHA256",
+    "--expected-source-sha256",
+    "6f2f6fb96b84448da085512c4bfd9cef10a08b33bce7278c34af61640d89c6dd"
+  ],
+  "guard_loader_contract": {
+    "interpreter": [
+      "/usr/bin/python3.12",
+      "-I",
+      "-B"
+    ],
+    "test_file": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/quality_trial02_terminal_closure_proposal/test_quality_closure.py",
+    "class": "QualityClosureGuards",
+    "methods_authored": 16,
+    "load": "Root-owned runner loads this absolute file with importlib.util; no package-path dependency. All runtime methods are FakeOps or mocks; only private tempfile output directories are created."
+  },
+  "actual_final_job_exists": false,
+  "actual_closure_execution": null,
+  "limits": {
+    "root_guard_suggestion": "CPU100%, MemoryMax=512M (536870912 bytes), TasksMax64, RuntimeMax60s, CUDA_VISIBLE_DEVICES empty; root retains original terminal and releases only its exact guard unit."
+  }
+}

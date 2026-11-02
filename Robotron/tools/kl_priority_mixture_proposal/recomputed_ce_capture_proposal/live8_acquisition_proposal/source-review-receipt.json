@@ -1,0 +1,35 @@
+{
+  "author_actions": {
+    "new_source_runbook_and_provenance_only": true,
+    "production_and_old_sealed_files_edited": false,
+    "runtime_queries_model_data_import_compile_tests_or_acquisition_commands": false
+  },
+  "files": {
+    "ACQUISITION_RUNBOOK.txt": {
+      "bytes": 17525,
+      "path": "Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_acquisition_proposal/ACQUISITION_RUNBOOK.txt",
+      "sha256": "531f15baf49b13eefd3803ab16810338bf1e5026fc64030b75f86f493f1b11c0"
+    },
+    "source-lock.json": {
+      "bytes": 6459,
+      "path": "Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_acquisition_proposal/source-lock.json",
+      "sha256": "0c3feef04ff9cf5ed3b764915c549fdcd252d9da2de0199147f31d11f949be52"
+    }
+  },
+  "live_adoption_authorized": false,
+  "peer": {
+    "agent": "/root/runtime_review",
+    "limitations": [
+      "actual CUDA rehearsal UNEXECUTED at preparation",
+      "future live bindings UNKNOWN",
+      "384M quality and explicit root maintenance review take priority",
+      "ordinary post-save optimizer/FIFO tails remain; no coherent anchor or zero-loss claim",
+      "conditional CE agreement does not bound executed entropy/KL/ranks"
+    ],
+    "method": "independent source-only read and exact runbook/lock hash confirmation",
+    "scope": "no ownership/scientific-claim contradiction found; no imports/tests/data/runtime actions",
+    "verdict": "PASS"
+  },
+  "schema": "robotron-recomputed-live8-source-readiness-review-v1",
+  "status": "SOURCE_ONLY_PEER_PASS_NO_LIVE_AUTHORIZATION"
+}

@@ -1,0 +1,198 @@
+{
+  "schema": "robotron-postaccepted-newgame-live8M-observer-source-preparation-v1",
+  "status": "SOURCE_ONLY_UNSELECTED_PEER_PENDING",
+  "activation_authorized": false,
+  "selected": false,
+  "author_imported_proposed_or_project_code": false,
+  "author_executed_tests": false,
+  "author_runtime_actions": false,
+  "author_model_or_replay_referent_reads": false,
+  "files": {
+    "observer.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postaccepted_newgame_live8M_observer_proposal/observer.py",
+      "sha256": "6bfa23b0aa942b1ce9461868f2c2a46a2ae8321feee03739adfede339a493395",
+      "bytes": 25043,
+      "identity": {
+        "device": 2304,
+        "inode": 86245492,
+        "bytes": 25043,
+        "mtime_ns": 1792290088677287198,
+        "ctime_ns": 1792290277475810807,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "test_observer.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postaccepted_newgame_live8M_observer_proposal/test_observer.py",
+      "sha256": "dfb456d8eda8bf535db0e70439bba723e32f29b97d761af7ec677652e40f0207",
+      "bytes": 12372,
+      "identity": {
+        "device": 2304,
+        "inode": 86245494,
+        "bytes": 12372,
+        "mtime_ns": 1792290150436602549,
+        "ctime_ns": 1792290277475810807,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "source-preservation.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postaccepted_newgame_live8M_observer_proposal/source-preservation.json",
+      "sha256": "2aedd9b5f0cb8df04ca66203bda53c4dc8837a2e6877bb3eaaa8f509b85e50bc",
+      "bytes": 12105,
+      "identity": {
+        "device": 2304,
+        "inode": 86245493,
+        "bytes": 12105,
+        "mtime_ns": 1792290088677555263,
+        "ctime_ns": 1792290277476810811,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "job-TEMPLATE.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postaccepted_newgame_live8M_observer_proposal/job-TEMPLATE.json",
+      "sha256": "b432693f854ef2877cbeb25cc726910b5de1e0d9cd7ecac4502f54080e57fb7f",
+      "bytes": 742,
+      "identity": {
+        "device": 2304,
+        "inode": 86245495,
+        "bytes": 742,
+        "mtime_ns": 1792290218802237337,
+        "ctime_ns": 1792290277476810811,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    "PREPARATION.txt": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postaccepted_newgame_live8M_observer_proposal/PREPARATION.txt",
+      "sha256": "b737e727301d7a146e6a3bb2ddb25bfb7a4e33e52740c86100a7f521224ed186",
+      "bytes": 4731,
+      "identity": {
+        "device": 2304,
+        "inode": 86245496,
+        "bytes": 4731,
+        "mtime_ns": 1792290218802334809,
+        "ctime_ns": 1792290277476810811,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  },
+  "upstream_pins": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/lr25_hot_window_observer_proposal/hot_window_observer.py",
+      "sha256": "f1faaa37da0fc91f943b00fccc96f1e1ff31fbfa741f00bcf30183a5e10f51ab",
+      "bytes": 23971,
+      "identity": {
+        "device": 2304,
+        "inode": 86245448,
+        "bytes": 23971,
+        "mtime_ns": 1792277619150121128,
+        "ctime_ns": 1792277909338531121,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/lr25_hot_window_observer_proposal/preparation-manifest.json",
+      "sha256": "562313df67728ba8c57394fe9404b783eeeaf2b594997bebb17adb5becec314c",
+      "bytes": 9701,
+      "identity": {
+        "device": 2304,
+        "inode": 86245455,
+        "bytes": 9701,
+        "mtime_ns": 1792277909346531158,
+        "ctime_ns": 1792277909346531158,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_one_trial_installed_ce_revision2_proposal/run_raw_kl_transition.py",
+      "sha256": "fd4e9d7b9b562c2bd6c663b9651d02b4167a3f552fcacb71cb8571440f3e9bf5",
+      "bytes": 62575,
+      "identity": {
+        "device": 2304,
+        "inode": 84285291,
+        "bytes": 62575,
+        "mtime_ns": 1792241233709314962,
+        "ctime_ns": 1792241499867150804,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  ],
+  "authored_guard_count": 6,
+  "authored_guard_methods": [
+    "test_default_and_dynamic_READY_phase_context_are_read_free",
+    "test_B_is_nonzero_pending0_available_and_after_READY_cache_boundary",
+    "test_new_8M_AND_8M_policy_same_B_accounting_and_first_pending1_LATCH",
+    "test_epoch_counters_health_freshness_stall_and_cutoff_fail_closed",
+    "test_original_durable_first_event_only_and_publication_failure_never_replaced",
+    "test_finite_source_changes_and_original_accounting_durability_are_preserved"
+  ],
+  "source_preservation": {
+    "finite_replacements": 12,
+    "unchanged_pure_functions": [
+      "require",
+      "integer",
+      "number",
+      "bounded",
+      "identity",
+      "normalise",
+      "pin",
+      "clock_value",
+      "encoded",
+      "publication_pin",
+      "durable_event",
+      "ReceiptJournal",
+      "durable_result"
+    ],
+    "original_class_accounting": "HorizonObserver exact except factual scope/origin strings; poll exact except factual final doc sentence.",
+    "policy": "NEW prospective8M learner AND8M acceptedDQN+epsilon; not oldLR8M/6M and no historical relabel."
+  },
+  "future_guard_argv": [
+    "ROOT_VERIFIED_CP312",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postaccepted_newgame_live8M_observer_proposal",
+    "-p",
+    "test_observer.py",
+    "-v"
+  ],
+  "future_default_PLAN_argv": [
+    "ROOT_VERIFIED_CP312",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/postaccepted_newgame_live8M_observer_proposal/observer.py"
+  ],
+  "future_actuals": {
+    "root_precommit": null,
+    "recovery_result": null,
+    "recovery_release": null,
+    "control": null,
+    "owner": null,
+    "current_phase": null,
+    "baseline": null,
+    "cutoff_s": null,
+    "observation": null,
+    "durability": null,
+    "candidate": null,
+    "CPU": null,
+    "quality_plan": null
+  },
+  "scope": "Pure injected-root observer only; dynamic genuine new CE start/.5/B4096, cached READY-bound B, unchanged epochs/partitions/durability. No control/save/stop/phase creation, model I/O, CPU lifecycle or quality implementation."
+}

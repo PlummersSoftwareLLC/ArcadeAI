@@ -1,0 +1,34 @@
+{
+  "schema": "robotron-postaccepted-newgame-live8M-window-job-v1",
+  "experiment": null,
+  "owner": null,
+  "recipe": {
+    "priority_metric": "ce",
+    "batch_size": 4096,
+    "learning_control_lr_scale": 0.5,
+    "scheduled_lr": 2.5e-05,
+    "max_samples_per_frame": 8
+  },
+  "current_phase": null,
+  "proofs": {
+    "root_precommit": null,
+    "recovery_result": null,
+    "recovery_release": null,
+    "control": null
+  },
+  "recovery_ready_clock": null,
+  "baseline": {
+    "api": null,
+    "observed_clock": null
+  },
+  "policy": {
+    "learner_frames": 8000000,
+    "learner_accepted": 8000000,
+    "poll_s": 1,
+    "API_age_s": 5,
+    "pipeline_age_s": 5,
+    "unobservable_s": 30,
+    "no_applied_s": 60,
+    "cutoff_s": null
+  }
+}

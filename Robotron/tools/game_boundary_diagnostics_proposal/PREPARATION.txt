@@ -1,0 +1,115 @@
+GAME-BOUNDARY INPUT DIAGNOSTICS — SOURCE-ONLY UNAPPLIED PROPOSAL
+
+Status: authored only. No candidate/module import, compile, test, default
+invocation, patch application, service action, runtime query, model or replay
+access was performed. The ten new unittest methods are entirely UNEXECUTED.
+This proposal changes no current source, controls, state or campaign receipts.
+
+Purpose and limits
+  The failed320M C2 observation does not contain the previous raw/alive/done/
+  start inputs that caused the accepted score reset. Its previous game ends
+  at9900/wave2/deaths0 and the next starts0/wave2/alive/lives3, then reaches
+  10000 within17 frames. Those facts do not establish the underlying cause.
+  This proposal preserves useful evidence for a FUTURE newly precommitted
+  private evaluation. It does not diagnose or repair the old game, change
+  row admission, remove the wave1 requirement, rescue an abandoned game or
+  authorize another campaign attempt.
+
+Activation, unchanged behavior and resource tradeoff
+  The only new opt-in is startup environment
+    ROBOTRON_GAME_BOUNDARY_DIAGNOSTICS=1
+  on SocketServer(replay_enabled=False). Values other than the exact string1
+  are OFF. Replay-enabled trainers remain OFF even if the variable is inherited.
+  No config/CLI/controller/control-file change or hot toggle is proposed.
+  Existing sidecar environment inheritance could supply this flag in a future
+  reviewed launch; source/backend/plan bindings must record that choice before
+  any measured cohort. All legs of a comparison must use the same choice.
+
+  OFF adds a None local, two boolean branches and optional None arguments;
+  it allocates no new sample tuples/dictionaries or diagnostic client key.
+  ON retains exactly ONE seven-primitive accepted wire sample per connected
+  client. Each accepted frame builds a current sample tuple and a small input
+  tuple, replacing the prior sample. Rejected frames can create a temporary
+  current sample but cannot advance the retained accepted sample or reach the
+  journal. There is no frame history/ring buffer, full wire/RAM/state array,
+  added file, extra journal write, new lock, thread, RNG operation or network
+  operation. No timing/overhead measurement has been performed. The opt-in
+  has some per-frame Python allocation cost; make no zero-overhead claim.
+
+  The journal expands a small detached dictionary only inside its existing
+  _begin call, for initial attachment, accepted score reset/gameUID transition
+  and the separate zero-score restart. It adds one key to the new game's
+  start context; existing measurement_starts.jsonl and games.jsonl retain
+  that context. Existing end/life contexts are unchanged. Context expansion
+  runs at the existing journal lock boundary and writes at existing cadence.
+  The scalar/tuple evidence has no mutable frame/client/array references.
+  Normal existing journal exceptions still invalidate an inference-only job;
+  no observer-error swallowing or behavior change is added to rescue a leg.
+
+Recorded meaning
+  schema: robotron-game-boundary-inputs-v1
+  previous_accepted_wire and current_wire each contain:
+    raw_score, raw_wave, player_alive, done, start_pressed, lives,
+    accepted_frames_before (the existing connection-local cs.frames before
+    the accepted-frame increment, NOT a Lua/global/emulator frame number).
+  Current wire values are copied BEFORE score coercion or unwrapping.
+  classifier_previous separately preserves the classifier's score/wave
+  baseline and prior client player_alive. Coerced accepted scores can differ
+  from the prior wire sample; do not call these fields interchangeable.
+  last_start_frame_before is captured BEFORE this frame's start_pressed update;
+  last_start_frame_after and recent_start are the actual values used by the
+  existing classifier. A missing prior timestamp uses its existing -10**9
+  sentinel. classifier_new_game and classifier_verdict are observed outputs,
+  not a recomputed decision. journal_start_reason separately identifies e.g.
+  zero_score_restart even when classifier_new_game is false.
+
+  The previous sample is connection-local and can be null after attachment.
+  It is not carried through the reconnect stash. It excludes rejected frames;
+  this is not an archive of intervening crashes/torn reads or a complete input
+  stream. Existing source/config pins remain necessary to interpret thresholds
+  and reconnect handling. No claimed raw-RAM chronology, causality or guarantee
+  that this evidence will uniquely explain a future failure follows.
+
+Preserved protocol
+  The actual existing score dip/wrap/reset classifier, acceptance/rejection,
+  score/wave coercion, recent-start update, game UID allocation, replay/reward
+  state, journal known_start/eligibility/first_play_level/cohort logic, admission
+  interval, tails, timeout handling and all campaign gates remain unchanged.
+  No score, wave, alive, done, start, UID or counter is assigned by diagnostics.
+  The only client assignment is the new _boundary_previous_accepted key.
+
+Files and future validation
+  socket_server_candidate.py and game_journal_candidate.py are complete NEW
+  copies with proposed edits only. unapplied.patch is their exact unified
+  diff against the pinned current two sources. source-lock.json records all
+  original/candidate/proposal hashes. No patch application was attempted.
+
+  test_game_boundary_diagnostics.py contains ten private stdlib methods:
+    * source pins/exact diff and unchanged noninstrumented methods;
+    * exact opt-in/private-only constructor expression;
+    * actual classifier AST region base/OFF/ON parity across continuity,
+      score reset, recent-start zero, carry dip, jump/drop, score/wave wraps
+      and attachment; unchanged verdict, frame rewrite, client state and UID;
+    * previous accepted sample survives rejection; actual before/after start
+      timing and boundary primitive fields;
+    * wire sample distinguished from a coerced classifier baseline;
+    * actual _journal_observe bridge into actual private journal admission;
+    * actual original/candidate journals preserve every non-evidence field,
+      cohort and number/path of existing writes;
+    * wave2 reset STILL abandoned, without retroactive row repair;
+    * zero-score journal restart distinguished from classifier new_game;
+    * dictionary expansion only at actual journal _begin, not every frame.
+  All journal I/O in future tests uses TemporaryDirectory. Neither sockets,
+  Torch, actual trainer/server constructor, MAME, models nor replay are used.
+  Extracting the actual classifier region/bridge is a limited functional check,
+  not full handle_client/wire/FIFO/measurement-lock or rollout validation.
+
+  Later, only after root releases all fixed windows and explicitly authorizes
+  a bounded CPU test process, a prospective command is:
+    env -u LD_PRELOAD -u PYTHONPATH CUDA_VISIBLE_DEVICES='' \
+      PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest \
+      Robotron.tools.game_boundary_diagnostics_proposal.test_game_boundary_diagnostics -v
+  Run the existing game-journal suite against private original/candidate copies
+  and a private real handle_client/frame integration before adoption, preserving
+  results and exact source hashes. Recheck patch applicability only after the
+  same release. No live rollout is requested by this source-only preparation.

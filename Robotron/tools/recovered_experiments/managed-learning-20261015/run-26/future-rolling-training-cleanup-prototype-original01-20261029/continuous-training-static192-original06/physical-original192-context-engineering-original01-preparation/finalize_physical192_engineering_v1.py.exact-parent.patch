@@ -1,0 +1,158 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/new-static-context-engineering-original01-preparation/joint-finalization-source-original01/finalize_static192_engineering_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/physical-original192-context-engineering-original01-preparation/finalize_physical192_engineering_v1.py
+@@ -12,15 +12,15 @@
+ import stat
+ 
+ HERE = Path(__file__).resolve().parent
+-ENG = HERE.parent
+-MODE_ROOT = ENG.parent
+-HC = MODE_ROOT/'health-consumer-original01'
+-FAMILY_SHA = '72e03ed29d4f446bac8bdf4d7557a85b01536b43eb7a71c174e305521535c1af'
+-MAP_SHA = '4629c151898362a71c3aa1f011c2088154c1cd69b9abc8959efdad79103c7410'
+-PREPARE_SHA = 'c2b265c19f2acb1f184ae9ce88b1e379d5655f3fc66cd7750f62d0bca795020d'
+-PROBE_SHA = 'f143cd90bceffacbd7b787b994b137d20ad2aacb717d87c99f551960361ea08a'
+-CLOSE_SHA = 'ecbca38b9f56fc2a78b2efba92e777167aff1b023ad07d83db455cffca5a80e9'
+-REVIEW_SHA = 'f6dcd7b9ae7556bc1e669b3973a6c5797f845d89c23e2d62a4955b55b519590a'
++ENG = HERE
++MODE_ROOT = HERE.parent
++HC = MODE_ROOT/'health-consumer-physical-original192-original02'
++FAMILY_SHA = '0effd7170f23dfac8ecd811c2df4b74435972b330bf74ba61913c530ce7a35b5'
++MAP_SHA = 'ed8d6356a7ab12ef00824d4cfa25048ada2974d32e61cfc6e57f227c5dc68a80'
++PREPARE_SHA = 'f74a71da4d2194fce199832fbffd6a1679761a22526c34382940f2bd35ea3665'
++PROBE_SHA = '5a3ecc6388710acb938ba599f0f3415dc361da1adf9dc2e77f97f9e1f280e775'
++CLOSE_SHA = '001c7b99b08256c1c84dbb2d25c0636cb848b75ae11a93dc64e9c040b8011c6d'
++REVIEW_SHA = '49517cda74226f60f12297c5a106a758d76a3e0e4682a0a2c9058124c4ad433f'
+ MODES = ('warmup','long','abort')
+ LIMIT = 16 << 20
+ 
+@@ -87,18 +87,18 @@
+             'Exact frozen Root-selected finalizer required')
+     job_pin = pin(job_path);require(job_pin['sha256'] == job_sha,'Root job SHA differs')
+     job = read(job_pin)
+-    require(job['schema'] == 'robotron-root-finalize-static192-engineering-job-v1'
++    require(job['schema'] == 'robotron-root-finalize-physical192-engineering-job-v1'
+             and set(job) == {'schema','prepared_contexts','launch_index','case','closeouts','output'}
+             and set(job['closeouts']) == set(MODES),'Exact three-scope Root selection required')
+     prepared = read(job['prepared_contexts']); index = read(job['launch_index']); case = read(job['case'])
+-    require(prepared['schema'] == 'robotron-static192-three-observer-engineering-preparation-v1'
++    require(prepared['schema'] == 'robotron-physical192-three-observer-engineering-preparation-v1'
+             and prepared['status'] == 'DATA_PREPARED_NOT_LAUNCHED'
+             and prepared['source']['sha256'] == PREPARE_SHA
+             and pin(prepared['source']['path']) == prepared['source']
+             and prepared['case'] == job['case']
+-            and index['schema'] == 'robotron-static192-three-original-engineering-launches-v1'
++            and index['schema'] == 'robotron-physical192-three-original-engineering-launches-v1'
+             and len(index['records']) == 3
+-            and case['schema'] == 'robotron-continuous-static192-health-case-v1',
++            and case['schema'] == 'robotron-continuous-physical-original192-health-case-v2',
+             'Exact actual NEW static case/preparation/index required')
+     family = prepared['source_family']; source_map = prepared['source_map']
+     require(family['sha256'] == FAMILY_SHA and source_map['sha256'] == MAP_SHA,
+@@ -125,8 +125,8 @@
+     require(pin(reviewed_source['path']) == reviewed_source,'Selected frozen reviewer source changed')
+     result = {}; parent_births = set(); worker_births = set()
+     for mode in MODES:
+-        records = [r for r in index['records'] if r['kind'] == 'main-static192' and r['mode'] == mode]
+-        intents = [r for r in prepared['records'] if r['kind'] == 'main-static192' and r['mode'] == mode]
++        records = [r for r in index['records'] if r['kind'] == 'main-physical192' and r['mode'] == mode]
++        intents = [r for r in prepared['records'] if r['kind'] == 'main-physical192' and r['mode'] == mode]
+         require(len(records) == len(intents) == 1, 'One exact original per mode required')
+         record = records[0]; intent = read(record['intent']); expected = intents[0]
+         require(record['intent'] == expected['intent'] and record['unit'] == expected['unit']
+@@ -135,8 +135,8 @@
+                 and intent['no_retry'] is True and intent['engineering_only'] is True,
+                 'Original mode/intent/no-retry case join differs')
+         owner = read(record['original_live_owner']); close_pin = job['closeouts'][mode]; close = read(close_pin)
+-        require(close['schema'] == 'robotron-static192-original-engineering-closeout-v1'
+-                and close['status'] == 'PASS_ENGINEERING_ONLY' and close['kind'] == 'main-static192'
++        require(close['schema'] == 'robotron-physical192-original-engineering-closeout-v1'
++                and close['status'] == 'PASS_ENGINEERING_ONLY' and close['kind'] == 'main-physical192'
+                 and close['mode'] == mode and close['launch_index'] == job['launch_index']
+                 and close['original_live_owner'] == record['original_live_owner']
+                 and close['source']['sha256'] == CLOSE_SHA
+@@ -145,7 +145,7 @@
+                 and type(close['worker_actual_exit']) is int and close['worker_actual_exit'] == (1 if mode == 'abort' else 0)
+                 and close['all_original_births_units_cgroups_and_tmpfs_control_absent'] is True
+                 and close['actual_parent_CPU_cores'] == 2 and close['actual_parent_memory_bytes'] == 4<<30
+-                and close['actual_parent_runtime_s'] == 780
++                and close['actual_parent_runtime_s'] == (1800 if mode == 'long' else 780)
+                 and close['scientific_qualification'] is close['quality_qualified'] is close['promotion'] is False,
+                 'Actual original independent closer/exit/resources/release differs')
+         terminal = read(close['parent_terminal']); stopped = read(close['owned_stop'])
+@@ -158,18 +158,28 @@
+         pair = (owner['pid'],owner['birth'])
+         require(pair not in parent_births,'Reused original parent handle');parent_births.add(pair)
+         report = read(close['actual_probe_result'])
+-        require(report['schema'] == 'robotron-static192-health-actual-native-interface-probe-v1'
++        require(report['schema'] == 'robotron-physical192-health-actual-native-interface-probe-v1'
+                 and report['status'] == 'PASS_ENGINEERING_INTERFACE_ONLY' and report['mode'] == mode
+                 and report['sources'] == mapped and report['retired_API_reviewer_source'] == reviewed_source
+                 and report['observer_lifecycle'] == close['worker_lifecycle']
+                 and report['case_inventory_authority'] == inventory_pin
+                 and report['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1'
+                 and report['maximum_gap_s'] == 2.0
+-                and report['main_health_profile'] == 'STATIC_ORIGINAL192_NO_FAULT_ADOPTION'
++                and report['main_health_profile'] == 'PHYSICAL_ORIGINAL192_TRAIN_CURRENT_TCP_EVAL_ORIGINAL_ONCE'
+                 and report['simultaneous192_actors_claimed'] is False
+                 and report['main_runtime_changed'] is report['private_policy_or_GPU_loaded']
+                     is report['scientific_launch_qualified'] is report['quality_qualified'] is False,
+                 'Actual source-bound probe domain differs')
++        if mode == 'long':
++            require(report['long_work_contract'] == close['long_work_contract']
++                        == 'MINIMUM600S_AND_VALIDATED3000_SAMPLES_HARD1200S'
++                    and report['long_minimum_work_s'] == 600 and report['long_maximum_work_s'] == 1200
++                    and report['long_minimum_observed_samples'] == 3000
++                    and type(report['actual_long_work_s']) in (int,float)
++                    and 600 <= report['actual_long_work_s'] == close['actual_long_work_s'] <= 1200
++                    and type(report['last_validated_long_count']) is int
++                    and report['last_validated_long_count'] == close['last_validated_long_count'] >= 3000,
++                    'FRESH long lacks both sustained600s and validated3000 samples within1200s')
+         native = read(report['original_job']); lifecycle = read(close['worker_lifecycle'])
+         worker = read(lifecycle['worker_job']); outcome = read(lifecycle['outcome'])
+         worker_owner = read(outcome['owner']); worker_terminal = read(lifecycle['terminal_properties'])
+@@ -180,7 +190,7 @@
+                 and worker['case'] == job['case'] and worker['sources'] == mapped
+                 and worker['parent']['pid'] == owner['pid'] and worker['parent']['birth'] == owner['birth']
+                 and worker['parent']['invocation_id'] == owner['invocation_id']
+-                and worker['schema'] == 'robotron-continuous-static192-observer-proof2s-job-v1'
++                and worker['schema'] == 'robotron-continuous-physical-original192-observer-proof2s-job-v2'
+                 and worker['maximum_gap_s'] == 2.0 and worker['interval_s'] == .2
+                 and worker['initial_samples'] == 100 and worker['work_s'] == 4200 and worker['runtime_s'] == 4260
+                 and worker['attempt'] == 1 and worker['no_retry'] is True,
+@@ -206,9 +216,11 @@
+                     and reviewed['full_main_input_count'] == len(case['inputs'])
+                     and reviewed['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1'
+                     and reviewed['verified_maximum_gap_s'] == 2.0
+-                    and reviewed['main_health_profile'] == 'STATIC_ORIGINAL192_NO_FAULT_ADOPTION'
+-                    and all(reviewed[k] is True for k in ('source_bound_completed_original192_bootstrap_verified',
+-                        'TRAIN155_originals_and_EVAL37_once_partition_verified',
++                    and reviewed['main_health_profile'] == 'PHYSICAL_ORIGINAL192_TRAIN_CURRENT_TCP_EVAL_ORIGINAL_ONCE'
++                    and all(reviewed[k] is True for k in ('source_bound_original192_physical_bootstrap_verified',
++                        'TRAIN155_original_physical_and_current_TCP_verified',
++                        'EVAL37_original_connection_and_strict_retirement_evidence_verified',
++                        'EVAL_closed_slots_have_positive_normal0_reap_and_cleanup_verified',
+                         'accepted_evidence_and_projection_gaps_verified','fresh_final_sample_verified',
+                         'queued_publication_byte_joins_verified','actual_resources_and_exit_and_owned_release_verified'))
+                     and outcome['success'] is True and outcome['error'] is None and lifecycle['success'] is True
+@@ -226,16 +238,19 @@
+     output = Path(job['output'])
+     require(output.is_absolute() and output.parent.resolve(strict=True) == Path(job_path).parent.resolve(strict=True)
+             and not output.exists(),'One exclusive Root-selected joint output beside job required')
+-    return put(output,dict(schema='robotron-continuous-static192-joint-engineering-readiness-v1',
++    return put(output,dict(schema='robotron-continuous-physical192-joint-engineering-readiness-v1',
+         status='ENGINEERING_PASS_AT_RECORDED_OBSERVED_LOAD_ONLY',source=own,job=job_pin,
+         source_family=family,observer_sources=mapped,observer_reviewer=reviewed_source,
+         case=job['case'],input_inventory_authority=inventory_pin,historical_main_input_count=247,
+         actual_held_input_count=len(case['inputs']),engineering=result,
+         lifecycle=result['long']['lifecycle'],independent_raw_review=result['long']['independent_raw_review'],
+         proof_gap_contract='robotron-main-proof-gap-2s-v1',maximum_gap_s=2.0,interval_s=.2,
+-        main_health_profile='STATIC_ORIGINAL192_NO_FAULT_ADOPTION',
++        main_health_profile='PHYSICAL_ORIGINAL192_TRAIN_CURRENT_TCP_EVAL_ORIGINAL_ONCE',
+         admission_basis='EVER_BOUND_ORIGINAL192_NOT_SIMULTANEOUS',simultaneous192_actors_claimed=False,
+         all_original_engineering_scopes_closed_at_recorded_closer=True,
++        all_three_modes_are_fresh_originals_for_this_physical_case=True,
++        old_static_or_countbounded_failures_reused_or_requalified=False,
++        long_work_contract='MINIMUM600S_AND_VALIDATED3000_SAMPLES_HARD1200S',
+         raw_predicates_replayed_by_this_finalizer=False,fresh_runtime_or_resource_probe_performed=False,
+         old_invalid_studies_or_old_whole_round_engineering_requalified=False,
+         private_frozen_policy_CPU_or_study_guard_qualified=False,

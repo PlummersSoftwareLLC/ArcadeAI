@@ -1,0 +1,105 @@
+ACTUAL WHOLE CLIENT-HANDLER / V2 WIRE INTEGRATION — SOURCE PREPARATION
+
+Status: SOURCE ONLY. This new test has not been imported, compiled, default-
+invoked or executed. No diagnostic patch was applied. Production sources,
+sealed activation revision3ded25b2 and prior failed/passed evidence stay intact.
+No live service/process/API/GPU/model/checkpoint/replay data was accessed.
+The author generated only bounded source text and source hashes.
+
+Existing evidence is separate:
+  Root reports activation revision's15 private tests PASS and actual owned
+  exit0, plus original/candidate private journal suites13+13=26PASS. The older
+  original ten-test9PASS/formattingFAIL receipt remains preserved. These results
+  do not imply that this NEW whole-handler integration has run or passed.
+
+What the new single unittest method will execute after explicit root GO:
+  A fresh stdlib-only parent validates the exact sealed revision and this new
+  source lock, creates one TemporaryDirectory and copies only pinned .py text
+  (at most64files/4MiB, each512KiB max) into private/Scripts/dqn. It overlays only
+  the two sealed socket/journal candidates. No production data/directory tree,
+  ROM, model, .pt, .npy, replay ring/bank or native library is copied.
+
+  It writes private model settings/control/run/cache/tmpfs directories before
+  starting a single owned fresh -I -B child. CUDA_VISIBLE_DEVICES is empty before
+  import; numerical/thread pools limited2. All DQN_/ROBOTRON_ ambient options are
+  removed except explicit private test options, and preload/PYTHONPATH unset.
+  Private MODEL_DIR/SETTINGS/control paths are asserted immediately after config
+  import. The unique EXISTING cfg.replay_tmpfs_dir is set before socket/server
+  construction; no replay object is constructed or module imported. No main,
+  RainbowAgent, learner, checkpoint or replay data is loaded.
+
+  Child imports the actual private config/model helper definitions/socket module
+  (Torch CPU library import is intrinsic to actual model action helpers; no
+  network instance, tensor forward/backward or optimizer is created). It asserts
+  zero visible CUDA devices and no initialized context before/after. Optional
+  expert import may report missing private v3, as in other isolated fixtures;
+  expert ratio is0 and no expert action is used. All application module paths
+  and source hashes must remain inside the private copied package. Torch/NumPy
+  library modules themselves are normal installed dependencies.
+
+  Six actual SocketServer instances run: diagnostic OFF and ON for each of:
+    1. valid inactive wave1 reset then alive wave1, final700/lives0 =>eligible;
+    2. direct C2-like9900/wave2/alive to0/wave2/alive with recent_start, then
+       synthetic10000 over17 subsequent frames =>same abandoned wave2 result;
+    3. inactive wave0 reset then first alive wave2 =>same abandonment, with
+       rejecting first-play inputs in existing normal disconnect record.
+  Each server has replay_enabled=False, real GameJournal, real fresh MetricsData,
+  actual n-step/history/state slicing and full unmodified handler body. A dummy
+  actor returns idle greedy actions and exposes memory only as a property that
+  raises. It checks the actual stacked state shape/finiteness and records its
+  calls; it performs no network inference. Inference batching is explicitly
+  disabled and cleanup Timer is suppressed so this fixture creates no service
+  threads. No SocketServer.start/accept loop, MAME or real socket/listener.
+
+  MemoryWire supplies actual v2 handshake+length prefixes+1890 big-endian floats
+  and actual header fields via fragmented recv calls. Only descriptor readiness
+  and socket syscalls are synthetic; actual _recv_exact, parse_frame_data,
+  slice/stack, classifier, _sync_measurement_boundary, UID allocation, journal
+  bridge/eligibility and action packing execute without stubs or AST extraction.
+  It returns EOF only after consuming every frame and then explicitly marks
+  intentional shutdown. Any earlier handler exception fails via its real error
+  latch, action count, clock/accounting and raw-stream checks.
+
+  OFF/ON compares every primitive input, wire hash, action, actor state hash,
+  final UID/score/wave/reward counters, learner/measurement clocks and all
+  admission/game/life/cohort row fields. Only real journal timestamps/durations,
+  run-instance IDs, diagnostic fields and their byte hashes/sizes are normalized.
+  Raw unnormalized row dictionaries+hashes are retained in captured report JSON.
+  Wave1 must qualify exactly as before; both bad cases must remain abandoned
+  with measurement_start_not_wave_1, never become accepted/zero-score repairs.
+
+  Then the actual copied existing test_measurement_actor seven-method suite
+  checks measurement controls, entry/exit boundary acknowledgment, n-step/history
+  clearing, actual AsyncReplayBuffer FIFO ordering/ack and legacy fixture loop.
+  Only TWO TEST-OWNED __new__ fixture assignments add explicit diagnosticsFalse
+  before import; no assertion or production getattr behavior is weakened.
+  Those old tests include their documented parser/action mocks. They complement
+  the NEW actual-wire cases and are not described as full wire coverage.
+  AsyncReplayBuffer in that regression uses synthetic string steps, no actual
+  replay store. Its worker must stop; no Python thread may remain at child exit.
+
+  Full copied-module hashes checked before/after; learner/replay/dashboard/agent
+  modules forbidden, real socket construction and child subprocesses forbidden
+  after imports. No model data or GPU context. Parent reaps only its own Popen
+  child;120s timeout kills/reaps that exact child. Root's external CPU unit must
+  supply working memory/CPU/disk/pids bounds. This test is not a replacement
+  cgroup/process supervisor and never signals unrelated processes.
+
+Prospective explicit command, NOT RUN:
+  env -u LD_PRELOAD -u PYTHONPATH CUDA_VISIBLE_DEVICES='' \
+    PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+    OPENBLAS_NUM_THREADS=2 ROBOTRON_ALLOW_BOUNDARY_WIRE_TEST=1 \
+    /home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python -Xgil=0 -B \
+    -m unittest Robotron.tools.game_boundary_diagnostics_proposal.wire_integration_validation.test_wire_integration -v
+  Run only after root reviews this source, releases fixed windows and provides
+  a fresh owned bounded CPU unit/temporary directory. Preserve full stdout,
+  stderr, actual process exit and pre/post source bindings. Successful parent
+  output contains the complete child report and all six private stream records.
+
+Limits remain even if a future run passes:
+  Synthetic transport/zero state/dummy inference do not certify TCP scheduling,
+  real Lua RAM chronology, emulation, real neural inference,16actor sidecar/
+  ManagedMeasurement controller admission/stop timing or a complete campaign.
+  Test17-frame scores are synthetic fixture inputs, not a reproduction proving
+  old C2 cause. No game-boundary classifier, scoring, reward, UID or eligibility
+  change and no production adoption/quality retry is authorized here.

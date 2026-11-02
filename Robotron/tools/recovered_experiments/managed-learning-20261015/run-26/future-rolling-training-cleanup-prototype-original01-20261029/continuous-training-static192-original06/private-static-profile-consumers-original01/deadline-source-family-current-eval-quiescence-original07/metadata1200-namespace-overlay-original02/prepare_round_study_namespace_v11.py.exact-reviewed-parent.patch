@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/prepare_round_study_v10.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/prepare_round_study_namespace_v11.py
+@@ -321,7 +321,7 @@
+         directory.mkdir(mode=0o700)
+         role = 'reference' if leg.startswith('R') else 'candidate'
+         selected = reference if role == 'reference' else candidate
+-        namespace = 'deadline32-current-eval-quiescence-proof2s-'+study['sha256'][:16]+'-'+leg.lower()+'-original01-20261029'
++        namespace = 'deadline32-physical192-proof2s-'+study['sha256'][:16]+'-'+leg.lower()+'-original01-20261029'
+         native_unit = 'robotron-'+namespace+'.service'
+         job = copy.deepcopy(old_ref if role == 'reference' else old_candidate)
+         job.update(unit=native_unit, lease=restored['restored_lease'], runtime=runtime, output=str(directory/'deadline-output-original01'), leg=leg,

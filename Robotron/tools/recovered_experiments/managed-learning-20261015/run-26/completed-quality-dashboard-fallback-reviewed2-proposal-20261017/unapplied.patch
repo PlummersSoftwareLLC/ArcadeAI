@@ -1,0 +1,12 @@
+--- a/Robotron/Scripts/dqn/experiment_status.py
++++ b/Robotron/Scripts/dqn/experiment_status.py
+@@ -116,7 +116,8 @@
+ 
+     def _load(self):
+         state = self._read(self.state_path, _STATUS_LIMIT)
+-        active = _mapping(state.get("active_quality_job"))
++        active = (_mapping(state.get("active_quality_job")) or
++                  _mapping(_mapping(state.get("optimization_goal")).get("last_completed_quality_campaign")))
+         if not active:
+             return {"available": False, "state": "unavailable", "legs": [],
+                     "current_leg": None, "total_legs": 0, "updated_unix_s": None,

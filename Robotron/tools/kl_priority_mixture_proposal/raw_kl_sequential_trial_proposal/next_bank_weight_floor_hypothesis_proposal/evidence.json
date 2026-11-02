@@ -1,0 +1,322 @@
+{
+  "schema": "robotron-bank-weight-next-hypothesis-saved-evidence-v1",
+  "status": "SOURCE_AND_SAVED_JSON_ONLY",
+  "actual_current_quality_result": null,
+  "actual_new_experiment": null,
+  "analysis_source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-four-readout-analysis-reviewed1-20261017/analysis.json",
+    "sha256": "819c316d2aaa969f68a254f596d661749ad1586e1aee1f2d01f5b2d5c176b29e"
+  },
+  "historical_capture_scope": "The eight original CE captures preceded KLtrial02; neither currentCEowner620749 nor the actualKLphase row-weight population was captured by this analysis.",
+  "original_CE_comparison_violations": 11433,
+  "original_CE_tolerance": {
+    "rtol": 0.0002,
+    "atol": 2e-05
+  },
+  "executed_KL_or_targets_observed": false,
+  "parameter_gradients_observed": false,
+  "readouts": {
+    "emitted": {
+      "scope": "Historical emitted actualCEcapture",
+      "rows": [
+        {
+          "index": 1,
+          "bank_weight": 0.27389228343963623,
+          "bank_Bellman_scalar_share": 0.09976194950025961,
+          "PER_coefficient_effective_count": 812.5872693175837,
+          "floor05_bank_scalar_share": 0.16826144140523863,
+          "floor05_Bellman_scalar_ratio": 1.0823569993204478
+        },
+        {
+          "index": 2,
+          "bank_weight": 0.3975984454154968,
+          "bank_Bellman_scalar_share": 0.13442777251834873,
+          "PER_coefficient_effective_count": 821.4418145982283,
+          "floor05_bank_scalar_share": 0.1633927050817865,
+          "floor05_Bellman_scalar_ratio": 1.034621898158645
+        },
+        {
+          "index": 3,
+          "bank_weight": 0.4713650941848755,
+          "bank_Bellman_scalar_share": 0.15133771746758776,
+          "PER_coefficient_effective_count": 827.6000983067313,
+          "floor05_bank_scalar_share": 0.1590689001218146,
+          "floor05_Bellman_scalar_ratio": 1.0091935982095879
+        },
+        {
+          "index": 4,
+          "bank_weight": 0.3099062442779541,
+          "bank_Bellman_scalar_share": 0.1090815760739015,
+          "PER_coefficient_effective_count": 827.217424896495,
+          "floor05_bank_scalar_share": 0.16495421894742557,
+          "floor05_Bellman_scalar_ratio": 1.0669096762612185
+        },
+        {
+          "index": 5,
+          "bank_weight": 0.4055747091770172,
+          "bank_Bellman_scalar_share": 0.1361698234447584,
+          "PER_coefficient_effective_count": 812.945369481222,
+          "floor05_bank_scalar_share": 0.16271417252790601,
+          "floor05_Bellman_scalar_ratio": 1.0317028524933827
+        },
+        {
+          "index": 6,
+          "bank_weight": 0.2260379195213318,
+          "bank_Bellman_scalar_share": 0.08633622753945595,
+          "PER_coefficient_effective_count": 815.1924362083614,
+          "floor05_bank_scalar_share": 0.17288630019147716,
+          "floor05_Bellman_scalar_ratio": 1.1046410822019483
+        },
+        {
+          "index": 7,
+          "bank_weight": 0.45405682921409607,
+          "bank_Bellman_scalar_share": 0.1477969735289266,
+          "PER_coefficient_effective_count": 819.6788384554482,
+          "floor05_bank_scalar_share": 0.16035359284678274,
+          "floor05_Bellman_scalar_ratio": 1.0149546513995442
+        },
+        {
+          "index": 8,
+          "bank_weight": 0.45890969038009644,
+          "bank_Bellman_scalar_share": 0.1475463847139796,
+          "PER_coefficient_effective_count": 825.7832075193164,
+          "floor05_bank_scalar_share": 0.15866143809386077,
+          "floor05_Bellman_scalar_ratio": 1.013211154086054
+        }
+      ],
+      "ranges": {
+        "bank_weight": [
+          0.2260379195213318,
+          0.4713650941848755
+        ],
+        "bank_Bellman_scalar_share": [
+          0.08633622753945595,
+          0.15133771746758776
+        ],
+        "PER_coefficient_effective_count": [
+          812.5872693175837,
+          827.6000983067313
+        ],
+        "floor05_bank_scalar_share": [
+          0.15866143809386077,
+          0.17288630019147716
+        ],
+        "floor05_Bellman_scalar_ratio": [
+          1.0091935982095879,
+          1.1046410822019483
+        ]
+      }
+    },
+    "fresh_actual_ce": {
+      "scope": "Same historicalCE-selected rows with synthetic metric/weight sensitivity; not observedcurrentphase",
+      "rows": [
+        {
+          "index": 1,
+          "bank_weight": 0.35226330161094666,
+          "bank_Bellman_scalar_share": 0.12173756925436746,
+          "PER_coefficient_effective_count": 871.4383908516099,
+          "floor05_bank_scalar_share": 0.16439985503048934,
+          "floor05_Bellman_scalar_ratio": 1.0510558621045698
+        },
+        {
+          "index": 2,
+          "bank_weight": 0.44130387902259827,
+          "bank_Bellman_scalar_share": 0.14512660771454902,
+          "PER_coefficient_effective_count": 881.0111329672436,
+          "floor05_bank_scalar_share": 0.161315506710947,
+          "floor05_Bellman_scalar_ratio": 1.0193027284109073
+        },
+        {
+          "index": 3,
+          "bank_weight": 0.43966084718704224,
+          "bank_Bellman_scalar_share": 0.14397169392752862,
+          "PER_coefficient_effective_count": 880.0471921179528,
+          "floor05_bank_scalar_share": 0.1605579831292718,
+          "floor05_Bellman_scalar_ratio": 1.0197587074132572
+        },
+        {
+          "index": 4,
+          "bank_weight": 0.3252604305744171,
+          "bank_Bellman_scalar_share": 0.11330341588488411,
+          "PER_coefficient_effective_count": 877.0659813484348,
+          "floor05_bank_scalar_share": 0.1641797621482349,
+          "floor05_Bellman_scalar_ratio": 1.0608699621752564
+        },
+        {
+          "index": 5,
+          "bank_weight": 0.42585301399230957,
+          "bank_Bellman_scalar_share": 0.141227202482815,
+          "PER_coefficient_effective_count": 873.9870604336339,
+          "floor05_bank_scalar_share": 0.1618373192903665,
+          "floor05_Bellman_scalar_ratio": 1.0245896378852155
+        },
+        {
+          "index": 6,
+          "bank_weight": 0.2563630938529968,
+          "bank_Bellman_scalar_share": 0.09579725292208657,
+          "PER_coefficient_effective_count": 871.5741310001924,
+          "floor05_bank_scalar_share": 0.1712482663083953,
+          "floor05_Bellman_scalar_ratio": 1.0910417563173214
+        },
+        {
+          "index": 7,
+          "bank_weight": 0.2465764582157135,
+          "bank_Bellman_scalar_share": 0.09212126218663393,
+          "PER_coefficient_effective_count": 874.4363773443343,
+          "floor05_bank_scalar_share": 0.17064412936210852,
+          "floor05_Bellman_scalar_ratio": 1.0946793408661586
+        },
+        {
+          "index": 8,
+          "bank_weight": 0.44222092628479004,
+          "bank_Bellman_scalar_share": 0.1436869585768862,
+          "PER_coefficient_effective_count": 880.862162599167,
+          "floor05_bank_scalar_share": 0.1594668312097525,
+          "floor05_Bellman_scalar_ratio": 1.0187736465600492
+        }
+      ],
+      "ranges": {
+        "bank_weight": [
+          0.2465764582157135,
+          0.44222092628479004
+        ],
+        "bank_Bellman_scalar_share": [
+          0.09212126218663393,
+          0.14512660771454902
+        ],
+        "PER_coefficient_effective_count": [
+          871.4383908516099,
+          881.0111329672436
+        ],
+        "floor05_bank_scalar_share": [
+          0.1594668312097525,
+          0.1712482663083953
+        ],
+        "floor05_Bellman_scalar_ratio": [
+          1.0187736465600492,
+          1.0946793408661586
+        ]
+      }
+    },
+    "fresh_recomputed_kl": {
+      "scope": "Same historicalCE-selected rows with synthetic metric/weight sensitivity; not observedcurrentphase",
+      "rows": [
+        {
+          "index": 1,
+          "bank_weight": 0.08028733730316162,
+          "bank_Bellman_scalar_share": 0.033791665482598356,
+          "PER_coefficient_effective_count": 299.6710058596162,
+          "floor05_bank_scalar_share": 0.17884841740035984,
+          "floor05_Bellman_scalar_ratio": 1.1766503956048333
+        },
+        {
+          "index": 2,
+          "bank_weight": 0.05048263445496559,
+          "bank_Bellman_scalar_share": 0.02199500369815262,
+          "PER_coefficient_effective_count": 263.0675147353323,
+          "floor05_bank_scalar_share": 0.18216901844718442,
+          "floor05_Bellman_scalar_ratio": 1.195852221745023
+        },
+        {
+          "index": 3,
+          "bank_weight": 0.05281354486942291,
+          "bank_Bellman_scalar_share": 0.022798039394390443,
+          "PER_coefficient_effective_count": 288.7990918559563,
+          "floor05_bank_scalar_share": 0.18091235638640465,
+          "floor05_Bellman_scalar_ratio": 1.193037116631935
+        },
+        {
+          "index": 4,
+          "bank_weight": 0.06811434030532837,
+          "bank_Bellman_scalar_share": 0.02863165733881767,
+          "PER_coefficient_effective_count": 327.18849284358896,
+          "floor05_bank_scalar_share": 0.17788070195592082,
+          "floor05_Bellman_scalar_ratio": 1.18154183337161
+        },
+        {
+          "index": 5,
+          "bank_weight": 0.08813216537237167,
+          "bank_Bellman_scalar_share": 0.03709565157267703,
+          "PER_coefficient_effective_count": 300.46228956310495,
+          "floor05_bank_scalar_share": 0.17936084928439033,
+          "floor05_Bellman_scalar_ratio": 1.1733590185011962
+        },
+        {
+          "index": 6,
+          "bank_weight": 0.09657269716262817,
+          "bank_Bellman_scalar_share": 0.04070134943155774,
+          "PER_coefficient_effective_count": 339.35284356945516,
+          "floor05_bank_scalar_share": 0.18010604942519512,
+          "floor05_Bellman_scalar_ratio": 1.1700277211411363
+        },
+        {
+          "index": 7,
+          "bank_weight": 0.08197956532239914,
+          "bank_Bellman_scalar_share": 0.03469367699582496,
+          "PER_coefficient_effective_count": 314.69683451121085,
+          "floor05_bank_scalar_share": 0.1797930900979058,
+          "floor05_Bellman_scalar_ratio": 1.1769058652766058
+        },
+        {
+          "index": 8,
+          "bank_weight": 0.05879824236035347,
+          "bank_Bellman_scalar_share": 0.025054662559683315,
+          "PER_coefficient_effective_count": 285.6354909212814,
+          "floor05_bank_scalar_share": 0.17934001764847382,
+          "floor05_Bellman_scalar_ratio": 1.188001557778777
+        }
+      ],
+      "ranges": {
+        "bank_weight": [
+          0.05048263445496559,
+          0.09657269716262817
+        ],
+        "bank_Bellman_scalar_share": [
+          0.02199500369815262,
+          0.04070134943155774
+        ],
+        "PER_coefficient_effective_count": [
+          263.0675147353323,
+          339.35284356945516
+        ],
+        "floor05_bank_scalar_share": [
+          0.17788070195592082,
+          0.18216901844718442
+        ],
+        "floor05_Bellman_scalar_ratio": [
+          1.1700277211411363,
+          1.195852221745023
+        ]
+      }
+    }
+  },
+  "conditional_rank_ranges": {
+    "spearman": [
+      0.2140747393354687,
+      0.27577458273746625
+    ],
+    "top_decile_overlap": [
+      0.17582417582417584,
+      0.2857142857142857
+    ]
+  },
+  "counterfactual_formula": "For each saved batch: old bank scalar=sum(HOF,EpHOF using_actual_CE); newbank=oldbank*max(oldweight,0.5)/oldweight; newBellman=oldBellman-oldbank+newbank. Coefficient/objective scalar arithmetic only; no forward, target, gradient or optimizer inference.",
+  "actual_trial02_latch": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-controller-20261017/observation-1456.json",
+    "sha256": "e60cbcbdc1736cd5ddb662fa019750b977e4b196d9b99c56b0d4a49147a1198a",
+    "boot_learner": 503951038,
+    "latch_learner": 511954292,
+    "logical_samples_per_fleetframe": 8.000161810334017,
+    "measurement_frames_unchanged": true,
+    "optimizer_outcome_delta": {
+      "attempts_started": 30900,
+      "outcomes_recorded": 30900,
+      "applied": 30886,
+      "amp_skipped": 14,
+      "unavailable": 0
+    },
+    "scope": "Saved API receipt, not simultaneousallthreadtiming or perparameter movement. Ratio8.00016 is consistent with cap8 plus onebatch/cachedsnapshot boundary; no raw-speed benefit established."
+  },
+  "future_current_phase_calibration": null,
+  "qualification_pass": false
+}

@@ -1,0 +1,56 @@
+{
+  "actual_private_CUDA_result": null,
+  "actual_test_result": null,
+  "files": {
+    "DESIGN.txt": {
+      "bytes": 7608,
+      "sha256": "9a275cbd753795af5458c910c561440879b8b07b33249eae641c614532d58944"
+    },
+    "PREPARATION.txt": {
+      "bytes": 3391,
+      "sha256": "6ddcc3eb68d06746e7ff3c6a435b819cebe37df7707cd5c201365566c72b598c"
+    },
+    "agent.py": {
+      "bytes": 95163,
+      "sha256": "b885020db1c07e2a736d46f20c295dc71a461242f717bd324e1a3111379b5157"
+    },
+    "prefetch.py": {
+      "bytes": 15674,
+      "sha256": "02871bc515ba23f8d353131e9b6b6b4e390692803578febee7c8d643dd308a27"
+    },
+    "recomputed_ce_capture.py": {
+      "bytes": 22084,
+      "sha256": "612eb25ea6add16e52a6518e244c2c7e1c22a2631755a4901ddc86a1bbfd0cf6"
+    },
+    "replay_buffer.py": {
+      "bytes": 113613,
+      "sha256": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f"
+    },
+    "source-lock.json": {
+      "bytes": 3198,
+      "sha256": "8ba2dabfbfad60671ef695490b330b8b7ee024093a4ba6cf7209212b85601389"
+    },
+    "test_recomputed_capture.py": {
+      "bytes": 13905,
+      "sha256": "c3ec9973a57106f3f5463f5b79a80eea7da5f50824b3cf681478555dd9a50051"
+    },
+    "training.py": {
+      "bytes": 30974,
+      "sha256": "50ffaaa405d2e192bcb63005df20588e18f733eb3dd98d3dfe6c185a1e6a5fc9"
+    },
+    "unapplied.patch": {
+      "bytes": 41465,
+      "sha256": "f196f57b2c817396d73ac271c5373182f94eae05541f242be45d90d03ae5d81f"
+    }
+  },
+  "imports_tests_compile_runtime_actions": false,
+  "loss_kernel_sha256": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a",
+  "loss_overlay": false,
+  "private_rehearsal_harness_present": false,
+  "production_applied": false,
+  "revision": 1,
+  "schema": "robotron-recomputed-ce-capture-review-manifest-v1",
+  "scope": "Input/PRE-state/actualCE observer; offline target/KL conditional RECOMPUTED, no live target identity/learning/parity claim",
+  "status": "SOURCE_ONLY_UNEXECUTED_PENDING_PEER",
+  "tests_authored_methods": 12
+}

@@ -1,0 +1,55 @@
+{
+  "schema": "robotron-trial02-quality-owned-closure-source-preparation-v1",
+  "status": "SOURCE_ONLY_READY_FOR_ROOT_REVIEW_AND_BOUNDED_GUARDS",
+  "files": {
+    "close_quality_trial02.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/quality_trial02_terminal_closure_proposal/close_quality_trial02.py",
+      "sha256": "6f2f6fb96b84448da085512c4bfd9cef10a08b33bce7278c34af61640d89c6dd",
+      "bytes": 19010,
+      "mode": "0o444"
+    },
+    "test_quality_closure.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/quality_trial02_terminal_closure_proposal/test_quality_closure.py",
+      "sha256": "37fa0db52bad4d57c910f1d3bfbef27d44ddfb845539c3292e4c19b88b77755b",
+      "bytes": 15126,
+      "mode": "0o444"
+    },
+    "job.schema.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/quality_trial02_terminal_closure_proposal/job.schema.json",
+      "sha256": "0228e0a0a5675ad70cb043e7bcef2cfd98fa902d38861eb5b99144b8a54a6642",
+      "bytes": 3769,
+      "mode": "0o444"
+    },
+    "PREPARATION.txt": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/quality_trial02_terminal_closure_proposal/PREPARATION.txt",
+      "sha256": "286b2f030a38d8c41b4a68daa29fe611a975f8c28fe913d2fd121826edaa39c4",
+      "bytes": 7185,
+      "mode": "0o444"
+    },
+    "future-argv.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/quality_trial02_terminal_closure_proposal/future-argv.json",
+      "sha256": "2d42aeea3bb73ee492e89e860cfca71c33b45f067b93c4c6fc2b8b660e009912",
+      "bytes": 1491,
+      "mode": "0o444"
+    }
+  },
+  "unchanged_resource_utility": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rawKL-trial02-terminal-release-root-preparation-20261017/archive_and_release_trial02.py",
+    "sha256": "d525f6a0910354023dec54bc6f54b45651912942cdc5a5eb51dc2de814361f65"
+  },
+  "actual_plan_sha256": "b502625ed8e39f01fa57af1c9f9cc8283794aa14e351e2b9bc9ec1268b267ecf",
+  "binding_job_sha256": "3b16c36da91c63fd4fb218f1fed3c1c5a5fe8caff73534d880aeaeccfe4c81fe",
+  "authored_guard_methods": 16,
+  "guard_class": "QualityClosureGuards",
+  "author_imported_or_executed": false,
+  "author_tests_or_runtime_queries": false,
+  "actual_guard_result": null,
+  "actual_final_closure_job": null,
+  "actual_closure_result": null,
+  "source_peer": "Runtime peer read current helper6f2f6fb9/test37fa0db5 and all16 guards SOURCE_ONLY_PASS before seal; separate exact manifest receipt requested.",
+  "external_root_assumptions": [
+    "Root validates original row reviews, four leg integrity and exact final score gates before supplying bound acceptance.",
+    "No executable job exists until all late-bound receipts/identities/reviews are actual.",
+    "Cleanup supports valid not_improved and does not promote, publish, restart or release source freeze."
+  ]
+}

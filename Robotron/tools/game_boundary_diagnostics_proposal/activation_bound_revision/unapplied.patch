@@ -1,0 +1,315 @@
+--- a/Robotron/Scripts/dqn/socket_server.py
++++ b/Robotron/Scripts/dqn/socket_server.py
+@@ -1083,6 +1083,12 @@
+         # without creating a replay consumer or accessing any bank/ring state.
+         # This latch also survives a controller clearing measurement_active.
+         self.replay_enabled = bool(replay_enabled)
++        # Explicit private-evaluator diagnostics only. The live replay-enabled
++        # trainer retains its existing frame path even if this env is inherited.
++        self.game_boundary_diagnostics = (
++            not self.replay_enabled
++            and os.getenv("ROBOTRON_GAME_BOUNDARY_DIAGNOSTICS", "") == "1"
++        )
+         self.inference_only_error = None
+         self._inference_error_lock = threading.Lock()
+         self.async_buffer = AsyncReplayBuffer(agent) if agent and self.replay_enabled else None
+@@ -1274,7 +1280,7 @@
+             measurement_frames=int(getattr(metrics, "measurement_frame_count", 0)),
+         )
+ 
+-    def _journal_observe(self, cid, frame, cs, new_game):
++    def _journal_observe(self, cid, frame, cs, new_game, boundary_inputs=None):
+         if self.game_journal is None:
+             return
+         try:
+@@ -1282,7 +1288,8 @@
+             cs["journal_measurement_active"] = bool(getattr(metrics, "measurement_active", False))
+             cs["journal_measurement_generation"] = int(getattr(metrics, "measurement_generation", 0))
+             self.game_journal.observe(cid, frame, cs, new_game=new_game,
+-                                      context=lambda: self._journal_context(cs))
++                                      context=lambda: self._journal_context(cs),
++                                      boundary_inputs=boundary_inputs)
+         except Exception as exc:
+             if not getattr(self, "replay_enabled", True):
+                 self._fail_inference_only(f"Game journal failed: {exc}")
+@@ -1804,11 +1811,24 @@
+                 _wrap_note = None
+                 _prev_for_log = None
+                 _is_new_game = False
++                _boundary_inputs = None
+                 with self.client_lock:
+                     _cs0 = self.client_states.get(cid)
+                     if _cs0 is not None:
+                         _raw_sc = int(frame.game_score)
+                         _raw_wv = int(frame.level_number)
++                        if self.game_boundary_diagnostics:
++                            # Connection-local previous ACCEPTED wire sample;
++                            # preserve current wire fields before score coercion
++                            # or unwrapping. No payload/RAM/state array retained.
++                            _diag_current = (
++                                _raw_sc, _raw_wv, bool(frame.player_alive),
++                                bool(frame.done), bool(frame.start_pressed),
++                                int(getattr(frame, "lives", -1)),
++                                int(_cs0.get("frames", 0)),
++                            )
++                            _diag_previous = _cs0.get("_boundary_previous_accepted")
++                            _diag_last_start_before = int(_cs0.get("last_start_frame", -10**9))
+                         if frame.start_pressed:
+                             _cs0["last_start_frame"] = int(_cs0.get("frames", 0))
+                         _recent_start = (int(_cs0.get("frames", 0))
+@@ -1935,6 +1955,18 @@
+                                 _wrap_note = (_wrap_note or f"[UNWRAP] cid={cid}") + (
+                                     f"  [missed-wrap heal: true wave "
+                                     f"{_cs0['wave_offset'] + _raw_wv}]")
++                            if self.game_boundary_diagnostics:
++                                # Primitive tuples only while enabled; the
++                                # journal expands a dict ONLY when _begin runs.
++                                # Rejected frames cannot advance this tracker.
++                                _boundary_inputs = (
++                                    _diag_previous, _diag_current, _prev_sc, _prev_wv,
++                                    bool(_cs0.get("player_alive", False)),
++                                    _diag_last_start_before,
++                                    int(_cs0.get("last_start_frame", -10**9)),
++                                    bool(_recent_start), bool(_is_new_game), _verdict,
++                                )
++                                _cs0["_boundary_previous_accepted"] = _diag_current
+                             _cs0["raw_score_prev"] = _raw_sc
+                             _cs0["raw_wave_prev"] = _raw_wv
+                             frame.game_score = int(_cs0.get("score_offset", 0)) + _raw_sc
+@@ -2017,7 +2049,8 @@
+                 # Measurement is separate from per-life RL terminal handling.
+                 # The accepted ingest classifier catches small-score resets,
+                 # unlike the legacy ratchet's >=5,000-point cohort gate.
+-                self._journal_observe(cid, frame, cs, _is_new_game)
++                self._journal_observe(cid, frame, cs, _is_new_game,
++                                      boundary_inputs=_boundary_inputs)
+ 
+                 # Peak score and rolling score/level telemetry are shared
+                 # metrics state; guard with metrics.lock for dashboard reads.
+--- a/Robotron/Scripts/dqn/game_journal.py
++++ b/Robotron/Scripts/dqn/game_journal.py
+@@ -18,6 +18,29 @@
+ 
+ def _utc(timestamp):
+     return datetime.fromtimestamp(timestamp, timezone.utc).isoformat()
++
++
++def _boundary_start_evidence(inputs, reason):
++    """Expand private ingest primitives once per journal game, never per frame."""
++    (previous, current, previous_score, previous_wave, previous_alive,
++     last_start_before, last_start_after, recent_start, new_game, verdict) = inputs
++    def sample(values):
++        if values is None:
++            return None
++        return dict(zip(("raw_score", "raw_wave", "player_alive", "done",
++                         "start_pressed", "lives", "accepted_frames_before"), values))
++    return dict(
++        schema="robotron-game-boundary-inputs-v1",
++        scope="private evaluator; connection-local accepted wire samples only",
++        journal_start_reason=reason,
++        previous_accepted_wire=sample(previous), current_wire=sample(current),
++        classifier_previous=dict(raw_score=previous_score, raw_wave=previous_wave,
++                                 player_alive=previous_alive),
++        last_start_frame_before=last_start_before,
++        last_start_frame_after=last_start_after,
++        recent_start=recent_start,
++        classifier_new_game=new_game, classifier_verdict=verdict,
++    )
+ 
+ 
+ class GameJournal:
+@@ -53,10 +76,13 @@
+         with path.open("a") as stream:
+             stream.write(json.dumps(row, allow_nan=False, separators=(",", ":")) + "\n")
+ 
+-    def _begin(self, cid, frame, cs, context, known_start, reason):
++    def _begin(self, cid, frame, cs, context, known_start, reason, boundary_inputs=None):
+         self.sequence += 1
+         now = self.clock()
+         ctx = context()
++        if boundary_inputs is not None:
++            ctx = dict(ctx, game_boundary_diagnostics=
++                       _boundary_start_evidence(boundary_inputs, reason))
+         game = dict(
+             journal_game_id=f"{self.run_id}:{self.sequence}",
+             client_id=int(cid), client_slot=int(cs.get("client_slot", cid)),
+@@ -127,7 +153,7 @@
+         game["result"] = row
+         self.completed.append(row)
+ 
+-    def observe(self, cid, frame, cs, *, new_game=False, context):
++    def observe(self, cid, frame, cs, *, new_game=False, context, boundary_inputs=None):
+         """Observe one accepted, score-unwrapped frame without changing training.
+ 
+         ``new_game`` comes from the existing ingest classifier, without the
+@@ -141,16 +167,19 @@
+             game = self.active.get(cid)
+             if game is None:
+                 game = self._begin(cid, frame, cs, context, bool(new_game),
+-                                   "score_reset" if new_game else "initial_attachment")
++                                   "score_reset" if new_game else "initial_attachment",
++                                   boundary_inputs=boundary_inputs)
+             elif new_game or int(cs.get("game_uid", 0)) != game["game_uid"]:
+                 self._finish(game, context, "score_reset" if new_game else "game_uid_changed", True)
+                 game = self._begin(cid, frame, cs, context, True,
+-                                   "score_reset" if new_game else "game_uid_changed")
++                                   "score_reset" if new_game else "game_uid_changed",
++                                   boundary_inputs=boundary_inputs)
+             elif game["finished"]:
+                 game["restart_pulse"] |= bool(frame.start_pressed)
+                 if (game["score"] == 0 and game["restart_pulse"]
+                         and frame.player_alive and not game["last_alive"]):
+-                    game = self._begin(cid, frame, cs, context, True, "zero_score_restart")
++                    game = self._begin(cid, frame, cs, context, True, "zero_score_restart",
++                                       boundary_inputs=boundary_inputs)
+                 else:
+                     game["last_alive"] = bool(frame.player_alive)
+                     return
+@@ -178,6 +207,13 @@
+             if (game["first_play_level"] is None and frame.player_alive
+                     and int(frame.level_number) >= 1 and 0 <= lives < 255):
+                 game["first_play_level"] = int(frame.level_number)
++                if (boundary_inputs is not None and game["measurement_active"]
++                        and game["known_start"] and game["first_play_level"] != 1):
++                    # Preserve the later rejecting first-play inputs too when
++                    # reset occurred on an inactive/zero-wave frame. No new
++                    # write: existing completion/disconnect retains this copy.
++                    game["start"] = dict(game["start"], first_play_not_wave_1_inputs=
++                                         _boundary_start_evidence(boundary_inputs, "first_play_not_wave_1"))
+             # Lua initializes previous_player_alive=1 at script load.  Its
+             # first inactive/attract frame can therefore have done=1 without
+             # any observed life; never turn that synthetic edge into a death.
+--- a/Robotron/tools/run_frozen_sidecar.py
++++ b/Robotron/tools/run_frozen_sidecar.py
+@@ -92,6 +92,7 @@
+     cpu_threads: int = 2
+     boot_assets: Path | None = None
+     inference_backend: str = "eager"
++    game_boundary_diagnostics: bool = False
+ 
+     def validate(self, *, require_boot_assets=False):
+         if self.directory != self.directory.resolve():
+@@ -116,6 +117,8 @@
+             raise ValueError("device must be cpu or cuda")
+         if self.inference_backend not in ("eager", "inductor"):
+             raise ValueError("inference_backend must be eager or inductor")
++        if type(self.game_boundary_diagnostics) is not bool:
++            raise ValueError("game_boundary_diagnostics must be a bool")
+         if self.inference_backend == "inductor" and self.device != "cuda":
+             raise ValueError("The opt-in inductor inference backend requires CUDA")
+         if self.device == "cuda" and not (self.gpu_uuid or "").startswith("GPU-"):
+@@ -140,6 +143,7 @@
+                     rompath=str(self.rompath), cpu_threads=self.cpu_threads,
+                     boot_assets=str(self.boot_assets) if self.boot_assets else None,
+                     inference_backend=self.inference_backend,
++                    game_boundary_diagnostics=self.game_boundary_diagnostics,
+                     comparison_caveat="Reevaluate the incumbent on this same device, high-slot set, "
+                     "fresh private MAME configuration and pacing before candidate comparisons.")
+ 
+@@ -175,6 +179,8 @@
+     os.environ["ROBOTRON_DQN_MODEL_DIR"] = str(job.directory / "isolated-models")
+     os.environ["ROBOTRON_DQN_CONTROL_PATH"] = str(job.directory / "isolated-control.json")
+     os.environ["ROBOTRON_RUN_DIR"] = str(job.directory / "journal")
++    # Bind the plan's explicit choice; inherited environment never opts in.
++    os.environ["ROBOTRON_GAME_BOUNDARY_DIAGNOSTICS"] = "1" if job.game_boundary_diagnostics else "0"
+     os.environ["ROBOTRON_TRAIN_GPU"] = "0"
+     os.environ["ROBOTRON_INFERENCE_GPU"] = "0"
+     os.environ["OMP_NUM_THREADS"] = str(job.cpu_threads)
+@@ -600,6 +606,8 @@
+     parser.add_argument("--gpu-uuid")
+     parser.add_argument("--inference-backend", choices=("eager", "inductor"), default="eager",
+                         help="inductor opts into strict CUDA compile/warmup before server/fleet startup")
++    parser.add_argument("--game-boundary-diagnostics", action="store_true",
++                        help="opt in to primitive game-boundary inputs in private journal contexts")
+     parser.add_argument("--port", type=int, default=9999)
+     parser.add_argument("--cohort-s", type=float, default=120)
+     parser.add_argument("--timeout-s", type=float, default=600)
+@@ -614,7 +622,8 @@
+     job = Job(args.checkpoint.resolve(), args.job_dir.resolve(), args.label, args.device,
+               args.gpu_uuid, args.port, args.cohort_s, args.timeout_s, args.wait_us,
+               args.mame.resolve(), args.rompath.resolve(), args.cpu_threads,
+-              args.boot_assets.resolve() if args.boot_assets else None, args.inference_backend)
++              args.boot_assets.resolve() if args.boot_assets else None, args.inference_backend,
++              game_boundary_diagnostics=args.game_boundary_diagnostics)
+     job.validate()
+     if not args.launch:
+         print(json.dumps(job.plan(), indent=2))
+--- a/Robotron/tools/run_quality_campaign.py
++++ b/Robotron/tools/run_quality_campaign.py
+@@ -64,6 +64,7 @@
+     mame: Path = Path("/usr/games/mame")
+     rompath: Path = evaluator.GAME / "roms"
+     hypothesis: str = "The candidate checkpoint improves greedy, full-game score over the protected reference."
++    game_boundary_diagnostics: bool = False
+ 
+     def jobs(self):
+         counts = Counter()
+@@ -75,7 +76,8 @@
+             checkpoint = self.directory / "checkpoints" / f"{role}.pt"
+             jobs.append((role, evaluator.Job(checkpoint, directory, label, "cuda",
+                 self.gpu_uuid, self.port, self.cohort_s, self.timeout_s, 1000,
+-                self.mame, self.rompath, 2, self.boot_assets, "inductor")))
++                self.mame, self.rompath, 2, self.boot_assets, "inductor",
++                game_boundary_diagnostics=self.game_boundary_diagnostics)))
+         return jobs
+ 
+     def validate(self):
+@@ -91,7 +93,7 @@
+ 
+ 
+ def command(job):
+-    return [sys.executable, "-Xgil=0", "-B", "-u", str(Path(evaluator.__file__).resolve()),
++    argv = [sys.executable, "-Xgil=0", "-B", "-u", str(Path(evaluator.__file__).resolve()),
+         "--checkpoint", str(job.checkpoint), "--job-dir", str(job.directory),
+         "--label", job.label, "--device", "cuda", "--gpu-uuid", job.gpu_uuid,
+         "--inference-backend", "inductor", "--port", str(job.port),
+@@ -99,6 +101,9 @@
+         "--wait-us", str(job.wait_us), "--cpu-threads", str(job.cpu_threads),
+         "--mame", str(job.mame), "--rompath", str(job.rompath),
+         "--boot-assets", str(job.boot_assets), "--launch"]
++    if job.game_boundary_diagnostics:
++        argv.append("--game-boundary-diagnostics")
++    return argv
+ 
+ 
+ def execution_sources():
+@@ -187,6 +192,12 @@
+     if any(receipt["job"].get(field) != expected.get(field)
+            for field in (*JOB_FIELDS, "label", "directory", "checkpoint")):
+         raise ValueError("Receipt does not match its precommitted job")
++    # Missing historical fields mean the original default OFF. New plans and
++    # receipts always carry an explicit bool, checked separately from scoring.
++    boundary_flag = receipt["job"].get("game_boundary_diagnostics", False)
++    if (type(boundary_flag) is not bool
++            or boundary_flag != expected.get("game_boundary_diagnostics", False)):
++        raise ValueError("Boundary diagnostics differs from the precommitted job")
+     if receipt["label"] != expected["label"]:
+         raise ValueError("Receipt label does not match its precommitted label")
+     if receipt["checkpoint_sha256"] != plan["checkpoints"][spec["role"]]["sha256"]:
+@@ -221,7 +232,8 @@
+             receipt, leg, digest = load_leg(spec, plan, verify_checkpoint=verify_checkpoint)
+             if record.get("returncode") != 0:
+                 raise ValueError("Evaluator did not exit successfully")
+-            signature = dict(job={field: receipt["job"][field] for field in JOB_FIELDS},
++            signature = dict(job=dict({field: receipt["job"][field] for field in JOB_FIELDS},
++                game_boundary_diagnostics=receipt["job"].get("game_boundary_diagnostics", False)),
+                 numeric_policy=receipt["numeric_policy"], runtime=receipt["runtime"],
+                 source_hashes=receipt["source_hashes"], protocol=leg["protocol"],
+                 boot_identity=receipt["boot_assets"]["identity"],
+@@ -376,12 +388,15 @@
+     parser.add_argument("--mame", type=Path, default=Path("/usr/games/mame"))
+     parser.add_argument("--rompath", type=Path, default=evaluator.GAME / "roms")
+     parser.add_argument("--hypothesis", default=Campaign.__dataclass_fields__["hypothesis"].default)
++    parser.add_argument("--game-boundary-diagnostics", action="store_true",
++                        help="precommit the same opt-in boundary diagnostics for all four legs")
+     parser.add_argument("--launch", action="store_true", help="run the precommitted campaign; default prints its plan")
+     args = parser.parse_args(argv)
+     campaign = Campaign(args.reference_checkpoint.resolve(), args.candidate_checkpoint.resolve(),
+         args.output_dir.resolve(), args.reference_label, args.candidate_label, args.gpu_uuid,
+         args.boot_assets.resolve(), args.port, args.cohort_s, args.timeout_s,
+-        args.mame.resolve(), args.rompath.resolve(), args.hypothesis)
++        args.mame.resolve(), args.rompath.resolve(), args.hypothesis,
++        game_boundary_diagnostics=args.game_boundary_diagnostics)
+     try:
+         if args.launch:
+             return run_campaign(campaign)

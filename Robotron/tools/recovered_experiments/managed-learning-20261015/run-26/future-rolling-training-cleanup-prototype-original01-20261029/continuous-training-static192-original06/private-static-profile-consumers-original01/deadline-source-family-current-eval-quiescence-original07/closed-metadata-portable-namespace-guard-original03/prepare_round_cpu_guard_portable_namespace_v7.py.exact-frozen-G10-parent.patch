@@ -1,0 +1,43 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-namespace1200-guard-original02/prepare_round_cpu_guard_namespace1200_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-portable-namespace-guard-original03/prepare_round_cpu_guard_portable_namespace_v7.py
+@@ -9,9 +9,9 @@
+ HERE = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
+ LOCAL = Path(__file__).resolve().parent
+ REUSE = LOCAL
+-SOURCE_CONTRACT_SHA = '33397c4b09c79fcfd4bfec1249105f4ff3d841c86a5e5d73f19d0a5edc44df9a'
++SOURCE_CONTRACT_SHA = '89a7a12f9d3de3b136622b1cfeb5f331cde615d64baa049e79662f23cb78482f'
+ DRIVER_SHA = '87e85dfee7b2f03df3fb79c319bce620da21f00f75821d633f4085b72b7dad68'
+-SHIM_SHA = 'b1787eda4fac993693c2abe0c410faefef03b3ca833d9f08fc0a21b3362a779f'
++SHIM_SHA = '1cc04670bf04f8f3e71981b18a41d867c9eff53cbf8451968792ac67ce2406fa'
+ EXACT_METADATA_CLASSIFIER = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/prepare_round_cpu_guard_v10.py', 'sha256': '787e91589ddedb506bceb66e20e36d8ca6d62b3b9a6b301209ada1bf3f3c4bd4', 'bytes': 11094, 'identity': {'device': 2304, 'inode': 85358602, 'bytes': 11094, 'mtime_ns': 1793312011307913418, 'ctime_ns': 1793312011307913418, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+ 
+ 
+@@ -27,7 +27,7 @@
+     study_pin = h.pin(Path(manifest).resolve())
+     study = json.loads(h.checked(study_pin).read_bytes())
+     assert [row['leg'] for row in study['cases']] == ['R1', 'C1', 'R2', 'C2']
+-    policy_pin = h.pin(LOCAL/'selected-current-quiescence-namespace1200-prospective-source-contract-v6.json')
++    policy_pin = h.pin(LOCAL/'selected-current-quiescence-portable-namespace-prospective-source-contract-v7.json')
+     assert policy_pin['sha256'] == SOURCE_CONTRACT_SHA
+     authority = json.loads(h.checked(authority_pin).read_bytes())
+     assert authority['schema'] == 'robotron-physical192-closed-metadata-and-raw-readiness-predicate-reuse-authority-v1'
+@@ -42,8 +42,8 @@
+     control = load('_round_CPU_prepare_controller', Path(controller['path']))
+     old_directory = BASE/'deadline-score32-fixed-fleet-admission-original03-preparation-20261026/actual-four-job-prebody-and-native-chain-CPU-original01'
+     old = json.loads((old_directory/'job.json').read_bytes())
+-    driver = h.pin(REUSE/'qualify_round_study_cpu_closed_metadata_namespace1200_v6.py')
+-    shim = h.pin(REUSE/'closed_metadata_readiness_reuse_namespace1200_v6.py')
++    driver = h.pin(REUSE/'qualify_round_study_cpu_closed_metadata_portable_namespace_v7.py')
++    shim = h.pin(REUSE/'closed_metadata_readiness_reuse_portable_namespace_v7.py')
+     assert driver['sha256'] == DRIVER_SHA and shim['sha256'] == SHIM_SHA
+     def authority_pins(value):
+         if isinstance(value, dict):
+@@ -90,7 +90,7 @@
+     witness = json.loads(h.checked(old['interpreter_symlink_binding']).read_bytes())
+     large[witness['source_pin']['path']] = witness['source_pin']
+     assert study['engineering_only'] is False
+-    unit = 'robotron-round-four-exact-contexts-CPU-current-quiescence-namespace-reuse-' + study_pin['sha256'][:16] + '-original01-20261029.service'
++    unit = 'robotron-round-four-exact-contexts-CPU-current-quiescence-portable-namespace-reuse-' + study_pin['sha256'][:16] + '-original01-20261029.service'
+     job = dict(schema='robotron-deadline32-four-actual-jobs-CPU-guard-v2', unit=unit,
+         output=str(output/'output-original01'), prepared_manifest=study_pin, helpers=old['helpers'],
+         new_native_chain_tests=old['new_native_chain_tests'], interpreter_symlink_binding=old['interpreter_symlink_binding'],

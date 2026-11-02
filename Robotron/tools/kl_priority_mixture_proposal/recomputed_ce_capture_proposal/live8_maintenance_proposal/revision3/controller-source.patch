@@ -1,0 +1,98 @@
+--- Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision2/run_live8_maintenance.py	2026-10-17 02:43:11.233884641 -0500
++++ Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_maintenance_proposal/revision3/run_live8_maintenance.py	2026-10-17 02:47:35.871001165 -0500
+@@ -119,6 +119,69 @@
+     return data
+ 
+ 
++def validate_python_binding(verifier, insurance_pin, *, hash_executable):
++    """Preserve the successful venv argv; attest its final symlink separately.
++
++    Resolving argv itself before Popen would change Python's venv discovery.
++    The23MiB executable is hashed at read_job and before CPU spawn only; frequent
++    runtime guards compare its full stat identity, plus the small context pins.
++    """
++    spec = verifier["python_binding"]
++    required = {"argv_path", "link_target", "link_identity", "executable", "pyvenv_cfg", "library_context",
++        "successful_execution", "successful_completion", "successful_result"}
++    require(isinstance(spec, dict) and set(spec) == required, "Invalid explicit Python binding")
++    argv_path = Path(verifier["python"])
++    require(str(argv_path) == spec["argv_path"] and argv_path.is_absolute() and argv_path.name == "python"
++        and argv_path.parent == argv_path.parent.resolve(strict=True), "Python argv is not the explicit canonical-parent venv path")
++    before = argv_path.lstat()
++    require(stat.S_ISLNK(before.st_mode) and identity(before) == spec["link_identity"]
++        and os.readlink(argv_path) == spec["link_target"], "Python venv symlink changed")
++    target = canonical(spec["executable"]["path"])
++    require(argv_path.resolve(strict=True) == target and target.stat().st_size <= 64 << 20
++        and os.access(argv_path, os.X_OK), "Python resolved executable differs or is not executable")
++    if hash_executable:
++        pin(spec["executable"], 64 << 20)
++    else:
++        info = target.lstat()
++        require(stat.S_ISREG(info.st_mode) and identity(info) == spec["executable"]["identity"]
++            and info.st_size == spec["executable"]["bytes"], "Python executable metadata changed")
++    venv = argv_path.parent.parent
++    require(spec["pyvenv_cfg"]["path"] == str(venv / "pyvenv.cfg"), "Wrong venv configuration pin")
++    pin(spec["pyvenv_cfg"], MAX_SOURCE)
++    require(isinstance(spec["library_context"], list) and len(spec["library_context"]) == 4, "Exactly four held library context pins required")
++    site = venv / "lib/python3.14t/site-packages"
++    expected = {str(site / package / name) for package in ("torch", "numpy") for name in ("__init__.py", "version.py")}
++    require({item["path"] for item in spec["library_context"]} == expected, "Python library context paths differ")
++    for item in spec["library_context"]:
++        pin(item, MAX_SOURCE)
++    execution = read_json(spec["successful_execution"])
++    completion = read_json(spec["successful_completion"])
++    result = read_json(spec["successful_result"])
++    insurance = read_json(insurance_pin)
++    require(insurance["status"] == "PASS" and insurance["mode"] == "insurance"
++        and result["status"] == "PASS" and result["kind"] == execution["kind"] == "insurance"
++        and result["original_exec_code"] == completion["original_exec_code"] == 1
++        and result["original_exit"] == completion["original_exit"] == 0
++        and result["original_result"] == completion["result"] == "success"
++        and result["original_invocation"] == completion["original_invocation"]
++        and result["original_pid"] == completion["original_pid"]
++        and result["original_archived_before_release"] is True
++        and result["numeric_report_sha256"] == insurance_pin["sha256"], "Python provenance is not the actual successful insurance CPU verification")
++    args = execution["argv"]
++    require(isinstance(args, list) and args.count(str(argv_path)) == 1, "Successful archived Python argv differs")
++    index = args.index(str(argv_path))
++    require(args[index+1:index+5] == ["-Xgil=0", "-I", "-B", "-u"]
++        and args[index+5] == verifier["script"]["path"] and args[index+6] == "--execute"
++        and args.count("--expected-verifier-sha256") == args.count("--expected-job-sha256") == 1
++        and args[args.index("--expected-verifier-sha256")+1] == verifier["script"]["sha256"]
++        and args[args.index("--expected-job-sha256")+1] == insurance["job_file"]["sha256"], "Successful archived interpreter/script/job flags differ")
++    require(identity(argv_path.lstat()) == identity(before) and os.readlink(argv_path) == spec["link_target"]
++        and argv_path.resolve(strict=True) == target, "Python symlink changed during binding check")
++    return dict(argv_path=str(argv_path), resolved_executable=str(target),
++        executable_sha256=spec["executable"]["sha256"], executable_hashed=hash_executable,
++        successful_CPU_invocation=completion["original_invocation"], venv_preserved=True)
++
++
+ def capture_row_checks(entry, index, expected, capture_id):
+     require(entry["index"] == index and entry["capture_complete"] is True and not entry["observer_errors"]
+         and entry["optimizer_outcome"] in ("applied_admission", "amp_skipped")
+@@ -325,7 +388,7 @@
+     for value in job["static_pins"]:
+         pin(value, MAX_SOURCE)
+     pin(job["verifier"]["script"], MAX_SOURCE)
+-    require(canonical(job["verifier"]["python"]).name.startswith("python"), "Explicit verifier Python required")
++    validate_python_binding(job["verifier"], job["insurance_verification"], hash_executable=True)
+     return job, record
+ 
+ 
+@@ -402,6 +465,7 @@
+         pin(self.job["verifier"]["script"], MAX_SOURCE)
+         pin(self.job["insurance_verification"], MAX_JSON)
+         pin(self.job["insurance_receipt"], MAX_JSON)
++        validate_python_binding(self.job["verifier"], self.job["insurance_verification"], hash_executable=False)
+ 
+     def trainer_id(self):
+         known = self.host.known_trainer
+@@ -495,6 +559,8 @@
+             OPENBLAS_NUM_THREADS="2", NUMEXPR_NUM_THREADS="2")
+         for key in ("LD_PRELOAD", "PYTHONPATH"):
+             env.pop(key, None)
++        python_proof = validate_python_binding(self.job["verifier"], self.job["insurance_verification"], hash_executable=True)
++        publish(root / "python-executable-proof.json", python_proof)
+         argv = [self.job["verifier"]["python"], "-Xgil=0", "-I", "-B", self.job["verifier"]["script"]["path"],
+             "--execute", "--job", job_pin["path"], "--expected-job-sha256", job_pin["sha256"],
+             "--expected-verifier-sha256", self.job["verifier"]["script"]["sha256"]]

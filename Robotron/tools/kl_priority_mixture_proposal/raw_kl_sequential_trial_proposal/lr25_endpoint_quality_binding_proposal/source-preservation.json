@@ -1,0 +1,47 @@
+{
+  "status": "SOURCE_BYTES_CHECKED_NOT_EXECUTED",
+  "original_carrier_sha256": "4159ef7818d2bd90c82682d007dcaabf2ea9ae3b74e3c707ba77d9496f7915c2",
+  "original_auditor_sha256": "cf64e229a4e02042f43bc458c0c36936da00a8decc4df23babd153679fe7ea31",
+  "carrier_exact_functions": [
+    "require",
+    "sha",
+    "write",
+    "call",
+    "show",
+    "pinned_json",
+    "default_argv",
+    "launch_argv",
+    "validate_plan",
+    "source_checks",
+    "prepare",
+    "launch",
+    "observe",
+    "archive",
+    "configure"
+  ],
+  "auditor_exact_functions": [
+    "require",
+    "digest",
+    "unique_object",
+    "decode",
+    "lines",
+    "indexed",
+    "immutable",
+    "validate_future_plan",
+    "validate_cpu_proof",
+    "validate_original_context",
+    "classify_actor_lines",
+    "configure",
+    "main"
+  ],
+  "auditor_audit_reverse_equal_after_only_metadata_provenance_replacement": true,
+  "audit_old_metadata": "original_failed_return=CFG['evidence']['failed_return'],separate_maintenance=CFG['evidence']['maintenance_result'],\n            followup_precommit=CFG['evidence']['followup_precommit']",
+  "audit_new_metadata": "original_driver=CFG['evidence']['driver_result'],hot_window=CFG['evidence']['window_result'],\n            hot_precommit=CFG['evidence']['precommit'],restored_control=CFG['evidence']['restored_control']",
+  "audit_metadata_key_change": [
+    "trial02_binding",
+    "lr25_binding"
+  ],
+  "row_life_admission_tail_scoring_classification_changed": false,
+  "actual_tests_run": false,
+  "actual_quality_selected": false
+}

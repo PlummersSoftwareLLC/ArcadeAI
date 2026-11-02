@@ -1,0 +1,41 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_boundary_proposal/profile_boundary.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_boundary_reviewed2_proposal/profile_boundary.py
+@@ -162,16 +162,23 @@
+         boundary_profile_sha256=spec['profile_binding']['pin']['sha256'])
+ 
+ 
++def phase_producer_batch(spec, purpose):
++    """Transition scope: endingcandidate/newest precede this new boot."""
++    spec = checked_spec(spec)
++    require(purpose in ('startup', 'candidate', 'newest_stopped'),
++            'Early insurance is not a phase-CPU purpose; separate adapter required')
++    require(purpose != 'candidate' or spec['mode'] == 'return_batch4096',
++            'Endingcandidate is supported only during the declared return transition')
++    return spec['after_batch_size'] if purpose == 'startup' else spec['before_batch_size']
++
++
+ def phase_cpu_boundary(spec, purpose, *, profile_pin=None, producer_observation=None):
+     """Select metadata context only; never run or claim numerical verification.
+ 
+ Early insurance requires a distinct maintenance-verifier lifecycle adaptation;
+ it cannot be represented as an existing phase purpose or a startup proof.
+ """
+-    spec = checked_spec(spec)
+-    require(purpose in ('startup', 'candidate', 'newest_stopped'),
+-            'Early insurance is not a phase-CPU purpose; separate adapter required')
+-    batch = spec['before_batch_size'] if purpose == 'newest_stopped' else spec['after_batch_size']
++    batch = phase_producer_batch(spec, purpose)
+     if batch == 4096:
+         require(profile_pin is None and producer_observation is None,
+                 'Do not attach a2048 producer context to original4096 proof')
+@@ -183,8 +190,8 @@
+     producer = full_metadata_pin(producer_observation)
+     role = 'treatment_startup' if purpose == 'startup' else purpose
+     return dict(batch_size=2048, verifier_family='explicit_profile_phase2048',
+-        job_schema='robotron-batch2048-phase-snapshot-checkpoint-CPU-job-v1',
+-        result_schema='robotron-batch2048-phase-snapshot-checkpoint-CPU-result-v1',
++        job_schema='robotron-batch2048-phase-snapshot-checkpoint-CPU-job-reviewed2-v1',
++        result_schema='robotron-batch2048-phase-snapshot-checkpoint-CPU-result-reviewed2-v1',
+         additional_job_fields=dict(batch2048_context=dict(profile=actual_profile,
+             role=role, producer_observation=producer)))
+ 

@@ -1,0 +1,159 @@
+OFFLINE EXECUTED-TRACE ANALYSIS — SOURCE-ONLY, UNEXECUTED PROPOSAL
+2026-10-17
+
+This directory adds an offline NumPy/stdlib analyser and synthetic fixtures.
+No tool invocation, import, syntax compilation, test, model/replay/tensor read,
+current trace read, numerical workload, GPU operation or live change has been
+performed in preparing it. Producer overlays, sampler proposal, DESIGN and
+source-lock remain unchanged. This proposal does not acquire the missing eight
+live consecutive batches, and does not qualify the current CUDA validation.
+
+Default
+-------
+  python3 -B .../executed_trace_analysis_proposal/analyse_trace.py
+prints one literal PLAN line. It does not inspect input paths, source files or
+runtime, import NumPy, or create output. Only explicit --execute enables reads
+and numerical analysis. The default is designed this way; it has NOT been run.
+
+Future explicit operation (only after separate authorization)
+----------------------------------------------------------
+  CUDA_VISIBLE_DEVICES='' OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 \
+    <reviewed CPU Python> -B <path>/analyse_trace.py --execute \
+    --trace /absolute/ce-executed-trace-<complete-new-session> \
+    --binding /absolute/reviewed-input-binding.json \
+    --binding-sha256 <actual external binding SHA256> \
+    --tool-sha256 <actual reviewed analyse_trace.py SHA256> \
+    --output /absolute/NEW-analysis-directory
+
+There is no launcher or live helper. A caller supplies resource ownership and
+CPU/memory bounds appropriate to its separate execution authorization. The
+analyser itself loads one attempt at a time, at most128MiB total captured input,
+64MiB uncompressed arrays per attempt and1MiB per JSON. The source prototype
+uses no Torch/CUDA and no checkpoint or replay contents. It hashes the external
+checkpoint ID string and acquisition review binding; it never loads that model.
+
+Input binding
+-------------
+Use input-binding-template.json as a schema example, replacing EVERY placeholder
+from actual reviewed artifacts. It is deliberately not an executable binding.
+Bind context/status/all8 original JSON+NPZ files, the exact six producer sources
+and d7fcb2e3 producer manifest, acquisition review file/hash, checkpoint hash and
+population. Accepted population labels distinguish live_consecutive_draws from
+private_fixed_batch_reuse. The latter is numerical control data, not the intended
+actual-mixture calibration. The tool does not infer a population from row values.
+The six-file producer map identifies the REVIEWED PROTOTYPE BUNDLE, not six
+actual imports. Separately bind executed_prototype_source_sha256 (the subset of
+that bundle actually used), agent_overlay_imported and agent_lifecycle_exercised.
+The private CUDA adapter uses five math/trace overlays and does not import the
+agent overlay or exercise its lifecycle: record both agent flags false. A live
+capture requires the actual agent overlay, all six source identities and its
+lifecycle. Full runtime/import provenance still belongs to the external review.
+External acquisition claims require independent review; a supplied hash only
+binds the statement and is not proof that its scientific claims are true.
+
+Exactly18 files are required in the original observer directory: context/status
+and attempts01..08 JSON+NPZ. A ninth attempt, temporary/partial extra file,
+missing field, observer error, unsuccessful attempt, nonfinite capture, missing
+auxiliary, invalid target mass, unavailable outcome or changed source/hash fails
+the analysis; no row is trimmed/replaced. This is not a valid-leg/quality gate.
+Failed acquisitions remain separate immutable evidence and cannot be rescued by
+this tool. Source/version pins intentionally reject another capture schema.
+
+Outputs and arithmetic
+----------------------
+For each of all8 attempts, weights-XX.npz retains ordered vectors:
+  actual_emitted, fresh_ce, fresh_kl (float32 emitted-style row weights),
+  their float64 pre-cast versions,
+  original executed FP32 CE, FP32 projected-target entropy and raw CE-H,
+  clamped FP32 KL, positive-support direct KL evaluated in float64,
+  roundoff-sensitive mask, fresh CE/KL leaf formula evaluations, original indices.
+Bank leaf-formula values are diagnostics only; banks have no PER leaves.
+
+Original emitted weights are reconstructed exactly using captured draw size,
+tree_total, clamped leaves, beta, raw-max denominator max(1e-12,max(w)), float64
+PER normalization, float64 bank mean and final float32 cast. Both saved formats
+must agree. The tree total is from draw time, not from learner consumption.
+
+Fresh CE uses the ACTUAL captured FP32 ce_loss that training.py packs into its
+priority readback. Reconstruction -(m*logp).sum is a check, not its replacement.
+Exactly as update_priorities, cast that metric to float64, take abs, add1e-6,
+raise to actual alpha. Fresh KL computes entropy of the SAME captured projected
+FP32 target with log-floor1e-12, subtracts from actual FP32 CE and clamps at0,
+then uses that same float64 priority-update formula. No second projection,
+forward, target renormalization, terminal exception or n-step reward discount.
+
+Fresh CE and fresh KL each normalize their selected PER leaves by the selected
+minimum, after the sampler's1e-10 leaf clamp; each independently recouples its
+own mean PER weight to HOF/EpHOF rows. Interesting/recent remain1. Actual observed
+origin boundaries override nominal quotas. Empty banks/shortfall slices remain
+visible. No global tree minimum is used. The hypothetical refreshed whole-tree
+total and max-denominator-floor domain are not reconstructed: these are explicit
+selected-min sensitivities, not a claim that an unseen migrated tree would emit
+these exact weights in every extreme denominator-floor case. The original
+emitted denominator-floor path is reconstructed and reported separately.
+
+NumPy FP32 log/reduction may differ from Torch/GPU arithmetic near cancellation.
+Raw negatives, material-negative counts, near-zero counts, clamp zeros, mass
+error and direct-positive-support FP64 discrepancy are retained. FP64 direct KL
+NEVER replaces the candidate FP32 CE-H input. The recorded tolerances are checks
+of source-identity/reduction consistency, not permission to hide meaningful
+negative KL or a certificate of an actual GPU KL priority kernel.
+Any material-negative raw KL explicitly sets interpretation_not_ready=true in
+that attempt and the final computed report. False is only absence of this
+numerical warning; it never qualifies KL execution, sampling or learning.
+
+Duplicates remain ordered repeated rows. Different metrics at a repeated ring
+index are reported, not averaged or deduplicated. Real native priority updates
+have ordered duplicate-slot writes; this analyser does not claim a coherent
+fresh tree, resolve slot-generation races, or replay migration. Selected rows
+come from CE/current stored priorities with quota draws, not from a KL population.
+An emitted→freshCE difference is a priority-age sensitivity, not an isolated
+causal estimate of staleness; freshCE→freshKL isolates the formula change on
+these same rows, including its bank recoupling.
+
+analysis-XX.json and report.json preserve quota counts, per-origin/expert/
+actor_kind weight sums and weighted CE contributions, raw numerical checks,
+bank scalar state/unknowns and exposure evidence. Weighted CE contribution is
+sum(w*CE)/4096 for each slice; slices sum to the full Bellman objective. Expert
+BC, Q-policy and margin contributions are separately reconstructed from actual
+per-row auxiliaries, expert masks and schedule with the original denominator/
+floor. They are NEVER multiplied by PER weights. Group auxiliary contributions
+sum to actual scalar terms; actual Bellman+aux objective must match captured
+weighted_loss. Aggregate tables include all8 equal4096 attempts, including skips.
+Stored actor_kind cannot identify evaluation-origin rows.
+
+Actual exposure totals, identity/epoch, finished/owned matching-epoch ticket and
+binary found_inf/mode consistency independently join each outcome label; a
+counter stream gap is rejected. Counts distinguish
+applied_admission from amp_skipped. Applied admission is not tensor proof of
+parameter/Adam movement. Every attempted/failed observation stays in acquisition
+history, although only a fully complete eight-row acquisition is analysable.
+
+The new create-only output retains request/binding/context, per-attempt computed
+artifacts and failure.json on error. report.json status is COMPUTED; only
+completion.json after the second full input/source hash check seals success.
+Partial outputs are never reused or overwritten. No sampler, optimizer, model,
+ring, bank, source, service, unit or control is changed.
+
+Synthetic fixtures (authored only)
+---------------------------------
+test_analyse_trace.py contains17 unexecuted methods: exact real-mixture counts,
+three distinct paired vectors/bank means, selected-min vs global-min semantics,
+beta0/common scaling, FP32→FP64 abs/epsilon/exponent, same projected entropy,
+negative roundoff/clamp retention, material-negative not-ready flag,
+duplicate order/conflicts, bank/interest
+shortfalls, source-fraction objective and unweighted auxiliaries, malformed mass
+and bank-weight mismatch, actual denominator floor, default no reads/numerics,
+7/9/error rejection, applied/skip identity, failure preservation/no overwrite,
+hash tamper/ninth file, and an eight-row persisted synthetic JSON/NPZ join.
+Future reviewed CPU test command is:
+  CUDA_VISIBLE_DEVICES='' OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 \
+    <reviewed CPU Python> -B -m unittest \
+    Robotron.tools.kl_priority_mixture_proposal.executed_trace_analysis_proposal.test_analyse_trace -v
+No method has run. Synthetic fixtures cannot validate real trace acquisition,
+actual CUDA reductions/AMP/fused Adam, current-source parity or learning quality.
+
+No LR multiplier, mean-weight compensation, KL sampler probability estimate,
+unbiased expected gradient, faster learning, plateau or game improvement claim
+is made. The next decision requires real complete provenance-bound acquisition
+and separately authorized execution/review; production CE stays unchanged.

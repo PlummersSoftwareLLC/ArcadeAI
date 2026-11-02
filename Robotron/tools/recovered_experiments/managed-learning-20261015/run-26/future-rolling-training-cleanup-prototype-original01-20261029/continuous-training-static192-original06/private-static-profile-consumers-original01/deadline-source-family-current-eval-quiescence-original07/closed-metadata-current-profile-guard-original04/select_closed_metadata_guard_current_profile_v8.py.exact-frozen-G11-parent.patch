@@ -1,0 +1,48 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-portable-namespace-guard-original03/select_closed_metadata_guard_portable_namespace_v7.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-current-profile-guard-original04/select_closed_metadata_guard_current_profile_v8.py
+@@ -10,8 +10,8 @@
+ from pathlib import Path
+ 
+ LOCAL = Path(__file__).resolve().parent
+-GENERATOR_SHA = '99cd6eb4942a432de04ea31bc752847dc8b5f12eceb2f384421fae508367a534'
+-PREPARER_SHA = '1696ecbc22a53b20650087a1255ed9ecabbcc6764745e6393d87999e440c7c93'
++GENERATOR_SHA = '916569eb0f02bd028138e67326254d1c86d9a6079cadd0f605c90265f95c1469'
++PREPARER_SHA = 'f2b740d77bdbe7548fcb2cf3e0b2c6e731ea8d8a5aa3b8111f2800446fa08067'
+ CLOSER_SHA = '2afa743774550aa613703aab64f82ec0da6f539509978e82744c7b9a7d99110a'
+ 
+ 
+@@ -28,7 +28,7 @@
+ 
+ 
+ def setup():
+-    path = LOCAL/'prepare_closed_metadata_authority_portable_namespace_v7.py'
++    path = LOCAL/'prepare_closed_metadata_authority_current_profile_v8.py'
+     require(hashlib.sha256(path.read_bytes()).hexdigest() == GENERATOR_SHA,
+             'Selected closed metadata generator differs')
+     g = load('_prefix_physical192_guard_authority_generator', path)
+@@ -67,13 +67,13 @@
+                 and not Path(subject['prelaunch_family_guard_closeout']).exists()
+                 and not Path(case['unqualified_controller_config']['path']).parent.joinpath('execution-original01').exists(),
+                 'Native/guard paths must remain unused')
+-    source = h.pin(LOCAL/'prepare_round_cpu_guard_portable_namespace_v7.py')
++    source = h.pin(LOCAL/'prepare_round_cpu_guard_current_profile_v8.py')
+     require(source['sha256'] == PREPARER_SHA, 'Actual prospective guard preparer differs')
+     preparer = load('_prefix_physical192_selected_closed_guard_preparer', h.checked(source))
+-    root = LOCAL.parent/'actual-closed-metadata-portable-namespace-guard-original03'
++    root = LOCAL.parent/'actual-closed-metadata-current-profile-guard-original04'
+     require(not root.exists(), 'One exclusive original guard preparation only')
+     packet = preparer.prepare(Path(a['native_prepared']['path']), root, authority_pin)
+-    closer = h.pin(LOCAL/'close_round_study_cpu_closed_metadata_portable_namespace_v7.py')
++    closer = h.pin(LOCAL/'close_round_study_cpu_closed_metadata_current_profile_v8.py')
+     require(closer['sha256'] == CLOSER_SHA, 'Exact reviewed guard closeout source differs')
+     result = dict(schema='robotron-physical192-selected-closed-metadata-CPU-guard-v1',
+         native_prepared=a['native_prepared'], source_contract=policy_pin,
+@@ -82,7 +82,7 @@
+         selected_guard_preparer=source, selected_guard_closer=closer,
+         native_guard_destinations_unchanged=True, default_guard_executed=False,
+         CPU_qualified=False, native_launch_qualified=False, source=h.pin(Path(__file__).resolve()))
+-    return h.put(LOCAL.parent/'selected-closed-metadata-portable-namespace-guard-original03.json', result)
++    return h.put(LOCAL.parent/'selected-closed-metadata-current-profile-guard-original04.json', result)
+ 
+ 
+ def selected(path, expected_sha):

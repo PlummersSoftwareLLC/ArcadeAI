@@ -1,0 +1,37 @@
+{
+  "activate_spec": {
+    "after_batch_size": 2048,
+    "before_batch_size": 4096,
+    "mode": "activate_batch2048",
+    "priority_metric": "ce"
+  },
+  "future_actuals": {
+    "candidate": null,
+    "current_owner": null,
+    "current_phase": null,
+    "deadline": null,
+    "fourclockfloor": null,
+    "insurance": null,
+    "newest_checkpoint": null,
+    "newphase_record": null,
+    "producerCSV": null,
+    "producer_observation": null,
+    "protected_reference": null,
+    "return_owner": null,
+    "root_precommit": null,
+    "rootjob": null,
+    "startupenv": null
+  },
+  "profile": {
+    "bytes": 764,
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json",
+    "sha256": "e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50"
+  },
+  "return_spec": {
+    "after_batch_size": 4096,
+    "before_batch_size": 2048,
+    "mode": "return_batch4096",
+    "priority_metric": "ce"
+  },
+  "status": "UNACTIVATED_NOT_AN_EXECUTABLE_TRANSITION_JOB"
+}

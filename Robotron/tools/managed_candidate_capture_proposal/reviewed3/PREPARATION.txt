@@ -1,0 +1,25 @@
+ADDITIVE SYSTEMD EMPTY-PROPERTY COLLECTION CORRECTION — SOURCE ONLY
+
+Original bundles3cc017 and61bac3, their actual11/13PASS guards, and BOTH actual
+preparer metadata failures remain immutable. Root's actual reviewed2 --execute
+again FAILED before directory/candidate copy: systemctl show without --all omits
+empty properties, so actual retained originalterminal ControlGroup was absent
+from parsed fields (None), rather than the empty string expected by the guard.
+This is a collector metadata failure, not failed capture or CPU verification.
+
+The sole source change is terminal_watcher's read-only command:
+  systemctl --user show EXACT_OWNED_UNIT --all
+No identity predicate is weakened. Running CG must equal pretrigger CG; original
+terminal0 may have exactoldCG or explicitemptyCG, and ownedPID/authoritativeoldCG
+absence/empty checks remain mandatory. terminal_identity retains actual'' value.
+No None/missing property becomes accepted evidence; collecting --all supplies it.
+
+Fourteen authored/unexecuted stdlib methods: prior13 unchanged plus realistic
+systemd fullshow fixture. Its ordinary response omits ControlGroup while --all
+includes ControlGroup=; the real terminal_watcher command and terminal_identity
+must handle that explicitempty value. No fixture invokes a service or process.
+
+No author imports/compile/default/tests/runtime queries/candidatebody reads,
+copy/chmod/link/source/unit/state actions. CPU/job/copy/owner/clocks/branch and
+no-release contracts are byte-identical. Root retains original64907/7a0c watcher
+and will inspect/run this new additive source; never silently resume an oldrun.

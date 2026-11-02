@@ -1,0 +1,18 @@
+--- Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_recompute_proposal/test_storage_watcher.py
++++ Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/same_gpu_route_diagnostic_proposal/test_storage_watcher.py
+@@ -44,13 +44,13 @@
+         self.assertEqual(parent.REPO, parent.GAME.parent)
+         self.assertEqual((parent.GAME/'Scripts/dqn/config.py').parts[-4:],
+                          ('Robotron', 'Scripts', 'dqn', 'config.py'))
+-        self.assertEqual(parent.VARIANTS, ('recompute8',))
++        self.assertEqual(parent.VARIANTS, ('route1',))
+         self.assertEqual(parent.BOUNDS['artifact_bytes'], 6 * (1 << 30))
+         self.assertEqual(parent.BOUNDS['phase_timeout_s'], 180)
+         self.assertEqual(parent.BOUNDS['total_timeout_s'], 600)
+         lock_bytes = (parent.HERE/'source-lock.json').read_bytes()
+         self.assertEqual(hashlib.sha256(lock_bytes).hexdigest(),
+-                         '683278660704999645e93dfbc7aad1b20423a5755080a76ccad8f3af54c3c82f')
++                         'cb8874f65753b6f95a3c777b3dcd0d34e3af14227fd58a8c1feed0adcb2b97db')
+         frozen = json.loads(lock_bytes)['frozen_science_helpers']
+         self.assertEqual(frozen['sha256'],
+                          'ba0039d406676f092309c6bf2248ddcf169af8960f60ed18b698ece1ea602f93')

@@ -1,0 +1,20 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/backup-sources/copy_verified_stopped_training_state_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/backup-sources/copy_verified_stopped_training_state_v2.py
+@@ -62,7 +62,7 @@
+ 
+ 
+ def read_pin(value,as_json=True):
+-    require(type(value)is dict and set(value)=={'path','sha256','bytes','identity'}and 0<value['bytes']<=8<<20,
++    require(type(value)is dict and set(value)=={'path','sha256','bytes','identity'}and type(value['bytes'])is int and (0<value['bytes'] if as_json else 0<=value['bytes']) and value['bytes']<=8<<20,
+         'Bounded metadata/source pin required; no array-body input sweep')
+     keys=set(value['identity']);require(keys in(
+         {'device','inode','mode','uid','nlink'},
+@@ -98,7 +98,7 @@
+     v.old_owner_absent(v.OWNER);empty_owner(FLEET)
+     population=read_pin(job['original_population'])
+     require(population['trainer']==v.OWNER and population['fleet']==FLEET
+-        and 0<len(population['actors'])<=192,'Actual original variable population required')
++        and 0<=len(population['actors'])<=192,'Actual original variable population required')
+     pairs={(a['pid'],a['starttime_ticks'])for a in population['actors']}
+     require(len(pairs)==len(population['actors']),'Duplicate original physical population')
+     for pid,birth in pairs:absent(pid,birth)

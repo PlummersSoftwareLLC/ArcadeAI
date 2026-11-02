@@ -1,0 +1,597 @@
+--- /dev/null
++++ b/Robotron/Scripts/dqn/rejected_gap_telemetry.py
+@@ -0,0 +1,239 @@
++"""UNSELECTED bounded observation only; never changes a socket/replay decision.
++
++No file, socket, model, replay-array or device I/O. Each event uses one short
++diagnostic lock. The first 32 closure witnesses are retained, never sampled by
++policy RNG or overwritten. Physical insertion/training and Lua application are
++outside this observer's claims. Root must test and select it after the freeze.
++"""
++from copy import deepcopy
++import os
++import threading
++import time
++
++
++SCHEMA = "robotron-rejected-gap-observation-v1"
++MAX_CLIENTS = 256
++MAX_WITNESSES = 32
++MAX_COUNT = (1 << 63) - 1
++REASONS = ("parse_none", "crash_jump", "crash_drop")
++COUNTERS = (
++    "connections", "tracking_overflow", "payloads_complete", "param_mismatch",
++    "short_payload", "receive_header_idle", "receive_header_eof", "receive_invalid_length",
++    "receive_broken_payload", "parse_none", "crash_jump", "crash_drop", "accepted_frames",
++    "neutral_write_ok", "neutral_write_failed", "gaps_opened", "accepted_closures",
++    "disconnect_closures", "same_classifier_game", "new_game_classified",
++    "measurement_boundary", "previous_step_entered", "nstep_add_called",
++    "one_step_called", "matured_total", "group_flush_before_input",
++    "matured_including_current_input", "enqueue_calls", "enqueue_returns",
++    "including_current_input_enqueue_calls", "witness_overflow",
++)
++
++
++def _actor(value):
++    return value if value in ("dqn", "epsilon", "expert", "eval", "measurement", "none") else "other"
++
++
++def _group(value):
++    # Exact held NStepReplayBuffer._actor_group semantics: every nonexpert is learner.
++    return "expert" if value == "expert" else "learner"
++
++
++def _state(cs):
++    """Only primitive metadata; never retain/copy a state, reward array or client dict."""
++    cs = cs or {}
++    action = cs.get("last_action")
++    if action is not None:
++        action = [int(action[0]), int(action[1])]
++    nstep = cs.get("nstep")
++    pending = getattr(nstep, "_deque", ())
++    return dict(game_uid=int(cs.get("game_uid") or 0), slot=int(cs.get("client_slot", -1)),
++        accepted_frames=int(cs.get("frames", 0)), last_state_present=cs.get("last_state") is not None,
++        last_action=action, previous_source=_actor(cs.get("prev_action_source")),
++        history_length=len(cs.get("frame_history", ())), nstep_pending=len(pending),
++        measurement_generation=int(cs.get("measurement_generation", 0)),
++        measurement_active=bool(cs.get("measurement_active", False)),
++        was_done=bool(cs.get("was_done", False)), player_alive=bool(cs.get("player_alive", False)),
++        accepted_score=int(cs.get("last_game_score", 0)), accepted_wave=int(cs.get("last_level_number", 0)))
++
++
++class RejectedGapTelemetry:
++    def __init__(self, *, enabled=False, clock_ns=time.monotonic_ns):
++        self.enabled = bool(enabled)
++        self._clock = clock_ns
++        self._lock = threading.Lock()
++        self._pid = os.getpid()
++        self._instance = clock_ns()
++        self._next_connection = 0
++        self._clients = {}
++        self._witnesses = []
++        self._counts = dict.fromkeys(COUNTERS, 0)
++        self._fault = False
++        self._saturated = False
++
++    def _inc(self, key, value=1):
++        value = int(value)
++        if value < 0:
++            raise ValueError("Negative diagnostic increment")
++        new = self._counts[key] + value
++        self._saturated |= new > MAX_COUNT
++        self._counts[key] = min(MAX_COUNT, new)
++
++    def _close(self, client, row, outcome):
++        row["outcome"] = outcome
++        row["closed_monotonic_ns"] = self._clock()
++        if len(self._witnesses) < MAX_WITNESSES:
++            self._witnesses.append(row)
++        else:
++            self._inc("witness_overflow")
++        client["pending"] = client["closing"] = None
++
++    def event(self, kind, connection=None, **data):
++        """Fail open for application behavior, fail visibly for diagnostic validity.
++
++        Returned connection/ticket is diagnostic only. Callers never branch any
++        action/replay/reset decision on it. Ordinary events with no gap allocate
++        no witness. A fault makes available=False; zero counters then prove nothing.
++        """
++        if not self.enabled or (connection is None and kind != "connect"):
++            return None
++        try:
++            with self._lock:
++                return self._event(kind, connection, data)
++        except Exception:
++            self._fault = True
++            return None
++
++    def _event(self, kind, connection, data):
++        if kind == "connect":
++            if len(self._clients) >= MAX_CLIENTS:
++                self._inc("tracking_overflow")
++                return None
++            self._next_connection += 1
++            key = self._next_connection
++            self._clients[key] = dict(cid=int(data["cid"]), sequence=0, pending=None, closing=None)
++            self._inc("connections")
++            return key
++        if connection is None:
++            return None
++        client = self._clients[connection]
++        if kind == "received":
++            client["sequence"] += 1
++            self._inc("payloads_complete")
++            return None
++        if kind in ("receive_header_idle", "receive_header_eof", "receive_invalid_length", "receive_broken_payload", "param_mismatch", "short_payload"):
++            self._inc(kind)
++            return None
++        if kind == "reject":
++            reason = data["reason"]
++            if reason not in REASONS:
++                raise ValueError("Unknown reject category")
++            self._inc(reason)
++            row = client["pending"]
++            if row is None:
++                self._inc("gaps_opened")
++                row = dict(connection_sequence=connection, cid=client["cid"],
++                    first_receive_sequence=client["sequence"], first_monotonic_ns=self._clock(),
++                    reject_before=_state(data.get("cs")), reasons=dict.fromkeys(REASONS, 0),
++                    neutral_write_ok=0, neutral_write_failed=0, before_reset=None, after_reset=None,
++                    previous_step_entered=False, nstep=None, enqueue_calls=0, enqueue_returns=0,
++                    including_current_input_enqueue_calls=0, next_action=None)
++                client["pending"] = row
++            row["reasons"][reason] = min(MAX_COUNT, row["reasons"][reason] + 1)
++            row["last_receive_sequence"] = client["sequence"]
++            row["last_monotonic_ns"] = self._clock()
++            return None
++        if kind == "neutral_result":
++            key = "neutral_write_ok" if data["ok"] else "neutral_write_failed"
++            self._inc(key)
++            if client["pending"] is not None:
++                client["pending"][key] = min(MAX_COUNT, client["pending"][key] + 1)
++            return None
++        if kind == "accepted":
++            self._inc("accepted_frames")
++            row = client["pending"]
++            if row is None:
++                return None
++            client["pending"] = None
++            client["closing"] = row
++            row["first_accepted_receive_sequence"] = client["sequence"]
++            row["first_accepted_monotonic_ns"] = self._clock()
++            row["before_reset"] = _state(data["cs"])
++            row["accepted_wire"] = {k: data[k] for k in ("score", "wave", "alive", "done", "new_game")}
++            # Continuity is unknown until the real first-frame/reset paths complete.
++            row["same_classifier_game"] = None
++            self._inc("accepted_closures")
++            self._inc("new_game_classified", int(data["new_game"]))
++            return connection
++        if kind == "disconnect":
++            row = client["closing"] or client["pending"]
++            if row is not None:
++                self._inc("disconnect_closures")
++                self._close(client, row, "handler_ended_without_completed_accepted_frame")
++            del self._clients[connection]
++            return None
++        row = client["closing"]
++        if row is None:
++            return None
++        if kind == "after_reset":
++            row["after_reset"] = _state(data["cs"])
++            uid = row["reject_before"]["game_uid"]
++            row["same_classifier_game"] = (uid > 0 and not row["accepted_wire"]["new_game"] and
++                uid == row["before_reset"]["game_uid"] == row["after_reset"]["game_uid"])
++            self._inc("same_classifier_game", int(row["same_classifier_game"]))
++            row["replay_writable_after_reset"] = bool(data["writable"])
++            row["measurement_boundary"] = (
++                row["reject_before"]["measurement_generation"] != row["after_reset"]["measurement_generation"] or
++                row["reject_before"]["measurement_active"] != row["after_reset"]["measurement_active"])
++            self._inc("measurement_boundary", int(row["measurement_boundary"]))
++        elif kind == "previous_step":
++            row["previous_step_entered"] = True
++            self._inc("previous_step_entered")
++        elif kind == "nstep_before":
++            pending = getattr(data["nstep"], "_deque", ())
++            # Held add() flushes ALL old prefixes before appending a different actor group.
++            flush = len(pending) if pending and _group(pending[-1].actor) != _group(data["actor"]) else 0
++            row["nstep"] = dict(input_actor=_actor(data["actor"]), training_done=bool(data["done"]),
++                pending_before=len(pending), group_flush_before_input=flush, matured_total=None,
++                matured_including_current_input=None)
++            self._inc("nstep_add_called")
++        elif kind == "nstep_after":
++            count = int(data["count"]); flush = row["nstep"]["group_flush_before_input"]
++            if count < flush:
++                raise ValueError("Held nstep emission ordering differs")
++            row["nstep"].update(matured_total=count, matured_including_current_input=count-flush)
++            self._inc("matured_total", count); self._inc("group_flush_before_input", flush)
++            self._inc("matured_including_current_input", count-flush)
++        elif kind == "one_step":
++            row["nstep"] = dict(input_actor=_actor(data["actor"]), training_done=bool(data["done"]),
++                pending_before=0, group_flush_before_input=0, matured_total=1,
++                matured_including_current_input=1)
++            self._inc("one_step_called"); self._inc("matured_total"); self._inc("matured_including_current_input")
++        elif kind == "enqueue_called":
++            i = row["enqueue_calls"]; row["enqueue_calls"] += 1
++            includes = i >= row["nstep"]["group_flush_before_input"]
++            row["including_current_input_enqueue_calls"] += int(includes)
++            self._inc("enqueue_calls"); self._inc("including_current_input_enqueue_calls", int(includes))
++        elif kind == "enqueue_returned":
++            row["enqueue_returns"] += 1
++            self._inc("enqueue_returns")
++        elif kind == "next_action":
++            row["next_action"] = _state(data["cs"])["last_action"]
++            row["next_action_source"] = _actor(data["cs"].get("prev_action_source"))
++        elif kind == "finish":
++            self._close(client, row, data["outcome"])
++        else:
++            raise ValueError("Unknown observation stage")
++        return None
++
++    def snapshot(self):
++        """Bounded readonly metadata copy; never drain counters or retain caller objects."""
++        with self._lock:
++            return dict(schema=SCHEMA, enabled=self.enabled,
++                available=self.enabled and not self._fault and not self._saturated and self._counts["tracking_overflow"] == 0,
++                process_id=self._pid, instance_monotonic_ns=self._instance,
++                observer_error=self._fault, counter_saturated=self._saturated,
++                counters=dict(self._counts), active_tracked_clients=len(self._clients),
++                pending_gaps=sum(c["pending"] is not None for c in self._clients.values()),
++                accepted_frames_in_progress=sum(c["closing"] is not None for c in self._clients.values()),
++                witness_limit=MAX_WITNESSES, witnesses=deepcopy(self._witnesses),
++                scope="Unthrottled tracked payload/gap events. UID continuity is classifier-only. Send/queue calls do not prove client application, physical replay insertion, sampling, learning or causal efficacy.")
+--- a/Robotron/Scripts/dqn/socket_server.py
++++ b/Robotron/Scripts/dqn/socket_server.py
+@@ -42,6 +42,7 @@
+     from .nstep_buffer import NStepReplayBuffer
+     from .game_journal import GameJournal
+     from .frozen_evaluation import reset_client_replay_segment
++    from .rejected_gap_telemetry import RejectedGapTelemetry
+     from .actor_tags import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT
+     from .model import combine_action, split_joint_action, action_index_to_wire_dir
+     from .metrics_display import (
+@@ -61,6 +62,7 @@
+     from nstep_buffer import NStepReplayBuffer
+     from game_journal import GameJournal
+     from frozen_evaluation import reset_client_replay_segment
++    from rejected_gap_telemetry import RejectedGapTelemetry
+     from actor_tags import ACTOR_DQN, ACTOR_EPSILON, ACTOR_EXPERT
+     from model import combine_action, split_joint_action, action_index_to_wire_dir
+     from metrics_display import (
+@@ -1083,6 +1085,8 @@
+         # without creating a replay consumer or accessing any bank/ring state.
+         # This latch also survives a controller clearing measurement_active.
+         self.replay_enabled = bool(replay_enabled)
++        self._rejected_gaps = RejectedGapTelemetry(enabled=(self.replay_enabled and
++            os.getenv("ROBOTRON_REJECTED_GAP_TELEMETRY", "") == "1"))
+         # Explicit private-evaluator diagnostics only. The live replay-enabled
+         # trainer retains its existing frame path even if this env is inherited.
+         self.game_boundary_diagnostics = (
+@@ -1091,6 +1095,7 @@
+         )
+         self.inference_only_error = None
+         self._inference_error_lock = threading.Lock()
++        self._exception_log_lock = threading.Lock()
+         self.async_buffer = AsyncReplayBuffer(agent) if agent and self.replay_enabled else None
+         self.inference_batcher = None
+         if agent and bool(getattr(RL_CONFIG, "inference_batching_enabled", True)):
+@@ -1166,6 +1171,10 @@
+             with self._inference_error_lock:
+                 if self.inference_only_error is None:
+                     self.inference_only_error = str(reason)
++
++    def rejected_gap_snapshot(self):
++        """Bounded diagnostic-only getter; no counter drain or policy action."""
++        return self._rejected_gaps.snapshot()
+ 
+     @staticmethod
+     def _measurement_snapshot():
+@@ -1722,6 +1731,8 @@
+     def handle_client(self, sock, cid):
+         local_accum = 0
+         local_measurement_accum = 0
++        _gap_connection = self._rejected_gaps.event("connect", cid=cid)
++        _gap_ticket = None
+         try:
+             sock.setblocking(False)
+             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+@@ -1769,27 +1780,35 @@
+                 hdr = self._recv_exact(sock, 4, timeout_s=0.25)
+                 if hdr is None:
+                     if time.time() - last_payload_time >= CLIENT_IDLE_TIMEOUT_S:
++                        self._rejected_gaps.event("receive_header_idle", _gap_connection)
+                         raise ConnectionError(
+                             f"idle timeout ({CLIENT_IDLE_TIMEOUT_S:.1f}s without frames)"
+                         )
+                     continue
+                 if len(hdr) < 4:
++                    self._rejected_gaps.event("receive_header_eof", _gap_connection)
+                     raise ConnectionError("EOF")
+                 dlen = struct.unpack(">I", hdr)[0]
+                 if dlen <= 0 or dlen > _MAX_FRAME_PAYLOAD_BYTES:
++                    self._rejected_gaps.event("receive_invalid_length", _gap_connection)
+                     raise ConnectionError(f"Invalid payload length {dlen}")
+ 
+                 data = self._recv_exact(sock, dlen, timeout_s=0.5)
+                 if data is None or len(data) < dlen:
++                    self._rejected_gaps.event("receive_broken_payload", _gap_connection)
+                     raise ConnectionError("Broken payload")
+                 last_payload_time = time.time()
++                self._rejected_gaps.event("received", _gap_connection)
++                _gap_ticket = None
+ 
+                 if len(data) >= 2:
+                     n = struct.unpack(">H", data[:2])[0]
+                     if n != WIRE_PARAMS_COUNT:
++                        self._rejected_gaps.event("param_mismatch", _gap_connection)
+                         print(f"Client {cid}: param mismatch {n} != {WIRE_PARAMS_COUNT}")
+                         break
+                 else:
++                    self._rejected_gaps.event("short_payload", _gap_connection)
+                     break
+ 
+                 preview_enabled = self._preview_enabled_for_client(cid)
+@@ -1803,11 +1822,19 @@
+                     if isinstance(_csv, dict) and not _csv.get("proto_v2"):
+                         _csv["proto_v2"] = True
+                 if not frame:
+-                    sock.sendall(self._pack_action(
+-                        -1, -1, _SRC_NONE, cid,
+-                        preview_enabled=preview_enabled,
+-                        hud_enabled=hud_enabled,
+-                    ))
++                    with self.client_lock:
++                        self._rejected_gaps.event("reject", _gap_connection, reason="parse_none",
++                            cs=self.client_states.get(cid))
++                    try:
++                        sock.sendall(self._pack_action(
++                            -1, -1, _SRC_NONE, cid,
++                            preview_enabled=preview_enabled,
++                            hud_enabled=hud_enabled,
++                        ))
++                    except BaseException:
++                        self._rejected_gaps.event("neutral_result", _gap_connection, ok=False)
++                        raise
++                    self._rejected_gaps.event("neutral_result", _gap_connection, ok=True)
+                     continue
+                 if should_parse_preview and frame.preview_pixels:
+                     self._cache_client_preview(cid, frame)
+@@ -2005,11 +2032,19 @@
+                         print(f"[INGEST] {_verdict}: cid={cid} raw={frame.game_score:,} "
+                               f"vs baseline {(_prev_for_log or 0):,} — one frame rejected, "
+                               f"baseline kept (torn BCD read or crash frame)")
+-                    sock.sendall(self._pack_action(
+-                        -1, -1, _SRC_NONE, cid,
+-                        preview_enabled=preview_enabled,
+-                        hud_enabled=hud_enabled,
+-                    ))
++                    with self.client_lock:
++                        self._rejected_gaps.event("reject", _gap_connection,
++                            reason=_verdict.replace("-", "_"), cs=self.client_states.get(cid))
++                    try:
++                        sock.sendall(self._pack_action(
++                            -1, -1, _SRC_NONE, cid,
++                            preview_enabled=preview_enabled,
++                            hud_enabled=hud_enabled,
++                        ))
++                    except BaseException:
++                        self._rejected_gaps.event("neutral_result", _gap_connection, ok=False)
++                        raise
++                    self._rejected_gaps.event("neutral_result", _gap_connection, ok=True)
+                     continue
+ 
+                 # Single-frame compact input; stacked current-first with recent history.
+@@ -2019,6 +2054,9 @@
+                     if cid not in self.client_states:
+                         break
+                     cs = self.client_states[cid]
++                    _gap_ticket = self._rejected_gaps.event("accepted", _gap_connection, cs=cs,
++                        score=int(frame.game_score), wave=int(frame.level_number),
++                        alive=bool(frame.player_alive), done=bool(frame.done), new_game=bool(_is_new_game))
+                     cs["frames"] += 1
+                     if cs["frames"] == 1:
+                         # First frame of a connection: clients (re)connect
+@@ -2071,6 +2109,7 @@
+                 if (_is_new_game and not measuring
+                         and not cs.get("replay_disabled", False)):
+                     self._reset_new_game_replay_segment(cid, cs, frame.game_score)
++                self._rejected_gaps.event("after_reset", _gap_ticket, cs=cs, writable=self._replay_writable(cs))
+                 model_state = self._stack_model_state(cs, single_state)
+ 
+                 # Measurement is separate from per-life RL terminal handling.
+@@ -2152,6 +2191,7 @@
+                 if (cs.get("last_state") is not None and cs.get("last_action") is not None
+                         and not getattr(metrics, "measurement_active", False)
+                         and cs.get("prev_action_source") != "measurement"):
++                    self._rejected_gaps.event("previous_step", _gap_ticket)
+                     mv_i, fr_i = cs["last_action"]
+                     try:
+                         score_delta_probe = max(0, int(frame.game_score) - int(cs.get("last_game_score", frame.game_score)))
+@@ -2243,23 +2283,30 @@
+                                 cs["last_clear_frame"] = int(cs["frames"])
+                         nstep = cs.get("nstep")
+                         if nstep is not None:
++                            self._rejected_gaps.event("nstep_before", _gap_ticket, nstep=nstep, actor=tag, done=bool(training_done))
+                             joint = combine_action(mv_i, fr_i)
+                             matured = nstep.add(cs["last_state"], joint, total_r,
+                                                 model_state, bool(training_done),
+                                                 actor=tag, priority_reward=total_r,
+                                                 interest=interest)
++                            self._rejected_gaps.event("nstep_after", _gap_ticket, count=len(matured))
+                             for s0, a, Rn, pR, sn, dn, h, act, intr in matured:
+                                 mv_n, fr_n = split_joint_action(a)
++                                self._rejected_gaps.event("enqueue_called", _gap_ticket)
+                                 self.async_buffer.step_async(
+                                     s0, (mv_n, fr_n), Rn, sn, bool(dn),
+                                     client_id=cid, actor=act, horizon=int(h), priority_reward=pR,
+                                     interest=intr)
++                                self._rejected_gaps.event("enqueue_returned", _gap_ticket)
+                         else:
++                            self._rejected_gaps.event("one_step", _gap_ticket, actor=tag, done=bool(training_done))
++                            self._rejected_gaps.event("enqueue_called", _gap_ticket)
+                             self.async_buffer.step_async(
+                                 cs["last_state"], (mv_i, fr_i), total_r,
+                                 model_state, bool(training_done), client_id=cid,
+                                 actor=tag, horizon=1, priority_reward=total_r,
+                                 interest=interest)
++                            self._rejected_gaps.event("enqueue_returned", _gap_ticket)
+ 
+                     cs["total_reward"] += total_r
+                     cs["ep_subj_reward"] = cs.get("ep_subj_reward", 0.0) + subj_r
+@@ -2343,6 +2390,7 @@
+                     hist = cs.get("frame_history")
+                     if hist is not None:
+                         hist.clear()
++                    self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_done_neutral_write_completed")
+                     continue
+ 
+                 if cs.get("was_done"):
+@@ -2382,6 +2430,7 @@
+                         ))
+                     except Exception:
+                         break
++                    self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_inactive_neutral_write_completed")
+                     continue
+ 
+                 # ── Choose action ───────────────────────────────────────
+@@ -2432,6 +2481,7 @@
+                 cs["last_game_score"] = int(frame.game_score)
+                 cs["last_level_number"] = int(frame.level_number)
+                 cs["prev_action_source"] = action_source
++                self._rejected_gaps.event("next_action", _gap_ticket, cs=cs)
+ 
+                 move_cmd = action_index_to_wire_dir(int(mv_idx))
+                 fire_cmd = action_index_to_wire_dir(int(effective_fire))
+@@ -2477,6 +2527,7 @@
+                     ))
+                 except Exception:
+                     break
++                self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_action_write_completed")
+ 
+         except ConnectionError as e:
+             if not self.shutdown_event.is_set():
+@@ -2485,9 +2536,13 @@
+         except Exception as e:
+             if not self.shutdown_event.is_set():
+                 self._fail_inference_only(f"Client {cid} error: {e}")
+-            print(f"Client {cid} error: {e}")
+-            traceback.print_exc()
++            # One stream write keeps concurrent client exception records intact.
++            error_record = f"Client {cid} error: {e}\n{traceback.format_exc()}"
++            with self._exception_log_lock:
++                sys.stderr.write(error_record)
++                sys.stderr.flush()
+         finally:
++            self._rejected_gaps.event("disconnect", _gap_connection)
+             # Flush frames accumulated since the last batch so decay schedules
+             # (epsilon / expert ratio) don't lag when a client disconnects.
+             if local_accum > 0:
+--- a/Robotron/Scripts/dqn/metrics_dashboard.py
++++ b/Robotron/Scripts/dqn/metrics_dashboard.py
+@@ -890,6 +890,41 @@
+     def now_body(self) -> bytes:
+         with self.lock:
+             return self._cached_now_body
++
++    def rejected_gap_body(self) -> bytes:
++        """On-demand readonly metadata; never hold dashboard/metrics/client locks."""
++        response = dict(schema="robotron-rejected-gap-api-v1", available=False,
++                        reason="server_unavailable", snapshot=None)
++        try:
++            # Main publishes this reference after dashboard startup. Keep a local
++            # reference; the snapshot itself uses only its own diagnostic lock.
++            server = getattr(self.metrics, "global_server", None)
++            if server is not None:
++                getter = getattr(server, "rejected_gap_snapshot", None)
++                if not callable(getter):
++                    response["reason"] = "getter_unavailable"
++                else:
++                    snapshot = getter()
++                    if (not isinstance(snapshot, dict)
++                            or snapshot.get("schema") != "robotron-rejected-gap-observation-v1"
++                            or any(type(snapshot.get(k)) is not bool for k in
++                                   ("enabled", "available", "observer_error", "counter_saturated"))
++                            or (snapshot["available"] and (not snapshot["enabled"]
++                                or snapshot["observer_error"] or snapshot["counter_saturated"]))):
++                        raise ValueError("Invalid rejected-gap snapshot")
++                    reason = ("disabled" if not snapshot["enabled"] else
++                              "observer_error" if snapshot["observer_error"] else
++                              "counter_saturated" if snapshot["counter_saturated"] else
++                              "available" if snapshot["available"] else "observer_unavailable")
++                    response.update(available=snapshot["available"], reason=reason, snapshot=snapshot)
++            body = json.dumps(response, allow_nan=False, separators=(",", ":")).encode("utf-8")
++            if len(body) <= 128 * 1024:
++                return body
++            response.update(available=False, reason="response_too_large", snapshot=None)
++        except Exception:
++            # No exception text, client payload or zero-counter substitute.
++            response.update(available=False, reason="snapshot_error", snapshot=None)
++        return json.dumps(response, allow_nan=False, separators=(",", ":")).encode("utf-8")
+ 
+     def game_preview_body(self, since_seq: int | None = None, wait_timeout_s: float = 0.0) -> bytes | None:
+         since = None if since_seq is None else int(max(0, since_seq))
+@@ -5163,6 +5198,9 @@
+             if path == "/api/now":
+                 self._send(state.now_body(), "application/json")
+                 return
++            if path == "/api/rejected_gaps":
++                self._send(state.rejected_gap_body(), "application/json")
++                return
+             if path == "/api/history":
+                 body = json.dumps(state.payload()).encode("utf-8")
+                 self._send(body, "application/json")
+--- a/Robotron/Scripts/dqn/experiment_status.py
++++ b/Robotron/Scripts/dqn/experiment_status.py
+@@ -141,6 +141,7 @@
+         indices = list(dict.fromkeys([*specs, *live_specs]))[:_MAX_LEGS]
+         updated = _number(status.get("updated_unix_s")) or status_path.stat().st_mtime
+         legs = []
++        checkpoint_frames = {"reference": set(), "candidate": set()}
+         for index in indices:
+             spec = specs.get(index, {})
+             progress = live_specs.get(index, {})
+@@ -169,6 +170,14 @@
+                     if (leg_state == "finished" or previous.get("count") is not None or
+                             (started is not None and self._clock() - started > 30)):
+                         raise
++            role = spec.get("role")
++            checkpoint = _mapping(_mapping(plan.get("checkpoints")).get(role))
++            frames = _number(_mapping(data.get("checkpoint_metadata")).get(
++                "learner_frame_count", _mapping(data.get("clocks")).get("learner_frame_count")))
++            if (role in checkpoint_frames and checkpoint.get("sha256")
++                    and data.get("checkpoint_sha256") == checkpoint["sha256"]
++                    and isinstance(frames, int) and frames > 0):
++                checkpoint_frames[role].add(frames)
+             cohort = _mapping(data.get("cohort"))
+             leg = {"index": _number(index),
+                    "role": _text(progress.get("role") or spec.get("role")),
+@@ -186,20 +195,20 @@
+         return {"available": True, "state": _text(status.get("state")) or "unknown",
+                 "current_leg": _number(status.get("current_leg")),
+                 "total_legs": len(indices), "updated_unix_s": updated,
+-                "comparison": self._comparison(plan, active, legs), "legs": legs,
++                "comparison": self._comparison(plan, active, legs, checkpoint_frames), "legs": legs,
+                 "outcome": _text(status.get("outcome")),
+                 "reason": _text(status.get("reason"))}
+ 
+     @staticmethod
+-    def _comparison(plan, active, legs):
+-        checkpoints = _mapping(plan.get("checkpoints"))
++    def _comparison(plan, active, legs, checkpoint_frames=None):
+         labels = []
+         for role in ("reference", "candidate"):
+-            checkpoint = _mapping(checkpoints.get(role))
+-            source = checkpoint.get("source") or active.get(role + "_checkpoint")
++            frames = _mapping(checkpoint_frames).get(role, ())
++            if len(frames) == 1:
++                labels.append(f"{next(iter(frames)) / 1_000_000:.1f}M")
++                continue
++            # A filename can contain a window increment (for example first8M),
++            # not the saved learner clock. Keep only the explicit role label.
+             label = next((leg.get("label") for leg in legs if leg["role"] == role), None)
+-            raw = str(source or label or role)
+-            milestone = re.search(r"(?<![\d.])(\d+(?:\.\d+)?)M\b", raw, re.IGNORECASE)
+-            labels.append(milestone.group(1) + "M" if milestone else
+-                          _text(label or Path(raw).stem))
++            labels.append(_text(label) or role)
+         return " vs ".join(labels)

@@ -1,0 +1,61 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_registry_v5.py:kernel_eval_exit
++++ offline-private-namespace:kernel_eval_exit
+@@ -1,11 +1,10 @@
+-def kernel_eval_exit(case, sample, slot):
++def kernel_eval_exit(case, sample, slot, *, _kernel_shared):
+     selected = case['continuous'].get('eval_exit_witness')
+     pin = sample.get('EVAL_kernel_exit_receipts', {}).get(slot)
+     require(selected is not None and pin is not None, 'No original positive EVAL exit/reap witness')
+     publication = sample['EVAL_exit_witness_capture']['publication']['value']
+     require(publication['exit_receipts'].get(slot) == pin, 'Kernel exit file was not published after its producer fsync returned')
+-    anchors = read_pin(selected['anchors'])
+-    selection = read_pin(selected['selection'])
++    anchors, selection = _read_shared_anchors(selected, read_pin, _kernel_shared)
+     value = read_pin(pin)
+     require(anchors['schema'] == 'robotron-original37-EVAL-pidfd-held-anchors-v1' and anchors['selection'] == selected['selection'] and (anchors['source'] == selected['source']) and (anchors['holder'] == selected['holder']) and (anchors['all37_acquired_while_originals_live'] is True) and (value['schema'] == 'robotron-original-EVAL-retained-pidfd-exit-v1') and (value['anchors'] == selected['anchors']) and (value['selection'] == selected['selection']) and (value['source'] == selected['source']) and (value['holder'] == selected['holder']) and (value['nonce'] == anchors['nonce'] == selection['nonce']) and (value['slot'] == int(slot)) and (value['anchor'] == anchors['originals'][slot]) and (value['original'] == selection['originals'][slot]) and (value['descriptor'] == value['anchor']['descriptor']) and (value['request_ioctl'] == 3226533643) and (value['request_mask'] == 40) and (value['original_Popen_wait_called_claimed'] is False) and (value['actor_signals_or_wait_or_reap_performed'] is False), 'Source-bound held-before-exit kernel EVAL authority differs')
+     old = case['continuous']['original_slots'][slot]
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_registry_v5.py:validate_snapshot
++++ offline-private-namespace:validate_snapshot
+@@ -1,5 +1,6 @@
+ def validate_snapshot(case, sample, previous=None):
+     """Physical TRAIN truth comes from raw actors/current handlers, never labels."""
++    _kernel_shared = {}
+     c = case['continuous']
+     value = sample['status']
+     completed = validate_completed_prefix_capture(case, sample)
+@@ -9,7 +10,7 @@
+     validated_kernel = {}
+     for slot in sample.get('EVAL_kernel_exit_receipts', {}):
+         require(slot in SLOTS and case['slot_eval'][slot] is True, 'Unknown kernel EVAL exit slot')
+-        validated_kernel[slot] = kernel_eval_exit(case, sample, slot)
++        validated_kernel[slot] = kernel_eval_exit(case, sample, slot, _kernel_shared=_kernel_shared)
+     current = current_connections(case, sample)
+     actors = sample['actors']
+     counts = dict(active_train=0, active_eval=0, retiring_eval=0, closed_eval=0)
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_health_main_journal128_v1.py:registry
++++ offline-private-namespace:registry
+@@ -1,10 +1,3 @@
+ def registry():
+     require(hashlib.sha256(REGISTRY.read_bytes()).hexdigest() == REGISTRY_SHA, 'Exact selected static192 registry verifier required')
+-    import sys
+-    name = '_prospective_current_eval_quiescence_registry_v5'
+-    if name not in sys.modules:
+-        spec = importlib.util.spec_from_file_location(name, REGISTRY)
+-        value = importlib.util.module_from_spec(spec)
+-        spec.loader.exec_module(value)
+-        sys.modules[name] = value
+-    return sys.modules[name]
++    return _selected_registry
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_transport_main_journal128_v1.py:base
++++ offline-private-namespace:base
+@@ -1,9 +1,3 @@
+ def base():
+     require(hashlib.sha256(BASE.read_bytes()).hexdigest() == BASE_SHA, 'Selected continuous health source changed')
+-    name = '_prospective_current_eval_quiescence_main_journal128_health_v1'
+-    if name not in sys.modules:
+-        spec = importlib.util.spec_from_file_location(name, BASE)
+-        module = importlib.util.module_from_spec(spec)
+-        spec.loader.exec_module(module)
+-        sys.modules[name] = module
+-    return sys.modules[name]
++    return _selected_base

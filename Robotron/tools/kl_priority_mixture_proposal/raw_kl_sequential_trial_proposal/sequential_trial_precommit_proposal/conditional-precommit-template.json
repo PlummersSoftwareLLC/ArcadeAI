@@ -1,0 +1,185 @@
+{
+  "activation_authorized": false,
+  "actual_deadline": null,
+  "actual_execution": null,
+  "actual_new_owner": null,
+  "actual_protected_best": null,
+  "actual_result": null,
+  "acyclic_chain": [
+    "immutable trial core SHA with actual BEFORE bindings",
+    "derived immutable phase record, root_precommit_sha256=core SHA",
+    "durable actual owned start request with monotonic/wall/boot timestamp before host.start",
+    "adopted owner + unique startup save/copy/same-load CPU phase proof + raw API before actorresume",
+    "activation receipt +192 resume proof + first observed counter snapshots",
+    "immutable watcher job binding core and activation receipt; never rewrite ancestor core"
+  ],
+  "candidate_and_return": {
+    "actual_CE_owner_and_readiness": null,
+    "actual_candidate": null,
+    "actual_latch_and_overshoot": null,
+    "candidate": "one unique model-only KL snapshot with completed request +readonly independent copy +strict CPU phase proof",
+    "confirmation_preparation": "only after actual CE return and all candidate proofs",
+    "new_CE_phase_record": "actionstart/previouskl/newphase and newest boot binding; retain candidate5 andRestartno",
+    "pending_request": "reconcile exact owned slot after retired-owner absence before CE boot; no broad deletion/retry",
+    "return": "actual newest stopped latest, not candidate/insurance/protected rollback"
+  },
+  "field_map": {
+    "learner_adds": "...replay.accepted_learner_total, separately dqn+epsilon",
+    "learner_frames": "API.learner_frame_count minus CPU boot_checkpoint.learner_frame_count",
+    "loaded_clocks": "CPU verified boot floor, not postboot API equality",
+    "optimizer": "API.host_pipeline.learning_exposure.optimizer.total singular",
+    "optimizer_identity": [
+      "process_id",
+      "instance_monotonic_ns",
+      "epoch",
+      "epoch_reason"
+    ],
+    "phase_snapshot": "NOT PRESENT IN API: bind immutable source/env/record, exact journal and same-load CPU metadata",
+    "physical_adds": "API.host_pipeline.learning_exposure.replay.accepted_total minus actual verified fresh-object accepted_total0",
+    "replay_identity": [
+      "process_id",
+      "instance_monotonic_ns",
+      "epoch",
+      "epoch_reason"
+    ],
+    "unclassified": "optimizer.unclassified_started_total; internal0or1 allowed"
+  },
+  "future_confirmation": {
+    "KL_training_during_confirmation": false,
+    "actual_candidate_and_CPU_proof": null,
+    "actual_plan_and_owners": null,
+    "actual_protected_reference": null,
+    "cohort_s": 1200,
+    "diagnostics_all_four": true,
+    "fresh_references_only": true,
+    "full_admission_and_full_tails": true,
+    "mean_gain_each_candidate_minimum": 0.05,
+    "median_each_candidate_minimum": "same fixed pooled fresh reference median",
+    "minimum_games_each": 50,
+    "order": "R/C/R/C",
+    "pool_candidate_rescue": false,
+    "slots": 16,
+    "timeout_s": 2400
+  },
+  "future_derived_actual_receipts": {
+    "CE_return_readiness": null,
+    "activation_receipt": null,
+    "adopted_trainer_identity": null,
+    "derived_phase_record_PIN": null,
+    "first_eligible_latch": null,
+    "frozen_candidate_request_copy_CPU": null,
+    "immutable_watcher_job": null,
+    "new_CE_phase_record_and_owner": null,
+    "newest_stopped_copy_CPU": null,
+    "owned_start_request_PIN_and_actual_t0": null,
+    "retired_owner_absence": null,
+    "startup_snapshot_copy_and_phase_CPU_proof": null
+  },
+  "future_immutable_core_bindings": {
+    "candidate5_sources": null,
+    "control_and_unit_overrides": null,
+    "experiment_branch_model_dir": null,
+    "fresh_before_trainer_and_all192_actor_identities": null,
+    "insurance_source_copy_CPU": null,
+    "newest_stopped_latest_copy_CPU_four_clocks": null,
+    "planned_owned_start_request_id": null,
+    "planned_phase_id_and_unique_save_tags": null,
+    "production_helpers_and_evaluation_profile": null,
+    "protected_checkpoint_and_metadata": null,
+    "ring_current_and_both_bank_start_proof": null,
+    "trial_id": null
+  },
+  "held_recipe": {
+    "LR_control": "UNCHANGED_ACTUAL_PIN",
+    "actor_count": 192,
+    "banks_and_auxiliaries": "UNCHANGED_ACTUAL_PIN",
+    "batch_size": 4096,
+    "capture_flags_new_boot": "both absent",
+    "installed_science": "candidate5 remains through KL and explicit CE return",
+    "max_samples_per_frame": 8,
+    "only_treatment": "same-executed-projected-target raw KL priorities",
+    "optimizer": "held fused Adam + AMP; actual StageB validation prerequisite",
+    "saved_scaler_policy": "UNCHANGED_ACTUAL_PIN"
+  },
+  "interpretation": {
+    "actual_historical_entropy_or_KL_claim": false,
+    "failure": "no promotion/no automatic old-state rollback",
+    "matched_AB_or_causal_speed": false,
+    "physical_turnover_implies_KL_conversion": false,
+    "policy_search": true,
+    "protected_promotion": "only actual complete fresh-quality pass +owned terminal/cleanup; unknown now"
+  },
+  "prerequisites": {
+    "fresh_current_owner_insurance_CPU": null,
+    "newest_stopped_latest_CPU": null,
+    "phase_snapshot_CPU_wrapper_source_and_guards": null,
+    "protected_best_after448": null,
+    "quality448_final_all_four_audits": null,
+    "quality448_original_controller_exit": null,
+    "quality448_owned_cleanup": null,
+    "stage_A_actual_result_and_cleanup": null,
+    "stage_B_actual_result_and_cleanup": null
+  },
+  "proposed_budget_root_accepted_but_NOT_active": {
+    "KL_owner_ceiling_s": 3600,
+    "fleet_pause_s": 10,
+    "horizon_not_seen_by_cutoff": "STOP_INCOMPLETE; no shutdown-tail candidate rescue",
+    "last_horizon_observation_s": 3240,
+    "origin": "actual durable owned start request monotonic time BEFORE new KL host.start; includes constructor/startup proof delays",
+    "owned_shutdown_s": 240,
+    "owner_alive_at_ceiling": "INVALID/manual owned recovery; no extension",
+    "remaining_slack_s": 50,
+    "stop_reserve_s": 360,
+    "unique_candidate_save_s": 60
+  },
+  "proposed_horizon": {
+    "both_required": true,
+    "candidate_count": 1,
+    "first_eligible_observation_only": true,
+    "learner_frames": 8000000,
+    "logical_or_optimized_sample_substitution": false,
+    "physical_accepted_ring_adds_all_sources": 6000000,
+    "second_horizon_or_result_based_extension": false
+  },
+  "schema": "robotron-raw-kl-sequential-trial-conditional-template-v1",
+  "states": {
+    "conditional": "notactive until actualprerequisites+rootcore",
+    "incomplete": "noeligible horizon bycutoff; stopwithoutcandidate rescue",
+    "invalid": "numerical/operational/provenance failure; noqualitywin/loss conclusion",
+    "latched": "once only; freezeonecandidate, thenendKL",
+    "manual": "unknownowner orfailednewestproof orKLowner pastceiling; noautomaticrollback",
+    "quality_eligible": "onlyvalidcandidate+returnedCE+allrootproofs; noKLconfirmation",
+    "retired": "actualoldKLowner absent",
+    "returned_CE": "actualneweststateCEphase/owner/load/fleet proof",
+    "running": "oneboundKLowner andepochs; noreset/retry"
+  },
+  "status": "INACTIVE_CONDITIONAL_PROPOSAL",
+  "watcher_proposal": {
+    "after_healthy192_no_applied_with_real_frames_adds_progress_s": 60,
+    "decision_precedence": [
+      "INVALID evidence",
+      "elapsed>=3600 with KLowner stillpresent =>INVALID/manual",
+      "unlatched andelapsed>3240 =>INCOMPLETE",
+      "first fresheligible receipt atelapsed<=3240 =>LATCH",
+      "unlatched andelapsed==3240 withouteligibility =>INCOMPLETE",
+      "otherwise CONTINUE"
+    ],
+    "immediate_invalid": [
+      "owner/source/control/record/metric mismatch",
+      "counter identity/epoch change or regression",
+      "classified unavailable optimizer outcome increases",
+      "actual owned priority/kernel/training error",
+      "failed load/fleet/source proof",
+      "known nonfinite persistent model/Adam/scaler evidence"
+    ],
+    "latch_time": "rootwatcher receipt monotonic time in sameboot; not older API timestamp",
+    "max_API_age_s": 5,
+    "max_missing_or_stale_interval_s": 30,
+    "max_pipeline_snapshot_age_s": 5,
+    "no_atomic_clock_claim": true,
+    "no_continuous_full_persistent_tensor_audit": true,
+    "normal_inflight": "availableFalse with internal0or1 unfinished optimizer attempt is not error",
+    "poll_interval_s": 1,
+    "unplanned_restart": "invalid single continuous screen; no KL retry/resume to meet horizon"
+  }
+}

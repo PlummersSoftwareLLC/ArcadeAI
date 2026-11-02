@@ -1,0 +1,71 @@
+2026-10-17 — Revision2 SOURCE ONLY, all tests and candidates unexecuted
+
+Root requested this separate revision2 after source-review revision1. Every
+revision1 file/manifest remains byte-identical at its original location.
+Revision2 adds strict draw capture/schema/index/small-field/FP32 weight joins,
+PRE+exit lease epoch checks and canonical actual tensor-device checks. Global
+RNG reads are sequential observations, not an all-thread atomic RNG anchor.
+Invalid captures stop requesting metadata and print at most64 error messages;
+first8 consumed ordinals still remain eligible failure records, never retries.
+
+Root authorized this separate observation-only proposal after actual A/A warmup
+and independent archived numerical audit. It advances calibration preparation;
+it does not qualify, replace or repair the old exact executed-target proposal.
+The completed AA two-case mismatches and previous CUDA failures are immutable.
+
+Five proposed production overlays are agent.py, training.py, replay_buffer.py,
+prefetch.py, recomputed_ce_capture.py. There is no loss_kernel.py overlay.
+The original loss SHAde962 and original _setup_torch_compile method/construction
+remain unchanged. Replay c791 and prefetch028 are byte-identical sealed copies.
+unapplied.patch is review material only; no production apply/check was run.
+
+Startup flag: DQN_RECOMPUTED_CE_CAPTURE_DIR=/absolute/NEW/ce-recomputed-capture-TAG
+Old DQN_EXECUTED_CE_TRACE_DIR must be absent. OFF imports no observer. ON records
+eight consumed eligible attempts, not eight successful/applied steps. Retained
+PRE online+target and exact staged FP32 inputs/actual CE do not observe executed
+target entropy or KL. Offline five-output reconstruction is RECOMPUTED and
+conditional. Matching CE alone never certifies target identity or rank accuracy.
+
+All enabled observer calls sit outside the unchanged compiled kernel and have
+isolated observer-error boundaries. Genuine learner exceptions remain original.
+Owned device synchronization precedes independent CPU copies; end drains one
+current raw snapshot before the wrapper releases its prefetch lease. No raw
+model/slot/device tensors survive end. Create-only publications avoid the old
+watcher's temporary-file/rename race: no new guard allowances are proposed.
+Limits:8 attempts,640MiB raw tensor copies at once,6GiB cumulative artifact files,
+128 small status receipts. Failed/partial files stay as evidence and no ninth
+replacement is fabricated. This is cooperative accounting, not an OS disk quota.
+Capture pauses and scheduling changes are observer effects, not throughput data.
+
+test_recomputed_capture.py contains14 authored/unexecuted methods: tiny CPU
+tensor copies/serialization, fake exposure outcomes and AST-extracted original
+training wrapper. It uses explicit4x3 test geometry and imports only the real
+loss definition/constructor (no real model, CUDA, torch.compile, whole training
+implementation, actual optimizer step or replay sampler execution). Tests cover
+source constructor/math preservation, detached PRE/input lifetime, no9/skips,
+transfer/forward failure, actual nonfinite retention, I/O/budget containment,
+FP32 dtype rejection, RNG non-advancement and raw drain before lease release.
+Fake applied exposure is not validation of real Adam admission or movement.
+
+NEW test_whole_training_capture.py contains6 separate integration methods. It
+reuses immutable08061 fixture setup/helpers and imports the ENTIRE proposed
+training.py in its full private copied package. Actual4096x8 CPU replay/prefetch,
+original four-output loss body, CPU Adam and optimizer exposure verify PRE/order,
+applied progress, original exception/outcome retention, lease drain, observer
+fault isolation and base/OFF/ON equality. A CPUGradScaler test uses explicitly
+named CUDA-branch device/autocast/found-inf adapters and retains applied/skip/
+transfer/forward failures across8 withno9. This is no actual CUDA/torch.compile/
+Rainbow geometry/lifecycle or live-mixture proof. No inherited old test methods
+are silently rerun. Native batch updates remain disabled as in that CPU fixture.
+This suite needs a fresh separate CUDA-hidden process with both
+ROBOTRON_ALLOW_WHOLE_STEP_CPU=1 and ROBOTRON_ALLOW_RECOMPUTED_WHOLE_CPU=1;
+do not combine it with the tiny observer module that imports Torch at startup.
+
+Pending: independent source review, explicit root CPU-test GO and actual result,
+full implementation/private integration tests, a separately reviewed one-attempt
+actual Rainbow4096 CUDA/AMP/fusedAdam/preload+native+prefetch rehearsal and owned
+parent/worker; offline recomputation and uncertainty reporting; source/runtime/
+checkpoint/run identity receipts. No private rehearsal worker/parent is included
+or launched by this revision. Current384 checkpoint/quality takes scheduling
+priority. No live flag, restart, source/control/state/unit/checkpoint/model-data
+action or import/test/compile/default invocation occurred in this authoring.

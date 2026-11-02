@@ -1,0 +1,30 @@
+
+def validate_completed_retirement(row,job,result,seal):
+    """Completed games need authentic STOP/child0, not fabricated keepalives."""
+    slot=row['slot'];member=row['member']
+    require(result['complete'] is True and result['errors']==[]
+        and result['all_original_threads_stopped'] is result['original_lease_released'] is True,
+        'Original completed-game audit requires final writer/lease closure')
+    require(slot in result['completed_original_normal0_slots']
+        and all(type(value)is int for value in result['completed_original_normal0_slots']),
+        'Completed first game missing positive normal0 retirement')
+    actor=result['original_slots'][str(slot)]
+    require(type(actor['actual_exit'])is int and actor['actual_exit']==0
+        and actor['outputs_sealed_after_original_writer_closure'] is True
+        and actor['original_unsealed_output_paths']==[],
+        'Completed original child must exit0 and seal only after writer closure')
+    receipt=result['completed_first_game_STOP_authorities'][str(slot)]
+    require(receipt['slot']==slot and receipt['member']==member
+        and receipt['session']==job['sessions'][str(slot)]==member['session']
+        and receipt['connection']==job['connections'][str(slot)]==member['connection']
+        and receipt['nonce']==member['startup_nonce']
+        and type(receipt['sequence'])is int and receipt['sequence']==row['completion_sequence']
+        and receipt['consumed_before_send'] is receipt['screen_first_game_complete'] is True
+        and row['completion_observed_ns']<=receipt['consumed_monotonic_ns']<=seal['seal_observed_monotonic_ns'],
+        'Authentic original first-game STOP subject/sequence/time required')
+    completion=receipt['completion']
+    required={'status','score','score_observed_ns','score_witness','completion_observed_ns',
+        'completion_sequence','completion_accepted_ordinal','completed_row','completion_source_witness'}
+    require(required<=set(completion) and all(key in row and row[key]==value for key,value in completion.items()),
+        'STOP authority must retain the complete original first-game result')
+    return True

@@ -1,0 +1,54 @@
+--- a/Robotron/Scripts/dqn/metrics_dashboard.py
++++ b/Robotron/Scripts/dqn/metrics_dashboard.py
+@@ -890,6 +890,41 @@
+     def now_body(self) -> bytes:
+         with self.lock:
+             return self._cached_now_body
++
++    def rejected_gap_body(self) -> bytes:
++        """On-demand readonly metadata; never hold dashboard/metrics/client locks."""
++        response = dict(schema="robotron-rejected-gap-api-v1", available=False,
++                        reason="server_unavailable", snapshot=None)
++        try:
++            # Main publishes this reference after dashboard startup. Keep a local
++            # reference; the snapshot itself uses only its own diagnostic lock.
++            server = getattr(self.metrics, "global_server", None)
++            if server is not None:
++                getter = getattr(server, "rejected_gap_snapshot", None)
++                if not callable(getter):
++                    response["reason"] = "getter_unavailable"
++                else:
++                    snapshot = getter()
++                    if (not isinstance(snapshot, dict)
++                            or snapshot.get("schema") != "robotron-rejected-gap-observation-v1"
++                            or any(type(snapshot.get(k)) is not bool for k in
++                                   ("enabled", "available", "observer_error", "counter_saturated"))
++                            or (snapshot["available"] and (not snapshot["enabled"]
++                                or snapshot["observer_error"] or snapshot["counter_saturated"]))):
++                        raise ValueError("Invalid rejected-gap snapshot")
++                    reason = ("disabled" if not snapshot["enabled"] else
++                              "observer_error" if snapshot["observer_error"] else
++                              "counter_saturated" if snapshot["counter_saturated"] else
++                              "available" if snapshot["available"] else "observer_unavailable")
++                    response.update(available=snapshot["available"], reason=reason, snapshot=snapshot)
++            body = json.dumps(response, allow_nan=False, separators=(",", ":")).encode("utf-8")
++            if len(body) <= 128 * 1024:
++                return body
++            response.update(available=False, reason="response_too_large", snapshot=None)
++        except Exception:
++            # No exception text, client payload or zero-counter substitute.
++            response.update(available=False, reason="snapshot_error", snapshot=None)
++        return json.dumps(response, allow_nan=False, separators=(",", ":")).encode("utf-8")
+ 
+     def game_preview_body(self, since_seq: int | None = None, wait_timeout_s: float = 0.0) -> bytes | None:
+         since = None if since_seq is None else int(max(0, since_seq))
+@@ -5163,6 +5198,9 @@
+             if path == "/api/now":
+                 self._send(state.now_body(), "application/json")
+                 return
++            if path == "/api/rejected_gaps":
++                self._send(state.rejected_gap_body(), "application/json")
++                return
+             if path == "/api/history":
+                 body = json.dumps(state.payload()).encode("utf-8")
+                 self._send(body, "application/json")

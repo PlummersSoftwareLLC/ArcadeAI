@@ -1,0 +1,30 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/review_round_study_readiness_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-physical-original04/postguard-owned-operations-original01/review_physical_study_readiness_v1.py
+@@ -9,7 +9,7 @@
+ import subprocess
+ import time
+ 
+-ROOT = Path(__file__).resolve().parents[2]
++ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ HERE = Path(__file__).resolve().parent
+ 
+ 
+@@ -73,7 +73,7 @@
+     while True:
+         try:
+             sample = worker.collect(health, case)
+-            health.validate(case, sample)
++            physical_validation = health.validate(case, sample)
+             health.check_inputs(case, full=True)
+             break
+         except (ValueError, OSError):
+@@ -91,7 +91,8 @@
+         CPU_qualifications_closed=True, original_attempts_unused=True,
+         future_service_and_timer_units_absent=True, private_ports_free=ports,
+         permanent_lease_identity_verified_and_unlocked=True, fresh_main=baseline,
+-        main_round=sample['status']['round'], active=sample.get('observed_counts', sample['status'])['active'], completed=sample.get('observed_counts', sample['status'])['completed'],
++        main_round=None, active=len(sample['actors']), completed=physical_validation['partition']['closed_eval'],
++        main_counts=physical_validation['partition'], main_health_profile=physical_validation['profile'],
+         GPU0=job['gpu_uuid'], GPU0_occupants=occupants, raw_GPU_readback=hardware.stdout,
+         evaluation_started=False, quality_qualified=False, promotion=False,
+         checks_must_be_repeated_before_launch=True, source=h.pin(Path(__file__).resolve())))

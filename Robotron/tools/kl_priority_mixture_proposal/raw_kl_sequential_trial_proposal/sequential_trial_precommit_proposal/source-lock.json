@@ -1,0 +1,55 @@
+{
+  "actual_A_B_or_trial_result": null,
+  "schema": "robotron-raw-kl-sequential-contract-source-lock-v1",
+  "scope": "Source/smallJSON only; actualfuturebindings remainunknown; no tensor/runtime queries",
+  "sources": {
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/learning_exposure.py": {
+      "bytes": 9123,
+      "sha256": "30d9191e9fc845d80e52a7a891244fcf0c7041cf60529f6559b15e6d47ac5c7f"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/main.py": {
+      "bytes": 67287,
+      "sha256": "61fa053eea882e7e9ca1d95cd8dc081c45dec75677b12c51231aa95f51da0282"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/managed_driver.py": {
+      "bytes": 5639,
+      "sha256": "05407642f75a5dc883ba7f45512f36711ffb66f29bce41fc860aba182644dc36"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/metrics_dashboard.py": {
+      "bytes": 233840,
+      "sha256": "3013d511f1d933fe6012df5cecd7f8a8861824bdd41580cbe241b7498916f1c6"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/run_telemetry.py": {
+      "bytes": 13426,
+      "sha256": "fac30f1f75d4d5272d21b2cdb2eae865aa519e1f344c04b3efbfdd6436a25863"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-live8-four-readout-efficacy-decision-source-review-20261017/decision-note.txt": {
+      "bytes": 6413,
+      "sha256": "d590407f8fa59aaaf7080da7d140dcde6baad3f027baba944781b1e47667e27f"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/agent.py": {
+      "bytes": 98429,
+      "sha256": "865a0df717b39951b7f7c516e4a962e3d48cf4d3dc11295ff266e58653e6c74b"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/config.py": {
+      "bytes": 117528,
+      "sha256": "19abcbde4d08cf8465b82185ac6dd52eb8965adb8611584e0677c4c7ff21d1fd"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_activation_lifecycle_proposal/ACTIVATION_AND_RETURN_CE.json": {
+      "bytes": 19309,
+      "sha256": "2da78068ada0d5d083be1112ab6391131c57e6d6125ae87b41b60de8debf130c"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/private_validation_proposal/preparation-manifest.json": {
+      "bytes": 7246,
+      "sha256": "2053218ba39354f6321e255abc493d7804a9f9cbe2f75de1948a69133d6012f2"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/priority_phase.py": {
+      "bytes": 8049,
+      "sha256": "ee3c0d02bc1eab55e92ffd605c3736fe5a0ef905a8a8ee242c687301ea2b7c5b"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/training.py": {
+      "bytes": 35009,
+      "sha256": "90b847856f810cb4f52513a4bd0625b2d15d4801107bff398060faae25bc4be4"
+    }
+  }
+}

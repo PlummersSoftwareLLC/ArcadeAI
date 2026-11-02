@@ -1,0 +1,43 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-namespace1200-guard-original02/closed_metadata_readiness_reuse_namespace1200_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-portable-namespace-guard-original03/closed_metadata_readiness_reuse_portable_namespace_v7.py
+@@ -24,7 +24,7 @@
+     return value
+ 
+ 
+-SOURCE_CONTRACT_SHA = '33397c4b09c79fcfd4bfec1249105f4ff3d841c86a5e5d73f19d0a5edc44df9a'
++SOURCE_CONTRACT_SHA = '89a7a12f9d3de3b136622b1cfeb5f331cde615d64baa049e79662f23cb78482f'
+ 
+ 
+ class ClosedMetadataReadiness:
+@@ -192,10 +192,28 @@
+                 and overlay['unchanged_native_controller'] == policy['native_controller'],
+                 'Selected metadata-only namespace correction differs from unchanged private source graph')
+         namespace = load('_closed_guard_metadata_namespace_preflight', h.checked(policy['metadata_assembler']))
++        # M9's stored ast.dump is immutable provenance from its successful
++        # CPython3.12 invocation. It is not an AST wire format: newer Python
++        # omits empty Call fields. Fresh equivalence uses ONE current parser.
++        parent_source = h.checked(policy['metadata_preparer_parent']).read_text()
++        selected_source = h.checked(policy['metadata_preparer']).read_text()
++        old_prefix = "namespace = 'deadline32-current-eval-quiescence-proof2s-'"
++        new_prefix = "namespace = 'deadline32-physical192-proof2s-'"
++        require(parent_source.count(old_prefix) == 1
++                and selected_source == parent_source.replace(old_prefix, new_prefix)
++                and Path(policy['metadata_preparer']['path']).parent
++                    == Path(policy['native_controller']['path']).parent,
++                'Only the exact one-prefix same-directory metadata overlay is allowed')
++        require(namespace.namespace_expression(selected_source, 'prepare')
++                    == namespace.namespace_expression(h.checked(policy['native_controller']).read_text(), 'checked_config'),
++                'Current-interpreter producer/controller namespace expressions differ')
++        expected_preflight = dict(schema='robotron-source-only-metadata-namespace-preflight-v1',
++            overlay=policy['metadata_namespace_overlay'],parent_preparer=policy['metadata_preparer_parent'],
++            selected_preparer=policy['metadata_preparer'],unchanged_native_controller=policy['native_controller'],
++            producer_controller_namespace_AST_equal=True,only_one_prefix_changed=True,scientific_payload_executed=False)
+         require(report['metadata_namespace_preparation_preflight']
+-                    == metadata_job['metadata_namespace_preparation_preflight']
+-                    == namespace.namespace_preflight(h, self.read(policy['physical_source_family'])),
+-                'Exact one-prefix producer/controller namespace preflight must hold for this closed metadata scope')
++                    == metadata_job['metadata_namespace_preparation_preflight'] == expected_preflight,
++                'Exact successful M9 report/job namespace preflight provenance differs')
+         classifier = load('_closed_guard_exact_resume_classifier', h.checked(policy['metadata_guard_preparer']))
+         require(report['held_input_classification_preflight'] == classifier.preflight_held_inputs(metadata_job['inputs']),
+                 'Recorded early preflight must classify the complete unchanged selected held-input domain')

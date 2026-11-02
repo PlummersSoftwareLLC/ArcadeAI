@@ -1,0 +1,2 @@
+local ok,err=pcall(function() assert(loadfile("/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality32-protected3045-vs-later3262-selectorReuse-original01-preparation-20261025/evaluator-count-active600-counterbalanced-engineering-original06/future-startup-slot64-chain-correction-original01/full-tail-observation-slot64-main.lua"))() end)
+if not ok then print("COMPILED32_FULL_TAIL_FATAL "..tostring(err));manager.machine:exit() end

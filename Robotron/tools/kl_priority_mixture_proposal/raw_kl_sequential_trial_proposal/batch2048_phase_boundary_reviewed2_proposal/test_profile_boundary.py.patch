@@ -1,0 +1,41 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_boundary_proposal/test_profile_boundary.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_boundary_reviewed2_proposal/test_profile_boundary.py
+@@ -171,7 +171,13 @@
+         for mode in helper.MODES:
+             boundary = spec(mode)
+             for purpose in ('startup', 'candidate', 'newest_stopped'):
+-                expected = boundary['before_batch_size'] if purpose == 'newest_stopped' else boundary['after_batch_size']
++                if mode == 'activate_batch2048' and purpose == 'candidate':
++                    with self.assertRaises(ValueError):
++                        helper.phase_cpu_boundary(boundary, purpose, profile_pin=profile, producer_observation=producer)
++                    continue
++                expected = {('activate_batch2048','startup'):2048,
++                    ('activate_batch2048','newest_stopped'):4096, ('return_batch4096','startup'):4096,
++                    ('return_batch4096','candidate'):2048, ('return_batch4096','newest_stopped'):2048}[(mode,purpose)]
+                 if expected == 4096:
+                     result = helper.phase_cpu_boundary(boundary, purpose)
+                     self.assertEqual(result['additional_job_fields'], {})
+@@ -183,7 +189,7 @@
+                     self.assertEqual(context['profile'], profile)
+                     self.assertEqual(context['producer_observation'], producer)
+                     self.assertEqual(context['role'], 'treatment_startup' if purpose == 'startup' else purpose)
+-                    self.assertEqual(result['result_schema'], 'robotron-batch2048-phase-snapshot-checkpoint-CPU-result-v1')
++                    self.assertEqual(result['result_schema'], 'robotron-batch2048-phase-snapshot-checkpoint-CPU-result-reviewed2-v1')
+                 self.assertEqual(result['batch_size'], expected)
+         with self.assertRaises(ValueError):
+             helper.phase_cpu_boundary(spec(), 'early_insurance',
+@@ -197,5 +203,14 @@
+                 producer_observation=producer)
+ 
+ 
++    def test_return_candidate_is2048_before4096_start_and_activation_candidate_is_invalid(self):
++        returning = spec('return_batch4096')
++        self.assertEqual(helper.phase_producer_batch(returning, 'candidate'), 2048)
++        self.assertEqual(helper.phase_producer_batch(returning, 'newest_stopped'), 2048)
++        self.assertEqual(helper.phase_producer_batch(returning, 'startup'), 4096)
++        with self.assertRaises(ValueError):
++            helper.phase_producer_batch(spec(), 'candidate')
++
++
+ if __name__ == '__main__':
+     unittest.main()

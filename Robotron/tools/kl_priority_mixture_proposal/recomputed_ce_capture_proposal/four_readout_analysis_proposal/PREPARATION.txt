@@ -1,0 +1,117 @@
+FOUR CONDITIONAL READOUTS — SOURCE-ONLY PREPARATION, 2026-10-17
+
+Purpose and status
+------------------
+This is an additive CPU analysis proposal for the eight original live captures
+and the separate source-reviewed conditional8 reconstruction. No production,
+capture, reconstruction or previous analysis file is changed. The author has
+not imported, compiled, default-invoked, tested or executed this proposal and
+has read no tensor/model/replay bytes or runtime endpoints. Actual future GPU
+reconstruction results and their root-bound file pins are unknown here.
+
+The frozen reconstruction reviewed is worker182f008a / parent02af5b4a /
+lock68327866 / original preparation-manifest6efd771b. Root later retained a
+fixture-only test correction separately; no scientific worker change is needed.
+Its actual execution status is not inferred from this source preparation.
+
+Readouts and exact scope
+------------------------
+A: original actual emitted/staged FP32 coefficients from the captured draw.
+B: selected-row sensitivity from fresh ACTUAL captured CE.
+C: selected-row sensitivity from fresh CONDITIONAL RECOMPUTED CE.
+D: selected-row sensitivity from that SAME conditional CE minus its conditional
+   CPU FP32 target entropy, clamped to nonnegative only after retaining signed KL.
+
+A→B exposes stored-leaf sensitivity, including unknown age/metric/generation and
+insertion/death/elite boosts; it does NOT isolate age or staleness causality.
+B→C exposes reconstruction differences; C→D exposes conditional entropy subtraction.
+Never subtract conditional entropy
+from actual CE and label the result executed KL. Original CE comparison remains
+native torch.isclose, rtol0.0002/atol0.00002/equal_nanFalse, independently rechecked
+against the worker's complete retained mask. No tolerance is fitted or changed.
+Finite mismatches stay in all-eight descriptions, with the original comparison
+false. The script cannot qualify a policy, optimizer update or tracing ABI.
+
+Fresh metric values retain FP32 provenance, then convert to FP64 before
+(abs(metric)+1e-6)**captured_alpha. The separate sampler leaf floor remains1e-10.
+For the SAME selected PER rows use (selected_min_leaf/leaf)**captured_beta.
+This is relative selected-row sensitivity, not a new tree/draw: whole-tree
+metric age, total, generation and candidate KL population remain unknown. The
+formula cancels a common positive tree total only when the original raw-weight
+normalizer floor is inactive. The observed original floor flag is reported;
+no hypothetical whole-tree maximum or floor status is invented. It does not
+claim bit-exact weights from a hypothetical future
+sampler. Keep all duplicates as separate observations; contradictory metrics
+for one repeated index do not form a coherent last-write tree.
+
+Each B/C/D vector independently sets recent/interesting=1 and banks=its own FP64
+NumPy mean PER weight BEFORE the final FP32 cast. Banks are not PER leaves.
+Actual A is verified against its recorded raw selected weights, denominator,
+FP64 bank mean and final FP32 cast. Reusing A's mean for B/C/D would hide the
+algorithm's bank coupling. No common multiplier or LR compensation is applied.
+
+For every vector report coefficient concentration/ESS, origin contributions,
+expert/nonexpert Bellman scalar, and paired rankings on the selected PER rows.
+Bellman arithmetic is presented separately holding actual CE or recomputed CE
+fixed; actual known BC and combined unobserved-aux/reduction residual are retained
+from the bound actual-only analysis. These are scalar coefficient/objective
+descriptions, not measured parameter gradients, actual effective LR or population
+IS ESS. Conditional auxiliary outputs remain available in the retained raw file;
+they are not used to invent missing actual per-row auxiliary observations.
+
+Retain negative signed KL, metric-epsilon-sensitive rows, conditional target
+negative entries/mass errors and CE reduction residuals. A normalized nonnegative
+target is required for literal KL. No silent renormalization, mass tolerance or
+negative-value rescue is introduced. Exact CE agreement does not bound missing
+actual entropy/KL/rank. Tied/floor-sensitive rankings and target discrepancies
+require interpretation; this script provides no automatic readiness decision.
+Eight CE-selected startup batches do not establish a KL-selected population,
+migration distribution, sustained throughput, learning speed or policy quality.
+
+Inputs and bounded execution contract
+------------------------------------
+Default invocation prints only literal PLAN_ONLY; it reads no helper/data and
+imports neither NumPy nor Torch. Explicit future execution requires a NEW owned
+0444 root binding, its SHA, this tool's SHA and a NEW canonical output directory.
+job.schema.json is only a schema, not a fabricated actual job or actual result.
+It binds the completed conditional phase and launch manifest, the existing exact
+actual-only analysis f9235940 and original input-binding0c2a528a, and all eight
+ordered result/readout/raw/mask file pins. Do not prepare an actual binding until
+the conditional job has a retained terminal outcome and all eight results.
+
+The reader opens only each small conditional-readout-inputs.pt, corresponding
+conditional-recomputed.pt and ce-mismatch-mask.pt, map_locationCPU/weights_only/
+mmap. It NEVER opens the original507MB PRE files or evaluates a network. Expected
+original payload identities are joined as metadata to the original acquisition;
+CE tensor fingerprints and original actual-only CE/weight statistics are joined
+independently. Only one row's retained tensors is resident at a time. Each small
+file is limited64MiB; Torch/NumPy are imported only after hidden-CUDA/source/job
+guards. No backward, optimizer, model or replay is constructed.
+
+Recommended root-owned execution envelope, after separate review and root GO:
+CUDA_VISIBLE_DEVICES='' before interpreter, unsetLD_PRELOAD/PYTHONPATH,2CPU,
+MemoryMax3GiB,TasksMax128,RuntimeMax120s,16MiB NEW analysis output budget.
+Original source evidence is external read-only, not copied. Preserve original
+unit exit and failure outputs before root-owned release. A cap/failure is retained,
+not retried with relaxed data/tolerances/resources. Author performed no execution.
+
+Future argv pattern (replace only actual root-owned paths/hashes after results):
+env -u LD_PRELOAD -u PYTHONPATH CUDA_VISIBLE_DEVICES='' OMP_NUM_THREADS=2
+ OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
+ /home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python -I -B
+ <this_directory>/analyse_four_readouts.py --execute
+ --binding <NEW_actual_root_binding.json> --binding-sha256 <actual_binding_SHA>
+ --tool-sha256 <frozen_tool_SHA> --output <NEW_analysis_directory>
+
+Authored tests
+---------------
+Twelve unexecuted methods cover the four distinct vectors, epsilon-before-alpha,
+source FP64 mean bank coupling, quota1, explicit scalar/CE choice, duplicate rows,
+negative/clamped KL, inconsistent raw subtraction, malformed origin/normalizer/
+bank data, nonfinite/negative CE, rank ties/empty PER and a read-free default.
+They use small synthetic CPU NumPy vectors and the pinned existing pure helper,
+no Torch/tensor files/model. They do not validate future actual PT decoding or
+the complete CLI/result/source binding; actual bounded execution remains needed.
+
+No previous source/receipt is rewritten. This advances conditional calibration;
+it is not a priority treatment or authorization for one.

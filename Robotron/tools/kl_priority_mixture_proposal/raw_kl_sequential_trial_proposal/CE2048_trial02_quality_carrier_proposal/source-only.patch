@@ -1,0 +1,100 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/recovered_CE543_quality_binding_proposal/root_quality_carrier.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_quality_carrier_proposal/root_quality_carrier.py
+@@ -1,7 +1,7 @@
+ #!/usr/bin/env python3
+-"""Root-owned live CE candidate versus actual protected reference quality carrier; default literal PLAN has no reads.
+-
+-Narrow factual binding adaptation of the actual448 root launcher. Only explicit --execute may
++"""Root-owned first CE2048 candidate versus protected543 quality carrier; default literal PLAN has no reads.
++
++Narrow metadata adaptation of the proven recovered-CE carrier. Only explicit --execute may
+ prepare a real default plan, perform fresh preflight, or schedule the campaign.
+ There is no service release, retry, checkpoint request, or publication action.
+ """
+@@ -28,8 +28,8 @@
+ SIDECAR_SHA='cd034413c2fd8a56bb9d22f8df86889939edfad041ee4e2e0210a831b5f9fe90'
+ GPU0='GPU-b549355c-78bb-53d8-04a6-da34d45e1dd0'
+ GPU1='GPU-c0c5d295-6f07-aab5-bbde-b592ea426ec1'
+-BINDINGS_SOURCE=Path(__file__).with_name('quality_bindings.py')
+-BINDINGS_SHA='2396f8247143945b6ea70dcfff2684f709f5092ee4c775822d7f47f9f4cae176'
++BINDINGS_SOURCE=G/'tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_quality_binding_proposal/quality_bindings.py'
++BINDINGS_SHA='53b650cd0f64b2bbe07e81324199e48f31153bc5f72aa4efd78d1fde940b7ab3'
+ 
+ 
+ def require(ok,message):
+@@ -69,13 +69,14 @@
+     require(CFG is not None, 'Explicit authenticated binding job required')
+     candidate=CFG['candidate'];job=BUNDLE['cpu_job'];proof=BUNDLE['proof']
+     require(CANDIDATE.stat().st_size==candidate['bytes'] and sha(CANDIDATE)==candidate['sha256']
+-            and not CANDIDATE.stat().st_mode&0o222,'Frozen CE candidate changed after phase CPU')
++            and not CANDIDATE.stat().st_mode&0o222,'Frozen first CE2048 candidate changed after typed phase CPU')
+     require(sha(REFERENCE)==REFERENCE_SHA and not REFERENCE.stat().st_mode&0o222,'Protected reference differs')
+     evidence=CFG['evidence']
+     return dict(binding_job=BINDING_PIN,phase_cpu_job=evidence['phase_cpu_job'],
+         phase_cpu_proof=evidence['phase_cpu_report'],phase_cpu_completion=evidence['phase_cpu_completion'],
+-        live_ce_capture=evidence['capture_result'],current_ce_phase=CFG['current_ce_phase'],runtime_baseline=CFG['runtime_baseline'],
+-        reference=CFG['reference'],previous_campaign=CFG['previous_campaign'],
++        trial_result=evidence['trial_result'],ce_return=evidence['ce_return'],owned_cleanup=evidence['owned_cleanup'],
++        current_ce_phase=BUNDLE['ce_return']['startup_phase_proof']['phase'],runtime_baseline=CFG['runtime_baseline'],
++        reference=CFG['reference'],
+         candidate_sha256=candidate['sha256'],candidate_bytes=candidate['bytes']),job
+ 
+ def default_argv():
+@@ -150,7 +151,7 @@
+ 
+ def readiness_contract(value,bound):
+     health=BUNDLE['baseline'];anchor=CFG['runtime_anchor']
+-    require(value['schema']=='robotron-live-CE-exclusive-readiness-v1' and value['status']=='PASS'
++    require(value['schema']=='robotron-CE2048-trial02-exclusive-readiness-v1' and value['status']=='PASS'
+             and type(value['observed_unix_s']) in (float,int) and 0<=time.time()-value['observed_unix_s']<180,
+             'Actual post-return runtime observation must be fresh within180s')
+     require(value['candidate']==dict(source=str(CANDIDATE),sha256=bound['candidate_sha256'],bytes=bound['candidate_bytes'],
+@@ -166,7 +167,7 @@
+     resources=value['resources']
+     require(resources['gpu0_uuid']==GPU0 and resources['gpu1_uuid']==GPU1 and resources['GPU0_free_bytes']>=14*(1<<30)
+             and all(resources[name] is True for name in ('GPU0_no_compute_owner','GPU1_main_only','port9999_clear','lease_free',
+-                'no_competing_helpers','no_private_cgroup_tmpfs_processes','no_pending_save','capture_and_CPU_units_released',
++                'no_competing_helpers','no_private_cgroup_tmpfs_processes','no_pending_save','owned_units_released',
+                 'commands_UID_cwd_exe_checked','held_environment_checked','unit_files_checked')),
+             'Fresh exclusive resource/owner/held-profile proof incomplete')
+     require(value['unit_files']==anchor['unit_files'] and value['unit_files']
+@@ -197,9 +198,9 @@
+     environment={part.split(b'=',1)[0].decode():part.split(b'=',1)[1].decode() for part in raw
+         if b'=' in part and part.split(b'=',1)[0].decode().startswith(('DQN_','ROBOTRON_','CUDA_','TORCHINDUCTOR_'))}
+     require(hashlib.sha256(json.dumps(environment,sort_keys=True).encode()).hexdigest()==readiness['environment_sha256']
+-            and environment.get('DQN_PER_PRIORITY_METRIC')=='ce'
+-            and environment.get('DQN_PRIORITY_PHASE_RECORD')==BUNDLE['current_ce_phase']['record']['path']
+-            and environment.get('DQN_PRIORITY_PHASE_RECORD_SHA256')==BUNDLE['current_ce_phase']['record']['sha256'],
++            and environment.get('DQN_PER_PRIORITY_METRIC')=='ce' and environment.get('DQN_BATCH_SIZE')=='4096'
++            and environment.get('DQN_PRIORITY_PHASE_RECORD')==BUNDLE['ce_return']['startup_phase_proof']['phase']['record']['path']
++            and environment.get('DQN_PRIORITY_PHASE_RECORD_SHA256')==BUNDLE['ce_return']['startup_phase_proof']['phase']['record']['sha256'],
+             'Main held CE execution environment differs')
+     applications=call(['nvidia-smi','--query-compute-apps=pid,gpu_uuid','--format=csv,noheader,nounits'])
+     require(applications['returncode']==0,'GPU ownership query failed')
+@@ -212,7 +213,7 @@
+     require(free[GPU0]>=14*(1<<30),'GPU0 free margin below14GiB')
+     with urllib.request.urlopen('http://127.0.0.1:8771/api/now',timeout=5) as stream:api=json.load(stream)
+     require(api['client_count']==192 and api['training_enabled'] and not api['measurement_active']
+-            and api['managed_experiment']=='best10M-fresh3-eps10-cap8-nosmooth'
++            and api['managed_experiment']==CFG['experiment']
+             and api['host_pipeline']['learning_exposure']['optimizer']['process_id']==main['pid'],'Current API CE owner/held branch changed')
+     return dict(main_pid=main['pid'],actors=192,current_learner_frames=api['learner_frame_count'])
+ 
+@@ -297,7 +298,7 @@
+     global CFG,BUNDLE,BINDINGS,BINDING_PIN,D,J,OUT,U,BASELINE,BASELINE_SHA,REFERENCE,REFERENCE_SHA,CANDIDATE
+     require(args.binding_job and args.binding_job_sha256 and args.expected_source_sha256,'Explicit concrete binding/source digests required')
+     require(sha(__file__)==args.expected_source_sha256 and sha(BINDINGS_SOURCE)==BINDINGS_SHA,'Carrier/bindings source differs')
+-    spec=importlib.util.spec_from_file_location('_rawkl_quality_bindings',BINDINGS_SOURCE)
++    spec=importlib.util.spec_from_file_location('_ce2048_ending_quality_bindings',BINDINGS_SOURCE)
+     BINDINGS=importlib.util.module_from_spec(spec);spec.loader.exec_module(BINDINGS)
+     path=args.binding_job.resolve(strict=True);info=path.lstat()
+     BINDING_PIN=dict(path=str(path),sha256=args.binding_job_sha256,bytes=info.st_size,identity=BINDINGS.identity(info))
+@@ -315,7 +316,7 @@
+     for name in ('plan-review','runtime-readiness'):parser.add_argument('--'+name,type=Path)
+     args=parser.parse_args(argv)
+     if not args.execute:
+-        print('PLAN_ONLY: concrete live CE candidate/phaseCPU/current CE/reference binding required; no reads/imports/queries/actions')
++        print('PLAN_ONLY: concrete first CE2048 candidate/typed phaseCPU/new returned CE4096/reference543 binding required; no reads/imports/queries/actions')
+         return 0
+     configure(args)
+     result=prepare(args) if args.action=='prepare' else launch(args) if args.action=='launch' else observe() if args.action=='observe' else archive()

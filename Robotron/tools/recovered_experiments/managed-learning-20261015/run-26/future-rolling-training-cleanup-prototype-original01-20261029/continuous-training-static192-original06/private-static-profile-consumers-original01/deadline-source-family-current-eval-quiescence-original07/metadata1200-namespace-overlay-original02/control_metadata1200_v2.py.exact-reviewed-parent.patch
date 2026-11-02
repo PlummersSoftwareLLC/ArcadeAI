@@ -1,0 +1,17 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-physical-original04/metadata600-resource-templates-original01/control_metadata600_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/metadata1200-namespace-overlay-original02/control_metadata1200_v2.py
+@@ -56,12 +56,12 @@
+     require(re.fullmatch(r'robotron-[A-Za-z0-9_-]+\.service',c['unit']), 'Exact audit service name required')
+     props=dict(x.split('=',1) for x in c['properties'])
+     require(len(props)==len(c['properties']) and props.get('CPUQuota')=='200%' and
+-        props.get('MemoryMax')=='4G' and props.get('RuntimeMaxSec')=='600' and
++        props.get('MemoryMax')=='4G' and props.get('RuntimeMaxSec')=='1200' and
+         set(props)<= {'CPUQuota','MemoryMax','RuntimeMaxSec','MemorySwapMax','TasksMax','TimeoutStopSec','SendSIGKILL'} and
+         props.get('SendSIGKILL')=='no' and
+         props.get('MemorySwapMax','0')=='0' and props.get('TasksMax','128') in ('128','256') and
+         props.get('TimeoutStopSec','5')=='5','Audit resource scope differs')
+-    require(type(c['observation_s']) in (int,float) and 600<=c['observation_s']<=720,
++    require(type(c['observation_s']) in (int,float) and 1200<=c['observation_s']<=1320,
+             'Bounded original audit observation required')
+     require(isinstance(c['argv'],list) and c['argv'] and all(isinstance(x,str) for x in c['argv']),
+             'Explicit selected auditor argv required')

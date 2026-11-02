@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-fleet-df519-vs-frozenS2-two-arm-screen-original01-20261031/future-fixed-cutoff-score-stall-policy-source-original01/run_newer_policy_vs_frozenS2_fixed_cutoff_liveness_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/df519-vs-S2-fixed-cutoff-liveness-screen-original01-20261031/future-reverse-corrected-protocol-source-only-original01/run_fixed_cutoff_reverse_order_screen_v3.py
+@@ -114,7 +114,7 @@
+     validate_job(job)
+     selected=json.loads(h.checked(job['screen_selection']).read_bytes())
+     require(selected['schema']=='robotron-prospective-S2-b231-two-arm-cutoff-screen-v1'
+-        and selected['status']=='ROOT_SELECTED_NOT_LAUNCHED'and selected['ordered_legs']==['R1','C1']
++        and selected['status']=='ROOT_SELECTED_NOT_LAUNCHED'and selected['ordered_legs']==['C1','R1']
+         and selected['screen_only']is True and selected['promotion']is False
+         and selected['reference']['checkpoint']['sha256']==REFERENCE_SHA,'Exact prospective paired screen selection required')
+     require(type(selected['private_score_stall_timeout_s'])is int and selected['private_score_stall_timeout_s']==0

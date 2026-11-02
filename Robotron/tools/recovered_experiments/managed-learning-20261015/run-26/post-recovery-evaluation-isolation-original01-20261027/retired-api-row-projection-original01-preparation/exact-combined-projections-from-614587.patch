@@ -1,0 +1,196 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/api_reconnect_projection_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/api_cached_projections_v2.py
+@@ -11,7 +11,7 @@
+ import math
+ from pathlib import Path
+ 
+-TCP_SOURCE=Path(__file__).with_name('round_health_transport_v4.py')
++TCP_SOURCE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/round_health_transport_v4.py')
+ TCP_SHA='54f3c764473f33b8c20533d7020cfb99b2f2ea51ea8e3c46d7e85c9625aaf88f'
+ 
+ 
+@@ -84,3 +84,184 @@
+             new_client_id=newer['client_id'],API_age_s=api_age,new_registration_effective_age_s=new_age,
+             unchanged_physical_TCP_ownership_verified=True,raw_API_rewritten=False))
+     return witnesses
++
++
++# Additional, separate retired-row exception. The original reconnect verifier
++# above is retained exactly. Raw API bytes/rows/counts are never rewritten.
++import copy
++import json
++import os
++import time
++
++ADMISSION_SOURCE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/round_admission_proof_v2.py')
++ADMISSION_SHA='9a5506a5b2163506f0cd40f71ca9c0a78945653a6ae9ae5552fb5a2bf70a4087'
++RETIREMENT_MAX_S=.5
++RETIRED_SCHEMA='robotron-source-bound-retired-API-row-evidence-v1'
++
++
++def _admission():
++    require(hashlib.sha256(ADMISSION_SOURCE.read_bytes()).hexdigest()==ADMISSION_SHA,
++            'Original durable round-admission verifier changed')
++    spec=importlib.util.spec_from_file_location('_retired_original_admission',ADMISSION_SOURCE)
++    value=importlib.util.module_from_spec(spec);spec.loader.exec_module(value)
++    return value
++
++
++def _tcp():
++    require(hashlib.sha256(TCP_SOURCE.read_bytes()).hexdigest()==TCP_SHA,
++            'Original physical TCP verifier changed')
++    spec=importlib.util.spec_from_file_location('_retired_original_TCP',TCP_SOURCE)
++    value=importlib.util.module_from_spec(spec);spec.loader.exec_module(value)
++    return value
++
++
++def _anchor(previous,slot):
++    require(previous is not None,'Retired API row needs a preceding accepted census')
++    if slot not in previous['actors']:
++        # The preceding sample has already passed this same verifier. Carry its
++        # original physical anchor; do not renew the receipt-end expiry below.
++        proof=previous.get('retired_API_projection',{})
++        require(proof.get('schema')==RETIRED_SCHEMA and slot in proof.get('entries',{}),
++                'Retired API row has no original accepted physical predecessor')
++        return copy.deepcopy(proof['entries'][slot]['anchor'])
++    require(slot not in previous['results'],'Retired API predecessor was already complete')
++    actor=previous['actors'][slot]
++    rows=[row for row in previous['api']['client_rows']if str(row['client_slot'])==slot]
++    require(len(rows)==1,'Retired API predecessor registration is ambiguous')
++    tcp=_tcp();transport=previous['transport']
++    raw=tcp.tcp_rows(transport['raw_tables']['tcp'])+tcp.tcp_rows(transport['raw_tables']['tcp6'],ipv6=True)
++    clients=[row for row in raw if row['state']=='01'and row['remote'][1]==9998
++             and row['inode']in transport['socket_inodes'][slot]]
++    require(len(clients)==1,'Retired API predecessor lacks one original owned TCP connection')
++    client=clients[0]
++    servers=[row for row in raw if row['state']=='01'and row['local']==client['remote']and row['remote']==client['local']
++             and row['inode']in transport['socket_inodes']['trainer']]
++    require(len(servers)==1,'Retired API predecessor lacks its original trainer TCP peer')
++    return dict(actor=copy.deepcopy(actor),API_row=copy.deepcopy(rows[0]),
++        accepted_monotonic_s=previous['monotonic_s'],accepted_unix_s=previous['unix_s'],
++        API_ts=previous['api']['ts'],client=client,server=servers[0])
++
++
++def _pid_probe(pid):
++    before=time.monotonic();path=Path('/proc',str(pid),'stat')
++    try:
++        raw=path.read_text();fields=raw.rsplit(')',1)[1].split()
++        value=dict(absent=False,current_birth=int(fields[19]),state=fields[0])
++    except FileNotFoundError:
++        value=dict(absent=True,current_birth=None,state=None)
++    return dict(path=str(path),pid=pid,before_monotonic_s=before,
++                after_monotonic_s=time.monotonic(),**value)
++
++
++def collect_retired(case,sample,previous,*,journal_lines):
++    """Attach bounded raw evidence only. Acceptance is independently recomputed."""
++    extras={str(row['client_slot'])for row in sample['api']['client_rows']}-set(sample['actors'])
++    if not extras:return sample
++    admission=_admission();entries={}
++    for slot in sorted(extras):
++        if slot not in sample['results']:
++            entries[slot]=dict(error='Unknown extra API slot; no retirement evidence')
++            continue
++        try:
++            anchor=_anchor(previous,slot);outer=sample['results'][slot]
++            directory=Path(case['round_root'])/('round-%06d'%sample['status']['round'])
++            receipt=admission.capture(directory/('slot-%03d-result.json'%int(slot)))
++            entries[slot]=dict(anchor=anchor,started=admission.capture(directory/'started.json'),
++                receipt=receipt,journal_line=journal_lines[outer['result']['journal_game_id']],
++                PID_absence=_pid_probe(anchor['actor']['pid']))
++        except (ValueError,OSError,KeyError)as failure:
++            entries[slot]=dict(error=repr(failure))
++    sample['retired_API_projection']=dict(schema=RETIRED_SCHEMA,entries=entries)
++    return sample
++
++
++def project_retired(case,sample,previous):
++    """Explicit API partition view; original sample/API/wire remain unchanged."""
++    rows=sample['api']['client_rows'];actors=sample['actors'];results=sample['results']
++    extras={str(row['client_slot'])for row in rows}-set(actors)
++    if not extras:return sample
++    require(previous is not None and sample['status']['round']==previous['status']['round'],
++            'Retired API projection needs the same preceding accepted round')
++    require(0<=sample['monotonic_s']-previous['monotonic_s']<=RETIREMENT_MAX_S,
++            'Retired API projection exceeds500ms accepted-proof gap')
++    proof=sample.get('retired_API_projection',{})
++    require(proof.get('schema')==RETIRED_SCHEMA and set(proof.get('entries',{}))==extras,
++            'Unknown extra API row or missing positive retirement evidence')
++    admission=_admission()
++    require(not admission.view(sample)['bootstrap']and not admission.view(previous)['bootstrap'],
++            'Retired API projection cannot admit a new/bootstrap round')
++    require(type(sample['api']['client_count'])is int and len(rows)==sample['api']['client_count']<=192,
++            'Retired raw API count/list differs')
++    ids=[row['client_id']for row in rows]
++    require(all(type(cid)is int and cid>=0 for cid in ids)and len(set(ids))==len(ids),
++            'Retired API projection has invalid or conflicting client IDs')
++    require(0<=number(sample['unix_s'])-number(sample['api']['ts'])<=RETIREMENT_MAX_S,
++            'Retired API cache is stale')
++    wire=sample['raw_API_wire'].encode('utf-8')
++    require(hashlib.sha256(wire).hexdigest()==sample['api_wire_sha256']and json.loads(wire)==sample['api'],
++            'Retired API raw bytes/count/rows were changed')
++    effective_slots={str(row['client_slot'])for row in rows}-extras
++    require(effective_slots-(set(actors)&set(results))==set(actors)-set(results)
++            and effective_slots<=set(actors), 'Retired projection hides a missing or unknown active slot')
++    static=('pid','starttime_ticks','parent_pid','cgroup','command','environment','affinity','uids','executable')
++    for role in ('trainer','fleet'):
++        current,old,expected=sample['owners'][role],previous['owners'][role],case['owners'][role]
++        require(current['unit']==old['unit']==expected['unit']and current['invocation']==old['invocation']==expected['invocation']
++                and all(current['process'][key]==old['process'][key]==expected['process'][key]for key in static),
++                'Retired API original main ownership or source changed')
++    for kind in ('optimizer','replay'):
++        for key in ('process_id','instance_monotonic_ns','epoch','epoch_reason'):
++            require(sample['api']['host_pipeline']['learning_exposure'][kind][key]
++                    ==previous['api']['host_pipeline']['learning_exposure'][kind][key]==case['exposure'][kind][key],
++                    'Retired API optimizer/replay lineage changed')
++    tcp=_tcp();transport=sample['transport']
++    current_tcp=tcp.tcp_rows(transport['raw_tables']['tcp'])+tcp.tcp_rows(transport['raw_tables']['tcp6'],ipv6=True)
++    retired=[]
++    for slot in sorted(extras):
++        require(slot in results and slot not in actors and slot in case['slot_eval'],
++                'Extra API slot is not a completed absent original actor')
++        entry=proof['entries'][slot]
++        require('error'not in entry and entry['anchor']==_anchor(previous,slot),
++                'Retired API original physical/registration anchor changed')
++        anchor=entry['anchor'];actor=anchor['actor'];matches=[row for row in rows if str(row['client_slot'])==slot]
++        require(len(matches)==1,'Multiple retired API registrations are not permitted')
++        row=matches[0];prior=anchor['API_row']
++        require(type(row['client_slot'])is int and str(row['client_slot'])==slot
++                and type(row['eval'])is bool and row['eval']==prior['eval']==case['slot_eval'][slot]
++                and row['client_id']==prior['client_id']and number(row['connected_seconds'])>=number(prior['connected_seconds']),
++                'Retired API CID/role/slot or registration age changed')
++        record=dict(round=sample['status']['round'],started=entry['started'],receipts={slot:entry['receipt']})
++        began,verified,_=admission.verify_round(case,record,{results[slot]['result']['journal_game_id']:entry['journal_line']},False)
++        require(began==sample['started']and verified[slot]==results[slot]
++                and entry['receipt']['sha256']==sample['receipt_hashes'][slot]
++                and results[slot]['pid']==actor['pid'], 'Retired API durable same-round receipt or original PID differs')
++        end=number(results[slot]['result']['end_unix_s'])
++        require(0<=sample['unix_s']-end<=RETIREMENT_MAX_S,
++                'Retired API receipt-end expiry exceeded500ms')
++        published=entry['receipt']['identity']['mtime_ns']
++        require(type(published)is int and 0<=sample['unix_s']-published/1e9<=RETIREMENT_MAX_S,
++                'Retired API receipt publication is stale or in the future')
++        probe=entry['PID_absence']
++        require(type(probe['pid'])is int and probe['pid']==actor['pid']
++                and probe['path']==str(Path('/proc',str(actor['pid']),'stat'))
++                and probe['absent']is True and probe['current_birth']is probe['state']is None
++                and sample['monotonic_s']<=number(probe['before_monotonic_s'])<=number(probe['after_monotonic_s'])
++                <=sample['monotonic_s']+RETIREMENT_MAX_S,
++                'Retired API original PID is live, reused, unobserved or probe is stale')
++        require(slot not in transport['socket_inodes']and slot not in transport['namespaces'],
++                'Retired API actor still owns a captured socket namespace')
++        require(not any(value['state']=='01'and (value['inode']in (anchor['client']['inode'],anchor['server']['inode'])
++                or (value['local'],value['remote'])in ((anchor['client']['local'],anchor['client']['remote']),
++                    (anchor['server']['local'],anchor['server']['remote'])))for value in current_tcp),
++                'Retired API original TCP connection remains established')
++        retired.append(dict(slot=slot,pid=actor['pid'],birth=actor['starttime_ticks'],client_id=row['client_id'],
++            receipt_sha256=entry['receipt']['sha256'],receipt_end_unix_s=end,
++            raw_API_row_retained=True,projected_retired=True,original_PID_and_established_TCP_absence_verified=True))
++    projected=dict(sample);projected['api']=dict(sample['api'])
++    projected['api']['client_rows']=[row for row in rows if str(row['client_slot'])not in extras]
++    projected['api']['client_count']=len(projected['api']['client_rows'])
++    projected['verified_retired_API_rows']=retired
++    # The original physical predicate must still account for EVERY live TCP
++    # connection. TIME_WAIT has no live owner and remains in the raw tables.
++    tcp.validate_transport(projected)
++    return projected

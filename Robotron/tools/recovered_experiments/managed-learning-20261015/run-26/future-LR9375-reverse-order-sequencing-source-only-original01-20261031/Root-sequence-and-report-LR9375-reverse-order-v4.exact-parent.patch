@@ -1,0 +1,54 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-policy-only-autosave-capture-original01-20261031/Root-sequence-and-report-frozen-policy-screen-v3.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-LR9375-reverse-order-sequencing-source-only-original01-20261031/Root-sequence-and-report-LR9375-reverse-order-v4.py
+@@ -1,4 +1,4 @@
+-"""Run two original screen legs, preserving each controller result and reporting progress."""
++"""Run candidate then reference; preserve native role catalogue and original closure gates."""
+ import argparse
+ import errno
+ import hashlib
+@@ -205,7 +205,8 @@
+     prepared = json.loads(selected(args.prepared, args.prepared_sha256))
+     configs = json.loads(selected(args.configs, args.configs_sha256))
+     # Authenticate the SAME immutable selection for display, without reading model bytes.
+-    display = screen_display(json.loads(selected(prepared['selection']['path'], prepared['selection']['sha256'])))
++    selection = json.loads(selected(prepared['selection']['path'], prepared['selection']['sha256']))
++    display = screen_display(selection)
+     code = selected(args.controller, args.controller_sha256)
+     module = importlib.util.module_from_spec(importlib.util.spec_from_loader('_selected_screen_controller', loader=None))
+     module.__file__ = str(args.controller)
+@@ -215,7 +216,7 @@
+     birth = int(Path('/proc', str(pid), 'stat').read_text().rsplit(')', 1)[1].split()[19])
+     write(args.output / 'owner.json', dict(pid=pid, birth=birth, started_unix_s=time.time(),
+         prepared=str(args.prepared), controller_sha256=args.controller_sha256), True)
+-    phase = dict(leg=None, job=None, execution=None, terminal=False, port_gate=None, detail='Starting the first original score-screen arm')
++    phase = dict(leg=None, job=None, execution=None, terminal=False, port_gate=None, detail='Preparing the candidate-first original score-screen arm')
+     stop = threading.Event()
+     monitor_errors = []
+ 
+@@ -268,9 +269,9 @@
+                     wait = 'Frozen-policy startup, then all 32 fresh first-game clients'
+             work.update(state='score_screen_running' if not phase['terminal'] else 'score_screen_review',
+                 current_stage=stage, waiting_for=wait, detail=display['rationale'],
+-                next_stage=(display['leg_labels']['C1']+' after the reference closes successfully'
+-                    if leg == 'R1' and not phase['terminal'] else
+-                    display['leg_labels']['R1']+' first, then '+display['leg_labels']['C1'] if leg is None and not phase['terminal'] else
++                next_stage=(display['leg_labels']['R1']+' after the candidate closes successfully'
++                    if leg == 'C1' and not phase['terminal'] else
++                    display['leg_labels']['C1']+' first, then '+display['leg_labels']['R1'] if leg is None and not phase['terminal'] else
+                     'Review the score comparison and select the next learning change'),
+                 eta=eta, deadline_unix_s=None, main_training_continues=True,
+                 updated_unix_s=now, observation_unix_s=now, score_screen=dict(leg=leg, counts=counts, port_gate=port_gate,
+@@ -298,9 +299,10 @@
+     exit_code = 1
+     error = None
+     try:
+-        if prepared['ordered_legs'] != ['R1', 'C1'] or configs['ordered_legs'] != ['R1', 'C1']:
+-            raise ValueError('Exactly two selected serial original arms required')
+-        for leg in ['R1', 'C1']:
++        if not (selection['ordered_legs'] == prepared['ordered_legs'] == configs['ordered_legs'] == ['R1', 'C1']
++                and selection.get('execution_order') == prepared.get('execution_order') == configs.get('execution_order') == ['C1', 'R1']):
++            raise ValueError('Exact native role catalogue and selected candidate-first execution order required')
++        for leg in ['C1', 'R1']:
+             config_pin = configs['configs'][leg]
+             config = json.loads(selected(config_pin['path'], config_pin['sha256']))
+             job_pin = prepared['jobs'][leg]['job']

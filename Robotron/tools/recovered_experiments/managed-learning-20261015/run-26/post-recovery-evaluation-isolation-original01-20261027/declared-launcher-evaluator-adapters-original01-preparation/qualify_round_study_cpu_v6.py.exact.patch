@@ -1,0 +1,14 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/qualify_round_study_cpu_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original01-preparation/qualify_round_study_cpu_v6.py
+@@ -149,9 +149,9 @@
+                 with self.subTest(leg=case['leg']):
+                     ctx=native.validate_completed_context(subject,h)
+                     self.assertEqual(len(ctx['modules']),12)
+-                    self.assertEqual(len(ctx['main_binding']['inputs']),243)
++                    self.assertEqual(len(ctx['main_binding']['inputs']),247)
+                     baseline=json.loads(h.checked(ctx['main_binding']['baseline_snapshot']).read_bytes())
+-                    self.assertEqual(set(baseline['actors'])|set(baseline['results']),set(map(str,range(192))))
++                    self.assertEqual(set(baseline['actors'])|set(baseline['results'])|set(baseline.get('round_admission',{}).get('pending',[])),set(map(str,range(192))))
+                     prebody.append(dict(leg=case['leg'],native_job=case['native_job'],runtime=case['runtime'],
+                         component_count=len(ctx['modules']),package_source_count=len(ctx['package_pins']),main_binding=subject['main_binding'],
+                         actual_full_health_contract_checked=True,protocol_provenance=ctx['protocol_provenance'],

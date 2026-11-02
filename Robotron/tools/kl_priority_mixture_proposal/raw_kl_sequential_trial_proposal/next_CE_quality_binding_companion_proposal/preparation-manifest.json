@@ -1,0 +1,113 @@
+{
+  "schema": "robotron-next-live-CE-quality-source-preparation-v1",
+  "status": "SOURCE_ONLY_FROZEN_UNINSTALLED_UNEXECUTED",
+  "files": {
+    "BINDING_API.txt": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_proposal/BINDING_API.txt",
+      "sha256": "dea29fbe3c27362590ecea0d27f69de62a5d3d71e2b5e75f034ef23645681d03",
+      "bytes": 4192,
+      "mode": "0o444"
+    },
+    "PREPARATION.txt": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_proposal/PREPARATION.txt",
+      "sha256": "1dc8209f5a7284361c8b5fe075b6210891555fe77f1e1dff4c4cd169ebdc44e1",
+      "bytes": 3036,
+      "mode": "0o444"
+    },
+    "README.txt": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_proposal/README.txt",
+      "sha256": "bcbacc44cd60b2799c6540c9b57490e5e54765f4d764e538838548ba1f869c47",
+      "bytes": 2944,
+      "mode": "0o444"
+    },
+    "audit_completed_leg.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_proposal/audit_completed_leg.py",
+      "sha256": "734999b906973d8742e28c734bf3f2d704cc3fa1765c0e30a906caaeb5eb176d",
+      "bytes": 34094,
+      "mode": "0o444"
+    },
+    "audit_completed_leg.py.patch": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_proposal/audit_completed_leg.py.patch",
+      "sha256": "3c9e1770001653df509af376f1517b1624c62f7f9075c834114d46a125d43196",
+      "bytes": 5353,
+      "mode": "0o444"
+    },
+    "binding-job.template.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_proposal/binding-job.template.json",
+      "sha256": "8d0655769c97361986dbdae0d3a903859635f014e05f1e8c01385f3edbf9fbeb",
+      "bytes": 3381,
+      "mode": "0o444"
+    },
+    "future-argv.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_proposal/future-argv.json",
+      "sha256": "027731aff06df660a5d3628f69935a69bd024a3458cdf068171e9bb066045009",
+      "bytes": 2878,
+      "mode": "0o444"
+    },
+    "quality_bindings.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_proposal/quality_bindings.py",
+      "sha256": "ecbe6ae896172ae7d44130de0004df7f25f33544b421106cdc325daa78f8cc59",
+      "bytes": 19573,
+      "mode": "0o444"
+    },
+    "root_quality_carrier.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_proposal/root_quality_carrier.py",
+      "sha256": "d770bc0163d5a8ea917981148f945d9123dc0a579dd023dc8ff7f3f1ff9b945b",
+      "bytes": 23657,
+      "mode": "0o444"
+    },
+    "root_quality_carrier.py.patch": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_proposal/root_quality_carrier.py.patch",
+      "sha256": "cfae54602c3226570bfa9fcc462bce97eac78e4b81069d364b4c88350a384bd9",
+      "bytes": 6485,
+      "mode": "0o444"
+    },
+    "source-lock.json": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_proposal/source-lock.json",
+      "sha256": "89bf41e80cc06b750ee64991f1f7cad4946761b51090eb49b1ed6fb04479beb7",
+      "bytes": 3117,
+      "mode": "0o444"
+    },
+    "template-audit-source.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_proposal/template-audit-source.py",
+      "sha256": "2576d4449b12d6b4a3b17898ab9938c6ff8c762829f61a29e3d510f73d585c21",
+      "bytes": 37008,
+      "mode": "0o444"
+    },
+    "test_quality_bindings.py": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/next_CE_quality_binding_companion_proposal/test_quality_bindings.py",
+      "sha256": "925a8ac356302149b89de987b9c3fec6b9e5649a400f80818ab4ef795dc34199",
+      "bytes": 14580,
+      "mode": "0o444"
+    }
+  },
+  "predecessor_manifest": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/fresh_quality_trial02_binding_companions_proposal/preparation-manifest.json",
+    "sha256": "c29dd888a0f8da751fc637290b77c441a549c6c320e2981a81e37782dbd6cf5b"
+  },
+  "source_lock_sha256": "89bf41e80cc06b750ee64991f1f7cad4946761b51090eb49b1ed6fb04479beb7",
+  "authored_stdlib_guard_class": "LiveCEBindingContracts",
+  "authored_guard_methods": 9,
+  "authored_guards_executed": false,
+  "author_imports_tests_runtime_PT": false,
+  "installed_source_changed": false,
+  "unchanged_carrier_function_AST": [
+    "default_argv",
+    "launch_argv",
+    "validate_plan",
+    "source_checks"
+  ],
+  "unchanged_auditor_row_tail_scoring_region": {
+    "bytes": 16083,
+    "sha256": "54a42967ea1340acda0fac6f7ab8ab2729248713861e8d978d351a9592312022"
+  },
+  "actual_previous_outcome": "not_improved",
+  "actual_reference": "protected448/1e085",
+  "prior_source_freeze_release_sha256": "6d509af8bab78803f2f57088f5ef62efa1b07be4f107da45cde906ce6aade34f",
+  "actual_future_candidate": null,
+  "actual_future_phase_cpu_result": null,
+  "actual_future_runtime": null,
+  "actual_future_plan": null,
+  "actual_future_quality_outcome": null,
+  "qualification_pass": false
+}

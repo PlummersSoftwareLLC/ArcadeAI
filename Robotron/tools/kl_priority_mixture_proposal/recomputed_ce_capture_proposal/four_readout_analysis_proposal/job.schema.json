@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Future root-bound four-readout CPU analysis job; no actual job is supplied",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "actual_analysis", "actual_binding", "reconstruction_phase", "reconstruction_launch_manifest", "attempts"],
+  "properties": {
+    "schema": {"const": "robotron-live8-four-readout-analysis-inputs-v1"},
+    "actual_analysis": {"$ref": "#/$defs/pin"},
+    "actual_binding": {"$ref": "#/$defs/pin"},
+    "reconstruction_phase": {"$ref": "#/$defs/pin"},
+    "reconstruction_launch_manifest": {"$ref": "#/$defs/pin"},
+    "attempts": {
+      "type": "array", "minItems": 8, "maxItems": 8,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["index", "result", "readout", "raw", "mask"],
+        "properties": {
+          "index": {"type": "integer", "minimum": 1, "maximum": 8},
+          "result": {"$ref": "#/$defs/pin"},
+          "readout": {"$ref": "#/$defs/pin"},
+          "raw": {"$ref": "#/$defs/pin"},
+          "mask": {"$ref": "#/$defs/pin"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "pin": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "sha256", "bytes"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^/"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "bytes": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

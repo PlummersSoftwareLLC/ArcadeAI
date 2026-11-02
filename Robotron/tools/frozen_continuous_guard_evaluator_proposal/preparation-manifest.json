@@ -1,0 +1,449 @@
+{
+  "actual_candidate": null,
+  "actual_native_campaign": null,
+  "actual_root_selection": null,
+  "author_validation": {
+    "AST": false,
+    "compile": false,
+    "runtime": false,
+    "target_imports": false,
+    "tests": false,
+    "text_reverse_only": true
+  },
+  "canonical_evaluator_base_hashes": {
+    "Scripts/dqn/actor_tags.py": "fc5b868a7fb68d4ab7ba65ba872ea0e845759af6143edfe648239d57cb7f1591",
+    "Scripts/dqn/config.py": "19abcbde4d08cf8465b82185ac6dd52eb8965adb8611584e0677c4c7ff21d1fd",
+    "Scripts/dqn/game_journal.py": "10827d786becfd19c386bddfbce85f1ab5ace5349d87717305e4044a2843edb0",
+    "Scripts/dqn/inference_actor.py": "7cc812adeab8dc7cb989f9024592767928afa786966b85f3488023fb8d6b34ce",
+    "Scripts/dqn/managed_measurement.py": "9649d0ba199bdc0943202164da7a9058e5d578b9c411ce26a950b2595c7e96e6",
+    "Scripts/dqn/model.py": "bcd174f05610c6f773ca8c53f9155206eba4f7b6a11383516ddd71f3b513eeb4",
+    "Scripts/dqn/nstep_buffer.py": "e46f03e9a626b3a24dea702344b0bbf050f1fdc5af672fc8fc9d18e6afef74c1",
+    "Scripts/dqn/rejected_gap_telemetry.py": "d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd",
+    "Scripts/dqn/socket_server.py": "f44ddfe31408b77b6d622e1d4ec4cda60a03999dc984d9e11b5aeac38911a9ed",
+    "Scripts/main.lua": "060f838359d35ef6c87b96dfe02ad34618ef974d5a43fefcb74320ebe9deecaf",
+    "Scripts/robotron_socket_wait.c": "fc9ed2719839f72e36346d0886e5b32116a167d49414b506dc8b5f4252464cfc",
+    "tools/run_frozen_sidecar.py": "db1fd0eac2c68b73425c77767ef0f842374291c855338f6b2ac05ee6b79dc04f",
+    "tools/sidecar_boot.py": "f06492e6d96cd472d9f0073b4c643e820bcacb6a96c5f542a59d6b6874e62362"
+  },
+  "created_utc": "2026-10-18T19:09:42.376233+00:00",
+  "effective_implementation": "Canonical E13 plus mandatory exact setup-time helper override and actual companion provenance; no canonical source relabel",
+  "files": [
+    {
+      "bytes": 44210,
+      "identity": {
+        "bytes": 44210,
+        "ctime_ns": 1792350512552904585,
+        "device": 2304,
+        "inode": 82575419,
+        "mode": "0o444",
+        "mtime_ns": 1792350254560546589,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/frozen_continuous_guard_evaluator_proposal/run_frozen_sidecar.py",
+      "sha256": "c3a2ef29245b9d6a2e8309520f67d3b1f92061c38b395fa4ef8773631287dea3"
+    },
+    {
+      "bytes": 24625,
+      "identity": {
+        "bytes": 24625,
+        "ctime_ns": 1792350512553904589,
+        "device": 2304,
+        "inode": 82575420,
+        "mode": "0o444",
+        "mtime_ns": 1792350254560940542,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/frozen_continuous_guard_evaluator_proposal/run_quality_campaign.py",
+      "sha256": "6d6fd8e4aa201d7099927af508742e8112cca3a5e6ca621731306664789ed8db"
+    },
+    {
+      "bytes": 13564,
+      "identity": {
+        "bytes": 13564,
+        "ctime_ns": 1792350512553904589,
+        "device": 2304,
+        "inode": 82575441,
+        "mode": "0o444",
+        "mtime_ns": 1792350425865566439,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/frozen_continuous_guard_evaluator_proposal/test_guard_metadata_deferred.py",
+      "sha256": "8d14c0af330b2a45f32d4f87393d70a331416ef5878653b4d06f4e83f599901b"
+    },
+    {
+      "bytes": 28082,
+      "identity": {
+        "bytes": 28082,
+        "ctime_ns": 1792350582373186363,
+        "device": 2304,
+        "inode": 82575445,
+        "mode": "0o444",
+        "mtime_ns": 1792350582373186363,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/frozen_continuous_guard_evaluator_proposal/source-preservation.json",
+      "sha256": "611c0f98f8ddd386965fec83282c694b421f5e87e1c39e72b4bce5f0d53477f9"
+    },
+    {
+      "bytes": 3997,
+      "identity": {
+        "bytes": 3997,
+        "ctime_ns": 1792350582374672257,
+        "device": 2304,
+        "inode": 82575446,
+        "mode": "0o444",
+        "mtime_ns": 1792350582374672257,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/frozen_continuous_guard_evaluator_proposal/README.txt",
+      "sha256": "3eb8572a5a519b655ef24f93bf2fbade88fb27d3b5702fa3d2e5b889d21ab448"
+    }
+  ],
+  "future_test_argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/frozen_continuous_guard_evaluator_proposal",
+    "-p",
+    "test_guard_metadata_deferred.py",
+    "-v"
+  ],
+  "guard_methods": [
+    "test_actual_guard_selection_requires_exact_manifest_and_both_source_pins",
+    "test_actual_runtime_verification_preserves_provenance_and_excludes_local_ids",
+    "test_actual_precommit_requires_identical_guard_for_every_leg",
+    "test_actual_load_leg_requires_successful_effective_verification"
+  ],
+  "launch_authorized": false,
+  "new_binding_carrier_auditor_family": false,
+  "production_mutations": false,
+  "runtime_token_contract": "Before actor/server construction; before serving; each existing protocol snapshot; after cleanup; local object IDs excluded from cross-leg equality",
+  "schema": "robotron-frozen-continuous-guard-evaluator-source-proposal-v1",
+  "selected_installer_manifest": {
+    "bytes": 43567,
+    "identity": {
+      "bytes": 43567,
+      "ctime_ns": 1792349968255924515,
+      "device": 2304,
+      "inode": 82575417,
+      "mode": "0o444",
+      "mtime_ns": 1792349968255924515,
+      "nlink": 1,
+      "uid": 1001
+    },
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_zero_dip_wave2_proposal/preparation-reviewed2-manifest.json",
+    "sha256": "947981d64af6c3cfce1d7191f1a02ce40f8ca79b5273aaee0dcc7a43b1760fd4"
+  },
+  "source_reverse": {
+    "run_frozen_sidecar.py": {
+      "byte_exact_base": true,
+      "candidate_sha256": "c3a2ef29245b9d6a2e8309520f67d3b1f92061c38b395fa4ef8773631287dea3",
+      "ordered_replacements": 20,
+      "restored_sha256": "db1fd0eac2c68b73425c77767ef0f842374291c855338f6b2ac05ee6b79dc04f"
+    },
+    "run_quality_campaign.py": {
+      "byte_exact_base": true,
+      "candidate_sha256": "6d6fd8e4aa201d7099927af508742e8112cca3a5e6ca621731306664789ed8db",
+      "ordered_replacements": 16,
+      "restored_sha256": "574e56f28499c751c639ee8a3474eecd5ca8de8c896da3dd44d5e4fc2fe60128"
+    }
+  },
+  "status": "SOURCE_ONLY_UNSELECTED_UNEXECUTED",
+  "tests_executed": null,
+  "upstreams": [
+    {
+      "bytes": 32915,
+      "identity": {
+        "bytes": 32915,
+        "ctime_ns": 1792309118271297342,
+        "device": 2304,
+        "inode": 79991634,
+        "mode": "0o664",
+        "mtime_ns": 1792309118270732796,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/run_frozen_sidecar.py",
+      "sha256": "db1fd0eac2c68b73425c77767ef0f842374291c855338f6b2ac05ee6b79dc04f"
+    },
+    {
+      "bytes": 16028,
+      "identity": {
+        "bytes": 16028,
+        "ctime_ns": 1792121360371002036,
+        "device": 2304,
+        "inode": 79965176,
+        "mode": "0o664",
+        "mtime_ns": 1792121360371002036,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/sidecar_boot.py",
+      "sha256": "f06492e6d96cd472d9f0073b4c643e820bcacb6a96c5f542a59d6b6874e62362"
+    },
+    {
+      "bytes": 168170,
+      "identity": {
+        "bytes": 168170,
+        "ctime_ns": 1792125589127110069,
+        "device": 2304,
+        "inode": 79696094,
+        "mode": "0o664",
+        "mtime_ns": 1792125589127110069,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/main.lua",
+      "sha256": "060f838359d35ef6c87b96dfe02ad34618ef974d5a43fefcb74320ebe9deecaf"
+    },
+    {
+      "bytes": 5245,
+      "identity": {
+        "bytes": 5245,
+        "ctime_ns": 1792116795992157590,
+        "device": 2304,
+        "inode": 79725134,
+        "mode": "0o664",
+        "mtime_ns": 1792116795992157590,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/robotron_socket_wait.c",
+      "sha256": "fc9ed2719839f72e36346d0886e5b32116a167d49414b506dc8b5f4252464cfc"
+    },
+    {
+      "bytes": 117528,
+      "identity": {
+        "bytes": 117528,
+        "ctime_ns": 1792239930882587724,
+        "device": 2304,
+        "inode": 79724998,
+        "mode": "0o664",
+        "mtime_ns": 1792239930881775881,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/config.py",
+      "sha256": "19abcbde4d08cf8465b82185ac6dd52eb8965adb8611584e0677c4c7ff21d1fd"
+    },
+    {
+      "bytes": 42429,
+      "identity": {
+        "bytes": 42429,
+        "ctime_ns": 1791931870132810020,
+        "device": 2304,
+        "inode": 79696088,
+        "mode": "0o664",
+        "mtime_ns": 1791931870132810020,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/model.py",
+      "sha256": "bcd174f05610c6f773ca8c53f9155206eba4f7b6a11383516ddd71f3b513eeb4"
+    },
+    {
+      "bytes": 153,
+      "identity": {
+        "bytes": 153,
+        "ctime_ns": 1792119887012144236,
+        "device": 2304,
+        "inode": 79725280,
+        "mode": "0o664",
+        "mtime_ns": 1792119887012144236,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/actor_tags.py",
+      "sha256": "fc5b868a7fb68d4ab7ba65ba872ea0e845759af6143edfe648239d57cb7f1591"
+    },
+    {
+      "bytes": 140517,
+      "identity": {
+        "bytes": 140517,
+        "ctime_ns": 1792306967928089640,
+        "device": 2304,
+        "inode": 79696030,
+        "mode": "0o664",
+        "mtime_ns": 1792306967914113042,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py",
+      "sha256": "f44ddfe31408b77b6d622e1d4ec4cda60a03999dc984d9e11b5aeac38911a9ed"
+    },
+    {
+      "bytes": 17716,
+      "identity": {
+        "bytes": 17716,
+        "ctime_ns": 1792206492975053663,
+        "device": 2304,
+        "inode": 79696085,
+        "mode": "0o664",
+        "mtime_ns": 1792206492975053663,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/game_journal.py",
+      "sha256": "10827d786becfd19c386bddfbce85f1ab5ace5349d87717305e4044a2843edb0"
+    },
+    {
+      "bytes": 11427,
+      "identity": {
+        "bytes": 11427,
+        "ctime_ns": 1792110938176754777,
+        "device": 2304,
+        "inode": 79725059,
+        "mode": "0o664",
+        "mtime_ns": 1792110938176754777,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/managed_measurement.py",
+      "sha256": "9649d0ba199bdc0943202164da7a9058e5d578b9c411ce26a950b2595c7e96e6"
+    },
+    {
+      "bytes": 20486,
+      "identity": {
+        "bytes": 20486,
+        "ctime_ns": 1792122635447811346,
+        "device": 2304,
+        "inode": 79725278,
+        "mode": "0o664",
+        "mtime_ns": 1792122635447811346,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/inference_actor.py",
+      "sha256": "7cc812adeab8dc7cb989f9024592767928afa786966b85f3488023fb8d6b34ce"
+    },
+    {
+      "bytes": 3592,
+      "identity": {
+        "bytes": 3592,
+        "ctime_ns": 1791907574326289547,
+        "device": 2304,
+        "inode": 79696089,
+        "mode": "0o664",
+        "mtime_ns": 1791907574326289547,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/nstep_buffer.py",
+      "sha256": "e46f03e9a626b3a24dea702344b0bbf050f1fdc5af672fc8fc9d18e6afef74c1"
+    },
+    {
+      "bytes": 12216,
+      "identity": {
+        "bytes": 12216,
+        "ctime_ns": 1792306967952203559,
+        "device": 2304,
+        "inode": 79696098,
+        "mode": "0o644",
+        "mtime_ns": 1792306967951858982,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/rejected_gap_telemetry.py",
+      "sha256": "d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd"
+    },
+    {
+      "bytes": 21373,
+      "identity": {
+        "bytes": 21373,
+        "ctime_ns": 1792206492975135744,
+        "device": 2304,
+        "inode": 79964045,
+        "mode": "0o664",
+        "mtime_ns": 1792206492975135744,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/run_quality_campaign.py",
+      "sha256": "574e56f28499c751c639ee8a3474eecd5ca8de8c896da3dd44d5e4fc2fe60128"
+    },
+    {
+      "bytes": 8266,
+      "identity": {
+        "bytes": 8266,
+        "ctime_ns": 1792127718506112477,
+        "device": 2304,
+        "inode": 79974595,
+        "mode": "0o664",
+        "mtime_ns": 1792127718506112477,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/compare_sidecar_measurements.py",
+      "sha256": "879590b64e760037a81da2ff574d5994d9259cf1746b8e406177e2220d37c746"
+    },
+    {
+      "bytes": 16688,
+      "identity": {
+        "bytes": 16688,
+        "ctime_ns": 1792112205533380193,
+        "device": 2304,
+        "inode": 79964799,
+        "mode": "0o664",
+        "mtime_ns": 1792112205533380193,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/compare_frozen_measurements.py",
+      "sha256": "53f744737a722fec2760c0001dc5747b19b05e07a1de8699764c781f04da6be0"
+    },
+    {
+      "bytes": 43567,
+      "identity": {
+        "bytes": 43567,
+        "ctime_ns": 1792349968255924515,
+        "device": 2304,
+        "inode": 82575417,
+        "mode": "0o444",
+        "mtime_ns": 1792349968255924515,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_zero_dip_wave2_proposal/preparation-reviewed2-manifest.json",
+      "sha256": "947981d64af6c3cfce1d7191f1a02ce40f8ca79b5273aaee0dcc7a43b1760fd4"
+    },
+    {
+      "bytes": 7359,
+      "identity": {
+        "bytes": 7359,
+        "ctime_ns": 1792349968248763047,
+        "device": 2304,
+        "inode": 82575412,
+        "mode": "0o444",
+        "mtime_ns": 1792349863506522733,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_zero_dip_wave2_proposal/effective_guard.py",
+      "sha256": "b9f90525cfd6366d595fdc8cc82646064197d7caee07169ce58e1e24b2118eb4"
+    },
+    {
+      "bytes": 973,
+      "identity": {
+        "bytes": 973,
+        "ctime_ns": 1792349968250763055,
+        "device": 2304,
+        "inode": 82575413,
+        "mode": "0o444",
+        "mtime_ns": 1792349863506339981,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_zero_dip_wave2_proposal/effective_guard_body.py",
+      "sha256": "f7a4d367162bafb87f4bc94ddad54573a76ab9159ae11e07540b2690c2c6eba4"
+    }
+  ]
+}

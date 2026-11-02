@@ -1,0 +1,49 @@
+{
+  "consulted_source_sha256": {
+    "DELL_SETUP.md": "6625492b920bc812853842e7bb2e1d76209cbdb4142e7dffc9adbfe19a63f8d1",
+    "Scripts/dqn/agent.py": "28977d6b925a4606a61b76438595f45ae054fc81aaaad989ab93e00d98a05668",
+    "Scripts/dqn/config.py": "f2794754a14e9f13c82b613aa131698246a08dc9021c18f1b78fda7c4b484498",
+    "Scripts/dqn/loss_kernel.py": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a",
+    "Scripts/dqn/main.py": "61fa053eea882e7e9ca1d95cd8dc081c45dec75677b12c51231aa95f51da0282",
+    "Scripts/dqn/managed_driver.py": "05407642f75a5dc883ba7f45512f36711ffb66f29bce41fc860aba182644dc36",
+    "Scripts/dqn/managed_measurement.py": "9649d0ba199bdc0943202164da7a9058e5d578b9c411ce26a950b2595c7e96e6",
+    "Scripts/dqn/prefetch.py": "a07cc84b6d411fd2536b1a17fa56c6b8b0f5ac9861740e44ea94878894a8d217",
+    "Scripts/dqn/replay_buffer.py": "28556797d15e0acf9387030b87f9ccce0b18e1e3cfa629b63c2d7239a4206238",
+    "Scripts/dqn/socket_server.py": "d99dd2782fc3e8f67670aefb398ed0dfdc1fd859432e24c8bd8dea4da2825214",
+    "Scripts/dqn/training.py": "194081120faae4228b0af0d6127c1e12c6d6180acdfe7d7a6a8c7cbcf24b963f",
+    "starttrainer.sh": "bb9ee963b195a2d4aafdb4a300748cf475b0540e2b52795aeb39092af97dcc0a",
+    "tools/checkpoint_at_frame.py": "5d8d7ab2456f2d6a8ad89327596cec654feae9a66db98190a07c87063a3be2b1",
+    "tools/parallel_state_fill_trial.py": "5555017afd066300554cc11097a5be3dbcfde956488d29d3e933b1421f59c54f",
+    "tools/restore_serial_after_parallel_trial.py": "c115253a36d2aca082da28520d733483cca9ecb3a59b65f97840ba5a3e39b7c0"
+  },
+  "live_actions_authorized": false,
+  "model_replay_data_read_for_runbook": false,
+  "remaining": [
+    "root accepts completed current-source CUDA OFF/ON validation and its hardware scope",
+    "fresh maintenance ownership/env/control/latest/ring/bank bindings",
+    "root accepts ordinary restart tail limit or separately reviews drain/save change",
+    "actual owned rollout, checkpoint verification, restored-state and first8 capture evidence",
+    "separate immutable acquisition review and authorized offline analysis"
+  ],
+  "runbook_import_compile_tests_or_live_actions": false,
+  "runbook_sha256": "76c72f978730b9feb7619c82537fabf18340e0144aceb4ab07e0357ea6d1f09e",
+  "schema": "robotron-live-ce-acquisition-source-runbook-v1",
+  "sealed_prototype_sha256": {
+    "agent.py": "05e2da8b4aa836635166ede19fd67c7234dc31b9a2e4aa23148e845b37a06353",
+    "executed_ce_trace.py": "d9b02b3108cdb7aa9cf895ce585810287ca5cde6ddc6b1b872721731e49648eb",
+    "loss_kernel.py": "ce527c840f1b0cce3f77fece52923c7023519605db92d7c5e691b1b573ee6d2f",
+    "manifest.json": "d7fcb2e36a7b08d472341d8f7f294d384f2591f17225832da83d350bff4e3316",
+    "prefetch.py": "02871bc515ba23f8d353131e9b6b6b4e390692803578febee7c8d643dd308a27",
+    "replay_buffer.py": "c79174e026021f6a1383fde707373a1ea61f2656aceec35755dfbd47b7374f8f",
+    "training.py": "c10cf8deaea99c9c74edbebf82d1f1c1badfdc4d33186f3874d6bc80c1e6a938",
+    "unapplied.patch": "dba0b15f20e07b6d933be7032634ae7ce2cc9f1db32b01f293ccd0ebc7a9acb4"
+  },
+  "source_findings": [
+    "existing resume-only graph gate and load lock protect no pre-load optimizer work",
+    "first eligible post-load attempt may run before fleet resumes",
+    "ordinary shutdown saves before async replay stop and cannot certify all queued tails",
+    "bank save/load warnings can be swallowed; positive counts alone are not exact intended-state proof",
+    "host capture stops after8 but ON5 compiled ABI persists until restart"
+  ],
+  "status": "SOURCE_ONLY_PROPOSAL_BLOCKED_ON_CUDA_PARITY"
+}

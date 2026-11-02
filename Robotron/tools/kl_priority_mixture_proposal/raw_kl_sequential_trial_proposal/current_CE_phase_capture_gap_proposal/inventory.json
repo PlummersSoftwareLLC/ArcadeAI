@@ -1,0 +1,159 @@
+{
+  "schema": "robotron-currentCE-capture-gap-inventory-v1",
+  "status": "NO_REVIEWED_RETAINED_CURRENT_PHASE_PRE_AND_CONSUMED_BATCH_ESTABLISHED",
+  "scope": "Named saved manifest/receipt fields,direct directory listings and source contracts only. No bulk observation parse,currentAPI/proc/unit query,PTstat/read/hash,framework import/test/acquisition or state edit. This is not a universal absence claim for unindexed files.",
+  "target_phase": {
+    "phase_id": "ce_after_rawkl_20261017_trial02",
+    "metric": "ce",
+    "owner": {
+      "pid": 620749,
+      "starttime_ticks": 33475842,
+      "unit": "robotron-managed-run-26-d3b365c9-trainer.service",
+      "invocation_id": "3e0b59be7ec5484d9cc8d33265e74d77",
+      "cgroup": "/user.slice/user-1001.slice/user@1001.service/app.slice/robotron-managed-run-26-d3b365c9-trainer.service"
+    },
+    "founder_phase_record_sha256": "3475a048151c08bbc4fdc58a9b4336c7df67cb7e6668779523239d3a35274308",
+    "root_precommit_sha256": "472ac8fd9254fdac891cd5665de47bdcda2d94baaa3be1366c85a1b1bdcb90ca",
+    "boot_checkpoint": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/models_dqn/robotron_dqn_latest.pt",
+      "sha256": "c5d282a3bbf95f6836d157f5033eed5444e8b094839581b384499a39cba3cf0e",
+      "bytes": 275186072
+    }
+  },
+  "historical_authentic_capture": {
+    "directory": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8",
+    "capture_id": "recomputed-inputs-315704701505992",
+    "context": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-owned-maintenance-reviewed4-20261017/ce-recomputed-capture-original8/context.json",
+      "sha256": "358b55a2b67d8da91b53e5600243f4a2d5c0bc95d2b14996d7b8f3233b3f15cd",
+      "bytes": 9537
+    },
+    "owner_pid": 4140916,
+    "consumed_attempts": 8,
+    "first_learner_frame_count": 435450662,
+    "first_training_step": 2090214,
+    "not_current_phase": true
+  },
+  "private_reconstruction_lineage": [
+    {
+      "source_lock": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/cuda_numeric_validation_timeout_reviewed2_proposal/source-lock.json",
+        "sha256": "bcc1c696ed1ddbd18879e64cee01d55909b99c8401d908f636228d4c83b36551",
+        "bytes": 13584
+      },
+      "retained_input_binding": {
+        "bytes": 7374,
+        "sha256": "0c2a528a3b1611b6e746e9ca09653297b62c750e35887bfaa1982dd8258351cf",
+        "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-actual-CE-analysis-source-preflight-20261017/input-binding.json"
+      },
+      "trained_checkpoint": null,
+      "scope": "Private/recomputed use of historical4140916 input; not a current620749 consumed batch"
+    },
+    {
+      "source_lock": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/phaseB_readiness_proposal/private_validation_phase_record_permissions_reviewed2_proposal/source-lock.json",
+        "sha256": "8edbe0082cb93939ebc9bfe6be922058f9c821addf72567f57d2c7a83b53b5fc",
+        "bytes": 14079
+      },
+      "retained_input_binding": {
+        "bytes": 7374,
+        "sha256": "0c2a528a3b1611b6e746e9ca09653297b62c750e35887bfaa1982dd8258351cf",
+        "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-actual-CE-analysis-source-preflight-20261017/input-binding.json"
+      },
+      "trained_checkpoint": {
+        "cpu_job": {
+          "sha256": "61647cd85d45ee30e73404d1f7463486c54cb80dea4c826ef6d799be63efeecb",
+          "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality448M-candidate-root-preparation-reviewed3-20261017/root-job.json"
+        },
+        "cpu_verification": {
+          "sha256": "98bae7f701493353a6cb4948d8a4653c5546411d2c40ba10d62f52dc412ddf52",
+          "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality448M-candidate-root-preparation-reviewed3-20261017/cpu-output/cpu-verification.json"
+        },
+        "source": {
+          "bytes": 275181008,
+          "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality448M-candidate-root-preparation-reviewed3-20261017/verification-copy.pt",
+          "sha256": "1e085a128e237c2bb0636b073e5053dd8bf5be932bcbd8249543b3af20e23021"
+        }
+      },
+      "scope": "Private/recomputed use of historical4140916 input; not a current620749 consumed batch"
+    },
+    {
+      "source_lock": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/live8_recompute_proposal/source-lock.json",
+        "sha256": "683278660704999645e93dfbc7aad1b20423a5755080a76ccad8f3af54c3c82f",
+        "bytes": 8268
+      },
+      "retained_input_binding": {
+        "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-actual-CE-analysis-source-preflight-20261017/input-binding.json",
+        "sha256": "0c2a528a3b1611b6e746e9ca09653297b62c750e35887bfaa1982dd8258351cf",
+        "bytes": 7374
+      },
+      "trained_checkpoint": null,
+      "scope": "Private/recomputed use of historical4140916 input; not a current620749 consumed batch"
+    },
+    {
+      "source_lock": {
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/recomputed_ce_capture_proposal/same_gpu_route_diagnostic_proposal/source-lock.json",
+        "sha256": "cb8874f65753b6f95a3c777b3dcd0d34e3af14227fd58a8c1feed0adcb2b97db",
+        "bytes": 9707
+      },
+      "retained_input_binding": {
+        "bytes": 7374,
+        "sha256": "0c2a528a3b1611b6e746e9ca09653297b62c750e35887bfaa1982dd8258351cf",
+        "source": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/live8-actual-CE-analysis-source-preflight-20261017/input-binding.json"
+      },
+      "trained_checkpoint": null,
+      "scope": "Private/recomputed use of historical4140916 input; not a current620749 consumed batch"
+    }
+  ],
+  "current_phase_artifacts": {
+    "return_directory_names": [
+      "API-before-resume.json",
+      "ending-candidate-CPU",
+      "ending-candidate-CPU-sources",
+      "newest-stopped",
+      "newest-stopped-copy",
+      "newest-stopped-sources",
+      "owned-start-lineage.json",
+      "owned-start-request.json",
+      "phase-record.json",
+      "result.json",
+      "root-job.json",
+      "startup-phase-CPU",
+      "startup-phase-CPU-sources",
+      "startup-save"
+    ],
+    "startup_save_names": [
+      "completed-after.json",
+      "completed-before.json",
+      "request.json",
+      "startup-readonly-copy.pt"
+    ],
+    "startup_phase_CPU_purpose": "startup",
+    "snapshot_scope": "Ordinary model/Adam/scaler/phase snapshot; no PRE training inputs/draw/4096weights+CE payload. No checkpoint bytes inspected.",
+    "controller_nonobservation_names": [
+      "candidate",
+      "deadline-armed.json",
+      "deadline-result.json",
+      "early-insurance",
+      "final-KL-transition-log-events.json",
+      "observer-job.json",
+      "pre-ending-health.json",
+      "result.json",
+      "return-intent-core.json",
+      "return-job.json",
+      "unit-actions.lock"
+    ]
+  },
+  "capture_source_limits": {
+    "startup_only": true,
+    "old_flags_explicitly_unset_by_selected_transition_source": true,
+    "old_observer_first_attempts": 8,
+    "old_observer_loss_identity": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a",
+    "installed_candidate_loss_identity": "23eb8fc0d8409c9f31ef26ec4596da9c2257e3985abbbfa7d5fbdcb337e21f67",
+    "old_observer_unchanged_reuse_not_valid": true
+  },
+  "actual_current_phase_PRE_batch": null,
+  "actual_current_phase_coefficients": null,
+  "qualification_pass": false
+}

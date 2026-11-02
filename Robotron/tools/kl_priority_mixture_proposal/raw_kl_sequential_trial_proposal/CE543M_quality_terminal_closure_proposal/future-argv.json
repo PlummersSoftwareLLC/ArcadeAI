@@ -1,0 +1,31 @@
+{
+  "scope": "SOURCE_ONLY inert templates; no invocation. All final proofs must come from authentic terminal artifacts and root acceptance.",
+  "closure_template": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE543M_quality_terminal_closure_proposal/close_quality_CE543M.py",
+    "--execute",
+    "--job",
+    "ACTUAL_FINAL_READONLY_JOB_PATH",
+    "--expected-job-sha256",
+    "ACTUAL_FINAL_JOB_SHA256",
+    "--expected-source-sha256",
+    "5afe9511d980e5bea90810b4c82b488077bbd816ef2bf78e978f4dec2d96d647"
+  ],
+  "guard_loader_contract": {
+    "interpreter": [
+      "/usr/bin/python3.12",
+      "-I",
+      "-B"
+    ],
+    "test_file": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE543M_quality_terminal_closure_proposal/test_quality_closure.py",
+    "class_name": "QualityClosureGuards",
+    "methods_authored": 16,
+    "load": "Root-owned importlib absolute file loader; all runtime methods use FakeOps, tests create private tempfile output directories only."
+  },
+  "root_guard_suggestion": "CPU100%, MemoryMax=512M (536870912 bytes), TasksMax64, RuntimeMax60s, CUDA_VISIBLE_DEVICES empty; retain original guard terminal and exact owned release.",
+  "actual_final_job_exists": false,
+  "actual_closure_execution": null,
+  "actual_quality_outcome": null
+}

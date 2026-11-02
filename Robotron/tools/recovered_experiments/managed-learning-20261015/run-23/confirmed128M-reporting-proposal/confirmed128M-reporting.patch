@@ -1,0 +1,211 @@
+diff --git a/Robotron/tools/render_learning_progress.py b/Robotron/tools/render_learning_progress.py
+--- a/Robotron/tools/render_learning_progress.py
++++ b/Robotron/tools/render_learning_progress.py
+@@ -127,17 +127,19 @@
+                 separate_backend_series=sorted(protocols))
+ 
+ 
+-def quality_series_axis(axis, groups, title, subtitle, baseline_label, baseline_color):
++def quality_series_axis(axis, groups, title, subtitle, baseline_label, baseline_color,
++                        *, positions=None, gain_reference_index=0):
+     means, errors = [g["mean"] for g in groups], [g["se"] for g in groups]
+-    axis.plot(range(len(groups)), means, color="#c2bdc9", lw=1.6)
++    positions = list(range(len(groups))) if positions is None else positions
++    axis.plot(positions, means, color="#c2bdc9", lw=1.6)
+     for index, (mean, error) in enumerate(zip(means, errors)):
+-        axis.errorbar(index, mean, yerr=error, fmt="o", ms=8, capsize=4,
++        axis.errorbar(positions[index], mean, yerr=error, fmt="o", ms=8, capsize=4,
+                       color="#00866a" if index == len(groups)-1 else baseline_color, elinewidth=1.6)
+-        axis.text(index, mean+error+2500, f"{mean:,.0f}", ha="center", va="bottom",
++        axis.text(positions[index], mean+error+2500, f"{mean:,.0f}", ha="center", va="bottom",
+                   fontsize=10, fontweight="bold")
+-    axis.set_xticks(range(len(groups)), [g["plot_label"] for g in groups])
++    axis.set_xticks(positions, [g["plot_label"] for g in groups])
+     axis.tick_params(axis="x", length=0, pad=10)
+-    axis.set_xlim(-.4, len(groups)-.6)
++    axis.set_xlim(min(positions)-.4, max(positions)+.4)
+     upper = math.ceil(max(m+e+7500 for m, e in zip(means, errors))/10000)*10000
+     axis.set_ylim(0, upper)
+     axis.set_yticks(range(0, upper+1, 20000))
+@@ -147,23 +149,27 @@
+     axis.set_axisbelow(True)
+     axis.set_title(title, loc="left", pad=33, fontweight="bold")
+     axis.text(0, 1.045, subtitle, transform=axis.transAxes, fontsize=9, color="#667786")
+-    gain = (means[-1]/means[0]-1)*100
++    gain = (means[-1]/means[gain_reference_index]-1)*100
+     axis.text(.04, .065, f"+{gain:.1f}% vs {baseline_label}", transform=axis.transAxes,
+         color="#00755f", fontsize=10, fontweight="bold",
+         bbox=dict(boxstyle="round,pad=.6", fc="#edf8f2", ec="none"))
+     return upper, gain
+ 
+ 
+-def observational_guard_overlay(axis, groups, guards):
++def observational_guard_overlay(axis, groups, guards, order=None):
+     if not guards:
+         return axis.get_ylim()[1]
+-    labels = [group["plot_label"] for group in groups]
+-    for index, guard in enumerate(guards, start=len(groups)):
++    combined = {group["label"]: group for group in [*groups, *guards]}
++    order = list(combined) if order is None else order
++    if len(order) != len(combined) or set(order) != set(combined):
++        raise ValueError("Quality timeline must contain each confirmed point and guard once")
++    labels = [combined[label]["plot_label"] for label in order]
++    for guard in guards:
++        index = order.index(guard["label"])
+         axis.errorbar(index, guard["mean"], yerr=guard["se"], fmt="D", ms=8,
+             mfc="white", mec="#bc7a20", mew=1.7, ecolor="#bc7a20", capsize=4, zorder=4)
+         axis.text(index, guard["mean"]+guard["se"]+2500, f"{guard['mean']:,.0f}",
+             ha="center", va="bottom", fontsize=10, fontweight="bold", color="#9c661b")
+-        labels.append(guard["plot_label"])
+     axis.set_xticks(range(len(labels)), labels)
+     axis.set_xlim(-.4, len(labels)-.6)
+     upper = math.ceil(max([axis.get_ylim()[1], *[g["mean"]+g["se"]+9000 for g in guards]])/10000)*10000
+@@ -287,16 +293,20 @@
+     sidecar_upper, sidecar_gain = quality_series_axis(sidecar_ax, data["sidecar_learning"],
+         "B  GPU0 compiled · earlier transport", "Own 8M reference → 16M · ±1 SE",
+         "own 8M baseline", "#8064a2")
+-    fixed_upper, fixed_gain = quality_series_axis(fixed_ax, data["fixed_transport_learning"],
+-        "C  GPU0 compiled · fixed transport, 3s", "64M incumbent · hollow diamond: single-cohort 96M guard",
+-        "own fixed-transport 16M baseline", "#b87536")
+-
+-    fixed_upper = observational_guard_overlay(fixed_ax, data["fixed_transport_learning"], data.get("observational_guards", []))
++    fixed_groups = data["fixed_transport_learning"]
++    timeline = data.get("fixed_transport_plot_order")
++    positions = None if timeline is None else [timeline.index(group["label"]) for group in fixed_groups]
++    fixed_upper, fixed_gain = quality_series_axis(fixed_ax, fixed_groups,
++        "C  GPU0 compiled · fixed transport, 3s", "128M incumbent · hollow diamond: single-cohort 96M guard",
++        "64M", "#b87536", positions=positions, gain_reference_index=-2)
++
++    fixed_upper = observational_guard_overlay(fixed_ax, fixed_groups,
++        data.get("observational_guards", []), order=timeline)
+ 
+     batch_aba_axis(rate_ax, data["batch_aba_throughput"])
+     stage = data["plotting"]["confirmed_stage"]
+     fig.text(.07, .965, "Robotron · learning progress and training throughput", fontsize=20, fontweight="bold")
+-    fig.text(.07, .925, f"Confirmed through 64M; 96M guard unpromoted · three separate quality series · batch 4096 / 192 actors", fontsize=11, color="#536171")
++    fig.text(.07, .925, f"Confirmed through 128M; 96M guard unpromoted · three separate quality series · batch 4096 / 192 actors", fontsize=11, color="#536171")
+     for y, line in zip([.115, .085, .055, .025], data["caption"].splitlines()):
+         fig.text(.07, y, line, fontsize=8.2, color="#647582", va="top")
+     fig.canvas.draw()
+@@ -321,9 +331,10 @@
+                 fixed_transport_score_axis_maximum=fixed_upper,
+                 fixed_transport_gain_32M_vs_16M_pct=(data["fixed_transport_learning"][1]["mean"] /
+                     data["fixed_transport_learning"][0]["mean"] - 1) * 100,
+-                fixed_transport_gain_latest_vs_16M_pct=fixed_gain,
+-                fixed_transport_gain_64M_vs_32M_pct=(data["fixed_transport_learning"][-1]["mean"] /
+-                    data["fixed_transport_learning"][-2]["mean"] - 1) * 100,
++                fixed_transport_gain_latest_vs_16M_pct=(fixed_groups[-1]["mean"] / fixed_groups[0]["mean"] - 1) * 100,
++                fixed_transport_gain_128M_vs_64M_pct=fixed_gain,
++                fixed_transport_gain_64M_vs_32M_pct=(data["fixed_transport_learning"][2]["mean"] /
++                    data["fixed_transport_learning"][1]["mean"] - 1) * 100,
+                 matplotlib=matplotlib.__version__, sources_unchanged=True,
+                 canvas_text_bounds_checked=True, png_integrity_verified=True)
+ 
+diff --git a/Robotron/DELL_SETUP.md b/Robotron/DELL_SETUP.md
+--- a/Robotron/DELL_SETUP.md
++++ b/Robotron/DELL_SETUP.md
+@@ -549,12 +549,15 @@
+ 
+ Private receipts retain checkpoint/source/boot hashes, saved policy clocks,
+ actor ownership, readiness evidence, and runtime/cleanup timeout counts.
+-Every admitted whole game must finish, all 16 actors must be represented, and
+-each leg needs at least 50 games. Runtime timeouts invalidate a leg, including
++Every admitted whole game must finish and all 16 actors must be represented.
++The official full-leg validator's 50-whole-game validity floor remains unchanged.
++The 128M plan adds no extra publication count floor: retain the original whole-game
++denominator and report low N as a precision caveat. Runtime timeouts invalidate
++a leg, including
+ ambiguous or late-flushed events; timeouts caused solely by intentional shutdown
+ are separate diagnostics. Use a sufficiently long admission window (currently
+-600 seconds with a 1200-second total deadline). Never promote an undersized or
+-invalid cohort. Preserve the original receipt even when diagnosing a failure.
++600 seconds with a 1200-second total deadline). Never promote a cohort that fails its precommitted
++validity or quality rules. Preserve the original receipt even when diagnosing a failure.
+ 
+ Transport recovery now closes Lua's connection on an action timeout and returns
+ `socket_ok=false`. Since action replies have no request ID, reusing that stream
+@@ -584,7 +587,7 @@
+ `50a374d33250713ba205024f85aaed3e50b62db913c29b2c2fb8c28392f051af`;
+ `logs/managed-learning-20261015/sidecar-fresh3-32M-confirmed-campaign.json` records
+ the exact source/boot/backend/checkpoint identities, saved clocks, and all tails.
+-The progress figure shows this fixed-transport 16M-to-32M-to-64M series separately from
++The progress figure shows this fixed-transport 16M-to-32M-to-64M-to-128M series separately from
+ the earlier GPU0 and GB300 curves. It does not connect the earlier 16M mean of
+ 100,100 to the 32M point or infer a cross-segment gain.
+ CPU regression evidence and exact applied hashes are recorded in
+@@ -661,7 +664,8 @@
+ period stays 512,000 samples, while actor refresh quantizes from 26,624 to
+ 28,672 samples. The sequential runs evolve policy/replay/RNG trajectories and
+ do not establish learning equivalence or formal statistical confidence. The
+-protected 64M policy and all fixed-backend quality gates remain separate.
++quality assessments and their precommitted gates remain separate from this
++throughput selection.
+ The progress figure retains the three quality segments unchanged and now shows
+ this batch chronology in panel D; historical actor-scaling trial data remain in
+ its JSON and archived earlier figure. No new run19 performance result is claimed.
+@@ -701,9 +705,49 @@
+ The same GPU0 compiled FP32/TF32 backend as both 64M legs passed full validation,
+ with zero runtime timeouts and owned cleanup complete. This is one observational
+ cohort, not a confirmed or promoted policy. Neither the fixed mean/median alarm
+-nor the N<64 rule triggered a confirmation. Protected 64M remains the incumbent
+-and reference; the scheduled 128M assessment is unchanged. The result does not
++nor the N<64 rule triggered a confirmation. At that check, protected 64M remained
++the incumbent and reference, and the 128M assessment stayed scheduled. The result does not
+ establish a causal batch-size effect or formal noninferiority. The progress
+ figure uses an unconnected hollow marker for this guard. Evidence is in
+ `logs/managed-learning-20261015/run-19/quality96M-guard-first-analysis.json` and
+ `logs/managed-learning-20261015/run-20/quality96M-first-final-independent-audit.json`.
++
++The subsequent 128M assessment on 2026-10-16 passed both prescribed complete
++GPU0 compiled FP32/TF32 cohorts on the unchanged fixed-transport/3s backend.
++The original legs contained 68 and 80 games: means 224,480.51 and 191,430.31,
++medians 206,462.5 and 156,900. Each independently exceeded the precommitted
++159,729.4355 mean floor (1.05 times protected 64M's original 217-game mean)
++and 146,575 median floor. Every admitted late tail completed, all 16 private
++slots were represented, and both legs had zero runtime inference errors.
++Each leg retains 16 separately classified intentional post-cutoff cleanup
++timeout diagnostics; these are not erased or counted as runtime failures.
++
++The descriptive original-row pool contains 148 games: mean 206,615.54,
++median 166,112.5 and SE 6,519.13, a 35.8211% mean gain over the original
++64M reference. All 16 pooled actor-slot mean contrasts were positive.
++The fixed 10,000-draw game and paired-slot bootstrap ratio sensitivities were
++[1.259, 1.464] and [1.285, 1.438]; repeated looks, selection and changing
++trajectories prevent interpreting these as formal confirmatory confidence.
++The 96M guard remains a separate unpromoted single cohort and enters neither
++this 148-game pool nor the 217-game reference.
++
++Root protected and promoted 128M at 12:45:15.271 UTC. It is now the managed
++incumbent and reference; the prior 64M policy, metadata, campaign and original
++comparison rows remain preserved. The new independent readonly protected copy is
++`models_dqn/managed-incumbents/fresh3-128M-confirmed.pt`, SHA256
++`70bf8218fa761de97bc89c30981dfd1d779484b459ec6837ed27213735e908f1`.
++Its `.pt.json` metadata and
++`logs/managed-learning-20261015/sidecar-fresh3-128M-confirmed-campaign.json`
++link the final root CPU lineage, both real receipts and both positive final
++isolation/cleanup audits. The promotion receipt is
++`logs/managed-learning-20261015/run-23/quality128M-root-promotion-audit.json`.
++
++Saved policy clocks were 907,399 logical updates, 2,269,118,464 optimized samples
++and 132,631,504 learner frames; the 81 Adam parameter states each recorded
++907,002 steps. These clocks and timestamped process-local application counters
++remain distinct. The learned trajectory includes the disclosed batch-size and
++rejected compiler trials; this quality gain does not isolate their causal effects
++or establish learning equivalence. Panel C now connects only confirmed policies
++through 128M, placing the unconnected hollow 96M marker chronologically between
++64M and 128M. The other quality backends and dated throughput A–B–A data remain
++unchanged.
+diff --git a/Robotron/tools/PIPELINE_REPORTING.md b/Robotron/tools/PIPELINE_REPORTING.md
+--- a/Robotron/tools/PIPELINE_REPORTING.md
++++ b/Robotron/tools/PIPELINE_REPORTING.md
+@@ -111,7 +111,9 @@
+ (+3.714%), not a causal estimate of telemetry overhead or a learning-quality
+ result. The final evidence is `exposure-health-independent-summary.json` and
+ `exposure-health-final-independent-audit.json` in run23. These operational
+-observations do not change the protected 64M reference or scheduled quality gates.
++observations do not themselves select or rebase a quality reference. The separately
++confirmed 128M promotion and preserved 64M/96M history are documented in
++`../DELL_SETUP.md`; subsequent quality checks must name their fixed reference.
+ 
+ ## Bank field output phases
+ 

@@ -1,0 +1,55 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/review_continuous_static192_observer_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/fullgame-source-family-original02/review_fullgame_round_observer_v7.py
+@@ -14,7 +14,7 @@
+     path = h.checked(value)
+     require(value['identity']['mode'] == '0o444' and path.stat().st_uid == os.getuid(),
+             'Closed evidence is not sealed and owned')
+-    require(path.stat().st_size <= 64 << 20, 'Closed evidence exceeds review bound')
++    require(path.stat().st_size <= 128 << 20, 'Closed evidence exceeds review bound')
+     return json.loads(path.read_bytes())
+ 
+ 
+@@ -36,9 +36,9 @@
+     native = read(lifecycle['native_job'], h)
+     require(job['native_job'] == lifecycle['native_job'] and job['native_runtime'] == native['runtime'],
+             'Original native/worker job or runtime join differs')
+-    require(job['schema'] == 'robotron-continuous-static192-observer-proof2s-job-v1', 'Wrong declared observer protocol version')
++    require(job['schema'] == 'robotron-fullgame-continuous-static192-observer-proof2s-job-v1', 'Wrong declared observer protocol version')
+     require(job['interval_s'] == .2 and job['initial_samples'] == 100 and job['maximum_gap_s'] == 2.0
+-            and job['work_s'] == 4200 and job['runtime_s'] == 4260 and job['attempt'] == 1
++            and job['work_s'] == 22200 and job['runtime_s'] == 22260 and job['attempt'] == 1
+             and job['no_retry'] is True, 'Observer bounds or original attempt differ')
+     require(job.get('source_bound_retired_API_projection') is True
+             and job.get('source_bound_completed_original192_bootstrap') is True
+@@ -49,7 +49,7 @@
+             and job['sources']['health'] == h.pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_transport_v1.py')),
+             'Exact source-bound static original192 observer dependencies required')
+     require(lifecycle['native_deadline_monotonic_s'] == job['deadline_monotonic_s']
+-            == lifecycle['native_started_monotonic_s'] + 4200, 'Native time bound differs')
++            == lifecycle['native_started_monotonic_s'] + 22200, 'Native time bound differs')
+     for value in [job['native_runtime'], *job['sources'].values()]:
+         h.checked(value)
+     unit = read(lifecycle['owner'], h)
+@@ -60,7 +60,7 @@
+     expected = dict(Id=job['unit'], InvocationID=owner['invocation_id'],
+         ExecMainPID=str(owner['pid']), MainPID='0', ExecMainCode='1', ExecMainStatus='0',
+         Result='success', NRestarts='0', Restart='no', CPUQuotaPerSecUSec='2s',
+-        MemoryMax=str(4 << 30), MemorySwapMax='0', TasksMax='128', RuntimeMaxUSec='1h 11min',
++        MemoryMax=str(4 << 30), MemorySwapMax='0', TasksMax='128', RuntimeMaxUSec='6h 11min',
+         TimeoutStopUSec='5s', SendSIGKILL='no')
+     require(all(terminal[key] == value for key, value in expected.items()), 'Actual worker scope/exit/resources differ')
+     original = unit['raw_properties']
+@@ -84,11 +84,11 @@
+             and outcome['all_writer_threads_stopped'] is True, 'Original observer did not close successfully')
+     started = int(terminal['ExecMainStartTimestampMonotonic']) / 1e6
+     ended = int(terminal['ExecMainExitTimestampMonotonic']) / 1e6
+-    require(0 < started < ended and ended-started <= 4260, 'Actual observer elapsed time differs')
++    require(0 < started < ended and ended-started <= 22260, 'Actual observer elapsed time differs')
+     health = h.load('_closed_round_observer_health', h.checked(job['sources']['health']))
+     case = read(job['case'], h)
+     health.check_inputs(case, full=True)
+-    require(100 <= len(outcome['samples']) <= 22000, 'Original sample count exceeds selected time bound')
++    require(100 <= len(outcome['samples']) <= 112000, 'Original sample count exceeds selected time bound')
+     durable = h.load('_closed_bounded_raw_durability', h.checked(job['sources']['durability']))
+     durability_records = []
+     previous = None

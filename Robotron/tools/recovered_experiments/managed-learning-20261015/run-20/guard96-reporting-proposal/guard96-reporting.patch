@@ -1,0 +1,134 @@
+diff --git a/Robotron/tools/render_learning_progress.py b/Robotron/tools/render_learning_progress.py
+--- a/Robotron/tools/render_learning_progress.py
++++ b/Robotron/tools/render_learning_progress.py
+@@ -46,7 +46,7 @@
+     seen, protocols, cohorts = set(), {}, 0
+     backend_references = {}
+     for group in [*data["learning"], *data.get("sidecar_learning", []),
+-                  *data.get("fixed_transport_learning", [])]:
++                  *data.get("fixed_transport_learning", []), *data.get("observational_guards", [])]:
+         rows, labels, counts = [], [], []
+         series = group.get("backend_series", "historical-gb300")
+         checkpoint = None
+@@ -111,9 +111,19 @@
+             measured = statistics.mean(float(row[key]) for row in source["rows"])
+             if not math.isclose(measured, expected, rel_tol=1e-10):
+                 raise ValueError(f"Throughput statistic differs: {trial['source']} / {key}")
++    for guard in data.get("observational_guards", []):
++        if (guard["role"] != "single-cohort-regression-guard" or guard["promoted"] is not False
++                or len(guard["source_receipts"]) != 1):
++            raise ValueError("Guard must remain a separate unpromoted single cohort")
++    event = data.get("bank_output_first_events")
++    if event is not None:
++        compared = json.loads(Path(event["comparison_source"]).read_bytes())
++        if event["comparison"] != compared["comparison"]:
++            raise ValueError("Bank event observation differs from its pinned comparison")
+     batch_trials = validate_batch_aba(data)
+     return dict(validated_cohorts=cohorts, disjoint_games=len(seen),
+                 validated_batch_trials=batch_trials,
++                observational_guard_count=len(data.get("observational_guards", [])),
+                 separate_backend_series=sorted(protocols))
+ 
+ 
+@@ -142,6 +152,24 @@
+         color="#00755f", fontsize=10, fontweight="bold",
+         bbox=dict(boxstyle="round,pad=.6", fc="#edf8f2", ec="none"))
+     return upper, gain
++
++
++def observational_guard_overlay(axis, groups, guards):
++    if not guards:
++        return axis.get_ylim()[1]
++    labels = [group["plot_label"] for group in groups]
++    for index, guard in enumerate(guards, start=len(groups)):
++        axis.errorbar(index, guard["mean"], yerr=guard["se"], fmt="D", ms=8,
++            mfc="white", mec="#bc7a20", mew=1.7, ecolor="#bc7a20", capsize=4, zorder=4)
++        axis.text(index, guard["mean"]+guard["se"]+2500, f"{guard['mean']:,.0f}",
++            ha="center", va="bottom", fontsize=10, fontweight="bold", color="#9c661b")
++        labels.append(guard["plot_label"])
++    axis.set_xticks(range(len(labels)), labels)
++    axis.set_xlim(-.4, len(labels)-.6)
++    upper = math.ceil(max([axis.get_ylim()[1], *[g["mean"]+g["se"]+9000 for g in guards]])/10000)*10000
++    axis.set_ylim(0, upper)
++    axis.set_yticks(range(0, upper+1, 40000))
++    return upper
+ 
+ 
+ def validate_batch_aba(data):
+@@ -260,13 +288,15 @@
+         "B  GPU0 compiled · earlier transport", "Own 8M reference → 16M · ±1 SE",
+         "own 8M baseline", "#8064a2")
+     fixed_upper, fixed_gain = quality_series_axis(fixed_ax, data["fixed_transport_learning"],
+-        "C  GPU0 compiled · fixed transport, 3s", "16M reference → 32M → 64M · latest +25.5% vs 32M",
++        "C  GPU0 compiled · fixed transport, 3s", "64M incumbent · hollow diamond: single-cohort 96M guard",
+         "own fixed-transport 16M baseline", "#b87536")
++
++    fixed_upper = observational_guard_overlay(fixed_ax, data["fixed_transport_learning"], data.get("observational_guards", []))
+ 
+     batch_aba_axis(rate_ax, data["batch_aba_throughput"])
+     stage = data["plotting"]["confirmed_stage"]
+-    fig.text(.07, .965, "Robotron · confirmed learning progress and training throughput", fontsize=20, fontweight="bold")
+-    fig.text(.07, .925, f"Confirmed quality through {stage}; three separate quality series · selected training: batch 4096 / 192 actors", fontsize=11, color="#536171")
++    fig.text(.07, .965, "Robotron · learning progress and training throughput", fontsize=20, fontweight="bold")
++    fig.text(.07, .925, f"Confirmed through 64M; 96M guard unpromoted · three separate quality series · batch 4096 / 192 actors", fontsize=11, color="#536171")
+     for y, line in zip([.115, .085, .055, .025], data["caption"].splitlines()):
+         fig.text(.07, y, line, fontsize=8.2, color="#647582", va="top")
+     fig.canvas.draw()
+diff --git a/Robotron/DELL_SETUP.md b/Robotron/DELL_SETUP.md
+--- a/Robotron/DELL_SETUP.md
++++ b/Robotron/DELL_SETUP.md
+@@ -120,8 +120,16 @@
+ Neither GC/snapshot release nor the cause of the deadline burst is established.
+ The full observation is in
+ `logs/managed-learning-20261015/run-19/natural-bank-memmap-independent-audit.json`.
+-Run20 began a separate `DQN_STREAM_BANK_OUTPUT=1` trial. No natural bank result
+-from that trial is reported here; the flag or a clean startup is not proof of a fix.
++Run20's first natural streaming event on 2026-10-16 published both banks with
++zero write errors, inference deadlines or journal disconnects, preserving all
++192 actor identities. The earlier memmap event retains its 34 deadline errors.
++Observed full capture/write brackets were 32.813 s (memmap) and 33.003 s (stream);
++this does not show a faster whole save. Live policy, snapshot payload and
++uncontrolled host work differ. This first pair supports continued observation
++of the opt-in trial, not a causal speedup or universal reliability fix. See
++`logs/managed-learning-20261015/run-20/natural-bank-stream-vs-memmap-independent-comparison.json`.
++The flag remains default OFF; the current trial is ON. The next natural event
++is not included in this result.
+ 
+ ## Python environment and optional WebRTC
+ 
+@@ -621,3 +629,15 @@
+ The progress figure retains the three quality segments unchanged and now shows
+ this batch chronology in panel D; historical actor-scaling trial data remain in
+ its JSON and archived earlier figure. No new run19 performance result is claimed.
++
++The prescribed 96M regression guard on 2026-10-16 completed all 81 admitted
++games, including every late tail: mean 205,422.22, median 169,600 and SE 8,846.83.
++The same GPU0 compiled FP32/TF32 backend as both 64M legs passed full validation,
++with zero runtime timeouts and owned cleanup complete. This is one observational
++cohort, not a confirmed or promoted policy. Neither the fixed mean/median alarm
++nor the N<64 rule triggered a confirmation. Protected 64M remains the incumbent
++and reference; the scheduled 128M assessment is unchanged. The result does not
++establish a causal batch-size effect or formal noninferiority. The progress
++figure uses an unconnected hollow marker for this guard. Evidence is in
++`logs/managed-learning-20261015/run-19/quality96M-guard-first-analysis.json` and
++`logs/managed-learning-20261015/run-20/quality96M-first-final-independent-audit.json`.
+diff --git a/Robotron/tools/PIPELINE_REPORTING.md b/Robotron/tools/PIPELINE_REPORTING.md
+--- a/Robotron/tools/PIPELINE_REPORTING.md
++++ b/Robotron/tools/PIPELINE_REPORTING.md
+@@ -88,7 +88,12 @@
+ autosave and sampling gaps. See
+ `logs/managed-learning-20261015/run-19/natural-bank-memmap-independent-audit.json`.
+ 
+-Run20 began a separate streaming-enabled trial. No result from its first natural
+-bank event is included here; the enabled flag and startup observations do not
+-establish a reliability fix or causal performance improvement. The trial plan is
+-`logs/managed-learning-20261015/run-20/natural-bank-observer-plan.json`.
++Run20's first natural streaming event published both banks without write errors,
++main inference deadlines or journal disconnects; all 192 pinned actors survived.
++The memmap baseline retains its 34 deadline errors. Overall observed capture/write
++brackets were 32.813 s versus 33.003 s, so this is not evidence of a faster whole
++save. Policy, snapshot payload and uncontrolled host work changed; no causal
++speedup or universal reliability fix is established. The default remains OFF and
++the separate trial is ON. See
++`logs/managed-learning-20261015/run-20/natural-bank-stream-vs-memmap-independent-comparison.json`.
++No subsequent natural-event result is included here.

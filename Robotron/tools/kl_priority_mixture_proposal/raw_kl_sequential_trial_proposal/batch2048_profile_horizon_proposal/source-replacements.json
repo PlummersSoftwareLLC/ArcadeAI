@@ -1,0 +1,60 @@
+{
+  "original": {
+    "bytes": 15704,
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/horizon_observer_proposal/horizon_observer.py",
+    "sha256": "25d70b4a3888dcba83ea9020c333cba32cfbd19c93b6e69037d6299b161fd7ec"
+  },
+  "replacements": [
+    {
+      "count": 1,
+      "new": "SCHEMA='robotron-ce-batch2048-horizon-job-v1'\nBATCH_SIZE=2048\n# Pure validator: future root must authenticate these exact profile-file bytes\n# before building its immutable job. The helper itself performs no file reads.\nPROFILE_BINDING_JSON='{\"pin\":{\"bytes\":764,\"path\":\"/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/profile.json\",\"sha256\":\"e755e22ade5cb56537b08f41f412e856da09435d88e4e71e09b22aba521eac50\"},\"value\":{\"LR_compensation\":false,\"batch_size\":2048,\"before_batch_size\":4096,\"deliberate_recipe_changes\":[\"DQN_BATCH_SIZE\"],\"held_recipe_context\":{\"baseline_batch_size\":512,\"batch_size\":2048,\"c51_target_smoothing\":0,\"epsilon\":0.1,\"expert_ratio\":0.1,\"fused\":true,\"gamma\":0.995,\"learning_control_lr_scale\":0.5,\"lr_anchor_step\":0.0,\"lr_gear\":\"climb\",\"max_samples_per_frame\":8,\"n_step\":3,\"num_atoms\":51,\"optimizer_eps\":0.00015,\"optimizer_lr\":2.5e-05,\"v_max\":50.0,\"v_min\":-10.0},\"priority_metric\":\"ce\",\"profile_id\":\"ce_batch2048_efficacy_screen_v1\",\"return_batch_size\":4096,\"schema\":\"robotron-ce-batch2048-efficacy-profile-v1\"}}'\nPROFILE_BINDING=json.loads(PROFILE_BINDING_JSON)\n",
+      "old": "SCHEMA='robotron-raw-kl-horizon-job-v1'"
+    },
+    {
+      "count": 1,
+      "new": "def validate_job(job):\n    require(type(job.get('batch_size')) is int and job['batch_size']==BATCH_SIZE,\n            'Exact declared batch2048 required')\n    require(isinstance(job.get('profile_binding'),dict) and\n            json.dumps(job['profile_binding'],sort_keys=True,separators=(',',':'),allow_nan=False)==PROFILE_BINDING_JSON,\n            'Exact pinned CE-batch2048 profile binding required')\n",
+      "old": "def validate_job(job):\n"
+    },
+    {
+      "count": 1,
+      "new": "schema='robotron-ce-batch2048-horizon-observation-v1'",
+      "old": "schema='robotron-raw-kl-horizon-observation-v1'"
+    },
+    {
+      "count": 1,
+      "new": "'CE batch2048 owner at or beyond fixed ceiling'",
+      "old": "'KL owner at or beyond fixed ceiling'"
+    },
+    {
+      "count": 1,
+      "new": "admitted_samples_total=current['optimizer']['applied']*BATCH_SIZE",
+      "old": "admitted_samples_total=current['optimizer']['applied']*4096"
+    },
+    {
+      "count": 1,
+      "new": "'Process-local admitted2048 batches; not per-parameter movement'",
+      "old": "'Process-local admitted4096 batches; not per-parameter movement'"
+    },
+    {
+      "count": 1,
+      "new": "'Owned pause/unique save/stop/newest-state batch4096 CE return; helper performs no actions'",
+      "old": "'Owned pause/unique save/stop/newest-state CE return; helper performs no actions'"
+    },
+    {
+      "count": 6,
+      "new": "CE_owner_present",
+      "old": "KL_owner_present"
+    },
+    {
+      "count": 1,
+      "new": "'Root must prove retirement/newest CPU/explicit batch4096 CE return; no helper action'",
+      "old": "'Root must prove retirement/newest CPU/explicit CE return; no helper action'"
+    },
+    {
+      "count": 1,
+      "new": "status='PLAN_ONLY',schema=SCHEMA,policy=POLICY,actions=False,\n        batch_size=BATCH_SIZE,profile_binding=PROFILE_BINDING,policy_is_unactivated_proposal=True,",
+      "old": "status='PLAN_ONLY',schema=SCHEMA,policy=POLICY,actions=False,"
+    }
+  ],
+  "reverse_byte_equality_checked_as_source": true
+}

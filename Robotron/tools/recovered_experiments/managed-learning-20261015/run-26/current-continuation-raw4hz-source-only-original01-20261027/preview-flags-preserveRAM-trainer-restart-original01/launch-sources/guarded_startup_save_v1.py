@@ -1,0 +1,140 @@
+"""Default inert. One future zero-input startup save; ROOT executes separately.
+
+Derived from the previously used guarded helper. Preparation/execute require the
+actual future owner, both original input groups positively frozen, all192births
+unchanged, fresh zero-client API producer proofs and exact0/1startup clocks.
+No model override, MAME action, recipe change or automatic retry is provided.
+"""
+import hashlib,importlib.util,json,math,os,pathlib,stat,subprocess,time,urllib.request
+R=pathlib.Path('/home/dave/source/repos/ArcadeAI/Robotron')
+C=R/'logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027'
+D=C/'preview-flags-preserveRAM-trainer-restart-original01'
+REGISTRY=C/'actual-fresh192-binding-original01/current-fresh192-main-binding.json'
+REGISTRY_SHA='0b1b8fb71122597412f83f39eaaa4739b4b5c71d148dad05981574b822233cff'
+GENERATOR=D/'launch-sources/prepare_same_state_trainer_only_v1.py'
+A=D/'live-original01/startup-save-original01'
+def pin(p):
+ p=pathlib.Path(p);s=p.lstat();assert p.resolve(strict=True)==p and stat.S_ISREG(s.st_mode) and s.st_nlink==1
+ raw=p.read_bytes();assert p.stat().st_mtime_ns==s.st_mtime_ns
+ return dict(path=str(p),sha256=hashlib.sha256(raw).hexdigest(),bytes=s.st_size,identity=dict(device=s.st_dev,inode=s.st_ino,bytes=s.st_size,mtime_ns=s.st_mtime_ns,ctime_ns=s.st_ctime_ns,mode=oct(stat.S_IMODE(s.st_mode)),uid=s.st_uid,nlink=s.st_nlink))
+def load(p):return json.loads(pathlib.Path(p).read_text())
+def freeze(p,v):
+ raw=v if isinstance(v,bytes) else (json.dumps(v,indent=2)+'\n').encode()
+ with p.open('xb') as f:f.write(raw);f.flush();os.fchmod(f.fileno(),0o444);os.fsync(f.fileno())
+ return pin(p)
+def module(name,p):
+ s=importlib.util.spec_from_file_location(name,p);m=importlib.util.module_from_spec(s);s.loader.exec_module(m);return m
+def held_original_inputs(l,registry):
+ assert registry['schema']=='robotron-current-fresh192-continuation-registry-v1'
+ assert len(registry['actors'])==192 and {a['slot']for a in registry['actors']}==set(range(192))
+ assert len({(a['pid'],a['starttime_ticks'])for a in registry['actors']})==192
+ groups={key:registry['actual_owners'][key]for key in ('fleet','supplemental0')}
+ assert len({o['cgroup']for o in groups.values()})==2
+ for key,o in groups.items():
+  l.live_owner(o);root=pathlib.Path('/sys/fs/cgroup'+o['cgroup'])
+  assert root.resolve(strict=True)==root and root.stat().st_uid==os.getuid()
+  assert (root/'cgroup.freeze').read_text().strip()=='1'
+  assert dict(line.split()for line in(root/'cgroup.events').read_text().splitlines()).get('frozen')=='1'
+  expected=set()
+  for a in registry['actors']:
+   selected='supplemental0'if a['slot']==0 else'fleet'
+   assert registry['actor_ownership'][str(a['slot'])]==selected
+   if selected!=key:continue
+   assert l.process_start(a['pid'])==a['starttime_ticks'] and sorted(os.sched_getaffinity(a['pid']))==a['mask']
+   assert pathlib.Path('/proc',str(a['pid']),'cgroup').read_text().strip()=='0::'+o['cgroup']
+   expected.add(a['pid'])
+  actual=set()
+  for pid in(root/'cgroup.procs').read_text().split():
+   try:cmd=pathlib.Path('/proc',pid,'cmdline').read_bytes().split(b'\0')
+   except FileNotFoundError:continue
+   if cmd[:1]==[b'/usr/games/mame']:actual.add(int(pid))
+  assert actual==expected and len(expected)==(1 if key=='supplemental0' else 191)
+ return dict(original192_births_and_affinity_preserved=True,both_original_input_cgroups_positively_frozen=True,owners=groups)
+def zero_input_api(l,g,owner,saved,registry,name):
+ l.live_owner(owner)
+ assert owner['pid']!=registry['owner']['pid'] and owner['starttime_ticks']!=registry['owner']['starttime_ticks']
+ assert owner['invocation_id']!=registry['owner']['invocation_id']
+ assert owner['cgroup']not in {registry['actual_owners'][k]['cgroup']for k in('fleet','supplemental0')}
+ held=held_original_inputs(l,registry)
+ with urllib.request.urlopen('http://127.0.0.1:8771/api/now',timeout=3)as response:raw=response.read(2_000_001)
+ assert len(raw)<=2_000_000;api=json.loads(raw);now=time.time()
+ assert type(api['ts'])in(int,float)and math.isfinite(api['ts'])and 0<=now-api['ts']<=5
+ assert type(api['pipeline_snapshot_age_s'])in(int,float)and math.isfinite(api['pipeline_snapshot_age_s'])and 0<=api['pipeline_snapshot_age_s']<=5
+ assert type(api['client_count'])is int and api['client_count']==0 and api['client_rows']==[]
+ assert api['training_enabled']is True and api['measurement_active']is False and api['memory_buffer_size']==6000000
+ assert api['lr']==6.25e-6 and api['managed_experiment']==registry['experiment']
+ assert api['pipeline_read_error']==api['bank_persistence_read_error']=='' and api['host_pipeline']['available']is True
+ for key,reason in(('optimizer','optimizer_restore_begin'),('replay','directory_adopt_begin')):
+  e=api['host_pipeline']['learning_exposure'][key]
+  assert e['enabled']is True and e['available']is True and e['process_id']==owner['pid']and e['epoch']==1 and e['epoch_reason']==reason
+ delta=g.startup_delta(api,saved['clocks'])
+ l.live_owner(owner);held_original_inputs(l,registry)
+ api_pin=freeze(A/(name+'-zero-input-API.raw.json'),raw)
+ proof=freeze(A/(name+'-zero-input-scope.json'),dict(owner=owner,API=api_pin,actual_client_count=api['client_count'],startup_delta=delta,**held))
+ return api,proof
+def prepare():
+ assert not A.exists()
+ owner_metadata=pin(D/'live-original01/actual-new-trainer-owner-original01.json')
+ owner=load(owner_metadata['path'])
+ linux=pin(D/'stop-sources/current192_linux_stop_v1.py')
+ poststop=pin(R/'logs/managed-learning-20261015/run-26/dashboard-JSON-production-continuity-main-inputs-original01-preparation-20261022/sources-original01/handoff_poststop_v1.py')
+ assert linux['sha256']=='3268d0bf2e18d3a7aa9c09addd331b1e42353be45c666203f0818caf294d7437'
+ registry_pin=pin(REGISTRY);assert registry_pin['sha256']==REGISTRY_SHA;registry=load(REGISTRY)
+ generator=pin(GENERATOR);g=module('startup_pure_generator',GENERATOR)
+ stop_result=pin(D/'stop-original01/result.json');stop=load(stop_result['path']);assert stop['status']=='CURRENT_TRAINER_STOPPED_AND_FULL_STATE_HOT_REPLAY_PRESERVED'
+ assert stop['saved']['strict_phase_verified']is True and stop['saved']['replay_bank_consistency_verified']is True
+ l=module('prepare_startup_linux',linux['path']);l.live_owner(owner);held_original_inputs(l,registry)
+ A.mkdir(mode=0o700)
+ prepared_API,prepared_scope=zero_input_api(l,g,owner,stop['saved'],registry,'prepare')
+ guardian_source='''import hashlib,importlib.util,json,pathlib,sys,time\njob=json.loads(pathlib.Path(sys.argv[1]).read_text())\ndef mod(name,p):\n q=pathlib.Path(p['path']);assert hashlib.sha256(q.read_bytes()).hexdigest()==p['sha256'];s=importlib.util.spec_from_file_location(name,q);m=importlib.util.module_from_spec(s);s.loader.exec_module(m);return m\nl=mod('startup_thaw_linux',job['linux']);p=mod('startup_thaw_poststop',job['poststop']);o=job['owner'];l.live_owner(o);result=p.thaw_startup_save(l,o);out=pathlib.Path(job['result']);out.write_text(json.dumps(dict(result=result,owner=o,completed_unix_s=time.time()))+'\\n');out.chmod(0o444)\n'''
+ source=freeze(A/'exact-owner-startup-thaw.py',guardian_source.encode())
+ job=freeze(A/'exact-owner-startup-thaw-job.json',dict(owner=owner,linux=linux,poststop=poststop,result=str(A/'exact-owner-startup-thaw-result.json')))
+ freeze(A/'ROOT-startup-save-prepare.json',dict(schema='robotron-root-one-zero-client-startup-save-preparation-v1',owner=owner,owner_metadata=owner_metadata,stop_result=stop_result,linux=linux,poststop=poststop,generator=generator,registry=registry_pin,prepared_zero_input_scope=prepared_scope,guardian_source=source,guardian_job=job,tag='previewflags-preserveRAM-startup-original01-20261027',timer_delay_s=10,independent_thaw_only_same_owned_cgroup=True,actions_performed=False))
+ print('PREPARED',A)
+def execute():
+ x=load(A/'ROOT-startup-save-prepare.json');owner=x['owner']
+ for key in ['linux','poststop','generator','registry','owner_metadata','stop_result','guardian_source','guardian_job']:assert pin(x[key]['path'])==x[key]
+ assert load(x['owner_metadata']['path'])==owner
+ l=module('root_startup_linux',x['linux']['path']);p=module('root_startup_poststop',x['poststop']['path']);l.live_owner(owner)
+ registry=load(x['registry']['path']);g=module('execute_startup_pure_generator',x['generator']['path'])
+ stop=load(D/'stop-original01/result.json');assert stop['status']=='CURRENT_TRAINER_STOPPED_AND_FULL_STATE_HOT_REPLAY_PRESERVED'
+ before_API,before_scope=zero_input_api(l,g,owner,stop['saved'],registry,'execute-before')
+ group=p.startup_save_cgroup(l,owner,require_unfrozen=True)
+ unit='robotron-previewflags-preserveRAM-startup-save-thaw-original01-20261027'
+ prior=l.show(unit+'.timer');assert prior.get('LoadState')=='not-found'
+ cmd=['systemd-run','--user','--unit='+unit,'--on-active=10s','--timer-property=AccuracySec=100ms','--property=Type=oneshot','--property=CPUQuota=10%','--property=MemoryMax=128M','--property=TasksMax=16','--property=TimeoutStartSec=20s','--','/usr/bin/python3.12','-I','-B',x['guardian_source']['path'],x['guardian_job']['path']]
+ guardian_armed_at=time.monotonic()
+ result=subprocess.run(cmd,capture_output=True,text=True);freeze(A/'ROOT-independent-thaw-timer-launch.json',dict(argv=cmd,exit=result.returncode,stdout=result.stdout,stderr=result.stderr,armed_monotonic_s=guardian_armed_at));assert result.returncode==0
+ timer=l.show(unit+'.timer');assert timer['ActiveState']=='active'
+ request=l.MODEL/'managed_save.request.json';slot=request.with_name(request.name+'.completed');tag=x['tag'];source=l.MODEL/'managed-checkpoints'/(tag+'.pt')
+ assert not request.exists() and not source.exists()
+ before_time=time.time();before=None if not slot.exists() else dict(actual_pin=l.full_pin(slot),archive=p.archive(l,slot,A/'completed-slot-before.json'))
+ raw=(json.dumps(dict(tag=tag))+'\n').encode();staging=request.with_name(request.name+'.previewflags-startup-original01.tmp');l.publish(staging,raw);request_archive=freeze(A/'request-archive.json',raw)
+ class B:
+  def state(self):
+   out=A/'brief-freeze-state.json';tmp=out.with_suffix('.tmp');tmp.write_text(json.dumps(dict(owner=owner,paused_owner=adapter.startup_save_paused_owner,updated_unix_s=time.time()))+'\n');os.replace(tmp,out)
+ from types import SimpleNamespace
+ adapter=SimpleNamespace(linux=l,startup_save_paused_owner=None,b=B())
+ assert time.monotonic()-guardian_armed_at<5 and l.show(unit+'.timer')['ActiveState']=='active','Independent thaw deadline too close; no freeze'
+ with p.startup_save_pause(adapter,owner):
+  assert (group/'cgroup.freeze').read_text().strip()=='1'
+  request_pin=p.publish_request_exclusive(l,staging,request);requested_at=time.time()
+  assert (group/'cgroup.freeze').read_text().strip()=='1','Guard thawed before inode capture; preserve attempt'
+ end=time.monotonic()+60
+ while True:
+  l.live_owner(owner)
+  if slot.exists() and load(slot)==dict(tag=tag) and not request.exists() and source.exists():break
+  assert time.monotonic()<end,'Same-owner startup save pending; do not retry';time.sleep(.1)
+ after_time=time.time();after=dict(actual_pin=l.full_pin(slot),archive=p.archive(l,slot,A/'completed-slot-after.json'))
+ after_API,after_scope=zero_input_api(l,g,owner,stop['saved'],registry,'execute-after')
+ source_pin=l.full_pin(source);copy_pin=p.archive(l,source,A/'startup-model-readonly-copy.pt')
+ assert source_pin['sha256']==copy_pin['sha256']
+ stop=load(D/'stop-original01/result.json');phase=pin(D/'live-original01/resume-phase-record.json')
+ acquisition=freeze(A/'actual-startup-acquisition.json',dict(schema='robotron-owned-phase-snapshot-acquisition-v1',experiment=registry['experiment'],model_dir=str(l.MODEL),purpose='startup',tag=tag,client_count=before_API['client_count'],zero_input_scope_before=before_scope,zero_input_scope_after=after_scope,owner_before=owner,owner_after=owner,clock_floor=stop['saved']['clocks'],source_checkpoint={k:source_pin[k] for k in ['path','sha256','bytes']},boot_checkpoint={k:stop['saved']['checkpoint'][k] for k in ['path','sha256','bytes']},phase_record_sha256=phase['sha256'],completed_slot_transition=dict(before=before,request=dict(actual_pin=request_pin,archive=request_archive),after=after,before_unix_s=before_time,request_unix_s=requested_at,after_unix_s=after_time),stopped_absence=None))
+ freeze(A/'ROOT-actual-startup-save-and-copy-result.json',dict(schema='robotron-root-one-guarded-startup-save-result-v1',owner=owner,source=source_pin,verification_copy=copy_pin,acquisition=acquisition,phase=phase,guardian_timer=unit+'.timer',actual_model_saved=True,no_game_clients_started=True,actual_zero_input_scope_before=before_scope,actual_zero_input_scope_after=after_scope,original192_MAME_births_RAM_preserved=True))
+ print(json.dumps(dict(source=source_pin,verification_copy=copy_pin,acquisition=acquisition)))
+if __name__=='__main__':
+ import sys
+ if sys.argv[1:]==['--prepare']:prepare()
+ elif sys.argv[1:]==['--execute']:execute()
+ else:print('INERT: select --prepare metadata or one --execute guarded save')

@@ -1,0 +1,31 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/observe_continuous_static192_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/observe_continuous_physical192_v2.py
+@@ -17,7 +17,7 @@
+ import time
+ import urllib.request
+ 
+-SCHEMA = 'robotron-continuous-static192-observer-proof2s-job-v1'
++SCHEMA = 'robotron-continuous-physical-original192-observer-proof2s-job-v2'
+ 
+ 
+ def require(value, message):
+@@ -137,13 +137,13 @@
+     require(job['interval_s'] == .2 and job['initial_samples'] == 100 and job['maximum_gap_s'] == 2.0
+             and job['work_s'] == 4200 and job['runtime_s'] == 4260, 'Exact deadline observer bounds required')
+     require(job.get('source_bound_retired_API_projection') is True
+-            and job.get('source_bound_completed_original192_bootstrap') is True
+-            and job.get('source_bound_static_original192_partition') is True
++            and job.get('source_bound_original192_physical_bootstrap') is True
++            and job.get('source_bound_physical_original192_partition') is True
+             and set(job['sources']) == {'client','worker','health','health_base','registry','durability','control','interpreter'}
+-            and job['sources']['health_base'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_health_v1.py'))
+-            and job['sources']['registry'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_registry_v1.py'))
+-            and job['sources']['health'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-original01/continuous_static192_transport_v1.py')),
+-            'Exact source-bound static original192 observer dependencies required')
++            and job['sources']['health_base'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_health_v2.py'))
++            and job['sources']['registry'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_registry_v2.py'))
++            and job['sources']['health'] == pin(Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/continuous_physical192_transport_v2.py')),
++            'Exact source-bound physical original192 observer dependencies required')
+     require(len(job['nonce']) == 32 and all(c in '0123456789abcdef' for c in job['nonce']), 'Fresh nonce required')
+     require(pin(Path(__file__).resolve()) == job['sources']['worker'], 'Actual worker source differs')
+     for value in job['sources'].values():

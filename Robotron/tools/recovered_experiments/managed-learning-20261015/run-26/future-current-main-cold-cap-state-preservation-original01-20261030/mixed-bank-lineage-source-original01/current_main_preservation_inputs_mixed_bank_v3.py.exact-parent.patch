@@ -1,0 +1,69 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/current_main_preservation_inputs_cold_bank_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/current_main_preservation_inputs_mixed_bank_v3.py
+@@ -167,12 +167,53 @@
+         expected[name]=dict(bank=name,selector=value['selector']['value'],pointer=pointer,metadata=metadata,
+             episodes=value['counts']['episodes'],transitions=value['counts']['transitions'],stride=meta['scalars']['stride'],
+             state_size=meta['scalars']['state_size'],captured_adds=meta['scalars']['captured_adds'],arrays=arrays,state_payload_read_or_hashed=False)
+-    require(json.dumps(banks,sort_keys=True,allow_nan=False)==json.dumps(expected,sort_keys=True,allow_nan=False),
+-        'Current prior disk selectors/NPZ/hash/stat/header identities differ from exact loaded S1 origin')
+-    return dict(schema='robotron-source-bound-cold-bank-counter-origin-v1',evidence=COLD_ORIGIN,
+-        owner=selection['owner'],banks=expected,scalars=scalars,held_replay=held['exposure']['replay'],
++    require(set(banks)==set(expected)=={'hof','ephof'},'Both per-bank boot/current origins required')
++    loaded_scalars=copy.deepcopy(scalars);origins={}
++    reader=None
++    for name,bank in banks.items():
++        prior=expected[name]
++        if json.dumps(bank,sort_keys=True,allow_nan=False)==json.dumps(prior,sort_keys=True,allow_nan=False):
++            origins[name]=dict(kind='INHERITED_BOOT_DISK',saved_local_revision=1,age_base_adds=0)
++            continue
++        require(bank['bank']==name and bank['selector']['previous']==prior['selector']['generation']
++            and bank['selector']['generation']!=prior['selector']['generation']
++            and type(bank['selector']['mutation_generation'])is int and bank['selector']['mutation_generation']>1
++            and bank['pointer']['mtime_ns']>=COLD_ORIGIN['consumed']['identity']['mtime_ns']
++            and bank['metadata']['mtime_ns']>=COLD_ORIGIN['consumed']['identity']['mtime_ns']
++            and bank['pointer']['mtime_ns']>=bank['metadata']['mtime_ns']
++            and bank['episodes']==prior['episodes']and bank['stride']==prior['stride']
++            and bank['state_size']==prior['state_size']and set(bank['arrays'])==set(prior['arrays'])
++            and all(json.dumps(bank['arrays'][key]['header'],sort_keys=True,allow_nan=False)==json.dumps(prior['arrays'][key]['header'],sort_keys=True,allow_nan=False)
++                and bank['arrays'][key]['bytes']==prior['arrays'][key]['bytes']for key in prior['arrays']),
++            'Current local bank must be a single source-geometry successor of the exact loaded disk generation')
++        if reader is None:reader=load(BANK_READER,BANK_READER_SHA,'_current_mixed_bank_metadata_reader')
++        raw,descriptor=reader.small_file(bank['metadata']['path'],1<<20)
++        require(descriptor==bank['metadata'],'Exact selected local metadata NPZ changed')
++        with reader.zipfile.ZipFile(reader.io.BytesIO(raw))as archive:
++            require(len(archive.namelist())==len(set(archive.namelist()))
++                and set(archive.namelist())=={key+'.npy'for key in reader.META_FIELDS}
++                and all(v.file_size<=128<<10 for v in archive.infolist())
++                and sum(v.file_size for v in archive.infolist())<=1<<20,'Exact bounded unique local bank metadata required')
++            current={}
++            for key in('stale_age','stale_age_normal','stride','state_size','captured_adds','mutation_generation'):
++                header,values=reader.meta_array(archive.read(key+'.npy'))
++                require(header==dict(descr='<i8',fortran_order=False,shape=())and len(values)==1
++                    and type(values[0])is int and values[0]>=0,'Typed source-local bank scalar required')
++                current[key]=values[0]
++        require(current['mutation_generation']==bank['selector']['mutation_generation']
++            and current['captured_adds']==bank['captured_adds']and current['stride']==bank['stride']
++            and current['state_size']==bank['state_size']and current['stale_age']<=current['captured_adds']
++            and current['stale_age_normal']>=current['stale_age']
++            and(current['stale_age_normal']<=current['captured_adds']or current['stale_age_normal']==loaded_scalars[name]['stale_age_normal']+current['captured_adds']),
++            'Published local bank scalar/age lineage is not source-reachable')
++        scalars[name]=current
++        origins[name]=dict(kind='CURRENT_BOOT_PERSISTED_SUCCESSOR',saved_local_revision=current['mutation_generation'],age_base_adds=current['captured_adds'])
++    return dict(schema='robotron-source-bound-mixed-bank-counter-origin-v2',evidence=COLD_ORIGIN,
++        owner=selection['owner'],banks=copy.deepcopy(banks),scalars=scalars,bank_origins=origins,
++        loaded_banks=expected,loaded_scalars=loaded_scalars,held_replay=held['exposure']['replay'],
+         held_optimizer=held['exposure']['optimizer'],loaded_local_revision=1,loaded_adds_total=0,
+         loaded_bank_payload_and_episode_metadata_equal=True,counter_values_normalized_or_reset=False)
++
+ 
+ 
+ def verify_input_closure(selection):
+@@ -205,7 +246,7 @@
+     require([v for k,v in entries if k=='DQN_MAX_SAMPLES_PER_FRAME']==[str(selection['expected_current_cap'])]
+         and dict(entries).get('ROBOTRON_CONTINUOUS_TRAINING_MODE')=='1','Actual current continuous startup cap required')
+     reader=load(BANK_READER,BANK_READER_SHA,'_current_stop_bank_reader');semantics=load(SEMANTICS,SEMANTICS_SHA,'_current_stop_bank_semantics')
+-    helper=Path(__file__).with_name('continuous_budget_bank_intent_cold_bank_v2.py');intent=load(helper,selection['budget_intent_source']['sha256'],'_current_continuous_budget_intent')
++    helper=Path(__file__).with_name('continuous_budget_bank_intent_mixed_bank_v3.py');intent=load(helper,selection['budget_intent_source']['sha256'],'_current_continuous_budget_intent')
+     require(pin(helper)==selection['budget_intent_source'],'Exact budget seam source required')
+     def api():
+         with urllib.request.urlopen('http://127.0.0.1:8771/api/now',timeout=5)as response:return json.load(response)

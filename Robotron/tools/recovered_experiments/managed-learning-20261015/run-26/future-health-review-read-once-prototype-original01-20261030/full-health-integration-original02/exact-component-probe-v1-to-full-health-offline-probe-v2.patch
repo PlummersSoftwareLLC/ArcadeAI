@@ -1,0 +1,461 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-health-review-read-once-prototype-original01-20261030/probe_within_sample_kernel_dependencies_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-health-review-read-once-prototype-original01-20261030/full-health-integration-original02/probe_full_per_sample_health_integration_v2.py
+@@ -1,4 +1,4 @@
+-"""UNSELECTED component probe: share kernel-exit metadata within ONE sample.
++"""UNSELECTED offline full per-sample health comparison: local kernel sharing.
+ 
+ This does not replace the full accepted/rejected health replay or h.checked.
+ Root alone may benchmark a bounded, independently qualified, closed C1 subset.
+@@ -6,6 +6,13 @@
+ import argparse
+ import ast
+ import copy
++import importlib.util
++import math
++import mmap
++import socket
++import subprocess
++import urllib.request
++from types import SimpleNamespace
+ import hashlib
+ import json
+ import os
+@@ -18,8 +25,10 @@
+ 
+ ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ B = ROOT/'logs/managed-learning-20261015/run-26'
+-HERE = B/'future-health-review-read-once-prototype-original01-20261030'
++HERE = B/'future-health-review-read-once-prototype-original01-20261030/full-health-integration-original02'
+ ORIGINAL_REGISTRY = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_registry_v5.py', 'sha256': '8cc5340708a73ffb97b16be4b96e72b3d5560ee0b371b7ffd8d67c4074cf76b4', 'bytes': 49518, 'identity': {'device': 2304, 'inode': 85353797, 'bytes': 49518, 'mtime_ns': 1793309467460439411, 'ctime_ns': 1793309543185873072, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
++ORIGINAL_BASE = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_health_main_journal128_v1.py', 'sha256': '95502ef826a20a6a62a014236ea79956ee3af5c05dda23b07c8ebef459c7ef7a', 'bytes': 37464, 'identity': {'device': 2304, 'inode': 85380114, 'bytes': 37464, 'mtime_ns': 1793325874164729893, 'ctime_ns': 1793325874164729893, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
++ORIGINAL_TRANSPORT = {'path': '/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/continuous_physical192_transport_main_journal128_v1.py', 'sha256': '3108ccc41b55285ca3381072be81fcd75ad1fcc68cf11711ba01025ef8cc55f6', 'bytes': 17116, 'identity': {'device': 2304, 'inode': 85380124, 'bytes': 17116, 'mtime_ns': 1793325874181550458, 'ctime_ns': 1793325874181550458, 'mode': '0o444', 'uid': 1001, 'nlink': 1}}
+ SLOTS = frozenset(map(str,range(192)))
+ 
+ 
+@@ -27,61 +36,6 @@
+     if not value:
+         raise ValueError(reason)
+ 
+-
+-def _kernel_eval_exit_with_shared(case, sample, slot, *, read_pin, shared):
+-    selected=case['continuous'].get('eval_exit_witness')
+-    pin=sample.get('EVAL_kernel_exit_receipts',{}).get(slot)
+-    require(selected is not None and pin is not None, 'No original positive EVAL exit/reap witness')
+-    publication=sample['EVAL_exit_witness_capture']['publication']['value']
+-    require(publication['exit_receipts'].get(slot)==pin,
+-            'Kernel exit file was not published after its producer fsync returned')
+-    anchors,selection=_read_shared_anchors(selected,read_pin,shared)
+-    value=read_pin(pin)
+-    require(anchors['schema']=='robotron-original37-EVAL-pidfd-held-anchors-v1'
+-            and anchors['selection']==selected['selection'] and anchors['source']==selected['source']
+-            and anchors['holder']==selected['holder'] and anchors['all37_acquired_while_originals_live'] is True
+-            and value['schema']=='robotron-original-EVAL-retained-pidfd-exit-v1'
+-            and value['anchors']==selected['anchors'] and value['selection']==selected['selection']
+-            and value['source']==selected['source'] and value['holder']==selected['holder']
+-            and value['nonce']==anchors['nonce']==selection['nonce']
+-            and value['slot']==int(slot) and value['anchor']==anchors['originals'][slot]
+-            and value['original']==selection['originals'][slot]
+-            and value['descriptor']==value['anchor']['descriptor']
+-            and value['request_ioctl']==0xc050ff0b and value['request_mask']==0x28
+-            and value['original_Popen_wait_called_claimed'] is False
+-            and value['actor_signals_or_wait_or_reap_performed'] is False,
+-            'Source-bound held-before-exit kernel EVAL authority differs')
+-    old=case['continuous']['original_slots'][slot]; child=old['original_child']; original=value['original']
+-    require(original['pid']==child['pid'] and original['birth']==child['birth']
+-            and original['parent']==child['parent'] and original['uid']==os.getuid()
+-            and original['initial_connection_binding']==old['connection_binding']
+-            and Path(pin['path'])==Path(selected['output'])/('exit-slot-%03d.json'%int(slot)),
+-            'Kernel receipt is not the original selected EVAL birth/connection/path')
+-    raw=bytes.fromhex(value['returned_raw80_hex']); initial=bytes.fromhex(value['anchor']['initial_info']['raw80_hex'])
+-    require(len(raw)==len(initial)==80 and value['returned_info']['raw80_hex']==value['returned_raw80_hex'],
+-            'Exact80-byte retained kernel buffers required')
+-    returned=struct.unpack_from('=Q',raw,0)[0]; supported=struct.unpack_from('=Q',raw,72)[0]
+-    status=struct.unpack_from('=i',raw,60)[0]
+-    require(returned & 8 and returned & 32 and supported & 8
+-            and not struct.unpack_from('=Q',initial,0)[0] & 8
+-            and struct.unpack_from('=Q',initial,0)[0] & 3 == 3
+-            and struct.unpack_from('=I',initial,16)[0]==child['pid']
+-            and struct.unpack_from('=I',initial,20)[0]==child['pid']
+-            and struct.unpack_from('=I',initial,24)[0]==child['parent']
+-            and struct.unpack_from('=I',initial,28)[0]==os.getuid()
+-            and struct.unpack_from('=I',initial,36)[0]==os.getuid()
+-            and value['returned_info']['returned_mask']==returned
+-            and value['returned_info']['supported_mask']==supported
+-            and value['returned_info']['exit_code_raw']==value['raw_wait_status']==status
+-            and os.WIFEXITED(status) and os.WEXITSTATUS(status)==0
+-            and value['normal_exit_zero'] is value['normal_exit'] is True
+-            and value['normal_exit_status']==0 and value['signal_termination'] is False
+-            and value['original_birth_absent'] is True and value['status']=='KERNEL_REAPED_NORMAL0'
+-            and value['anchor']['capture_end_monotonic_ns'] <= value['capture_begin_monotonic_ns']
+-            <= value['capture_end_monotonic_ns'] <= value['observed_monotonic_ns']
+-            <= sample['monotonic_s']*1e9,
+-            'No positive retained normal0 waitstatus/reap truth for original EVAL')
+-    return value
+ 
+ 
+ def _read_shared_anchors(selected, read_pin, shared):
+@@ -95,21 +49,6 @@
+             'Exact within-sample anchor/selection fullpins changed')
+     return shared['values']
+ 
+-
+-def verify_sample_kernel_exits(case, sample, read_pin):
+-    """Keep all state local; callback authenticates each unique pin THIS sample.
+-
+-    No h.checked replacement or global/path cache exists. The selected original
+-    registry.read_pin callback retains its full SHA/full8 and immutable checks.
+-    Only anchors/selection are shared, privately, across this sample's receipts.
+-    """
+-    slots=list(sample.get('EVAL_kernel_exit_receipts',{}))
+-    shared={}
+-    result={}
+-    for slot in slots:
+-        require(slot in SLOTS and case['slot_eval'][slot] is True, 'Unknown kernel EVAL exit slot')
+-        result[slot]=_kernel_eval_exit_with_shared(case,sample,slot,read_pin=read_pin,shared=shared)
+-    return result
+ 
+ 
+ def canonical(value):
+@@ -150,17 +89,130 @@
+     return json.loads(raw)
+ 
+ 
+-def selected_original_functions():
+-    """Compile ONLY four exact original stdlib functions; no module monkeypatch."""
+-    raw=checked_bytes(ORIGINAL_REGISTRY,2_000_000)
++def _compile_namespace(raw, path, injected, replacements=None, omitted=()):
++    """Bind private offline collaborators before compilation; never patch modules."""
++    nodes=[]
++    replacements={}if replacements is None else replacements
++    for node in ast.parse(raw).body:
++        if isinstance(node,(ast.Import,ast.ImportFrom,ast.If)):
++            continue
++        if isinstance(node,ast.FunctionDef)and node.name in omitted:
++            continue
++        if isinstance(node,ast.FunctionDef)and node.name in replacements:
++            node=copy.deepcopy(replacements[node.name])
++        nodes.append(node)
++    namespace=dict(__name__='_offline_full_health_validation',__file__=path,
++        hashlib=hashlib,json=json,math=math,os=os,Path=Path,stat=stat,struct=struct,
++        copy=copy,importlib=importlib,mmap=mmap,subprocess=subprocess,time=time,
++        urllib=urllib,socket=socket,sys=sys)
++    namespace.update(injected)
++    exec(compile(ast.fix_missing_locations(ast.Module(body=nodes,type_ignores=[])),path,'exec'),namespace)
++    return SimpleNamespace(**namespace)
++
++
++def _factory_without_module_cache(node, selected_name):
++    node=copy.deepcopy(node)
++    require(isinstance(node.body[0],ast.Expr)and isinstance(node.body[0].value,ast.Call)
++        and isinstance(node.body[0].value.func,ast.Name)and node.body[0].value.func.id=='require',
++        'Original factory source-SHA guard must remain first')
++    node.body=[node.body[0],ast.Return(value=ast.Name(id=selected_name,ctx=ast.Load()))]
++    return node
++
++
++def selected_registry_reader(raw):
+     nodes={n.name:n for n in ast.parse(raw).body if isinstance(n,ast.FunctionDef)}
+-    wanted=('require','identity','read_pin','kernel_eval_exit')
+-    require(all(name in nodes for name in wanted),'Exact original kernel collaborators missing')
+-    namespace=dict(os=os,Path=Path,stat=stat,hashlib=hashlib,json=json,struct=struct)
+-    for name in wanted:
+-        module=ast.Module(body=[nodes[name]],type_ignores=[])
+-        exec(compile(ast.fix_missing_locations(module),ORIGINAL_REGISTRY['path'],'exec'),namespace)
+-    return namespace['kernel_eval_exit'],namespace['read_pin']
++    namespace=dict(os=os,Path=Path,stat=stat,hashlib=hashlib,json=json)
++    for name in ('require','identity','read_pin'):
++        exec(compile(ast.fix_missing_locations(ast.Module(body=[nodes[name]],type_ignores=[])),
++            ORIGINAL_REGISTRY['path'],'exec'),namespace)
++    return namespace['read_pin']
++
++
++def assemble_full_health(source_bytes, read_pin_callback, optimized):
++    """Complete saved-snapshot validation; original outer review stays required."""
++    registry_nodes={n.name:n for n in ast.parse(source_bytes['registry']).body if isinstance(n,ast.FunctionDef)}
++    replacements={}
++    injected=dict(read_pin=read_pin_callback)
++    if optimized:
++        kernel=copy.deepcopy(registry_nodes['kernel_eval_exit'])
++        replacement=ast.parse("anchors,selection=_read_shared_anchors(selected,read_pin,_kernel_shared)\nvalue=read_pin(pin)").body
++        old_reads=ast.parse("anchors=read_pin(selected['anchors']); selection=read_pin(selected['selection']); value=read_pin(pin)").body
++        found=False
++        for index in range(len(kernel.body)-2):
++            if [ast.dump(x,include_attributes=False)for x in kernel.body[index:index+3]]==[ast.dump(x,include_attributes=False)for x in old_reads]:
++                kernel.body[index:index+3]=replacement;found=True;break
++        require(found,'Exact original kernel three-read assignment required')
++        kernel.args.kwonlyargs.append(ast.arg(arg='_kernel_shared'))
++        kernel.args.kw_defaults.append(None)
++        replacements['kernel_eval_exit']=kernel
++        snapshot=copy.deepcopy(registry_nodes['validate_snapshot'])
++        snapshot.body.insert(1,ast.parse('_kernel_shared={}').body[0])
++        changed=0
++        for node in ast.walk(snapshot):
++            if isinstance(node,ast.Call)and isinstance(node.func,ast.Name)and node.func.id=='kernel_eval_exit':
++                node.keywords.append(ast.keyword(arg='_kernel_shared',value=ast.Name(id='_kernel_shared',ctx=ast.Load())))
++                changed+=1
++        require(changed==1,'Exactly one original snapshot kernel-exit call required')
++        replacements['validate_snapshot']=snapshot
++        injected['_read_shared_anchors']=_read_shared_anchors
++    registry=_compile_namespace(source_bytes['registry'],ORIGINAL_REGISTRY['path'],injected,replacements,omitted=('read_pin',))
++    base_nodes={n.name:n for n in ast.parse(source_bytes['base']).body if isinstance(n,ast.FunctionDef)}
++    base=_compile_namespace(source_bytes['base'],ORIGINAL_BASE['path'],dict(_selected_registry=registry),
++        dict(registry=_factory_without_module_cache(base_nodes['registry'],'_selected_registry')))
++    transport_nodes={n.name:n for n in ast.parse(source_bytes['transport']).body if isinstance(n,ast.FunctionDef)}
++    return _compile_namespace(source_bytes['transport'],ORIGINAL_TRANSPORT['path'],dict(_selected_base=base),
++        dict(base=_factory_without_module_cache(transport_nodes['base'],'_selected_base')))
++
++
++def checked_snapshot(row, index, worker_pin, worker, owner):
++    require(row['index']==index and row['job']==worker_pin and row['nonce']==worker['nonce']
++        and row['owner']==owner,'Actual saved accepted row binding differs')
++    return row['snapshot']
++
++
++def copied_negative_inputs(case,sample,previous):
++    """Eight bounded faults; every change stays in freshly copied input data."""
++    cases=[]
++    def add(name,mutate):
++        value=copy.deepcopy(dict(case=case,sample=sample,previous=previous))
++        before=canonical(value);mutate(value)
++        require(canonical(value)!=before,'Negative mutation did not change input')
++        cases.append((name,value))
++    def bad_api(x):x['sample']['api_wire_sha256']='0'*64
++    add('raw_API_SHA_drift',bad_api)
++    def epoch(x):
++        s=x['sample'];s['api']['host_pipeline']['learning_exposure']['optimizer']['epoch']+=1
++        s['raw_API_wire']=canonical(s['api']).decode();s['api_wire_sha256']=hashlib.sha256(s['raw_API_wire'].encode()).hexdigest()
++    add('optimizer_epoch_drift_with_coherent_wire',epoch)
++    def actor(x):
++        slot=next(slot for slot in x['sample']['actors']if x['case']['slot_eval'][slot]is False)
++        x['sample']['actors'][slot]['starttime_ticks']+=1
++    add('original_TRAIN_birth_drift',actor)
++    def tcp(x):
++        for name in ('tcp','tcp6'):x['sample']['transport']['raw_tables'][name]=''
++    add('missing_current_owned_TCP',tcp)
++    def capture(x):x['sample']['capture_started_monotonic_s']=x['sample']['monotonic_s']-5.001
++    add('capture_bracket_exceeds5s',capture)
++    def gap(x):
++        if x['previous']is None:x['previous']=copy.deepcopy(x['sample'])
++        x['previous']['monotonic_s']=x['sample']['monotonic_s']-2.001
++    add('previous_accepted_gap_exceeds2s',gap)
++    def anchor(x):x['case']['continuous']['eval_exit_witness']['anchors']['identity']['inode']+=1
++    add('held_anchor_full8_inode_drift',anchor)
++    def cleanup(x):
++        slot=next(iter(x['sample']['EVAL_cleanup_captures']))
++        c=x['sample']['EVAL_cleanup_captures'][slot];c['value']['cleanup_error']='UNRECOGNIZED_RECORDED_ERROR'
++        c['raw_wire']=canonical(c['value']).decode();c['sha256']=hashlib.sha256(c['raw_wire'].encode()).hexdigest()
++    add('unknown_cleanup_error_with_coherent_wire',cleanup)
++    return cases
++
++
++def outcome_of_validation(health,case,sample,previous):
++    try:
++        value=health.validate(case,sample,previous=previous)
++    except(ValueError,AssertionError)as error:
++        return dict(accepted=False,error_type=type(error).__name__,error=str(error))
++    return dict(accepted=True,value=value)
+ 
+ 
+ def recorder(original_read_pin):
+@@ -183,7 +235,7 @@
+     return value,dict(wall_s=time.perf_counter()-wall,CPU_s=time.process_time()-cpu)
+ 
+ 
+-def deny_unsafe(event,args):
++def deny_unsafe(event,args,archive_policy):
+     if event in ('os.system','subprocess.Popen','socket.connect','socket.bind'):
+         raise ValueError('No process/network action in this component probe')
+     if event=='open':
+@@ -191,7 +243,8 @@
+         if isinstance(path,(str,bytes,os.PathLike)):
+             path=os.fsdecode(path)
+             require(not path.startswith(('/proc/','/sys/','/dev/'))
+-                and not path.endswith(('.pt','.pth','.jsonl','.npy','.npz'))
++                and not path.endswith(('.pt','.pth','.npy','.npz'))
++                and (not path.endswith('.jsonl')or path==archive_policy['archive'])
+                 and '/models_dqn/'not in path,'No process/model/replay/raw-journal body reads')
+     if event=='import':
+         require(not str(args[0]).split('.')[0]in ('torch','numpy','socket','subprocess'), 'No GPU/model/network import')
+@@ -199,13 +252,15 @@
+ 
+ def execute(selection_pin, own_pin):
+     require(not any(name.split('.')[0]in ('torch','numpy') for name in sys.modules), 'No Torch/NumPy in metadata probe')
+-    resource.setrlimit(resource.RLIMIT_CPU,(30,30))
++    resource.setrlimit(resource.RLIMIT_CPU,(60,60))
+     resource.setrlimit(resource.RLIMIT_AS,(1<<30,1<<30))
+-    sys.addaudithook(deny_unsafe)
++    archive_policy=dict(archive=None)
++    sys.addaudithook(lambda event,args:deny_unsafe(event,args,archive_policy))
+     metadata_inputs=[]
+     selected=read_metadata(selection_pin,262144,metadata_inputs)
+-    require(selected['schema']=='robotron-root-closed-C1-kernel-dependency-probe-v1'
+-        and selected['prototype']==own_pin and selected['original_registry']==ORIGINAL_REGISTRY,
++    require(selected['schema']=='robotron-root-closed-C1-full-health-integration-probe-v2'
++        and selected['prototype']==own_pin and selected['original_registry']==ORIGINAL_REGISTRY
++        and selected['original_base']==ORIGINAL_BASE and selected['original_transport']==ORIGINAL_TRANSPORT,
+         'Exact unselected component sources required')
+     checked_bytes(own_pin,262144)
+     q=read_metadata(selected['closed_C1_qualification'],2_000_000,metadata_inputs)
+@@ -235,6 +290,18 @@
+         and outcome['all_writer_threads_stopped']is True and outcome['uncommitted_raw']==[],
+         'Actual fully sealed successful outcome required')
+     case=read_metadata(worker['case'],4<<20,metadata_inputs)
++    prior_prefix=read_metadata(case['continuous']['completed_clients_prefix'],2_000_000,metadata_inputs)
++    archive=prior_prefix['archive']
++    require(prior_prefix['schema']=='robotron-prior-cohort-EVAL-completed-prefix-v1'
++        and prior_prefix['canonical_path']==str(Path(case['continuous']['eval_journal_directory'])/'completed_clients.jsonl')
++        and archive['path']not in (prior_prefix['canonical_path'],str(Path(case['continuous']['eval_journal_directory'])/'games.jsonl'))
++        and type(archive['bytes'])is int and 0<=archive['bytes']==prior_prefix['prefix_bytes']<=262144
++        and archive['sha256']==prior_prefix['prefix_sha256']
++        and archive['identity']['mode']=='0o444' and archive['identity']['uid']==os.getuid()
++        and archive['identity']['nlink']==1
++        and case['inputs'].get(archive['path'])==dict(sha256=archive['sha256'],identity=archive['identity']),
++        'Only the exact case-held immutable historical prefix archive may bypass the raw-extension deny')
++    archive_policy['archive']=archive['path']
+     pins=selected['samples']
+     require(type(pins)is list and 1<=len(pins)<=3 and len({p['path']for p in pins})==len(pins),
+         'Select one to three distinct saved accepted C1 samples only')
+@@ -244,67 +311,92 @@
+         require(len(matches)==1,'Sample is not an exact accepted outcome fullpin')
+         indices.append(matches[0])
+     require(indices==sorted(indices) and len(set(indices))==len(indices), 'Ordered distinct accepted subset required')
+-    baseline,original_read_pin=selected_original_functions()
++    source_bytes={key:checked_bytes(pin,2_000_000)for key,pin in
++        (('registry',ORIGINAL_REGISTRY),('base',ORIGINAL_BASE),('transport',ORIGINAL_TRANSPORT))}
++    original_read_pin=selected_registry_reader(source_bytes['registry'])
+     owner=read_metadata(outcome['owner'],2_000_000,metadata_inputs)
+-    results=[]
++    results=[];negative_results=[];negative_seed=None
+     for ordinal,(value,index)in enumerate(zip(pins,indices)):
+         row=read_metadata(value,8<<20,metadata_inputs)
+-        require(row['index']==index and row['job']==life['worker_job']
+-            and row['nonce']==worker['nonce'] and row['owner']==owner,'Actual saved sample binding differs')
+-        sample=row['snapshot'];before=canonical(dict(case=case,sample=sample))
+-        old_read,old_calls=recorder(original_read_pin)
+-        new_read,new_calls=recorder(original_read_pin)
+-        original_kernel=type(baseline)(baseline.__code__,dict(baseline.__globals__,read_pin=old_read))
+-        def original():
+-            result={}
+-            for slot in sample.get('EVAL_kernel_exit_receipts',{}):
+-                require(slot in SLOTS and case['slot_eval'][slot]is True,'Unknown kernel EVAL exit slot')
+-                result[slot]=original_kernel(case,sample,slot)
+-            return result
+-        def prototype():
+-            return verify_sample_kernel_exits(case,sample,new_read)
+-        # Alternate order to disclose/reduce simple warm-cache order bias.
+-        order=('original','prototype')if ordinal%2==0 else('prototype','original')
+-        measured={}
++        sample=checked_snapshot(row,index,life['worker_job'],worker,owner)
++        if index==0:
++            previous=None;previous_pin=None
++        else:
++            previous_pin=outcome['samples'][index-1]
++            prior=read_metadata(previous_pin,8<<20,metadata_inputs)
++            previous=checked_snapshot(prior,index-1,life['worker_job'],worker,owner)
++        before=canonical(dict(case=case,sample=sample,previous=previous))
++        old_read,old_calls=recorder(original_read_pin);new_read,new_calls=recorder(original_read_pin)
++        original=assemble_full_health(source_bytes,old_read,False)
++        prototype=assemble_full_health(source_bytes,new_read,True)
++        order=('original','prototype')if ordinal%2==0 else('prototype','original');measured={}
+         for name in order:
+-            measured[name]=measure(original if name=='original'else prototype)
+-            require(canonical(dict(case=case,sample=sample))==before,'Component mutated original case/sample')
+-        require(measured['original'][0]==measured['prototype'][0], 'Per-slot kernel validation outputs differ')
+-        require(dependency_set(old_calls)==dependency_set(new_calls),'Unique fullpin/as_json/immutable dependencies differ')
+-        slot_count=len(measured['original'][0])
+-        require(len(old_calls)==3*slot_count and len(new_calls)==(slot_count+2 if slot_count else 0),
+-                'Unexpected original or shared callback coverage')
+-        counts={}
+-        for name,calls in (('original',old_calls),('prototype',new_calls)):
+-            counts[name]=dict(callback_calls=len(calls),callback_bytes=sum(x['pin']['bytes']for x in calls),
+-                unique_dependencies=len(dependency_set(calls)))
+-        results.append(dict(sample=value,index=index,order=list(order),kernel_slots=len(measured['original'][0]),
+-            outputs_equal=True,unique_dependencies_equal=True,inputs_unchanged=True,
++            health=original if name=='original'else prototype
++            measured[name]=measure(lambda:health.validate(case,sample,previous=previous))
++            require(canonical(dict(case=case,sample=sample,previous=previous))==before,'Validation mutated original input')
++        require(measured['original'][0]==measured['prototype'][0],'Full per-sample health outputs differ')
++        require(dependency_set(old_calls)==dependency_set(new_calls),'Unique full-health callback dependencies differ')
++        first_new_calls=list(new_calls)
++        repeated=prototype.validate(case,sample,previous=previous)
++        repeat_calls=new_calls[len(first_new_calls):]
++        require(repeated==measured['prototype'][0] and len(repeat_calls)==len(first_new_calls)
++            and dependency_set(repeat_calls)==dependency_set(first_new_calls),
++            'Same validator instance failed to reset authentication for the next validate call')
++        require(canonical(dict(case=case,sample=sample,previous=previous))==before,'Repeated validation mutated original input')
++        k=len(sample.get('EVAL_kernel_exit_receipts',{}))
++        require(len(old_calls)-len(first_new_calls)==2*max(0,k-1),'Unexpected sharing callback delta')
++        counts={name:dict(callback_calls=len(calls),callback_bytes=sum(x['pin']['bytes']for x in calls),
++            unique_dependencies=len(dependency_set(calls)))for name,calls in (('original',old_calls),('prototype',first_new_calls))}
++        results.append(dict(sample=value,index=index,actual_previous_accepted_sample=previous_pin,order=list(order),
++            kernel_slots=k,outputs_equal=True,unique_dependencies_equal=True,inputs_unchanged=True,
++            same_instance_second_validate_reauthenticates=True,second_validate_callback_calls=len(repeat_calls),
+             original_outputs_sha256=hashlib.sha256(canonical(measured['original'][0])).hexdigest(),
+             prototype_outputs_sha256=hashlib.sha256(canonical(measured['prototype'][0])).hexdigest(),
+             original=measured['original'][1],prototype=measured['prototype'][1],counts=counts,
+             original_dependency_set=[json.loads(x)for x in dependency_set(old_calls)],
+-            prototype_dependency_set=[json.loads(x)for x in dependency_set(new_calls)]))
++            prototype_dependency_set=[json.loads(x)for x in dependency_set(first_new_calls)]))
++        if negative_seed is None and sample.get('EVAL_cleanup_captures'):
++            negative_seed=(sample,previous)
++    require(negative_seed is not None,'Select a closed accepted sample with cleanup evidence for bounded negative checks')
++    sample,previous=negative_seed;seed_before=canonical(dict(case=case,sample=sample,previous=previous))
++    for label,value in copied_negative_inputs(case,sample,previous):
++        old_read,old_calls=recorder(original_read_pin);new_read,new_calls=recorder(original_read_pin)
++        original=assemble_full_health(source_bytes,old_read,False);prototype=assemble_full_health(source_bytes,new_read,True)
++        before=canonical(value)
++        old=outcome_of_validation(original,value['case'],value['sample'],value['previous'])
++        require(canonical(value)==before,'Original validator mutated negative copied data')
++        new=outcome_of_validation(prototype,value['case'],value['sample'],value['previous'])
++        require(canonical(value)==before,'Prototype mutated negative copied data')
++        require(old['accepted']is False and new==old,'Expected identical bounded negative rejection')
++        require(dependency_set(old_calls)==dependency_set(new_calls),'Negative unique dependencies differ')
++        negative_results.append(dict(label=label,expected_rejection=True,error_type=old['error_type'],error=old['error'],
++            unique_dependencies_equal=True,inputs_unchanged=True))
++    require(len(negative_results)==8 and canonical(dict(case=case,sample=sample,previous=previous))==seed_before,
++        'Bounded negative coverage or original input immutability differs')
+     require(not any(name.split('.')[0]in ('torch','numpy')for name in sys.modules),'Unexpected model import')
+     output=Path(selected['output'])
+     require(output.parent==HERE and output.name.startswith('Root-') and output.resolve(strict=False)==output
+         and not output.exists(),'Fresh direct-child Root-only probe output required')
+     output.mkdir(mode=0o700)
+-    value=dict(schema='robotron-closed-C1-kernel-dependency-component-probe-result-v1',status='PASS',
+-        source=own_pin,selection=selection_pin,original_registry=ORIGINAL_REGISTRY,
+-        closed_C1_qualification=selected['closed_C1_qualification'],metadata_inputs=metadata_inputs,
+-        samples=results,resource_limits=dict(CPU_seconds=30,address_space_bytes=1<<30,external_wall_s=45),
++    value=dict(schema='robotron-closed-C1-full-per-sample-health-integration-probe-result-v2',status='PASS',
++        source=own_pin,selection=selection_pin,original_registry=ORIGINAL_REGISTRY,original_base=ORIGINAL_BASE,
++        original_transport=ORIGINAL_TRANSPORT,closed_C1_qualification=selected['closed_C1_qualification'],metadata_inputs=metadata_inputs,
++        samples=results,negative_checks=negative_results,resource_limits=dict(CPU_seconds=60,address_space_bytes=1<<30,external_wall_s=90),
+         max_rss_KiB=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+-        component_only=True,full_health_replay_replaced=False,accepted_or_rejected_proof_requalified=False,
+-        dependency_set_scope='Original registry.read_pin callbacks only; outer helper hooks remain untouched',
+-        h_checked_replaced_or_monkeypatched=False,cross_sample_cache=False,
++        timing_scope='transport.validate including original factory/dependency checks; excludes source assembly, sealed row hash/JSON parse, outer durability and full-corpus review',
++        full_per_sample_health_outputs_equal=True,full_closed_review_replaced=False,accepted_or_rejected_evidence_requalified=False,
++        outer_fe911_durability_rejection_coverage_source_unchanged=True,
++        dependency_set_scope='Exact original registry.read_pin successful callbacks; h.checked and all outer helper hooks unchanged',
++        imported_production_modules_monkeypatched=False,cross_sample_evidence_cache=False,
+         current_or_future_study_source_selected=False,throughput_or_quality_credit=False,
+-        no_model_Torch_proc_API_or_raw_journal_reads=True)
++        explicit_immutable_prior_cohort_archive=archive,
++        no_model_Torch_proc_API_or_live_raw_journal_reads=True)
+     raw=(json.dumps(value,indent=2,sort_keys=True,allow_nan=False)+'\n').encode()
+     with(output/'report.json').open('xb')as stream:
+         stream.write(raw);stream.flush();os.fchmod(stream.fileno(),0o444);os.fsync(stream.fileno())
+     print(json.dumps(dict(status='PASS',output=str(output/'report.json'),sha256=hashlib.sha256(raw).hexdigest(),
+-        samples=len(results),component_only=True)),flush=True)
++        samples=len(results),negative_checks=len(negative_results),full_review_replaced=False)),flush=True)
++
+ 
+ 
+ def main():
+@@ -315,7 +407,7 @@
+     parser.add_argument('--source-sha256')
+     args=parser.parse_args()
+     if not args.execute:
+-        print('SOURCE_ONLY_UNSELECTED_COMPONENT_PROBE')
++        print('SOURCE_ONLY_UNSELECTED_FULL_PER_SAMPLE_HEALTH_PROBE')
+         return 0
+     own=Path(__file__).resolve(strict=True)
+     own_raw=own.read_bytes();info=own.lstat()

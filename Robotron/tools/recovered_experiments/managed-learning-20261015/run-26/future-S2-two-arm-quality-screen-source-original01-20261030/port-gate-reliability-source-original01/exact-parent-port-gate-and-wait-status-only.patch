@@ -1,0 +1,151 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-S2-two-arm-quality-screen-source-original01-20261030/Root-sequence-and-report-S2-screen-v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-S2-two-arm-quality-screen-source-original01-20261030/Root-sequence-and-report-S2-screen-port-gate-v2.py
+@@ -1,10 +1,12 @@
+ """Run two original screen legs, preserving each controller result and reporting progress."""
+ import argparse
++import errno
+ import hashlib
+ import importlib.util
+ import json
+ import os
+ from pathlib import Path
++import socket
+ import threading
+ import time
+ 
+@@ -73,6 +75,70 @@
+             and seal['mean_score'] == sum(scores) / 32):
+         raise ValueError('Invalid fixed-denominator first-game score seal')
+     return seal
++
++
++def wait_for_job_ports(job, *, notify=None, socket_factory=None, clock=None, sleep=None):
++    """Observe all selected bind-only ports free together within one90s bound.
++
++    Probe sockets never listen/connect, and all are closed before returning.
++    The subsequent native bind remains authoritative; this is no reservation.
++    """
++    slots, proxies = job['actor_slots'], job['proxy_ports']
++    if not (type(slots) is list and len(slots) == 32 and len(set(slots)) == 32
++            and all(type(slot) is int for slot in slots)
++            and type(proxies) is dict and set(proxies) == {str(slot) for slot in slots}):
++        raise ValueError('Exact selected32-slot proxy port map required')
++    ports = [job['origin_port'], *[proxies[str(slot)] for slot in slots]]
++    if not (all(type(port) is int and 1 <= port <= 65535 for port in ports)
++            and len(set(ports)) == 33):
++        raise ValueError('Selected origin and32 distinct TCP proxy ports required')
++    factory = socket.socket if socket_factory is None else socket_factory
++    now = time.monotonic if clock is None else clock
++    pause = time.sleep if sleep is None else sleep
++    started = now(); deadline = started + 90; tries = 0
++    def observe(status, busy_port=None, detail=None, released=True):
++        stamp = now()
++        value = dict(status=status, tries=tries, elapsed_s=stamp-started, bound_s=90,
++            started_monotonic_s=started, deadline_monotonic_s=deadline,
++            observed_monotonic_s=stamp, ports=list(ports), busy_port=busy_port, detail=detail,
++            bind_address='127.0.0.1', SO_REUSEADDR=0, probe_sockets_released=released, all_probe_socket_close_calls_attempted=True,
++            native_launch_started=False, future_native_bind_still_required=True)
++        if notify is not None:notify(value)
++        return value
++    while True:
++        if now() >= deadline:
++            observe('PORT_WAIT_TIMEOUT', detail='Selected ports did not become jointly bindable within90s')
++            raise TimeoutError('Selected screen ports did not become jointly bindable within90s; no native launch')
++        tries += 1; probes = []; failure = None; busy_port = None; close_error = None
++        try:
++            for port in ports:
++                busy_port = port
++                probe = factory(socket.AF_INET, socket.SOCK_STREAM); probes.append(probe)
++                probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
++                probe.bind(('127.0.0.1', port))
++        except Exception as error:
++            failure = error
++        finally:
++            for probe in probes:
++                try:probe.close()
++                except BaseException as error:
++                    if close_error is None:close_error = error
++        if close_error is not None:
++            observe('PORT_PROBE_CLEANUP_FAILED', detail=repr(close_error), released=False)
++            raise close_error
++        if failure is None:
++            if now() >= deadline:
++                observe('PORT_WAIT_TIMEOUT', detail='Whole-set bind or cleanup exceeded90s; no native launch')
++                raise TimeoutError('Selected screen port gate exceeded90s; no native launch')
++            return observe('PORTS_FREE_BEFORE_LAUNCH')
++        if not isinstance(failure, OSError) or failure.errno != errno.EADDRINUSE:
++            observe('PORT_PROBE_FAILED', busy_port, repr(failure))
++            raise failure
++        if now() >= deadline:
++            observe('PORT_WAIT_TIMEOUT', busy_port, repr(failure))
++            raise TimeoutError('Selected screen ports remain busy at90s; no native launch') from failure
++        observe('WAITING_FOR_PORTS', busy_port, 'EADDRINUSE; no listener or TIME_WAIT ownership inferred')
++        pause(min(.25, max(0, deadline-now())))
+ 
+ 
+ def main():
+@@ -103,7 +169,7 @@
+     birth = int(Path('/proc', str(pid), 'stat').read_text().rsplit(')', 1)[1].split()[19])
+     write(args.output / 'owner.json', dict(pid=pid, birth=birth, started_unix_s=time.time(),
+         prepared=str(args.prepared), controller_sha256=args.controller_sha256), True)
+-    phase = dict(leg=None, job=None, execution=None, terminal=False, detail='Starting the first original score-screen arm')
++    phase = dict(leg=None, job=None, execution=None, terminal=False, port_gate=None, detail='Starting the first original score-screen arm')
+     stop = threading.Event()
+     monitor_errors = []
+ 
+@@ -121,7 +187,12 @@
+                 eta = 'The next action has no confirmed start time until the original results are reviewed.'
+             anchor = None
+             counts = None
+-            if job is not None and not phase['terminal']:
++            port_gate = phase.get('port_gate')
++            if port_gate is not None and not phase['terminal']:
++                stage = f'Score screen {leg}: waiting for selected local ports'
++                wait = f'All33 ports must be free together; {port_gate["tries"]} checks in {port_gate["elapsed_s"]:.1f}s'
++                eta = 'Port availability is checked for at most90 seconds; the arm has not launched.'
++            elif job is not None and not phase['terminal']:
+                 status_path = Path(job['output']) / 'status.json'
+                 identity_path = Path(phase['execution']) / 'root-original-identity.json'
+                 identity = read(identity_path) if identity_path.is_file() else None
+@@ -148,7 +219,7 @@
+             work.update(state='score_screen_running' if not phase['terminal'] else 'score_screen_review',
+                 current_stage=stage, waiting_for=wait, next_stage=('Candidate S2 arm after the reference closes successfully' if leg == 'R1' and not phase['terminal'] else 'Review the score comparison and select the next learning change'),
+                 eta=eta, deadline_unix_s=None, main_training_continues=True,
+-                updated_unix_s=now, observation_unix_s=now, score_screen=dict(leg=leg, counts=counts,
++                updated_unix_s=now, observation_unix_s=now, score_screen=dict(leg=leg, counts=counts, port_gate=port_gate,
+                     policy_scope='Frozen S2 versus protected b231; exploratory screen only, no automatic promotion'))
+             c.update(mode='manual', observation_unix_s=now, main_training_continues=True)
+             write(args.control, c)
+@@ -166,6 +237,7 @@
+     worker = threading.Thread(target=watch, name='screen-work-status')
+     worker.start()
+     seals = {}
++    port_gates = {}
+     exit_code = 1
+     error = None
+     try:
+@@ -179,6 +251,15 @@
+             if config['argv'] != prepared['jobs'][leg]['argv']:
+                 raise ValueError('Controller argv differs from the selected original job')
+             phase.update(leg=leg, job=job, execution=config['output'], detail=f'Starting original {leg} score-screen arm')
++            def port_observation(value):
++                port_gates[leg] = value
++                phase.update(port_gate=value, detail=f'Waiting for original {leg} selected ports')
++            try:
++                wait_for_job_ports(job, notify=port_observation)
++            finally:
++                if leg in port_gates:
++                    write(args.output / (leg + '-port-gate.json'), port_gates[leg], True)
++            phase.update(port_gate=None, detail=f'Starting original {leg} score-screen arm')
+             module.launch(config_pin['path'])
+             result = module.observe(config_pin['path'])
+             seals[leg] = validate_leg(result, job)
+@@ -206,7 +287,7 @@
+             candidate_mean_change_fraction=None if reference == 0 else candidate / reference - 1,
+             inference_scope='Two serial exploratory arms; no independent confirmation, promotion or causal learning claim')
+     write(args.output / 'result.json', dict(actual_exit=exit_code, error=error, legs=list(seals),
+-        comparison=comparison, report_update_errors=monitor_errors, reporter_thread_closed=not worker.is_alive(),
++        comparison=comparison, port_gates=port_gates, report_update_errors=monitor_errors, reporter_thread_closed=not worker.is_alive(),
+         native_or_original_controller_retried=False, screen_only=True, promotion=False, ended_unix_s=time.time()), True)
+     return exit_code
+ 

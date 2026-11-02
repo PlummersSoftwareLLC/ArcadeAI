@@ -1,0 +1,92 @@
+{
+  "schema": "robotron-first-LATCH-followup-quality-source-preservation-v1",
+  "original_binding_manifest": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_quality_binding_proposal/preparation-manifest.json",
+    "sha256": "3d7b87869b4271a0279b4c9a3d21c56be8bbd36c96d3bf32b07fe55ee71be4a0",
+    "bytes": 17643,
+    "identity": {
+      "device": 2304,
+      "inode": 86245397,
+      "bytes": 17643,
+      "mtime_ns": 1792271493084242951,
+      "ctime_ns": 1792271493084242951,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "original_binder": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_quality_binding_proposal/quality_bindings.py",
+    "sha256": "53b650cd0f64b2bbe07e81324199e48f31153bc5f72aa4efd78d1fde940b7ab3",
+    "bytes": 35747,
+    "identity": {
+      "device": 2304,
+      "inode": 86245381,
+      "bytes": 35747,
+      "mtime_ns": 1792271375030432262,
+      "ctime_ns": 1792271493082952225,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "original_auditor": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/CE2048_trial02_quality_binding_proposal/audit_completed_leg.py",
+    "sha256": "4b46c2f4b57073a6f710f6d8c568f7c7ec994c305e022ffdded7f1730426a052",
+    "bytes": 34054,
+    "identity": {
+      "device": 2304,
+      "inode": 86245383,
+      "bytes": 34054,
+      "mtime_ns": 1792271375061082254,
+      "ctime_ns": 1792271493082952225,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "binder_exact_functions": [
+    "require",
+    "identity",
+    "read_bytes",
+    "read",
+    "four",
+    "flat",
+    "triple",
+    "load_horizon",
+    "owner",
+    "check_cpu",
+    "check_early",
+    "check_activation_origin",
+    "check_reference"
+  ],
+  "binder_changed_functions": [
+    "check_selection",
+    "check_return",
+    "terminal",
+    "validate"
+  ],
+  "binder_new_functions": [
+    "check_maintenance_health",
+    "check_maintenance_chain",
+    "check_followup_precommit"
+  ],
+  "auditor_exact_functions": [
+    "require",
+    "digest",
+    "unique_object",
+    "decode",
+    "lines",
+    "indexed",
+    "immutable",
+    "validate_future_plan",
+    "validate_cpu_proof",
+    "validate_original_context",
+    "classify_actor_lines",
+    "configure",
+    "main"
+  ],
+  "auditor_only_changed_function": "audit",
+  "auditor_delta": "Only returned result provenance emission replaces CE_return alias with original_failed_return,separate_maintenance,followup_precommit; entire row/life/math/timeout/log/gate flow unchanged.",
+  "actual_guard_execution": null
+}

@@ -1,0 +1,70 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/dashboard-JSON-production-continuity-main-inputs-original01-preparation-20261022/sources-original01/handoff_controller_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/current-continuation-raw4hz-source-only-original01-20261027/stop_and_preserve_current_trainer_only_v1.py
+@@ -1,4 +1,4 @@
+-"""One bounded score-carry handoff, driven by an authenticated backend.
++"""One bounded stop-and-preserve of CURRENT training state; no source install/start.
+ 
+ Default invocation performs no reads or actions. A backend owns real process,
+ control, cgroup, source, CPU-verifier and recovery operations. This module owns
+@@ -93,40 +93,10 @@
+                     and saved.get('newest_stopped_source') is True
+                     and saved.get('replay_bank_consistency_verified') is True,
+                     'Actual newest stopped checkpoint/replay verification is incomplete')
+-            installed = self.call('exact_parser_and_resume_record_installed', b.install,
+-                                  context, retired, saved)
+-            require(installed.get('exact_selected_parser') is True
+-                    and installed.get('only_selected_source_changed') is True
+-                    and installed.get('newest_checkpoint_unchanged') is True,
+-                    'Source installation escaped its verified transaction')
+-            self.start_attempts += 1
+-            require(self.start_attempts == 1, 'One replacement start attempt only')
+-            self.replacement = self.call('one_replacement_started', b.start_once,
+-                                         context, saved, installed)
+-            startup = self.call('same_replacement_startup_verified', b.verify_startup,
+-                                self.replacement, saved, installed)
+-            require(startup.get('same_original_replacement') is True
+-                    and startup.get('newest_state_preserved') is True
+-                    and startup.get('startup_update_count') in (0, 1)
+-                    and type(startup.get('startup_update_count')) is int
+-                    and all(type(startup.get(k)) is int for k in
+-                            ('logical_sample_delta','learner_frame_delta','raw_frame_delta'))
+-                    and startup.get('logical_sample_delta') == startup['startup_update_count']*4096
+-                    and startup.get('learner_frame_delta') == 0
+-                    and startup.get('raw_frame_delta') == 0
+-                    and startup.get('replay_storage_and_bank_identity_verified') is True,
+-                    'Verified startup did not preserve the newest state')
+-            self.call('original_fleet_thawed', b.thaw_fleet, context, startup)
+-            live = self.call('original192_reconnected_and_learning', b.verify_progress,
+-                             context, self.replacement, startup)
+-            require(live.get('original192_identities_preserved') is True
+-                    and live.get('training_progress_verified') is True
+-                    and type(live.get('pipeline_errors')) is int and live['pipeline_errors'] == 0,
+-                    'Original actors or healthy learning were not restored')
+             self.completed = True
+-            outcome.update(status='SCORE_CARRY_HANDOFF_VERIFIED_ORIGINAL192_LEARNING',
+-                           production_changed=True, live=live,
+-                           startup_update_count=startup['startup_update_count'])
++            outcome.update(status='CURRENT_TRAINER_STOPPED_AND_FULL_STATE_HOT_REPLAY_PRESERVED',
++                           trainer_stopped=True, replacement_started=False,
++                           source_install_performed=False, saved=saved)
+         except ObservationPending as error:
+             outcome.update(status='SAME_ORIGINAL_HANDLE_OBSERVATION_PENDING',
+                            error=str(error), pending_stage=self.stage)
+@@ -165,7 +135,7 @@
+             and hashlib.sha256(args.job.read_bytes()).hexdigest() == args.expected_job_sha256,
+             'Exact selected immutable handoff job required')
+     job = json.loads(args.job.read_bytes())
+-    require(job.get('authorized') is True and job.get('schema') == 'robotron-score-carry-live-handoff-job-v1',
++    require(job.get('authorized') is True and job.get('schema') == 'robotron-current-continuation-stop-only-job-v1',
+             'Explicit selected live handoff scope required')
+     entry = job['backend_source']
+     path = Path(entry['path'])
+@@ -175,7 +145,7 @@
+     spec.loader.exec_module(module)
+     backend = module.prepare(job)
+     result = Handoff(backend).run()
+-    return 0 if result['status'] == 'SCORE_CARRY_HANDOFF_VERIFIED_ORIGINAL192_LEARNING' else 1
++    return 0 if result['status'] == 'CURRENT_TRAINER_STOPPED_AND_FULL_STATE_HOT_REPLAY_PRESERVED' else 1
+ 
+ 
+ if __name__ == '__main__':

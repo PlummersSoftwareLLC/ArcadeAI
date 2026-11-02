@@ -1,0 +1,52 @@
+LIVE8 MAINTENANCE ADAPTER REVIEWED2 — SOURCE PREPARATION ONLY
+
+Preserves original ../preparation-manifest.json8ee75d0d and all original files,
+root's actual35 PASS and original read_job refusal f44978fc. No actual maintenance
+or actor/source mutation occurred in that refused preflight. This is a separate
+new source bundle/job/output/unit, never a resume or overwrite of the old attempt.
+
+The sole controller change resolves the held model directory exactly as pinned
+config.pyf2794754 lines47–50: stripped explicit ROBOTRON_DQN_MODEL_DIR, otherwise
+GAME/models_dqn. Both must equal the root job's canonical model_dir. The actual
+held environment may omit the variable; nothing injects/changes it. Config source
+SHA is mandatory, DQN_RATCHET0 and DQN_EXACT_GRAPH_CHECKPOINT/latest remain exact.
+Wrong explicit directory, wrong/missing config source, protected-checkpoint path
+and ratchet changes fail closed. All prior ownership/source/control/recipe/bank/
+ring/log/native/128graph/first-PRE-clock/capture/recovery predicates are unchanged.
+
+The complete operational/root-job contract remains in immutable ../PREPARATION.txt
+e0481e2d, with this narrow model-directory default clarification. job.schema.json
+is byte-identical. The explicit helper source path now points to THIS bundle's
+controller and copied bank_state_revision2.py. Actual root jobs are created only
+by the root after fresh binding; no future PID/identity is manufactured here.
+The OVERLAY source directory is the original recomputed_ce_capture_proposal/
+revision2, not this nested live8_maintenance_proposal/revision2 directory.
+
+Selected copied bank helper/test remain e0c69fb3/20f43e31. Original nine-ring
+source-defined fallocate extent support, bank exact extents and all11 contracts
+are unchanged. The original24 controller tests are unchanged except sharing
+this same-package new controller import;3 new pure default-path tests make27.
+Selected total=38 stdlib tests. No authors imported/compiled/executed any source,
+default, tests, live query, checkpoint/model/tensor/replay read or runtime action.
+
+Default prints literal PLAN with no helper/job reads. Explicit runtime invocation:
+ python3 -B ABS_THIS_BUNDLE/run_live8_maintenance.py --launch --job ABS_NEW_JOB \
+  --expected-job-sha256 ROOT_JOB_SHA --expected-controller-sha256 02f4fa02...
+Root future test command (NOT RUN BY AUTHORS):
+ python3 -B -m unittest \
+ Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_maintenance_proposal.revision2.test_live8_maintenance \
+ Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_maintenance_proposal.revision2.test_bank_state_revision2
+
+Root's corrected service policy is Type=exec,RemainAfterExit=yes,CPUQuota200%,
+MemoryMax4G,TasksMax128,RuntimeMaxSec4800,KillSignalSIGINT,TimeoutStopSec900,
+SendSIGKILL=no. RuntimeMaxSec does not bound Type=oneshot ExecStart; root retained
+that limitation of the original35-test unit honestly (actual.065s completion).
+Use detached3s timer, no --wait/--collect, reap carrier before trigger; preserve
+same original invocation/fullshow/cat/journal/exit BEFORE any root-owned release.
+This is future launch metadata, not authorization or an executed service.
+
+Consume ONLY existing insurance26bd3789 +finiteCPU83c898 saved four-clock floor:
+steps2042467,samples6918356992,learner423154160,frame846584430. No new save request,
+completed384 gate rearm, protected-winner load, automatic insurance rollback or
+ninth capture. Normalboot input remains newest stopped-latest with CPU proof.
+No coherent tail/RNG/actor/replay RAM equality or learning/quality claim is added.

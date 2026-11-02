@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/stop-sources/prepare_owned_current_stop_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/handoff-preservation-original01/stop-sources/prepare_owned_current_stop_v2.py
+@@ -31,7 +31,7 @@
+     'controller': (HERE/'control_owned_current_stop900_v1.py','3016bffdec578cacbb354e5d8d453b05e84d42ed8a42e0a3874d91f439c063e8'),
+     'source_peer': (HERE/'independent-owned-current-stop-v3-and-900-resource-source-peer-v1.json','6d382596a3cb60a0306536444754079558bd45bacbd2db34a686266bba6b2c7a'),
+     'guard_closeout': (H/'stop-focused-six-original01-preparation/independent-original-CPU-scope-closeout.json','22ed0d258a5305fb1b81cd1eb68bf052a1eb38b837cee9676fba53a1d86bb514'),
+-    'main_binding': (B/'post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-fixed-RCRC-study-original01/main-binding.json','c75868e40f0b63fb088818b3b9a285831ef22c1b4dabe97f1a5e06601059cf44'),
++    'main_binding': (H/'current-owner-evidence-original03-closed-control-cleanup/Root-normalized-control-operational-main-binding.json','8956d405f84cab32bb4778b117726ebb30588e473680ca2b8c5c8df93102c814'),
+     'boot_CPU_report': (B/'power-outage-recovery-20261027-original01/post-training-CPU-verification-original02.json','e04dc403489d2545fd4e67909537d2684f20f4a52c15eee0df1edb36de2cb114'),
+     'phase_record': (G/'models_dqn/resume-records/resume-b99e50b9b1e7339f27c44de399e556ea0213c011ce2480c71eccd1e70ebd179e.json','f919a465369d4f28266693ae7a438946ef688a9f6087322c4bf917e6c5d327d2'),
+     'phase_anchor': (B/'post-natural-turnover-durable-next-candidate-20261029-original03/endpoint-CPU.json','d9dfb33918a98a3164f503fafe7bc6ac4dfca1df15c252b531f4d0dd1eca8990'),

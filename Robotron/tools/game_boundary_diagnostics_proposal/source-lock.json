@@ -1,0 +1,43 @@
+{
+  "schema": "robotron-game-boundary-diagnostics-source-proposal-v1",
+  "status": "SOURCE_ONLY_UNAPPLIED_UNEXECUTED",
+  "base_sha256": {
+    "Robotron/Scripts/dqn/socket_server.py": "8fe556f7507547a97839072bbcecc98384c2b395c8ae789ac8ee062f55bca721",
+    "Robotron/Scripts/dqn/game_journal.py": "27c6143851aff73dd355db89e1ffaa65d90d215b91921406050387be5ad69029"
+  },
+  "new_files_sha256": {
+    "socket_server_candidate.py": "d99dd2782fc3e8f67670aefb398ed0dfdc1fd859432e24c8bd8dea4da2825214",
+    "game_journal_candidate.py": "544de3a9bf5cdbb7029004d69c27c8ce54154211a1af216cdfc031c3f33fcd87",
+    "unapplied.patch": "38aec7c264d085116df1dd62b81646cf7fff675fa8bcca59af174988bd1a56ab",
+    "test_game_boundary_diagnostics.py": "5227069f959696b36b08f8e281fd5de198cdb4789a44640097b28a7ed5285675",
+    "PREPARATION.txt": "734e7cc6e88f7003fc0f9913fbb8be446dbdf715981c55a3ccbe46633ab4e6fc"
+  },
+  "activation": {
+    "environment": "ROBOTRON_GAME_BOUNDARY_DIAGNOSTICS",
+    "exact_enabled_value": "1",
+    "startup_only": true,
+    "requires_replay_enabled_false": true,
+    "production_default_changed": false
+  },
+  "scope": {
+    "retained_samples_per_connected_client": 1,
+    "sample_contains_only_primitives": true,
+    "evidence_dictionary_expansion": "existing journal _begin only",
+    "record_location": "new game start context in existing journal records",
+    "additional_files_writes_threads_locks_or_rng": false,
+    "classifier_uid_rewards_admission_or_cohort_gates_changed": false,
+    "prior_320M_failure_cause_established": false,
+    "old_rows_repaired_or_campaign_retried": false
+  },
+  "validation": {
+    "new_stdlib_test_methods": 10,
+    "executed_test_methods": 0,
+    "candidate_imported": false,
+    "candidate_compiled": false,
+    "patch_application_attempted": false,
+    "runtime_or_data_queries": false,
+    "source_peer_review": "requested separately; pending",
+    "full_handle_client_or_live_sidecar_integration_validated": false,
+    "performance_overhead_measured": false
+  }
+}

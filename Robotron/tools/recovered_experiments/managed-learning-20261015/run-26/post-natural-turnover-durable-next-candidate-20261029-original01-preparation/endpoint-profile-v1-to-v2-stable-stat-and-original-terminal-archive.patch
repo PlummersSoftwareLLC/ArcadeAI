@@ -1,0 +1,38 @@
+--- prepare_durable_endpoint_profiles_v1.py
++++ prepare_durable_endpoint_profiles_v2.py
+@@ -36,7 +36,9 @@
+     require(path.is_absolute() and not path.is_symlink() and path.is_file(), 'Actual regular metadata required')
+     st=path.stat();require(st.st_size<=2<<20 and st.st_uid==os.getuid() and st.st_nlink==1
+         and stat.S_IMODE(st.st_mode)==0o444, 'Owned immutable bounded metadata required: '+str(path))
+-    raw=path.read_bytes();require(path.stat()==st, 'Metadata changed during read')
++    raw=path.read_bytes();after=path.stat()
++    stable=lambda q:(q.st_dev,q.st_ino,q.st_size,q.st_mtime_ns,q.st_ctime_ns,q.st_mode,q.st_uid,q.st_nlink)
++    require(stable(after)==stable(st), 'Metadata changed during read')
+     digest=hashlib.sha256(raw).hexdigest()
+     if expected is not None:require(digest==expected,'Metadata source selection differs')
+     return json.loads(raw),dict(path=str(path),sha256=digest,bytes=len(raw))
+@@ -65,7 +67,8 @@
+     require(endpoint['sha256']not in {authority['endpoint']['sha256'],
+         'a6e17a3c6cd8a9b6cb5479e6c6cbd1a284c1cd880372d0d02441680bc708e502',
+         '444a14287789b26e3d84564cf4a9e49518d82d91d6a3ed82ca09526ef89c8523'},'A genuinely distinct endpoint is required')
+-    st=Path(endpoint['path']).stat();require(st.st_size==endpoint['bytes'] and stat.S_IMODE(st.st_mode)==0o444
++    ep=Path(endpoint['path']);st=ep.stat();require(not ep.is_symlink() and ep.resolve(strict=True)==ep
++        and st.st_size==endpoint['bytes'] and stat.S_IMODE(st.st_mode)==0o444
+         and st.st_uid==os.getuid() and st.st_nlink==1,'Immutable actual endpoint metadata differs')
+     require(report['CUDA_initialized']is False and report['online_target_shapes_and_finiteness_verified']is True
+         and report['priority_phase_valid']is True and report['Adam_parameters']==81
+@@ -85,8 +88,12 @@
+     expected=dict(CPUQuotaPerSecUSec='2s',MemoryMax=str(4<<30),MemorySwapMax='0',TasksMax='128',
+         RuntimeMaxUSec='3min',Restart='no',NRestarts='0')
+     require(all(terminal[k]==v for k,v in expected.items()),'Original endpoint CPU resource scope differs')
+-    raw=subprocess.check_output(['systemctl','--user','show',UNIT],text=True,timeout=5)
+-    values=dict(line.split('=',1)for line in raw.splitlines()if'='in line)
++    archive=CASE/'canonical-profile-CPU-original01/original-durable-observer-terminal.json'
++    if archive.exists():
++        values,_=metadata(archive)
++    else:
++        raw=subprocess.check_output(['systemctl','--user','show',UNIT],text=True,timeout=5)
++        values=dict(line.split('=',1)for line in raw.splitlines()if'='in line)
+     scope=dict(Id=UNIT,MainPID='0',ExecMainPID=str(PID),InvocationID=INVOCATION,ExecMainCode='1',ExecMainStatus='0',
+         Result='success',NRestarts='0',Restart='no',RemainAfterExit='yes',Type='exec',CPUQuotaPerSecUSec='1s',
+         MemoryMax=str(256<<20),MemorySwapMax='0',TasksMax='32',RuntimeMaxUSec='4h 7min')

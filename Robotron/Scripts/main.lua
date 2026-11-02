@@ -15,7 +15,7 @@
       - Receives joystick commands: movement_dir (-1 neutral or 0..7) and firing_dir (-1 neutral or 0..7)
 --]]
 
-RAW_SOCKET_ADDRESS = os.getenv("ROBOTRON_SOCKET_ADDRESS") or "m2macpro:9998"
+RAW_SOCKET_ADDRESS = os.getenv("ROBOTRON_SOCKET_ADDRESS") or "dell:9998"
 PREVIEW_CLIENT_FLAG = (os.getenv("ROBOTRON_PREVIEW_CLIENT") == "1") and 1 or 0
 CLIENT_SLOT = math.max(0, math.floor(tonumber(os.getenv("ROBOTRON_CLIENT_SLOT") or "0") or 0))
 -- Eval override: 0 = auto (server decides by cid), 1 = force eval, 2 = force non-eval.
@@ -24,7 +24,7 @@ SOCKET_ADDRESS = RAW_SOCKET_ADDRESS
 if string.sub(SOCKET_ADDRESS, 1, 7) ~= "socket." then
     SOCKET_ADDRESS = "socket." .. SOCKET_ADDRESS
 end
-SOCKET_READ_TIMEOUT_S = 3.5
+SOCKET_READ_TIMEOUT_S = 120.0
 CONNECTION_RETRY_INTERVAL_S = 1.0
 SAVE_INTERVAL_S = 300
 unpack = table.unpack or unpack
@@ -49,6 +49,76 @@ function env_flag(name, default)
     raw = string.lower(tostring(raw))
     return not (raw == "0" or raw == "false" or raw == "off" or raw == "no")
 end
+
+-- Host socket wait configuration.  Keep the default and unsupported platforms
+-- on the existing busy-poll path.  The native callback never touches Lua state
+-- or advances emulation; it only sleeps the host thread after an empty read.
+local socket_wait_raw = os.getenv("ROBOTRON_SOCKET_WAIT_US") or "0"
+local socket_wait_us = socket_wait_raw:match("^%d+$") and math.tointeger(tonumber(socket_wait_raw)) or 0
+socket_wait_us = math.max(0, math.min(10000, socket_wait_us or 0))
+local socket_idle_wait = nil
+local socket_time_now = os.clock
+local socket_clock_kind = "process_cpu"
+local socket_wait_description = "busy polling"
+if socket_wait_us > 0 then
+    local helper_path = os.getenv("ROBOTRON_HOST_WAIT_LIB")
+    local clock_ready = type(emu) == "table" and type(emu.osd_ticks) == "function"
+        and type(emu.osd_ticks_per_second) == "function"
+    local rate_ok, tick_rate = false, nil
+    if clock_ready then
+        rate_ok, tick_rate = pcall(emu.osd_ticks_per_second)
+        clock_ready = rate_ok and type(tick_rate) == "number" and tick_rate > 0
+            and tick_rate < math.huge
+        if clock_ready then
+            local ticks_ok, ticks = pcall(emu.osd_ticks)
+            clock_ready = ticks_ok and type(ticks) == "number" and ticks == ticks
+                and ticks ~= math.huge and ticks ~= -math.huge
+        end
+    end
+    if os.getenv("ROBOTRON_SOCKET_WAIT_ACTIVE") == "select-v1" then
+        -- Only the successfully loaded, opted-in preload shim sets this flag.
+        -- Its read blocks in host time, so CPU-time deadlines are unsafe here.
+        assert(clock_ready, "Robotron socket readiness wait requires a host wall clock")
+        local host_ticks = emu.osd_ticks
+        socket_time_now = function() return host_ticks() / tick_rate end
+        socket_clock_kind = "host_wall"
+        socket_wait_description = string.format("socket readiness wait %dus, host wall timers", socket_wait_us)
+    else
+        local load_ok, sleep_fn = false, nil
+        if clock_ready and helper_path and helper_path ~= "" and type(package) == "table"
+                and type(package.loadlib) == "function" then
+            load_ok, sleep_fn = pcall(package.loadlib, helper_path, "robotron_socket_wait")
+        end
+        if load_ok and type(sleep_fn) == "function" then
+            local host_ticks = emu.osd_ticks
+            socket_time_now = function() return host_ticks() / tick_rate end
+            socket_clock_kind = "host_wall"
+            socket_idle_wait = sleep_fn
+            socket_wait_description = string.format("host sleep %dus, host wall timers", socket_wait_us)
+        else
+            print("Robotron socket host wait unavailable; using busy polling")
+        end
+    end
+end
+local socket_receive_timeout_count = 0
+local socket_timeout_last_logged_count = 0
+local socket_timeout_last_log_unix_s = nil
+local function log_socket_receive_timeout(partial_bytes, elapsed_s)
+    socket_receive_timeout_count = socket_receive_timeout_count + 1
+    local unix_s = os.time()
+    if socket_timeout_last_log_unix_s == nil or unix_s - socket_timeout_last_log_unix_s >= 30 then
+        print(string.format(
+            "[SOCKET ACTION TIMEOUT] slot=%d count=%d suppressed=%d partial_bytes=%d elapsed_s=%.3f timeout_s=%.3f clock=%s unix_s=%d backend=%q",
+            tonumber(CLIENT_SLOT) or 0, socket_receive_timeout_count,
+            socket_receive_timeout_count - socket_timeout_last_logged_count - 1,
+            partial_bytes, elapsed_s, SOCKET_READ_TIMEOUT_S, socket_clock_kind, unix_s,
+            socket_wait_description
+        ))
+        socket_timeout_last_log_unix_s = unix_s
+        socket_timeout_last_logged_count = socket_receive_timeout_count
+    end
+end
+-- End host socket wait configuration.
 
 RRCHRIS_PATCH_ENABLED = env_flag("ROBOTRON_ENABLE_RRCHRIS_PATCH", false)
 SKIP_UNUSED_TACTICAL_FEATURES = env_flag("ROBOTRON_SKIP_UNUSED_TACTICAL_FEATURES", false)
@@ -442,16 +512,30 @@ PREVIEW_FORMAT_RGB565_LZSS = 2
 PREVIEW_FORMAT_RGB565_RLE = 3
 -- Enable preview support; server controls streaming per-client via action source flags.
 PREVIEW_CAPTURE_ENABLED = true
+RETIRE_AFTER_GAME_ENABLED = env_flag("ROBOTRON_RETIRE_AFTER_GAME", false)
 PREVIEW_FPS_MAX = 30
 PREVIEW_FPS = math.max(
     1,
     math.min(PREVIEW_FPS_MAX, math.floor(env_number("ROBOTRON_PREVIEW_FPS", PREVIEW_FPS_MAX) or PREVIEW_FPS_MAX))
 )
 PREVIEW_MIN_INTERVAL_S = (1.0 / PREVIEW_FPS)
+-- Preview rate is wall-clock time even when socket waits use the legacy
+-- process-CPU clock. CPU time can advance faster than wall time on MAME's
+-- worker threads and must not make a 30fps preview run above its target.
+local preview_time_now = socket_time_now
+if type(emu) == "table" and type(emu.osd_ticks) == "function"
+    and type(emu.osd_ticks_per_second) == "function" then
+    local preview_rate_ok, preview_tick_rate = pcall(emu.osd_ticks_per_second)
+    if preview_rate_ok and type(preview_tick_rate) == "number"
+        and preview_tick_rate > 0 and preview_tick_rate < math.huge then
+        local preview_host_ticks = emu.osd_ticks
+        preview_time_now = function() return preview_host_ticks() / preview_tick_rate end
+    end
+end
 -- A max width/height <= 0 means native snapshot resolution.
 PREVIEW_MAX_WIDTH = math.floor(env_number("ROBOTRON_PREVIEW_MAX_WIDTH", 0) or 0)
 PREVIEW_MAX_HEIGHT = math.floor(env_number("ROBOTRON_PREVIEW_MAX_HEIGHT", 0) or 0)
-PREVIEW_TRY_RLE = env_flag("ROBOTRON_PREVIEW_RLE", true)
+PREVIEW_TRY_RLE = false
 PREVIEW_RLE_MIN_SAVINGS_BYTES = math.max(64, math.floor(env_number("ROBOTRON_PREVIEW_RLE_MIN_SAVINGS", 256) or 256))
 PREVIEW_MAX_BYTES = 2000000
 SOCKET_MAX_PAYLOAD_BYTES = 4194304
@@ -2678,6 +2762,7 @@ local function lzss_compress_bytes(data)
     return table.concat(out)
 end
 
+local PREVIEW_RLE_BLACK128 = string.rep("\0\0", 128)
 local function rle_compress_rgb565_words(blob)
     if not blob or #blob < 4 or (#blob % 2) ~= 0 then
         return nil
@@ -2691,12 +2776,19 @@ local function rle_compress_rgb565_words(blob)
         local word = string.sub(blob, i, i + 1)
         local run_words = 1
         local j = i + 2
+        -- A complete black128-word block is the common snapshot background.
+        -- This preserves the original128-run boundary exactly; every other
+        -- case takes the unchanged word-by-word fallback.
+        if word == "\0\0" and (i + 255) <= n and string.sub(blob, i, i + 255) == PREVIEW_RLE_BLACK128 then
+            run_words = 128
+        else
         while run_words < 128 and j <= n do
             if string.sub(blob, j, j + 1) ~= word then
                 break
             end
             run_words = run_words + 1
             j = j + 2
+        end
         end
 
         if run_words >= 2 then
@@ -2726,16 +2818,118 @@ local function rle_compress_rgb565_words(blob)
     return table.concat(out)
 end
 
+-- Preview bytes only: group native snapshot pixels to avoid per-pixel Lua/C
+-- string allocations. RGB565 layout and the resize fallback remain exact.
+local PREVIEW_NATIVE_UNPACK16 = "=" .. string.rep("I4", 16)
+local PREVIEW_RGB565_PACK16 = ">" .. string.rep("I2", 16)
+local function preview_pack_native16(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16)
+    return string.pack(PREVIEW_RGB565_PACK16,
+        (((p1 >> 19) & 0x1F) << 11) | (((p1 >> 10) & 0x3F) << 5) | ((p1 >> 3) & 0x1F),
+        (((p2 >> 19) & 0x1F) << 11) | (((p2 >> 10) & 0x3F) << 5) | ((p2 >> 3) & 0x1F),
+        (((p3 >> 19) & 0x1F) << 11) | (((p3 >> 10) & 0x3F) << 5) | ((p3 >> 3) & 0x1F),
+        (((p4 >> 19) & 0x1F) << 11) | (((p4 >> 10) & 0x3F) << 5) | ((p4 >> 3) & 0x1F),
+        (((p5 >> 19) & 0x1F) << 11) | (((p5 >> 10) & 0x3F) << 5) | ((p5 >> 3) & 0x1F),
+        (((p6 >> 19) & 0x1F) << 11) | (((p6 >> 10) & 0x3F) << 5) | ((p6 >> 3) & 0x1F),
+        (((p7 >> 19) & 0x1F) << 11) | (((p7 >> 10) & 0x3F) << 5) | ((p7 >> 3) & 0x1F),
+        (((p8 >> 19) & 0x1F) << 11) | (((p8 >> 10) & 0x3F) << 5) | ((p8 >> 3) & 0x1F),
+        (((p9 >> 19) & 0x1F) << 11) | (((p9 >> 10) & 0x3F) << 5) | ((p9 >> 3) & 0x1F),
+        (((p10 >> 19) & 0x1F) << 11) | (((p10 >> 10) & 0x3F) << 5) | ((p10 >> 3) & 0x1F),
+        (((p11 >> 19) & 0x1F) << 11) | (((p11 >> 10) & 0x3F) << 5) | ((p11 >> 3) & 0x1F),
+        (((p12 >> 19) & 0x1F) << 11) | (((p12 >> 10) & 0x3F) << 5) | ((p12 >> 3) & 0x1F),
+        (((p13 >> 19) & 0x1F) << 11) | (((p13 >> 10) & 0x3F) << 5) | ((p13 >> 3) & 0x1F),
+        (((p14 >> 19) & 0x1F) << 11) | (((p14 >> 10) & 0x3F) << 5) | ((p14 >> 3) & 0x1F),
+        (((p15 >> 19) & 0x1F) << 11) | (((p15 >> 10) & 0x3F) << 5) | ((p15 >> 3) & 0x1F),
+        (((p16 >> 19) & 0x1F) << 11) | (((p16 >> 10) & 0x3F) << 5) | ((p16 >> 3) & 0x1F))
+end
+
+-- Exact 64-byte native-pixel keys; at most 1024 retained 32-byte values.
+-- FIFO replacement does not reorder on hits and cannot grow with changing noise.
+-- RGB conversion depends only on the bytes, so entries remain valid across
+-- frames/dimension changes. Resized output never accesses this cache.
+local PREVIEW_NATIVE64_CACHE_LIMIT = 1024
+local PREVIEW_NATIVE64_MAX_MISSES_PER_FRAME = 64
+local preview_native64_cache = {}
+local preview_native64_keys = {}
+local preview_native64_next = 1
+
+local function preview_rgb565_bytes(src, vw, vh, tw, th)
+    if tw == vw and th == vh then
+        local out = {}
+        local n = tw * th
+        local grouped = n - (n % 16)
+        local oi = 1
+        local cache_misses = 0
+        for pixel = 0, grouped - 1, 16 do
+            if cache_misses >= PREVIEW_NATIVE64_MAX_MISSES_PER_FRAME then
+                -- High-entropy frames use the original direct native16 path;
+                -- no further block substrings, hashes, lookups or insertions.
+                out[oi] = preview_pack_native16(string.unpack(PREVIEW_NATIVE_UNPACK16, src, pixel * 4 + 1))
+            else
+                local start = pixel * 4 + 1
+                local block = string.sub(src, start, start + 63)
+                local packed = preview_native64_cache[block]
+                if packed == nil then
+                    cache_misses = cache_misses + 1
+                    packed = preview_pack_native16(string.unpack(PREVIEW_NATIVE_UNPACK16, block))
+                    local evicted = preview_native64_keys[preview_native64_next]
+                    if evicted ~= nil then
+                        preview_native64_cache[evicted] = nil
+                    end
+                    preview_native64_keys[preview_native64_next] = block
+                    preview_native64_cache[block] = packed
+                    preview_native64_next = (preview_native64_next % PREVIEW_NATIVE64_CACHE_LIMIT) + 1
+                end
+                out[oi] = packed
+            end
+            oi = oi + 1
+        end
+        for pixel = grouped, n - 1 do
+            local px = string.unpack("=I4", src, pixel * 4 + 1)
+            local rgb565 = (((px >> 19) & 0x1F) << 11) | (((px >> 10) & 0x3F) << 5) | ((px >> 3) & 0x1F)
+            out[oi] = string.pack(">I2", rgb565)
+            oi = oi + 1
+        end
+        return table.concat(out)
+    end
+        local out = {}
+        local oi = 1
+        for ty = 0, th - 1 do
+            local sy = math.floor(((ty + 0.5) * vh) / th)
+            if sy >= vh then sy = vh - 1 end
+            local row_base = sy * vw
+            for tx = 0, tw - 1 do
+                local sx = math.floor(((tx + 0.5) * vw) / tw)
+                if sx >= vw then sx = vw - 1 end
+                local px_off = ((row_base + sx) * 4) + 1
+                local px = string.unpack("=I4", src, px_off)
+                local r = (px >> 16) & 0xFF
+                local g = (px >> 8) & 0xFF
+                local b = px & 0xFF
+                local rgb565 = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)
+                out[oi] = string.pack(">I2", rgb565)
+                oi = oi + 1
+            end
+        end
+
+        return table.concat(out)
+end
+
 local function capture_game_preview()
     if (not PREVIEW_CAPTURE_ENABLED) or (not preview_stream_enabled) then
         clear_pending_preview()
         return
     end
-    local now_s = os.clock()
+    local now_s = preview_time_now()
     if (now_s - last_preview_capture_time_s) < PREVIEW_MIN_INTERVAL_S then
         return
     end
-    last_preview_capture_time_s = now_s
+    -- Keep the 30Hz schedule through uneven inference replies. Rounding to
+    -- the current clock tick discards missed captures and falls below 30Hz
+    -- even when the game supplies enough frames. Allow one frame of catch-up,
+    -- bounding the debt after a stall or an interval with no viewer.
+    last_preview_capture_time_s = math.max(
+        last_preview_capture_time_s + PREVIEW_MIN_INTERVAL_S,
+        now_s - PREVIEW_MIN_INTERVAL_S)
 
     local ok, result = pcall(function()
         local vw, vh = manager.machine.video:snapshot_size()
@@ -2764,27 +2958,7 @@ local function capture_game_preview()
         local tw = preview_target_w
         local th = preview_target_h
 
-        local out = {}
-        local oi = 1
-        for ty = 0, th - 1 do
-            local sy = math.floor(((ty + 0.5) * vh) / th)
-            if sy >= vh then sy = vh - 1 end
-            local row_base = sy * vw
-            for tx = 0, tw - 1 do
-                local sx = math.floor(((tx + 0.5) * vw) / tw)
-                if sx >= vw then sx = vw - 1 end
-                local px_off = ((row_base + sx) * 4) + 1
-                local px = string.unpack("=I4", src, px_off)
-                local r = (px >> 16) & 0xFF
-                local g = (px >> 8) & 0xFF
-                local b = px & 0xFF
-                local rgb565 = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)
-                out[oi] = string.pack(">I2", rgb565)
-                oi = oi + 1
-            end
-        end
-
-        local blob = table.concat(out)
+        local blob = preview_rgb565_bytes(src, vw, vh, tw, th)
         local fmt = PREVIEW_FORMAT_RGB565
         if PREVIEW_TRY_RLE and #blob >= 4096 then
             local rle = rle_compress_rgb565_words(blob)
@@ -3484,11 +3658,11 @@ local function process_frame_via_socket(frame_payload, frame_idx)
 
     local read_ok, read_result = pcall(function()
         trace_log(frame_idx, "socket_read_begin", "waiting for 3-byte or 5-byte action")
-        local started = os.clock()
+        local started = socket_time_now()
         local legacy_buffer_ready_at = nil
 
         local v5_buffer_ready_at = nil
-        while (os.clock() - started) < SOCKET_READ_TIMEOUT_S do
+        while (socket_time_now() - started) < SOCKET_READ_TIMEOUT_S do
             if #ACTION_RX_BUFFER >= 6 then
                 -- v2 action: 5 bytes + GA1 difficulty byte.
                 local action_bytes = string.sub(ACTION_RX_BUFFER, 1, 6)
@@ -3516,22 +3690,29 @@ local function process_frame_via_socket(frame_payload, frame_idx)
                 -- an old server).  Same settle-wait pattern as the 3-byte
                 -- legacy case so a split 6-byte packet isn't misparsed.
                 if v5_buffer_ready_at == nil then
-                    v5_buffer_ready_at = os.clock() + 0.003
-                elseif os.clock() >= v5_buffer_ready_at then
-                    local action_bytes = ACTION_RX_BUFFER
-                    ACTION_RX_BUFFER = ""
-                    local move_dir, fire_dir, source, start_advanced, start_level_min = string.unpack("bbBBB", action_bytes)
-                    START_ADVANCED = (start_advanced or 0) ~= 0
-                    START_LEVEL_MIN = math.max(1, math.min(81, math.floor(start_level_min or 1)))
-                    trace_log(
-                        frame_idx,
-                        "socket_read_ok",
-                        string.format(
-                            "move=%d fire=%d src=%d adv=%d level=%d",
-                            move_dir, fire_dir, source, start_advanced or 0, START_LEVEL_MIN
+                    v5_buffer_ready_at = socket_time_now() + 0.003
+                elseif socket_time_now() >= v5_buffer_ready_at then
+                    -- A host sleep can straddle the settle deadline while the
+                    -- sixth byte arrives. Probe once before declaring legacy.
+                    local tail = current_socket:read(1)
+                    if tail and #tail > 0 then
+                        ACTION_RX_BUFFER = ACTION_RX_BUFFER .. tail
+                    else
+                        local action_bytes = ACTION_RX_BUFFER
+                        ACTION_RX_BUFFER = ""
+                        local move_dir, fire_dir, source, start_advanced, start_level_min = string.unpack("bbBBB", action_bytes)
+                        START_ADVANCED = (start_advanced or 0) ~= 0
+                        START_LEVEL_MIN = math.max(1, math.min(81, math.floor(start_level_min or 1)))
+                        trace_log(
+                            frame_idx,
+                            "socket_read_ok",
+                            string.format(
+                                "move=%d fire=%d src=%d adv=%d level=%d",
+                                move_dir, fire_dir, source, start_advanced or 0, START_LEVEL_MIN
+                            )
                         )
-                    )
-                    return {move_dir, fire_dir, source}
+                        return {move_dir, fire_dir, source}
+                    end
                 end
             else
                 v5_buffer_ready_at = nil
@@ -3539,31 +3720,37 @@ local function process_frame_via_socket(frame_payload, frame_idx)
 
             if #ACTION_RX_BUFFER == 3 then
                 if legacy_buffer_ready_at == nil then
-                    legacy_buffer_ready_at = os.clock() + 0.003
-                elseif os.clock() >= legacy_buffer_ready_at then
-                    local action_bytes = ACTION_RX_BUFFER
-                    ACTION_RX_BUFFER = ""
-                    local move_dir, fire_dir, source = string.unpack("bbB", action_bytes)
-                    trace_log(frame_idx, "socket_read_ok_legacy", string.format("move=%d fire=%d src=%d", move_dir, fire_dir, source))
-                    return {move_dir, fire_dir, source}
+                    legacy_buffer_ready_at = socket_time_now() + 0.003
+                elseif socket_time_now() >= legacy_buffer_ready_at then
+                    local tail = current_socket:read(3)
+                    if tail and #tail > 0 then
+                        ACTION_RX_BUFFER = ACTION_RX_BUFFER .. tail
+                    else
+                        local action_bytes = ACTION_RX_BUFFER
+                        ACTION_RX_BUFFER = ""
+                        local move_dir, fire_dir, source = string.unpack("bbB", action_bytes)
+                        trace_log(frame_idx, "socket_read_ok_legacy", string.format("move=%d fire=%d src=%d", move_dir, fire_dir, source))
+                        return {move_dir, fire_dir, source}
+                    end
                 end
             else
                 legacy_buffer_ready_at = nil
             end
 
-            local need = 6 - #ACTION_RX_BUFFER
-            if need < 1 then
-                need = 1
-            end
-            local chunk = current_socket:read(need)
-            if chunk and #chunk > 0 then
-                ACTION_RX_BUFFER = ACTION_RX_BUFFER .. chunk
+            if #ACTION_RX_BUFFER < 6 then
+                local chunk = current_socket:read(6 - #ACTION_RX_BUFFER)
+                if chunk and #chunk > 0 then
+                    ACTION_RX_BUFFER = ACTION_RX_BUFFER .. chunk
+                elseif socket_idle_wait then
+                    socket_idle_wait()
+                end
             end
         end
 
+        log_socket_receive_timeout(#ACTION_RX_BUFFER, math.max(0, socket_time_now() - started))
         ACTION_RX_BUFFER = ""
-        trace_log(frame_idx, "socket_read_timeout", "using neutral action")
-        return {-1, -1}
+        trace_log(frame_idx, "socket_read_timeout", "closing connection; using neutral action")
+        return nil
     end)
 
     if not read_ok then
@@ -3573,11 +3760,27 @@ local function process_frame_via_socket(frame_payload, frame_idx)
         return -1, -1, false
     end
 
+    if read_result == nil then
+        -- Replies carry no request ID. Reusing this stream after a timeout
+        -- could apply a late reply to the next state or lose byte alignment.
+        close_socket()
+        return -1, -1, false
+    end
+
     local move_dir, fire_dir, source = unpack(read_result)
     local source_u8 = (source or 0) & 0xFF
+    if RETIRE_AFTER_GAME_ENABLED and (source_u8 & 0x20) ~= 0 then
+        -- The host sets this only after fsync of the confirmed final score.
+        set_preview_stream_enabled(false)
+        close_socket()
+        print("[ROUND] Final game score committed by host; exiting client")
+        manager.machine:exit()
+        return -1, -1, false
+    end
     set_preview_stream_enabled((source_u8 & 0x40) ~= 0)
     -- Source byte bits:
     --   low nibble = action source
+    --   0x20 = final score committed; retire this one-game training client
     --   0x40 = preview enabled
     --   0x80 = preview HUD overlay enabled
     PREVIEW_HUD_ENABLED = (source_u8 & 0x80) ~= 0
@@ -4008,6 +4211,7 @@ if not apply_rrchris_patch() then
 end
 
 print("Robotron socket target: " .. SOCKET_ADDRESS)
+print("Robotron socket wait: " .. socket_wait_description)
 if EVAL_MODE > 0 then
     print("Robotron eval override: " .. (EVAL_MODE == 1 and "EVAL (greedy, wave-1)" or "NON-EVAL (training)"))
 else

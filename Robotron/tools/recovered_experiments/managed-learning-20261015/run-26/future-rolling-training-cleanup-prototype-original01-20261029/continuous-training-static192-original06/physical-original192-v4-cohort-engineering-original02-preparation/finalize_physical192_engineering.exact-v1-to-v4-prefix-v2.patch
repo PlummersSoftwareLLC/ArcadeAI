@@ -1,0 +1,31 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/physical-original192-context-engineering-original01-preparation/finalize_physical192_engineering_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/physical-original192-v4-cohort-engineering-original02-preparation/finalize_physical192_engineering_v2.py
+@@ -14,13 +14,13 @@
+ HERE = Path(__file__).resolve().parent
+ ENG = HERE
+ MODE_ROOT = HERE.parent
+-HC = MODE_ROOT/'health-consumer-physical-original192-original02'
+-FAMILY_SHA = '0effd7170f23dfac8ecd811c2df4b74435972b330bf74ba61913c530ce7a35b5'
+-MAP_SHA = 'ed8d6356a7ab12ef00824d4cfa25048ada2974d32e61cfc6e57f227c5dc68a80'
+-PREPARE_SHA = 'f74a71da4d2194fce199832fbffd6a1679761a22526c34382940f2bd35ea3665'
+-PROBE_SHA = '5a3ecc6388710acb938ba599f0f3415dc361da1adf9dc2e77f97f9e1f280e775'
+-CLOSE_SHA = '001c7b99b08256c1c84dbb2d25c0636cb848b75ae11a93dc64e9c040b8011c6d'
+-REVIEW_SHA = '49517cda74226f60f12297c5a106a758d76a3e0e4682a0a2c9058124c4ad433f'
++HC = MODE_ROOT/'health-consumer-physical-original192-v4-cohort-original03'
++FAMILY_SHA = '5a901e68e16270f7985f907964d46cc0ceb7b6e17dd1834009a5d616b88fcecd'
++MAP_SHA = '5e5c77c2554dacbe86b9ac0cd38eebe09d6eb1cbfe427310482dfdc8fd0b2bf1'
++PREPARE_SHA = '85ec340af871cc30e10603a10aa599c3e280d740f059e444660b4166d9e800a2'
++PROBE_SHA = '27f5f0dfd64dabdc1d543f83b78abd366b96bba67f9674e8c9f81cf25d4c9581'
++CLOSE_SHA = 'd6c5c36eae4aa572e5cb267e997611c498235b81155ecf3dabc3c0083db27392'
++REVIEW_SHA = '5c43b07c591b2ff65f828f516df240576aa12be94646c78daf954a49560bff0b'
+ MODES = ('warmup','long','abort')
+ LIMIT = 16 << 20
+ 
+@@ -221,6 +221,7 @@
+                         'TRAIN155_original_physical_and_current_TCP_verified',
+                         'EVAL37_original_connection_and_strict_retirement_evidence_verified',
+                         'EVAL_closed_slots_have_positive_normal0_reap_and_cleanup_verified',
++                    'prior_completed_EVAL_prefix_and_current_suffix_verified',
+                         'accepted_evidence_and_projection_gaps_verified','fresh_final_sample_verified',
+                         'queued_publication_byte_joins_verified','actual_resources_and_exit_and_owned_release_verified'))
+                     and outcome['success'] is True and outcome['error'] is None and lifecycle['success'] is True

@@ -1,0 +1,42 @@
+{
+  "schema": "robotron-root-paced-benchmark-b5-derived-control-source-v1",
+  "upstream": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/control_audit_reviewed3.py",
+    "sha256": "b5a50047e1a2981a41732c756bf908c6b9b935c58d1d0503c0df494e6f863aee",
+    "bytes": 17094,
+    "identity": {
+      "device": 2304,
+      "inode": 81531268,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "source": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_none_ticket_paced_full_handler_proposal/control_paced_benchmark.py",
+    "sha256": "592921672d4bf81ef748ff358147ea349d6ac76bb80fbe960e3c2a817c9947d2",
+    "bytes": 17031,
+    "identity": {
+      "device": 2304,
+      "inode": 81288138,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "changed_function": "checked_config",
+  "all_other_functions_AST_identical": true,
+  "original_source_unchanged": true,
+  "actual_execution": false,
+  "resource_caps": {
+    "CPUQuota": "800%",
+    "MemoryMax": "2G",
+    "RuntimeMaxSec": "180",
+    "MemorySwapMax": "0",
+    "TasksMax": "256",
+    "TimeoutStopSec": "5"
+  },
+  "observation_s": 180,
+  "scope": "Changes config resource gate and docstring only. B5 lifecycle primitives unmodified; result retains original b5 schema and actual outcome. Root attested actual FT3.14/GIL0 separately; benchmark self-attests. CPU mask shares main available0..71, no disjoint core claim.",
+  "no_retry": true
+}

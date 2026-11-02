@@ -1,0 +1,263 @@
+--- a/Robotron/tools/render_learning_progress.py
++++ b/Robotron/tools/render_learning_progress.py
+@@ -39,6 +39,237 @@
+     for source in data["sources"]:
+         if digest(source["path"]) != source["sha256"]:
+             raise ValueError(f"Source changed: {source['path']}")
++
++
++def validate_protected_annotation_543(data):
++    """Actual543M protection stays separate from the historical600s curves."""
++    proof = data["protected_incumbent_annotation"]
++    if proof["stage"] != "543M":
++        raise ValueError("Another incumbent requires separately reviewed reporting evidence")
++    if proof.get("actual_publication_and_adoption_bound") is not True:
++        raise ValueError("543M publication/cleanup/freeze/adoption reporting evidence remains unbound")
++    def bound(name):
++        pin = proof["evidence"][name]
++        if digest(pin["path"]) != pin["sha256"]:
++            raise ValueError("Changed protected reporting evidence: " + name)
++        return json.loads(Path(pin["path"]).read_text())
++    def current_incumbent():
++        actual = json.loads(Path(proof["state_path"]).read_text())["incumbent"]
++        if actual != proof["state_incumbent"]:
++            raise ValueError("Managed incumbent changed; do not render stale protection")
++        return actual
++    def same_pin(left, right):
++        return all(left[key] == right[key] for key in ("path", "sha256", "bytes"))
++    incumbent = current_incumbent()
++    metadata, summary = bound("metadata"), bound("summary")
++    cpu, adoption = bound("CPU_verification"), bound("root_adoption")
++    publication, final_gate = bound("publication_review"), bound("independent_final_gate")
++    if (str((Path(proof["game_root"]) / incumbent["checkpoint"]).resolve()) != proof["protected_checkpoint"]
++            or incumbent["sha256"] != proof["checkpoint_sha256"]
++            or metadata["checkpoint_sha256"] != proof["checkpoint_sha256"]
++            or metadata["protected_checkpoint"] != proof["protected_checkpoint"]
++            or metadata["plan_sha256"] != summary["plan_sha256"]
++            or metadata["assessment"]["qualified_improvement"] is not True
++            or summary["qualified_improvement"] is not True
++            or summary["outcome"] != "qualified_improvement"):
++        raise ValueError("Protected confirmation identity/provenance differs")
++    adopted_state = bound("canonical_adopted_before_receipt_link")
++    linked_state = bound("canonical_adopted_after_receipt_link")
++    adopted = {key: value for key, value in incumbent.items()
++               if key != "root_promotion_receipt_sha256"}
++    if (adoption["status"] != proof["expected_adoption_status"]
++            or adopted_state["incumbent"] != adopted
++            or linked_state["incumbent"] != incumbent
++            or not same_pin(adoption["canonical_after_adoption_before_receipt_link"], proof["evidence"]["canonical_adopted_before_receipt_link"])
++            or adoption["protected_checkpoint"] != incumbent["checkpoint"]
++            or adoption["checkpoint_sha256"] != proof["checkpoint_sha256"]
++            or incumbent["root_promotion_receipt"] != proof["evidence"]["root_adoption"]["path"]
++            or incumbent["root_promotion_receipt_sha256"] != proof["evidence"]["root_adoption"]["sha256"]
++            or incumbent["independent_original_row_audits"] != proof["original_row_audits"]
++            or incumbent["metadata_sha256"] != proof["evidence"]["metadata"]["sha256"]
++            or incumbent["independent_final_gate_review_sha256"] != proof["evidence"]["independent_final_gate"]["sha256"]
++            or not same_pin(adoption["actual_publication"], proof["evidence"]["publication_review"])
++            or not same_pin(incumbent["actual_owned_quality_closure"], proof["evidence"]["owned_cleanup"])
++            or not same_pin(incumbent["explicit_root_freeze_release"], proof["evidence"]["source_freeze_release"])
++            or adoption["main_owner_unchanged"] != proof["main_owner_at_adoption"]
++            or adoption["candidate_counts"] != [59, 66] or adoption["fixed_reference_count"] != 149
++            or adoption["candidate_pool_descriptive_only"] is not True
++            or adoption["live_learner_restored"] is not False
++            or adoption["goal_remains_active"] is not True
++            or adoption["first_win_completes_goal"] is not False):
++        raise ValueError("Publication and actual managed adoption are not established")
++    if (cpu["status"] != "PASS" or cpu["sha256"] != proof["checkpoint_sha256"]
++            or cpu["cuda_initialized"] is not False or cpu["visible_cuda_devices"] != 0
++            or cpu["clocks"]["learner_frame_count"] != 543235763
++            or cpu.get("phase_metadata_verified") is not True
++            or cpu["saved_priority_metric_phase"]["metric"] != "ce"
++            or cpu["saved_priority_metric_phase"]["valid"] is not True
++            or cpu["root_job"]["phase_snapshot"]["purpose"] != "candidate"
++            or cpu["root_job"]["phase_snapshot"]["observed_clients"] != 192
++            or cpu["root_job"]["phase_snapshot"]["expected_phase"]["metric"] != "ce"
++            or final_gate["status"] != "PASS_INDEPENDENT_SAVED_ALL4_FIXED_FRESH_REFERENCE_AND_SEPARATE_CANDIDATE_GATES"
++            or final_gate["actual_plan_sha256"] != summary["plan_sha256"]
++            or final_gate["math_qualified_improvement"] is not True
++            or not all(item["mean_pass"] and item["median_pass"]
++                       for item in final_gate["candidate_gates"])):
++        raise ValueError("Actual CPU and independent final gate proof differ")
++    if data["fixed_transport_learning"][-1]["checkpoint_sha256"] != "5076199285752a8748ce9566bc74c6b67210a03ae7f04f132f92b786dea102da":
++        raise ValueError("Keep the historical600s curve through192M")
++    if (proof["original_row_audits"][1]["original_audit_exit"] != 2
++            or bound("C1_manual_supplement")["original_failure_preserved"]["auditor_valid"] is not False
++            or bound("C1_manual_supplement")["original_failure_preserved"]["original_exit"] != 2):
++        raise ValueError("C1 original auditor failure/manual exception must stay explicit")
++    publication_exit = bound("publication_completion")
++    publication_identity = bound("publication_identity")
++    publication_stdout = bound("publication_stdout")
++    cleanup, release = bound("owned_cleanup"), bound("source_freeze_release")
++    root_gate = bound("root_all4_gate")
++    if (publication["status"] != "PASS_CREATE_ONLY_PROTECTED_CE543M_PUBLISHED"
++            or not same_pin(publication["publication_original_execution"], proof["evidence"]["publication_completion"])
++            or not same_pin(publication["metadata"], proof["evidence"]["metadata"])
++            or publication["protected_checkpoint"]["sha256"] != proof["checkpoint_sha256"]
++            or publication["protected_checkpoint"]["path"] != proof["protected_checkpoint"]
++            or publication["managed_incumbent_updated"] is not False or publication["live_learner_restored"] is not False
++            or publication_exit["exit_code"] != 0 or publication_exit["original_pid"] != 1130381
++            or publication_identity["pid"] != publication_exit["original_pid"]
++            or publication_identity["starttime_ticks"] != publication_exit["original_starttime_ticks"]
++            or not same_pin(publication_exit["identity"], proof["evidence"]["publication_identity"])
++            or publication_identity["argv"][-2:] != ["--label", "freshCE-543M-confirmed"]
++            or "--publish" not in publication_identity["argv"]
++            or publication_stdout["outcome"] != "qualified_improvement"
++            or publication_stdout["protected_checkpoint"] != proof["protected_checkpoint"]
++            or not all(item["mean_pass"] and item["median_pass"] for item in publication_stdout["candidate_checks"])
++            or cleanup["status"] != "PASS_ORIGINAL_QUALITY_ARCHIVED_OWNED_CLEANUP_COMPLETE"
++            or cleanup["owned_cleanup_complete"] is not True
++            or cleanup["original_execution"]["owner"]["pid"] != 894289
++            or cleanup["original_execution"]["exec_code"] != 1 or cleanup["original_execution"]["exit_status"] != 0
++            or cleanup["main192_and_resources_healthy"] is not True
++            or release["status"] != "PASS_ROOT_EXPLICIT_CURRENT_CE543M_SOURCE_FREEZE_RELEASE"
++            or release["source_freeze_released"] is not True or release["all69_original_owned_processes_absent"] is not True
++            or release["original_audit_exits_preserved"] != [0, 2, 0, 0]
++            or not same_pin(release["actual_owned_closure"], proof["evidence"]["owned_cleanup"])
++            or not same_pin(publication["source_freeze_release"], proof["evidence"]["source_freeze_release"])
++            or root_gate["status"] != "PASS_ALL4_ORIGINALS_INDEPENDENT_REVIEWS_AND_FIXED_GATES"
++            or root_gate["qualification_pass"] is not True or root_gate["plan_sha256"] != summary["plan_sha256"]
++            or root_gate["original_leg_audits"] != proof["original_row_audits"]):
++        raise ValueError("Original publication, owned closure and explicit root freeze release differ")
++    all_ids, candidates, references, candidate_counts = set(), [], [], []
++    common = None
++    for item, audit_record in zip(summary["legs"], proof["original_row_audits"]):
++        audit_pin = audit_record["audit_receipt"]
++        path = item["receipt_path"]
++        if (item["returncode"] != 0 or item["valid"] is not True
++                or digest(path) != item["receipt_sha256"]
++                or metadata["evidence_sha256"].get(path) != item["receipt_sha256"]
++                or digest(audit_pin["path"]) != audit_pin["sha256"]):
++            raise ValueError("Completed campaign leg differs from protected evidence")
++        receipt = json.loads(Path(path).read_text())
++        audit = json.loads(Path(audit_pin["path"]).read_text())
++        execution_pin = audit_record["audit_execution"]
++        if digest(execution_pin["path"]) != execution_pin["sha256"]:
++            raise ValueError("Original auditor execution changed")
++        execution = json.loads(Path(execution_pin["path"]).read_text())
++        expected_exit = 2 if item["index"] == 2 else 0
++        if (audit_record["leg"] != item["index"] or audit_record["role"] != item["role"]
++                or audit_record["original_evaluator"]["returncode"] != 0
++                or audit_record["receipt"]["path"] != path
++                or audit_record["receipt"]["sha256"] != item["receipt_sha256"]
++                or audit_record["original_audit_exit"] != expected_exit
++                or execution["original_exit"] != expected_exit
++                or execution["original_exec_code"] != 1
++                or execution["source_pins_held"] is not True
++                or execution["no_retry"] is not True
++                or execution["original_archived_before_release"] is not True):
++            raise ValueError("Original auditor/evaluator outcome changed")
++        if item["index"] == 2:
++            manual, acceptance = bound("C1_manual_supplement"), bound("C1_root_acceptance")
++            if (audit["valid"] is not False
++                    or manual["status"] != "PASS_INDEPENDENT_SAVED_C1_NARROW_SHUTDOWN_REVIEW"
++                    or manual["actual_plan_sha256"] != summary["plan_sha256"]
++                    or manual["original_audit"]["exit_status"] != 2
++                    or manual["original_failure_preserved"]["auditor_valid"] is not False
++                    or manual["original_rows_and_lives"]["all59_original_dictionaries_equal_receipt"] is not True
++                    or acceptance["status"] != "PASS_ROOT_C1_NARROW_MANUAL_INTEGRITY_REVIEW_ORIGINAL_AUDIT_EXIT2_PRESERVED"
++                    or acceptance["audit_disposition"] != "root_accepted_narrow_manual_review"
++                    or acceptance["actual_plan_sha256"] != summary["plan_sha256"]
++                    or not same_pin(acceptance["audit_receipt"], audit_pin)
++                    or not same_pin(acceptance["audit_execution"], execution_pin)
++                    or not same_pin(acceptance["independent_review"], proof["evidence"]["C1_manual_supplement"])
++                    or not same_pin(audit_record["independent_review"], proof["evidence"]["C1_manual_supplement"])
++                    or not same_pin(audit_record["root_manual_acceptance"], proof["evidence"]["C1_root_acceptance"])
++                    or manual["original_audit"] != acceptance["original_audit"]
++                    or manual["original_evaluator"] != acceptance["original_evaluator"]
++                    or execution["original_pid"] != manual["original_audit"]["pid"]
++                    or execution["original_invocation"] != manual["original_audit"]["invocation_id"]
++                    or acceptance["original_audit"]["exit_status"] != 2
++                    or acceptance["original_evaluator"]["returncode"] != 0):
++                raise ValueError("Only exact preserved C1 manual acceptance is supported")
++            audit_ids = item["included_game_ids"]
++        else:
++            if (audit["valid"] is not True or audit["receipt_sha256"] != item["receipt_sha256"]
++                    or audit["leg"] != item["index"] or audit["role"] != item["role"]):
++                raise ValueError("Original passing leg audit differs")
++            audit_ids = audit["admission_ids"]
++        leg = validate_receipt(receipt)
++        validate_backend(receipt, verify_checkpoint=False)
++        ids = {row["journal_game_id"] for row in leg["rows"]}
++        if (all_ids & ids or ids != set(item["included_game_ids"])
++                or sorted(ids) != sorted(audit_ids)
++                or receipt["job"]["cohort_s"] != 1200.0
++                or receipt["job"]["timeout_s"] != 2400.0
++                or receipt["job"]["game_boundary_diagnostics"] is not True
++                or receipt["source_hashes"] != metadata["evaluator_source_hashes"]
++                or receipt["ended_source_hashes"] != receipt["source_hashes"]):
++            raise ValueError("Original full-tail1200s/diagnosticsTRUE evidence differs")
++        signature = dict(numeric=receipt["numeric_policy"], runtime=receipt["runtime"],
++                         boot=receipt["boot_assets"]["identity"],
++                         job={key: value for key, value in receipt["job"].items()
++                              if key not in ("checkpoint", "directory", "label")})
++        common = signature if common is None else common
++        if signature != common:
++            raise ValueError("Actual543 confirmation source/backend cohort contexts differ")
++        all_ids.update(ids)
++        if item["role"] == "candidate":
++            if (receipt["checkpoint_sha256"] != proof["checkpoint_sha256"]
++                    or any(receipt["clocks"][key] != cpu["clocks"][key]
++                           for key in ("training_steps", "optimized_samples", "learner_frame_count"))):
++                raise ValueError("Confirmed candidate checkpoint/clocks differ")
++            candidates.append(leg["rows"])
++            candidate_counts.append(len(leg["rows"]))
++        else:
++            if (receipt["checkpoint_sha256"] != metadata["checkpoints"]["reference"]["sha256"]
++                    or receipt["checkpoint_sha256"] != data["historical_protected448_annotation"]["checkpoint_sha256"]):
++                raise ValueError("Fresh references must use the preserved protected448M")
++            references.extend(leg["rows"])
++    if ([item["role"] for item in summary["legs"]] != ["reference", "candidate", "reference", "candidate"]
++            or len(summary["legs"]) != 4 or len(proof["original_row_audits"]) != 4
++            or len(all_ids) != 274 or len(references) != 149 or candidate_counts != [59, 66]):
++        raise ValueError("Actual274-game confirmation counts differ")
++    ref_scores = [row["score"] for row in references]
++    mean_floor, median_floor = 1.05 * statistics.mean(ref_scores), statistics.median(ref_scores)
++    if not all(statistics.mean(row["score"] for row in cohort) >= mean_floor
++               and statistics.median(row["score"] for row in cohort) >= median_floor
++               for cohort in candidates):
++        raise ValueError("Both separate candidates must pass the same fresh149-reference gates")
++    checks = []
++    for index, cohort in zip((2,4), candidates):
++        mean, median = statistics.mean(row["score"] for row in cohort), statistics.median(row["score"] for row in cohort)
++        checks.append(dict(index=index, mean=mean, median=median, mean_ratio=mean/(mean_floor/1.05), mean_pass=True, median_pass=True))
++    for measured, reported in zip(checks, incumbent["individual_candidate_checks"]):
++        if (measured["index"] != reported["index"] or reported["mean_pass"] is not True or reported["median_pass"] is not True
++                or any(not math.isclose(measured[key], reported[key], rel_tol=1e-12) for key in ("mean","median","mean_ratio"))):
++            raise ValueError("Displayed cohort gains differ from actual separate gates")
++    if len(incumbent["individual_candidate_checks"]) != 2:
++        raise ValueError("Two distinct candidate gains are required")
++    scores = [row["score"] for cohort in candidates for row in cohort]
++    actual = dict(count=len(scores), mean=statistics.mean(scores),
++                  median=statistics.median(scores),
++                  se=statistics.stdev(scores) / math.sqrt(len(scores)))
++    if not all(math.isclose(actual[key], proof["descriptive_candidate_pool"][key], rel_tol=1e-12)
++               for key in actual):
++        raise ValueError("Separate descriptive confirmation statistics differ")
++    current_incumbent()
++    return proof
+ 
+ 
+ def validate_protected_annotation_448(data):
+@@ -216,6 +447,8 @@
+ 
+ def validate_protected_annotation(data):
+     """Actual384M protection stays separate from the historical600s curves."""
++    if data["protected_incumbent_annotation"]["stage"] == "543M":
++        return validate_protected_annotation_543(data)
+     if data["protected_incumbent_annotation"]["stage"] == "448M":
+         return validate_protected_annotation_448(data)
+     proof = data["protected_incumbent_annotation"]
+@@ -602,7 +835,12 @@
+     protection = data["protected_incumbent_annotation"]
+     pool = protection["descriptive_candidate_pool"]
+     fig.text(.07, .965, "Robotron · learning progress and training throughput", fontsize=20, fontweight="bold")
+-    if protection["stage"] == "448M":
++    if protection["stage"] == "543M":
++        gains = [(item["mean_ratio"]-1)*100 for item in protection["state_incumbent"]["individual_candidate_checks"]]
++        header = (f"Protected543M · 1200s / diagnostics ON · n={pool['count']} / mean {pool['mean']:,.0f}"
++                  f" · cohorts +{gains[0]:.3f}% / +{gains[1]:.3f}% vs fresh448M")
++        fig.text(.07, .925, header, fontsize=11, color="#536171")
++    elif protection["stage"] == "448M":
+         gains = [(item["mean_ratio"]-1)*100 for item in protection["state_incumbent"]["individual_candidate_checks"]]
+         header = (f"Protected448M · 1200s / diagnostics ON · n={pool['count']} / mean {pool['mean']:,.0f}"
+                   f" · cohorts +{gains[0]:.3f}% / +{gains[1]:.3f}% vs fresh384M")

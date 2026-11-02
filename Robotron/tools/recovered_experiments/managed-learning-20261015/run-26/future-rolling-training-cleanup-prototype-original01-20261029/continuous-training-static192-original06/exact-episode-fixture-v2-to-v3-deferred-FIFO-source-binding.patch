@@ -1,0 +1,13 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/test_continuous_train_episode_boundaries_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/test_continuous_train_episode_boundaries_v3.py
+@@ -33,8 +33,8 @@
+ GAME = HERE.parents[4]
+ # Author-frozen actual sources. This file is staged only; Root owns execution.
+ SOURCES = {
+-    'server': (HERE/'socket_server_continuous_train_candidate_v1.py',
+-               '49d24b2fe8d0051eff0512b1baea3bdf2c04c00b58e0f212cfe73f7ce6af4987'),
++    'server': (HERE/'socket_server_continuous_train_candidate_v3.py',
++               'a076501b0601a637b91269a41572be60496754ad1da4b04385d77c51b9f34423'),
+     'journal': (HERE/'game_journal_continuous_train_candidate_v1.py',
+                 '6aa78cb40434793853d17a1032cc6454ac86b0168828848d9d390336ba8678f0'),
+     'nstep': (GAME/'Scripts/dqn/nstep_buffer.py',

@@ -1,0 +1,30 @@
+{
+  "files": {
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/learning_exposure.py": {
+      "bytes": 9123,
+      "sha256": "30d9191e9fc845d80e52a7a891244fcf0c7041cf60529f6559b15e6d47ac5c7f"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/metrics_dashboard.py": {
+      "bytes": 233840,
+      "sha256": "3013d511f1d933fe6012df5cecd7f8a8861824bdd41580cbe241b7498916f1c6"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/live_activation_lifecycle_proposal/ACTIVATION_AND_RETURN_CE.json": {
+      "bytes": 19309,
+      "sha256": "2da78068ada0d5d083be1112ab6391131c57e6d6125ae87b41b60de8debf130c"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/CONTRACT.txt": {
+      "bytes": 11904,
+      "sha256": "030ab5996819e359ac5135d237797614dc57cb6a9fc5b0cc8ddea3f410259488"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/conditional-precommit-template.json": {
+      "bytes": 8323,
+      "sha256": "9afaae6672befb16c51bebc83fa1ca7eefdb61d8c1389dbc19aeefc5ac114ac1"
+    },
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/sequential_trial_precommit_proposal/source-lock.json": {
+      "bytes": 3046,
+      "sha256": "a8b2b6b2e55cffd3046038646faa98fb2668464e2112ec42ea9e6d39bb479b04"
+    }
+  },
+  "schema": "robotron-raw-kl-horizon-observer-source-lock-v1",
+  "scope": "Source preparation only. Actual transition/job/source/owner/control evidence is separately root-bound before activation."
+}

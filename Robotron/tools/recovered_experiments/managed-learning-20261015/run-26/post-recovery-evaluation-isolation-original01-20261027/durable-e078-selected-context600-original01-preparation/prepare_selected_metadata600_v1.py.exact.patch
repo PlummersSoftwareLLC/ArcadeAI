@@ -1,0 +1,20 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original04-mmap-preparation/prepare_selected_admission_study_cpu_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-selected-context600-original01-preparation/prepare_selected_metadata600_v1.py
+@@ -14,7 +14,7 @@
+ import time
+ 
+ HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
+-LOCAL=Path(__file__).resolve().parent
++LOCAL=Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original04-mmap-preparation')
+ ROOT=Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ 
+ 
+@@ -31,7 +31,7 @@
+     assert os.environ['CUDA_VISIBLE_DEVICES']==''and 'torch'not in sys.modules
+     fields=dict(x.split('=',1)for x in subprocess.check_output(['systemctl','--user','show',job['unit']],text=True,timeout=10).splitlines()if'='in x)
+     expected=dict(MainPID=str(os.getpid()),InvocationID=os.environ['INVOCATION_ID'],CPUQuotaPerSecUSec='2s',
+-        MemoryMax=str(4<<30),MemorySwapMax='0',TasksMax='128',RuntimeMaxUSec='3min',NRestarts='0',Restart='no')
++        MemoryMax=str(4<<30),MemorySwapMax='0',TasksMax='128',RuntimeMaxUSec='10min',NRestarts='0',Restart='no')
+     assert all(fields.get(k)==v for k,v in expected.items())
+     h=load('_selected_admission_CPU_helpers',ROOT/'tools/startup_policy_journal_proposal/run_full_policy_startup_v3.py')
+     for pin in job['inputs']:h.checked(pin)

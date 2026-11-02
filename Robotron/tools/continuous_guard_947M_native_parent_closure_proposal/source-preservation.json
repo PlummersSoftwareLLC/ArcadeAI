@@ -1,0 +1,427 @@
+{
+  "schema": "robotron-source-text-preservation-continuous-guard947M-native-parent-closure-v1",
+  "status": "SOURCE_TEXT_ONLY_UNEXECUTED",
+  "base": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/lr25_845M_native_parent_closure_proposal/close_original_parent.py",
+    "sha256": "4eabe292436da86d46e0576a68395a2fbb4c3204b88b34aba506314e34cabaaa",
+    "bytes": 21060,
+    "identity": {
+      "device": 2304,
+      "inode": 81295402,
+      "bytes": 21060,
+      "mtime_ns": 1792331370824160983,
+      "ctime_ns": 1792331464192523415,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "selected": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_947M_native_parent_closure_proposal/close_original_parent.py",
+    "sha256": "5f75c947fc1e68a88ffcea3d6ce074b1dd423b832291c66845d1c898777ee29e",
+    "bytes": 32504,
+    "identity": {
+      "device": 2304,
+      "inode": 82579882,
+      "bytes": 32504,
+      "mtime_ns": 1792356793438427303,
+      "ctime_ns": 1792356874288739536,
+      "mode": "0o444",
+      "uid": 1001,
+      "nlink": 1
+    }
+  },
+  "raw_reverse_to_base_exact": true,
+  "ordered_reversal": "Starting from selected text, reverse the14 listed replacements in reverse order, requiring exactly one occurrence at each step; result equals base bytes.",
+  "changes": [
+    {
+      "label": "docstring",
+      "before": "\"\"\"UNSELECTED closure of one already observed original LR25 quality parent.",
+      "after": "\"\"\"UNSELECTED closure of the already root-observed original continuous-guard947M parent."
+    },
+    {
+      "label": "finite health numbers",
+      "before": "import json\n",
+      "after": "import json\nimport math\n"
+    },
+    {
+      "label": "exact observed947M facts and selected closed sources/configs",
+      "before": "PREP = RUN/'LR25-continuation-original01-root-preparation-20261018'\nPACK = GAME/'tools/live_lr_recipe_cpu_metadata_review_binding_proposal'\nUNIT = 'robotron-quality-LR25-845M-vs-CE704-original01-20261018.service'\nTIMER = UNIT.removesuffix('.service')+'.timer'\nPID = 3673741\nSTART = 42153995\nINVOCATION = 'b4a91157d71a4462a96ad1deaf232815'\nTIMER_INVOCATION = '2bd5c6d664a945e490912ed3b43d74ca'\nCAMPAIGN = GAME/'logs/managed-learning-20261015/quality-CE704M-vs-LR25-845M-trial01-20261018'\nPLAN_SHA = '8ac7c5729ca5d53edcbf02ddd61e9e8377b8b1d7f4d43648c2fda7ab263b0c7d'\nBINDING_SHA = 'b98dd3f00ef3961f36a2e9748b55c96751411e3945f740cee2b74d8c2bdd16c3'\nAUDITOR_SHA = 'fd137b8ee95e2b74c7a9fd41574c98401060673b197b6ea25b5062e13abc37ec'\nCONFIG_SHAS = ('c1f841c653d6b19883f0a9dc62af476fd8bf11eea847cfcc8e481765feeb8686',\n    '383d44f5487a543da8c48da865469f6b0730d8d93283fb7871366392e95bc93a',\n    '3de4ee34f5f6d55a096cc3c4cd9d4f40068ea3b020933d1e6494c892c4483d0f',\n    '6b7d5b672585698c7bb578484116f2f3ac5dd52fc1a24fe6a0c3b3291a820154')\nOUTPUT = RUN/'LR25-845M-quality-native-parent-owned-closure-original01-20261018'\nSCHEMA = 'robotron-root-LR25-845M-original-parent-closure-case-v1'\nROLES = ('reference', 'candidate', 'reference', 'candidate')\nKNOWN = {\n    'live': (PREP/'root-original-LR25-quality-timer-launch-identity-and-live-parent.json', '0e5a5da6231bb46bfb4dce06409465bf2b2be4f7ac2e5997226b7d1407ed3b59'),\n    'plan': (PREP/'actual-LR25-845M-native-plan-readonly-copy.json', PLAN_SHA),\n    'binding': (PREP/'actual-LR25-845M-quality-binding.json', BINDING_SHA),\n    'family': (PACK/'preparation-manifest.json', 'd21e5a95c1659a82b0a3fa93c6b4f0e960ad70b81d217959a8a74d6e95b81859'),\n}\n",
+      "after": "PREP = RUN/'continuous-guard-same-LR25-continuation-original01-root-preparation-20261018'\nPACK = GAME/'tools/continuous_guard_same_lr25_continuation_proposal'\nUNIT = 'robotron-quality-continuous-guard-same-LR25-vs-CE845-original01-20261018.service'\nTIMER = UNIT.removesuffix('.service')+'.timer'\nPID = 359834\nSTART = 44664226\nINVOCATION = 'c646fc24d96143979e96b2c40a656ec7'\nTIMER_INVOCATION = 'f912ce046cf74b35b1be87f20635fbd7'\nCAMPAIGN = GAME/'logs/managed-learning-20261015/quality-CE845M-vs-continuous-guard-same-LR25-first8M-trial01-20261018'\nPLAN_SHA = '6517ec4eff1d31afd86aa5721c433b35d4c34f1244653e03919ab271aa697f88'\nBINDING_SHA = 'f9cb5bd19ffca1caa3c80216cecb4e5eb8370d4e55fc31cf8327cffc0d28dd06'\nAUDITOR_SHA = '61b299b327fe6156571646aa809e38563f7bf71de980a48b36272c9f555551d2'\nCONTROL = GAME/'tools/quality_audit_control_gc_repair_proposal/control_audit_reviewed3.py'\nCONTROL_SHA = 'b5a50047e1a2981a41732c756bf908c6b9b935c58d1d0503c0df494e6f863aee'\nCONFIG_SHAS = ('cc6c181b38eaae94755584bdb4a2fff725184069ab8a5f649c3005ada3060dbc',\n    'a4e03121b1e71706d3dd89663a00703312dfa242c88b7310b83d9d87d50509ba',\n    '2c99d6b28c1a3fb87a184f307db9fb7d159f9901de3977ecc1f011814beacf6c',\n    '98cc3a154215eb42526201ea26a9cc5801d985feb84eff1675a98873723b4192')\nOUTPUT = RUN/'continuous-guard-same-LR25-947M-quality-native-parent-owned-closure-original01-20261018'\nSCHEMA = 'robotron-root-continuous-guard-947M-original-parent-closure-case-v1'\nHEALTH_SCHEMA = 'robotron-root-continuous-guard-947M-fresh-terminal-health-v1'\nANCHOR = ('main_owner','fleet_owner','inference_worker','actors','source_hashes','control_hashes','unit_files','environment_sha256')\nROLES = ('reference', 'candidate', 'reference', 'candidate')\nKNOWN = {\n    'live': (PREP/'root-original947M-native-quality-launch-and-main-health-PASS.json', '700ff17618eb740d8af7c8b6c90b8210d1958753494cf9e7a2c1a0ad863a0eef'),\n    'plan': (PREP/'actual947M-native-plan-readonly-copy.json', PLAN_SHA),\n    'binding': (PREP/'actual947M-quality-binding.json', BINDING_SHA),\n    'family': (PACK/'preparation-reviewed3-manifest.json', '55933898484a2593f34adaa6943086d7f49667ebe9b782f99125d2963c7ecacf'),\n}\n"
+    },
+    {
+      "label": "seventh explicit health PIN",
+      "before": "'native_summary', 'audit_releases', 'output_directory'}",
+      "after": "'native_summary', 'audit_releases', 'fresh_terminal_health', 'output_directory'}"
+    },
+    {
+      "label": "authenticate actual700f launch shape without invented timer-cat field",
+      "before": "    require(live['status'] == 'PASS_ORIGINAL_NATIVE_PARENT_OBSERVED_LIVE'\n        and live['original'] == dict(pid=PID, starttime_ticks=START, invocation_id=INVOCATION,\n            unit=UNIT, observed_live=True)\n        and live['timer'] == dict(unit=TIMER, invocation_id=TIMER_INVOCATION)\n        and live['native_parent_restart_count'] == 0 and live['retry'] is False,\n        'Genuine prior observed-live ownership required')\n    original_terminal_live = properties(live['service_show']['stdout'])\n    require(live['service_show']['returncode'] == live['timer_show']['returncode'] == live['timer_cat']['returncode'] == 0\n        and live['service_show']['argv'] == ['systemctl', '--user', 'show', UNIT, '--all']\n        and live['timer_show']['argv'] == ['systemctl', '--user', 'show', TIMER, '--all']\n        and live['timer_cat']['argv'] == ['systemctl', '--user', 'cat', TIMER]\n        and original_terminal_live.get('Id') == UNIT and original_terminal_live.get('SubState') == 'running'\n        and original_terminal_live.get('MainPID') == str(PID)\n        and original_terminal_live.get('InvocationID') == INVOCATION\n        and original_terminal_live.get('NRestarts') == '0', 'Saved live service evidence differs')\n    original_timer(properties(live['timer_show']['stdout']))\n",
+      "after": "    require(live['schema'] == 'robotron-root-original947M-native-quality-launch-and-health-v1'\n        and live['status'] == 'PASS_ORIGINAL_QUALITY_PARENT_RUNNING_MAIN192_UNCHANGED'\n        and live['original'] == dict(pid=PID, starttime_ticks=START, invocation_id=INVOCATION,\n            unit=UNIT, observed_live=True)\n        and live['timer_invocation_id'] == TIMER_INVOCATION and live['native_plan'] == plan_pin\n        and live['retry'] is False and live['qualification'] is False and live['promotion'] is False\n        and live['learning_changes'] is False and live['exact_original192_verified'] is True\n        and live['held62_source_and_two_controls_verified'] is True,\n        'Genuine prior observed-live947M ownership and unchanged main192 required')\n    original_terminal_live = properties(live['service_show']['stdout'])\n    require(live['service_show']['returncode'] == live['timer_show']['returncode'] == 0\n        and live['service_show']['argv'] == ['systemctl', '--user', 'show', UNIT, '--all']\n        and live['timer_show']['argv'] == ['systemctl', '--user', 'show', TIMER, '--all']\n        and original_terminal_live.get('Id') == UNIT and original_terminal_live.get('SubState') == 'running'\n        and original_terminal_live.get('MainPID') == str(PID)\n        and original_terminal_live.get('InvocationID') == INVOCATION\n        and original_terminal_live.get('NRestarts') == '0', 'Saved live service evidence differs')\n    original_timer(properties(live['timer_show']['stdout']))\n    _, audit_control = bounded_bytes(CONTROL)\n    require(audit_control['sha256'] == CONTROL_SHA and audit_control['identity']['mode'] == '0o444',\n        'Selected existing B5 audit controller differs')\n    require(binding['candidate']['sha256'] == '402827c43c2ed5a81bffbaa4bdc017c087004fbd94350e1fcc2b048f65b3e839'\n        and binding['reference']['sha256'] == 'fda8dcdf80a794b2715843dc892890296363c7586c60bae435a0925e32997ecd'\n        and plan['checkpoints']['candidate']['sha256'] == binding['candidate']['sha256']\n        and plan['checkpoints']['reference']['sha256'] == binding['reference']['sha256'],\n        'Only actual947M402827 versus protected845fda8 metadata is eligible')\n"
+    },
+    {
+      "label": "exact future original audit units",
+      "before": "'robotron-LR25-845M-quality-leg%02d-audit-original01-20261018.service'",
+      "after": "'robotron-continuous-guard-same-LR25-947M-leg%02d-audit-original01-20261018.service'"
+    },
+    {
+      "label": "exact future original audit output paths",
+      "before": "'LR25-845M-quality-leg%02d-audit-original01-root-execution-20261018'",
+      "after": "'continuous-guard-same-LR25-947M-leg%02d-audit-original01-root-execution-20261018'"
+    },
+    {
+      "label": "actual closed audit config paths",
+      "before": "'LR25-845M-quality-leg%02d-audit-original01-config.json'",
+      "after": "'actual947M-original-leg%02d-audit-control-config.json'"
+    },
+    {
+      "label": "actual selected reviewed2 auditor filename",
+      "before": "str(PACK/'audit_completed_leg.py')",
+      "after": "str(PACK/'audit_completed_leg_reviewed2.py')"
+    },
+    {
+      "label": "validate root fresh terminal health before any output or action",
+      "before": "    return dict(live=live_pin, native_plan=plan_pin, binding=binding_pin, family=family_pin,\n        case=case, baseline=reader(binding['runtime_baseline']),\n        original_cgroup=original_terminal_live['ControlGroup'])\n",
+      "after": "    baseline = reader(binding['runtime_baseline'])\n    require(baseline['main_owner'] == live['main_owner'] and baseline['fleet_owner'] == live['fleet_owner']\n        and len(baseline['actors']) == 192, 'Actual binding baseline/main192 lineage differs')\n    context = dict(live=live_pin, native_plan=plan_pin, binding=binding_pin, family=family_pin,\n        case=case, baseline=baseline, experiment=binding['experiment'],\n        original_cgroup=original_terminal_live['ControlGroup'])\n    fresh_terminal_health(context, reader=reader)\n    return context\n"
+    },
+    {
+      "label": "new typed root-observed fresh terminal health validation only",
+      "before": "def held_sources(context):\n",
+      "after": "def full8_metadata_pin(value):\n    require(type(value) is dict and set(value) == {'path','sha256','bytes','identity'}\n        and type(value['path']) is str and Path(value['path']).is_absolute()\n        and '..' not in Path(value['path']).parts and Path(value['path']).suffix == '.json'\n        and type(value['sha256']) is str and len(value['sha256']) == 64\n        and all(c in '0123456789abcdef' for c in value['sha256'])\n        and type(value['bytes']) is int and value['bytes'] > 0, 'Typed FULL8 closed JSON PIN required')\n    fields = {'device','inode','bytes','mtime_ns','ctime_ns','mode','uid','nlink'}\n    require(type(value['identity']) is dict and set(value['identity']) == fields,\n        'Fresh health must retain all eight real identity fields')\n    row = value['identity']\n    require(all(type(row[k]) is int for k in fields-{'mode'})\n        and row['device'] >= 0 and row['inode'] > 0 and row['bytes'] == value['bytes']\n        and row['mtime_ns'] > 0 and row['ctime_ns'] > 0 and row['uid'] == os.getuid()\n        and row['nlink'] == 1 and type(row['mode']) is str and row['mode'] == '0o444',\n        'Readonly owned FULL8 identity types/values differ')\n    return value\n\n\ndef fresh_terminal_health(context, *, reader=read_pin, now=None):\n    # This authenticates a ROOT-observed, sealed record. No API/GPU/proc query,\n    # producer action or claim of independent current liveness occurs here.\n    pin_value = full8_metadata_pin(context['case']['fresh_terminal_health'])\n    value = reader(pin_value)\n    require(type(value) is dict and set(value) == {'schema','status','observed_unix_s',*ANCHOR,\n        'main_api','quality_terminal','resources'} and value['schema'] == HEALTH_SCHEMA\n        and value['status'] == 'PASS', 'Exact fresh-terminal-health schema/status required')\n    observed = value['observed_unix_s']; checked = time.time() if now is None else now\n    require(type(observed) in (int,float) and type(checked) in (int,float)\n        and math.isfinite(observed) and math.isfinite(checked) and observed > 0 and checked > 0\n        and 0 <= checked-observed < 180,\n        'Root terminal health must be younger than180s and cannot be future-dated')\n    baseline = context['baseline']\n    require(all(value[k] == baseline[k] for k in ANCHOR if k != 'actors'),\n        'Original main/fleet/inference/environment/frozen source-control-unit identities changed')\n    worker = value['inference_worker']\n    require(type(worker) is dict and set(worker) == {'tid','starttime_ticks','mask'}\n        and type(worker['tid']) is int and worker['tid'] > 0\n        and type(worker['starttime_ticks']) is int and worker['starttime_ticks'] > 0\n        and type(worker['mask']) is list and bool(worker['mask'])\n        and all(type(cpu) is int and cpu >= 0 for cpu in worker['mask'])\n        and len(set(worker['mask'])) == len(worker['mask']), 'Typed original inference worker required')\n    require(len(value['source_hashes']) == 62 and len(value['control_hashes']) == 2\n        and len(value['unit_files']) == 3, 'Exact held62+2+3 inventory required')\n    censuses = []\n    for actors in (value['actors'], baseline['actors']):\n        require(type(actors) is list and len(actors) == 192, 'Every original actor required')\n        census = set()\n        for row in actors:\n            require(type(row) is dict and set(row) == {'slot','pid','starttime_ticks','mask'}\n                and all(type(row[k]) is int for k in ('slot','pid','starttime_ticks'))\n                and 0 <= row['slot'] < 192 and row['pid'] > 0 and row['starttime_ticks'] > 0\n                and type(row['mask']) is list and bool(row['mask'])\n                and all(type(cpu) is int and cpu >= 0 for cpu in row['mask'])\n                and len(set(row['mask'])) == len(row['mask']), 'Complete typed actor slot/PID/start/mask required')\n            census.add((row['slot'],row['pid'],row['starttime_ticks'],tuple(sorted(row['mask']))))\n        require(len(census) == 192 and {r[0] for r in census} == set(range(192))\n            and len({r[1] for r in census}) == 192, 'Unique192 original actor identities required')\n        censuses.append(census)\n    require(censuses[0] == censuses[1], 'Original192 actor identity/mask set changed')\n    expected_terminal = dict(unit=UNIT,pid=PID,starttime_ticks=START,invocation_id=INVOCATION,\n        timer=TIMER,timer_invocation_id=TIMER_INVOCATION,exec_main_code=1,exit_status=0,\n        result='success',n_restarts=0,main_pid=0,cgroup=context['original_cgroup'])\n    terminal = value['quality_terminal']\n    require(type(terminal) is dict and set(terminal) == set(expected_terminal)|{'cgroup_state'}\n        and all(type(terminal[k]) is type(v) and terminal[k] == v for k,v in expected_terminal.items())\n        and terminal['cgroup_state'] in ('empty','removed'), 'Fresh root record must identify this terminal native0 only')\n    resource_keys = {'GPU0_empty','GPU1_main_only','port9999_clear','no_pending_save','lease_free'}\n    require(type(value['resources']) is dict and set(value['resources']) == resource_keys\n        and all(value['resources'][k] is True for k in resource_keys), 'Root private-resource release/idle proof incomplete')\n    api = reader(full8_metadata_pin(value['main_api']))\n    require(type(api['client_count']) is int and api['client_count'] == 192\n        and api['training_enabled'] is True and api['measurement_active'] is False\n        and api['managed_experiment'] == context['experiment'] and api['lr'] == 1.25e-5\n        and api['pipeline_read_error'] == api['bank_persistence_read_error'] == '',\n        'Fresh root API must retain active same-.25 main192 without pipeline/bank errors')\n    require(type(api['ts']) in (int,float) and math.isfinite(api['ts']) and 0 <= observed-api['ts'] <= 5\n        and type(api['pipeline_snapshot_age_s']) in (int,float) and math.isfinite(api['pipeline_snapshot_age_s'])\n        and 0 <= api['pipeline_snapshot_age_s'] <= 5, 'Fresh root API/pipeline sample stale or future-dated')\n    old_api = reader(baseline['actual_API']); pipe = api['host_pipeline']; old_pipe = old_api['host_pipeline']\n    require(pipe['schema'] == 'robotron-host-pipeline-v1' and pipe['available'] is True\n        and type(pipe['generation']) is int and pipe['generation'] >= 0\n        and pipe['generation'] == old_pipe['generation']\n        and all(type(pipe[k]['errors']) is int and pipe[k]['errors'] == 0\n            for k in ('inference','actor_refresh','target_refresh')),\n        'Host pipeline partial, reset or reports errors')\n    require(all(type(api[k]) is int and api[k] >= old_api[k] for k in\n        ('training_steps','optimized_samples','learner_frame_count','frame_count')),\n        'Original main learning clocks regressed')\n    identities = ('process_id','instance_monotonic_ns','epoch','epoch_reason')\n    for name in ('optimizer','replay'):\n        row = pipe['learning_exposure'][name]; old = old_pipe['learning_exposure'][name]\n        require(row['enabled'] is True and all(row[k] == old[k] for k in identities)\n            and type(row['process_id']) is int and row['process_id'] == baseline['main_owner']['pid']\n            and type(row['instance_monotonic_ns']) is int and row['instance_monotonic_ns'] > 0\n            and type(row['epoch']) is int and row['epoch'] == 1,\n            'Original replay/optimizer identity or epoch changed')\n        if name == 'optimizer':\n            require(row['schema'] == 'robotron-optimizer-exposure-v1', 'Optimizer schema differs')\n            keys = ('attempts_started','outcomes_recorded','applied','amp_skipped','unavailable')\n            for group in ('total','since_epoch'):\n                c = row[group]\n                require(all(type(c[k]) is int and c[k] >= old[group][k] for k in keys)\n                    and c['outcomes_recorded'] == c['applied']+c['amp_skipped']+c['unavailable']\n                    and c['unavailable'] == 0, 'Optimizer outcome counters/partition unavailable or regressed')\n            require(all(row['since_epoch'][k] <= row['total'][k] for k in keys),\n                'Optimizer epoch counters exceed process totals')\n            pending = row['unclassified_started_total']\n            require(type(pending) is int and pending in (0,1)\n                and row['total']['attempts_started']-row['total']['outcomes_recorded'] == pending\n                and type(row['available']) is bool and row['available'] is\n                (row['since_epoch']['outcomes_recorded'] > 0 and row['since_epoch']['unavailable'] == 0 and pending == 0),\n                'Optimizer available flag must preserve the normal one-attempt-in-flight case')\n        else:\n            keys = ('dqn','epsilon','expert','eval','unattributed')\n            c = row['accepted_by_source_total']\n            require(row['schema'] == 'robotron-replay-insert-exposure-v1' and row['available'] is True\n                and set(c) == set(keys) and all(type(c[k]) is int and c[k] >= old['accepted_by_source_total'][k] for k in keys)\n                and type(row['accepted_total']) is int and row['accepted_total'] == sum(c.values())\n                and type(row['accepted_learner_total']) is int and row['accepted_learner_total'] == c['dqn']+c['epsilon'],\n                'Replay counter/source partition unavailable or regressed')\n    return dict(pin=pin_value,observed_unix_s=observed,checked_unix_s=checked,age_s=checked-observed,\n        scope='Authenticated historical root health; no new API/GPU/proc query by this controller')\n\n\ndef held_sources(context):\n"
+    },
+    {
+      "label": "truthful new closure result schema",
+      "before": "schema='robotron-root-LR25-845M-original-native-parent-owned-closure-v1'",
+      "after": "schema='robotron-root-continuous-guard-947M-original-native-parent-owned-closure-v1'"
+    },
+    {
+      "label": "health age and identities at actual closure start",
+      "before": "    try:\n        held_sources(context)\n",
+      "after": "    try:\n        result['fresh_terminal_health_at_start'] = fresh_terminal_health(context)\n        held_sources(context)\n"
+    },
+    {
+      "label": "health age and identities before first owned release",
+      "before": "        result['original_cgroup_before_release'] = empty_original_cgroup(context)\n",
+      "after": "        result['original_cgroup_before_release'] = empty_original_cgroup(context)\n        result['fresh_terminal_health_before_release'] = fresh_terminal_health(context)\n"
+    }
+  ],
+  "unchanged_whole_functions": [
+    {
+      "name": "require",
+      "sha256": "50ec46f62bae613a2bb2ed94edc4cadbfe9950e2839082c7464e0ae1b316b839",
+      "bytes": 91
+    },
+    {
+      "name": "identity",
+      "sha256": "fcae22f86dbb0358ce31636b9012f2a34fcbdc24f916d1790d53e192a35b2ba9",
+      "bytes": 216
+    },
+    {
+      "name": "bounded_bytes",
+      "sha256": "94625477db4a4ba30066e34e7881663c53250df16feaa3666cd47d12b500b68e",
+      "bytes": 744
+    },
+    {
+      "name": "read_pin",
+      "sha256": "7421974bdd38db6c6e7744b38ada27cef70b99dea4a4c2c8110113b4ee00113d",
+      "bytes": 667
+    },
+    {
+      "name": "known",
+      "sha256": "4ba5d85fe7e7643a1516666aa30ffc56a078a16d60c6a3d89257053e4e77a960",
+      "bytes": 249
+    },
+    {
+      "name": "properties",
+      "sha256": "822264c824ca91e1e896045c2f8688db849e206908248fb4c81fcf185f1836c1",
+      "bytes": 105
+    },
+    {
+      "name": "original_terminal",
+      "sha256": "c7ddfa075b71a9fcf26ee9e973d00d0c0a1ddcc8c5e437e1a216fbd2fdaffd4c",
+      "bytes": 386
+    },
+    {
+      "name": "original_timer",
+      "sha256": "771a5e7eb21a01962a11c5b09cdf9255716d6f64cb62fdae56e1823c1b2e3081",
+      "bytes": 243
+    },
+    {
+      "name": "held_sources",
+      "sha256": "17f83d7c6919b5fa801f38fddce3f69baad5a4fd83328972ddbd19d9711879a4",
+      "bytes": 728
+    },
+    {
+      "name": "empty_original_cgroup",
+      "sha256": "9e3e4c55a4fa15638674ba29e58550a833c4ecd2911e50735e12e4a2320f1e34",
+      "bytes": 510
+    },
+    {
+      "name": "sync_directory",
+      "sha256": "37491bc8d948d83e07acfdfae55abbb9ba0752bae11c9608578ea7b1206e3a16",
+      "bytes": 169
+    },
+    {
+      "name": "pin",
+      "sha256": "c3a7ff8ecf6d47b63b5cf3e36f7f5a19b57bc3d492fc3630d1dabe9c4edbed81",
+      "bytes": 245
+    },
+    {
+      "name": "publish",
+      "sha256": "41f1c83a0debd8dbdfdb0524314a9696a00c85601ac9be910d2d5af883947714",
+      "bytes": 215
+    },
+    {
+      "name": "command",
+      "sha256": "e13023ecca8490fdff589d92cee201e838266f58b413dbb494b9f58efc34dd9f",
+      "bytes": 873
+    },
+    {
+      "name": "fields",
+      "sha256": "d59b3807ea4f2cb6855dd094e3d3c5c1bd979a56013e349e402f3433bf2a0bf0",
+      "bytes": 235
+    },
+    {
+      "name": "main",
+      "sha256": "964e5f4c574383c0590b05f39a676df46cbb7288e9bb7ffd4dbd612d29fedd4e",
+      "bytes": 1164
+    }
+  ],
+  "changed_base_functions": [
+    "validate_case",
+    "close"
+  ],
+  "new_metadata_only_functions": [
+    "full8_metadata_pin",
+    "fresh_terminal_health"
+  ],
+  "base18_selected20_definitions": true,
+  "preserved_existing_runtime_functions": [
+    "held_sources",
+    "empty_original_cgroup",
+    "original_terminal",
+    "original_timer",
+    "pin",
+    "publish",
+    "command",
+    "fields"
+  ],
+  "scope": [
+    "Only closed root launch shape/current exact identities, plan/binding/family/auditor/config paths and source constants, seventh typed health field, two new pure metadata guards and new result schema are adapted.",
+    "close retains the complete original six-command/timer-first release algorithm; it adds health authentication at actual start and just before first release.",
+    "Health is also validated before any closure output/action in validate_case. It accepts normal optimizer pending0 or1, requires no unavailable outcomes and preserves atomic partition/availability semantics.",
+    "No selected N/Q/producer/runtime/canonical source was modified. No code imports/AST/compilation/tests, numerical/runtime/API/proc/unit/GPU/model/replay operations occurred."
+  ],
+  "upstream_pins": [
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/lr25_845M_native_parent_closure_proposal/close_original_parent.py",
+      "sha256": "4eabe292436da86d46e0576a68395a2fbb4c3204b88b34aba506314e34cabaaa",
+      "bytes": 21060,
+      "identity": {
+        "device": 2304,
+        "inode": 81295402,
+        "bytes": 21060,
+        "mtime_ns": 1792331370824160983,
+        "ctime_ns": 1792331464192523415,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/quality_audit_control_gc_repair_proposal/control_audit_reviewed3.py",
+      "sha256": "b5a50047e1a2981a41732c756bf908c6b9b935c58d1d0503c0df494e6f863aee",
+      "bytes": 17094,
+      "identity": {
+        "device": 2304,
+        "inode": 81531268,
+        "bytes": 17094,
+        "mtime_ns": 1792306398891963524,
+        "ctime_ns": 1792306398891963524,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/preparation-reviewed3-manifest.json",
+      "sha256": "55933898484a2593f34adaa6943086d7f49667ebe9b782f99125d2963c7ecacf",
+      "bytes": 70270,
+      "identity": {
+        "device": 2304,
+        "inode": 82575612,
+        "bytes": 70270,
+        "mtime_ns": 1792352462701239811,
+        "ctime_ns": 1792352462701239811,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/continuous_guard_same_lr25_continuation_proposal/audit_completed_leg_reviewed2.py",
+      "sha256": "61b299b327fe6156571646aa809e38563f7bf71de980a48b36272c9f555551d2",
+      "bytes": 36228,
+      "identity": {
+        "device": 2304,
+        "inode": 82575542,
+        "bytes": 36228,
+        "mtime_ns": 1792352229713075471,
+        "ctime_ns": 1792352229713075471,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/continuous-guard-same-LR25-continuation-original01-root-preparation-20261018/root-original947M-native-quality-launch-and-main-health-PASS.json",
+      "sha256": "700ff17618eb740d8af7c8b6c90b8210d1958753494cf9e7a2c1a0ad863a0eef",
+      "bytes": 29651,
+      "identity": {
+        "device": 2304,
+        "inode": 82579874,
+        "bytes": 29651,
+        "mtime_ns": 1792355751020174662,
+        "ctime_ns": 1792355751020174662,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/continuous-guard-same-LR25-continuation-original01-root-preparation-20261018/root-original947M-startup-main-api-readonly-copy.json",
+      "sha256": "311803c5ffbf211d076ed6eebae1f437ba3baa394263e8c1022b752160ba1daa",
+      "bytes": 93804,
+      "identity": {
+        "device": 2304,
+        "inode": 82579872,
+        "bytes": 93804,
+        "mtime_ns": 1792355750983867390,
+        "ctime_ns": 1792355750983867390,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/continuous-guard-same-LR25-continuation-original01-root-preparation-20261018/actual947M-native-plan-readonly-copy.json",
+      "sha256": "6517ec4eff1d31afd86aa5721c433b35d4c34f1244653e03919ab271aa697f88",
+      "bytes": 283584,
+      "identity": {
+        "device": 2304,
+        "inode": 82579870,
+        "bytes": 283584,
+        "mtime_ns": 1792355750940071258,
+        "ctime_ns": 1792355750940071258,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/continuous-guard-same-LR25-continuation-original01-root-preparation-20261018/actual947M-quality-binding.json",
+      "sha256": "f9cb5bd19ffca1caa3c80216cecb4e5eb8370d4e55fc31cf8327cffc0d28dd06",
+      "bytes": 243757,
+      "identity": {
+        "device": 2304,
+        "inode": 82579841,
+        "bytes": 243757,
+        "mtime_ns": 1792355151419034273,
+        "ctime_ns": 1792355151419034273,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/continuous-guard-same-LR25-continuation-original01-root-preparation-20261018/actual947M-four-original-leg-audit-configs-prepared-not-executed.json",
+      "sha256": "4ef4466b4114d831f4fc42673c0b613defdcf749c0b17754f526b36fc6735cfb",
+      "bytes": 4742,
+      "identity": {
+        "device": 2304,
+        "inode": 82579879,
+        "bytes": 4742,
+        "mtime_ns": 1792356053602240715,
+        "ctime_ns": 1792356053602240715,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/continuous-guard-same-LR25-continuation-original01-root-preparation-20261018/actual947M-original-leg01-audit-control-config.json",
+      "sha256": "cc6c181b38eaae94755584bdb4a2fff725184069ab8a5f649c3005ada3060dbc",
+      "bytes": 7113,
+      "identity": {
+        "device": 2304,
+        "inode": 82579875,
+        "bytes": 7113,
+        "mtime_ns": 1792356053596927671,
+        "ctime_ns": 1792356053596927671,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/continuous-guard-same-LR25-continuation-original01-root-preparation-20261018/actual947M-original-leg02-audit-control-config.json",
+      "sha256": "a4e03121b1e71706d3dd89663a00703312dfa242c88b7310b83d9d87d50509ba",
+      "bytes": 7113,
+      "identity": {
+        "device": 2304,
+        "inode": 82579876,
+        "bytes": 7113,
+        "mtime_ns": 1792356053598984639,
+        "ctime_ns": 1792356053598984639,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/continuous-guard-same-LR25-continuation-original01-root-preparation-20261018/actual947M-original-leg03-audit-control-config.json",
+      "sha256": "2c99d6b28c1a3fb87a184f307db9fb7d159f9901de3977ecc1f011814beacf6c",
+      "bytes": 7113,
+      "identity": {
+        "device": 2304,
+        "inode": 82579877,
+        "bytes": 7113,
+        "mtime_ns": 1792356053600008387,
+        "ctime_ns": 1792356053600008387,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/continuous-guard-same-LR25-continuation-original01-root-preparation-20261018/actual947M-original-leg04-audit-control-config.json",
+      "sha256": "98cc3a154215eb42526201ea26a9cc5801d985feb84eff1675a98873723b4192",
+      "bytes": 7113,
+      "identity": {
+        "device": 2304,
+        "inode": 82579878,
+        "bytes": 7113,
+        "mtime_ns": 1792356053601230951,
+        "ctime_ns": 1792356053601230951,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    },
+    {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/LR25-845M-quality-native-parent-owned-closure-original01-20261018/root-original-native-parent-result-and-owned-release.json",
+      "sha256": "857ef704687f886b2f74be88cf5208d47b0a6394b204bba5719a11d4beec5306",
+      "bytes": 25179,
+      "identity": {
+        "device": 2304,
+        "inode": 81535807,
+        "bytes": 25179,
+        "mtime_ns": 1792341793615730508,
+        "ctime_ns": 1792341793615730508,
+        "mode": "0o444",
+        "uid": 1001,
+        "nlink": 1
+      }
+    }
+  ]
+}

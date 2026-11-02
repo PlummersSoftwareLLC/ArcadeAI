@@ -1,0 +1,51 @@
+{
+  "schema": "robotron-whole-executed-ce-trace-validation-source-preparation-v1",
+  "status": "SOURCE_ONLY_UNEXECUTED_REVIEW_PENDING",
+  "authoring_scope": "New files only. No invocation/import/compile/test/runtime/data/GPU action or production/sealed source changes.",
+  "new_files_sha256": {
+    "test_whole_train_step.py": "08061c2aed557135c824ce277440276430cabe6d6b96cbccbdd64d96af592901",
+    "VALIDATION_PLAN.txt": "cb94773fd1a385112457c8c4a635c0d95bb5a120bf71e3a61e8e94d5b7028674"
+  },
+  "immutable_dependencies": {
+    "../executed_trace_proposal/manifest.json": "d7fcb2e36a7b08d472341d8f7f294d384f2591f17225832da83d350bff4e3316",
+    "../sampler-preparation-manifest.json": "ff93d7970d9750cb15379ceefcef5503e8f57ae9e85e0639daadcc80f65a94b8",
+    "../sampler_fixture.py": "10872d08f11556bff08031b0265fc488347be717e5e2a91ff84fcf461ce298e8",
+    "Robotron/Scripts/dqn/training.py": "194081120faae4228b0af0d6127c1e12c6d6180acdfe7d7a6a8c7cbcf24b963f",
+    "Robotron/Scripts/dqn/loss_kernel.py": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a",
+    "Robotron/Scripts/dqn/model.py": "bcd174f05610c6f773ca8c53f9155206eba4f7b6a11383516ddd71f3b513eeb4",
+    "Robotron/Scripts/dqn/config.py": "f2794754a14e9f13c82b613aa131698246a08dc9021c18f1b78fda7c4b484498",
+    "Robotron/Scripts/dqn/agent.py": "28977d6b925a4606a61b76438595f45ae054fc81aaaad989ab93e00d98a05668"
+  },
+  "new_cpu_test_methods": 8,
+  "new_methods_executed": 0,
+  "cpu_contract": {
+    "full_copied_training_modules": true,
+    "ast_extracted_training": false,
+    "synthetic_rows": 4096,
+    "synthetic_state_width": 8,
+    "synthetic_joint_actions": 4,
+    "atoms": 51,
+    "actual_private_replay_prefetch_loss_exposure_observer": true,
+    "real_cpu_adam": true,
+    "real_cpu_grad_scaler_with_cuda_control_flow_boundary_adapter": true,
+    "production_cuda_found_inf_contract_validated": false,
+    "actual_agent_constructor_or_callbacks_validated": false
+  },
+  "future_gpu_plan_only": {
+    "runner_implemented": false,
+    "launch_authorized": false,
+    "state_width": 11128,
+    "rows": 4096,
+    "joint_actions": 81,
+    "real_cuda_amp_fused_adam_required": true,
+    "display_gpu_uuid": "GPU-b549355c-78bb-53d8-04a6-da34d45e1dd0",
+    "fit_within_16GiB_established": false,
+    "private_fixed_batch_control_is_live_mixture_calibration": false
+  },
+  "limitations": [
+    "Source preparation, not executable readiness or actual validation results.",
+    "New CPU tests and future GPU fit/numerical/control/cleanup contracts remain unexecuted.",
+    "CPU adapters do not qualify CUDA AMP, actual capture_amp_found_inf, fused Adam, compiler or real agent lifecycle.",
+    "No production sampler attempts captured, coherent anchor, KL switch, learning-speed or quality claim."
+  ]
+}

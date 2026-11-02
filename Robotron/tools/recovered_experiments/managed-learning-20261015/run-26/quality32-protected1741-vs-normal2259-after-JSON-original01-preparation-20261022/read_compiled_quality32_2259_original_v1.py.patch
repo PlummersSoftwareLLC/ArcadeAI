@@ -1,0 +1,37 @@
+--- read_compiled_quality32_original_v2.py
++++ read_compiled_quality32_2259_original_v1.py
+@@ -1,4 +1,4 @@
+-"""One independent original min50 quality32 leg review for the fixed1741/2202 pair.
++"""One independent original min50 quality32 leg review for the fixed1741/2259 pair.
+ 
+ No numerical runtime, games, signals, retry, promotion or main mutation. Every
+ original min50/all32 full tail must pass. A valid leg does not qualify a policy;
+@@ -22,15 +22,15 @@
+ R=G/'logs/managed-learning-20261015/run-26'
+ SLOTS=tuple(range(4096,4128))
+ GPU='GPU-b549355c-78bb-53d8-04a6-da34d45e1dd0'
+-PAIR_SHA='79ae0a32e8d924d36517dbd76e6b97bb34309f695d0b913a28da514b3a269b90'
++PAIR_SHA='ad0ff9558602611227651bdf472ca4d2685d7038711c934dbe123142f6639d6e'
+ POLICIES={
+     'reference':dict(sha256='e19557810df3e2c18a6f64660bde6cb300eb597967f9074dc4aff6e42a1f0b83',
+         clocks=dict(learner_frame_count=1741229950,training_steps=7128160,optimized_samples=27621148672,frame_count=3434514217)),
+-    'candidate':dict(sha256='7dc8b12238ae8969eb5e66d3c6ff9769338496db697f49e826f71dfab1d2a744',
+-        clocks=dict(learner_frame_count=2202676281,training_steps=8863417,optimized_samples=34728761344,frame_count=4322965788)),
++    'candidate':dict(sha256='c97f7d82118c6d743d3ce9649a709ef49f93946e349f55c5e9ab47339a27af9b',
++        clocks=dict(learner_frame_count=2259572926,training_steps=9077049,optimized_samples=35603798016,frame_count=4432345420)),
+ }
+ ROLES={'R1':'reference','C1':'candidate','R2':'reference','C2':'candidate'}
+-RUNTIME_SHA='899e6c472175aa96cfae64b03ebe091852e8ca365c67588d56a2199439a5980b'
++RUNTIME_SHA='c105c5adb795f5c76650828fccfe9715e278aee528f770b4a56284218b055b4d'
+ PROPERTIES=['CPUQuota=1200%','MemoryMax=16G','MemorySwapMax=0','RuntimeMaxSec=9660',
+     'TasksMax=512','TimeoutStopSec=30','KillMode=mixed','SendSIGKILL=no']
+ 
+@@ -61,7 +61,7 @@
+         'Exact fixed-role pair, saved clocks and minimum50 required')
+     require(job['schema']=='robotron-compiled-full-tail32-quality-original-v1'
+         and job['runtime']['sha256']==RUNTIME_SHA
+-        and job['runtime']['path']==str(HERE/'run_compiled_full_tail32_quality_v1.py')
++        and job['runtime']['path']==str(HERE/'run_compiled_full_tail32_quality2259_v1.py')
+         and job['checkpoint']['sha256']==POLICIES[ROLES[job['quality_leg']]]['sha256'] and job['actor_slots']==list(SLOTS)
+         and job['gpu_uuid']==GPU and job['backend']=='inductor'and job['device']=='cuda'
+         and job['origin_port']==19998 and job['proxy_ports']=={str(s):20000+s-4096 for s in SLOTS}

@@ -1,0 +1,182 @@
+--- immutable-384-auditor47de.py
++++ future448-auditor.py
+@@ -21,15 +21,17 @@
+ 
+ 
+ SLOTS = list(range(4096, 4112))
+-TEMPLATE_SHA256 = "4fd02b9ff2be9c73dfa7c84c84c44b537f0a11a2d29417e80213cecda730dc2f"
+-RUNBOOK_SHA256 = "229c57f79f4f50696b8c8f2470f4636b7e5787dec95922d4bf8f260882004700"
+-VERIFIER_SHA256 = "527f2b9928bae9d58f7d8cd9984dfa126aa32f671af3e48935087870a1c9edd9"
+-REFERENCE_SHA256 = "4f0ef22962aa51bd900be6e89d866b7df828a7eb58fa17dfd574aa32d4267b11"
+-TARGET = 388629023
++TEMPLATE_SHA256 = "47debecaf6a851d00b7d8717cdb342a9b551fe197e659a0c04594195412f7044"
++RUNBOOK_SHA256 = "ffd99dc1e4b006ea99e359114b45f55774a83f94bc9867414c969466ac10d7e6"
++VERIFIER_SHA256 = "ea6ccfcd62e2683641475634ba1647856a988691a6cede3dbeda629dd03ba56b"
++BASE_VERIFIER_SHA256 = "7d1103daf2a77be8250884cb75ce04a640000f04b4376e994d493bc6fd0f7ead"
++REFERENCE_SHA256 = "ac8bc98038a7860f1682e66311fd48657361eaa8ec7aff1f44bd53cf84090963"
++TARGET = 452629023
+ GAME = Path("/home/dave/source/repos/ArcadeAI/Robotron")
+-CAMPAIGN = GAME / "logs/managed-learning-20261015/quality-256M-vs-384M-20261017"
+-CPU_PROOF = GAME / "logs/managed-learning-20261015/run-26/quality384M-checkpoint-verification-preparation-20261017/cpu-verification.json"
+-PLAN = "PLAN ONLY: no inputs read/imported. Future --execute audits only an explicitly finished/returncode0 leg1..4 of quality-256M-vs-384M-20261017 with actual plan/candidate/CPU-proof/source SHA bindings; all4 diagnosticsTRUE, original1200s/min50/all16/fulltails. No campaign qualification or launch."
++CAMPAIGN_ROOT = GAME / "logs/managed-learning-20261015"
++CAMPAIGN_PREFIX = "quality-384M-vs-448M-"
++CPU_VERIFIER = GAME / "logs/managed-learning-20261015/run-26/managed-candidate-checkpoint-CPU-verifier-proposal-20261017/verify_candidate_checkpoint.py"
++PLAN = "PLAN ONLY: no inputs read/imported. Future --execute audits only an explicitly finished/returncode0 leg1..4 of a root-bound quality-384M-vs-448M-* campaign with actual candidate bytes/hash, plan, generic CPU job/proof/source bindings; all4 diagnosticsTRUE,1200/2400,min50/all16/fulltails. No campaign qualification or launch."
+ EVALUATOR_NAMES = {"tools/run_frozen_sidecar.py", "tools/sidecar_boot.py", "Scripts/main.lua", "Scripts/robotron_socket_wait.c"} | {
+     "Scripts/dqn/"+name for name in ("config.py", "model.py", "actor_tags.py", "socket_server.py", "game_journal.py", "managed_measurement.py", "inference_actor.py", "nstep_buffer.py")}
+ EXECUTION_NAMES = {str(GAME/"tools"/name) for name in ("run_quality_campaign.py", "run_frozen_sidecar.py", "compare_sidecar_measurements.py", "compare_frozen_measurements.py")}
+@@ -89,7 +91,9 @@
+ 
+ 
+ def validate_future_plan(plan, args, directory):
+-    require(directory == CAMPAIGN and plan["output_directory"] == str(CAMPAIGN), "Wrong future campaign")
++    require(directory == args.campaign and directory.parent == CAMPAIGN_ROOT
++            and directory.name.startswith(CAMPAIGN_PREFIX) and len(directory.name) > len(CAMPAIGN_PREFIX)
++            and plan["output_directory"] == str(directory), "Wrong future448 campaign namespace")
+     require(set(plan["evaluator_source_hashes"]) == EVALUATOR_NAMES
+             and set(plan["execution_source_hashes"]) == EXECUTION_NAMES, "Require all12+4 source bindings")
+     for name, expected in BOUNDARY_SOURCES.items():
+@@ -100,8 +104,8 @@
+     checkpoints = plan["checkpoints"]
+     require(checkpoints["reference"]["sha256"] == REFERENCE_SHA256
+             and checkpoints["candidate"]["sha256"] == args.candidate_sha256, "Protected/reference or actual future candidate differs")
+-    for role, source in (("reference", GAME / "models_dqn/managed-incumbents/fresh3-256M-confirmed.pt"),
+-                         ("candidate", GAME / "models_dqn/managed-checkpoints/fresh3-384M.pt")):
++    for role, source in (("reference", GAME / "models_dqn/managed-incumbents/fresh3-384M-confirmed.pt"),
++                         ("candidate", GAME / "models_dqn/managed-checkpoints/fresh3-448M.pt")):
+         require(checkpoints[role]["source"] == str(source)
+                 and checkpoints[role]["snapshot"] == str(directory / "checkpoints" / (role + ".pt")), "Checkpoint path differs")
+     require([spec["index"] for spec in plan["legs"]] == [1,2,3,4]
+@@ -134,16 +138,48 @@
+ 
+ 
+ def validate_cpu_proof(proof, args):
+-    require(proof["status"] == "PASS" and proof["script_sha256"] == VERIFIER_SHA256
+-            and proof["sha256"] == args.candidate_sha256, "Actual384 CPU proof is not matchingPASS")
+-    require(proof["source_before"]["sha256"] == proof["verification_copy"]["sha256"] == args.candidate_sha256
+-            and proof["source_after_verification"] == proof["source_before"]
+-            and proof["copy_after_verification"] == proof["verification_copy"], "CPU proof source/copy identity differs")
+-    require(proof["clocks"]["learner_frame_count"] >= TARGET, "Saved candidate below actual384 target")
+-    executed = proof["execution_arguments"]
+-    require(executed["expected_checkpoint"] == str(GAME / "models_dqn/managed-checkpoints/fresh3-384M.pt")
+-            and executed["expected_target"] == TARGET and executed["expected_tag"] == "fresh3-384M"
+-            and executed["expected_sha256"] == args.candidate_sha256, "CPU proof is for another checkpoint request")
++    require(proof["schema"] == "robotron-managed-candidate-checkpoint-CPU-result-v1"
++            and proof["status"] == "PASS" and proof["script"]["sha256"] == VERIFIER_SHA256
++            and proof["base_verifier"]["sha256"] == BASE_VERIFIER_SHA256
++            and proof["sha256"] == args.candidate_sha256 and proof["bytes"] == args.candidate_bytes,
++            "Matching actual448 candidate-wrapper PASS required")
++    require(proof["job_file"]["sha256"] == args.cpu_job_sha256,
++            "Actual candidate CPU root job differs")
++    source, copied = proof["source_before"], proof["verification_copy"]
++    require(source["sha256"] == copied["sha256"] == args.candidate_sha256
++            and source["bytes"] == copied["bytes"] == args.candidate_bytes
++            and source["path"] == str(GAME / "models_dqn/managed-checkpoints/fresh3-448M.pt")
++            and (source["device"], source["inode"]) != (copied["device"], copied["inode"])
++            and copied["mode"] == "0o444" and copied["nlink"] == 1
++            and proof["bound_files"]["source_checkpoint"] == source
++            and proof["bound_files"]["root_readonly_verification_copy"] == copied,
++            "CPU source/copy identity differs")
++    root_job = proof["root_job"]
++    candidate = root_job["candidate"]
++    require(root_job["schema"] == "robotron-managed-candidate-checkpoint-CPU-job-v1"
++            and root_job["verifier_sha256"] == VERIFIER_SHA256
++            and root_job["base_verifier_sha256"] == BASE_VERIFIER_SHA256
++            and root_job["experiment"] == "best10M-fresh3-eps10-cap8-nosmooth"
++            and root_job["source"]["path"] == source["path"]
++            and root_job["source"]["sha256"] == args.candidate_sha256
++            and root_job["source"]["bytes"] == args.candidate_bytes
++            and candidate["tag"] == "fresh3-448M" and candidate["target_learner_frames"] == TARGET,
++            "CPU proof describes another candidate/tag/target")
++    gate = proof["candidate_gate"]
++    floor = proof["clock_floor"]
++    require(gate["tag"] == "fresh3-448M" and gate["target"] == TARGET
++            and gate["checkpoint"] == source["path"]
++            and gate["experiment"] == root_job["experiment"]
++            and gate["trigger_snapshot"]["client_count"] == 192
++            and set(floor) == {"training_steps", "optimized_samples", "learner_frame_count", "frame_count"}
++            and all(type(floor[key]) is int and floor[key] > 0
++                    and floor[key] == gate["trigger_snapshot"][key]
++                    and proof["clocks"][key] >= floor[key] for key in floor)
++            and floor["learner_frame_count"] >= TARGET,
++            "Saved candidate predates authentic gate four-clock floor or448 target")
++    require(proof["actual_restore_or_optimizer_step"] is False
++            and proof["actual_quality_qualification"] is False,
++            "CPU structural verification must not claim restore or quality")
+ 
+ 
+ def validate_original_context(entry, row):
+@@ -202,7 +238,8 @@
+ 
+ def audit(args):
+     require(digest(__file__) == args.source_sha256, "Auditor source SHA mismatch")
+-    require(args.campaign == CAMPAIGN and args.game == GAME, "Only the exact future384 campaign/game is allowed")
++    require(args.campaign.parent == CAMPAIGN_ROOT and args.campaign.name.startswith(CAMPAIGN_PREFIX)
++            and args.game == GAME, "Only the future448 namespace/game is allowed")
+     require(args.output.is_absolute(), "Explicit absolute new audit output required")
+     directory = args.campaign.resolve(strict=True)
+     output = args.output.resolve()
+@@ -235,8 +272,8 @@
+         run = Path(__file__).resolve().parent.parent
+         for path, expected, name in (
+             (Path(__file__).with_name("template-audit-source.py"), TEMPLATE_SHA256, "template-audit-source.py"),
+-            (run / "fresh-quality-256M-vs-384M-diagnostics-bound-runbook-20261017.txt", RUNBOOK_SHA256, "future384-runbook.txt"),
+-            (CPU_PROOF.with_name("verify_saved_checkpoint.py"), VERIFIER_SHA256, "384-verifier-source.py")):
++            (run / "future448M-quality-current-source-readiness-independent-20261017/source-readiness-receipt.json", RUNBOOK_SHA256, "future448-source-readiness.json"),
++            (CPU_VERIFIER, VERIFIER_SHA256, "candidate-verifier-source.py")):
+             require(digest(path) == expected, "Auditor source preparation provenance changed")
+             capture(path, name)
+         report["audit_provenance"]["source_template"] = dict(
+@@ -265,11 +302,12 @@
+                 and records[0]["state"] == "finished" and records[0]["returncode"] == 0,
+                 "Wait for the owner's finished evaluator record with returncode0")
+         record = records[0]
+-        proof_raw = capture(args.cpu_proof, "384-cpu-verification.json")
++        proof_raw = capture(args.cpu_proof, "448-cpu-verification.json")
+         require(hashlib.sha256(proof_raw).hexdigest() == args.cpu_proof_sha256, "Actual future CPU proof SHA differs")
+         proof = decode(proof_raw)
+         validate_cpu_proof(proof, args)
+-        report["future384_binding"] = dict(candidate_sha256=args.candidate_sha256, cpu_proof_sha256=args.cpu_proof_sha256, minimum_learner_frames=TARGET)
++        report["future448_binding"] = dict(candidate_sha256=args.candidate_sha256, candidate_bytes=args.candidate_bytes,
++            cpu_proof_sha256=args.cpu_proof_sha256, cpu_job_sha256=args.cpu_job_sha256, minimum_learner_frames=TARGET)
+         legdir = directory / f"{args.leg:02d}-{spec['role']}"
+         require(Path(spec["receipt_path"]) == legdir / "receipt.json"
+                 and Path(spec["job"]["directory"]) == legdir,
+@@ -350,7 +388,7 @@
+                     "Frozen journal clocks differ from checkpoint metadata")
+             if spec["role"] == "candidate":
+                 require(receipt["checkpoint_metadata"][key] == proof["clocks"][key],
+-                        "Candidate receipt clock differs from actual384 CPU proof")
++                        "Candidate receipt clock differs from actual448 generic CPU proof")
+         cohort = receipt["cohort"]
+         require(set(cohort["started_ids"]) == set(admitted)
+                 and len(cohort["started_ids"]) == len(admitted)
+@@ -499,9 +537,11 @@
+         return 0
+     parser = argparse.ArgumentParser(description=__doc__)
+     parser.add_argument("--game", type=Path, default=GAME)
+-    parser.add_argument("--campaign", type=Path, default=CAMPAIGN)
++    parser.add_argument("--campaign", type=Path, required=True)
+     parser.add_argument("--plan-sha256", required=True)
+     parser.add_argument("--candidate-sha256", required=True)
++    parser.add_argument("--candidate-bytes", type=int, required=True)
++    parser.add_argument("--cpu-job-sha256", required=True)
+     parser.add_argument("--cpu-proof", type=Path, required=True)
+     parser.add_argument("--cpu-proof-sha256", required=True)
+     parser.add_argument("--source-sha256", required=True)
+@@ -509,9 +549,12 @@
+     parser.add_argument("--output", type=Path, required=True)
+     parser.add_argument("--execute", action="store_true")
+     args = parser.parse_args(argv)
+-    for value in (args.plan_sha256, args.candidate_sha256, args.cpu_proof_sha256, args.source_sha256):
++    for value in (args.plan_sha256, args.candidate_sha256, args.cpu_proof_sha256, args.cpu_job_sha256, args.source_sha256):
+         require(re.fullmatch(r"[0-9a-f]{64}",value) is not None, "Actual lowercase SHA256 binding required")
+-    require(args.cpu_proof == CPU_PROOF, "Actual384 CPU proof path required")
++    require(type(args.candidate_bytes) is int and 200 << 20 <= args.candidate_bytes <= 400 << 20, "Actual candidate byte bound required")
++    require(args.cpu_proof.is_absolute() and args.cpu_proof == args.cpu_proof.resolve(strict=True)
++            and args.cpu_proof.is_relative_to(GAME / "logs/managed-learning-20261015/run-26")
++            and args.cpu_proof.name == "cpu-verification.json", "Actual canonical generic CPU proof path required")
+     return audit(args)
+ 
+ 

@@ -1,0 +1,29 @@
+{
+  "schema": "robotron-ce2048-shared-recipe-future-guards-v1",
+  "status": "SOURCE_ONLY_UNEXECUTED",
+  "guard_count": 8,
+  "argv": [
+    "/usr/bin/python3.12",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_shared_recipe_guard_integration_proposal",
+    "-p",
+    "test_shared_recipe_chain.py",
+    "-v"
+  ],
+  "suggested_root_bounds": {
+    "cpu_only": true,
+    "CUDA_VISIBLE_DEVICES": "",
+    "CPUQuota": "100%",
+    "MemoryMax": "512M",
+    "TasksMax": 32,
+    "RuntimeMaxSec": 60
+  },
+  "actual_execution": null,
+  "trial_job": null,
+  "activation_owner": null
+}

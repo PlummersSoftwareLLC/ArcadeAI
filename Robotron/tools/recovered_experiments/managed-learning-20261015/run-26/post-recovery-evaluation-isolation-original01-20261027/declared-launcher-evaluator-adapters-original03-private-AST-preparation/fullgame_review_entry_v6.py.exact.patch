@@ -1,0 +1,35 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/fullgame_review_entry_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-evaluator-adapters-original03-private-AST-preparation/fullgame_review_entry_v6.py
+@@ -10,8 +10,9 @@
+ from pathlib import Path
+ import sys
+ 
+-HERE=Path(__file__).resolve().parent
+-CORE_SHA='4e534242670b51090c104cf83e330db710843c3f949229c9fa2645dceaeb1bef'
++HERE=Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation')
++LOCAL=Path(__file__).resolve().parent
++CORE_SHA='d68126b96b0b8eb6442c813905d5c71afab89e0f1226c1426b6599f3e4f0fa3c'
+ 
+ 
+ def load(name,path):
+@@ -22,7 +23,7 @@
+ class ReviewReader:
+     def __init__(self,job,h):
+         self.h=h
+-        p=load('_fullgame_review_source_reader_pipeline',HERE/'fullgame_review_pipeline_v7.py')
++        p=load('_fullgame_review_source_reader_pipeline',LOCAL/'fullgame_review_pipeline_v7.py')
+         p.require(job['schema']=='robotron-original-quota64-independent-leg-review-job-v1'
+             and job['sources']==p.sources(h),'Exact eleven declared review dependencies required')
+         self.sources={pin['path']:pin for pin in job['sources'].values()}
+@@ -42,9 +43,9 @@
+ 
+ 
+ def execute(args):
+-    p=load('_fullgame_review_entry_pipeline',HERE/'fullgame_review_pipeline_v7.py');h=p.helpers()
++    p=load('_fullgame_review_entry_pipeline',LOCAL/'fullgame_review_pipeline_v7.py');h=p.helpers()
+     p.require(h.pin(Path(__file__).resolve())['sha256']==args.expected_source_sha256,'Actual selected review entry differs')
+-    core_pin=h.pin(HERE/'review_fullgame_rounds_v7.py');p.require(core_pin['sha256']==CORE_SHA,'Actual unchanged quota64 reviewer differs')
++    core_pin=h.pin(LOCAL/'review_fullgame_rounds_v7.py');p.require(core_pin['sha256']==CORE_SHA,'Actual unchanged quota64 reviewer differs')
+     jp=h.pin(args.job.resolve());p.require(jp['sha256']==args.job_sha256,'Actual original review job differs')
+     job=p.read(jp);subject=p.read(job['native_job'])
+     p.require(subject['engineering_only']is False,'Engineering contexts cannot execute a scientific review entry')

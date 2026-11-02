@@ -1,0 +1,71 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-current-profile-guard-original04/qualify_round_study_cpu_closed_metadata_current_profile_v8.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/private-static-profile-consumers-original01/deadline-source-family-current-eval-quiescence-original07/closed-metadata-three-capacity-guard-original05/qualify_three_capacity_jobs_cpu_v1.py
+@@ -1,4 +1,4 @@
+-"""One original CPU qualification of four actual serialized deadline32 jobs.
++"""One original CPU qualification of three capacity-amended serialized jobs.
+ 
+ No launch/observe/signal, model opening, Torch import, GPU/MAME or main mutation.
+ The separate ROOT closeout follows terminal archive/release; this report alone
+@@ -36,7 +36,7 @@
+ def execute(args):
+     require(hashlib.sha256(Path(__file__).read_bytes()).hexdigest()==args.source_sha256,'Actual CPU driver differs')
+     raw=Path(args.job).read_bytes();require(hashlib.sha256(raw).hexdigest()==args.job_sha256,'Actual CPU job differs')
+-    job=json.loads(raw);require(job['schema']=='robotron-deadline32-four-actual-jobs-CPU-guard-v2','New exact CPU job schema required')
++    job=json.loads(raw);require(job['schema']=='robotron-deadline32-three-capacity-jobs-CPU-guard-v1','New exact CPU job schema required')
+     require(sys.version_info[:2]==(3,14)and sys._is_gil_enabled()is False,'Actual free-threaded3.14 required')
+     require(os.environ.get('CUDA_VISIBLE_DEVICES')==''and not os.environ.get('LD_PRELOAD'),'Explicit CPU-only environment required')
+     require('torch'not in sys.modules,'Torch must not precede prebody guard')
+@@ -98,12 +98,12 @@
+             mode=oct(stat.S_IMODE(s.st_mode)),uid=s.st_uid,nlink=s.st_nlink)
+         require(s.st_size==pin['bytes'] and all(values[k]==v for k,v in i.items()),'Attested large input identity changed')
+     for pin in job['large_input_stat_attestations']:stat_only(pin)
+-    prepared=json.loads(h.checked(job['prepared_manifest']).read_bytes());cases=prepared['cases']
+-    require([v['leg']for v in cases]==['R1','C1','R2','C2'],'Actual fixed four serialized subjects required')
++    prepared=json.loads(h.checked(job['prepared_manifest']).read_bytes());cases=prepared['cases'][1:]
++    require([v['leg']for v in cases]==['C1','R2','C2'],'Actual exact three unused capacity subjects required')
+     native=load('_deadline_actual_CPU_native',h.checked(cases[0]['runtime']))
+-    # Explicit semantic reuse from the already closed exact four-job metadata
+-    # execution. Every original per-job domain join and every raw full SHA and
+-    # identity remain freshly checked; no scientific/native function changes.
++    # Closed M9 semantic facts retain original identities. The selected adapter
++    # verifies exact capacity-only derivation for these three new subjects,
++    # then repeats full accepted/rejected/verifier/registry integrity per job.
+     phase('closed_metadata_authority_begin')
+     reuse_module=load('_closed_metadata_readiness_reuse',h.checked(job['readiness_reuse_shim']))
+     reuse=reuse_module.ClosedMetadataReadiness(job,h,phase)
+@@ -122,7 +122,7 @@
+         subjects.append((case,subject))
+     prebody=[];negative_checks=[]
+     class ActualSerializedJobs(unittest.TestCase):
+-        def test_all_four_actual_native_completed_prebody_contexts(self):
++        def test_all_three_actual_native_completed_prebody_contexts(self):
+             for case,subject in subjects:
+                 with self.subTest(leg=case['leg']):
+                     ctx=native.validate_completed_context(subject,h)
+@@ -192,7 +192,7 @@
+                 self.assertEqual(proof['verified_maximum_gap_s'],2.0)
+                 self.assertEqual(proof['proof_gap_contract'],'robotron-main-proof-gap-2s-v1')
+                 self.assertEqual(proof['full_main_input_count'],len(ctx['main_binding']['inputs']))
+-            self.assertEqual(reuse.counts,dict(semantics_reused_from_closed_metadata=4,raw_full_integrity_passes=4))
++            self.assertEqual(reuse.counts,dict(semantics_reused_from_closed_metadata=3,raw_full_integrity_passes=3))
+     tests=load('_deadline_actual_CPU_NEW_native_chain_tests',h.checked(job['new_native_chain_tests']))
+     actual_new_count=unittest.defaultTestLoader.loadTestsFromTestCase(tests.Tests).countTestCases()
+     require(actual_new_count==job['expected_new_native_chain_tests'],'Exact selected NEW integration count differs')
+@@ -206,12 +206,15 @@
+     for pin in job['inputs']:h.checked(pin)
+     for pin in job['large_input_stat_attestations']:stat_only(pin)
+     output=Path(job['output']);require(not output.exists(),'Original CPU output already exists');output.mkdir(mode=0o700)
+-    report=dict(schema='robotron-deadline32-four-actual-jobs-CPU-guard-result-v1',passed=result.wasSuccessful(),
++    report=dict(schema='robotron-deadline32-three-capacity-jobs-CPU-guard-result-v1',passed=result.wasSuccessful(),
+         tests_run=result.testsRun,actual_serialized_job_tests=6,
+         readiness_semantics_reused_from_closed_metadata=reuse.counts['semantics_reused_from_closed_metadata'],
+         readiness_raw_full_integrity_passes=reuse.counts['raw_full_integrity_passes'],
+         closed_metadata_readiness_authority=job['closed_metadata_readiness_authority'],
+-        reused_predicates='Original closed metadata actual four-job raw health and all192 slot predicates; no semantic raw replay in this guard.',
++        prepared_capacity_amendment=job['prepared_amendment'],parent_guard_CPU_job=job['parent_guard_CPU_job'],
++        new_capacity_sources_claimed_to_have_run_original_engineering=False,
++        old_exact_job_receipts_reused=False,
++        reused_predicates='Original closed M9 four-job predicates remain historical; each new exact C1/R2/C2 proves its capacity-only derivation and freshly authenticates every recorded raw dependency.',
+         every_job_raw_hash_slot_and_owner_epoch_checks_unchanged=True,new_native_chain_tests=actual_new_count,
+         old_clock_controller19_rerun=False,actual_prebody_contexts=prebody,actual_contract_negative_cases=negative_checks,
+         native_jobs=[c['native_job']for c in cases],prepared_manifest=job['prepared_manifest'],original_CPU_job=h.pin(args.job),

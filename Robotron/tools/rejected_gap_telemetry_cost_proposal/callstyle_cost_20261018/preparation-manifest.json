@@ -1,0 +1,166 @@
+{
+  "activation_authorized": false,
+  "actual_execution": null,
+  "files": {
+    "benchmark_callstyle_cost.py": {
+      "bytes": 22782,
+      "identity": {
+        "bytes": 22782,
+        "ctime_ns": 1792309111650321890,
+        "device": 2304,
+        "inode": 81531278,
+        "mode": "0o444",
+        "mtime_ns": 1792309111650321890,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_cost_proposal/callstyle_cost_20261018/benchmark_callstyle_cost.py",
+      "sha256": "ef5f715b7c83748e01943a1c752eeff24c06ec549e5a5361b81fac8dcff895d6"
+    }
+  },
+  "finite_changes": [
+    "All four selected arms instantiate the real helper; enabled/disabled crossed with cached/lookup.",
+    "Cached event=observer.event is created INSIDE each worker; no shared bound event variable outside workers.",
+    "Lookup body replaces the ten event(...) calls by literal observer.event(...), no added per-hook wrapper. All scalar args/state changes and outer accepted call count remain identical.",
+    "No nohooks/noop arm rerun; original successful four-arm result remains separate evidence.",
+    "Existing thread setup gates, local counter, exact snapshots, source/GIL/env guards,45s budget and error preservation retained."
+  ],
+  "future_root_argv": [
+    "/usr/bin/env",
+    "-u",
+    "LD_PRELOAD",
+    "-u",
+    "PYTHONPATH",
+    "CUDA_VISIBLE_DEVICES=",
+    "PYTHONDONTWRITEBYTECODE=1",
+    "/home/dave/source/repos/ArcadeAI/.venv-gb300/bin/python",
+    "-Xgil=0",
+    "-I",
+    "-B",
+    "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_cost_proposal/callstyle_cost_20261018/benchmark_callstyle_cost.py",
+    "--execute",
+    "--expected-source-sha256",
+    "ef5f715b7c83748e01943a1c752eeff24c06ec549e5a5361b81fac8dcff895d6",
+    "--output",
+    "<FRESH_ABSOLUTE_ROOT_OUTPUT.json>"
+  ],
+  "future_root_bounds": {
+    "CPUQuota": "400%",
+    "MemoryMax": "512M",
+    "MemorySwapMax": 0,
+    "Restart": "no",
+    "RuntimeMaxSec": 60,
+    "TasksMax": 512,
+    "TimeoutStopSec": 5
+  },
+  "limitations": [
+    "Mechanism probe only, no live overhead, throughput, upper-bound or quality/causal speed claim.",
+    "Actual server does per-hook attribute lookup; this synthetic accepted-body scalar workload does not execute the server/replay/network/training paths.",
+    "All192 workers continuously active differs from actual duty cycles;4CPUquota and scheduling affect outcomes. Three orders partially counterbalance positions; no randomization.",
+    "Prior surprising disabled timings cannot by themselves select helper optimization; both original and this new independent question retain original outcomes.",
+    "Earlier prebaseline oneCPUcost overlap last~10s and nonrandom before06:39:05.557035Z/post07:19:41.937155Z separation remain unrelated observational confounds."
+  ],
+  "preserved_original_success": {
+    "bytes": 102151,
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/rejected-gap-concurrent-cost-original01-root-execution-20261018/cost.json",
+    "sha256": "f63c0d016e04b7d89e86259da88d5e0f8b25ec85d48c828168fe7f3a05653991",
+    "source": "Root-reported closed success only; not read/relabelled/rerun by author."
+  },
+  "question": "Does one shared bound-method object in the prior synthetic workload confound FT costs? Compare unique per-worker cached methods versus literal per-hook lookup within each enabled/disabled mode.",
+  "schema": "robotron-rejected-gap-callstyle-cost-source-preparation-v1",
+  "source_checks": {
+    "author_imports": 0,
+    "cached_accepted_body_exact": true,
+    "compile_or_AST": 0,
+    "executions": 0,
+    "lookup_event_calls": 10,
+    "runtime_or_model_reads": 0,
+    "tests": 0
+  },
+  "status": "SOURCE_ONLY_FIXED_UNSELECTED_UNEXECUTED",
+  "timing": "Worker creation/connect/ready barrier excluded; start-gate release to last worker end clock. Same process CPU clock, earlier completion coordination/scheduling included, teardown/snapshot/disconnect excluded.",
+  "upstream_pins": {
+    "helper": {
+      "bytes": 12216,
+      "identity": {
+        "bytes": 12216,
+        "ctime_ns": 1792301353397526560,
+        "device": 2304,
+        "inode": 81529014,
+        "mode": "0o444",
+        "mtime_ns": 1792301353397526560,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_proposal/rejected_gap_telemetry_reviewed3.py",
+      "sha256": "d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd"
+    },
+    "successful_concurrent_source": {
+      "bytes": 20856,
+      "identity": {
+        "bytes": 20856,
+        "ctime_ns": 1792308849313515303,
+        "device": 2304,
+        "inode": 81531275,
+        "mode": "0o444",
+        "mtime_ns": 1792308849313515303,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_cost_proposal/concurrent_cost_20261018/benchmark_concurrent_cost_reviewed2.py",
+      "sha256": "eb9f914447d268d6c154e73a5cd269c1bfa3e35a92c29233205e102144858aae"
+    },
+    "successful_source_selection": {
+      "bytes": 3392,
+      "identity": {
+        "bytes": 3392,
+        "ctime_ns": 1792308849313830409,
+        "device": 2304,
+        "inode": 81531276,
+        "mode": "0o444",
+        "mtime_ns": 1792308849313830409,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_cost_proposal/concurrent_cost_20261018/preparation-reviewed2-selection.json",
+      "sha256": "f51aa242f4eeb19c0d4a1ddab08a8d8ecadb89c89105f20392824617e1eac23e"
+    }
+  },
+  "workload": {
+    "accepted_frames_per_arm": 24576,
+    "arms": [
+      "disabled_cached",
+      "disabled_lookup",
+      "enabled_cached",
+      "enabled_lookup"
+    ],
+    "connections_per_worker": 1,
+    "frames_per_worker": 128,
+    "hook_calls_per_frame": 10,
+    "native_threads": 192,
+    "no_gap_only": true,
+    "orders": [
+      [
+        "disabled_cached",
+        "disabled_lookup",
+        "enabled_lookup",
+        "enabled_cached"
+      ],
+      [
+        "disabled_lookup",
+        "enabled_cached",
+        "disabled_cached",
+        "enabled_lookup"
+      ],
+      [
+        "enabled_cached",
+        "enabled_lookup",
+        "disabled_lookup",
+        "disabled_cached"
+      ]
+    ],
+    "partial_counterbalance": true,
+    "per_frame_shared_list_writes": 0,
+    "repeats": 3
+  }
+}

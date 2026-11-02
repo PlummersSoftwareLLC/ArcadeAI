@@ -1,0 +1,54 @@
+FROZEN SOURCE API; null templates are not executable jobs. All actual PINs are full
+{path,sha256,bytes,identity:{device,inode,bytes,mtime_ns,ctime_ns,mode,uid,nlink}}
+for owned0444 non-symlink regular nlink1 bounded<=4MiB JSON/text. No PT is decoded
+by the binder. The root job itself has the same PIN and an explicit digest argv.
+
+Candidate descriptor must name only FIRST tag rawkl-first-8M-20261017-trial02,
+with actual SHA/bytes. Evidence PINs are actual inline phaseCPU job/report and
+cpu-completion.json {argv,exit_code}; COMPLETE trial result +its activation,
+observer, decision event, fsync durability, CE_return, earlyinsurance and separate
+deadline-result. Phase report is the returned cpu-report-readonly.json, not its
+original writable output. owned_cleanup is an actual root receipt with PASS-prefix
+status and owned_cleanup_complete=true; original shows/cat/invjournal are separately
+pinned for BOTH retained trial_controller and deadline identities, with actual
+archived_before_release/released=true facts. show files are original plain
+systemctl key=value snapshots (not collected defaults/command wrapper JSON).
+No invented separate candidateCPU unit identity is needed.
+
+runtime_anchor and the separately PINned runtime_baseline contain exactly the
+same main_owner/fleet_owner (five-key pid/start/unit/inv/cgroup), inference_worker
+(tid/starttime_ticks/mask), all192 actors (pid/starttime_ticks/slot/mask), complete
+source_hashes (currently61; do not trim), control_hashes2, unit_files, and
+normalized held environment_sha256. main_owner MUST equal actual READY CE_return
+owner. Baseline is newly observed AFTER CE return, status PASS; it is not old511524
+or the KL owner. Fresh launch readiness uses that anchor, candidate/rootCPU binding,
+observed_unix_s and original resources proof; no owner/schema bypass exists.
+
+predecessor_quality_plan is actual quality-384M-vs-448M-20261017/plan.json PIN.
+The new root job freezes fresh output/preview/execution directories (distinct),
+unit basename robotron-quality-*, labels and hypothesis. No directory is created
+by this source template. Default plan preparation requires all completed actual
+proofs; explicit root action selects one later detached launch. Fixed12+4 source
+closure is current config19ab plus unchanged source names; only config differs
+from prior approved predecessor. Evaluator/scoring/finalizer source unchanged.
+
+Additional exact selection joins: evidence.outer_job/activation_job/trial_core and
+actual_launch_identities bind the original selected trial02 controller, deadline
+and KL trainer. Original controller ExecStart must include that exact outer job
+and selected controller source/digests. Observer start_request must decode to the
+authentic activation start clock; no refreshed horizon origin is permitted.
+
+The historical early7d numeric report is legitimately writable0664. The consumed
+evidence.early_insurance must be a byte-identical independent0444 archived copy;
+its SHA/bytes join the trial's historical PIN without reopening the mutable
+original. This is genuine early KL-owner192 insurance, not the FIRST candidate.
+Only archived invocation journals may be zero bytes; all other PINs are positive.
+
+Held environment_sha256 uses the carrier's original
+json.dumps(selected_environment,sort_keys=True).encode() normalization. It is not
+LiveHost.environment's different representation. Complete source dictionaries
+remain exact; the >=61 check supplements, rather than replaces, full equality.
+
+Guard selection is QualityBindingContracts,13 source-authored methods. Tiny
+metadata fixtures/injected readers exercise joins; no model, checkpoint, runtime,
+CUDA, evaluator execution or real current baseline is exercised by those guards.

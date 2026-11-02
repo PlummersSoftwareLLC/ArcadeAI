@@ -1,0 +1,247 @@
+{
+  "activation_authorized": false,
+  "actual": {
+    "application": null,
+    "enabled_instance": null,
+    "intervention": null,
+    "measurement": null,
+    "test_execution": null
+  },
+  "bounds": {
+    "active_connections": 256,
+    "counter_max": 9223372036854775807,
+    "pending_per_connection": 1,
+    "witnesses_global_first": 32
+  },
+  "files": {
+    "PREPARATION.txt": {
+      "bytes": 8019,
+      "identity": {
+        "bytes": 8019,
+        "ctime_ns": 1792301488630159351,
+        "device": 2304,
+        "inode": 81529015,
+        "mode": "0o444",
+        "mtime_ns": 1792301447998428796,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_proposal/PREPARATION.txt",
+      "sha256": "9973697c075c958749678417267a491a0116ee10943764de6cd28827dbaa66af"
+    },
+    "rejected_gap_telemetry.py": {
+      "bytes": 11954,
+      "identity": {
+        "bytes": 11954,
+        "ctime_ns": 1792301124491096742,
+        "device": 2304,
+        "inode": 81529010,
+        "mode": "0o444",
+        "mtime_ns": 1792300996868620034,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_proposal/rejected_gap_telemetry.py",
+      "sha256": "56cd5363769d51bdf32f43dca3d89f71beb825b935b4f518b866591a4a1b82f8"
+    },
+    "rejected_gap_telemetry_reviewed2.py": {
+      "bytes": 12000,
+      "identity": {
+        "bytes": 12000,
+        "ctime_ns": 1792301200950980345,
+        "device": 2304,
+        "inode": 81529013,
+        "mode": "0o444",
+        "mtime_ns": 1792301200950980345,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_proposal/rejected_gap_telemetry_reviewed2.py",
+      "sha256": "33727b6533bfb8347fa9109fd4f54005abe2d5a67ed2ea58fa60afbe900d7da4"
+    },
+    "rejected_gap_telemetry_reviewed3.py": {
+      "bytes": 12216,
+      "identity": {
+        "bytes": 12216,
+        "ctime_ns": 1792301353397526560,
+        "device": 2304,
+        "inode": 81529014,
+        "mode": "0o444",
+        "mtime_ns": 1792301353397526560,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_proposal/rejected_gap_telemetry_reviewed3.py",
+      "sha256": "d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd"
+    },
+    "socket_server-insertion.patch": {
+      "bytes": 12729,
+      "identity": {
+        "bytes": 12729,
+        "ctime_ns": 1792301124491096742,
+        "device": 2304,
+        "inode": 81529011,
+        "mode": "0o444",
+        "mtime_ns": 1792301053164358872,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_proposal/socket_server-insertion.patch",
+      "sha256": "b09570b80da4ec94acd7ba1221ce87010aa7a3b45141d09555fde18ae7fca448"
+    },
+    "source-preservation.json": {
+      "bytes": 7628,
+      "identity": {
+        "bytes": 7628,
+        "ctime_ns": 1792301488630159351,
+        "device": 2304,
+        "inode": 81529012,
+        "mode": "0o444",
+        "mtime_ns": 1792301488630159351,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_proposal/source-preservation.json",
+      "sha256": "1ba91cd4731063173ee3b6e72e436a6cad38f7e427554879bb371972bb1f6899"
+    }
+  },
+  "future_selection": {
+    "API_exposure_pending": true,
+    "candidate_socket_sha256": "0eed0f6176270c5abe51fa481f10085818b63ac2d59427ff59ea9615d1c9b698",
+    "combined_logging_patch_rebase_pending": true,
+    "enable_condition": "main replay_enabled and ROBOTRON_REJECTED_GAP_TELEMETRY=1",
+    "helper_contents": {
+      "bytes": 12216,
+      "identity": {
+        "bytes": 12216,
+        "ctime_ns": 1792301353397526560,
+        "device": 2304,
+        "inode": 81529014,
+        "mode": "0o444",
+        "mtime_ns": 1792301353397526560,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_proposal/rejected_gap_telemetry_reviewed3.py",
+      "sha256": "d58610a139644b79f39504e48e1bc43bda9837cc51d743bec623103918c50cbd"
+    },
+    "helper_runtime_destination": "Scripts/dqn/rejected_gap_telemetry.py",
+    "socket_diff": {
+      "bytes": 12729,
+      "identity": {
+        "bytes": 12729,
+        "ctime_ns": 1792301124491096742,
+        "device": 2304,
+        "inode": 81529011,
+        "mode": "0o444",
+        "mtime_ns": 1792301053164358872,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/rejected_gap_telemetry_proposal/socket_server-insertion.patch",
+      "sha256": "b09570b80da4ec94acd7ba1221ce87010aa7a3b45141d09555fde18ae7fca448"
+    },
+    "source_dependency_closure_pending": true
+  },
+  "limits": [
+    "Future source closure and API integration not authored/applied",
+    "Overhead and behavior noninterference unmeasured; real-handler tests deferred",
+    "Classifier UID continuity is not independent game ground truth",
+    "Queue calls/returns do not prove physical insertion, training or causal impact",
+    "Snapshot diagnostic data is not atomic with API/gameplay/client stages",
+    "Original and intermediate sealed source proposals preserved"
+  ],
+  "preserved_helpers": [
+    "rejected_gap_telemetry.py",
+    "rejected_gap_telemetry_reviewed2.py"
+  ],
+  "schema": "robotron-rejected-gap-telemetry-source-preparation-v1",
+  "status": "SOURCE_ONLY_UNSELECTED_UNAPPLIED_TESTS_DEFERRED_PEER_PENDING",
+  "upstream_pins": {
+    "closed_stdout_observation": {
+      "bytes": 4602,
+      "identity": {
+        "bytes": 4602,
+        "ctime_ns": 1792296980956486736,
+        "device": 2304,
+        "inode": 81925255,
+        "mode": "0o444",
+        "mtime_ns": 1792296980956486736,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/accepted-newgame-forward-recovery-root-control-20261017/root-existing-trainer-stdout-neutral-reject-60s-observation.json",
+      "sha256": "6ddae68fe69e3b9f07b894fe511df6ed0c8ba586afe49ab84e68f6734a876e56"
+    },
+    "held_Lua": {
+      "bytes": 168170,
+      "identity": {
+        "bytes": 168170,
+        "ctime_ns": 1792125589127110069,
+        "device": 2304,
+        "inode": 79696094,
+        "mode": "0o664",
+        "mtime_ns": 1792125589127110069,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/main.lua",
+      "sha256": "060f838359d35ef6c87b96dfe02ad34618ef974d5a43fefcb74320ebe9deecaf"
+    },
+    "held_nstep": {
+      "bytes": 3592,
+      "identity": {
+        "bytes": 3592,
+        "ctime_ns": 1791907574326289547,
+        "device": 2304,
+        "inode": 79696089,
+        "mode": "0o664",
+        "mtime_ns": 1791907574326289547,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/nstep_buffer.py",
+      "sha256": "e46f03e9a626b3a24dea702344b0bbf050f1fdc5af672fc8fc9d18e6afef74c1"
+    },
+    "held_socket": {
+      "bytes": 136403,
+      "identity": {
+        "bytes": 136403,
+        "ctime_ns": 1792288634151983356,
+        "device": 2304,
+        "inode": 79695972,
+        "mode": "0o664",
+        "mtime_ns": 1792288634136965085,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/socket_server.py",
+      "sha256": "4a1f6a3cc7c82d8c85e1af93ceac0ca7457663d5f5ba7c7d893e3c2b3003e26c"
+    },
+    "prior_conditional_finding": {
+      "bytes": 12701,
+      "identity": {
+        "bytes": 12701,
+        "ctime_ns": 1792293882265598412,
+        "device": 2304,
+        "inode": 81925243,
+        "mode": "0o444",
+        "mtime_ns": 1792293882265598412,
+        "nlink": 1,
+        "uid": 1001
+      },
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/accepted-newgame-forward-recovery-root-control-20261017/future-samegame-rejected-gap-source-followup.json",
+      "sha256": "58337bdd1fe6471faf492e63ed3b5a740c9beed8099f12a86573743859946e7c"
+    }
+  },
+  "verification": {
+    "finite_replacements": 26,
+    "project_or_helper_imports": 0,
+    "reverse_byte_equality": true,
+    "runtime_actions": 0,
+    "source_AST_parsed": true,
+    "tests_authored": 0,
+    "tests_executed": 0,
+    "unchanged_original_functions": 72
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "schema": "robotron-fullgame-explicit-health-and-pair-adaptation-delta-v1",
+  "native": [
+    {
+      "old": "PAIR_SHA='63000cf3441f085e8b297d9c589f19e7147c7213a07288e644c420089e497dc3'",
+      "new": "PAIR_SHA='0'*64"
+    },
+    {
+      "old": "POLICIES={'reference': {'sha256': 'e19557810df3e2c18a6f64660bde6cb300eb597967f9074dc4aff6e42a1f0b83', 'clocks': {'learner_frame_count': 1741229950, 'training_steps': 7128160, 'optimized_samples': 27621148672, 'frame_count': 3434514217}}, 'candidate': {'sha256': 'b23152ece3bb614831a278fe0572c07433f1bee59c5accef5a1ab7d3007af883', 'clocks': {'learner_frame_count': 3045860554, 'training_steps': 11995683, 'optimized_samples': 47558522880, 'frame_count': 5926701223}}}",
+      "new": "POLICIES={}"
+    },
+    {
+      "old": "def validate_job(job):\n",
+      "new": "def round_contract():\n    path=Path(__file__).with_name('fullgame_round_contract_v4.py')\n    require(hashlib.sha256(path.read_bytes()).hexdigest()=='__FULLGAME_CONTRACT_SHA__','Exact recovered fullgame contract required')\n    return load('_recovered_fullgame_round_contract',path)\n\n\ndef validate_completed_context(job,h):\n    validate_job(job)\n    for entry in job['inputs']:h.checked(entry)\n    context=round_contract().context(job,h)\n    context['reader']=load('_fullgame_prebody_reader',h.checked(job['main_sources']['reader']))\n    return context\n\n\ndef validate_job(job):\n    round_contract().install_pair(job,globals())\n"
+    },
+    {
+      "old": "def validate_main_health_contract(job,protocol,family):\n    \"\"\"Exact native producer/consumer contract, callable before private actions.\"\"\"\n    require(protocol['schema']=='robotron-native-quota64-dedicated-main-health-protocol-v1'\n        and protocol['health_job']['binding']==job['main_binding']\n        and family['runtime']==job['runtime']\n        and set(protocol['health_job']['sources'])==set(HEALTH_DEPENDENCIES)\n        and all(protocol['health_job']['sources'][key]['sha256']==sha for key,sha in HEALTH_DEPENDENCIES.items())\n        and family['main_prefix_validator']['sha256']==PREFIX_VALIDATOR_SHA\n        and family['main_health_finalizer']['sha256']==FINALIZER_SHA\n        and set(family['main_observer'])==set(OBSERVER_DEPENDENCIES)\n        and all(family['main_observer'][key]['sha256']==sha for key,sha in OBSERVER_DEPENDENCIES.items()),\n        'Exact prospective main-health engine/dependencies/family/binding required')\n",
+      "new": "def validate_main_health_contract(job,protocol,family):\n    h=helpers()\n    require(round_contract().read(job['main_health_protocol'],h)==protocol\n        and round_contract().read(job['source_family_manifest'],h)==family,'Passed health context differs from serialized job')\n    return round_contract().context(job,h)"
+    },
+    {
+      "old": "    root,package_pins=h.package_inputs(job['source_package'])",
+      "new": "    context=validate_completed_context(job,h)\n    round_contract().validate_launch(job,jp,context,h)\n    root,package_pins=h.package_inputs(job['source_package'])"
+    },
+    {
+      "old": "        supervision=load('_compiled32_main_supervision',h.checked(job['main_sources']['supervision']))\n        window=load('_compiled32_main_health',h.checked(job['main_sources']['window']))\n        reader=load('_compiled32_immutable_reader',h.checked(job['main_sources']['reader']))\n        main=reader.read_pin(job['main_binding'])\n        policy=reader.read_pin(main['supervision_policy'])\n        baseline=reader.read_pin(main['baseline_API'])\n        protocol=reader.read_pin(job['main_health_protocol'])\n        family=reader.read_pin(job['source_family_manifest'])\n        validate_main_health_contract(job,protocol,family)\n        client=load('_compiled32_dedicated_main_health_client',h.checked(family['main_observer']['client']))\n        prefix=load('_compiled32_owned_main_prefix',h.checked(family['main_prefix_validator']))\n        main_finalizer=load('_compiled32_owned_main_finalizer',h.checked(family['main_health_finalizer']))\n        def read_main(entry,as_json=True):return reader.read_pin(entry,as_json=as_json)\n        prior_groups=prefix.verified_groups(job,protocol,family,read_main,h)\n",
+      "new": "        reader=context['reader']\n        main=context['binding']\n        protocol=context['protocol']\n        family=context['family']\n        client=load('_compiled32_dedicated_main_health_client',h.checked(family['main_observer']['client']))\n        main_finalizer=load('_compiled32_owned_main_finalizer',h.checked(family['main_health_finalizer']))\n        prior_groups=[]\n"
+    }
+  ],
+  "reviewer": [
+    {
+      "old": "PAIR_SHA='63000cf3441f085e8b297d9c589f19e7147c7213a07288e644c420089e497dc3'",
+      "new": "PAIR_SHA='0'*64"
+    },
+    {
+      "old": "POLICIES={'reference': {'sha256': 'e19557810df3e2c18a6f64660bde6cb300eb597967f9074dc4aff6e42a1f0b83', 'clocks': {'learner_frame_count': 1741229950, 'training_steps': 7128160, 'optimized_samples': 27621148672, 'frame_count': 3434514217}}, 'candidate': {'sha256': 'b23152ece3bb614831a278fe0572c07433f1bee59c5accef5a1ab7d3007af883', 'clocks': {'learner_frame_count': 3045860554, 'training_steps': 11995683, 'optimized_samples': 47558522880, 'frame_count': 5926701223}}}",
+      "new": "POLICIES={}"
+    },
+    {
+      "old": "RUNTIME_SHA='9ecf99ba66b76b8bd31de06e894124e495d3fedba86ba5a1c36db628ccb95f83'",
+      "new": "RUNTIME_SHA='0'*64"
+    },
+    {
+      "old": "SELECTED_RUNTIME=Path('/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-fixed-slot64-full-game-protocol-original01-preparation-20261024/scientific-protocol-interface-correction-original01/run_quality32_quota64_selected_original01_v2.py')",
+      "new": "SELECTED_RUNTIME=Path(__file__).with_name('run_fullgame_rounds_v4.py')"
+    },
+    {
+      "old": "def validate_scope(job,job_pin,scope,config):\n",
+      "new": "def round_contract():\n    path=Path(__file__).with_name('fullgame_round_contract_v4.py')\n    require(hashlib.sha256(path.read_bytes()).hexdigest()=='__FULLGAME_CONTRACT_SHA__','Exact recovered fullgame contract required')\n    return load('_recovered_fullgame_round_contract',path)\n\n\ndef validate_scope(job,job_pin,scope,config):\n    round_contract().install_pair(job,globals())\n"
+    },
+    {
+      "old": "    native_pin=config['native_job'];job=read(native_pin);directory=Path(native_pin['path']).parent",
+      "new": "    native_pin=config['native_job'];job=read(native_pin);directory=Path(native_pin['path']).parent\n    round_contract().install_pair(job,globals())"
+    },
+    {
+      "old": "        main=read(job['main_binding']);protocol=read(job['main_health_protocol']);family=read(job['source_family_manifest'])\n        health_engine=modules['main_health_engine'];prefix=modules['main_prefix_validator']\n        require(family['runtime']==job['runtime']and family['leg_reviewer']==h.pin(__file__)\n            and config['sources']['main_health_engine']==protocol['health_job']['sources']['full_health_engine']\n            and config['sources']['main_prefix_validator']==family['main_prefix_validator']\n            and protocol['health_job']['binding']==job['main_binding']\n            and set(protocol['health_job']['sources'])==set(runtime.HEALTH_DEPENDENCIES)\n            and all(protocol['health_job']['sources'][key]['sha256']==sha\n                for key,sha in runtime.HEALTH_DEPENDENCIES.items()),\n            'Original immutable main-health engine/family/physical binding differs')\n        prior_groups=prefix.verified_groups(job,protocol,family,read,h)\n        closed_main=read(result['main_health_report'])\n        require(closed_main['schema']=='robotron-owned-main-full-health-closed-report-v3'\n            and closed_main['status']=='ORIGINAL_LIVE_TRANSPORT_AND_FULL_HEALTH_CLOSED_NOT_SCIENTIFIC'\n            and closed_main['health_job']==protocol['health_job']\n            and closed_main['actual_status']==result['main_samples']\n            and closed_main['writer']['all_original_samples_persisted']is closed_main['writer']['thread_stopped']is True\n            and len(main['held_hashes'])==197\n            and 0<len(closed_main['samples'])<=112000,'Original full main-health writer/source/ceiling evidence incomplete')\n        require(config['sources']['main_observer_reviewer']==family['main_observer']['reviewer'],\n            'Original independent observer-review source differs')\n        observer_checked=modules['main_observer_reviewer'].verify(job,native_pin,owner,controller_config['argv'],\n            result['main_observer_lifecycle'],protocol,family,prior_groups,read,h)\n        require(observer_checked['closed_report']==result['main_health_report'],\n            'Native and independent worker closure reports differ')\n        worker_life=read(result['main_observer_lifecycle'])\n        worker_fields=rt.archived_closure(read(worker_life['worker_closure']),read(worker_life['worker_owner']),read,exit_zero=True)\n        require(started<=result['native_started_monotonic_s']<=closed_main['guard_started_monotonic_s']\n            and result['native_deadline_monotonic_s']==result['native_started_monotonic_s']+job['wall_limit_s']\n            and closed_main['guard_ended_monotonic_s']<=result['native_deadline_monotonic_s']\n            and started<=int(worker_fields['ExecMainStartTimestampMonotonic'])/1e6\n            <int(worker_fields['ExecMainExitTimestampMonotonic'])/1e6<=ended,\n            'Original separate worker did not stay inside the native interval/deadline')\n        report['main_observer_independently_verified']=observer_checked\n        raw_main=health_engine.replay(protocol['health_job'],closed_main['samples'],\n            read(closed_main['initial_cursors']),read,h,prior_groups=prior_groups,\n            original_statuses=closed_main['actual_status'])\n        require(raw_main['transport']==closed_main['transport']and raw_main['deep_samples']==closed_main['deep_samples']\n            and started<=closed_main['guard_started_monotonic_s']<=raw_main['first_deep_monotonic_s']\n            <=raw_main['last_deep_monotonic_s']<=closed_main['guard_ended_monotonic_s']<=ended\n            and raw_main['first_deep_monotonic_s']-started<=30\n            and ended-raw_main['last_deep_monotonic_s']<=30\n            and raw_main['final_learner_frames']>raw_main['first_learner_frames']\n            and raw_main['final_training_steps']>raw_main['first_training_steps'],\n            'Original complete raw main-health replay, native interval or learning progress differs')\n        require(closed_main['guard_ended_monotonic_s']-closed_main['guard_started_monotonic_s']<=22260,\n            'Original main-health coverage exceeds the selected native unit bound')\n        initial_pin=result['initial_main_readiness']\n        require(initial_pin['path']==str(out/'original-initial-main-readiness.json'),\n                'Original readiness receipt path escaped')\n        initial_checked=validate_initial_readiness(read(initial_pin),initial_pin,job,native_pin,raw_main,\n            h.pin(out/'original-loaded-policy.json'),admission,started,ended)\n        report['initial_main_readiness_verified']=initial_checked\n        report.update(main_health_raw_replay=raw_main,\n            main_health_case_roles=list(ROLES)[:list(ROLES).index(job['quality_leg'])+1],\n            main_health_engine=config['sources']['main_health_engine'],source_family_manifest=job['source_family_manifest'])\n        health=dict(raw_report=result['main_health_report'],raw_samples=len(closed_main['samples']),\n            physical_censuses=raw_main['deep_samples'],budget=raw_main['transport']['budget'])\n",
+      "new": "        checked_health=round_contract().review_health(job,native_pin,result,owner,controller_config,admission,started,ended,read,h)\n        report['main_observer_independently_verified']=checked_health['checked']\n        report['initial_main_readiness_verified']=checked_health['receipt']\n        report.update(main_health_raw_replay=checked_health['checked'],\n            main_health_case_roles=list(ROLES)[:list(ROLES).index(job['quality_leg'])+1],\n            main_health_engine=config['sources']['main_health_engine'],source_family_manifest=job['source_family_manifest'])\n        health=checked_health['health']\n"
+    }
+  ],
+  "private_count_and_life_tail_and_score_predicates_unchanged": true,
+  "exact64_actual_complete_games_already_required_by_both_original_sources": true,
+  "additional_pair_job_minimum_is64": true,
+  "historical_transport_floor50_retained_without_changing_all64_requirement": true
+}

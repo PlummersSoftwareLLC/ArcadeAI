@@ -1,0 +1,45 @@
+{
+  "schema": "robotron-next-bank-hypothesis-diagnostic-first-reviewed2-v1",
+  "status": "SOURCE_ONLY_DIAGNOSTIC_FIRST_NO_TREATMENT_SELECTED",
+  "preserved_prior_manifest": {
+    "sha256": "27cb0e0b429ec13e38a0beeda0c1534e963e4f6a724c09f05d73264d9b5f405f",
+    "bytes": 3589,
+    "mode": "0o444"
+  },
+  "files": {
+    "CLARIFICATION_DIAGNOSTIC_FIRST.txt": {
+      "sha256": "64dacced237f731492f5fbd1518a353054a0dcf3b0bd4fa8ef8afbda1a5faaf4",
+      "bytes": 4235,
+      "mode": "0o444"
+    },
+    "DECISION.txt": {
+      "sha256": "e12d593e4cead795f5ec5549cbfa88f4db7dc03d7de29f954481944ca3cc7f1e",
+      "bytes": 7003,
+      "mode": "0o444"
+    },
+    "evidence.json": {
+      "sha256": "c9f7465a0818c320625160453784c9ed75763d7e19325afb098bb02e9da94429",
+      "bytes": 12374,
+      "mode": "0o444"
+    },
+    "preparation-manifest.json": {
+      "sha256": "27cb0e0b429ec13e38a0beeda0c1534e963e4f6a724c09f05d73264d9b5f405f",
+      "bytes": 3589,
+      "mode": "0o444"
+    },
+    "weighted_row_mass_clarification.json": {
+      "sha256": "21bf26b8dea52be20d49eeb9cd954c66edfd7e1ebe630ffdd9216d7f937729e2",
+      "bytes": 5581,
+      "mode": "0o444"
+    }
+  },
+  "conditional_research_hypotheses": 1,
+  "selected_deployments": 0,
+  "next_step": "Fresh current-phase coefficient calibration; only if justified one isolated per-origin gradient diagnostic. Do not force a floortrial from scalarshares.",
+  "actual_quality_outcome": null,
+  "actual_current_calibration": null,
+  "actual_gradient_geometry": null,
+  "actual_trial": null,
+  "model_or_runtime_or_test_actions": false,
+  "qualification_pass": false
+}

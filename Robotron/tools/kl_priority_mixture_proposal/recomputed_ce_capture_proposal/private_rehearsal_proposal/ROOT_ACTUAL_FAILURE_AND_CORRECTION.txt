@@ -1,0 +1,37 @@
+SOURCE-ONLY FIXTURE CORRECTION — AUTHORITATIVE ACTUAL TEST ADDENDUM
+
+This supersedes the old TEST_FIXTURE_PREFLIGHT wording about no actual test
+failure. That note/v2manifest were frozen before root's actual-result message
+arrived and remain immutable; they are historical preparation, not current
+execution truth. Root ACTUALLY executed52 stdlib methods:18 process+25storage
+PASS,8of9 original contract methods PASS,1fixtureERROR. Child exits[0,0,1].
+Actual original execution-completion15238cf38b1a10e7ac10c864bc9a8051b6db8e8ee43d74f3b5a8a2b8d0ff569b
+and failing contract stderrab70a8f06e8cbae7f3dd950bcda3abd82ac9f821ebaba493a04c4471940c8931
+are copied byte-exact under original-actual-test-failure. Original source62a6,
+all52 original outcomes and source versions remain preserved. This is NOT an
+actual numerical/GPU/controller failure. The author performed no imports,
+compile, tests/default execution, model/numerical/runtime/GPU/service actions.
+
+The failure is exactly absent fake-agent online_net before mocked compile.
+Corrected test_rehearsal_contract_reviewed2.py c351da69719526570af8345a8089fd7436505f9798686c136474f7155c9b2296
+adds only online_net=object(),target_net=object() in that test fixture. Every
+assertion/injection and all9 expected outcomes remain unchanged. Parent90e3,
+worker53ab,lock2887 and frozen v1c37e/v2256617 remain byte-exact. The original
+43 guard tests already passed against those unchanged sources. Root will run
+ONLY the separately named corrected9 tests; no need to rerun the unchanged43.
+Never report the original52 run as passing. If corrected9 pass, describe the
+aggregate as original43+corrected9, with original51pass/1error still preserved.
+
+Future root-owned focused command (same package, no author execution):
+  env -u LD_PRELOAD -u PYTHONPATH CUDA_VISIBLE_DEVICES='' python3 -B -m unittest \
+    Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.private_rehearsal_proposal.test_rehearsal_contract_reviewed2
+Root's isolated -I explicit-sys.path private wrapper is also valid and should
+assert exactly9 cases, no skips, and no Torch/NumPy modules before/after.
+Do NOT use automatic discovery over both old and corrected contract modules.
+Retain actual exit/source/log evidence before releasing the exact test unit.
+
+No parent aggregate patch is included. Recompute phase already labels CE-only
+comparison_scope and aggregate limitations forbid parity/learning/lifecycle
+claims. Root must use the explicit ConditionalCE/no-four-output-parity label
+in future actual result closure. GPU rehearsal is still unexecuted and384M
+capture/fresh quality have priority; no watcher operation is authorized here.

@@ -1,0 +1,38 @@
+{
+  "actual_final_gate_or_publication_execution": null,
+  "author_runtime_PT_tests_imports_actions": false,
+  "created_utc": "2026-10-17T09:50:47.859236+00:00",
+  "files": {
+    "FINALIZATION.json": {
+      "bytes": 5159,
+      "mode": "0o444",
+      "sha256": "dd50b54f8adeaada7183b3cd58a5631afeaaa4eb1423d558c03cad02cbdd1705"
+    },
+    "RUNBOOK.txt": {
+      "bytes": 6521,
+      "mode": "0o444",
+      "sha256": "ca014a91ba1b24be85a21416e2fabcd6351695280d1d38e67299dfc254f201a8"
+    }
+  },
+  "generic_helper_changes": false,
+  "schema": "robotron-quality448-finalization-source-preparation-v1",
+  "source_readback": {
+    "actual448_per_leg_auditor": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality448M-original-row-leg-audit-preparation-20261017/audit_completed_leg.py",
+      "sha256": "2576d4449b12d6b4a3b17898ab9938c6ff8c762829f61a29e3d510f73d585c21"
+    },
+    "generic_protect": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/protect_quality_winner.py",
+      "sha256": "e45965d3057ec8542ab2b05fd2250209e53986a0977fbb1294aa54f64a11f0f0"
+    },
+    "old384_adoption_carrier": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-managed-incumbent-adoption-root-20261017/root-adoption-controller.py",
+      "sha256": "f1b737fa0b9af27dc81d40145ab518109ab6352cdd1ce105c9ace42b3729b65a"
+    },
+    "old384_publication_carrier": {
+      "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/quality384M-protected-publication-root-20261017/root-publication-controller.py",
+      "sha256": "21e0db730b21ac510c9604dad453bb95436c1e117f04fc60479d8c4275fb5c40"
+    }
+  },
+  "status": "SOURCE_ONLY_DECLARATIVE_NO_FINAL_GATES_INFERRED"
+}

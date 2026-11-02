@@ -1,0 +1,11 @@
+--- a/Robotron/tools/run_frozen_sidecar.py
++++ b/Robotron/tools/run_frozen_sidecar.py
+@@ -365,7 +365,7 @@
+              GAME / "Scripts/main.lua", GAME / "Scripts/robotron_socket_wait.c"]
+     paths.extend(GAME / "Scripts/dqn" / name for name in (
+         "config.py", "model.py", "actor_tags.py", "socket_server.py", "game_journal.py",
+-        "managed_measurement.py", "inference_actor.py", "nstep_buffer.py"))
++        "managed_measurement.py", "inference_actor.py", "nstep_buffer.py", "rejected_gap_telemetry.py"))
+     return {str(path.relative_to(GAME)): sha256(path) for path in paths}
+ 
+ 

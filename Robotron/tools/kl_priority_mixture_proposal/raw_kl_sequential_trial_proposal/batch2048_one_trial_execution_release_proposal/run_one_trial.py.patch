@@ -1,0 +1,72 @@
+--- frozen/run_one_trial.py
++++ execution_release/run_one_trial.py
+@@ -1,4 +1,4 @@
+-"""One UNCONSUMED CE2048 batch trial; literal PLAN and explicit launch refusal.
++"""One explicitly bound CE2048 trial; literal PLAN and actual proof-gated execution.
+ 
+ The separate deadline_guard invocation must be armed first. This controller
+ performs no automatic trial/candidate/CPU retry and never boots older bytes.
+@@ -21,12 +21,10 @@
+ import traceback
+ 
+ SCHEMA = 'robotron-one-ce-batch2048-trial-job-v1'
+-EXECUTION_BLOCKERS = ('typed producer/phase-insurance transport awaits final source and guard validation',
+-    'current private CE2048 numerical readiness is unbound',
+-    'future actual root precommit and owner/checkpoint bindings are unbound')
+-
+-ADAPTER = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_phase_lifecycle_integration_reviewed3_proposal/run_CE_batch_transition.py')
+-ADAPTER_SHA = '6c46d9b107b5a5a9557079b4195fe47fa034a84c47e677948fac6ceae6a9004e'
++EXECUTION_BLOCKERS = ()  # Actual proof validation below replaces the preserved unconditional refusal.
++
++ADAPTER = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_proposal/run_CE_batch_transition.py')
++ADAPTER_SHA = 'bbdbce10635cc9c729c6805e101f3d1c492f15ce24edb06eb95e53dc0c6d1739'
+ HORIZON = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_profile_horizon_proposal/horizon_observer2048.py')
+ HORIZON_SHA = 'e8809615c3a837da3400f56d58ecdbfd59b13b83c574c65643731afe8b13a124'
+ EARLY_PATH = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_early_phase_insurance_proposal/early_phase_insurance.py')
+@@ -35,6 +33,25 @@
+ PLAN = 'PLAN_ONLY_UNCONSUMED_CE2048: no reads/helper imports/runtime/actions'
+ JOURNAL_BYTES = 32 << 20
+ 
++
++
++RELEASE_VALIDATOR = Path('/home/dave/source/repos/ArcadeAI/Robotron/tools/kl_priority_mixture_proposal/raw_kl_sequential_trial_proposal/batch2048_one_trial_execution_release_proposal/execution_readiness.py')
++RELEASE_VALIDATOR_SHA = 'c01e71f00345f64996b469ff7b7a257a2e73e7d8e016914bc8225d3647df321f'
++
++def execution_readiness():
++    require(RELEASE_VALIDATOR==RELEASE_VALIDATOR.resolve(strict=True) and not RELEASE_VALIDATOR.is_symlink(),
++        'Noncanonical execution prerequisite helper')
++    before=RELEASE_VALIDATOR.stat()
++    require(before.st_uid==os.getuid() and before.st_nlink==1 and before.st_mode&0o777==0o444
++        and 0<before.st_size<=1<<20,'Execution prerequisite helper must be owned readonly source')
++    data=RELEASE_VALIDATOR.read_bytes()
++    stamp=lambda value:(value.st_dev,value.st_ino,value.st_size,value.st_mtime_ns,value.st_ctime_ns,value.st_uid,value.st_nlink,value.st_mode)
++    require(stamp(RELEASE_VALIDATOR.stat())==stamp(before) and hashlib.sha256(data).hexdigest()==RELEASE_VALIDATOR_SHA,
++        'Execution prerequisite validator source differs')
++    spec=importlib.util.spec_from_file_location('_CE2048_actual_execution_readiness',RELEASE_VALIDATOR)
++    module=importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(module)
++    return module
+ 
+ def require(value, message):
+     if not value:
+@@ -433,7 +450,8 @@
+     core = dict(schema='robotron-ce-batch2048-owned-return-intent-v1', mode='return_batch4096',
+         phase_id=intent['phase_id'], trial_core=activation['trial_core'], batch_profile=trial['profile'],
+         activation_owner=activation['owner'], original_start=activation['start_request'],
+-        decision=decision_pin, phase_early_insurance_result=early['result_pin'])
++        decision=decision_pin, phase_early_insurance_result=early['result_pin'],
++        execution_prerequisites=trial['execution_prerequisites'])
+     core_pin = base.publish(root / 'return-intent-core.json', core)
+     result.update(mode='return_batch4096', before=before, phase_id=intent['phase_id'],
+         request_id=intent['request_id'], startup_tag=intent['startup_tag'],
+@@ -740,9 +758,9 @@
+     args = parser.parse_args(argv)
+     if not args.execute:
+         print(PLAN); return 0
+-    require(not EXECUTION_BLOCKERS, 'UNCONSUMED CE2048: ' + '; '.join(EXECUTION_BLOCKERS))
+     require(args.job and args.expected_job_sha256 and args.expected_controller_sha256
+         and args.expected_armed_sha256, 'Explicit actual root bindings required')
++    execution_readiness().preflight_trial(args.job,args.expected_job_sha256,__file__,args.expected_controller_sha256)
+     require(not any(name == 'torch' or name.startswith(('torch.', 'numpy', 'dqn')) for name in sys.modules),
+         'Fresh stdlib-only parent required')
+     # Authenticate the sibling as data before its first import. The independent

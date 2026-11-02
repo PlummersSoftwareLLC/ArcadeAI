@@ -1,0 +1,62 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window02-D6-selected-metadata600-original01-preparation/closed-metadata-reuse-guard-original01-preparation/closed_metadata_readiness_reuse_D6_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-window03-D7-selected-metadata600-original01-preparation/closed-metadata-reuse-guard-template-original01-preparation/closed_metadata_readiness_reuse_D7_v3.py
+@@ -22,7 +22,7 @@
+     return value
+ 
+ 
+-SOURCE_CONTRACT_SHA = '51dba1d3150db4af359b57dec6c5d29e23d3b2ae4a360dfde5a7ee16d5dc0ecc'
++SOURCE_CONTRACT_SHA = None  # UNFILLED; this template cannot qualify or prepare a guard.
+ 
+ 
+ class ClosedMetadataReadiness:
+@@ -30,18 +30,18 @@
+         self.h, self.phase = h, phase
+         self.authority_pin = cpu_job['closed_metadata_readiness_authority']
+         a = self.read(self.authority_pin) if authority is None else authority
+-        require(a['schema'] == 'robotron-D6-closed-metadata-and-raw-readiness-predicate-reuse-authority-v2', 'Exact reuse authority required')
++        require(a['schema'] == 'robotron-D7-closed-metadata-and-raw-readiness-predicate-reuse-authority-v3', 'Exact reuse authority required')
+         self.a = a
+         policy_pin = cpu_job['closed_metadata_readiness_source_contract']
+         require(policy_pin['sha256'] == SOURCE_CONTRACT_SHA and a['source_contract'] == policy_pin,
+-                'Exact selected D6 source contract required')
++                'Exact selected D7 source contract required')
+         policy = self.read(policy_pin)
+-        require(policy['schema'] == 'robotron-D6-prospective-closed-metadata-guard-source-contract-v1'
+-                and policy['D6_source_family']['sha256'] == '89deb47e7cfa86a432ee46f888fe2ae557d8235b7e5b3870128f200f1493ed3b'
+-                and policy['D6_source_peer']['sha256'] == '6dafa62594430ad4e3f3451fe192bdece04e5ebfe1481e4c3d437e4e606eb8e1'
+-                and policy['raw_samples'] == 3101 and policy['full_main_input_count'] == 247,
+-                'D6 source selection differs')
+-        for key in ('D6_source_family', 'D6_source_peer', 'Native_source_family', 'joint_engineering',
++        require(policy['schema'] == 'robotron-D7-prospective-closed-metadata-guard-source-contract-v1'
++                and policy['D7_source_family']['sha256'] == '19d77e8e7bb8802f006b395b165cd7e85b175c7e70f71dbebb4e0404f82a3f35'
++                and policy['Native_source_family']['sha256'] == 'ab870d1e08ddc27a7ed6456ce4a3be821fc247829c867a94f8c4db96947ff0ef'
++                and type(policy['raw_samples']) is int and policy['raw_samples'] >= 3000 and policy['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1' and policy['maximum_gap_s'] == 2.0 and policy['full_main_input_count'] == 247,
++                'D7 source selection differs')
++        for key in ('D7_source_family', 'core_source_peer', 'Native_source_family', 'joint_engineering',
+                     'metadata_driver', 'metadata_preparer', 'metadata_contract', 'metadata_closer',
+                     'raw_review', 'raw_reviewer', 'lifecycle', 'worker_job', 'outcome', 'reader', 'archive'):
+             require(a[key] == policy[key], 'Selected new source differs: ' + key)
+@@ -89,19 +89,19 @@
+         require(Path(a['native_prepared']['path']).parent == Path(policy['future_study_directory'])
+                 and all(row['runtime'] == policy['native_runtime']
+                         and row['native_controller'] == policy['native_controller'] for row in prepared['cases']),
+-                'Only the selected D6 exact four subjects may be reused')
++                'Only the selected D7 exact four subjects may be reused')
+         self.subjects = [(row['leg'], self.read(row['native_job'])) for row in prepared['cases']]
+         self.raw = self.read(a['raw_review'])
+         require(self.raw['status'] == 'PASS' and self.raw['lifecycle'] == a['lifecycle']
+                 and self.raw['original_job'] == a['worker_job'] and self.raw['full_main_input_count'] == 247
+-                and self.raw['accepted_samples'] == a['raw_samples'] == 3101
++                and self.raw['accepted_samples'] == a['raw_samples'] == policy['raw_samples']
+                 and self.raw['raw_API_and_TCP_and_retirement_snapshots_replayed'] is True
+-                and self.raw['legacy_500ms_evidence_and_projection_gaps_verified'] is True,
++                and self.raw['accepted_evidence_and_projection_gaps_verified'] is True and self.raw['proof_gap_contract'] == 'robotron-main-proof-gap-2s-v1' and self.raw['verified_maximum_gap_s'] == 2.0,
+                 'Actual full raw readiness predicates required')
+         life = self.read(a['lifecycle'])
+         require(life['worker_job'] == a['worker_job'] and life['outcome'] == a['outcome'], 'Original readiness lifecycle differs')
+         outcome = self.read(a['outcome'])
+-        require(len(outcome['samples']) == 3101, 'Original raw corpus count differs')
++        require(len(outcome['samples']) == a['raw_samples'], 'Original raw corpus count differs')
+         self.samples = outcome['samples']
+         self.counts = dict(semantics_reused_from_closed_metadata=0, raw_full_integrity_passes=0)
+         phase('closed_metadata_authority_validated', samples=len(self.samples))

@@ -1,0 +1,32 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-immutable-bootstrap-live-pidfd-original04/run_immutable_bootstrap_live_pidfd_health_focused_CPU_v5.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-live-pidfd-current-EVAL-quiescence-original05/run_current_EVAL_quiescence_health_focused_eight_CPU_v5.py
+@@ -34,7 +34,7 @@
+     source=pin(Path(__file__).resolve());require(source['sha256']==args.source_sha256,'Exact CPU driver required')
+     jp=pin(Path(args.job).resolve());require(jp['sha256']==args.job_sha256,'Exact original CPU job required')
+     job=json.loads(Path(jp['path']).read_bytes())
+-    require(job['schema']=='robotron-immutable-bootstrap-live-pidfd-focused-original-CPU-job-v4'
++    require(job['schema']=='robotron-current-EVAL-quiescence-focused-original-CPU-job-v5'
+         and job['source']==source and job['original_attempt']==1 and job['no_retry']is True,
+         'One exact original prospective CPU fixture job required')
+     for value in job['inputs']:
+@@ -52,16 +52,16 @@
+                 raise RuntimeError('No model/ROM/MAME body access in focused fixture')
+     sys.addaudithook(audit)
+     fixture=job['fixture'];require(pin(fixture['path'])==fixture,'Exact fixture file required')
+-    spec=importlib.util.spec_from_file_location('_immutable_bootstrap_live_pidfd_health_fixture',fixture['path'])
++    spec=importlib.util.spec_from_file_location('_current_EVAL_quiescence_health_fixture',fixture['path'])
+     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+     suite=unittest.defaultTestLoader.loadTestsFromTestCase(module.Tests)
+-    require(suite.countTestCases()==6,'Six focused methods required; no inherited suite rerun')
+-    print(json.dumps(dict(phase='FOCUSED_IMMUTABLE_BOOTSTRAP_LIVE_PIDFD_V4',methods=6)),flush=True)
++    require(suite.countTestCases()==8,'Eight focused methods required; no inherited suite rerun')
++    print(json.dumps(dict(phase='FOCUSED_CURRENT_ONCE_ONLY_EVAL_QUIESCENCE_V5',methods=8)),flush=True)
+     result=unittest.TextTestRunner(stream=sys.stdout,verbosity=2).run(suite)
+     for value in job['inputs']:
+         require(pin(value['path'])==value,'Fixture source changed during original CPU run')
+     require('torch'not in sys.modules,'Torch unexpectedly imported')
+-    report=dict(schema='robotron-immutable-bootstrap-live-pidfd-focused-original-CPU-report-v4',status='PASS'if result.wasSuccessful()else'FAIL',
++    report=dict(schema='robotron-current-EVAL-quiescence-focused-original-CPU-report-v5',status='PASS'if result.wasSuccessful()else'FAIL',
+         original_job=jp,actual_PID=os.getpid(),source=source,fixture=fixture,
+         tests_run=result.testsRun,failures=[str(t)for t,_ in result.failures],errors=[str(t)for t,_ in result.errors],
+         elapsed_s=time.monotonic()-started,Torch_imported=False,GPU_or_MAME_launched=False,

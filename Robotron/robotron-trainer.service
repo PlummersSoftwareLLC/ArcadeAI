@@ -1,0 +1,13 @@
+[Unit]
+Description=Robotron inference and training on GB300
+After=network-online.target
+[Service]
+Type=simple
+KillSignal=SIGINT
+WorkingDirectory=/home/dave/source/repos/ArcadeAI/Robotron
+ExecStart=/home/dave/source/repos/ArcadeAI/Robotron/starttrainer.sh
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=180
+[Install]
+WantedBy=default.target

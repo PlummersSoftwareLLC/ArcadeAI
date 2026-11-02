@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/tools/post_recovery_evaluation/review_round_study_readiness_v2.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/durable-e078-R1-owned-launch-original01-preparation/review_round_study_readiness_v2.py
+@@ -9,7 +9,7 @@
+ import subprocess
+ import time
+ 
+-ROOT = Path(__file__).resolve().parents[2]
++ROOT = Path('/home/dave/source/repos/ArcadeAI/Robotron')
+ HERE = Path(__file__).resolve().parent
+ 
+ 

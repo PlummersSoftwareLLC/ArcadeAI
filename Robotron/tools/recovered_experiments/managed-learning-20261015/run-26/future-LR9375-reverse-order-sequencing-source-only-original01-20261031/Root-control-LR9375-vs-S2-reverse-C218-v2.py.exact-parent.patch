@@ -1,0 +1,11 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/hot-LR9375-applied120k-replay40M-learner32M-original01-20261031/future-LR9375-frozen-screen-controller-source-only-original01/Root-control-LR9375-vs-S2-C218-v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-LR9375-reverse-order-sequencing-source-only-original01-20261031/Root-control-LR9375-vs-S2-reverse-C218-v2.py
+@@ -65,7 +65,7 @@
+ def checked_config(config):
+     c = json.loads(Path(config).read_text())
+     require(set(c) == {'unit', 'output', 'argv', 'properties', 'pins', 'observation_s'}, 'Exact six-field compiled full-tail32 config required')
+-    require(c['unit'] in {'robotron-LR9375-S2-fixedcutoff-score-'+leg+'-original01-20261031.service' for leg in ('r1','c1')}, 'Exact private compiled full-tail32 namespace required')
++    require(c['unit'] in {'robotron-LR9375-S2-reverse-fixedcutoff-score-'+leg+'-original01-20261031.service' for leg in ('r1','c1')}, 'Exact private compiled full-tail32 namespace required')
+     props = dict((x.split('=', 1) for x in c['properties']))
+     require(len(props) == len(c['properties']) and props == dict(CPUQuota='1200%', MemoryMax='24G', MemorySwapMax='0', RuntimeMaxSec='4260', TasksMax='512', TimeoutStopSec='30', KillMode='mixed', SendSIGKILL='no'), 'Exact bounded compiled32 resources required')
+     require(type(c['observation_s']) is int and c['observation_s'] == 4320, 'Fixed original runtime/shutdown observation required')

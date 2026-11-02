@@ -1,0 +1,72 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/verify_current_continuous_stopped_fullstate_mixed_bank_v6.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-current-main-cold-cap-state-preservation-original01-20261030/current-A2-LR9375-route-source-only-original01-20261031/verify_current_continuous_stopped_fullstate_A2_LR9375_v7.py
+@@ -1,4 +1,4 @@
+-"""Strict stopped .0625 CE checkpoint/ring/bank preservation; default inert.
++"""Strict stopped .1875 CE checkpoint/ring/bank preservation; default inert.
+ 
+ Root alone creates the actual job after owned stop. This verifier never starts,
+ stops, signals, installs, saves a model, changes controls or admits actors. The
+@@ -102,7 +102,7 @@
+     """Bind one actual cold incarnation; no old owner/boot/phase is relabelled."""
+     global OWNER, FLEET, PHASE_ANCHOR_SHA, BOOT_SHA, RECORD_SHA
+     entry=job['current_inputs_source']
+-    require(entry['path']==str(Path(__file__).with_name('current_main_preservation_inputs_mixed_bank_v3.py')),
++    require(entry['path']==str(Path(__file__).with_name('current_main_preservation_inputs_A2_LR9375_v4.py')),
+             'Exact selected current preservation metadata source required')
+     helper=load('_current_continuous_preservation_inputs',entry)
+     selection=helper.read(job['current_selection'])
+@@ -119,16 +119,18 @@
+ 
+ 
+ def select_current_recipe(job,recipe):
+-    """Same strict tensor/numerical body, exact selected .0625 cap8/12 literals."""
++    """Same strict tensor/numerical body, exact selected .1875 cap8/12 literals."""
+     context=job['source_control_context']['held_recipe_context'];cap=job['expected_current_cap']
+-    expected=dict(recipe.HISTORICAL_HELD_CONTEXT,learning_control_lr_scale=.0625,
+-                  optimizer_lr=3.125e-6,max_samples_per_frame=cap)
++    expected=dict(recipe.HISTORICAL_HELD_CONTEXT,learning_control_lr_scale=.1875,
++                  optimizer_lr=5e-5*.1875,max_samples_per_frame=cap)
+     require(type(cap)is int and cap in(8,12) and context==expected
+             and set(context)==set(expected)and all(type(context[k])is type(v)for k,v in expected.items()),
+             'All held recipe fields must match; only selected cold cap8/12 is variable')
+     data=recipe.STRICT_PATH.read_bytes()
+     require(hashlib.sha256(data).hexdigest()==recipe.STRICT_SHA256,'Original strict body changed')
+-    replacements=list(recipe.RECIPE_REPLACEMENTS)
++    replacements=[(b'learning_control_lr_scale=.5,',b'learning_control_lr_scale=.1875,'),
++        (b'optimizer_lr=2.5e-5,',b'optimizer_lr=5e-5*.1875,'),
++        (b"control['lr_scale'] == .5",b"control['lr_scale'] == .1875")]
+     if cap==12:replacements.extend([(b'max_samples_per_frame=8,',b'max_samples_per_frame=12,'),
+         (b"DQN_MAX_SAMPLES_PER_FRAME='8',",b"DQN_MAX_SAMPLES_PER_FRAME='12',")])
+     effective=data
+@@ -142,8 +144,8 @@
+     exec(compile(effective,str(recipe.STRICT_PATH)+'::current-cold-cap-'+str(cap),'exec'),selected.__dict__)
+     require(selected.HELD_RECIPE_CONTEXT==context,'Effective strict context differs')
+     return selected,dict(schema='robotron-phase-CPU-recipe-source-specialization-v1',
+-        selected_recipe=dict(priority_metric='ce',batch_size=4096,learning_control_lr_scale=.0625,
+-            scheduled_lr=3.125e-6,max_samples_per_frame=cap),
++        selected_recipe=dict(priority_metric='ce',batch_size=4096,learning_control_lr_scale=.1875,
++            scheduled_lr=5e-5*.1875,max_samples_per_frame=cap),
+         full_held_recipe_context=copy.deepcopy(context),raw_strict_source_sha256=recipe.STRICT_SHA256,
+         effective_source_sha256=hashlib.sha256(effective).hexdigest(),
+         literal_replacements=[dict(original=a.decode(),effective=b.decode())for a,b in replacements],
+@@ -245,7 +247,7 @@
+         and 0<api['ts']<=authority['stopped_unix_s'],'Actual stopped chronology differs')
+     require(api['client_count']==0 and api['client_rows']==[] and api['training_enabled']is True
+         and api['measurement_active']is False and api['memory_buffer_size']==6000000
+-        and api['lr']==3.125e-6 and api['managed_experiment']==job['experiment']
++        and api['lr']==5e-5*.1875 and api['managed_experiment']==job['experiment']
+         and api['pipeline_read_error']==api['bank_persistence_read_error']=='','Final zero-client supported pause/recipe required')
+     require(seal['input_sources_sealed']is seal['all_handlers_finished']is seal['budget_exhausted']is True
+         and seal['prefetch_paused_claimed']is False,
+@@ -452,9 +454,9 @@
+         'Actual restored startup descriptor required; no new CPU report is fabricated')
+     recipe=deps['recipe_verifier']
+     base,specialization=select_current_recipe(job,recipe)
+-    require(specialization['selected_recipe']['learning_control_lr_scale']==.0625
++    require(specialization['selected_recipe']['learning_control_lr_scale']==.1875
+         and specialization['selected_recipe']['max_samples_per_frame']==job['expected_current_cap'],
+-        'Exact .0625 selected current-cap recipe required')
++        'Exact .1875 selected current-cap recipe required')
+     output=Path(job['output_directory'])
+     require(output.is_absolute()and output.resolve(strict=False)==output and not output.exists()
+         and output.parent.is_dir(),'Exclusive new Root output required')

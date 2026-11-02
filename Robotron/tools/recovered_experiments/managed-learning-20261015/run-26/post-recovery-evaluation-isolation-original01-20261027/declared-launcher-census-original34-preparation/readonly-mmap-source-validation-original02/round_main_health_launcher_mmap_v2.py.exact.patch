@@ -1,0 +1,44 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/round_main_health_launcher_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/declared-launcher-census-original34-preparation/readonly-mmap-source-validation-original02/round_main_health_launcher_mmap_v2.py
+@@ -9,6 +9,8 @@
+ import csv
+ import importlib.util
+ import json
++import mmap
++import stat
+ import os
+ from pathlib import Path
+ import subprocess
+@@ -71,7 +73,10 @@
+ 
+ 
+ def file_identity(path):
+-    info = path.stat()
++    return stat_identity(path.stat())
++
++
++def stat_identity(info):
+     return dict(device=info.st_dev, inode=info.st_ino, bytes=info.st_size,
+                 mtime_ns=info.st_mtime_ns, ctime_ns=info.st_ctime_ns,
+                 mode=oct(info.st_mode & 0o777), uid=info.st_uid, nlink=info.st_nlink)
+@@ -84,8 +89,18 @@
+                 and file_identity(actual) == value['identity'], 'Held input identity changed: ' + path)
+         if full:
+             with actual.open('rb') as stream:
+-                require(hashlib.file_digest(stream, 'sha256').hexdigest() == value['sha256'],
+-                        'Held input bytes changed: ' + path)
++                info = os.fstat(stream.fileno())
++                require(stat.S_ISREG(info.st_mode) and stat_identity(info) == value['identity'],
++                        'Held source must remain the selected regular file: ' + path)
++                if info.st_size:
++                    with mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ) as view:
++                        digest = hashlib.sha256(view).hexdigest()
++                else:
++                    digest = hashlib.sha256(b'').hexdigest()
++                require(digest == value['sha256'], 'Held input bytes changed: ' + path)
++                require(not actual.is_symlink() and file_identity(actual) == value['identity']
++                        and stat_identity(os.fstat(stream.fileno())) == value['identity'],
++                        'Held input changed during full hash: ' + path)
+ 
+ 
+ def completed_round(directory, journal):

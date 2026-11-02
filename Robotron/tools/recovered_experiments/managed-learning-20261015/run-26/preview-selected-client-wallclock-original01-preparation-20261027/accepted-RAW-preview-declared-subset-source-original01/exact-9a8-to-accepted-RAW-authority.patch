@@ -1,0 +1,149 @@
+--- 9a8-corrected-authority.py
++++ accepted-RAW-authority.py
+@@ -1,11 +1,14 @@
+ """Source-only post-trial exec component; default CLI has no action.
+ 
+ INPUT always remains the original supervisor's oldLua/env0 contract. Accepted
+-OUTPUT is507f/env1; rollback OUTPUT is060f/env1 under a NEW one-use permit.
++OUTPUT is selected RAWcbd810/env1 only after actual27FPS/budget qualification;
++rollback OUTPUT is060f/env1 under a NEW one-use permit. Cached INPUT manifest
++still has its original507 target authority and is returned UNCHANGED.
+ ROOT authenticates modules/immutable selection and supplies future actual facts.
+ """
+ import argparse
+ import hashlib
++import math
+ import os
+ from pathlib import Path
+ import stat
+@@ -14,7 +17,8 @@
+ 
+ ACCEPT = 'ACCEPTED_PERSISTENT_PREVIEW_SLOT163'
+ ROLLBACK = 'ONE_USE_ORIGINAL_LUA_EVAL_PRESERVING_ROLLBACK_SLOT163'
+-PREVIEW_SHA = '507f3f5a799d49791d2c6cbca3f4600167a166c4a410723d4d29225d18b6e0ab'
++PREVIEW_SHA = 'cbd8109f8d62f65c26c38ea91c73b3285fda0812895ee5e5fbf4e8565afedbd1'
++RAW_WIRE_POLICY = dict(format=1, name='raw_rgb565be', RLE_enabled=False)
+ ORIGINAL_SHA = '060f838359d35ef6c87b96dfe02ad34618ef974d5a43fefcb74320ebe9deecaf'
+ 
+ 
+@@ -51,10 +55,45 @@
+     return directory
+ 
+ 
++def validate_RAW_benchmark(authority, selection, read):
++    """Prospective strict27FPS/one-percent gate; no practical fallback."""
++    require(authority['wire_policy'] == RAW_WIRE_POLICY
++            and authority['benchmark_verdict'] is not None,
++            'Actual RAW operational verdict is unfilled')
++    verdict = read(authority['benchmark_verdict'])
++    require(verdict['schema'] == 'robotron-root-selected-RAW-preview-operational-benchmark-verdict-v1'
++            and verdict['accepted'] is True
++            and verdict['selected_target'] == authority['output_lua']
++            and verdict['wire_policy'] == RAW_WIRE_POLICY
++            and verdict['actual_output_binding'] == selection['accepted_output_binding']
++            and verdict['actual_benchmark_report'] is not None,
++            'Actual immutable RAW target/binding/report verdict differs')
++    require(verdict['benchmark_target_fps'] == 30 and verdict['minimum_fresh_cache_fps'] == 27
++            and verdict['both_ON_windows_target_met'] is True
++            and verdict['useful_throughput_within_one_percent_point_budget'] is True,
++            'Original30FPS target/27FPS threshold/one-percent point budget not qualified')
++    observed = verdict['observed_ON_fresh_cache_fps']
++    change = verdict['relative_useful_throughput_point_change']
++    require(type(observed) is list and len(observed) == 2
++            and all(type(v) in (int, float) and math.isfinite(v) and v >= 27 for v in observed)
++            and type(change) in (int, float) and math.isfinite(change) and change >= -0.01,
++            'Actual two ON rates or useful-throughput point estimate failed')
++    report = read(verdict['actual_benchmark_report'])
++    require(report['schema'] == 'robotron-root-selected-RAW-preview-operational-benchmark-report-v1'
++            and report['selected_target'] == verdict['selected_target']
++            and report['wire_policy'] == verdict['wire_policy']
++            and report['actual_output_binding'] == verdict['actual_output_binding']
++            and report['observed_ON_fresh_cache_fps'] == observed
++            and report['relative_useful_throughput_point_change'] == change
++            and report['actual_raw_benchmark_evidence'] is not None,
++            'Actual benchmark report/criteria join differs')
++    read(report['actual_raw_benchmark_evidence'])
++
++
+ def validate_authority(authority, read, base):
+     require(set(authority) == {'schema', 'mode', 'root_selection', 'fresh_parent_snapshot',
+             'supervisor_owner', 'supervisor_process', 'prior_actor', 'base_manifest',
+-            'output_lua', 'claim_directory'}
++            'output_lua', 'claim_directory', 'wire_policy', 'benchmark_verdict'}
+             and authority['schema'] == 'robotron-slot163-posttrial-output-authority-v1'
+             and authority['mode'] in (ACCEPT, ROLLBACK), 'Exact163 post-trial authority required')
+     require(all(authority[key] is not None for key in
+@@ -67,7 +106,9 @@
+             and selection['base_manifest'] == authority['base_manifest']
+             and selection['output_lua'] == authority['output_lua']
+             and selection['fresh_parent_snapshot'] == authority['fresh_parent_snapshot']
+-            and selection['prior_actor'] == authority['prior_actor'], 'ROOT selection differs')
++            and selection['prior_actor'] == authority['prior_actor']
++            and selection['wire_policy'] == authority['wire_policy']
++            and selection['benchmark_verdict'] == authority['benchmark_verdict'], 'ROOT selection differs')
+     release = read(selection['root_freeze_release'])
+     require(release['schema'] == 'robotron-root-fixed03-preview-freeze-release-v1'
+             and release['all_four_legs_qualified'] is True
+@@ -84,12 +125,13 @@
+             'Cached supervisor INPUT is still autoenv0')
+     require(authority['prior_actor']['pid'] > 0 and authority['prior_actor']['starttime_ticks'] > 0,
+             'Exact prior owned process required')
+-    expected_pin = manifest['target_lua'] if authority['mode'] == ACCEPT else manifest['original_lua']
++    expected_pin = authority['output_lua'] if authority['mode'] == ACCEPT else manifest['original_lua']
+     expected_sha = PREVIEW_SHA if authority['mode'] == ACCEPT else ORIGINAL_SHA
+     require(authority['output_lua'] == expected_pin
+             and authority['output_lua']['sha256'] == expected_sha, 'Explicit different output source authority required')
+     base.read_bytes_pin(authority['output_lua'])
+     if authority['mode'] == ACCEPT:
++        validate_RAW_benchmark(authority, selection, read)
+         require(authority['claim_directory'] is None and selection['accepted_output_binding'] is not None,
+                 'Persistent admission needs actual accepted output binding, no trial-fuse rearm')
+         require(selection['operational_benchmark_accepted'] is True,
+@@ -102,16 +144,21 @@
+                 'Accepted output registry/source/role missing')
+         policy = read(binding['supervision_policy'])
+         transition = read(binding['preview_slot163_transition'])
+-        require(transition['schema'] == 'robotron-owned-slot163-readonly-reconciliation-evidence-v1'
++        require(transition['schema'] == 'robotron-owned-slot163-next-output-readonly-reconciliation-evidence-v1'
+                 and transition['actual_eval_preserved'] is True
+                 and transition['original191_exact'] is True
+-                and policy['baseline_actors']['163']['environment']['ROBOTRON_EVAL_MODE'] == '1',
++                and policy['baseline_actors']['163']['environment']['ROBOTRON_EVAL_MODE'] == '1'
++                and policy['baseline_actors']['163']['command'][
++                    policy['baseline_actors']['163']['command'].index('-autoboot_script') + 1]
++                    == authority['output_lua']['path'],
+                 'Actual adopted output policy/transition are missing')
+         actor = next(row for row in binding['actors'] if row['slot'] == 163)
+         require((actor['pid'], actor['starttime_ticks']) ==
+                 (authority['prior_actor']['pid'], authority['prior_actor']['starttime_ticks']),
+                 'Accepted output process differs from prior-process authority')
+     else:
++        require(authority['wire_policy'] is None and authority['benchmark_verdict'] is None,
++                'Original-Lua rollback cannot inherit RAW acceptance')
+         require(authority['claim_directory'] is not None
+                 and selection['closed_trial_outcome'] is not None
+                 and selection['explicit_rollback_selected'] is True,
+@@ -137,13 +184,21 @@
+     return manifest
+ 
+ 
++def accepted_target(authority, read, base):
++    require(authority['mode'] == ACCEPT, 'Only accepted RAW authority supplies fleet target')
++    validate_authority(authority, read, base)
++    return authority['output_lua']
++
++
+ def prepare_output(authority, manifest, args, environment, base):
+     """Reuse original bfff INPUT validation; never forge its fixed507f pin."""
+     command, result_environment = base.prepare_launch(manifest, args, environment)
+     if environment['ROBOTRON_CLIENT_SLOT'] == '163':
+         require(authority['mode'] in (ACCEPT, ROLLBACK), 'Unknown output authority')
+-        expected = manifest['target_lua'] if authority['mode'] == ACCEPT else manifest['original_lua']
+-        require(authority['output_lua'] == expected, 'Wrong explicit source for selected mode')
++        expected = authority['output_lua'] if authority['mode'] == ACCEPT else manifest['original_lua']
++        require(authority['output_lua'] == expected
++                and expected['sha256'] == (PREVIEW_SHA if authority['mode'] == ACCEPT else ORIGINAL_SHA),
++                'Wrong explicit source for selected mode')
+         at = command.index('-autoboot_script') + 1
+         require(command[at] == manifest['target_lua']['path'], 'Frozen base preparation changed')
+         command[at] = expected['path']

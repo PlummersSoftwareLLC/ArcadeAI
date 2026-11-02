@@ -1,0 +1,137 @@
+{
+  "files": [
+    {
+      "original": {
+        "bytes": 4962,
+        "identity": {
+          "bytes": 4962,
+          "ctime_ns": 1792324330299679081,
+          "device": 2304,
+          "inode": 81288102,
+          "mode": "0o444",
+          "mtime_ns": 1792324330271678989,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/recipe.py",
+        "sha256": "6b08943b48da99706b631a98d9ee53d5174ee9cbf4fbe82c2b7279e555e01e3c"
+      },
+      "preserved_copy": {
+        "bytes": 4962,
+        "identity": {
+          "bytes": 4962,
+          "ctime_ns": 1792324882362596558,
+          "device": 2304,
+          "inode": 81288119,
+          "mode": "0o444",
+          "mtime_ns": 1792324882362596558,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/draft-history-common-release-abi-20261018/recipe.py",
+        "sha256": "6b08943b48da99706b631a98d9ee53d5174ee9cbf4fbe82c2b7279e555e01e3c"
+      }
+    },
+    {
+      "original": {
+        "bytes": 27810,
+        "identity": {
+          "bytes": 27810,
+          "ctime_ns": 1792324618613657023,
+          "device": 2304,
+          "inode": 81288103,
+          "mode": "0o444",
+          "mtime_ns": 1792324387319863703,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/verify_recipe_phase_snapshot.py",
+        "sha256": "885f2c04ee7d7958178d35dbb448778917e4b51f43b3a994e8c40e2253514c9e"
+      },
+      "preserved_copy": {
+        "bytes": 27810,
+        "identity": {
+          "bytes": 27810,
+          "ctime_ns": 1792324882364596566,
+          "device": 2304,
+          "inode": 81288120,
+          "mode": "0o444",
+          "mtime_ns": 1792324882364596566,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/draft-history-common-release-abi-20261018/verify_recipe_phase_snapshot.py",
+        "sha256": "885f2c04ee7d7958178d35dbb448778917e4b51f43b3a994e8c40e2253514c9e"
+      }
+    },
+    {
+      "original": {
+        "bytes": 12307,
+        "identity": {
+          "bytes": 12307,
+          "ctime_ns": 1792324618614657027,
+          "device": 2304,
+          "inode": 81288105,
+          "mode": "0o444",
+          "mtime_ns": 1792324503809950802,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/test_recipe_cpu_metadata.py",
+        "sha256": "9a1648528671ab4c658d33435f51d7c2987a252d984cc04be3b891f1bd115950"
+      },
+      "preserved_copy": {
+        "bytes": 12307,
+        "identity": {
+          "bytes": 12307,
+          "ctime_ns": 1792324882365596569,
+          "device": 2304,
+          "inode": 81288121,
+          "mode": "0o444",
+          "mtime_ns": 1792324882365596569,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/draft-history-common-release-abi-20261018/test_recipe_cpu_metadata.py",
+        "sha256": "9a1648528671ab4c658d33435f51d7c2987a252d984cc04be3b891f1bd115950"
+      }
+    },
+    {
+      "original": {
+        "bytes": 10893,
+        "identity": {
+          "bytes": 10893,
+          "ctime_ns": 1792324618615657030,
+          "device": 2304,
+          "inode": 81288111,
+          "mode": "0o444",
+          "mtime_ns": 1792324618615657030,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/recipe-CPU-source-preservation.json",
+        "sha256": "c981173bec310e356871e9750fe797dfe5d8fb2fe750aa3157f5218de614e127"
+      },
+      "preserved_copy": {
+        "bytes": 10893,
+        "identity": {
+          "bytes": 10893,
+          "ctime_ns": 1792324882366596573,
+          "device": 2304,
+          "inode": 81288122,
+          "mode": "0o444",
+          "mtime_ns": 1792324882366596573,
+          "nlink": 1,
+          "uid": 1001
+        },
+        "path": "/home/dave/source/repos/ArcadeAI/Robotron/tools/live_lr_recipe_continuation_proposal/draft-history-common-release-abi-20261018/recipe-CPU-source-preservation.json",
+        "sha256": "c981173bec310e356871e9750fe797dfe5d8fb2fe750aa3157f5218de614e127"
+      }
+    }
+  ],
+  "reason": "Root found genuine release original192actors_preserved is a 192-item identity list, while pre-fix common recipe incorrectly expected True. Preserve old source/note bytes before canonical proposal common-pin correction.",
+  "schema": "robotron-numeric-draft-common-release-ABI-prefixed-preservation-v1",
+  "status": "PRESERVED_UNEXECUTED_DRAFT",
+  "tests_or_numerical_execution": false,
+  "utc": "2026-10-18T12:01:22.368747+00:00"
+}

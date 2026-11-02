@@ -1,0 +1,41 @@
+ def transaction_fixture(self):
+  game=self.root/'game';scripts=game/'Scripts/dqn';scripts.mkdir(parents=True);model=game/'models_dqn';model.mkdir();out=self.root/'transaction';out.mkdir();source=scripts/'metrics_dashboard.py';source.write_bytes(Path(INPUTS['original_dashboard']['path']).read_bytes());os.chmod(source,0o664);socket=scripts/'socket_server.py';socket.write_bytes(b'held socket fixture');os.chmod(socket,0o664);other=scripts/'agent.py';other.write_bytes(b'held numerical fixture');os.chmod(other,0o664);checkpoint=model/'robotron_dqn_latest.pt';checkpoint.write_bytes(b'current newest-stopped fixture');os.chmod(checkpoint,0o664);control=model/'learning_control.json';control.write_text('{"measurement":null,"lr_scale":0.25}');os.chmod(control,0o664);settings=model/'game_settings.json';settings.write_text('{"fixture":true}');os.chmod(settings,0o664)
+  settings_archive=P.archive(L,settings,out/'settings-original.json');control_bytes=control.read_bytes();report=Path(INPUTS['finite_phase_report']['path']);phase_path=Path(INPUTS['original_phase_record']['path']);phase=L.full_pin(phase_path);dropin=out/'91-per-priority-phase.conf';dropin.write_text('Environment="DQN_PRIORITY_PHASE_RECORD='+phase['path']+'"\nEnvironment="DQN_PRIORITY_PHASE_RECORD_SHA256='+phase['sha256']+'"\n');os.chmod(dropin,0o664);commands=[]
+  b=types.SimpleNamespace(job=dict(case='scorecarry-dashboardJSON-fixture'),out=out,prepared=dict(proposed_source=INPUTS['candidate_dashboard']),control_pin=L.full_pin(control),control_bytes=control_bytes,main=dict(held_hashes={str(p):L.full_pin(p)['sha256'] for p in [source,socket,other,control,settings]}));b.state=lambda:None;b.event=lambda name,value:L.publish(out/name,value)
+  adapter=object.__new__(P.Poststop);adapter.b=b;adapter.linux=L;adapter.absent_original=lambda:None;adapter.fleet_held=lambda:None;adapter.command=lambda argv:commands.append(argv);adapter.config=dict(settings_archive=settings_archive,phase_dropin=L.full_pin(dropin),original_phase_record=phase)
+  saved=dict(checkpoint=L.full_pin(checkpoint),report=L.full_pin(report));originals={str(p):L.full_pin(p) for p in [source,socket,other,checkpoint,control,settings]}
+  return adapter,game,model,saved,originals,commands,source,socket,other
+ def test_dashboard_transaction_installs_only_selected_source_and_current_phase(self):
+  a,game,model,saved,before,commands,source,socket,other=self.transaction_fixture()
+  with patch.object(L,'GAME',game),patch.object(L,'MODEL',model),patch.object(L,'CONTROL',model/'learning_control.json'):
+   result=a.install({}, {}, saved)
+  self.assertEqual(L.full_pin(source)['sha256'],L.NEW_SOCKET_SHA);self.assertEqual(L.full_pin(source)['identity']['mode'],'0o664');self.assertEqual(L.full_pin(socket),before[str(socket)]);self.assertEqual(L.full_pin(other),before[str(other)]);self.assertEqual(L.full_pin(saved['checkpoint']['path']),saved['checkpoint']);self.assertEqual(commands,[['systemctl','--user','daemon-reload']]);self.assertTrue(result['only_selected_source_changed']);phase=json.loads(Path(result['phase_record']['path']).read_bytes());self.assertEqual(phase['checkpoint'],{k:saved['checkpoint'][k] for k in ['path','sha256','bytes']});self.assertEqual(phase['action'],'resume')
+ def test_dashboard_transaction_rejects_foreign_source_before_any_publication(self):
+  a,game,model,saved,before,commands,source,socket,other=self.transaction_fixture();source.write_bytes(b'foreign source update');foreign=L.full_pin(source)
+  with patch.object(L,'GAME',game),patch.object(L,'MODEL',model),patch.object(L,'CONTROL',model/'learning_control.json'):
+   with self.assertRaisesRegex(RuntimeError,'Original parser changed'):a.install({}, {}, saved)
+  self.assertEqual(L.full_pin(source),foreign);self.assertEqual(L.full_pin(socket),before[str(socket)]);self.assertEqual(L.full_pin(other),before[str(other)]);self.assertEqual(commands,[])
+ def test_dashboard_transaction_rejects_changed_numerical_hold(self):
+  a,game,model,saved,before,commands,source,socket,other=self.transaction_fixture();other.write_bytes(b'foreign numerical update')
+  with patch.object(L,'GAME',game),patch.object(L,'MODEL',model),patch.object(L,'CONTROL',model/'learning_control.json'):
+   with self.assertRaisesRegex(RuntimeError,'unselected held input changed'):a.install({}, {}, saved)
+  self.assertEqual(L.full_pin(source),before[str(source)]);self.assertEqual(L.full_pin(socket),before[str(socket)]);self.assertEqual(commands,[])
+ def test_dashboard_transaction_rejects_unpinned_candidate(self):
+  a,game,model,saved,before,commands,source,socket,other=self.transaction_fixture();a.b.prepared['proposed_source']=dict(INPUTS['candidate_dashboard'],sha256='0'*64)
+  with patch.object(L,'GAME',game),patch.object(L,'MODEL',model),patch.object(L,'CONTROL',model/'learning_control.json'):
+   with self.assertRaisesRegex(RuntimeError,'Immutable/source input changed'):a.install({}, {}, saved)
+  self.assertEqual(L.full_pin(source),before[str(source)]);self.assertEqual(L.full_pin(socket),before[str(socket)]);self.assertEqual(commands,[])
+ def test_original_kernel_primitives_and_controller_are_unchanged(self):
+  import ast
+  def methods(path):
+   tree=ast.parse(Path(path).read_bytes());result={}
+   def visit(nodes,prefix=''):
+    for n in nodes:
+     if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)):result[prefix+n.name]=ast.dump(n,include_attributes=False)
+     elif isinstance(n,ast.ClassDef):visit(n.body,prefix+n.name+'.')
+   visit(tree.body);return result
+  allowed={'handoff_linux_v1.py':{'LinuxBackend.__init__','LinuxBackend.preflight'},'handoff_poststop_v1.py':{'Poststop.install'},'handoff_recovery_v1.py':{'recover'},'prepare_handoff_poststop_v1.py':{'prepare','main'}}
+  for name,change in INPUTS['bundle_changes'].items():
+   old=methods(change['original']['path']);new=methods(change['proposed']['path']);self.assertEqual(set(old),set(new));self.assertLessEqual({k for k in old if old[k]!=new[k]},allowed.get(name,set()))
+  self.assertEqual(Path(SOURCES['handoff_controller_v1.py']['path']).read_bytes(),Path(INPUTS['bundle_changes']['handoff_controller_v1.py']['original']['path']).read_bytes())
+

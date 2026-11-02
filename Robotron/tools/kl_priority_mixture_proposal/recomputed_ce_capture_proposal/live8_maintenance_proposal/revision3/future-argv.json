@@ -1,0 +1,9 @@
+{
+  "status": "SOURCE_PREPARATION_ONLY_NOT_EXECUTED",
+  "test_argv": ["python3", "-B", "-m", "unittest", "Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_maintenance_proposal.revision3.test_live8_maintenance", "Robotron.tools.kl_priority_mixture_proposal.recomputed_ce_capture_proposal.live8_maintenance_proposal.revision3.test_bank_state_revision2"],
+  "explicit_argv": ["ABS_ROOT_PARENT_PYTHON", "-B", "ABS_THIS_BUNDLE/run_live8_maintenance.py", "--launch", "--job", "ABS_NEW_REVIEWED3_ROOT_JOB", "--expected-job-sha256", "ROOT_JOB_SHA256", "--expected-controller-sha256", "5059f5572c7e09a6949125fdb3126e0f7cb048e064ff4aafecc513ad72b251c1"],
+  "CPU_verifier_python": "Preserve exact archived REPO/.venv-gb300/bin/python symlink argv; separate explicit python_binding pins its link/resolved target/config/library/provenance",
+  "service_properties": ["Type=exec", "RemainAfterExit=yes", "CPUQuota=200%", "MemoryMax=4G", "TasksMax=128", "RuntimeMaxSec=4800", "KillSignal=SIGINT", "TimeoutStopSec=900", "SendSIGKILL=no"],
+  "lifecycle": "New reviewed3 unit/job/output only; detached3s timer, scheduling carrier reaped before trigger, no --wait or --collect; archive actual original invocation/exit before root release",
+  "author_execution": false
+}

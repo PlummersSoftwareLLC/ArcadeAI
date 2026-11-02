@@ -1,0 +1,33 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/retired-api-row-projection-original01-preparation/capture-bracket-revision02/round_observer_client_retired_API_v4.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-evaluation-isolation-original01-20261027/future-two-second-main-proof-contract-original01-preparation/source-family-original01/round_observer_client_proof2s_v1.py
+@@ -26,10 +26,10 @@
+         self.common = h.load('_native_round_observer_protocol', h.checked(self.sources['worker']))
+         c = self.common
+         c.require(self.sources['client'] == h.pin(__file__), 'Actual round client source differs')
+-        c.require(protocol['schema'] == 'robotron-native-round-main-health-declared-launcher-protocol-v1'
++        c.require(protocol['schema'] == 'robotron-native-round-main-health-declared-launcher-proof2s-protocol-v1'
+                   and protocol['case'] == job['main_binding'] and prior_groups == []
+                   and protocol['raw_API_required'] is True and protocol['close_requires_final_sample'] is True
+-                  and protocol['hot_max_gap_s'] == .5 and protocol['initial_samples'] == 100
++                  and protocol['hot_max_gap_s'] == 2.0 and protocol['initial_samples'] == 100
+                   and protocol['raw_queue_protocol'] == 'pending-byte-digest-v2'
+                   and protocol['volatile_live_tmpfs'] is True
+                   and protocol['source_bound_API_reconnect_projection'] is True
+@@ -53,7 +53,7 @@
+         self.job = dict(schema=c.SCHEMA, attempt=1, no_retry=True, nonce=nonce,
+             unit=self.unit, output=str(self.output), parent=self.parent,
+             native_job=jp, native_runtime=job['runtime'], case=job['main_binding'],
+-            sources=self.sources, interval_s=.2, initial_samples=100, maximum_gap_s=.5,
++            sources=self.sources, interval_s=.2, initial_samples=100, maximum_gap_s=2.0,
+             raw_queue_protocol='pending-byte-digest-v2', source_bound_API_reconnect_projection=True, source_bound_natural_round_admission=True, source_bound_declared_launcher_census=True, live_control_path=str(self.control_path),
+             work_s=4200, runtime_s=4260, deadline_monotonic_s=deadline)
+         self.jobpin = h.put(self.root / 'job.json', self.job)
+@@ -106,7 +106,7 @@
+                   and value['owner'] == self.worker_owner and value['state'] == 'running',
+                   'Original observer live identity differs')
+         c.require(c.birth(self.worker_owner['pid']) == self.worker_owner['birth']
+-                  and 0 <= time.monotonic() - value['updated_monotonic_s'] <= .5,
++                  and 0 <= time.monotonic() - value['updated_monotonic_s'] <= self.job['maximum_gap_s'],
+                   'Original observer stopped or publication expired')
+         if self.last_live is not None:
+             c.require(value['observed_samples'] >= self.last_live['observed_samples'], 'Original observer publication regressed')

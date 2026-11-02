@@ -1,0 +1,30 @@
+{
+  "schema": "robotron-postaccepted-newgame-live8M-exclusive-readiness-v1",
+  "status": null,
+  "observed_unix_s": null,
+  "candidate": null,
+  "main_owner": null,
+  "fleet_owner": null,
+  "inference_worker": null,
+  "actors": null,
+  "source_hashes": null,
+  "control_hashes": null,
+  "unit_files": null,
+  "environment_sha256": null,
+  "resources": {
+    "gpu0_uuid": null,
+    "gpu1_uuid": null,
+    "GPU0_free_bytes": null,
+    "GPU0_no_compute_owner": null,
+    "GPU1_main_only": null,
+    "port9999_clear": null,
+    "lease_free": null,
+    "no_competing_helpers": null,
+    "no_private_cgroup_tmpfs_processes": null,
+    "no_pending_save": null,
+    "capture_and_CPU_units_released": null,
+    "commands_UID_cwd_exe_checked": null,
+    "held_environment_checked": null,
+    "unit_files_checked": null
+  }
+}

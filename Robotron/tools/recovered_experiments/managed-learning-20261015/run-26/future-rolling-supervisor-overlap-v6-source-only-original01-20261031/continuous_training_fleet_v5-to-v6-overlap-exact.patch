@@ -1,0 +1,77 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-supervisor-softreset-and-refill-v5-original01-20261031/continuous_training_fleet_v5.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-supervisor-overlap-v6-source-only-original01-20261031/continuous_training_fleet_v6.py
+@@ -154,6 +154,27 @@
+     closed=closures.get(connection['token'])
+     if closed is not None and result['end_unix_s']>closed['closed_unix_s']:return None
+     return entry
++
++
++def train_observation_context(slot,row,batch):
++    """Bounded failure evidence, not a fresh physical/Popen ownership claim."""
++    values=batch.get('connections')
++    matched=[]if type(values)is not list else[c for c in values if type(c)is dict and c.get('client_slot')==slot]
++    context=dict(schema='robotron-TRAIN-observation-failure-context-v1',
++        API={k:batch.get(k)for k in('schema','server_stamp','observed_unix_s','observed_monotonic_ns',
++            'continuous_training_mode','main_measurement_entry_disabled','measurement_generation')},
++        matching_row_count=len(matched),matching_rows=[{k:c.get(k)for k in CONNECTION_FIELDS}for c in matched[:3]],
++        matching_rows_truncated=len(matched)>3,maximum_matching_rows_recorded=3,
++        expected_binding=row.get('connection_binding'),expected_original_child=row.get('original_child'),
++        expected_incarnation=row.get('incarnation'),state_before_failure=row.get('state'),
++        actual_kernel_or_exit_proof_claimed=False)
++    try:bounded=len(json.dumps(context,sort_keys=True,allow_nan=False).encode())<=8192
++    except (TypeError,ValueError):bounded=False
++    if not bounded:
++        return dict(schema=context['schema'],matching_row_count=len(matched),
++            matching_rows_omitted_due_to_8192_byte_diagnostic_limit=True,
++            expected_incarnation=row.get('incarnation'),actual_kernel_or_exit_proof_claimed=False)
++    return context
+ 
+ 
+ class ContinuousTrainingFleet:
+@@ -411,9 +432,13 @@
+         require(row['eval_only']is False and item['child'].poll()is None,'Live owned TRAIN only')
+         old=read(row['connection_binding'])['data']['connection']
+         current=[c for c in connections if c['client_slot']==slot]
+-        require(len(current)<=1 and (not current or current[0]['eval_only']is False),
++        require(len(current)<=2 and all(c['eval_only']is False for c in current),
+                 'Ambiguous or changed TRAIN role')
+-        if current and current[0]==old:
++        old_rows=[c for c in current if c['token']==old['token']]
++        fresh=[c for c in current if c['token']!=old['token']]
++        require(len(old_rows)<=1 and all(c==old for c in old_rows)and len(fresh)<=1,
++                'Duplicate, altered old binding or multiple fresh TRAIN candidates')
++        if old_rows and not fresh:
+             require(item.get('unbound_candidate_token')is None,'Unbound TRAIN token remains unresolved')
+             row['state']='active_train';item.pop('reconnect_started',None);return
+         if 'reconnect_started'not in item:
+@@ -422,14 +447,17 @@
+         row['state']='reconnecting_train'
+         require(time.monotonic()-item['reconnect_started']<=self.cfg['fault_cleanup_s']+self.cfg['startup_s'],
+                 'TRAIN reconnect did not authenticate within declared cleanup+startup bounds')
+-        if not current:return
+-        candidate=current[0]
++        if not fresh:return
++        candidate=fresh[0]
+         require(type(candidate['token'])is str and candidate['token']not in item['tokens']
+             and type(candidate['connection_ns'])is int and candidate['connection_ns']>old['connection_ns']
+             and type(candidate['client_id'])is int,'Fresh never-used TRAIN token required')
+         require(item.get('unbound_candidate_token')in(None,candidate['token']),
+                 'Another unbound TRAIN token appeared before ownership proof')
+         item['unbound_candidate_token']=candidate['token']
++        # An exact old+one-new TRAIN overlap is only a pending observation.
++        # Do not authenticate/adopt until the next API view is unique-new.
++        if old_rows:return
+         cleanup=self.get('/api/connection_cleanup_token',dict(token=old['token']))
+         if not closed_connection(old,cleanup,self.cfg['trainer']['server_stamp']):return
+         policy=self.policy()
+@@ -644,8 +672,9 @@
+                         if row['state']in('active_train','reconnecting_train')and item['child'].poll()is None:
+                             try:self.observe_train(slot,batch['connections'])
+                             except Exception as error:
++                                context=train_observation_context(slot,row,batch)
+                                 row['state']='quarantined';row['quarantine_reason']=repr(error).encode('ascii','backslashreplace').decode('ascii')[:256]
+-                                self.record_error('slot',slot,error)
++                                self.record_error('slot',slot,error,context)
+                     self.journals()
+                 except Exception as error:
+                     self.record_error('observation',None,error)

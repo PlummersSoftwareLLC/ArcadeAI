@@ -1,0 +1,274 @@
+--- /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/test_physical_original192_health_adversarial_DRAFT_v1.py
++++ /home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/future-rolling-training-cleanup-prototype-original01-20261029/continuous-training-static192-original06/health-consumer-physical-original192-original02/test_physical_original192_health_adversarial_v2.py
+@@ -1,4 +1,4 @@
+-"""UNFROZEN physical-cohort fixture draft; Root alone may run after final ABI/source freeze.
++"""Source-bound physical-cohort fixtures; Root alone operates the bounded CPU job.
+ 
+ Only SHA-bound actual pure verifier functions are compiled. All process, unit,
+ API, TCP, bootstrap/startup authority, CPU closeout and event evidence below is
+@@ -16,6 +16,7 @@
+ from pathlib import Path
+ import socket
+ import stat
++import struct
+ import tempfile
+ import threading
+ import time
+@@ -25,9 +26,9 @@
+ 
+ HERE = Path(__file__).resolve().parent
+ SOURCES = {
+-    'registry': ('continuous_physical192_registry_v2.py', None),
+-    'health': ('continuous_physical192_health_v2.py', None),
+-    'transport': ('continuous_physical192_transport_v2.py', None),
++    'registry': ('continuous_physical192_registry_v2.py', '71fc044d7b3bbbfceba5ef23f69a6c741eeff5700176050c6cdbe9e4794bba69'),
++    'health': ('continuous_physical192_health_v2.py', '77a832a4202bf81e2f8eae00affc2127be0a22795c75f0c5cf1585f22d2991a9'),
++    'transport': ('continuous_physical192_transport_v2.py', 'a460b4f3d5352d712c39929dcafe9883909610c01a71a0a08b82953f490d5541'),
+ }
+ LEGACY_ROOT = HERE.parent/'health-consumer-original01'
+ LEGACY_SOURCES = {
+@@ -38,7 +39,8 @@
+ PRODUCER = Path('/home/dave/source/repos/ArcadeAI/Robotron/Scripts/dqn/connection_cleanup_receipts.py')
+ PRODUCER_SHA = 'f27e38411238fcf62256e6b317836b757d31d5e0ac962ec8523dd380236d80ee'
+ NEW_PROFILE = 'PHYSICAL_ORIGINAL192_TRAIN_CURRENT_TCP_EVAL_ORIGINAL_ONCE'
+-EVAL_KERNEL_POSITIVE_ABI = None  # No positive invented until Root/Design select the exact real witness.
++KERNEL_SOURCE = HERE.parent/'EVAL-pidfd-exit-witness-original01-preparation/hold_original_EVAL_pidfd_exits_v1.py'
++KERNEL_SOURCE_SHA = 'fe306753c9cbb20e715b76d60c116ef9ce47a768c1a1afe0b00c03eac02a095c'
+ 
+ 
+ 
+@@ -66,7 +68,7 @@
+ 
+ def actual_pure_functions(sources=SOURCES, root=HERE):
+     common = dict(hashlib=hashlib, json=json, math=math, mmap=mmap,
+-        os=os, Path=Path, socket=socket, stat=stat, copy=copy)
++        os=os, Path=Path, socket=socket, stat=stat, copy=copy, struct=struct)
+     tree, filename = source('registry',sources,root)
+     ns = dict(common)
+     selected = [n for n in tree.body if isinstance(n, ast.FunctionDef)
+@@ -78,7 +80,7 @@
+     tree, filename = source('health',sources,root)
+     ns = dict(common, registry=lambda: registry)
+     wanted = {'birth','stat_identity','file_identity','check_inputs','validate_optimizer_accounting',
+-              'stable_round_status','observed_counts','validate_policy','validate','require'}
++              'stable_round_status','observed_counts','validate_policy','validate_eval_holder','validate','require'}
+     selected = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in wanted]
+     # STATIC is the actual producer identity projection, not a relaxed fixture projection.
+     selected += [n for n in tree.body if isinstance(n, ast.Assign)
+@@ -105,6 +107,7 @@
+     """No runtime fact is asserted by these fabricated records."""
+     def __init__(self, directory):
+         self.root = Path(directory).resolve()
++        self.root.mkdir(parents=True,exist_ok=True)
+         self.reg, self.health, self.transport = actual_pure_functions()
+         self.sequence = 0
+         # Deterministic synthetic wall clock, including temporary event mtimes;
+@@ -133,7 +136,7 @@
+             accepted_profile=NEW_PROFILE,
+             maximum_proof_gap_s=2.0, narrow_API_exception_TTL_s=.5,
+             launch_argv=['SYNTHETIC-ROLE-WRAPPER'], input_environment_by_slot={},
+-            policy_generation=0)
++            policy_generation=0,eval_journal_directory=str(self.root/'journal'),eval_exit_witness=None)
+         self.case['continuous'] = c
+         self.case['owners'] = {key: dict(unit=owner['unit'], invocation=owner['invocation_id'],
+             process=proc(owner['pid'], owner['birth'], 1, owner['cgroup'],
+@@ -146,6 +149,7 @@
+             dict(schema='robotron-root-continuous-main-startup-qualified-v1', trainer=trainer,
+                 all_model_optimizer_replay_banks_clocks_preserved=True,
+                 new_mode_source_and_CPU_qualified=True, actual_CPU_scope_closeouts=[fake_close],
++                canonical_sources=[pin(HERE/SOURCES[key][0]) for key in SOURCES]+[owner_source],
+                 SYNTHETIC_NOT_ACTUAL=True))
+         c['source_pins'] = [pin(HERE/SOURCES[key][0]) for key in SOURCES]+[owner_source]
+         self.case['inputs'] = {p['path']:dict(sha256=p['sha256'], identity=p['identity'])
+@@ -288,7 +292,8 @@
+         result = dict(schema='robotron-continuous-physical-original192-main-health-snapshot-v2',unix_s=unix,monotonic_s=mono,
+             owners=copy.deepcopy(self.case['owners']),status=status,actors=actors,api=api,
+             policy_capture=capture('robotron-continuous-main-policy-v1'),connections_capture=connections,
+-            PID_absence={},capture_started_monotonic_s=mono-.2,capture_ended_monotonic_s=mono-.01,
++            PID_absence={},EVAL_journal_evidence={},EVAL_cleanup_captures={},
++            EVAL_kernel_exit_receipts={},EVAL_exit_witness_capture=None,capture_started_monotonic_s=mono-.2,capture_ended_monotonic_s=mono-.01,
+             transport=dict(raw_tables=dict(tcp=self.tcp_table(actors),tcp6='synthetic IPv6 header\n'),
+                 socket_inodes=dict(trainer=['1999']+[str(self.server_inode(s))for s in actors],
+                                    **{s:[str(self.client_inode(s))]for s in actors}),
+@@ -352,15 +357,27 @@
+         natural = self.event('natural-result',0,dict(result=result,raw_line=raw_line,natural_complete=True),
+                              mono=999.85,unix=self.now-.05)
+         row['state'],row['natural_result'] = 'retiring_eval',natural
++        conn = self.connections[slot]
++        receipt = dict(schema='robotron-prospective-connection-cleanup-receipt-v2',
++            server_stamp=self.case['continuous']['server_stamp'],token=conn['token'],client_id=0,
++            client_slot=0,eval_only=True,connection_ns=conn['connection_ns'],socket_endpoints=conn['socket_endpoints'],
++            original_handler_stopped=True,original_owned_timer_stopped=True,owned_timer_callback_succeeded=True,
++            journal_disconnect_succeeded=True,FIFO_reset_executed=True,replay_consumer_healthy=True,
++            ready_for_external_join=True,cleanup_error=None,terminal_receipt=result,
++            terminal_line_sha256=raw_line['sha256'],observed_monotonic_ns=999900000000)
++        raw=Path(raw_line['path']).read_text()
++        journal=Path(self.case['continuous']['eval_journal_directory']);journal.mkdir(exist_ok=True)
++        for name in ('games.jsonl','completed_clients.jsonl'):
++            with (journal/name).open('a')as stream:
++                stream.write(raw);stream.flush();os.fsync(stream.fileno())
++        sample['EVAL_journal_evidence'][slot]=dict(schema='robotron-independent-original-EVAL-journal-evidence-v1',
++            raw_line=raw,raw_line_sha256=raw_line['sha256'],main_raw_line=raw,retirement_raw_line=raw,
++            main_path=str(journal/'games.jsonl'),retirement_path=str(journal/'completed_clients.jsonl'),
++            first_observed_unix_s=self.now-.05,first_observed_monotonic_s=999.9)
++        wire,sha=self.wire(receipt)
++        sample['EVAL_cleanup_captures'][slot]=dict(before_monotonic_ns=999850000000,
++            after_monotonic_ns=999950000000,value=receipt,raw_wire=wire,sha256=sha)
+         if closed:
+-            conn = self.connections[slot]
+-            receipt = dict(schema='robotron-prospective-connection-cleanup-receipt-v2',
+-                server_stamp=self.case['continuous']['server_stamp'], token=conn['token'],client_id=0,
+-                client_slot=0,eval_only=True,connection_ns=conn['connection_ns'],socket_endpoints=conn['socket_endpoints'],
+-                original_handler_stopped=True,original_owned_timer_stopped=True,owned_timer_callback_succeeded=True,
+-                journal_disconnect_succeeded=True,FIFO_reset_executed=True,replay_consumer_healthy=True,
+-                ready_for_external_join=True,cleanup_error=None,terminal_receipt=result,
+-                terminal_line_sha256=raw_line['sha256'])
+             row['closure'] = self.event('original-reaped-closure',0,dict(actual_exit=0,
+                 original_pid=2000,original_birth=9000,original_wait_reaped=True,original_birth_absent=True,
+                 natural_result=natural,restart_censored=False,connection_cleanup=[receipt]),mono=999.9)
+@@ -378,6 +395,80 @@
+             dict(anchor=self.transport.anchor(self.case,previous,slot),PID_absence=sample['PID_absence'][slot])})
+         self.sync_children(sample);self.counts(sample)
+         return previous,self.refresh(sample)
++
++    def write_named(self,path,value):
++        path.parent.mkdir(parents=True,exist_ok=True)
++        raw=(json.dumps(value,separators=(',',':'),allow_nan=False)+'\n').encode()
++        with path.open('xb')as stream:
++            stream.write(raw);stream.flush();os.fchmod(stream.fileno(),0o444);os.fsync(stream.fileno())
++        os.utime(path,ns=(int((self.now-.05)*1e9),)*2)
++        return pin(path)
++
++    @staticmethod
++    def info80(pid,parent,*,mask=39,status=0):
++        # Synthetic exact kernel ABI buffers, never a pidfd/ioctl operation.
++        raw=bytearray(80)
++        for offset,value,fmt in ((0,mask,'Q'),(16,pid,'I'),(20,pid,'I'),(24,parent,'I'),
++                                  (28,os.getuid(),'I'),(36,os.getuid(),'I'),(60,status,'i'),(72,127,'Q')):
++            struct.pack_into('='+fmt,raw,offset,value)
++        return bytes(raw)
++
++    def kernel(self,sample,*,mask=44,status=0,all37=False):
++        source=pin(KERNEL_SOURCE)
++        assert source['sha256']==KERNEL_SOURCE_SHA
++        c=self.case['continuous']
++        if source['path']not in self.case['inputs']:
++            c['source_pins'].append(source)
++            self.case['inputs'][source['path']]=dict(sha256=source['sha256'],identity=source['identity'])
++        self.sequence+=1;output=self.root/('synthetic-kernel-%04d'%self.sequence)
++        holder=dict(pid=5000,birth=10000,parent=1,uid=os.getuid(),unit='synthetic-holder.service',
++                    invocation_id='5'*32,cgroup='/synthetic/holder')
++        originals={s:dict(pid=r['original_child']['pid'],birth=r['original_child']['birth'],
++            parent=r['original_child']['parent'],uid=os.getuid(),initial_connection_binding=r['connection_binding'])
++            for s,r in c['original_slots'].items()if self.roles[s]}
++        selection=self.write('synthetic-kernel-selection.json',dict(output=str(output),nonce='3'*32,originals=originals))
++        anchors_value=dict(schema='robotron-original37-EVAL-pidfd-held-anchors-v1',source=source,
++            selection=selection,holder=holder,nonce='3'*32,all37_acquired_while_originals_live=True,
++            originals={s:dict(slot=int(s),original=r,descriptor=dict(fd=100+int(s),SYNTHETIC=True),
++                initial_info=dict(raw80_hex=self.info80(r['pid'],r['parent']).hex()),
++                capture_end_monotonic_ns=997500000000)for s,r in originals.items()})
++        anchors=self.write_named(output/'held-original37-anchors.json',anchors_value)
++        c['eval_exit_witness']=dict(selection=selection,source=source,anchors=anchors,output=str(output),holder=holder)
++        receipts={}
++        for slot in (originals if all37 else ['0']):
++            original=originals[slot];raw=self.info80(original['pid'],original['parent'],mask=mask,status=status)
++            info=dict(raw80_hex=raw.hex(),returned_mask=mask,supported_mask=127,exit_code_raw=status)
++            value=dict(schema='robotron-original-EVAL-retained-pidfd-exit-v1',anchors=anchors,selection=selection,
++                source=source,holder=holder,nonce='3'*32,slot=int(slot),anchor=anchors_value['originals'][slot],
++                original=original,descriptor=anchors_value['originals'][slot]['descriptor'],
++                request_ioctl=0xc050ff0b,request_mask=0x28,original_Popen_wait_called_claimed=False,
++                actor_signals_or_wait_or_reap_performed=False,returned_raw80_hex=raw.hex(),returned_info=info,
++                raw_wait_status=status,normal_exit_zero=True,normal_exit=True,normal_exit_status=0,
++                signal_termination=False,original_birth_absent=True,status='KERNEL_REAPED_NORMAL0',
++                capture_begin_monotonic_ns=999800000000,capture_end_monotonic_ns=999850000000,
++                observed_monotonic_ns=999900000000)
++            receipts[slot]=self.write_named(output/('exit-slot-%03d.json'%int(slot)),value)
++        sample['EVAL_kernel_exit_receipts']=receipts
++        common=dict(holder=holder,source=source,selection=selection,anchors=anchors,nonce='3'*32,exit_receipts=receipts)
++        if all37:
++            value=dict(common,schema='robotron-original37-EVAL-pidfd-holder-terminal-v1',
++                all37_exit_receipts_present=True,unresolved_slots=[],status='ALL37_REAPED_NORMAL0')
++            published=self.write_named(output/'holder-terminal.json',value)
++            capture=dict(state='ALL37_IMMUTABLE_EXIT_RECEIPTS_PUBLISHED',holder=None,
++                publication=dict(kind='COMPLETE_TERMINAL_PUBLICATION',immutable_pin=published))
++        else:
++            value=dict(common,schema='robotron-original37-EVAL-pidfd-holder-live-v1',state='HOLDING_UNRESOLVED_ORIGINALS',
++                unresolved_slots=sorted(set(originals)-set(receipts)),updated_monotonic_ns=999950000000,
++                updated_unix_s=sample['unix_s']-.05)
++            owner=dict(unit=holder['unit'],invocation=holder['invocation_id'],process=proc(holder['pid'],holder['birth'],1,
++                holder['cgroup'],['SYNTHETIC-PYTHON',source['path'],source['sha256'],selection['path'],selection['sha256']],
++                {},dict(path='SYNTHETIC-PYTHON')))
++            capture=dict(state='HOLDING_UNRESOLVED_ORIGINALS',holder=owner,publication=dict(kind='LIVE_HEARTBEAT'))
++        wire,sha=self.wire(value)
++        capture['publication'].update(before_monotonic_ns=999900000000,after_monotonic_ns=999990000000,
++                                     raw_wire=wire,sha256=sha,value=value)
++        sample['EVAL_exit_witness_capture']=capture
++        return sample
+ 
+     def replacement_event(self, sample, field, change):
+         row = sample['status']['slots']['0']
+@@ -440,6 +531,15 @@
+                     entry=case['continuous']['source_pins'][0];case['inputs'][entry['path']]['sha256']='0'*64
+                 with self.subTest(mutation=mutation),self.assertRaises((ValueError,TypeError)):
+                     h.reg.validate_case(case)
++            entry=h.write('tiny-held-input.txt',b'SYNTHETIC tiny held source\n')
++            tiny=dict(inputs={entry['path']:dict(sha256=entry['sha256'],identity=entry['identity'])})
++            h.health.check_inputs(tiny,full=True)
++            for key,value in [('sha256','0'*64),('identity',dict(entry['identity'],inode=0))]:
++                bad=copy.deepcopy(tiny);bad['inputs'][entry['path']][key]=value
++                with self.subTest(input_guard=key),self.assertRaises(ValueError):h.health.check_inputs(bad,full=True)
++            link=h.root/'synthetic-input-symlink';link.symlink_to(entry['path'])
++            bad=dict(inputs={str(link):dict(sha256=entry['sha256'],identity=entry['identity'])})
++            with self.assertRaises(ValueError):h.health.check_inputs(bad,full=True)
+             sample=h.rebind_train()
+             for field,value in [('pid',999999),('starttime_ticks',999999),('parent_pid',999999),('cgroup','/foreign')]:
+                 bad=copy.deepcopy(sample);bad['actors']['40'][field]=value;h.sync_children(bad)
+@@ -488,11 +588,43 @@
+                 bad=copy.deepcopy(good);h.replacement_event(bad,'closure',change)
+                 with self.subTest(case=i),self.assertRaises(ValueError):h.transport.validate(h.case,bad,previous)
+             prior,missing=h.retired(closed=False)
+-            with self.assertRaises(ValueError):h.transport.validate(h.case,missing,prior)
+-            bad=copy.deepcopy(good);bad['EVAL_kernel_exit_witnesses']={'0':{'schema':'UNKNOWN-NOT-A-REAP-PROOF'}}
+-            bad['status']['slots']['0']['closure']=None;h.refresh(bad)
+-            with self.assertRaises(ValueError):h.transport.validate(h.case,bad,previous)
+-            self.assertIsNone(EVAL_KERNEL_POSITIVE_ABI)  # prospective kernel alternative deliberately not invented
++            result=h.transport.validate(h.case,missing,prior)
++            view=h.reg.validate_snapshot(h.case,missing,prior)
++            self.assertEqual(view['counts']['closed_eval'],0)
++            self.assertEqual(view['counts']['retiring_eval'],1)  # absence is not a normal-exit claim
++            bad=copy.deepcopy(missing);bad['EVAL_cleanup_captures'].clear()
++            with self.assertRaises(ValueError):h.transport.validate(h.case,bad,prior)
++            # Exact independent journal reconstruction plus positive retained-kernel normal0/reap.
++            missing['status']['slots']['0'].update(natural_result=None,closure=None)
++            h.refresh(missing);h.kernel(missing);h.reg.validate_case(h.case)
++            h.transport.validate(h.case,missing,prior)
++            self.assertEqual(h.reg.validate_snapshot(h.case,missing,prior)['counts']['closed_eval'],1)
++            for mask,status in [(0,0),(39,0),(44,15),(44,1792)]:
++                h.kernel(missing,mask=mask,status=status)
++                with self.subTest(mask=mask,raw_status=status),self.assertRaises(ValueError):
++                    h.transport.validate(h.case,missing,prior)
++            h.kernel(missing)
++            bad=copy.deepcopy(missing);bad['EVAL_exit_witness_capture']['publication']['value']['exit_receipts']={}
++            value=bad['EVAL_exit_witness_capture']['publication']['value'];wire,sha=h.wire(value)
++            bad['EVAL_exit_witness_capture']['publication'].update(raw_wire=wire,sha256=sha)
++            with self.assertRaises(ValueError):h.health.validate_eval_holder(h.case,bad)
++            with self.assertRaises(ValueError):h.reg.kernel_eval_exit(h.case,bad,'0')
++            for mutation in ('dead','stale','missing','birth'):
++                bad=copy.deepcopy(missing);cap=bad['EVAL_exit_witness_capture']
++                if mutation=='dead':cap['holder']['process']['state']='Z'
++                elif mutation=='birth':cap['holder']['process']['starttime_ticks']+=1
++                elif mutation=='missing':bad['EVAL_kernel_exit_receipts']={}
++                else:
++                    cap['publication']['value']['updated_monotonic_ns']=997000000000
++                    wire,sha=h.wire(cap['publication']['value']);cap['publication'].update(raw_wire=wire,sha256=sha)
++                with self.subTest(holder=mutation),self.assertRaises(ValueError):h.health.validate_eval_holder(h.case,bad)
++            # Terminal publication is tested only as the actual holder predicate;
++            # it makes no claim that still-synthetic active actors have exited.
++            terminal=h.sample();h.kernel(terminal,all37=True);h.reg.validate_case(h.case)
++            h.health.validate_eval_holder(h.case,terminal)
++            for slot in terminal['EVAL_kernel_exit_receipts']:h.reg.kernel_eval_exit(h.case,terminal,slot)
++            bad=copy.deepcopy(terminal);bad['EVAL_kernel_exit_receipts'].pop('36')
++            with self.assertRaises(ValueError):h.health.validate_eval_holder(h.case,bad)
+ 
+     def test_retired_EVAL_half_second_TTL_and_original_absence_TCP_brackets_remain(self):
+         with tempfile.TemporaryDirectory()as directory:

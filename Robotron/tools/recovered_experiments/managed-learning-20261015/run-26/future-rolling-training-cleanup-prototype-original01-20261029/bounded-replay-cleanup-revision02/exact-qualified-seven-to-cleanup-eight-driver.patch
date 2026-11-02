@@ -1,0 +1,49 @@
+--- run_proof2s_focused_CPU_v1.py
++++ run_bounded_cleanup_eight_CPU_v1.py
+@@ -1,4 +1,4 @@
+-"""Default inert; one original Root-operated pure predicate CPU qualification."""
++"""Default inert; one Root-operated eight-method cleanup CPU qualification."""
+ import argparse
+ import hashlib
+ import importlib.util
+@@ -34,7 +34,7 @@
+     source=pin(Path(__file__).resolve());require(source['sha256']==args.source_sha256,'Exact CPU driver required')
+     jp=pin(Path(args.job).resolve());require(jp['sha256']==args.job_sha256,'Exact original CPU job required')
+     job=json.loads(Path(jp['path']).read_bytes())
+-    require(job['schema']=='robotron-proof2s-focused-original-CPU-job-v1'
++    require(job['schema']=='robotron-bounded-replay-cleanup-eight-original-CPU-job-v1'
+         and job['source']==source and job['original_attempt']==1 and job['no_retry']is True,
+         'One exact original prospective CPU fixture job required')
+     for value in job['inputs']:
+@@ -52,23 +52,23 @@
+                 raise RuntimeError('No model/ROM/MAME body access in focused fixture')
+     sys.addaudithook(audit)
+     fixture=job['fixture'];require(pin(fixture['path'])==fixture,'Exact fixture file required')
+-    spec=importlib.util.spec_from_file_location('_proof2s_focused_fixture',fixture['path'])
++    spec=importlib.util.spec_from_file_location('_bounded_cleanup_focused_fixture',fixture['path'])
+     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+     suite=unittest.defaultTestLoader.loadTestsFromTestCase(module.Tests)
+-    require(suite.countTestCases()==7,'Seven focused methods required; no inherited suite rerun')
+-    print(json.dumps(dict(phase='FOCUSED_PROOF2S_SOURCE_PREDICATES',methods=7)),flush=True)
++    require(suite.countTestCases()==8,'Eight focused methods required; no inherited suite rerun')
++    print(json.dumps(dict(phase='BOUNDED_REPLAY_CLEANUP_EIGHT_METHODS',methods=8)),flush=True)
+     result=unittest.TextTestRunner(stream=sys.stdout,verbosity=2).run(suite)
+     for value in job['inputs']:
+         require(pin(value['path'])==value,'Fixture source changed during original CPU run')
+     require('torch'not in sys.modules,'Torch unexpectedly imported')
+-    report=dict(schema='robotron-proof2s-focused-original-CPU-report-v1',status='PASS'if result.wasSuccessful()else'FAIL',
++    report=dict(schema='robotron-bounded-replay-cleanup-eight-original-CPU-report-v1',status='PASS'if result.wasSuccessful()else'FAIL',
+         original_job=jp,actual_PID=os.getpid(),source=source,fixture=fixture,
+         tests_run=result.testsRun,failures=[str(t)for t,_ in result.failures],errors=[str(t)for t,_ in result.errors],
+         elapsed_s=time.monotonic()-started,Torch_imported=False,GPU_or_MAME_launched=False,
+-        pure_SHA_bound_AST_predicates_and_complete_client_and_health_methods=True,
+-        worker_or_raw_reviewer_main_executed=False,real_original_raw_or_scores_read=False,
+-        admission_TCP_and_live_collection_mocked_not_qualified=True,
+-        old_500ms_failed_studies_remain_invalid=True,
++        actual_AsyncReplayBuffer_methods_with_synthetic_agent_and_owned_threads=True,
++        receipt_definitions_exercised=True,production_server_imported=False,
++        server_or_supervisor_runtime_integration_qualified=False,
++        rolling_refill_qualified=False,
+         scientific_launch_qualified=False,quality_qualified=False,promotion=False)
+     publish(output/'report.json',report)
+     print(json.dumps(dict(report=str(output/'report.json'),status=report['status'])),flush=True)

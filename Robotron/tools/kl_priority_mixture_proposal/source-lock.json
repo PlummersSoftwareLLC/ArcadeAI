@@ -1,0 +1,36 @@
+{
+  "schema": "robotron-kl-priority-mixture-design-source-lock-v1",
+  "status": "DESIGN_ONLY_UNIMPLEMENTED_NO_EXECUTION_OR_LIVE_AUTHORIZATION",
+  "existing_unapplied_patch": {
+    "path": "Robotron/tools/priority_metric_proposal/optional-kl-priorities.patch",
+    "sha256": "7d09bec1a2611ece11814d8b241d6af054e3dd9310c30e5009a71c0b2e3838c8"
+  },
+  "independent_source_calibration_review": {
+    "path": "Robotron/logs/managed-learning-20261015/run-26/priority-analysis/independent-source-calibration-review-20261017.json",
+    "sha256": "ef8ed33a913241cb42494fe853c9d07410e0689437d66e6d6d70b390dea9cda3"
+  },
+  "historical_uniform_sample_json_evidence": {
+    "path": "Robotron/logs/managed-learning-20261015/run-26/priority-analysis/offline-diagnostic.json",
+    "recorded_sha256": "7096cf19d38863e7e405b67b14963a9e23929ac1ff866ba3e68d03808e1f9612",
+    "scope": "Existing recorded256uniform-row evidence only; no sample/checkpoint tensors read or recomputation. Not actual4096mixture weights or LR multiplier."
+  },
+  "source_sha256": {
+    "Robotron/Scripts/dqn/training.py": "194081120faae4228b0af0d6127c1e12c6d6180acdfe7d7a6a8c7cbcf24b963f",
+    "Robotron/Scripts/dqn/loss_kernel.py": "de9621e3d926a8f49f230f9e271c645a7498d38445622d6ae2761ab2bbd7253a",
+    "Robotron/Scripts/dqn/replay_buffer.py": "28556797d15e0acf9387030b87f9ccce0b18e1e3cfa629b63c2d7239a4206238",
+    "Robotron/Scripts/dqn/config.py": "f2794754a14e9f13c82b613aa131698246a08dc9021c18f1b78fda7c4b484498",
+    "Robotron/Scripts/dqn/agent.py": "28977d6b925a4606a61b76438595f45ae054fc81aaaad989ab93e00d98a05668",
+    "Robotron/Scripts/dqn/nstep_buffer.py": "e46f03e9a626b3a24dea702344b0bbf050f1fdc5af672fc8fc9d18e6afef74c1",
+    "Robotron/Scripts/dqn/socket_server.py": "8fe556f7507547a97839072bbcecc98384c2b395c8ae789ac8ee062f55bca721"
+  },
+  "source_references": {
+    "objective_and_expert_terms": ["training.py:247-335", "loss_kernel.py:95-126"],
+    "target_semantics": ["training.py:259-299", "loss_kernel.py:54-95", "nstep_buffer.py:46-67"],
+    "priority_readback_and_amp_order": ["training.py:392-448"],
+    "actual_sampler_and_weights": ["replay_buffer.py:772-797", "replay_buffer.py:846-923"],
+    "leaf_update_insert_and_boost": ["replay_buffer.py:417-440", "replay_buffer.py:963-1016", "agent.py:1019-1038", "socket_server.py:795-815", "socket_server.py:896-910"],
+    "persistence": ["replay_buffer.py:1558-1578", "replay_buffer.py:1844-1861"],
+    "fixed_recipe_quota_defaults": ["config.py:684-711", "config.py:789-823"]
+  },
+  "scope": "Source/oldJSON reads and new design text only. No implementation, imports/tests/compilation, patch application, sampling, checkpoint/replay/tensor reads, API/process/GPU/service queries or numerical workloads."
+}

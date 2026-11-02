@@ -1,0 +1,11 @@
+--- a/Robotron/Scripts/dqn/socket_server.py
++++ b/Robotron/Scripts/dqn/socket_server.py
+@@ -2812,6 +2812,8 @@
+                 except Exception:
+                     break
+                 self._rejected_gaps.event("finish", _gap_ticket, outcome="accepted_action_write_completed")
++                if self.replay_enabled:
++                    last_payload_time = time.time()  # Client-idle budget excludes Main's own completed RPC work.
+ 
+         except ConnectionError as e:
+             if not self.shutdown_event.is_set():

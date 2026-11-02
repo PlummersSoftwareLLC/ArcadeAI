@@ -1,0 +1,34 @@
+{
+  "schema": "robotron-post-recovery-observation-window-status-v2",
+  "state": "captured_CPU_verified",
+  "updated_unix_s": 1793175796.2190435,
+  "anchor_unix_s": 1793163683.7597764,
+  "minimum_added_each": 8000000,
+  "added": {
+    "learner_frames": 8862937,
+    "accepted_DQN_epsilon": 8861337
+  },
+  "owner": {
+    "pid": 294486,
+    "birth_ticks": 1369270,
+    "invocation_id": "cba42d4be03e44c6a37fa66c6c8855e1"
+  },
+  "round": 5,
+  "active": 123,
+  "completed": 69,
+  "applied_updates": 34608,
+  "old_interrupted_window_not_rescued": true,
+  "quality_qualified": false,
+  "causal_learning_speed_qualified": false,
+  "next_stage": "Freeze and CPU-verify a checkpoint, then prepare a matched frozen-policy comparison",
+  "endpoint": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-learning-20261027-original03/endpoint.pt",
+    "sha256": "573cfb34ff258acf5fe3b828ed58d3c571d84e05b81c629381c0bda1ffccd867",
+    "bytes": 275186008
+  },
+  "CPU_verification": {
+    "path": "/home/dave/source/repos/ArcadeAI/Robotron/logs/managed-learning-20261015/run-26/post-recovery-learning-20261027-original03/endpoint-CPU-verification.json",
+    "sha256": "056e33ed3c47fe442cb7dd12b5a900d93ddd0a8e26477920dec5900033eb212f",
+    "bytes": 2090
+  }
+}

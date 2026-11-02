@@ -1,0 +1,70 @@
+--- sequence_quality32_campaign_v2.py
++++ sequence_quality32_2259_prospective197_v1.py
+@@ -96,7 +96,7 @@
+         self.h=h;self.read=lambda e,as_json=True:reader.read_pin(e,as_json=as_json)
+         self.precommit_pin=precommit_pin;self.precommit=self.read(precommit_pin)
+         self.ready_pin=self.precommit['launch_readiness'];self.ready=self.read(self.ready_pin)
+-        self.root=Path(self.ready['campaign_directory']);self.events=self.root/'sequence-events-original01'
++        self.root=Path(self.ready['campaign_directory']);self.events=self.root/'sequence-events-prospective197-original01'
+         self.rt=load('_sequence_archived_scope',h.checked(self.ready['native_closure']))
+         self.ctl=load('_sequence_CPU_controller',h.checked(self.ready['CPU_controller']))
+         self.q=load('_sequence_quality_review_predicates',h.checked(self.ready['leg_reviewer']))
+@@ -108,7 +108,7 @@
+         print(json.dumps(dict(event=label,receipt=pin)),flush=True);return pin
+ 
+     def check_new_actions(self):
+-        control=self.root/'sequencing-control.json'
++        control=self.root/'sequencing-control-prospective197-original01.json'
+         if control.exists()and json.loads(control.read_text()).get('stop_new_actions')is True:
+             raise StopNewActions('Operator requested no further scheduling/preparation')
+         current=json.loads((R.parent/'state.json').read_text()).get('active_quality_job')or{}
+@@ -153,7 +153,7 @@
+             goal['last_progress']='Original quality sequence: '+stage+' '+role+'. No original retry, candidate pooling or main mutation.'
+             data['updated_unix_s']=time.time();encoded=json.dumps(data,separators=(',',':'),allow_nan=False).encode()
+             if len(encoded)>=1048576:return
+-            backup=self.root/'sequence-state-backups-original01'/f'{self.count:04d}-{attempt}.json'
++            backup=self.root/'sequence-state-backups-prospective197-original01'/f'{self.count:04d}-{attempt}.json'
+             with backup.open('xb')as stream:stream.write(raw);stream.flush();os.fchmod(stream.fileno(),0o444);os.fsync(stream.fileno())
+             if state.read_bytes()!=raw:continue
+             temporary=state.with_name(f'state.sequence-{os.getpid()}-{self.count}.tmp')
+@@ -173,7 +173,8 @@
+         return evidence
+ 
+     def review(self,directory,role):
+-        self.check_new_actions();cfg_pin=self.h.pin(directory/'independent-review-controller-config.json')
++        self.check_new_actions();cfg_name=('independent-review-controller-config-prospective197-original01.json' if role=='R1' else 'independent-review-controller-config.json')
++        cfg_pin=self.h.pin(directory/cfg_name)
+         cfg=self.read(cfg_pin);rjp=self.h.pin(directory/'independent-review-job.json')
+         expected=['/usr/bin/python3.12','-I','-B',self.ready['leg_reviewer']['path'],'--observe','--job',
+             rjp['path'],'--job-sha256',rjp['sha256'],'--expected-source-sha256',self.ready['leg_reviewer']['sha256']]
+@@ -196,14 +197,18 @@
+     def run(self):
+         require(self.precommit['schema']=='robotron-existing-R1-quality32-sequence-precommit-v1'
+             and self.precommit['source']==self.h.pin(__file__),'Exact one-use sequence/source required')
++        prior=self.read(self.precommit['prior_observer_terminal'])
++        prior_intent=self.read(self.precommit['prior_observer_intent'])
++        require(prior['status']=='SEQUENCING_STOPPED_NO_NEW_ACTIONS' and prior['original_records']==[]
++            and birth(prior_intent['pid'])!=prior_intent['birth'],'Prior observer must be terminal without scientific actions')
+         first_owner=self.read(self.precommit['first_R1_native_owner'])
+         first_controller=self.read(self.precommit['first_R1_controller'])
+         require(birth(first_owner['pid'])==first_owner['starttime_ticks']
+             and birth(first_controller['pid'])==first_controller['starttime_ticks'],
+             'Existing original R1 native and controller must be live at sequence start')
+-        require(not (self.root/'original-sequence-observer-intent.json').exists(),'Original sequence already consumed')
+-        self.events.mkdir(mode=0o700);(self.root/'sequence-state-backups-original01').mkdir(mode=0o700)
+-        self.h.put(self.root/'original-sequence-observer-intent.json',dict(source=self.h.pin(__file__),
++        require(not (self.root/'original-sequence-observer-prospective197-original01-intent.json').exists(),'Original sequence already consumed')
++        self.events.mkdir(mode=0o700);(self.root/'sequence-state-backups-prospective197-original01').mkdir(mode=0o700)
++        self.h.put(self.root/'original-sequence-observer-prospective197-original01-intent.json',dict(source=self.h.pin(__file__),
+             precommit=self.precommit_pin,pid=os.getpid(),birth=birth(os.getpid()),original_attempt=1,no_retry=True,
+             R1_native_relaunched=False,R1_controller_observation_adopted=False,created_unix_s=time.time()))
+         outcome=dict(schema='robotron-original-certified-quality32-sequence-outcome-v1',precommit=self.precommit_pin,
+@@ -253,7 +258,7 @@
+             outcome.update(status='ORIGINAL_SEQUENCE_FAILURE_PRESERVED_NO_RETRY',error=repr(error),traceback=traceback.format_exc())
+             self.register('ORIGINAL_SEQUENCE_FAILED','campaign',terminal=True)
+         outcome['ended_unix_s']=time.time()
+-        pin=self.h.put(self.root/'original-sequence-observer-outcome.json',outcome)
++        pin=self.h.put(self.root/'original-sequence-observer-prospective197-original01-outcome.json',outcome)
+         print(json.dumps(dict(outcome=pin,status=outcome['status'],quality_qualified=outcome['quality_qualified'])),flush=True)
+         return 0 if outcome['status']in ('ORIGINAL_FOUR_LEG_CAMPAIGN_COMPLETE','SEQUENCING_STOPPED_NO_NEW_ACTIONS')else 1
+ 
